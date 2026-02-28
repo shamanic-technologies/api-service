@@ -50,7 +50,7 @@ export const SALES_STEPS: Step[] = [
     number: 1,
     title: "Connect Your AI",
     description: "Add Distribute to ChatGPT, Claude, or Cursor",
-    code: "https://mcp.distribute.org/mcp",
+    code: "https://mcp.distribute.you/mcp",
   },
   {
     number: 2,

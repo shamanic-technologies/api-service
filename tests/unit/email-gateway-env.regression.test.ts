@@ -10,12 +10,12 @@ describe("Email gateway env var naming", () => {
   });
 
   it("should read emailSending config from EMAIL_GATEWAY_SERVICE_* env vars", async () => {
-    process.env.EMAIL_GATEWAY_SERVICE_URL = "https://email-gateway.distribute.org";
+    process.env.EMAIL_GATEWAY_SERVICE_URL = "https://email-gateway.distribute.you";
     process.env.EMAIL_GATEWAY_SERVICE_API_KEY = "test-gw-key";
 
     const { externalServices } = await import("../../src/lib/service-client.js");
 
-    expect(externalServices.emailSending.url).toBe("https://email-gateway.distribute.org");
+    expect(externalServices.emailSending.url).toBe("https://email-gateway.distribute.you");
     expect(externalServices.emailSending.apiKey).toBe("test-gw-key");
   });
 

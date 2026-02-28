@@ -30,7 +30,7 @@ router.get("/", (req, res) => {
   res.json({
     name: "Distribute API",
     version: "1.0.0",
-    docs: "https://docs.distribute.org",
+    docs: "https://docs.distribute.you",
   });
 });
 
