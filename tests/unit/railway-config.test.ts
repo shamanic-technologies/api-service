@@ -5,7 +5,7 @@ import { resolve } from "path";
 describe("railway.json", () => {
   const root = resolve(import.meta.dirname, "../..");
   const config = JSON.parse(
-    readFileSync(resolve(root, "railway.json"), "utf-8"),
+    readFileSync(resolve(root, "apps/api-service/railway.json"), "utf-8"),
   );
 
   it("references a Dockerfile that exists", () => {
