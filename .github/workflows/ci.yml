@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm --filter "./shared/*" build
+
+      - name: Run unit tests
+        run: pnpm test:unit
+
+  openapi-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --no-frozen-lockfile
+
+      - name: Regenerate OpenAPI spec from Zod schemas
+        run: pnpm generate:openapi
+
+      - name: Check openapi.json is up to date
+        run: |
+          if ! git diff --exit-code openapi.json; then
+            echo "::error::openapi.json is out of sync with Zod schemas. Run 'pnpm generate:openapi' and commit the result."
+            exit 1
+          fi

@@ -21,10 +21,11 @@ describe("railway.json", () => {
     expect(config.deploy.healthcheckPath).toBe("/health");
   });
 
-  it("watches source and shared directories", () => {
+  it("watches source, shared, and scripts directories", () => {
     const patterns: string[] = config.build.watchPatterns;
     expect(patterns).toContain("/src/**");
     expect(patterns).toContain("/shared/**");
+    expect(patterns).toContain("/scripts/**");
     expect(patterns).toContain("/pnpm-lock.yaml");
     expect(patterns).toContain("/Dockerfile");
   });

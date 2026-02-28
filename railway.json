@@ -6,6 +6,7 @@
     "watchPatterns": [
       "/src/**",
       "/shared/**",
+      "/scripts/**",
       "/pnpm-lock.yaml",
       "/Dockerfile"
     ]
