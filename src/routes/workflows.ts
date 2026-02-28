@@ -14,8 +14,8 @@ router.get("/workflows", authenticate, requireOrg, requireUser, async (req: Auth
   try {
     const params = new URLSearchParams();
     params.set("orgId", req.orgId!);
-    params.set("appId", (req.query.appId as string) || "mcpfactory");
 
+    if (req.query.appId) params.set("appId", req.query.appId as string);
     if (req.query.category) params.set("category", req.query.category as string);
     if (req.query.channel) params.set("channel", req.query.channel as string);
     if (req.query.audienceType) params.set("audienceType", req.query.audienceType as string);
@@ -40,8 +40,8 @@ router.get("/workflows", authenticate, requireOrg, requireUser, async (req: Auth
 router.get("/workflows/best", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    params.set("appId", (req.query.appId as string) || "mcpfactory");
 
+    if (req.query.appId) params.set("appId", req.query.appId as string);
     if (req.query.category) params.set("category", req.query.category as string);
     if (req.query.channel) params.set("channel", req.query.channel as string);
     if (req.query.audienceType) params.set("audienceType", req.query.audienceType as string);

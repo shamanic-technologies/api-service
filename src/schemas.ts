@@ -949,7 +949,7 @@ registry.registerPath({
   security: authed,
   request: {
     query: z.object({
-      appId: z.string().optional().describe("Application ID (defaults to 'mcpfactory')"),
+      appId: z.string().optional().describe("Filter by application ID (opt-in, omit to return all)"),
       category: z.string().optional().describe("Filter by category (e.g. 'sales', 'pr')"),
       channel: z.string().optional().describe("Filter by channel (e.g. 'email')"),
       audienceType: z.string().optional().describe("Filter by audience type (e.g. 'cold-outreach')"),
@@ -990,7 +990,7 @@ registry.registerPath({
   security: authed,
   request: {
     query: z.object({
-      appId: z.string().optional().describe("Application ID (defaults to 'mcpfactory')"),
+      appId: z.string().optional().describe("Filter by application ID (opt-in, omit to return all)"),
       category: z.string().optional().describe("Filter by category (e.g. 'sales')"),
       channel: z.string().optional().describe("Filter by channel (e.g. 'email')"),
       audienceType: z.string().optional().describe("Filter by audience type (e.g. 'cold-outreach')"),
