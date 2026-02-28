@@ -17,6 +17,7 @@ import appsRoutes from "./routes/apps.js";
 import chatRoutes from "./routes/chat.js";
 import billingRoutes from "./routes/billing.js";
 import { stripeWebhookHandler } from "./routes/billing.js";
+import { apiReference } from "@scalar/express-api-reference";
 import { registerPlatformKeys } from "./startup.js";
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
@@ -60,6 +61,15 @@ app.get("/openapi.json", (_req, res) => {
     res.status(404).json({ error: "OpenAPI spec not generated yet. Run: pnpm generate:openapi" });
   }
 });
+
+// API docs (Scalar)
+app.use(
+  "/docs",
+  apiReference({
+    url: "/openapi.json",
+    theme: "kepler",
+  }),
+);
 
 // Public routes
 app.use(healthRoutes);

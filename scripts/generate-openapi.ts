@@ -13,8 +13,8 @@ const generator = new OpenApiGeneratorV3(registry.definitions);
 const document = generator.generateDocument({
   openapi: "3.0.0",
   info: {
-    title: "MCPFactory API Service",
-    description: `API Gateway for MCPFactory. Handles authentication, proxies to internal services, and exposes the public REST API.
+    title: "distribute API",
+    description: `API Gateway for distribute. Handles authentication, proxies to internal services, and exposes the public REST API.
 
 ## Authentication
 
