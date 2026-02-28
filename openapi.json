@@ -3362,10 +3362,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Application ID (defaults to 'mcpfactory')"
+              "description": "Filter by application ID (opt-in, omit to return all)"
             },
             "required": false,
-            "description": "Application ID (defaults to 'mcpfactory')",
+            "description": "Filter by application ID (opt-in, omit to return all)",
             "name": "appId",
             "in": "query"
           },
@@ -3540,10 +3540,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Application ID (defaults to 'mcpfactory')"
+              "description": "Filter by application ID (opt-in, omit to return all)"
             },
             "required": false,
-            "description": "Application ID (defaults to 'mcpfactory')",
+            "description": "Filter by application ID (opt-in, omit to return all)",
             "name": "appId",
             "in": "query"
           },

@@ -60,8 +60,14 @@ describe("Workflow proxy routes", () => {
     expect(bestBlock).toContain("objective");
   });
 
-  it("should default appId to mcpfactory", () => {
-    expect(content).toContain("mcpfactory");
+  it("should not default appId — it is an opt-in filter", () => {
+    // appId should only be forwarded if explicitly passed in query params
+    const listStart = content.indexOf('"/workflows"');
+    const bestStart = content.indexOf('"/workflows/best"');
+    const listBlock = content.slice(listStart, bestStart);
+
+    expect(listBlock).toContain('req.query.appId');
+    expect(listBlock).not.toContain('"mcpfactory"');
   });
 
   it("should forward humanId query param on GET /workflows", () => {
