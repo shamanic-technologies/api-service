@@ -31,11 +31,11 @@ const PORT = process.env.PORT || 3000;
 // CORS - allow dashboard and MCP clients
 app.use(cors({
   origin: [
-    "https://dashboard.mcpfactory.org",
-    "https://mcpfactory.org",
+    "https://dashboard.distribute.you",
+    "https://distribute.you",
+    "https://performance.distribute.you",
     "http://localhost:3000",
     "http://localhost:3001",
-    "https://performance.mcpfactory.org",
     "http://localhost:3007",
   ],
   credentials: true,
