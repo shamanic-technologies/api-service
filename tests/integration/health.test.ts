@@ -8,7 +8,7 @@ describe("Health endpoints", () => {
   it("GET / returns API info", async () => {
     const response = await request(app).get("/");
     expect(response.status).toBe(200);
-    expect(response.body.name).toBe("MCPFactory API");
+    expect(response.body.name).toBe("Distribute API");
     expect(response.body.version).toBeDefined();
   });
 
