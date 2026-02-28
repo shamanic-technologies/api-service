@@ -28,7 +28,7 @@ vi.mock("../../src/lib/service-client.js", () => ({
   externalServices: {
     client: { url: "http://mock-client", apiKey: "k" },
     emailgen: { url: "http://mock-emailgen", apiKey: "k" },
-    emailSending: { url: "http://mock-email", apiKey: "k" },
+    emailGateway: { url: "http://mock-email", apiKey: "k" },
     campaign: { url: "http://mock-campaign", apiKey: "k" },
     lead: { url: "http://mock-lead", apiKey: "k" },
     key: { url: "http://mock-key", apiKey: "k" },

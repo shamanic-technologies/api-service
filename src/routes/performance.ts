@@ -118,16 +118,16 @@ function toBroadcastDeliveryStats(b: BroadcastStatsResponse | undefined | null):
   };
 }
 
-/** Fetch broadcast delivery stats from the unified email-sending service.
- *  Only uses broadcast stats (outreach emails via Instantly).
- *  Transactional stats are transactional/test emails via Postmark — not relevant. */
+/** Fetch broadcast delivery stats from email-gateway.
+ *  Only uses broadcast stats (outreach emails).
+ *  Transactional stats are transactional/test emails — not relevant. */
 async function fetchBroadcastDeliveryStats(filters: Record<string, string>): Promise<DeliveryStats> {
   try {
     const result = await callExternalService<{
       transactional: BroadcastStatsResponse;
       broadcast: BroadcastStatsResponse;
     }>(
-      externalServices.emailSending,
+      externalServices.emailGateway,
       "/stats",
       { method: "POST", body: filters }
     );
@@ -144,7 +144,7 @@ async function fetchWorkflowDeliveryStats(appId?: string): Promise<Map<string, D
     const result = await callExternalService<{
       groups: Array<{ key: string; broadcast: BroadcastStatsResponse }>;
     }>(
-      externalServices.emailSending,
+      externalServices.emailGateway,
       "/stats",
       { method: "POST", body: { ...(appId && { appId }), type: "broadcast", groupBy: "workflowName" } }
     );
@@ -198,7 +198,7 @@ function applyStatsToWorkflow(wf: WorkflowEntry, stats: DeliveryStats) {
 }
 
 /**
- * Enrich leaderboard email stats from the unified email-sending service.
+ * Enrich leaderboard email stats from email-gateway.
  * Uses per-brand stats via brandId filter and per-workflow stats via groupBy.
  */
 async function enrichWithDeliveryStats(data: LeaderboardData, appId?: string): Promise<void> {
@@ -441,7 +441,7 @@ router.get("/performance/leaderboard", authenticate, requireOrg, requireUser, as
 
     const data = await buildLeaderboardData(appId);
 
-    // Enrich with broadcast delivery stats from email-sending service
+    // Enrich with broadcast delivery stats from email-gateway
     try {
       await enrichWithDeliveryStats(data, appId);
     } catch (err) {
