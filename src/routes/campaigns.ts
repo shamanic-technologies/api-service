@@ -41,7 +41,7 @@ async function fetchDeliveryStats(
   appId: string
 ): Promise<Record<string, number> | null> {
   const deliveryResult = await callExternalService<{ transactional: EmailGatewayStats; broadcast: EmailGatewayStats }>(
-    externalServices.emailSending,
+    externalServices.emailGateway,
     "/stats",
     {
       method: "POST",
@@ -492,7 +492,7 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
       stats.emailsGenerated = 0;
     }
 
-    // Delivery stats from postmark + instantly
+    // Delivery stats from email-gateway
     if (delivery) {
       Object.assign(stats, delivery);
     } else {
