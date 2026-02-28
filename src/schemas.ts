@@ -764,6 +764,16 @@ export const BrandScrapeRequestSchema = z
   })
   .openapi("BrandScrapeRequest");
 
+export const SalesProfileFromUrlRequestSchema = z
+  .object({
+    url: z.string().min(1).describe("Brand website URL to extract a sales profile from"),
+    skipCache: z
+      .boolean()
+      .optional()
+      .describe("Skip cached results and force re-extraction"),
+  })
+  .openapi("SalesProfileFromUrlRequest");
+
 export const IcpSuggestionRequestSchema = z
   .object({
     brandUrl: z.string().min(1).describe("Brand website URL"),
@@ -887,6 +897,31 @@ registry.registerPath({
   },
   responses: {
     200: { description: "ICP suggestion (Apollo-compatible search params)" },
+    400: { description: "Invalid request", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brand/sales-profile",
+  tags: ["Brand"],
+  summary: "Extract sales profile from URL",
+  description:
+    "Extract a sales profile from a brand website URL. " +
+    "Upserts the brand and returns the profile synchronously (with cache). " +
+    "Use this to pre-fill campaign forms for new URLs.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: SalesProfileFromUrlRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Sales profile extracted from the URL" },
     400: { description: "Invalid request", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },

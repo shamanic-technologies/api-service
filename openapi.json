@@ -552,6 +552,23 @@
           "brandUrl"
         ]
       },
+      "SalesProfileFromUrlRequest": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Brand website URL to extract a sales profile from"
+          },
+          "skipCache": {
+            "type": "boolean",
+            "description": "Skip cached results and force re-extraction"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
       "BestWorkflowResponse": {
         "type": "object",
         "properties": {
@@ -3130,6 +3147,84 @@
         "responses": {
           "200": {
             "description": "ICP suggestion (Apollo-compatible search params)"
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`mcpf_app_*`) on endpoints that need org context. Ignored when using a user key (`mcpf_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`mcpf_app_*`) on endpoints that need user context. Ignored when using a user key (`mcpf_*`)."
+          }
+        ]
+      }
+    },
+    "/v1/brand/sales-profile": {
+      "post": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "Extract sales profile from URL",
+        "description": "Extract a sales profile from a brand website URL. Upserts the brand and returns the profile synchronously (with cache). Use this to pre-fill campaign forms for new URLs.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesProfileFromUrlRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sales profile extracted from the URL"
           },
           "400": {
             "description": "Invalid request",

@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
-import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
-import { BrandScrapeRequestSchema, IcpSuggestionRequestSchema } from "../schemas.js";
+import { createRun, getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
+import { BrandScrapeRequestSchema, IcpSuggestionRequestSchema, SalesProfileFromUrlRequestSchema } from "../schemas.js";
 import { fetchKeySource } from "../lib/billing.js";
 
 const router = Router();
@@ -42,6 +42,60 @@ router.post("/brand/scrape", authenticate, async (req: AuthenticatedRequest, res
   } catch (error: any) {
     console.error("Brand scrape error:", error.message);
     res.status(500).json({ error: error.message || "Failed to scrape brand" });
+  }
+});
+
+/**
+ * POST /v1/brand/sales-profile
+ * Extract a sales profile from a URL (upserts the brand, returns profile synchronously)
+ */
+router.post("/brand/sales-profile", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const parsed = SalesProfileFromUrlRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
+    }
+    const { url, skipCache } = parsed.data;
+
+    // Resolve keySource from billing-service
+    const keySource = await fetchKeySource(req.orgId!, req.appId!);
+
+    // Create a tracking run so brand-service can link costs
+    const parentRun = await createRun({
+      orgId: req.orgId!,
+      userId: req.userId,
+      appId: req.appId!,
+      serviceName: "api-service",
+      taskName: "sales-profile-from-url",
+    });
+
+    const result = await callExternalService(
+      externalServices.brand,
+      "/sales-profile",
+      {
+        method: "POST",
+        body: {
+          url,
+          appId: req.appId!,
+          orgId: req.orgId!,
+          userId: req.userId!,
+          keyType: keySource,
+          parentRunId: parentRun.id,
+          skipCache,
+        },
+      }
+    );
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("Sales profile from URL error:", error.message);
+    const msg = error.message || "Failed to extract sales profile";
+    if (msg.includes("No Anthropic API key found")) {
+      return res.status(400).json({
+        error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys (BYOK).",
+      });
+    }
+    res.status(500).json({ error: msg });
   }
 });
 
