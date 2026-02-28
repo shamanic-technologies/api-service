@@ -12,8 +12,8 @@ describe("Workflow proxy route configuration", () => {
     expect(serviceClientContent).toContain("WORKFLOW_SERVICE_API_KEY");
   });
 
-  it("should use workflow.mcpfactory.org as default URL", () => {
-    expect(serviceClientContent).toContain("workflow.mcpfactory.org");
+  it("should use workflow.distribute.org as default URL", () => {
+    expect(serviceClientContent).toContain("workflow.distribute.org");
   });
 });
 
@@ -68,7 +68,7 @@ describe("Workflow proxy routes", () => {
     const listBlock = content.slice(listStart, bestStart);
 
     expect(listBlock).toContain('req.query.appId');
-    expect(listBlock).not.toContain('"mcpfactory"');
+    expect(listBlock).not.toContain('"distribute"');
   });
 
   it("should forward humanId query param on GET /workflows", () => {

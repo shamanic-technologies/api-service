@@ -16,7 +16,8 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
-    req.authType = "jwt";
+    req.appId = "distribute";
+    req.authType = "app_key";
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -31,7 +32,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
 }));
 
 // Mock runs-client
-vi.mock("@mcpfactory/runs-client", () => ({
+vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
   createRun: vi.fn().mockResolvedValue({ id: "parent-run-123" }),
   updateRun: vi.fn().mockResolvedValue({ id: "parent-run-123", status: "failed" }),
@@ -113,13 +114,13 @@ describe("POST /v1/campaigns with targetAudience", () => {
     expect(res.body.campaign.id).toBe("campaign-123");
 
     // Verify brand upsert was called
-    const brandCall = fetchCalls.find((c) => c.url.includes("/brands") && c.body?.appId === "mcpfactory");
+    const brandCall = fetchCalls.find((c) => c.url.includes("/brands") && c.body?.appId === "distribute");
     expect(brandCall).toBeDefined();
     expect(brandCall!.body!.url).toBe("https://example.com");
     expect(brandCall!.body!.orgId).toBe("org_test456");
 
     // Verify campaign-service received all fields including workflowName and derived type
-    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.appId === "mcpfactory");
+    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.appId === "distribute");
     expect(campaignCall).toBeDefined();
     expect(campaignCall!.body!.workflowName).toBe("sales-email-cold-outreach-sienna");
     expect(campaignCall!.body!.type).toBe("cold-email-outreach");
@@ -165,9 +166,9 @@ describe("POST /v1/campaigns with targetAudience", () => {
       });
 
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456");
+    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
 
-    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.appId === "mcpfactory");
+    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.appId === "distribute");
     expect(campaignCall).toBeDefined();
     expect(campaignCall!.body!.keySource).toBe("platform");
   });
@@ -194,7 +195,7 @@ describe("POST /v1/campaigns with targetAudience", () => {
 
     expect(res.status).toBe(200);
 
-    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.appId === "mcpfactory");
+    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.appId === "distribute");
     expect(campaignCall!.body!.keySource).toBe("platform");
   });
 
@@ -337,7 +338,7 @@ describe("POST /v1/campaigns with targetAudience", () => {
         maxBudgetWeeklyUsd: 100,
       });
 
-    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.appId === "mcpfactory");
+    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.appId === "distribute");
     expect(campaignCall!.body!.maxBudgetDailyUsd).toBe("25");
     expect(campaignCall!.body!.maxBudgetWeeklyUsd).toBe("100");
   });

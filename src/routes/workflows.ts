@@ -94,7 +94,7 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
     const { description, hints, style } = parsed.data;
 
     // Resolve keySource from billing-service
-    const keySource = await fetchKeySource(req.orgId!);
+    const keySource = await fetchKeySource(req.orgId!, req.appId!);
 
     const result = await callExternalService(
       externalServices.workflow,
@@ -102,7 +102,7 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
       {
         method: "POST",
         body: {
-          appId: "mcpfactory",
+          appId: req.appId!,
           orgId: req.orgId,
           userId: req.userId,
           keySource,

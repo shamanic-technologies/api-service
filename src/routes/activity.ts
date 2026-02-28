@@ -13,7 +13,7 @@ router.post("/activity", authenticate, requireOrg, requireUser, async (req: Auth
     callExternalService(externalServices.transactionalEmail, "/send", {
       method: "POST",
       body: {
-        appId: "mcpfactory",
+        appId: req.appId!,
         eventType: "user_active",
         userId: req.userId,
         orgId: req.orgId,

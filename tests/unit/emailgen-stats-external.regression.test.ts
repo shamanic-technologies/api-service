@@ -33,6 +33,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (_req: any, _res: any, next: any) => {
     _req.userId = "user1";
     _req.orgId = "org1";
+    _req.appId = "distribute";
     next();
   },
   requireOrg: (_req: any, _res: any, next: any) => next(),
@@ -44,7 +45,7 @@ vi.mock("../../src/lib/internal-headers.js", () => ({
   buildInternalHeaders: () => ({}),
 }));
 
-vi.mock("@mcpfactory/runs-client", () => ({
+vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
 }));
 

@@ -1,5 +1,5 @@
 /**
- * Service client for calling other mcpfactory services
+ * Service client for calling other distribute services
  * All services require API key authentication via X-API-Key header
  */
 
@@ -9,7 +9,7 @@ export const externalServices = {
     apiKey: process.env.CLIENT_SERVICE_API_KEY || "",
   },
   emailgen: {
-    url: process.env.CONTENT_GENERATION_SERVICE_URL || "https://content-generation.mcpfactory.org",
+    url: process.env.CONTENT_GENERATION_SERVICE_URL || "https://content-generation.distribute.org",
     apiKey: process.env.CONTENT_GENERATION_SERVICE_API_KEY || "",
   },
   lead: {
@@ -41,15 +41,15 @@ export const externalServices = {
     apiKey: process.env.TRANSACTIONAL_EMAIL_SERVICE_API_KEY || "",
   },
   brand: {
-    url: process.env.BRAND_SERVICE_URL || "https://brand.mcpfactory.org",
+    url: process.env.BRAND_SERVICE_URL || "https://brand.distribute.org",
     apiKey: process.env.BRAND_SERVICE_API_KEY || "",
   },
   runs: {
-    url: process.env.RUNS_SERVICE_URL || "https://runs.mcpfactory.org",
+    url: process.env.RUNS_SERVICE_URL || "https://runs.distribute.org",
     apiKey: process.env.RUNS_SERVICE_API_KEY || "",
   },
   workflow: {
-    url: process.env.WORKFLOW_SERVICE_URL || "https://workflow.mcpfactory.org",
+    url: process.env.WORKFLOW_SERVICE_URL || "https://workflow.distribute.org",
     apiKey: process.env.WORKFLOW_SERVICE_API_KEY || "",
   },
   billing: {

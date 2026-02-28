@@ -28,9 +28,9 @@ router.get("/debug/config", (req, res) => {
 
 router.get("/", (req, res) => {
   res.json({
-    name: "MCPFactory API",
+    name: "Distribute API",
     version: "1.0.0",
-    docs: "https://docs.mcpfactory.org",
+    docs: "https://docs.distribute.org",
   });
 });
 

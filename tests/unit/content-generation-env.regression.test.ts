@@ -27,12 +27,12 @@ describe("Content-generation env var naming", () => {
   });
 
   it("should read emailgen config from CONTENT_GENERATION_SERVICE_* env vars", async () => {
-    process.env.CONTENT_GENERATION_SERVICE_URL = "https://content-generation.mcpfactory.org";
+    process.env.CONTENT_GENERATION_SERVICE_URL = "https://content-generation.distribute.org";
     process.env.CONTENT_GENERATION_SERVICE_API_KEY = "test-cg-key";
 
     const { externalServices } = await import("../../src/lib/service-client.js");
 
-    expect(externalServices.emailgen.url).toBe("https://content-generation.mcpfactory.org");
+    expect(externalServices.emailgen.url).toBe("https://content-generation.distribute.org");
     expect(externalServices.emailgen.apiKey).toBe("test-cg-key");
   });
 
@@ -45,7 +45,7 @@ describe("Content-generation env var naming", () => {
     const { externalServices } = await import("../../src/lib/service-client.js");
 
     // Should fall back to default, not pick up the old env var
-    expect(externalServices.emailgen.url).toBe("https://content-generation.mcpfactory.org");
+    expect(externalServices.emailgen.url).toBe("https://content-generation.distribute.org");
     expect(externalServices.emailgen.apiKey).toBe("");
   });
 });

@@ -25,21 +25,21 @@ router.post("/leads/search", authenticate, requireOrg, requireUser, async (req: 
     } = parsed.data;
 
     // Resolve keySource from billing-service
-    const keySource = await fetchKeySource(req.orgId!);
+    const keySource = await fetchKeySource(req.orgId!, req.appId!);
 
     const result = await callExternalService(
       externalServices.lead,
       "/search",
       {
         method: "POST",
-        headers: { "x-app-id": "mcpfactory", "x-org-id": req.orgId! },
+        headers: { "x-app-id": req.appId!, "x-org-id": req.orgId! },
         body: {
           personTitles: person_titles,
           organizationLocations: organization_locations,
           qOrganizationIndustryTagIds: organization_industries,
           organizationNumEmployeesRanges: organization_num_employees_ranges,
           perPage: Math.min(per_page, 100),
-          appId: "mcpfactory",
+          appId: req.appId!,
           orgId: req.orgId,
           userId: req.userId,
           keySource,

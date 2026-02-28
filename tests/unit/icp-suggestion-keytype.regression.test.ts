@@ -15,7 +15,8 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
-    req.authType = "jwt";
+    req.appId = "distribute";
+    req.authType = "app_key";
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -30,7 +31,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
 }));
 
 // Mock runs-client (imported by brand router)
-vi.mock("@mcpfactory/runs-client", () => ({
+vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
 }));
 
@@ -76,10 +77,10 @@ describe("POST /v1/brand/icp-suggestion", () => {
 
     expect(capturedBody).toBeDefined();
     expect(capturedBody!.keySource).toBe("byok");
-    expect(capturedBody!.appId).toBe("mcpfactory");
+    expect(capturedBody!.appId).toBe("distribute");
     expect(capturedBody!.url).toBe("https://example.com");
     expect(capturedBody!.orgId).toBe("org_test456");
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456");
+    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
   });
 
   it("should forward keySource 'platform' when billing-service returns payg", async () => {

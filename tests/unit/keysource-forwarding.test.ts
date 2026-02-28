@@ -20,7 +20,8 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
-    req.authType = "jwt";
+    req.appId = "distribute";
+    req.authType = "app_key";
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -35,7 +36,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
 }));
 
 // Mock runs-client
-vi.mock("@mcpfactory/runs-client", () => ({
+vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
   createRun: vi.fn().mockResolvedValue({ id: "parent-run-123" }),
   updateRun: vi.fn().mockResolvedValue({ id: "parent-run-123", status: "failed" }),
@@ -85,7 +86,7 @@ describe("POST /v1/campaigns/:id/resume — keySource forwarding", () => {
     const res = await request(app).post("/v1/campaigns/camp-123/resume").send({});
 
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456");
+    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
 
     const patchCall = fetchCalls.find((c) => c.url.includes("/campaigns/camp-123") && c.method === "PATCH");
     expect(patchCall).toBeDefined();
@@ -114,12 +115,12 @@ describe("POST /v1/workflows/generate — keySource forwarding", () => {
       .send({ description: "Generate a cold outreach workflow for SaaS founders" });
 
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456");
+    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
 
     const generateCall = fetchCalls.find((c) => c.url.includes("/workflows/generate") && c.method === "POST");
     expect(generateCall).toBeDefined();
     expect(generateCall!.body!.keySource).toBe("byok");
-    expect(generateCall!.body!.appId).toBe("mcpfactory");
+    expect(generateCall!.body!.appId).toBe("distribute");
     expect(generateCall!.body!.orgId).toBe("org_test456");
     expect(generateCall!.body!.userId).toBe("user_test123");
   });
@@ -147,12 +148,12 @@ describe("POST /v1/leads/search — keySource forwarding", () => {
       .send({ person_titles: ["CTO"] });
 
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456");
+    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
 
     const searchCall = fetchCalls.find((c) => c.url.includes("/search") && c.method === "POST");
     expect(searchCall).toBeDefined();
     expect(searchCall!.body!.keySource).toBe("byok");
-    expect(searchCall!.body!.appId).toBe("mcpfactory");
+    expect(searchCall!.body!.appId).toBe("distribute");
     expect(searchCall!.body!.orgId).toBe("org_test456");
     expect(searchCall!.body!.userId).toBe("user_test123");
   });
@@ -184,12 +185,12 @@ describe("POST /v1/qualify — keySource forwarding", () => {
       });
 
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456");
+    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
 
     const qualifyCall = fetchCalls.find((c) => c.url.includes("/qualify") && c.method === "POST");
     expect(qualifyCall).toBeDefined();
     expect(qualifyCall!.body!.keySource).toBe("byok");
-    expect(qualifyCall!.body!.appId).toBe("mcpfactory");
+    expect(qualifyCall!.body!.appId).toBe("distribute");
     expect(qualifyCall!.body!.userId).toBe("user_test123");
   });
 
@@ -220,7 +221,7 @@ describe("POST /v1/brand/scrape — keySource forwarding", () => {
       .send({ url: "https://example.com" });
 
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456");
+    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
 
     const scrapeCall = fetchCalls.find((c) => c.url.includes("/scrape") && c.method === "POST");
     expect(scrapeCall).toBeDefined();
