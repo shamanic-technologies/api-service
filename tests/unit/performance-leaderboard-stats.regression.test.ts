@@ -4,7 +4,7 @@
  *    instead of emailsSent/emailsOpened/emailsClicked/emailsReplied), so all
  *    delivery stats were always 0.
  * 2. It summed transactional + broadcast stats, but transactional stats are
- *    lifecycle/test emails via Postmark — only broadcast (Instantly) is relevant.
+ *    transactional/test emails via Postmark — only broadcast (Instantly) is relevant.
  * 3. buildLeaderboardData relied on /campaigns/list which only returns ongoing
  *    campaigns, so brands was always empty when all campaigns were stopped.
  * 4. Campaign costs came from campaign-service which only lists ongoing campaigns.
@@ -34,7 +34,7 @@ vi.mock("../../src/lib/service-client.js", () => ({
     key: { url: "http://mock-key", apiKey: "k" },
     replyQualification: { url: "http://mock-rq", apiKey: "k" },
     scraping: { url: "http://mock-scraping", apiKey: "k" },
-    lifecycle: { url: "http://mock-lifecycle", apiKey: "k" },
+    transactionalEmail: { url: "http://mock-transactional-email", apiKey: "k" },
     brand: { url: "http://mock-brand", apiKey: "k" },
     runs: { url: "http://mock-runs", apiKey: "k" },
   },
