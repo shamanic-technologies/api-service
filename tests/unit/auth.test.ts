@@ -73,6 +73,15 @@ describe("Auth middleware — app key identity resolution", () => {
     expect(content).toContain("Identity resolution failed");
   });
 
+  it("should return 502 when identity resolution returns incomplete data", () => {
+    expect(content).toContain("Identity resolution returned incomplete data");
+    expect(content).toContain("!resolved.orgId || !resolved.userId");
+  });
+
+  it("should warn when only one identity header is provided", () => {
+    expect(content).toContain("App key request has only one identity header");
+  });
+
   it("should set authType to app_key for app key authentication", () => {
     expect(content).toContain('"app_key"');
   });
