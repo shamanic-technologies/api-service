@@ -55,6 +55,12 @@ describe("OpenAPI spec — info description", () => {
   });
 });
 
+describe("OpenAPI spec — server URL", () => {
+  it("should default to api.distribute.you", () => {
+    expect(generatorContent).toContain("https://api.distribute.you");
+  });
+});
+
 describe("OpenAPI spec — identity header parameters on authenticated endpoints", () => {
   it("should inject x-org-id and x-user-id header parameters for authenticated operations", () => {
     expect(generatorContent).toContain('"x-org-id"');
