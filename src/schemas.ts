@@ -118,7 +118,7 @@ registry.registerPath({
 
 export const RegisterAppRequestSchema = z
   .object({
-    name: z.string().min(1).describe("Unique app name (lowercase, alphanumeric with hyphens)"),
+    name: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/, "App name must be lowercase alphanumeric with hyphens").describe("Unique app name (lowercase, alphanumeric with hyphens)"),
   })
   .openapi("RegisterAppRequest");
 

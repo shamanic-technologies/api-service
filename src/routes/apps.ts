@@ -16,15 +16,7 @@ router.post("/apps/register", async (req, res) => {
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
 
-    const name = parsed.data.name
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, "-")
-      .replace(/-+/g, "-")
-      .replace(/^-|-$/g, "");
-
-    if (!name) {
-      return res.status(400).json({ error: "App name results in empty slug after normalization" });
-    }
+    const { name } = parsed.data;
 
     const result = await callExternalService(
       externalServices.key,
