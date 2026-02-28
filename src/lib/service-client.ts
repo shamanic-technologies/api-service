@@ -9,7 +9,7 @@ export const externalServices = {
     apiKey: process.env.CLIENT_SERVICE_API_KEY || "",
   },
   emailgen: {
-    url: process.env.CONTENT_GENERATION_SERVICE_URL || "https://content-generation.distribute.org",
+    url: process.env.CONTENT_GENERATION_SERVICE_URL || "https://content-generation.distribute.you",
     apiKey: process.env.CONTENT_GENERATION_SERVICE_API_KEY || "",
   },
   lead: {
@@ -41,15 +41,15 @@ export const externalServices = {
     apiKey: process.env.TRANSACTIONAL_EMAIL_SERVICE_API_KEY || "",
   },
   brand: {
-    url: process.env.BRAND_SERVICE_URL || "https://brand.distribute.org",
+    url: process.env.BRAND_SERVICE_URL || "https://brand.distribute.you",
     apiKey: process.env.BRAND_SERVICE_API_KEY || "",
   },
   runs: {
-    url: process.env.RUNS_SERVICE_URL || "https://runs.distribute.org",
+    url: process.env.RUNS_SERVICE_URL || "https://runs.distribute.you",
     apiKey: process.env.RUNS_SERVICE_API_KEY || "",
   },
   workflow: {
-    url: process.env.WORKFLOW_SERVICE_URL || "https://workflow.distribute.org",
+    url: process.env.WORKFLOW_SERVICE_URL || "https://workflow.distribute.you",
     apiKey: process.env.WORKFLOW_SERVICE_API_KEY || "",
   },
   billing: {

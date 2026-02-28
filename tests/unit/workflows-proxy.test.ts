@@ -12,8 +12,8 @@ describe("Workflow proxy route configuration", () => {
     expect(serviceClientContent).toContain("WORKFLOW_SERVICE_API_KEY");
   });
 
-  it("should use workflow.distribute.org as default URL", () => {
-    expect(serviceClientContent).toContain("workflow.distribute.org");
+  it("should use workflow.distribute.you as default URL", () => {
+    expect(serviceClientContent).toContain("workflow.distribute.you");
   });
 });
 
