@@ -33,6 +33,13 @@ describe("POST /v1/apps/register route", () => {
     expect(content).toContain("body: { name }");
   });
 
+  it("should slugify the name before forwarding to key-service", () => {
+    expect(content).toContain(".toLowerCase()");
+    expect(content).toContain('.replace(/[^a-z0-9-]/g, "-")');
+    expect(content).toContain('.replace(/-+/g, "-")');
+    expect(content).toContain('.replace(/^-|-$/g, "")');
+  });
+
   it("should return 400 for invalid requests", () => {
     expect(content).toContain("400");
     expect(content).toContain("Invalid request");
