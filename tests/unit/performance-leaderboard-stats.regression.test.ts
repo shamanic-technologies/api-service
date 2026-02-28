@@ -40,6 +40,13 @@ vi.mock("../../src/lib/service-client.js", () => ({
   },
 }));
 
+vi.mock("../../src/middleware/auth.js", () => ({
+  authenticate: (_req: any, _res: any, next: any) => next(),
+  requireOrg: (_req: any, _res: any, next: any) => next(),
+  requireUser: (_req: any, _res: any, next: any) => next(),
+  AuthenticatedRequest: {},
+}));
+
 import express from "express";
 import request from "supertest";
 import performanceRouter from "../../src/routes/performance.js";
@@ -586,6 +593,57 @@ describe("GET /performance/leaderboard", () => {
     expect(res.body.hero.bestCostPerReply.costPerReplyCents).toBe(125);
   });
 
+  it("should work without appId filter and return data across all apps", async () => {
+    const app = createApp();
+    const brands = [
+      { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
+    ];
+    const workflowGroups: MockRunsGroup[] = [
+      { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "5000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "1000.0000", cancelledCostInUsdCents: "0", runCount: 10 },
+    ];
+    const brandCostGroups: MockRunsGroup[] = [
+      { dimensions: { brandId: "brand-1" }, totalCostInUsdCents: "5000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "1000.0000", cancelledCostInUsdCents: "0", runCount: 10 },
+    ];
+
+    const mock = setupMocks(brands, brandCostGroups, workflowGroups);
+    mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
+      const result = mock(_service, path, opts);
+      if (result !== null) return result;
+
+      if (path === "/stats") {
+        const body = opts?.body || {};
+        if (body.groupBy === "workflowName") {
+          // Without appId filter, appId should NOT be in the body
+          expect(body.appId).toBeUndefined();
+          return Promise.resolve(makeGroupedGatewayResponse([
+            { key: "sales-email-cold-outreach-sienna", broadcast: { emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5, repliesWillingToMeet: 2, repliesInterested: 1 } },
+          ]));
+        }
+        if (body.brandId) {
+          expect(body.appId).toBeUndefined();
+          return Promise.resolve(makeGatewayResponse({ emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5 }));
+        }
+        return Promise.resolve(makeGatewayResponse(null));
+      }
+      return Promise.resolve(null);
+    });
+
+    // No appId query param
+    const res = await request(app).get("/performance/leaderboard");
+
+    expect(res.status).toBe(200);
+    expect(res.body.brands).toHaveLength(1);
+    expect(res.body.workflows).toHaveLength(1);
+    expect(res.body.workflows[0].emailsSent).toBe(30);
+
+    // Verify runs-service was called WITHOUT appId in the URL
+    const runsCall = mockCallExternalService.mock.calls.find(
+      (call: any[]) => typeof call[1] === "string" && call[1].includes("/v1/stats/public/leaderboard")
+    );
+    expect(runsCall).toBeDefined();
+    expect(runsCall![1]).not.toContain("appId=");
+  });
+
   it("should return null category for non-standard workflow names", async () => {
     const app = createApp();
     const brands = [{ id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" }];
@@ -618,6 +676,22 @@ describe("GET /performance/leaderboard", () => {
     // Non-standard workflows should not appear in availableCategories or sections
     expect(res.body.availableCategories).toHaveLength(0);
     expect(res.body.categorySections).toHaveLength(0);
+  });
+});
+
+describe("Regression: performance leaderboard must require auth", () => {
+  it("source code should use authenticate, requireOrg, requireUser middleware", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const content = fs.readFileSync(
+      path.join(__dirname, "../../src/routes/performance.ts"),
+      "utf-8"
+    );
+
+    expect(content).toContain("authenticate, requireOrg, requireUser");
+    expect(content).toContain('from "../middleware/auth.js"');
+    // appId should NOT be required
+    expect(content).not.toContain('"appId query parameter is required"');
   });
 });
 

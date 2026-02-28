@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { callExternalService, externalServices } from "../lib/service-client.js";
+import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { getWorkflowCategory, getWorkflowDisplayName, getSectionKey, getSignatureName, SECTION_LABELS, type WorkflowCategory } from "@distribute/content";
 
 const router = Router();
@@ -138,14 +139,14 @@ async function fetchBroadcastDeliveryStats(filters: Record<string, string>): Pro
 }
 
 /** Fetch broadcast delivery stats grouped by workflow name. Returns a map of workflowName → stats. */
-async function fetchWorkflowDeliveryStats(appId: string): Promise<Map<string, DeliveryStats>> {
+async function fetchWorkflowDeliveryStats(appId?: string): Promise<Map<string, DeliveryStats>> {
   try {
     const result = await callExternalService<{
       groups: Array<{ key: string; broadcast: BroadcastStatsResponse }>;
     }>(
       externalServices.emailSending,
       "/stats",
-      { method: "POST", body: { appId, type: "broadcast", groupBy: "workflowName" } }
+      { method: "POST", body: { ...(appId && { appId }), type: "broadcast", groupBy: "workflowName" } }
     );
 
     const map = new Map<string, DeliveryStats>();
@@ -200,14 +201,14 @@ function applyStatsToWorkflow(wf: WorkflowEntry, stats: DeliveryStats) {
  * Enrich leaderboard email stats from the unified email-sending service.
  * Uses per-brand stats via brandId filter and per-workflow stats via groupBy.
  */
-async function enrichWithDeliveryStats(data: LeaderboardData, appId: string): Promise<void> {
+async function enrichWithDeliveryStats(data: LeaderboardData, appId?: string): Promise<void> {
   // Fetch per-brand and per-workflow stats in parallel
   const [, workflowStatsMap] = await Promise.all([
     // Per-brand stats
     Promise.all(
       data.brands.map(async (brand) => {
         if (!brand.brandId) return;
-        const stats = await fetchBroadcastDeliveryStats({ brandId: brand.brandId, appId });
+        const stats = await fetchBroadcastDeliveryStats({ brandId: brand.brandId, ...(appId && { appId }) });
         if (stats.emailsSent === 0) return;
         applyStatsToBrand(brand, stats);
       })
@@ -229,7 +230,7 @@ async function enrichWithDeliveryStats(data: LeaderboardData, appId: string): Pr
   // Fallback: when per-workflow groupBy returns no data (old emails sent without workflowName),
   // fetch aggregate broadcast stats and distribute by cost share across workflows
   if (!anyWorkflowEnriched && data.workflows.length > 0) {
-    const aggregateStats = await fetchBroadcastDeliveryStats({ appId });
+    const aggregateStats = await fetchBroadcastDeliveryStats(appId ? { appId } : {});
     if (aggregateStats.emailsSent > 0) {
       const totalCost = data.workflows.reduce((s, w) => s + w.totalCostUsdCents, 0);
       if (totalCost > 0) {
@@ -322,14 +323,15 @@ interface RunsStatsGroup {
 
 /** Build leaderboard data from brand-service + runs-service public endpoint.
  *  Uses brand-service for brands, runs-service for costs + workflows. */
-async function buildLeaderboardData(appId: string): Promise<LeaderboardData> {
+async function buildLeaderboardData(appId?: string): Promise<LeaderboardData> {
+  const appParam = appId ? `appId=${encodeURIComponent(appId)}&` : "";
   // 1. Get brands + workflow stats + brand costs in parallel
   const [allBrands, workflowStatsResult, brandCosts] = await Promise.all([
     fetchAllBrands(),
     // Workflow stats from runs-service public endpoint
     callExternalService<{ groups: RunsStatsGroup[] }>(
       externalServices.runs,
-      `/v1/stats/public/leaderboard?appId=${encodeURIComponent(appId)}&groupBy=workflowName`
+      `/v1/stats/public/leaderboard?${appParam}groupBy=workflowName`
     ).catch((err) => {
       console.warn("Failed to fetch workflow stats:", err);
       return { groups: [] as RunsStatsGroup[] };
@@ -337,7 +339,7 @@ async function buildLeaderboardData(appId: string): Promise<LeaderboardData> {
     // Brand costs from runs-service public endpoint
     callExternalService<{ groups: RunsStatsGroup[] }>(
       externalServices.runs,
-      `/v1/stats/public/leaderboard?appId=${encodeURIComponent(appId)}&groupBy=brandId`
+      `/v1/stats/public/leaderboard?${appParam}groupBy=brandId`
     ).then((result) => {
       const costMap = new Map<string, number>();
       for (const g of result.groups || []) {
@@ -432,13 +434,10 @@ function buildCategorySections(data: LeaderboardData): CategorySection[] {
   });
 }
 
-// Public route — no auth required, appId must be provided as query param
-router.get("/performance/leaderboard", async (req, res) => {
+// Authenticated route — appId is an optional filter
+router.get("/performance/leaderboard", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const appId = req.query.appId as string;
-    if (!appId) {
-      return res.status(400).json({ error: "appId query parameter is required" });
-    }
+    const appId = req.query.appId as string | undefined;
 
     const data = await buildLeaderboardData(appId);
 
