@@ -13,7 +13,13 @@ export const registry = new OpenAPIRegistry();
 registry.registerComponent("securitySchemes", "bearerAuth", {
   type: "http",
   scheme: "bearer",
-  description: "App key (mcpf_app_*) or user key (mcpf_*) via Authorization: Bearer header",
+  description:
+    "Bearer token authentication. Two key types are supported:\n\n" +
+    "- **User key** (`mcpf_*`): carries org context automatically. No extra headers needed.\n" +
+    "- **App key** (`mcpf_app_*`): identifies the app only. To access endpoints that require " +
+    "org/user context, also send `x-org-id` and `x-user-id` headers with your external IDs " +
+    "(e.g. Clerk IDs). The API resolves them to internal UUIDs via client-service.\n\n" +
+    "See the top-level API description for full details and examples.",
 });
 
 const authed: Record<string, string[]>[] = [{ bearerAuth: [] }];
