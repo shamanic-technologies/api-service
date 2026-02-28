@@ -36,9 +36,9 @@ export const externalServices = {
     url: process.env.EMAIL_GATEWAY_SERVICE_URL || "http://localhost:3009",
     apiKey: process.env.EMAIL_GATEWAY_SERVICE_API_KEY || "",
   },
-  lifecycle: {
-    url: process.env.LIFECYCLE_EMAILS_SERVICE_URL || "http://localhost:3008",
-    apiKey: process.env.LIFECYCLE_EMAILS_SERVICE_API_KEY || "",
+  transactionalEmail: {
+    url: process.env.TRANSACTIONAL_EMAIL_SERVICE_URL || "http://localhost:3008",
+    apiKey: process.env.TRANSACTIONAL_EMAIL_SERVICE_API_KEY || "",
   },
   brand: {
     url: process.env.BRAND_SERVICE_URL || "https://brand.mcpfactory.org",
