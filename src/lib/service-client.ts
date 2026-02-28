@@ -91,12 +91,14 @@ export async function callExternalService<T>(
 
     if (!response.ok) {
       const errorText = await response.text();
+      let errorMessage: string;
       try {
         const errorJson = JSON.parse(errorText);
-        throw new Error(errorJson.error || `Service call failed: ${response.status}`);
+        errorMessage = errorJson.error || `Service call failed: ${response.status}`;
       } catch {
-        throw new Error(`Service call failed: ${response.status} - ${errorText}`);
+        errorMessage = `Service call failed: ${response.status} - ${errorText}`;
       }
+      throw new Error(errorMessage);
     }
 
     return response.json();
