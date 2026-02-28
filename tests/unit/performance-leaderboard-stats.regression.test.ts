@@ -679,8 +679,8 @@ describe("GET /performance/leaderboard", () => {
   });
 });
 
-describe("Regression: performance leaderboard must require auth", () => {
-  it("source code should use authenticate, requireOrg, requireUser middleware", () => {
+describe("Regression: performance leaderboard must require auth but NOT filter by org/user", () => {
+  it("source code should use authenticate middleware only (no requireOrg/requireUser)", () => {
     const fs = require("fs");
     const path = require("path");
     const content = fs.readFileSync(
@@ -688,10 +688,61 @@ describe("Regression: performance leaderboard must require auth", () => {
       "utf-8"
     );
 
-    expect(content).toContain("authenticate, requireOrg, requireUser");
+    // Must authenticate callers
     expect(content).toContain('from "../middleware/auth.js"');
+    // Leaderboard is a global view — org/user headers are for auth only, never for filtering
+    expect(content).not.toMatch(/leaderboard.*requireOrg/);
+    expect(content).not.toMatch(/leaderboard.*requireUser/);
     // appId should NOT be required
     expect(content).not.toContain('"appId query parameter is required"');
+  });
+
+  it("should return identical data regardless of org/user auth context", async () => {
+    const app = createApp();
+    const brands = [
+      { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
+    ];
+    const workflowGroups: MockRunsGroup[] = [
+      { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "5000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "1000.0000", cancelledCostInUsdCents: "0", runCount: 10 },
+    ];
+    const brandCostGroups: MockRunsGroup[] = [
+      { dimensions: { brandId: "brand-1" }, totalCostInUsdCents: "5000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "1000.0000", cancelledCostInUsdCents: "0", runCount: 10 },
+    ];
+
+    const mock = setupMocks(brands, brandCostGroups, workflowGroups);
+    mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
+      const result = mock(_service, path, opts);
+      if (result !== null) return result;
+      if (path === "/stats") {
+        const body = opts?.body || {};
+        if (body.groupBy === "workflowName") {
+          return Promise.resolve(makeGroupedGatewayResponse([
+            { key: "sales-email-cold-outreach-sienna", broadcast: { emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5 } },
+          ]));
+        }
+        if (body.brandId) {
+          return Promise.resolve(makeGatewayResponse({ emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5 }));
+        }
+        return Promise.resolve(makeGatewayResponse(null));
+      }
+      return Promise.resolve(null);
+    });
+
+    // Call without org/user context
+    const res1 = await request(app).get("/performance/leaderboard");
+    // Call with org/user context (simulated via headers — auth is mocked)
+    const res2 = await request(app)
+      .get("/performance/leaderboard")
+      .set("x-org-id", "org-123")
+      .set("x-user-id", "user-456");
+
+    expect(res1.status).toBe(200);
+    expect(res2.status).toBe(200);
+
+    // Data must be identical — org/user headers must never affect leaderboard results
+    expect(res1.body.brands).toEqual(res2.body.brands);
+    expect(res1.body.workflows).toEqual(res2.body.workflows);
+    expect(res1.body.hero).toEqual(res2.body.hero);
   });
 });
 

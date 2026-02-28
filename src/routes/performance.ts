@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { callExternalService, externalServices } from "../lib/service-client.js";
-import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
+import { authenticate, AuthenticatedRequest } from "../middleware/auth.js";
 import { getWorkflowCategory, getWorkflowDisplayName, getSectionKey, getSignatureName, SECTION_LABELS, type WorkflowCategory } from "@distribute/content";
 
 const router = Router();
@@ -435,7 +435,7 @@ function buildCategorySections(data: LeaderboardData): CategorySection[] {
 }
 
 // Authenticated route — appId is an optional filter
-router.get("/performance/leaderboard", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.get("/performance/leaderboard", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const appId = req.query.appId as string | undefined;
 
