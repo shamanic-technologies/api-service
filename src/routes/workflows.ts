@@ -8,13 +8,13 @@ const router = Router();
 
 /**
  * GET /v1/workflows
- * List workflows for the authenticated org from workflow-service
+ * List all workflows from workflow-service. All query params are optional filters.
  */
 router.get("/workflows", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    params.set("orgId", req.orgId!);
 
+    if (req.query.orgId) params.set("orgId", req.query.orgId as string);
     if (req.query.appId) params.set("appId", req.query.appId as string);
     if (req.query.category) params.set("category", req.query.category as string);
     if (req.query.channel) params.set("channel", req.query.channel as string);
