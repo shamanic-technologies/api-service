@@ -1105,10 +1105,55 @@
           "Performance"
         ],
         "summary": "Get performance leaderboard",
-        "description": "Returns public performance leaderboard data. No authentication required.",
+        "description": "Returns performance leaderboard data including brands, workflows, and hero stats. Requires authentication.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by application ID (opt-in, omit to return all)"
+            },
+            "required": false,
+            "description": "Filter by application ID (opt-in, omit to return all)",
+            "name": "appId",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`mcpf_app_*`) on endpoints that need org context. Ignored when using a user key (`mcpf_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`mcpf_app_*`) on endpoints that need user context. Ignored when using a user key (`mcpf_*`)."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "Leaderboard data with brands, models, and hero stats"
+            "description": "Leaderboard data with brands, workflows, and hero stats"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
           },
           "502": {
             "description": "Upstream service error",

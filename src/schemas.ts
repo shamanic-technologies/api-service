@@ -168,9 +168,16 @@ registry.registerPath({
   tags: ["Performance"],
   summary: "Get performance leaderboard",
   description:
-    "Returns public performance leaderboard data. No authentication required.",
+    "Returns performance leaderboard data including brands, workflows, and hero stats. Requires authentication.",
+  security: authed,
+  request: {
+    query: z.object({
+      appId: z.string().optional().describe("Filter by application ID (opt-in, omit to return all)"),
+    }),
+  },
   responses: {
-    200: { description: "Leaderboard data with brands, models, and hero stats" },
+    200: { description: "Leaderboard data with brands, workflows, and hero stats" },
+    401: { description: "Unauthorized", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
   },
 });
