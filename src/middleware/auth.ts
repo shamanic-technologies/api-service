@@ -50,11 +50,32 @@ export async function authenticate(
         );
 
         if (!resolved) {
+          console.error("[auth] Identity resolution returned null", {
+            appId: validation.appId,
+            externalOrgId,
+            externalUserId,
+          });
           return res.status(502).json({ error: "Identity resolution failed" });
+        }
+
+        if (!resolved.orgId || !resolved.userId) {
+          console.error("[auth] Identity resolution returned empty IDs", {
+            resolved,
+            appId: validation.appId,
+            externalOrgId,
+            externalUserId,
+          });
+          return res.status(502).json({ error: "Identity resolution returned incomplete data" });
         }
 
         req.orgId = resolved.orgId;
         req.userId = resolved.userId;
+      } else if (externalOrgId || externalUserId) {
+        console.warn("[auth] App key request has only one identity header", {
+          hasOrgId: !!externalOrgId,
+          hasUserId: !!externalUserId,
+          path: req.path,
+        });
       }
 
       return next();
@@ -134,6 +155,13 @@ export function requireOrg(
   next: NextFunction
 ) {
   if (!req.orgId) {
+    console.warn("[auth] requireOrg blocked request", {
+      path: req.path,
+      authType: req.authType,
+      hasAppId: !!req.appId,
+      hasOrgHeader: !!req.headers["x-org-id"],
+      hasUserHeader: !!req.headers["x-user-id"],
+    });
     return res.status(400).json({ error: "Organization context required" });
   }
   next();
