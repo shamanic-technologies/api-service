@@ -60,7 +60,7 @@ The API service resolves these external IDs to internal UUIDs via \`client-servi
   },
   servers: [
     {
-      url: process.env.SERVICE_URL || "https://api.mcpfactory.org",
+      url: process.env.SERVICE_URL || "https://api.distribute.you",
     },
   ],
   tags: [
