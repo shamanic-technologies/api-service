@@ -19,6 +19,7 @@ router.get("/workflows", authenticate, requireOrg, requireUser, async (req: Auth
     if (req.query.category) params.set("category", req.query.category as string);
     if (req.query.channel) params.set("channel", req.query.channel as string);
     if (req.query.audienceType) params.set("audienceType", req.query.audienceType as string);
+    if (req.query.humanId) params.set("humanId", req.query.humanId as string);
 
     const result = await callExternalService(
       externalServices.workflow,
@@ -90,7 +91,7 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
       });
     }
 
-    const { description, hints } = parsed.data;
+    const { description, hints, style } = parsed.data;
 
     // Resolve keySource from billing-service
     const keySource = await fetchKeySource(req.orgId!);
@@ -107,6 +108,7 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
           keySource,
           description,
           hints,
+          ...(style && { style }),
         },
       }
     );

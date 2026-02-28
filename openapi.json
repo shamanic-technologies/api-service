@@ -578,6 +578,16 @@
               },
               "signatureName": {
                 "type": "string"
+              },
+              "humanId": {
+                "type": "string",
+                "nullable": true,
+                "description": "Human ID if styled after an expert"
+              },
+              "styleName": {
+                "type": "string",
+                "nullable": true,
+                "description": "Base style name for versioning (e.g. 'hormozi')"
               }
             },
             "required": [
@@ -587,7 +597,9 @@
               "channel",
               "audienceType",
               "signature",
-              "signatureName"
+              "signatureName",
+              "humanId",
+              "styleName"
             ]
           },
           "dag": {
@@ -682,6 +694,16 @@
                   "updated"
                 ],
                 "description": "Whether the workflow was created or updated"
+              },
+              "humanId": {
+                "type": "string",
+                "nullable": true,
+                "description": "Human ID if styled after an expert"
+              },
+              "styleName": {
+                "type": "string",
+                "nullable": true,
+                "description": "Base style name for versioning (e.g. 'hormozi')"
               }
             },
             "required": [
@@ -692,7 +714,9 @@
               "audienceType",
               "signature",
               "signatureName",
-              "action"
+              "action",
+              "humanId",
+              "styleName"
             ]
           },
           "dag": {
@@ -729,6 +753,37 @@
           "generatedDescription"
         ]
       },
+      "WorkflowStyle": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "human",
+              "brand"
+            ],
+            "description": "Style source type"
+          },
+          "humanId": {
+            "type": "string",
+            "description": "Human ID from human-service. Required when type is 'human'."
+          },
+          "brandId": {
+            "type": "string",
+            "description": "Brand ID from brand-service. Required when type is 'brand'."
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Display name of the human or brand (e.g. 'Hormozi', 'My Brand')"
+          }
+        },
+        "required": [
+          "type",
+          "name"
+        ],
+        "description": "Optional style configuration. When provided, the workflow is generated in the style of an industry expert or brand."
+      },
       "GenerateWorkflowRequest": {
         "type": "object",
         "properties": {
@@ -763,6 +818,9 @@
               }
             },
             "description": "Optional hints to guide DAG generation"
+          },
+          "style": {
+            "$ref": "#/components/schemas/WorkflowStyle"
           }
         },
         "required": [
@@ -3339,6 +3397,16 @@
             "required": false,
             "description": "Filter by audience type (e.g. 'cold-outreach')",
             "name": "audienceType",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter workflows by human expert ID"
+            },
+            "required": false,
+            "description": "Filter workflows by human expert ID",
+            "name": "humanId",
             "in": "query"
           },
           {

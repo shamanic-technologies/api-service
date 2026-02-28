@@ -63,6 +63,33 @@ describe("Workflow proxy routes", () => {
   it("should default appId to mcpfactory", () => {
     expect(content).toContain("mcpfactory");
   });
+
+  it("should forward humanId query param on GET /workflows", () => {
+    const listStart = content.indexOf('"/workflows"');
+    const bestStart = content.indexOf('"/workflows/best"');
+    const listBlock = content.slice(listStart, bestStart);
+
+    expect(listBlock).toContain("humanId");
+  });
+});
+
+describe("Workflow response schemas include style fields", () => {
+  const schemaPath = path.join(__dirname, "../../src/schemas.ts");
+  const content = fs.readFileSync(schemaPath, "utf-8");
+
+  it("should include humanId and styleName in BestWorkflowResponse", () => {
+    const bestSection = content.slice(content.indexOf('"BestWorkflowResponse"'));
+    expect(bestSection).toContain("humanId");
+    expect(bestSection).toContain("styleName");
+  });
+
+  it("should include humanId query param on GET /v1/workflows", () => {
+    const listSection = content.slice(
+      content.indexOf('path: "/v1/workflows"'),
+      content.indexOf('path: "/v1/workflows/{id}"')
+    );
+    expect(listSection).toContain("humanId");
+  });
 });
 
 describe("Workflow routes are mounted in index.ts", () => {
