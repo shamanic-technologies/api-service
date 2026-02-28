@@ -8,7 +8,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
   AuthenticatedRequest: {},
 }));
 
-vi.mock("@mcpfactory/runs-client", () => ({
+vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
 }));
 

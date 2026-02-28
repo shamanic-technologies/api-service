@@ -37,6 +37,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (_req: any, _res: any, next: any) => {
     _req.userId = "user1";
     _req.orgId = "org1";
+    _req.appId = "distribute";
     next();
   },
   requireOrg: (_req: any, _res: any, next: any) => next(),
@@ -48,7 +49,7 @@ vi.mock("../../src/lib/internal-headers.js", () => ({
   buildInternalHeaders: (...args: unknown[]) => mockBuildInternalHeaders(...args),
 }));
 
-vi.mock("@mcpfactory/runs-client", () => ({
+vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: (...args: unknown[]) => mockGetRunsBatch(...args),
 }));
 
@@ -78,7 +79,7 @@ describe("GET /v1/brands/:brandId/delivery-stats", () => {
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       if (path === "/stats") {
         expect(opts.body.brandId).toBe("brand-123");
-        expect(opts.body.appId).toBe("mcpfactory");
+        expect(opts.body.appId).toBe("distribute");
         return Promise.resolve({
           transactional: {
             emailsSent: 50, emailsDelivered: 48, emailsOpened: 30,

@@ -1,7 +1,7 @@
 import { beforeAll, afterAll, vi } from "vitest";
 
 // Mock runs-client (used by brand router)
-vi.mock("@mcpfactory/runs-client", () => ({
+vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
 }));
 

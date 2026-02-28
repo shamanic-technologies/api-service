@@ -16,11 +16,11 @@ interface BillingAccount {
  * Uses GET /v1/accounts which auto-creates the billing account if missing.
  * Throws if billing-service is unreachable — never silently defaults.
  */
-export async function fetchKeySource(orgId: string): Promise<KeySource> {
+export async function fetchKeySource(orgId: string, appId: string): Promise<KeySource> {
   const result = await callExternalService<BillingAccount>(
     externalServices.billing,
     "/v1/accounts",
-    { headers: { "x-app-id": "mcpfactory", "x-org-id": orgId, "x-key-source": "platform" } }
+    { headers: { "x-app-id": appId, "x-org-id": orgId, "x-key-source": "platform" } }
   );
   if (result.billingMode === "byok") return "byok";
   return "platform";

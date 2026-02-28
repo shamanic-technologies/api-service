@@ -1,5 +1,5 @@
 /**
- * Mock for @mcpfactory/runs-client
+ * Mock for @distribute/runs-client
  * Used in tests since the workspace package may not be built in CI
  */
 
@@ -89,7 +89,7 @@ export async function createRun(_params: CreateRunParams): Promise<Run> {
     id: "mock-run-id",
     organizationId: "mock-org-uuid",
     userId: null,
-    appId: "mcpfactory",
+    appId: "distribute",
     brandId: null,
     campaignId: null,
     serviceName: "mock-service",
@@ -108,7 +108,7 @@ export async function updateRun(_runId: string, _status: "completed" | "failed")
     id: _runId,
     organizationId: "mock-org-uuid",
     userId: null,
-    appId: "mcpfactory",
+    appId: "distribute",
     brandId: null,
     campaignId: null,
     serviceName: "mock-service",

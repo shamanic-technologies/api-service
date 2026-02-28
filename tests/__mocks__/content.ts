@@ -1,5 +1,5 @@
 /**
- * Mock for @mcpfactory/content
+ * Mock for @distribute/content
  * Used in tests since the workspace package may not be built in CI
  */
 

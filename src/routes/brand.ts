@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
-import { getRunsBatch, type RunWithCosts } from "@mcpfactory/runs-client";
+import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { BrandScrapeRequestSchema, IcpSuggestionRequestSchema } from "../schemas.js";
 import { fetchKeySource } from "../lib/billing.js";
 
@@ -20,7 +20,7 @@ router.post("/brand/scrape", authenticate, async (req: AuthenticatedRequest, res
     const { url, skipCache } = parsed.data;
 
     // Resolve keySource from billing-service (default to "platform" if no orgId)
-    const keySource = req.orgId ? await fetchKeySource(req.orgId) : "platform";
+    const keySource = req.orgId ? await fetchKeySource(req.orgId, req.appId!) : "platform";
 
     const result = await callExternalService(
       externalServices.scraping,
@@ -29,7 +29,7 @@ router.post("/brand/scrape", authenticate, async (req: AuthenticatedRequest, res
         method: "POST",
         body: {
           url,
-          sourceService: "mcpfactory",
+          sourceService: req.appId!,
           sourceOrgId: req.orgId,
           userId: req.userId,
           keySource,
@@ -154,7 +154,7 @@ router.post("/brand/icp-suggestion", authenticate, requireOrg, requireUser, asyn
     const { brandUrl } = parsed.data;
 
     // Resolve keySource from billing-service
-    const keySource = await fetchKeySource(req.orgId!);
+    const keySource = await fetchKeySource(req.orgId!, req.appId!);
 
     const result = await callExternalService(
       externalServices.brand,
@@ -164,7 +164,7 @@ router.post("/brand/icp-suggestion", authenticate, requireOrg, requireUser, asyn
         body: {
           orgId: req.orgId,
           userId: req.userId,
-          appId: "mcpfactory",
+          appId: req.appId!,
           keySource,
           url: brandUrl,
         },
@@ -203,7 +203,7 @@ router.get("/brands/costs", authenticate, requireOrg, requireUser, async (req: A
       }>;
     }>(
       externalServices.runs,
-      `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&appId=mcpfactory&groupBy=brandId`
+      `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&appId=${encodeURIComponent(req.appId!)}&groupBy=brandId`
     );
 
     const costs: Record<string, string> = {};
@@ -240,7 +240,7 @@ router.get("/brands/:id/cost-breakdown", authenticate, requireOrg, requireUser, 
       }>;
     }>(
       externalServices.runs,
-      `/v1/stats/costs/by-cost-name?orgId=${encodeURIComponent(orgId)}&appId=mcpfactory&brandId=${encodeURIComponent(id)}`
+      `/v1/stats/costs/by-cost-name?orgId=${encodeURIComponent(orgId)}&appId=${encodeURIComponent(req.appId!)}&brandId=${encodeURIComponent(id)}`
     );
 
     res.json({ costs: data.costs || [] });

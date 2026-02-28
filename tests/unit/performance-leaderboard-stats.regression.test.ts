@@ -17,7 +17,7 @@
  * use correct field names, only read broadcast stats,
  * use runs-service /v1/stats/public/leaderboard for costs (public, cross-org, string values).
  * Per-workflow email stats via email-gateway groupBy: "workflowName".
- * Categories parsed from workflow name format via @mcpfactory/content.
+ * Categories parsed from workflow name format via @distribute/content.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -166,7 +166,7 @@ describe("GET /performance/leaderboard", () => {
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard");
+    const res = await request(app).get("/performance/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     // Brands should come from brand-service
@@ -232,7 +232,7 @@ describe("GET /performance/leaderboard", () => {
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard");
+    const res = await request(app).get("/performance/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     const brand = res.body.brands[0];
@@ -269,7 +269,7 @@ describe("GET /performance/leaderboard", () => {
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard");
+    const res = await request(app).get("/performance/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     const brand = res.body.brands[0];
@@ -305,7 +305,7 @@ describe("GET /performance/leaderboard", () => {
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard");
+    const res = await request(app).get("/performance/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     const brand = res.body.brands[0];
@@ -345,7 +345,7 @@ describe("GET /performance/leaderboard", () => {
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard");
+    const res = await request(app).get("/performance/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     expect(res.body.workflows).toHaveLength(2);
@@ -389,7 +389,7 @@ describe("GET /performance/leaderboard", () => {
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard");
+    const res = await request(app).get("/performance/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     expect(res.body.categorySections).toBeDefined();
@@ -456,7 +456,7 @@ describe("GET /performance/leaderboard", () => {
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard");
+    const res = await request(app).get("/performance/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     // Workflows should get proportional stats based on cost share (60% / 40%)
@@ -518,7 +518,7 @@ describe("GET /performance/leaderboard", () => {
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard");
+    const res = await request(app).get("/performance/leaderboard?appId=distribute");
     expect(res.status).toBe(200);
 
     // inactive-brand has no cost AND no email stats → filtered out
@@ -571,7 +571,7 @@ describe("GET /performance/leaderboard", () => {
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard");
+    const res = await request(app).get("/performance/leaderboard?appId=distribute");
     expect(res.status).toBe(200);
     expect(res.body.hero).toBeDefined();
 
@@ -607,7 +607,7 @@ describe("GET /performance/leaderboard", () => {
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard");
+    const res = await request(app).get("/performance/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     const wf = res.body.workflows[0];
@@ -684,7 +684,7 @@ describe("Regression: performance leaderboard must use broadcast-only stats", ()
     expect(content).toContain("getSectionKey");
     expect(content).toContain("getSignatureName");
     expect(content).toContain("SECTION_LABELS");
-    expect(content).toContain("@mcpfactory/content");
+    expect(content).toContain("@distribute/content");
     expect(content).toContain("availableCategories");
   });
 

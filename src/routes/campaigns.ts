@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
-import { createRun, updateRun, getRunsBatch, type RunWithCosts } from "@mcpfactory/runs-client";
+import { createRun, updateRun, getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { CreateCampaignRequestSchema, BatchStatsRequestSchema } from "../schemas.js";
 import { fetchKeySource } from "../lib/billing.js";
 
@@ -14,7 +14,7 @@ function sendTransactionalEmail(
   callExternalService(externalServices.transactionalEmail, "/send", {
     method: "POST",
     body: {
-      appId: "mcpfactory",
+      appId: req.appId!,
       eventType,
       brandId,
       campaignId,
@@ -37,7 +37,8 @@ interface EmailGatewayStats {
 /** Fetch delivery stats from email-gateway (aggregates transactional + broadcast). */
 async function fetchDeliveryStats(
   filters: { campaignId?: string; brandId?: string },
-  orgId: string
+  orgId: string,
+  appId: string
 ): Promise<Record<string, number> | null> {
   const deliveryResult = await callExternalService<{ transactional: EmailGatewayStats; broadcast: EmailGatewayStats }>(
     externalServices.emailSending,
@@ -45,7 +46,7 @@ async function fetchDeliveryStats(
     {
       method: "POST",
       headers: { "x-org-id": orgId },
-      body: { ...filters, appId: "mcpfactory", orgId },
+      body: { ...filters, appId, orgId },
     }
   ).catch((err) => {
     console.warn("[campaigns] Email-gateway stats failed:", (err as Error).message);
@@ -104,7 +105,7 @@ router.get("/campaigns", authenticate, requireOrg, requireUser, async (req: Auth
 /**
  * POST /v1/campaigns
  * Create a new campaign
- * 
+ *
  * If clientUrl is provided, scrapes the company info first and stores in company-service
  */
 router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
@@ -163,7 +164,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       {
         method: "POST",
         body: {
-          appId: "mcpfactory",
+          appId: req.appId!,
           orgId: req.orgId,
           url: brandUrl,
           userId: req.userId,
@@ -177,7 +178,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     const parentRun = await createRun({
       orgId: req.orgId!,
       userId: req.userId,
-      appId: "mcpfactory",
+      appId: req.appId!,
       brandId: brandResult.brandId,
       serviceName: "api-service",
       taskName: "create-campaign",
@@ -185,7 +186,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     console.log("[api-service] POST /v1/campaigns \u2014 step 2 done: parent run created", { parentRunId: parentRun.id });
 
     // 3. Resolve keySource from billing-service (byok vs pay-as-you-go)
-    const keySource = await fetchKeySource(req.orgId!);
+    const keySource = await fetchKeySource(req.orgId!, req.appId!);
     console.log("[api-service] POST /v1/campaigns — step 3: resolved keySource from billing-service", { keySource });
 
     // 4. Forward to campaign-service with parentRunId
@@ -195,7 +196,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       ...restData,
       workflowName,
       type: "cold-email-outreach",
-      appId: "mcpfactory",
+      appId: req.appId!,
       orgId: req.orgId,
       brandId: brandResult.brandId,
       keySource,
@@ -353,14 +354,14 @@ router.post("/campaigns/:id/resume", authenticate, requireOrg, requireUser, asyn
     const parentRun = await createRun({
       orgId: req.orgId!,
       userId: req.userId,
-      appId: "mcpfactory",
+      appId: req.appId!,
       campaignId: id,
       serviceName: "api-service",
       taskName: "resume-campaign",
     });
 
     // Resolve keySource from billing-service
-    const keySource = await fetchKeySource(req.orgId!);
+    const keySource = await fetchKeySource(req.orgId!, req.appId!);
 
     let result;
     try {
@@ -414,13 +415,14 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
   try {
     const { id } = req.params;
     const orgId = req.orgId!;
+    const appId = req.appId!;
 
     // Fetch stats from all services in parallel using campaignId filter
     const [leadStats, emailgenStats, delivery, budgetUsage, costBreakdown, leadsFromRuns] = await Promise.all([
       callExternalService(
         externalServices.lead,
         `/stats?campaignId=${id}`,
-        { headers: { "x-app-id": "mcpfactory", "x-org-id": orgId } }
+        { headers: { "x-app-id": appId, "x-org-id": orgId } }
       ).catch((err) => {
         console.warn("[campaigns] Lead-service stats failed:", (err as Error).message);
         return null;
@@ -428,12 +430,12 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
       callExternalService(
         externalServices.emailgen,
         "/stats",
-        { method: "POST", body: { campaignId: id, appId: "mcpfactory" }, headers: { "x-org-id": orgId } }
+        { method: "POST", body: { campaignId: id, appId }, headers: { "x-org-id": orgId } }
       ).catch((err) => {
         console.warn("[campaigns] Emailgen stats failed:", (err as Error).message);
         return null;
       }),
-      fetchDeliveryStats({ campaignId: id }, orgId),
+      fetchDeliveryStats({ campaignId: id }, orgId, appId),
       callExternalService<{ results: Record<string, { totalCostInUsdCents: string | null }> }>(
         externalServices.campaign,
         "/campaigns/batch-budget-usage",
@@ -445,7 +447,7 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
       // Full cost breakdown by cost name from runs-service (single source of truth)
       callExternalService<{ costs: Array<{ costName: string; totalCostInUsdCents: string; actualCostInUsdCents: string; provisionedCostInUsdCents: string; totalQuantity: string }> }>(
         externalServices.runs,
-        `/v1/stats/costs/by-cost-name?orgId=${encodeURIComponent(orgId)}&appId=mcpfactory&campaignId=${encodeURIComponent(id)}`
+        `/v1/stats/costs/by-cost-name?orgId=${encodeURIComponent(orgId)}&appId=${encodeURIComponent(appId)}&campaignId=${encodeURIComponent(id)}`
       ).catch((err) => {
         console.warn("[campaigns] Cost breakdown failed:", (err as Error).message);
         return null;
@@ -453,7 +455,7 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
       // Lead-serve run count from runs-service (source of truth for leadsServed)
       callExternalService<{ groups: Array<{ dimensions: Record<string, string | null>; runCount: number }> }>(
         externalServices.runs,
-        `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&appId=mcpfactory&campaignId=${encodeURIComponent(id)}&taskName=lead-serve&groupBy=serviceName`
+        `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&appId=${encodeURIComponent(appId)}&campaignId=${encodeURIComponent(id)}&taskName=lead-serve&groupBy=serviceName`
       ).catch((err) => {
         console.warn("[campaigns] Lead-serve runs stats failed:", (err as Error).message);
         return null;
@@ -531,6 +533,7 @@ router.post("/campaigns/batch-stats", authenticate, requireOrg, requireUser, asy
     const { campaignIds } = parsed.data;
 
     const orgId = req.orgId!;
+    const appId = req.appId!;
 
     // Fetch budget usage and lead-serve run counts in bulk (one call each)
     const budgetUsagePromise = callExternalService<{
@@ -548,7 +551,7 @@ router.post("/campaigns/batch-stats", authenticate, requireOrg, requireUser, asy
       groups: Array<{ dimensions: Record<string, string | null>; runCount: number }>;
     }>(
       externalServices.runs,
-      `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&appId=mcpfactory&taskName=lead-serve&groupBy=campaignId`
+      `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&appId=${encodeURIComponent(appId)}&taskName=lead-serve&groupBy=campaignId`
     ).catch((err) => {
       console.warn("[campaigns] Batch lead-serve runs stats failed:", (err as Error).message);
       return null;
@@ -562,14 +565,14 @@ router.post("/campaigns/batch-stats", authenticate, requireOrg, requireUser, asy
             callExternalService(
               externalServices.lead,
               `/stats?campaignId=${id}`,
-              { headers: { "x-app-id": "mcpfactory", "x-org-id": orgId } }
+              { headers: { "x-app-id": appId, "x-org-id": orgId } }
             ).catch(() => null),
             callExternalService(
               externalServices.emailgen,
               "/stats",
-              { method: "POST", body: { campaignId: id, appId: "mcpfactory" }, headers: { "x-org-id": orgId } }
+              { method: "POST", body: { campaignId: id, appId }, headers: { "x-org-id": orgId } }
             ).catch(() => null),
-            fetchDeliveryStats({ campaignId: id }, orgId),
+            fetchDeliveryStats({ campaignId: id }, orgId, appId),
           ]);
 
           return { campaignId: id, leadStats, emailgenStats, delivery };
@@ -659,7 +662,7 @@ router.get("/campaigns/:id/leads", authenticate, requireOrg, requireUser, async 
       externalServices.lead,
       `/leads?campaignId=${id}`,
       {
-        headers: { "x-app-id": "mcpfactory", "x-org-id": req.orgId! },
+        headers: { "x-app-id": req.appId!, "x-org-id": req.orgId! },
       }
     ) as { leads: Array<Record<string, unknown>> };
 
@@ -803,7 +806,7 @@ router.get("/brands/:brandId/delivery-stats", authenticate, requireOrg, requireU
     const { brandId } = req.params;
     const orgId = req.orgId!;
 
-    const delivery = await fetchDeliveryStats({ brandId }, orgId);
+    const delivery = await fetchDeliveryStats({ brandId }, orgId, req.appId!);
 
     res.json(delivery ?? {
       emailsSent: 0,
@@ -832,6 +835,7 @@ router.get("/brands/:brandId/delivery-stats", authenticate, requireOrg, requireU
 router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
   const orgId = req.orgId!;
+  const appId = req.appId!;
 
   // SSE headers
   res.writeHead(200, {
@@ -865,14 +869,14 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
         callExternalService<{ served: number; buffered: number; skipped: number }>(
           externalServices.lead,
           `/stats?campaignId=${id}`,
-          { headers: { "x-app-id": "mcpfactory", "x-org-id": orgId } }
+          { headers: { "x-app-id": appId, "x-org-id": orgId } }
         ).catch(() => null),
         callExternalService<{ stats?: { emailsGenerated?: number } }>(
           externalServices.emailgen,
           "/stats",
-          { method: "POST", body: { campaignId: id, appId: "mcpfactory" }, headers: { "x-org-id": orgId } }
+          { method: "POST", body: { campaignId: id, appId }, headers: { "x-org-id": orgId } }
         ).catch(() => null),
-        fetchDeliveryStats({ campaignId: id }, orgId),
+        fetchDeliveryStats({ campaignId: id }, orgId, appId),
       ]);
 
       if (closed) return;

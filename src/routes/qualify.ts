@@ -32,7 +32,7 @@ router.post("/qualify", authenticate, async (req: AuthenticatedRequest, res) => 
     const orgId = sourceOrgId || req.orgId;
 
     // Resolve keySource from billing-service (default to "platform" if no orgId)
-    const keySource = orgId ? await fetchKeySource(orgId) : "platform";
+    const keySource = orgId ? await fetchKeySource(orgId, req.appId!) : "platform";
 
     const result = await callExternalService(
       externalServices.replyQualification,
@@ -48,7 +48,7 @@ router.post("/qualify", authenticate, async (req: AuthenticatedRequest, res) => 
           subject,
           bodyText,
           bodyHtml,
-          appId: "mcpfactory",
+          appId: req.appId!,
           userId: req.userId,
           keySource,
           byokApiKey,

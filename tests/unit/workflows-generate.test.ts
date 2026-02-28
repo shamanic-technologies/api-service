@@ -30,7 +30,7 @@ describe("POST /v1/workflows/generate route", () => {
   });
 
   it("should pass appId and orgId from auth context", () => {
-    expect(content).toContain('appId: "mcpfactory"');
+    expect(content).toContain("appId: req.appId!");
     expect(content).toContain("orgId: req.orgId");
   });
 

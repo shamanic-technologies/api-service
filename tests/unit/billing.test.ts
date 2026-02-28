@@ -7,7 +7,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
   AuthenticatedRequest: {},
 }));
 
-vi.mock("@mcpfactory/runs-client", () => ({
+vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
 }));
 
@@ -18,7 +18,7 @@ function mockBillingAccountResponse(billingMode: string) {
     JSON.stringify({
       id: "acc-1",
       orgId: "org-123",
-      appId: "mcpfactory",
+      appId: "distribute",
       billingMode,
       creditBalanceCents: 200,
       hasPaymentMethod: false,
@@ -53,39 +53,39 @@ describe("fetchKeySource", () => {
   });
 
   it("should call GET /v1/accounts (upsert) with required headers including x-key-source", async () => {
-    await fetchKeySource("org-123");
+    await fetchKeySource("org-123", "distribute");
 
     const billingCall = fetchCalls.find((c) => c.url.includes("/v1/accounts"));
     expect(billingCall).toBeDefined();
     expect(billingCall!.url).not.toContain("/v1/accounts/balance");
-    expect(billingCall!.headers!["x-app-id"]).toBe("mcpfactory");
+    expect(billingCall!.headers!["x-app-id"]).toBe("distribute");
     expect(billingCall!.headers!["x-org-id"]).toBe("org-123");
     expect(billingCall!.headers!["x-key-source"]).toBe("platform");
   });
 
   it("should return 'platform' for trial billing mode", async () => {
-    const result = await fetchKeySource("org-123");
+    const result = await fetchKeySource("org-123", "distribute");
     expect(result).toBe("platform");
   });
 
   it("should return 'platform' for payg billing mode", async () => {
     global.fetch = vi.fn().mockResolvedValue(mockBillingAccountResponse("payg"));
 
-    const result = await fetchKeySource("org-123");
+    const result = await fetchKeySource("org-123", "distribute");
     expect(result).toBe("platform");
   });
 
   it("should return 'byok' for byok billing mode", async () => {
     global.fetch = vi.fn().mockResolvedValue(mockBillingAccountResponse("byok"));
 
-    const result = await fetchKeySource("org-123");
+    const result = await fetchKeySource("org-123", "distribute");
     expect(result).toBe("byok");
   });
 
   it("should throw when billing-service is unreachable", async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error("Connection refused"));
 
-    await expect(fetchKeySource("org-123")).rejects.toThrow("Connection refused");
+    await expect(fetchKeySource("org-123", "distribute")).rejects.toThrow("Connection refused");
   });
 
   it("should throw when billing-service returns an error", async () => {
@@ -96,6 +96,6 @@ describe("fetchKeySource", () => {
       })
     );
 
-    await expect(fetchKeySource("org-123")).rejects.toThrow();
+    await expect(fetchKeySource("org-123", "distribute")).rejects.toThrow();
   });
 });

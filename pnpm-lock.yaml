@@ -11,10 +11,10 @@ importers:
       '@asteasolutions/zod-to-openapi':
         specifier: ^7.3.0
         version: 7.3.4(zod@3.25.76)
-      '@mcpfactory/content':
+      '@distribute/content':
         specifier: workspace:*
         version: link:shared/content
-      '@mcpfactory/runs-client':
+      '@distribute/runs-client':
         specifier: workspace:*
         version: link:shared/runs-client
       '@scalar/express-api-reference':

@@ -1,5 +1,5 @@
 {
-  "name": "@mcpfactory/api-service",
+  "name": "@distribute/api-service",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -15,8 +15,8 @@
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^7.3.0",
-    "@mcpfactory/content": "workspace:*",
-    "@mcpfactory/runs-client": "workspace:*",
+    "@distribute/content": "workspace:*",
+    "@distribute/runs-client": "workspace:*",
     "@scalar/express-api-reference": "^0.8.46",
     "@sentry/node": "^8.0.0",
     "cors": "^2.8.5",
