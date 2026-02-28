@@ -17,6 +17,7 @@
     "@asteasolutions/zod-to-openapi": "^7.3.0",
     "@mcpfactory/content": "workspace:*",
     "@mcpfactory/runs-client": "workspace:*",
+    "@scalar/express-api-reference": "^0.8.46",
     "@sentry/node": "^8.0.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",
