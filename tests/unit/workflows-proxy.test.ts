@@ -26,10 +26,11 @@ describe("Workflow proxy routes", () => {
     expect(content).toContain("requireOrg");
   });
 
-  it("should proxy GET /workflows with Clerk orgId", () => {
+  it("should proxy GET /workflows without forced filters", () => {
     expect(content).toContain('"/workflows"');
-    expect(content).toContain('params.set("orgId", req.orgId!)');
     expect(content).toContain("externalServices.workflow");
+    // orgId should NOT be force-injected — it's an opt-in filter like all others
+    expect(content).not.toContain('params.set("orgId", req.orgId!)');
   });
 
   it("should proxy GET /workflows/:id", () => {
