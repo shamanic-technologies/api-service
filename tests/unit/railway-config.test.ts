@@ -26,5 +26,11 @@ describe("railway.json", () => {
     expect(patterns).toContain("/src/**");
     expect(patterns).toContain("/shared/**");
     expect(patterns).toContain("/pnpm-lock.yaml");
+    expect(patterns).toContain("/Dockerfile");
+  });
+
+  it("has restart policy configured", () => {
+    expect(config.deploy.restartPolicyType).toBe("ON_FAILURE");
+    expect(config.deploy.restartPolicyMaxRetries).toBe(5);
   });
 });
