@@ -38,6 +38,7 @@ RUN pnpm install --prod --no-frozen-lockfile
 
 # Copy built output
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/openapi.json ./openapi.json
 COPY --from=builder /app/shared/content/dist shared/content/dist
 COPY --from=builder /app/shared/runs-client/dist shared/runs-client/dist
 

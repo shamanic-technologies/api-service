@@ -27,4 +27,8 @@ describe("Dockerfile", () => {
   it("sets IPv4-first DNS for Neon compatibility", () => {
     expect(dockerfile).toContain("dns-result-order=ipv4first");
   });
+
+  it("copies generated openapi.json to production stage", () => {
+    expect(dockerfile).toContain("COPY --from=builder /app/openapi.json");
+  });
 });
