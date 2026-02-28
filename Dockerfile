@@ -23,19 +23,23 @@ RUN pnpm --filter "./shared/*" build
 # Build api-service
 RUN pnpm build
 
-# Prepare production directory with only production dependencies
-RUN pnpm deploy --prod /prod
-
-# Copy built files to production directory
-RUN cp -r /app/dist /prod/dist
-
 # Stage 2: Production
 FROM node:20-slim
 
 WORKDIR /app
 
-# Copy production directory from builder
-COPY --from=builder /prod .
+RUN npm install -g pnpm
+
+# Copy workspace config and install prod deps only
+COPY --from=builder /app/package.json /app/pnpm-workspace.yaml /app/pnpm-lock.yaml* ./
+COPY --from=builder /app/shared/content/package.json shared/content/
+COPY --from=builder /app/shared/runs-client/package.json shared/runs-client/
+RUN pnpm install --prod --no-frozen-lockfile
+
+# Copy built output
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/shared/content/dist shared/content/dist
+COPY --from=builder /app/shared/runs-client/dist shared/runs-client/dist
 
 # Force IPv4 first to avoid IPv6 connection issues with Neon
 ENV NODE_OPTIONS="--dns-result-order=ipv4first"
