@@ -6,11 +6,11 @@ const router = Router();
 
 /**
  * POST /v1/activity
- * Track user activity — fires a lifecycle email (deduped per user per day)
+ * Track user activity — fires a transactional email (deduped per user per day)
  */
 router.post("/activity", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    callExternalService(externalServices.lifecycle, "/send", {
+    callExternalService(externalServices.transactionalEmail, "/send", {
       method: "POST",
       body: {
         appId: "mcpfactory",
@@ -18,7 +18,7 @@ router.post("/activity", authenticate, requireOrg, requireUser, async (req: Auth
         userId: req.userId,
         orgId: req.orgId,
       },
-    }).catch((err) => console.warn("[activity] Lifecycle email failed:", err.message));
+    }).catch((err) => console.warn("[activity] Transactional email failed:", err.message));
 
     res.json({ ok: true });
   } catch (error: any) {

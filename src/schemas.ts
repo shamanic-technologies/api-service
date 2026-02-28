@@ -1166,7 +1166,7 @@ registry.registerPath({
   tags: ["Activity"],
   summary: "Track user activity",
   description:
-    "Records user activity event. Fires a lifecycle email deduped per user per day.",
+    "Records user activity event. Fires a transactional email deduped per user per day.",
   security: authed,
   responses: {
     200: {

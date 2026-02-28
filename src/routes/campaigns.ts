@@ -6,12 +6,12 @@ import { createRun, updateRun, getRunsBatch, type RunWithCosts } from "@mcpfacto
 import { CreateCampaignRequestSchema, BatchStatsRequestSchema } from "../schemas.js";
 import { fetchKeySource } from "../lib/billing.js";
 
-function sendLifecycleEmail(
+function sendTransactionalEmail(
   eventType: string,
   req: AuthenticatedRequest,
   { brandId, campaignId, ...metadata }: Record<string, unknown>
 ) {
-  callExternalService(externalServices.lifecycle, "/send", {
+  callExternalService(externalServices.transactionalEmail, "/send", {
     method: "POST",
     body: {
       appId: "mcpfactory",
@@ -22,7 +22,7 @@ function sendLifecycleEmail(
       userId: req.userId,
       metadata,
     },
-  }).catch((err) => console.warn(`[campaigns] Lifecycle email ${eventType} failed:`, err.message));
+  }).catch((err) => console.warn(`[campaigns] Transactional email ${eventType} failed:`, err.message));
 }
 
 const router = Router();
@@ -53,7 +53,7 @@ async function fetchDeliveryStats(
   });
 
   // Only use broadcast stats (outreach emails via Instantly).
-  // Transactional stats are lifecycle/test emails via Postmark — not relevant.
+  // Transactional stats are transactional/test emails via Postmark — not relevant.
   const b = (deliveryResult as any)?.broadcast;
   if (!b) return null;
 
@@ -234,11 +234,11 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       status: (result as any).campaign?.status,
     });
 
-    // Fire-and-forget lifecycle email
+    // Fire-and-forget transactional email
     const campaign = (result as any).campaign;
     if (campaign?.brandId && campaign?.id) {
-      console.log("[api-service] POST /v1/campaigns \u2014 step 4: sending lifecycle email campaign_created");
-      sendLifecycleEmail("campaign_created", req, {
+      console.log("[api-service] POST /v1/campaigns \u2014 step 4: sending transactional email campaign_created");
+      sendTransactionalEmail("campaign_created", req, {
         brandId: campaign.brandId,
         campaignId: campaign.id,
         campaignName: parsed.data.name || campaign.name,
@@ -325,9 +325,9 @@ router.post("/campaigns/:id/stop", authenticate, requireOrg, requireUser, async 
       );
     }
 
-    // Fire-and-forget lifecycle email
+    // Fire-and-forget transactional email
     if (campaign?.brandId) {
-      sendLifecycleEmail("campaign_stopped", req, {
+      sendTransactionalEmail("campaign_stopped", req, {
         brandId: campaign.brandId,
         campaignId: id,
         campaignName: campaign?.name,

@@ -119,7 +119,7 @@ function toBroadcastDeliveryStats(b: BroadcastStatsResponse | undefined | null):
 
 /** Fetch broadcast delivery stats from the unified email-sending service.
  *  Only uses broadcast stats (outreach emails via Instantly).
- *  Transactional stats are lifecycle/test emails via Postmark — not relevant. */
+ *  Transactional stats are transactional/test emails via Postmark — not relevant. */
 async function fetchBroadcastDeliveryStats(filters: Record<string, string>): Promise<DeliveryStats> {
   try {
     const result = await callExternalService<{
