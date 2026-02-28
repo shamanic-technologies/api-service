@@ -953,6 +953,7 @@ registry.registerPath({
       category: z.string().optional().describe("Filter by category (e.g. 'sales', 'pr')"),
       channel: z.string().optional().describe("Filter by channel (e.g. 'email')"),
       audienceType: z.string().optional().describe("Filter by audience type (e.g. 'cold-outreach')"),
+      humanId: z.string().optional().describe("Filter workflows by human expert ID"),
     }),
   },
   responses: {
@@ -1011,6 +1012,8 @@ registry.registerPath({
                 audienceType: z.string(),
                 signature: z.string(),
                 signatureName: z.string(),
+                humanId: z.string().nullable().describe("Human ID if styled after an expert"),
+                styleName: z.string().nullable().describe("Base style name for versioning (e.g. 'hormozi')"),
               }),
               dag: z.object({
                 nodes: z.array(z.any()),
@@ -1032,6 +1035,21 @@ registry.registerPath({
   },
 });
 
+export const WorkflowStyleSchema = z
+  .object({
+    type: z.enum(["human", "brand"]).describe("Style source type"),
+    humanId: z
+      .string()
+      .optional()
+      .describe("Human ID from human-service. Required when type is 'human'."),
+    brandId: z
+      .string()
+      .optional()
+      .describe("Brand ID from brand-service. Required when type is 'brand'."),
+    name: z.string().min(1).describe("Display name of the human or brand (e.g. 'Hormozi', 'My Brand')"),
+  })
+  .openapi("WorkflowStyle");
+
 export const GenerateWorkflowRequestSchema = z
   .object({
     description: z
@@ -1051,6 +1069,9 @@ export const GenerateWorkflowRequestSchema = z
       })
       .optional()
       .describe("Optional hints to guide DAG generation"),
+    style: WorkflowStyleSchema.optional().describe(
+      "Optional style configuration. When provided, the workflow is generated in the style of an industry expert or brand."
+    ),
   })
   .openapi("GenerateWorkflowRequest");
 
@@ -1085,6 +1106,8 @@ registry.registerPath({
                 signature: z.string().describe("SHA-256 hash of the canonical DAG"),
                 signatureName: z.string().describe("Human-readable name for this DAG variant"),
                 action: z.enum(["created", "updated"]).describe("Whether the workflow was created or updated"),
+                humanId: z.string().nullable().describe("Human ID if styled after an expert"),
+                styleName: z.string().nullable().describe("Base style name for versioning (e.g. 'hormozi')"),
               }),
               dag: z.object({
                 nodes: z.array(z.any()).describe("DAG nodes"),

@@ -34,9 +34,10 @@ describe("POST /v1/workflows/generate route", () => {
     expect(content).toContain("orgId: req.orgId");
   });
 
-  it("should forward description and hints from request body", () => {
+  it("should forward description, hints, and style from request body", () => {
     expect(content).toContain("description");
     expect(content).toContain("hints");
+    expect(content).toContain("style");
   });
 
   it("should return 400 on invalid request", () => {
@@ -70,6 +71,14 @@ describe("GenerateWorkflowRequestSchema", () => {
     expect(content).toContain("expectedInputs");
   });
 
+  it("should have optional style with type, humanId, brandId, name", () => {
+    expect(content).toContain("WorkflowStyleSchema");
+    expect(content).toContain('"human"');
+    expect(content).toContain('"brand"');
+    expect(content).toContain("humanId");
+    expect(content).toContain("brandId");
+  });
+
   it("should register POST /v1/workflows/generate path in OpenAPI", () => {
     expect(content).toContain('path: "/v1/workflows/generate"');
     expect(content).toContain('method: "post"');
@@ -81,5 +90,14 @@ describe("GenerateWorkflowRequestSchema", () => {
     expect(content).toContain("workflow");
     expect(content).toContain("dag");
     expect(content).toContain("generatedDescription");
+  });
+
+  it("should include humanId and styleName in GenerateWorkflowResponse", () => {
+    // These fields appear in the response schema between signatureName and GenerateWorkflowResponse
+    const start = content.indexOf('path: "/v1/workflows/generate"');
+    const end = content.indexOf('"GenerateWorkflowResponse"');
+    const responseSection = content.slice(start, end);
+    expect(responseSection).toContain("humanId");
+    expect(responseSection).toContain("styleName");
   });
 });
