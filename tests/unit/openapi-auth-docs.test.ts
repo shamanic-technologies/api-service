@@ -11,9 +11,9 @@ const generatorContent = fs.readFileSync(generatorPath, "utf-8");
 describe("OpenAPI spec — auth documentation", () => {
   it("should document both key types in security scheme description", () => {
     expect(schemasContent).toContain("User key");
-    expect(schemasContent).toContain("mcpf_usr_*");
+    expect(schemasContent).toContain("distrib.usr_*");
     expect(schemasContent).toContain("App key");
-    expect(schemasContent).toContain("mcpf_app_*");
+    expect(schemasContent).toContain("distrib.app_*");
   });
 
   it("should mention x-org-id and x-user-id headers in security scheme", () => {
@@ -36,11 +36,11 @@ describe("OpenAPI spec — info description", () => {
   });
 
   it("should document user key flow with example", () => {
-    expect(generatorContent).toContain("Authorization: Bearer mcpf_abc123");
+    expect(generatorContent).toContain("Authorization: Bearer distrib.usr_abc123");
   });
 
   it("should document app key flow with identity headers example", () => {
-    expect(generatorContent).toContain("Authorization: Bearer mcpf_app_abc123");
+    expect(generatorContent).toContain("Authorization: Bearer distrib.app_abc123");
     expect(generatorContent).toContain("x-org-id: org_2xyzABC");
     expect(generatorContent).toContain("x-user-id: user_2abcDEF");
   });

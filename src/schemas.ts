@@ -15,9 +15,9 @@ registry.registerComponent("securitySchemes", "bearerAuth", {
   scheme: "bearer",
   description:
     "Bearer token authentication. Two key types are supported:\n\n" +
-    "- **User key** (`mcpf_usr_*`): carries app, org, and user context. No extra headers needed. " +
+    "- **User key** (`distrib.usr_*`): carries app, org, and user context. No extra headers needed. " +
     "Recommended for API/MCP access.\n" +
-    "- **App key** (`mcpf_app_*`): identifies the app only (server-to-server). To access endpoints " +
+    "- **App key** (`distrib.app_*`): identifies the app only (server-to-server). To access endpoints " +
     "that require org/user context, also send `x-org-id` and `x-user-id` headers with your external IDs " +
     "(e.g. Clerk IDs). The API resolves them to internal UUIDs via client-service.\n\n" +
     "See the top-level API description for full details and examples.",
