@@ -18,6 +18,7 @@ import chatRoutes from "./routes/chat.js";
 import billingRoutes from "./routes/billing.js";
 import { stripeWebhookHandler } from "./routes/billing.js";
 import emailsRoutes from "./routes/emails.js";
+import stripeRoutes from "./routes/stripe.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { registerPlatformKeys } from "./startup.js";
 import { readFileSync, existsSync } from "fs";
@@ -92,6 +93,7 @@ app.use("/v1", workflowsRoutes);
 app.use("/v1", chatRoutes);
 app.use("/v1", billingRoutes);
 app.use("/v1", emailsRoutes);
+app.use("/v1", stripeRoutes);
 
 // 404 handler
 app.use((req, res) => {

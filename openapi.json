@@ -1077,6 +1077,224 @@
         "required": [
           "templates"
         ]
+      },
+      "CreateStripeProductRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Product name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Product description"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Arbitrary key-value metadata"
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "CreateStripePriceRequest": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stripe product ID"
+          },
+          "unitAmountCents": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Price in cents"
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "default": "usd",
+            "description": "ISO 4217 currency code"
+          },
+          "recurring": {
+            "type": "object",
+            "properties": {
+              "interval": {
+                "type": "string",
+                "enum": [
+                  "day",
+                  "week",
+                  "month",
+                  "year"
+                ],
+                "description": "Billing interval"
+              }
+            },
+            "required": [
+              "interval"
+            ],
+            "description": "Recurring pricing config (omit for one-time)"
+          }
+        },
+        "required": [
+          "productId",
+          "unitAmountCents"
+        ]
+      },
+      "CreateStripeCouponRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Custom coupon ID (auto-generated if omitted)"
+          },
+          "percentOff": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Percent discount (0-100)"
+          },
+          "amountOffCents": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Fixed discount in cents"
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3,
+            "description": "Currency for amountOff (required if amountOff is set)"
+          },
+          "duration": {
+            "type": "string",
+            "enum": [
+              "once",
+              "repeating",
+              "forever"
+            ],
+            "description": "How long the coupon applies"
+          },
+          "durationInMonths": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Months for 'repeating' duration"
+          }
+        },
+        "required": [
+          "duration"
+        ]
+      },
+      "CreateStripeCheckoutRequest": {
+        "type": "object",
+        "properties": {
+          "lineItems": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "priceId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Stripe price ID"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "default": 1,
+                  "description": "Quantity"
+                }
+              },
+              "required": [
+                "priceId"
+              ]
+            },
+            "minItems": 1,
+            "description": "Line items for checkout"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "payment",
+              "subscription"
+            ],
+            "default": "payment",
+            "description": "Checkout mode"
+          },
+          "successUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Redirect URL after success"
+          },
+          "cancelUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Redirect URL after cancel"
+          },
+          "customerEmail": {
+            "type": "string",
+            "format": "email",
+            "description": "Pre-fill customer email"
+          },
+          "customerId": {
+            "type": "string",
+            "description": "Existing Stripe customer ID"
+          },
+          "discounts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "couponId": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Stripe coupon ID"
+                }
+              },
+              "required": [
+                "couponId"
+              ]
+            },
+            "description": "Coupons to apply"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Metadata for the checkout session"
+          }
+        },
+        "required": [
+          "lineItems",
+          "successUrl",
+          "cancelUrl"
+        ]
+      },
+      "StripeStatsRequest": {
+        "type": "object",
+        "properties": {
+          "brandId": {
+            "type": "string",
+            "description": "Filter by brand ID"
+          },
+          "campaignId": {
+            "type": "string",
+            "description": "Filter by campaign ID"
+          },
+          "runIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Filter by run IDs"
+          }
+        }
       }
     },
     "parameters": {}
@@ -4875,6 +5093,603 @@
         "responses": {
           "200": {
             "description": "Templates deployed"
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`mcpf_app_*`) on endpoints that need org context. Ignored when using a user key (`mcpf_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`mcpf_app_*`) on endpoints that need user context. Ignored when using a user key (`mcpf_*`)."
+          }
+        ]
+      }
+    },
+    "/v1/stripe/products/{productId}": {
+      "get": {
+        "tags": [
+          "Stripe"
+        ],
+        "summary": "Get a Stripe product",
+        "description": "Retrieve a Stripe product by ID. Uses the org's app Stripe key via key-service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Stripe product ID"
+            },
+            "required": true,
+            "description": "Stripe product ID",
+            "name": "productId",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`mcpf_app_*`) on endpoints that need org context. Ignored when using a user key (`mcpf_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`mcpf_app_*`) on endpoints that need user context. Ignored when using a user key (`mcpf_*`)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stripe product"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stripe/products": {
+      "post": {
+        "tags": [
+          "Stripe"
+        ],
+        "summary": "Create a Stripe product",
+        "description": "Create a new Stripe product. Idempotent — returns existing product if the ID already exists.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStripeProductRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created/existing product"
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`mcpf_app_*`) on endpoints that need org context. Ignored when using a user key (`mcpf_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`mcpf_app_*`) on endpoints that need user context. Ignored when using a user key (`mcpf_*`)."
+          }
+        ]
+      }
+    },
+    "/v1/stripe/products/{productId}/prices": {
+      "get": {
+        "tags": [
+          "Stripe"
+        ],
+        "summary": "List prices for a product",
+        "description": "List all active prices for a Stripe product.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Stripe product ID"
+            },
+            "required": true,
+            "description": "Stripe product ID",
+            "name": "productId",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`mcpf_app_*`) on endpoints that need org context. Ignored when using a user key (`mcpf_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`mcpf_app_*`) on endpoints that need user context. Ignored when using a user key (`mcpf_*`)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of active prices"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stripe/prices": {
+      "post": {
+        "tags": [
+          "Stripe"
+        ],
+        "summary": "Create a Stripe price",
+        "description": "Create a new price for a product. Supports one-time and recurring pricing.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStripePriceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created price"
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`mcpf_app_*`) on endpoints that need org context. Ignored when using a user key (`mcpf_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`mcpf_app_*`) on endpoints that need user context. Ignored when using a user key (`mcpf_*`)."
+          }
+        ]
+      }
+    },
+    "/v1/stripe/coupons/{couponId}": {
+      "get": {
+        "tags": [
+          "Stripe"
+        ],
+        "summary": "Get a Stripe coupon",
+        "description": "Retrieve a Stripe coupon by ID.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Stripe coupon ID"
+            },
+            "required": true,
+            "description": "Stripe coupon ID",
+            "name": "couponId",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`mcpf_app_*`) on endpoints that need org context. Ignored when using a user key (`mcpf_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`mcpf_app_*`) on endpoints that need user context. Ignored when using a user key (`mcpf_*`)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stripe coupon"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/stripe/coupons": {
+      "post": {
+        "tags": [
+          "Stripe"
+        ],
+        "summary": "Create a Stripe coupon",
+        "description": "Create a new coupon. Supports percent or fixed-amount discounts.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStripeCouponRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created coupon"
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`mcpf_app_*`) on endpoints that need org context. Ignored when using a user key (`mcpf_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`mcpf_app_*`) on endpoints that need user context. Ignored when using a user key (`mcpf_*`)."
+          }
+        ]
+      }
+    },
+    "/v1/stripe/checkout": {
+      "post": {
+        "tags": [
+          "Stripe"
+        ],
+        "summary": "Create a Stripe Checkout session",
+        "description": "Create a Stripe Checkout session for payment or subscription. Returns the checkout URL to redirect the customer.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStripeCheckoutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Checkout session with URL"
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`mcpf_app_*`) on endpoints that need org context. Ignored when using a user key (`mcpf_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`mcpf_app_*`) on endpoints that need user context. Ignored when using a user key (`mcpf_*`)."
+          }
+        ]
+      }
+    },
+    "/v1/stripe/stats": {
+      "post": {
+        "tags": [
+          "Stripe"
+        ],
+        "summary": "Get Stripe sales stats",
+        "description": "Get aggregated sales stats. Filterable by brandId, campaignId, or runIds.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StripeStatsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Aggregated sales stats"
           },
           "400": {
             "description": "Validation error",
