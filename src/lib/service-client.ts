@@ -64,6 +64,10 @@ export const externalServices = {
     url: process.env.INSTANTLY_SERVICE_URL || "http://localhost:3011",
     apiKey: process.env.INSTANTLY_SERVICE_API_KEY || "",
   },
+  stripe: {
+    url: process.env.STRIPE_SERVICE_URL || "http://localhost:3022",
+    apiKey: process.env.STRIPE_SERVICE_API_KEY || "",
+  },
 };
 
 interface ServiceCallOptions {

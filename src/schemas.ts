@@ -1557,3 +1557,223 @@ registry.registerPath({
   },
 });
 
+// ===================================================================
+// STRIPE (e-commerce — products, prices, coupons, checkout)
+// ===================================================================
+
+export const CreateStripeProductRequestSchema = z
+  .object({
+    name: z.string().min(1).describe("Product name"),
+    description: z.string().optional().describe("Product description"),
+    metadata: z.record(z.string()).optional().describe("Arbitrary key-value metadata"),
+  })
+  .openapi("CreateStripeProductRequest");
+
+export const CreateStripePriceRequestSchema = z
+  .object({
+    productId: z.string().min(1).describe("Stripe product ID"),
+    unitAmountCents: z.number().int().min(0).describe("Price in cents"),
+    currency: z.string().min(3).max(3).default("usd").describe("ISO 4217 currency code"),
+    recurring: z
+      .object({
+        interval: z.enum(["day", "week", "month", "year"]).describe("Billing interval"),
+      })
+      .optional()
+      .describe("Recurring pricing config (omit for one-time)"),
+  })
+  .openapi("CreateStripePriceRequest");
+
+export const CreateStripeCouponRequestSchema = z
+  .object({
+    id: z.string().optional().describe("Custom coupon ID (auto-generated if omitted)"),
+    percentOff: z.number().min(0).max(100).optional().describe("Percent discount (0-100)"),
+    amountOffCents: z.number().int().min(0).optional().describe("Fixed discount in cents"),
+    currency: z.string().min(3).max(3).optional().describe("Currency for amountOff (required if amountOff is set)"),
+    duration: z.enum(["once", "repeating", "forever"]).describe("How long the coupon applies"),
+    durationInMonths: z.number().int().min(1).optional().describe("Months for 'repeating' duration"),
+  })
+  .openapi("CreateStripeCouponRequest");
+
+const LineItemSchema = z.object({
+  priceId: z.string().min(1).describe("Stripe price ID"),
+  quantity: z.number().int().min(1).default(1).describe("Quantity"),
+});
+
+const DiscountSchema = z.object({
+  couponId: z.string().min(1).describe("Stripe coupon ID"),
+});
+
+export const CreateStripeCheckoutRequestSchema = z
+  .object({
+    lineItems: z.array(LineItemSchema).min(1).describe("Line items for checkout"),
+    mode: z.enum(["payment", "subscription"]).default("payment").describe("Checkout mode"),
+    successUrl: z.string().url().describe("Redirect URL after success"),
+    cancelUrl: z.string().url().describe("Redirect URL after cancel"),
+    customerEmail: z.string().email().optional().describe("Pre-fill customer email"),
+    customerId: z.string().optional().describe("Existing Stripe customer ID"),
+    discounts: z.array(DiscountSchema).optional().describe("Coupons to apply"),
+    metadata: z.record(z.string()).optional().describe("Metadata for the checkout session"),
+  })
+  .openapi("CreateStripeCheckoutRequest");
+
+export const StripeStatsRequestSchema = z
+  .object({
+    brandId: z.string().optional().describe("Filter by brand ID"),
+    campaignId: z.string().optional().describe("Filter by campaign ID"),
+    runIds: z.array(z.string()).optional().describe("Filter by run IDs"),
+  })
+  .openapi("StripeStatsRequest");
+
+// --- OpenAPI registrations ---
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/stripe/products/{productId}",
+  tags: ["Stripe"],
+  summary: "Get a Stripe product",
+  description: "Retrieve a Stripe product by ID. Uses the org's app Stripe key via key-service.",
+  security: authed,
+  request: {
+    params: z.object({ productId: z.string().describe("Stripe product ID") }),
+  },
+  responses: {
+    200: { description: "Stripe product" },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/stripe/products",
+  tags: ["Stripe"],
+  summary: "Create a Stripe product",
+  description: "Create a new Stripe product. Idempotent — returns existing product if the ID already exists.",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: CreateStripeProductRequestSchema } },
+    },
+  },
+  responses: {
+    200: { description: "Created/existing product" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/stripe/products/{productId}/prices",
+  tags: ["Stripe"],
+  summary: "List prices for a product",
+  description: "List all active prices for a Stripe product.",
+  security: authed,
+  request: {
+    params: z.object({ productId: z.string().describe("Stripe product ID") }),
+  },
+  responses: {
+    200: { description: "List of active prices" },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/stripe/prices",
+  tags: ["Stripe"],
+  summary: "Create a Stripe price",
+  description: "Create a new price for a product. Supports one-time and recurring pricing.",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: CreateStripePriceRequestSchema } },
+    },
+  },
+  responses: {
+    200: { description: "Created price" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/stripe/coupons/{couponId}",
+  tags: ["Stripe"],
+  summary: "Get a Stripe coupon",
+  description: "Retrieve a Stripe coupon by ID.",
+  security: authed,
+  request: {
+    params: z.object({ couponId: z.string().describe("Stripe coupon ID") }),
+  },
+  responses: {
+    200: { description: "Stripe coupon" },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/stripe/coupons",
+  tags: ["Stripe"],
+  summary: "Create a Stripe coupon",
+  description: "Create a new coupon. Supports percent or fixed-amount discounts.",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: CreateStripeCouponRequestSchema } },
+    },
+  },
+  responses: {
+    200: { description: "Created coupon" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/stripe/checkout",
+  tags: ["Stripe"],
+  summary: "Create a Stripe Checkout session",
+  description:
+    "Create a Stripe Checkout session for payment or subscription. Returns the checkout URL to redirect the customer.",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: CreateStripeCheckoutRequestSchema } },
+    },
+  },
+  responses: {
+    200: { description: "Checkout session with URL" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/stripe/stats",
+  tags: ["Stripe"],
+  summary: "Get Stripe sales stats",
+  description: "Get aggregated sales stats. Filterable by brandId, campaignId, or runIds.",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: StripeStatsRequestSchema } },
+    },
+  },
+  responses: {
+    200: { description: "Aggregated sales stats" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
