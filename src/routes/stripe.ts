@@ -17,9 +17,10 @@ const router = Router();
 
 /**
  * GET /v1/stripe/products/:productId
- * Retrieve a Stripe product by ID
+ * Retrieve a Stripe product by ID.
+ * Only needs appId (to resolve Stripe key) — no org context required.
  */
-router.get("/stripe/products/:productId", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+router.get("/stripe/products/:productId", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const { productId } = req.params;
     const result = await callExternalService(
@@ -35,9 +36,10 @@ router.get("/stripe/products/:productId", authenticate, requireOrg, async (req: 
 
 /**
  * POST /v1/stripe/products
- * Create a Stripe product
+ * Create a Stripe product.
+ * Only needs appId — orgId forwarded when available for tracking.
  */
-router.post("/stripe/products", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+router.post("/stripe/products", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = CreateStripeProductRequestSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -49,7 +51,7 @@ router.post("/stripe/products", authenticate, requireOrg, async (req: Authentica
       "/products/create",
       {
         method: "POST",
-        body: { appId: req.appId, orgId: req.orgId, ...parsed.data },
+        body: { appId: req.appId, ...(req.orgId && { orgId: req.orgId }), ...parsed.data },
       }
     );
     res.json(result);
@@ -65,9 +67,10 @@ router.post("/stripe/products", authenticate, requireOrg, async (req: Authentica
 
 /**
  * GET /v1/stripe/products/:productId/prices
- * List active prices for a Stripe product
+ * List active prices for a Stripe product.
+ * Only needs appId — no org context required.
  */
-router.get("/stripe/products/:productId/prices", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+router.get("/stripe/products/:productId/prices", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const { productId } = req.params;
     const result = await callExternalService(
@@ -83,9 +86,10 @@ router.get("/stripe/products/:productId/prices", authenticate, requireOrg, async
 
 /**
  * POST /v1/stripe/prices
- * Create a Stripe price
+ * Create a Stripe price.
+ * Only needs appId — orgId forwarded when available for tracking.
  */
-router.post("/stripe/prices", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+router.post("/stripe/prices", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = CreateStripePriceRequestSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -97,7 +101,7 @@ router.post("/stripe/prices", authenticate, requireOrg, async (req: Authenticate
       "/prices/create",
       {
         method: "POST",
-        body: { appId: req.appId, orgId: req.orgId, ...parsed.data },
+        body: { appId: req.appId, ...(req.orgId && { orgId: req.orgId }), ...parsed.data },
       }
     );
     res.json(result);
@@ -113,9 +117,10 @@ router.post("/stripe/prices", authenticate, requireOrg, async (req: Authenticate
 
 /**
  * GET /v1/stripe/coupons/:couponId
- * Retrieve a Stripe coupon by ID
+ * Retrieve a Stripe coupon by ID.
+ * Only needs appId — no org context required.
  */
-router.get("/stripe/coupons/:couponId", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+router.get("/stripe/coupons/:couponId", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const { couponId } = req.params;
     const result = await callExternalService(
@@ -131,9 +136,10 @@ router.get("/stripe/coupons/:couponId", authenticate, requireOrg, async (req: Au
 
 /**
  * POST /v1/stripe/coupons
- * Create a Stripe coupon
+ * Create a Stripe coupon.
+ * Only needs appId — orgId forwarded when available for tracking.
  */
-router.post("/stripe/coupons", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+router.post("/stripe/coupons", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = CreateStripeCouponRequestSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -145,7 +151,7 @@ router.post("/stripe/coupons", authenticate, requireOrg, async (req: Authenticat
       "/coupons/create",
       {
         method: "POST",
-        body: { appId: req.appId, orgId: req.orgId, ...parsed.data },
+        body: { appId: req.appId, ...(req.orgId && { orgId: req.orgId }), ...parsed.data },
       }
     );
     res.json(result);
@@ -156,12 +162,13 @@ router.post("/stripe/coupons", authenticate, requireOrg, async (req: Authenticat
 });
 
 // -----------------------------------------------------------------------
-// Checkout
+// Checkout (requires org context — user-facing operation)
 // -----------------------------------------------------------------------
 
 /**
  * POST /v1/stripe/checkout
- * Create a Stripe Checkout session
+ * Create a Stripe Checkout session.
+ * Requires org/user context for tracking the purchase.
  */
 router.post("/stripe/checkout", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
@@ -186,12 +193,13 @@ router.post("/stripe/checkout", authenticate, requireOrg, async (req: Authentica
 });
 
 // -----------------------------------------------------------------------
-// Stats
+// Stats (requires org context — scoped to org data)
 // -----------------------------------------------------------------------
 
 /**
  * POST /v1/stripe/stats
- * Get Stripe sales stats
+ * Get Stripe sales stats.
+ * Requires org context to scope the stats query.
  */
 router.post("/stripe/stats", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
