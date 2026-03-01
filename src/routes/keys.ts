@@ -134,7 +134,7 @@ router.post("/api-keys/session", authenticate, requireOrg, requireUser, async (r
       "/internal/api-keys/session",
       {
         method: "POST",
-        body: { orgId: req.orgId },
+        body: { appId: req.appId, orgId: req.orgId, userId: req.userId },
       }
     );
     res.json(result);
@@ -161,7 +161,13 @@ router.post("/api-keys", authenticate, requireOrg, requireUser, async (req: Auth
       "/internal/api-keys",
       {
         method: "POST",
-        body: { orgId: req.orgId, name },
+        body: {
+          appId: req.appId,
+          orgId: req.orgId,
+          userId: req.userId,
+          createdBy: req.userId,
+          name,
+        },
       }
     );
     res.json(result);

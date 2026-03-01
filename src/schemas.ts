@@ -15,9 +15,10 @@ registry.registerComponent("securitySchemes", "bearerAuth", {
   scheme: "bearer",
   description:
     "Bearer token authentication. Two key types are supported:\n\n" +
-    "- **User key** (`mcpf_*`): carries org context automatically. No extra headers needed.\n" +
-    "- **App key** (`mcpf_app_*`): identifies the app only. To access endpoints that require " +
-    "org/user context, also send `x-org-id` and `x-user-id` headers with your external IDs " +
+    "- **User key** (`mcpf_usr_*`): carries app, org, and user context. No extra headers needed. " +
+    "Recommended for API/MCP access.\n" +
+    "- **App key** (`mcpf_app_*`): identifies the app only (server-to-server). To access endpoints " +
+    "that require org/user context, also send `x-org-id` and `x-user-id` headers with your external IDs " +
     "(e.g. Clerk IDs). The API resolves them to internal UUIDs via client-service.\n\n" +
     "See the top-level API description for full details and examples.",
 });
@@ -1453,6 +1454,105 @@ registry.registerPath({
   responses: {
     200: { description: "Webhook processed" },
     400: { description: "Invalid signature", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ===================================================================
+// TRANSACTIONAL EMAILS
+// ===================================================================
+
+export const SendEmailRequestSchema = z
+  .object({
+    eventType: z.string().min(1).describe("Event type determining which template to use (e.g. 'webinar_welcome', 'j_minus_1')"),
+    recipientEmail: z.string().email().optional().describe("Direct recipient email (fallback when no userId on the key)"),
+    brandId: z.string().optional().describe("Brand ID for tracking"),
+    campaignId: z.string().optional().describe("Campaign ID for tracking"),
+    productId: z.string().optional().describe("Product/instance ID for product-scoped dedup (e.g. webinar ID)"),
+    metadata: z.record(z.unknown()).optional().describe("Template variables for {{variable}} interpolation"),
+  })
+  .openapi("SendEmailRequest");
+
+export const EmailStatsRequestSchema = z
+  .object({
+    eventType: z.string().optional().describe("Filter by event type"),
+  })
+  .openapi("EmailStatsRequest");
+
+const TemplateItemSchema = z.object({
+  name: z.string().min(1).describe("Template name (unique per app)"),
+  subject: z.string().min(1).describe("Email subject line"),
+  htmlBody: z.string().min(1).describe("HTML body with {{variable}} interpolation"),
+  textBody: z.string().optional().describe("Plain text body (optional)"),
+  from: z.string().optional().describe('Sender address, e.g. "Display Name <email@domain.com>"'),
+  messageStream: z.string().optional().describe('Postmark message stream ID, e.g. "outbound" or "broadcast"'),
+});
+
+export const DeployEmailTemplatesRequestSchema = z
+  .object({
+    templates: z.array(TemplateItemSchema).min(1).describe("Templates to deploy"),
+  })
+  .openapi("DeployEmailTemplatesRequest");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/emails/send",
+  tags: ["Emails"],
+  summary: "Send a transactional email",
+  description:
+    "Send a templated transactional email. Uses the org's appId for template lookup and dedup. " +
+    "Dedup strategy depends on eventType (once-only, daily, product-scoped, or none).",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: SendEmailRequestSchema } },
+    },
+  },
+  responses: {
+    200: { description: "Email send results" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/emails/stats",
+  tags: ["Emails"],
+  summary: "Get email stats",
+  description: "Get aggregated email sending stats for the org, optionally filtered by eventType.",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: EmailStatsRequestSchema } },
+    },
+  },
+  responses: {
+    200: { description: "Aggregated email stats" },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/emails/templates",
+  tags: ["Emails"],
+  summary: "Deploy email templates",
+  description:
+    "Idempotent upsert of email templates. Safe to call on every cold start. " +
+    "Templates support {{variable}} interpolation from metadata passed at send time.",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: DeployEmailTemplatesRequestSchema } },
+    },
+  },
+  responses: {
+    200: { description: "Templates deployed" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });

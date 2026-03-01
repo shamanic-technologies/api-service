@@ -69,7 +69,7 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Bearer token authentication. Two key types are supported:\n\n- **User key** (`mcpf_*`): carries org context automatically. No extra headers needed.\n- **App key** (`mcpf_app_*`): identifies the app only. To access endpoints that require org/user context, also send `x-org-id` and `x-user-id` headers with your external IDs (e.g. Clerk IDs). The API resolves them to internal UUIDs via client-service.\n\nSee the top-level API description for full details and examples."
+        "description": "Bearer token authentication. Two key types are supported:\n\n- **User key** (`mcpf_usr_*`): carries app, org, and user context. No extra headers needed. Recommended for API/MCP access.\n- **App key** (`mcpf_app_*`): identifies the app only (server-to-server). To access endpoints that require org/user context, also send `x-org-id` and `x-user-id` headers with your external IDs (e.g. Clerk IDs). The API resolves them to internal UUIDs via client-service.\n\nSee the top-level API description for full details and examples."
       }
     },
     "schemas": {
@@ -980,6 +980,102 @@
           "success_url",
           "cancel_url",
           "reload_amount_cents"
+        ]
+      },
+      "SendEmailRequest": {
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Event type determining which template to use (e.g. 'webinar_welcome', 'j_minus_1')"
+          },
+          "recipientEmail": {
+            "type": "string",
+            "format": "email",
+            "description": "Direct recipient email (fallback when no userId on the key)"
+          },
+          "brandId": {
+            "type": "string",
+            "description": "Brand ID for tracking"
+          },
+          "campaignId": {
+            "type": "string",
+            "description": "Campaign ID for tracking"
+          },
+          "productId": {
+            "type": "string",
+            "description": "Product/instance ID for product-scoped dedup (e.g. webinar ID)"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            },
+            "description": "Template variables for {{variable}} interpolation"
+          }
+        },
+        "required": [
+          "eventType"
+        ]
+      },
+      "EmailStatsRequest": {
+        "type": "object",
+        "properties": {
+          "eventType": {
+            "type": "string",
+            "description": "Filter by event type"
+          }
+        }
+      },
+      "DeployEmailTemplatesRequest": {
+        "type": "object",
+        "properties": {
+          "templates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Template name (unique per app)"
+                },
+                "subject": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Email subject line"
+                },
+                "htmlBody": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "HTML body with {{variable}} interpolation"
+                },
+                "textBody": {
+                  "type": "string",
+                  "description": "Plain text body (optional)"
+                },
+                "from": {
+                  "type": "string",
+                  "description": "Sender address, e.g. \"Display Name <email@domain.com>\""
+                },
+                "messageStream": {
+                  "type": "string",
+                  "description": "Postmark message stream ID, e.g. \"outbound\" or \"broadcast\""
+                }
+              },
+              "required": [
+                "name",
+                "subject",
+                "htmlBody"
+              ]
+            },
+            "minItems": 1,
+            "description": "Templates to deploy"
+          }
+        },
+        "required": [
+          "templates"
         ]
       }
     },
@@ -4607,6 +4703,230 @@
             }
           }
         }
+      }
+    },
+    "/v1/emails/send": {
+      "post": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Send a transactional email",
+        "description": "Send a templated transactional email. Uses the org's appId for template lookup and dedup. Dedup strategy depends on eventType (once-only, daily, product-scoped, or none).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendEmailRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email send results"
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`mcpf_app_*`) on endpoints that need org context. Ignored when using a user key (`mcpf_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`mcpf_app_*`) on endpoints that need user context. Ignored when using a user key (`mcpf_*`)."
+          }
+        ]
+      }
+    },
+    "/v1/emails/stats": {
+      "post": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Get email stats",
+        "description": "Get aggregated email sending stats for the org, optionally filtered by eventType.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailStatsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Aggregated email stats"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`mcpf_app_*`) on endpoints that need org context. Ignored when using a user key (`mcpf_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`mcpf_app_*`) on endpoints that need user context. Ignored when using a user key (`mcpf_*`)."
+          }
+        ]
+      }
+    },
+    "/v1/emails/templates": {
+      "put": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "Deploy email templates",
+        "description": "Idempotent upsert of email templates. Safe to call on every cold start. Templates support {{variable}} interpolation from metadata passed at send time.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeployEmailTemplatesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Templates deployed"
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`mcpf_app_*`) on endpoints that need org context. Ignored when using a user key (`mcpf_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`mcpf_app_*`) on endpoints that need user context. Ignored when using a user key (`mcpf_*`)."
+          }
+        ]
       }
     }
   }
