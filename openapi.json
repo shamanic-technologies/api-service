@@ -1295,6 +1295,72 @@
             "description": "Filter by run IDs"
           }
         }
+      },
+      "ResolveUserResponse": {
+        "type": "object",
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Internal organization UUID"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Internal user UUID"
+          },
+          "orgCreated": {
+            "type": "boolean",
+            "description": "Whether a new org was created"
+          },
+          "userCreated": {
+            "type": "boolean",
+            "description": "Whether a new user was created"
+          }
+        },
+        "required": [
+          "orgId",
+          "userId",
+          "orgCreated",
+          "userCreated"
+        ]
+      },
+      "ResolveUserRequest": {
+        "type": "object",
+        "properties": {
+          "externalOrgId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "External organization ID (e.g. Clerk org ID)"
+          },
+          "externalUserId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "External user ID — use a generated UUID for anonymous users"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "User email address"
+          },
+          "firstName": {
+            "type": "string",
+            "description": "User first name"
+          },
+          "lastName": {
+            "type": "string",
+            "description": "User last name"
+          },
+          "imageUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "User avatar URL"
+          }
+        },
+        "required": [
+          "externalOrgId",
+          "externalUserId"
+        ]
       }
     },
     "parameters": {}
@@ -5690,6 +5756,91 @@
         "responses": {
           "200": {
             "description": "Aggregated sales stats"
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`mcpf_app_*`) on endpoints that need org context. Ignored when using a user key (`mcpf_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`mcpf_app_*`) on endpoints that need user context. Ignored when using a user key (`mcpf_*`)."
+          }
+        ]
+      }
+    },
+    "/v1/users/resolve": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Resolve external user identity",
+        "description": "Map external org/user IDs to internal UUIDs via client-service (idempotent upsert). For anonymous users, generate a UUID as externalUserId — each call with a new ID creates a new user. Calling again with the same IDs updates optional contact fields (email, firstName, etc.).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveUserRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resolved identity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolveUserResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation error",

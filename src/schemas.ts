@@ -1777,3 +1777,53 @@ registry.registerPath({
     500: { description: "Internal error", content: errorContent },
   },
 });
+
+// ===================================================================
+// USERS
+// ===================================================================
+
+export const ResolveUserRequestSchema = z
+  .object({
+    externalOrgId: z.string().min(1).describe("External organization ID (e.g. Clerk org ID)"),
+    externalUserId: z.string().min(1).describe("External user ID — use a generated UUID for anonymous users"),
+    email: z.string().email().optional().describe("User email address"),
+    firstName: z.string().optional().describe("User first name"),
+    lastName: z.string().optional().describe("User last name"),
+    imageUrl: z.string().url().optional().describe("User avatar URL"),
+  })
+  .openapi("ResolveUserRequest");
+
+export const ResolveUserResponseSchema = z
+  .object({
+    orgId: z.string().uuid().describe("Internal organization UUID"),
+    userId: z.string().uuid().describe("Internal user UUID"),
+    orgCreated: z.boolean().describe("Whether a new org was created"),
+    userCreated: z.boolean().describe("Whether a new user was created"),
+  })
+  .openapi("ResolveUserResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/users/resolve",
+  tags: ["Users"],
+  summary: "Resolve external user identity",
+  description:
+    "Map external org/user IDs to internal UUIDs via client-service (idempotent upsert). " +
+    "For anonymous users, generate a UUID as externalUserId — each call with a new ID creates a new user. " +
+    "Calling again with the same IDs updates optional contact fields (email, firstName, etc.).",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: ResolveUserRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Resolved identity",
+      content: { "application/json": { schema: ResolveUserResponseSchema } },
+    },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
