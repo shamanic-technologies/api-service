@@ -26,6 +26,7 @@ interface FetchCall {
   url: string;
   method?: string;
   body?: any;
+  headers?: Record<string, string>;
 }
 
 let fetchCalls: FetchCall[] = [];
@@ -186,6 +187,110 @@ describe("POST /v1/users/resolve", () => {
         externalOrgId: "clerk_org_abc",
         externalUserId: "anon_user_123",
       });
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /v1/users
+// ---------------------------------------------------------------------------
+
+describe("GET /v1/users", () => {
+  let app: express.Express;
+
+  const usersResponse = {
+    users: [
+      {
+        id: "00000000-0000-0000-0000-000000000010",
+        externalId: "clerk_user_abc",
+        email: "alice@example.com",
+        firstName: "Alice",
+        lastName: "Smith",
+        imageUrl: null,
+        phone: null,
+        createdAt: "2025-06-01T00:00:00.000Z",
+      },
+    ],
+    total: 1,
+    limit: 50,
+    offset: 0,
+  };
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    mockFetchOk(usersResponse);
+    app = createApp();
+  });
+
+  it("should proxy to client-service /users with appId and orgId", async () => {
+    const res = await request(app).get("/v1/users");
+
+    expect(res.status).toBe(200);
+    expect(res.body.users).toHaveLength(1);
+    expect(res.body.total).toBe(1);
+
+    const call = fetchCalls.find((c) => c.url.includes("/users?"));
+    expect(call).toBeDefined();
+    const url = new URL(call!.url);
+    expect(url.searchParams.get("appId")).toBe("distribute-frontend");
+    expect(url.searchParams.get("orgId")).toBe("org_test456");
+    expect(url.searchParams.get("limit")).toBe("50");
+    expect(url.searchParams.get("offset")).toBe("0");
+  });
+
+  it("should forward email filter to client-service", async () => {
+    const res = await request(app).get("/v1/users?email=alice@example.com");
+
+    expect(res.status).toBe(200);
+
+    const call = fetchCalls.find((c) => c.url.includes("/users?"));
+    const url = new URL(call!.url);
+    expect(url.searchParams.get("email")).toBe("alice@example.com");
+  });
+
+  it("should forward custom limit and offset", async () => {
+    const res = await request(app).get("/v1/users?limit=10&offset=20");
+
+    expect(res.status).toBe(200);
+
+    const call = fetchCalls.find((c) => c.url.includes("/users?"));
+    const url = new URL(call!.url);
+    expect(url.searchParams.get("limit")).toBe("10");
+    expect(url.searchParams.get("offset")).toBe("20");
+  });
+
+  it("should use defaults when limit/offset are omitted", async () => {
+    await request(app).get("/v1/users");
+
+    const call = fetchCalls.find((c) => c.url.includes("/users?"));
+    const url = new URL(call!.url);
+    expect(url.searchParams.get("limit")).toBe("50");
+    expect(url.searchParams.get("offset")).toBe("0");
+  });
+
+  it("should not send email param when not provided", async () => {
+    await request(app).get("/v1/users");
+
+    const call = fetchCalls.find((c) => c.url.includes("/users?"));
+    const url = new URL(call!.url);
+    expect(url.searchParams.has("email")).toBe(false);
+  });
+
+  it("should return 400 for invalid email filter", async () => {
+    const res = await request(app).get("/v1/users?email=not-an-email");
+    expect(res.status).toBe(400);
+  });
+
+  it("should return 500 when client-service fails", async () => {
+    global.fetch = vi.fn().mockImplementation(async () => ({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({ error: "Internal error" }),
+      text: () => Promise.resolve('{"error":"Internal error"}'),
+    }));
+    app = createApp();
+
+    const res = await request(app).get("/v1/users");
     expect(res.status).toBe(500);
   });
 });
