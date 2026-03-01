@@ -1631,7 +1631,7 @@ registry.registerPath({
   path: "/v1/stripe/products/{productId}",
   tags: ["Stripe"],
   summary: "Get a Stripe product",
-  description: "Retrieve a Stripe product by ID. Uses the org's app Stripe key via key-service.",
+  description: "Retrieve a Stripe product by ID. Uses the app's Stripe key via key-service. No org context required.",
   security: authed,
   request: {
     params: z.object({ productId: z.string().describe("Stripe product ID") }),
@@ -1648,7 +1648,7 @@ registry.registerPath({
   path: "/v1/stripe/products",
   tags: ["Stripe"],
   summary: "Create a Stripe product",
-  description: "Create a new Stripe product. Idempotent — returns existing product if the ID already exists.",
+  description: "Create a new Stripe product. Idempotent — returns existing product if the ID already exists. No org context required (app-level operation).",
   security: authed,
   request: {
     body: {
@@ -1668,7 +1668,7 @@ registry.registerPath({
   path: "/v1/stripe/products/{productId}/prices",
   tags: ["Stripe"],
   summary: "List prices for a product",
-  description: "List all active prices for a Stripe product.",
+  description: "List all active prices for a Stripe product. No org context required.",
   security: authed,
   request: {
     params: z.object({ productId: z.string().describe("Stripe product ID") }),
@@ -1685,7 +1685,7 @@ registry.registerPath({
   path: "/v1/stripe/prices",
   tags: ["Stripe"],
   summary: "Create a Stripe price",
-  description: "Create a new price for a product. Supports one-time and recurring pricing.",
+  description: "Create a new price for a product. Supports one-time and recurring pricing. No org context required (app-level operation).",
   security: authed,
   request: {
     body: {
@@ -1705,7 +1705,7 @@ registry.registerPath({
   path: "/v1/stripe/coupons/{couponId}",
   tags: ["Stripe"],
   summary: "Get a Stripe coupon",
-  description: "Retrieve a Stripe coupon by ID.",
+  description: "Retrieve a Stripe coupon by ID. No org context required.",
   security: authed,
   request: {
     params: z.object({ couponId: z.string().describe("Stripe coupon ID") }),
@@ -1722,7 +1722,7 @@ registry.registerPath({
   path: "/v1/stripe/coupons",
   tags: ["Stripe"],
   summary: "Create a Stripe coupon",
-  description: "Create a new coupon. Supports percent or fixed-amount discounts.",
+  description: "Create a new coupon. Supports percent or fixed-amount discounts. No org context required (app-level operation).",
   security: authed,
   request: {
     body: {

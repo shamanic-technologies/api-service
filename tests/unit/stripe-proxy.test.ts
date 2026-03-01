@@ -2,13 +2,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
 
-// Mock auth middleware
+// Configurable auth context — tests can toggle org/user presence
+let mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456" as string | undefined, userId: "user_test123" as string | undefined, authType: "user_key" as string };
+
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
-    req.userId = "user_test123";
-    req.orgId = "org_test456";
-    req.appId = "distribute-frontend";
-    req.authType = "user_key";
+    req.appId = mockAuthContext.appId;
+    req.authType = mockAuthContext.authType;
+    if (mockAuthContext.orgId) req.orgId = mockAuthContext.orgId;
+    if (mockAuthContext.userId) req.userId = mockAuthContext.userId;
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -52,11 +54,16 @@ function mockFetchOk(responseData: any = {}) {
 // Products
 // ---------------------------------------------------------------------------
 
+function resetAuthContext() {
+  mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456", userId: "user_test123", authType: "user_key" };
+}
+
 describe("GET /v1/stripe/products/:productId", () => {
   let app: express.Express;
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    resetAuthContext();
     mockFetchOk({ id: "prod_123", name: "Webinar Access" });
     app = createApp();
   });
@@ -78,6 +85,7 @@ describe("POST /v1/stripe/products", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    resetAuthContext();
     mockFetchOk({ id: "prod_new", name: "Course" });
     app = createApp();
   });
@@ -115,6 +123,7 @@ describe("GET /v1/stripe/products/:productId/prices", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    resetAuthContext();
     mockFetchOk({ prices: [{ id: "price_123", unitAmount: 4999 }] });
     app = createApp();
   });
@@ -136,6 +145,7 @@ describe("POST /v1/stripe/prices", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    resetAuthContext();
     mockFetchOk({ id: "price_new" });
     app = createApp();
   });
@@ -172,6 +182,7 @@ describe("GET /v1/stripe/coupons/:couponId", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    resetAuthContext();
     mockFetchOk({ id: "WELCOME20", percentOff: 20 });
     app = createApp();
   });
@@ -193,6 +204,7 @@ describe("POST /v1/stripe/coupons", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    resetAuthContext();
     mockFetchOk({ id: "WELCOME20" });
     app = createApp();
   });
@@ -229,6 +241,7 @@ describe("POST /v1/stripe/checkout", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    resetAuthContext();
     mockFetchOk({ url: "https://checkout.stripe.com/session_123", sessionId: "cs_123" });
     app = createApp();
   });
@@ -276,6 +289,7 @@ describe("POST /v1/stripe/stats", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    resetAuthContext();
     mockFetchOk({ totalRevenue: 12500, totalOrders: 5 });
     app = createApp();
   });
@@ -303,6 +317,86 @@ describe("POST /v1/stripe/stats", () => {
 });
 
 // ---------------------------------------------------------------------------
+// App key without org context (startup / public catalog reads)
+// ---------------------------------------------------------------------------
+
+describe("Stripe catalog endpoints — app key without org context", () => {
+  let appKeyApp: express.Express;
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    // Simulate app key with NO org/user context
+    mockAuthContext = { appId: "distribute-frontend", orgId: undefined, userId: undefined, authType: "app_key" };
+    mockFetchOk({ id: "prod_123", name: "Webinar Access" });
+    appKeyApp = createApp();
+  });
+
+  it("GET /v1/stripe/products/:id should work without org context", async () => {
+    const res = await request(appKeyApp).get("/v1/stripe/products/prod_123");
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /v1/stripe/products should work without org context", async () => {
+    const res = await request(appKeyApp)
+      .post("/v1/stripe/products")
+      .send({ name: "Course" });
+    expect(res.status).toBe(200);
+
+    const call = fetchCalls.find((c) => c.url.includes("/products/create"));
+    expect(call!.body.appId).toBe("distribute-frontend");
+    expect(call!.body.orgId).toBeUndefined();
+  });
+
+  it("GET /v1/stripe/products/:id/prices should work without org context", async () => {
+    const res = await request(appKeyApp).get("/v1/stripe/products/prod_123/prices");
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /v1/stripe/prices should work without org context", async () => {
+    const res = await request(appKeyApp)
+      .post("/v1/stripe/prices")
+      .send({ productId: "prod_123", unitAmountCents: 4999, currency: "usd" });
+    expect(res.status).toBe(200);
+
+    const call = fetchCalls.find((c) => c.url.includes("/prices/create"));
+    expect(call!.body.orgId).toBeUndefined();
+  });
+
+  it("GET /v1/stripe/coupons/:id should work without org context", async () => {
+    const res = await request(appKeyApp).get("/v1/stripe/coupons/WELCOME20");
+    expect(res.status).toBe(200);
+  });
+
+  it("POST /v1/stripe/coupons should work without org context", async () => {
+    const res = await request(appKeyApp)
+      .post("/v1/stripe/coupons")
+      .send({ percentOff: 20, duration: "once" });
+    expect(res.status).toBe(200);
+
+    const call = fetchCalls.find((c) => c.url.includes("/coupons/create"));
+    expect(call!.body.orgId).toBeUndefined();
+  });
+
+  it("POST /v1/stripe/checkout should return 400 without org context", async () => {
+    const res = await request(appKeyApp)
+      .post("/v1/stripe/checkout")
+      .send({
+        lineItems: [{ priceId: "price_123", quantity: 1 }],
+        successUrl: "https://polarity.com/success",
+        cancelUrl: "https://polarity.com/cancel",
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Organization context required");
+  });
+
+  it("POST /v1/stripe/stats should return 400 without org context", async () => {
+    const res = await request(appKeyApp).post("/v1/stripe/stats").send({});
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Organization context required");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Error handling
 // ---------------------------------------------------------------------------
 
@@ -311,6 +405,7 @@ describe("Stripe proxy — error handling", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    resetAuthContext();
     global.fetch = vi.fn().mockImplementation(async () => ({
       ok: false,
       status: 500,
