@@ -22,15 +22,15 @@ All authenticated endpoints require a Bearer token in the \`Authorization\` head
 
 There are two key types, each with different identity resolution behavior:
 
-### 1. User key (\`mcpf_*\`)
+### 1. User key (\`distrib.usr_*\`)
 
 Issued per-user via \`POST /v1/api-keys\`. The key already carries the user's internal org UUID — no extra headers needed.
 
 \`\`\`
-Authorization: Bearer mcpf_abc123...
+Authorization: Bearer distrib.usr_abc123...
 \`\`\`
 
-### 2. App key (\`mcpf_app_*\`)
+### 2. App key (\`distrib.app_*\`)
 
 Issued when an app registers via \`POST /v1/apps/register\`. The key identifies the **app**, not a user or org. To access endpoints that require org/user context (campaigns, keys, activity, etc.), you must also send two identity headers:
 
@@ -40,7 +40,7 @@ Issued when an app registers via \`POST /v1/apps/register\`. The key identifies 
 | \`x-user-id\` | External user ID (e.g. Clerk user ID) | \`user_2abc...\` |
 
 \`\`\`
-Authorization: Bearer mcpf_app_abc123...
+Authorization: Bearer distrib.app_abc123...
 x-org-id: org_2xyzABC
 x-user-id: user_2abcDEF
 \`\`\`
@@ -92,8 +92,8 @@ const identityParams = [
     schema: { type: "string" as const },
     description:
       "External organization ID (e.g. Clerk org ID `org_2xyz...`). " +
-      "Required when using an app key (`mcpf_app_*`) on endpoints that need org context. " +
-      "Ignored when using a user key (`mcpf_*`).",
+      "Required when using an app key (`distrib.app_*`) on endpoints that need org context. " +
+      "Ignored when using a user key (`distrib.usr_*`).",
   },
   {
     name: "x-user-id",
@@ -102,8 +102,8 @@ const identityParams = [
     schema: { type: "string" as const },
     description:
       "External user ID (e.g. Clerk user ID `user_2abc...`). " +
-      "Required when using an app key (`mcpf_app_*`) on endpoints that need user context. " +
-      "Ignored when using a user key (`mcpf_*`).",
+      "Required when using an app key (`distrib.app_*`) on endpoints that need user context. " +
+      "Ignored when using a user key (`distrib.usr_*`).",
   },
 ];
 

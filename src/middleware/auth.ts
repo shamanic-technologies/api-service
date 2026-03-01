@@ -10,9 +10,9 @@ export interface AuthenticatedRequest extends Request {
 
 /**
  * Authenticate via API key (app key or user key)
- * - App key (dist_app_*): resolved via key-service → appId, then external IDs
+ * - App key (distrib.app_*): resolved via key-service → appId, then external IDs
  *   from x-org-id/x-user-id headers resolved to internal UUIDs via client-service
- * - User key (dist_*): resolved via key-service → orgId (internal UUID directly)
+ * - User key (distrib.usr_*): resolved via key-service → appId, orgId, userId
  */
 export async function authenticate(
   req: AuthenticatedRequest,
