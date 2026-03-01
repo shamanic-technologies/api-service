@@ -35,7 +35,7 @@ function createApp() {
 
   // Endpoint that only requires auth (no requireOrg)
   app.get("/v1/me", authenticate, (req: AuthenticatedRequest, res) => {
-    res.json({ orgId: req.orgId || null, userId: req.userId || null, authType: req.authType });
+    res.json({ appId: req.appId || null, orgId: req.orgId || null, userId: req.userId || null, authType: req.authType });
   });
 
   return app;
@@ -139,7 +139,7 @@ describe("Auth middleware — app key with identity headers", () => {
       .set("Authorization", "Bearer mcpf_app_test123");
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ orgId: null, userId: null, authType: "app_key" });
+    expect(res.body).toEqual({ appId: "test-app", orgId: null, userId: null, authType: "app_key" });
   });
 
   it("should return 400 when only x-org-id is provided without x-user-id", async () => {
@@ -164,21 +164,45 @@ describe("Auth middleware — user key", () => {
     app = createApp();
   });
 
-  it("should use orgId directly from key-service without client-service call", async () => {
+  it("should set appId, orgId, userId from key-service without client-service call", async () => {
     mockCall.mockResolvedValueOnce({
       valid: true,
       type: "user",
+      appId: "distribute-frontend",
       orgId: "org-uuid-direct",
+      userId: "user-uuid-direct",
     });
 
     const res = await request(app)
       .get("/v1/me")
-      .set("Authorization", "Bearer mcpf_test123");
+      .set("Authorization", "Bearer mcpf_usr_test123");
 
     expect(res.status).toBe(200);
     expect(res.body.orgId).toBe("org-uuid-direct");
     expect(res.body.authType).toBe("user_key");
     // Only one call (key validation), no client-service call
+    expect(mockCall).toHaveBeenCalledTimes(1);
+  });
+
+  it("should pass requireOrg and requireUser when user key carries full identity", async () => {
+    mockCall.mockResolvedValueOnce({
+      valid: true,
+      type: "user",
+      appId: "distribute-frontend",
+      orgId: "org-uuid-direct",
+      userId: "user-uuid-direct",
+    });
+
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("Authorization", "Bearer mcpf_usr_test123");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      orgId: "org-uuid-direct",
+      userId: "user-uuid-direct",
+      authType: "user_key",
+    });
     expect(mockCall).toHaveBeenCalledTimes(1);
   });
 });

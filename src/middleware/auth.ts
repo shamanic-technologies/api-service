@@ -81,8 +81,10 @@ export async function authenticate(
       return next();
     }
 
-    // User key: orgId is already an internal UUID
+    // User key: all identity comes from the key itself — no headers needed
+    req.appId = validation.appId;
     req.orgId = validation.orgId;
+    req.userId = validation.userId;
     req.authType = "user_key";
     return next();
   } catch (error) {
@@ -98,6 +100,7 @@ async function validateKey(apiKey: string): Promise<{
   type: "app" | "user";
   appId?: string;
   orgId?: string;
+  userId?: string;
 } | null> {
   try {
     const result = await callExternalService<{
@@ -105,6 +108,7 @@ async function validateKey(apiKey: string): Promise<{
       type: "app" | "user";
       appId?: string;
       orgId?: string;
+      userId?: string;
     }>(
       externalServices.key,
       "/validate",

@@ -11,7 +11,7 @@ const generatorContent = fs.readFileSync(generatorPath, "utf-8");
 describe("OpenAPI spec — auth documentation", () => {
   it("should document both key types in security scheme description", () => {
     expect(schemasContent).toContain("User key");
-    expect(schemasContent).toContain("mcpf_*");
+    expect(schemasContent).toContain("mcpf_usr_*");
     expect(schemasContent).toContain("App key");
     expect(schemasContent).toContain("mcpf_app_*");
   });
