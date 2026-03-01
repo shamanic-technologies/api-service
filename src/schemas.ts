@@ -1827,3 +1827,57 @@ registry.registerPath({
     500: { description: "Internal error", content: errorContent },
   },
 });
+
+// --- GET /v1/users --- list users for an org ---
+
+export const ListUsersQuerySchema = z
+  .object({
+    email: z.string().email().optional().describe("Filter by exact email address"),
+    limit: z.coerce.number().int().min(1).max(200).default(50).describe("Max results (1–200, default 50)"),
+    offset: z.coerce.number().int().min(0).default(0).describe("Pagination offset (default 0)"),
+  })
+  .openapi("ListUsersQuery");
+
+export const ListUsersUserSchema = z
+  .object({
+    id: z.string().uuid().describe("Internal user UUID"),
+    externalId: z.string().describe("External user ID (e.g. Clerk user ID)"),
+    email: z.string().nullable().describe("User email address"),
+    firstName: z.string().nullable().describe("User first name"),
+    lastName: z.string().nullable().describe("User last name"),
+    imageUrl: z.string().nullable().describe("User avatar URL"),
+    phone: z.string().nullable().describe("User phone number"),
+    createdAt: z.string().describe("ISO timestamp of user creation"),
+  })
+  .openapi("ListUsersUser");
+
+export const ListUsersResponseSchema = z
+  .object({
+    users: z.array(ListUsersUserSchema).describe("List of users"),
+    total: z.number().int().describe("Total number of users matching the query"),
+    limit: z.number().int().describe("Limit used for this page"),
+    offset: z.number().int().describe("Offset used for this page"),
+  })
+  .openapi("ListUsersResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/users",
+  tags: ["Users"],
+  summary: "List users for the authenticated org",
+  description:
+    "Returns paginated users belonging to the caller's organization. " +
+    "Supports optional email filtering and offset-based pagination.",
+  security: authed,
+  request: {
+    query: ListUsersQuerySchema,
+  },
+  responses: {
+    200: {
+      description: "Paginated user list",
+      content: { "application/json": { schema: ListUsersResponseSchema } },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});

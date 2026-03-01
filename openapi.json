@@ -1361,6 +1361,89 @@
           "externalOrgId",
           "externalUserId"
         ]
+      },
+      "ListUsersUser": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Internal user UUID"
+          },
+          "externalId": {
+            "type": "string",
+            "description": "External user ID (e.g. Clerk user ID)"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "description": "User email address"
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true,
+            "description": "User first name"
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true,
+            "description": "User last name"
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "User avatar URL"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "description": "User phone number"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO timestamp of user creation"
+          }
+        },
+        "required": [
+          "id",
+          "externalId",
+          "email",
+          "firstName",
+          "lastName",
+          "imageUrl",
+          "phone",
+          "createdAt"
+        ]
+      },
+      "ListUsersResponse": {
+        "type": "object",
+        "properties": {
+          "users": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ListUsersUser"
+            },
+            "description": "List of users"
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total number of users matching the query"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Limit used for this page"
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Offset used for this page"
+          }
+        },
+        "required": [
+          "users",
+          "total",
+          "limit",
+          "offset"
+        ]
       }
     },
     "parameters": {}
@@ -5893,6 +5976,109 @@
             "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
           }
         ]
+      }
+    },
+    "/v1/users": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "List users for the authenticated org",
+        "description": "Returns paginated users belonging to the caller's organization. Supports optional email filtering and offset-based pagination.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "email",
+              "description": "Filter by exact email address"
+            },
+            "required": false,
+            "description": "Filter by exact email address",
+            "name": "email",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50,
+              "description": "Max results (1–200, default 50)"
+            },
+            "required": false,
+            "description": "Max results (1–200, default 50)",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "minimum": 0,
+              "default": 0,
+              "description": "Pagination offset (default 0)"
+            },
+            "required": false,
+            "description": "Pagination offset (default 0)",
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated user list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListUsersResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
