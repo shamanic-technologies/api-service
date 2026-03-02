@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "distribute API",
-    "description": "API Gateway for distribute. Handles authentication, proxies to internal services, and exposes the public REST API.\n\n## Authentication\n\nAll authenticated endpoints require a Bearer token in the `Authorization` header.\n\nThere are two key types, each with different identity resolution behavior:\n\n### 1. User key (`distrib.usr_*`)\n\nIssued per-user via `POST /v1/api-keys`. The key already carries the user's internal org UUID — no extra headers needed.\n\n```\nAuthorization: Bearer distrib.usr_abc123...\n```\n\n### 2. App key (`distrib.app_*`)\n\nA server-to-server key for programmatic access. The key identifies the app. To access endpoints that require org/user context (campaigns, keys, activity, etc.), you must also send two identity headers:\n\n| Header | Description | Example |\n|--------|-------------|---------|\n| `x-org-id` | External organization ID (e.g. Clerk org ID) | `org_2xyz...` |\n| `x-user-id` | External user ID (e.g. Clerk user ID) | `user_2abc...` |\n\n```\nAuthorization: Bearer distrib.app_abc123...\nx-org-id: org_2xyzABC\nx-user-id: user_2abcDEF\n```\n\nThe API service resolves these external IDs to internal UUIDs via `client-service`. Both headers are **optional** — if omitted, the request proceeds without org/user context, which is fine for endpoints that only need app-level auth (e.g. `GET /v1/me`). But endpoints that require org context (e.g. `GET /v1/campaigns`) will return `400 Organization context required`.\n\n### Error codes\n\n| Code | Meaning |\n|------|---------|\n| 401 | Missing or invalid Bearer token |\n| 400 | Org context required but `x-org-id` header not provided (app key only) |\n| 401 | User identity required but `x-user-id` header not provided (app key only) |\n| 502 | Identity resolution failed (client-service unreachable) |\n",
+    "description": "API Gateway for distribute.\n\n## Quick Start\n\n1. Create an API key in the distribute dashboard, or via `POST /v1/api-keys`\n2. Use it as a Bearer token — that's it, no extra headers needed\n\n```\nAuthorization: Bearer distrib.usr_abc123...\n```\n\nYour key carries your org and user identity. All endpoints work out of the box.\n\n## Storing provider keys (BYOK)\n\nTo store your own provider API keys (e.g. OpenAI, Anthropic) for use in workflows:\n\n```\nPOST /v1/keys\nAuthorization: Bearer distrib.usr_abc123...\n\n{ \"keySource\": \"org\", \"provider\": \"openai\", \"apiKey\": \"sk-...\" }\n```\n\n## Error codes\n\n| Code | Meaning |\n|------|---------|\n| 401 | Missing or invalid Bearer token |\n| 400 | Organization context required (missing `x-org-id` — app key only) |\n| 502 | Identity resolution failed (internal service unreachable) |\n\n",
     "version": "1.0.0"
   },
   "servers": [
@@ -16,6 +16,14 @@
       "description": "Health check and debug endpoints"
     },
     {
+      "name": "Authentication",
+      "description": "Create and manage your API keys"
+    },
+    {
+      "name": "Keys",
+      "description": "Provider key management"
+    },
+    {
       "name": "Performance",
       "description": "Public performance leaderboard"
     },
@@ -26,14 +34,6 @@
     {
       "name": "Campaigns",
       "description": "Campaign management"
-    },
-    {
-      "name": "Keys",
-      "description": "Provider key management"
-    },
-    {
-      "name": "API Keys",
-      "description": "API key management"
     },
     {
       "name": "Leads",
@@ -65,7 +65,7 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Bearer token authentication. Two key types are supported:\n\n- **User key** (`distrib.usr_*`): carries app, org, and user context. No extra headers needed. Recommended for API/MCP access.\n- **App key** (`distrib.app_*`): identifies the app only (server-to-server). To access endpoints that require org/user context, also send `x-org-id` and `x-user-id` headers with your external IDs (e.g. Clerk IDs). The API resolves them to internal UUIDs via client-service.\n\nSee the top-level API description for full details and examples."
+        "description": "Bearer token authentication.\n\nUse an API key (`distrib.usr_*`) as your Bearer token. Create one via `POST /v1/api-keys` or in the dashboard.\n\nFor multi-tenant platforms: app keys (`distrib.app_*`) are also supported — see the Platform section in the API description."
       }
     },
     "schemas": {
@@ -2686,7 +2686,7 @@
     "/v1/api-keys": {
       "get": {
         "tags": [
-          "API Keys"
+          "Authentication"
         ],
         "summary": "List API keys",
         "description": "List all API keys for the organization",
@@ -2743,10 +2743,10 @@
       },
       "post": {
         "tags": [
-          "API Keys"
+          "Authentication"
         ],
         "summary": "Create an API key",
-        "description": "Generate a new permanent API key for the organization",
+        "description": "Create a new API key for your organization. This is the recommended way to authenticate with the API.",
         "security": [
           {
             "bearerAuth": []
@@ -2811,7 +2811,7 @@
     "/v1/api-keys/{id}": {
       "delete": {
         "tags": [
-          "API Keys"
+          "Authentication"
         ],
         "summary": "Revoke an API key",
         "description": "Delete/revoke an API key by ID",
@@ -2880,7 +2880,7 @@
     "/v1/api-keys/session": {
       "post": {
         "tags": [
-          "API Keys"
+          "Authentication"
         ],
         "summary": "Get or create session API key",
         "description": "Get or create a short-lived session API key for Foxy chat integration",

@@ -9,40 +9,29 @@ const generatorPath = path.join(__dirname, "../../scripts/generate-openapi.ts");
 const generatorContent = fs.readFileSync(generatorPath, "utf-8");
 
 describe("OpenAPI spec — auth documentation", () => {
-  it("should document both key types in security scheme description", () => {
-    expect(schemasContent).toContain("User key");
+  it("should document user key as the default in security scheme", () => {
     expect(schemasContent).toContain("distrib.usr_*");
-    expect(schemasContent).toContain("App key");
-    expect(schemasContent).toContain("distrib.app_*");
+    expect(schemasContent).toContain("POST /v1/api-keys");
   });
 
-  it("should mention x-org-id and x-user-id headers in security scheme", () => {
-    expect(schemasContent).toContain("x-org-id");
-    expect(schemasContent).toContain("x-user-id");
-  });
-
-  it("should explain identity resolution via client-service in security scheme", () => {
-    expect(schemasContent).toContain("client-service");
-  });
-
-  it("should reference Clerk IDs as example external IDs in security scheme", () => {
-    expect(schemasContent).toContain("Clerk");
+  it("should not reference Platform section or app registration", () => {
+    expect(schemasContent).not.toContain("Platform section");
+    expect(schemasContent).not.toContain("/v1/apps/register");
   });
 });
 
 describe("OpenAPI spec — info description", () => {
-  it("should include Authentication section in API description", () => {
-    expect(generatorContent).toContain("## Authentication");
+  it("should include Quick Start section in API description", () => {
+    expect(generatorContent).toContain("## Quick Start");
   });
 
   it("should document user key flow with example", () => {
     expect(generatorContent).toContain("Authorization: Bearer distrib.usr_abc123");
   });
 
-  it("should document app key flow with identity headers example", () => {
-    expect(generatorContent).toContain("Authorization: Bearer distrib.app_abc123");
-    expect(generatorContent).toContain("x-org-id: org_2xyzABC");
-    expect(generatorContent).toContain("x-user-id: user_2abcDEF");
+  it("should include BYOK section with org keySource example", () => {
+    expect(generatorContent).toContain("## Storing provider keys (BYOK)");
+    expect(generatorContent).toContain('"keySource": "org"');
   });
 
   it("should document error codes for auth failures", () => {
@@ -50,8 +39,9 @@ describe("OpenAPI spec — info description", () => {
     expect(generatorContent).toContain("Identity resolution failed");
   });
 
-  it("should explain that identity headers are optional for app keys", () => {
-    expect(generatorContent).toContain("Both headers are **optional**");
+  it("should not include Advanced: Platform integration section", () => {
+    expect(generatorContent).not.toContain("## Advanced: Platform integration");
+    expect(generatorContent).not.toContain("/v1/apps/register");
   });
 });
 
@@ -74,5 +64,33 @@ describe("OpenAPI spec — identity header parameters on authenticated endpoints
 
   it("should preserve existing parameters when adding identity headers", () => {
     expect(generatorContent).toContain("operation.parameters ?? []");
+  });
+});
+
+describe("OpenAPI spec — tag structure", () => {
+  it("should use Authentication tag for API key endpoints", () => {
+    expect(schemasContent).toContain('tags: ["Authentication"]');
+  });
+
+  it("should not have Platform tag", () => {
+    expect(generatorContent).not.toContain('"Platform"');
+    expect(schemasContent).not.toContain('tags: ["Platform"]');
+  });
+
+  it("should define Authentication tag before Keys tag", () => {
+    const authTagPos = generatorContent.indexOf('"Authentication"');
+    const keysTagPos = generatorContent.indexOf('"Keys"');
+    expect(authTagPos).toBeLessThan(keysTagPos);
+  });
+});
+
+describe("OpenAPI spec — keySource clarity", () => {
+  it("should only allow 'org' keySource in UpsertKeyRequestSchema", () => {
+    const upsertBlock = schemasContent.slice(
+      schemasContent.indexOf("UpsertKeyRequestSchema"),
+      schemasContent.indexOf("UpsertKeyRequestSchema") + 300,
+    );
+    expect(upsertBlock).toContain('"org"');
+    expect(upsertBlock).not.toMatch(/enum\(\[.*"app".*\]\)/);
   });
 });

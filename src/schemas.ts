@@ -14,13 +14,10 @@ registry.registerComponent("securitySchemes", "bearerAuth", {
   type: "http",
   scheme: "bearer",
   description:
-    "Bearer token authentication. Two key types are supported:\n\n" +
-    "- **User key** (`distrib.usr_*`): carries app, org, and user context. No extra headers needed. " +
-    "Recommended for API/MCP access.\n" +
-    "- **App key** (`distrib.app_*`): identifies the app only (server-to-server). To access endpoints " +
-    "that require org/user context, also send `x-org-id` and `x-user-id` headers with your external IDs " +
-    "(e.g. Clerk IDs). The API resolves them to internal UUIDs via client-service.\n\n" +
-    "See the top-level API description for full details and examples.",
+    "Bearer token authentication.\n\n" +
+    "Use an API key (`distrib.usr_*`) as your Bearer token. " +
+    "Create one via `POST /v1/api-keys` or in the dashboard.\n\n" +
+    "Your key carries your org and user identity. No extra headers needed.",
 });
 
 const authed: Record<string, string[]>[] = [{ bearerAuth: [] }];
@@ -515,7 +512,7 @@ export const CreateApiKeyRequestSchema = z
 registry.registerPath({
   method: "get",
   path: "/v1/api-keys",
-  tags: ["API Keys"],
+  tags: ["Authentication"],
   summary: "List API keys",
   description: "List all API keys for the organization",
   security: authed,
@@ -529,9 +526,9 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/v1/api-keys",
-  tags: ["API Keys"],
+  tags: ["Authentication"],
   summary: "Create an API key",
-  description: "Generate a new permanent API key for the organization",
+  description: "Create a new API key for your organization. This is the recommended way to authenticate with the API.",
   security: authed,
   request: {
     body: {
@@ -550,7 +547,7 @@ registry.registerPath({
 registry.registerPath({
   method: "delete",
   path: "/v1/api-keys/{id}",
-  tags: ["API Keys"],
+  tags: ["Authentication"],
   summary: "Revoke an API key",
   description: "Delete/revoke an API key by ID",
   security: authed,
@@ -567,7 +564,7 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/v1/api-keys/session",
-  tags: ["API Keys"],
+  tags: ["Authentication"],
   summary: "Get or create session API key",
   description:
     "Get or create a short-lived session API key for Foxy chat integration",
