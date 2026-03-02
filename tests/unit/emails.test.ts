@@ -2,19 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
 
-// Mock billing module
-vi.mock("../../src/lib/billing.js", () => ({
-  fetchKeySource: vi.fn().mockResolvedValue("platform"),
-}));
-
-// Mock auth middleware — keySource is now resolved in middleware
+// Mock auth middleware
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
     req.appId = "distribute-frontend";
     req.authType = "user_key";
-    req.keySource = "platform";
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -89,10 +83,8 @@ describe("POST /v1/emails/send", () => {
       productId: "webinar-123",
       metadata: { name: "Kevin" },
     });
-    expect(sendCall!.body.keySource).toBeUndefined();
     expect(sendCall!.headers!["x-org-id"]).toBe("org_test456");
     expect(sendCall!.headers!["x-user-id"]).toBe("user_test123");
-    expect(sendCall!.headers!["x-key-source"]).toBe("platform");
   });
 
   it("should return 400 when eventType is missing", async () => {
@@ -155,10 +147,8 @@ describe("POST /v1/emails/stats", () => {
       eventType: "webinar_welcome",
     });
     expect(statsCall!.body.userId).toBeUndefined();
-    expect(statsCall!.body.keySource).toBeUndefined();
     expect(statsCall!.headers!["x-org-id"]).toBe("org_test456");
     expect(statsCall!.headers!["x-user-id"]).toBe("user_test123");
-    expect(statsCall!.headers!["x-key-source"]).toBe("platform");
   });
 
   it("should allow empty body for unfiltered stats", async () => {
@@ -219,10 +209,8 @@ describe("PUT /v1/emails/templates", () => {
     });
     expect(deployCall!.body.orgId).toBeUndefined();
     expect(deployCall!.body.userId).toBeUndefined();
-    expect(deployCall!.body.keySource).toBeUndefined();
     expect(deployCall!.headers!["x-org-id"]).toBe("org_test456");
     expect(deployCall!.headers!["x-user-id"]).toBe("user_test123");
-    expect(deployCall!.headers!["x-key-source"]).toBe("platform");
   });
 
   it("should return 400 when templates array is empty", async () => {

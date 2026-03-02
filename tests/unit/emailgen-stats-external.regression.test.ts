@@ -47,7 +47,6 @@ vi.mock("../../src/lib/internal-headers.js", () => ({
     if (req.orgId) headers["x-org-id"] = req.orgId;
     if (req.userId) headers["x-user-id"] = req.userId;
     if (req.appId) headers["x-app-id"] = req.appId;
-    if (req.keySource) headers["x-key-source"] = req.keySource;
     return headers;
   },
 }));

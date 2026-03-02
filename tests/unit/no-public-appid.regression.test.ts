@@ -52,14 +52,13 @@ describe("No public appId regression", () => {
     expect(fs.existsSync(appsRoute)).toBe(false);
   });
 
-  it("should not have keySource 'app' in UpsertKeyRequestSchema", () => {
+  it("should not have keySource in UpsertKeyRequestSchema (route hardcodes it)", () => {
     const upsertBlock = schemas.slice(
       schemas.indexOf("UpsertKeyRequestSchema"),
       schemas.indexOf("UpsertKeyRequestSchema") + 300,
     );
-    // Should only have "org", not "app"
-    expect(upsertBlock).toContain('"org"');
-    expect(upsertBlock).not.toMatch(/enum\(\[.*"app".*\]\)/);
+    // keySource is no longer in the public schema — the route hardcodes "org"
+    expect(upsertBlock).not.toContain("keySource");
   });
 
   it("should not accept appId from query params in any route", () => {

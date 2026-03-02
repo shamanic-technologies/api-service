@@ -85,12 +85,12 @@ describe("OpenAPI spec — tag structure", () => {
 });
 
 describe("OpenAPI spec — keySource clarity", () => {
-  it("should only allow 'org' keySource in UpsertKeyRequestSchema", () => {
+  it("should not have keySource in UpsertKeyRequestSchema (route hardcodes it)", () => {
     const upsertBlock = schemasContent.slice(
       schemasContent.indexOf("UpsertKeyRequestSchema"),
       schemasContent.indexOf("UpsertKeyRequestSchema") + 300,
     );
-    expect(upsertBlock).toContain('"org"');
-    expect(upsertBlock).not.toMatch(/enum\(\[.*"app".*\]\)/);
+    // keySource is no longer in the public schema — the route hardcodes "org"
+    expect(upsertBlock).not.toContain("keySource");
   });
 });

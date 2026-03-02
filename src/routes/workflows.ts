@@ -49,18 +49,6 @@ async function fetchOrgKeys(orgId: string): Promise<KeyItem[]> {
   return result.keys ?? [];
 }
 
-/**
- * Resolve a workflow by name: find its ID from workflow-service list endpoint.
- */
-async function resolveWorkflowByName(name: string): Promise<{ id: string; [key: string]: unknown } | null> {
-  const result = await callExternalService<{ workflows: Array<{ id: string; name: string; [key: string]: unknown }> }>(
-    externalServices.workflow,
-    `/workflows?name=${encodeURIComponent(name)}`
-  );
-  const workflows = result.workflows ?? [];
-  return workflows.find((w) => w.name === name) ?? workflows[0] ?? null;
-}
-
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
@@ -328,7 +316,6 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
           appId: req.appId!,
           orgId: req.orgId,
           userId: req.userId,
-          keySource: req.keySource,
           description,
           hints,
           ...(style && { style }),
@@ -345,8 +332,8 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
 });
 
 // ---------------------------------------------------------------------------
-// Exported helpers for use by campaigns route (pre-campaign validation)
+// Exported helpers
 // ---------------------------------------------------------------------------
-export { fetchRequiredProviders, fetchOrgKeys, resolveWorkflowByName };
+export { fetchRequiredProviders, fetchOrgKeys };
 
 export default router;

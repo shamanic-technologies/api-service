@@ -3,7 +3,7 @@ import express from "express";
 import request from "supertest";
 
 // Configurable auth context — tests can toggle org/user presence
-let mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456" as string | undefined, userId: "user_test123" as string | undefined, authType: "user_key" as string, keySource: "org" as string | undefined };
+let mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456" as string | undefined, userId: "user_test123" as string | undefined, authType: "user_key" as string };
 
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
@@ -11,7 +11,6 @@ vi.mock("../../src/middleware/auth.js", () => ({
     req.authType = mockAuthContext.authType;
     if (mockAuthContext.orgId) req.orgId = mockAuthContext.orgId;
     if (mockAuthContext.userId) req.userId = mockAuthContext.userId;
-    if (mockAuthContext.keySource) req.keySource = mockAuthContext.keySource;
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -23,11 +22,6 @@ vi.mock("../../src/middleware/auth.js", () => ({
     next();
   },
   AuthenticatedRequest: {},
-}));
-
-const mockFetchKeySource = vi.fn().mockResolvedValue("org");
-vi.mock("../../src/lib/billing.js", () => ({
-  fetchKeySource: (...args: unknown[]) => mockFetchKeySource(...args),
 }));
 
 interface FetchCall {
@@ -63,7 +57,7 @@ function mockFetchOk(responseData: any = {}) {
 // ---------------------------------------------------------------------------
 
 function resetAuthContext() {
-  mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456", userId: "user_test123", authType: "user_key", keySource: "org" };
+  mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456", userId: "user_test123", authType: "user_key" };
 }
 
 describe("GET /v1/stripe/products/:productId", () => {
@@ -87,7 +81,6 @@ describe("GET /v1/stripe/products/:productId", () => {
     expect(call!.url).toContain("appId=distribute-frontend");
     expect(call!.headers!["x-org-id"]).toBe("org_test456");
     expect(call!.headers!["x-user-id"]).toBe("user_test123");
-    expect(call!.headers!["x-key-source"]).toBe("org");
   });
 });
 
@@ -113,9 +106,7 @@ describe("POST /v1/stripe/products", () => {
     expect(call!.method).toBe("POST");
     expect(call!.body).toMatchObject({ appId: "distribute-frontend", name: "Course", description: "Online course" });
     expect(call!.body.orgId).toBeUndefined();
-    expect(call!.body.keySource).toBeUndefined();
     expect(call!.headers!["x-org-id"]).toBe("org_test456");
-    expect(call!.headers!["x-key-source"]).toBe("org");
   });
 
   it("should return 400 when name is missing", async () => {
@@ -148,7 +139,6 @@ describe("GET /v1/stripe/products/:productId/prices", () => {
     expect(call).toBeDefined();
     expect(call!.url).toContain("appId=distribute-frontend");
     expect(call!.headers!["x-org-id"]).toBe("org_test456");
-    expect(call!.headers!["x-key-source"]).toBe("org");
   });
 });
 
@@ -171,8 +161,6 @@ describe("POST /v1/stripe/prices", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/prices/create"));
     expect(call!.body).toMatchObject({ appId: "distribute-frontend", productId: "prod_123", unitAmountCents: 4999 });
-    expect(call!.body.keySource).toBeUndefined();
-    expect(call!.headers!["x-key-source"]).toBe("org");
   });
 
   it("should return 400 when productId is missing", async () => {
@@ -207,7 +195,6 @@ describe("GET /v1/stripe/coupons/:couponId", () => {
     expect(call).toBeDefined();
     expect(call!.url).toContain("appId=distribute-frontend");
     expect(call!.headers!["x-org-id"]).toBe("org_test456");
-    expect(call!.headers!["x-key-source"]).toBe("org");
   });
 });
 
@@ -230,8 +217,6 @@ describe("POST /v1/stripe/coupons", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/coupons/create"));
     expect(call!.body).toMatchObject({ appId: "distribute-frontend", percentOff: 20, duration: "once" });
-    expect(call!.body.keySource).toBeUndefined();
-    expect(call!.headers!["x-key-source"]).toBe("org");
   });
 
   it("should return 400 when duration is missing", async () => {
@@ -280,23 +265,6 @@ describe("POST /v1/stripe/checkout", () => {
     });
     expect(call!.headers!["x-org-id"]).toBe("org_test456");
     expect(call!.headers!["x-user-id"]).toBe("user_test123");
-    expect(call!.headers!["x-key-source"]).toBe("org");
-  });
-
-  it("should forward keySource 'platform' in headers when middleware resolves payg/trial", async () => {
-    mockAuthContext.keySource = "platform";
-    const res = await request(app)
-      .post("/v1/stripe/checkout")
-      .send({
-        lineItems: [{ priceId: "price_123", quantity: 1 }],
-        mode: "payment",
-        successUrl: "https://polarity.com/success",
-        cancelUrl: "https://polarity.com/cancel",
-      });
-
-    expect(res.status).toBe(200);
-    const call = fetchCalls.find((c) => c.url.includes("/checkout/create"));
-    expect(call!.headers!["x-key-source"]).toBe("platform");
   });
 
   it("should return 400 when lineItems is missing", async () => {
@@ -332,17 +300,7 @@ describe("POST /v1/stripe/stats", () => {
     const call = fetchCalls.find((c) => c.url.includes("/stats"));
     expect(call!.body).toMatchObject({ appId: "distribute-frontend", brandId: "brand_abc" });
     expect(call!.body.orgId).toBeUndefined();
-    expect(call!.body.keySource).toBeUndefined();
     expect(call!.headers!["x-org-id"]).toBe("org_test456");
-    expect(call!.headers!["x-key-source"]).toBe("org");
-  });
-
-  it("should forward keySource 'platform' in headers when middleware resolves payg/trial", async () => {
-    mockAuthContext.keySource = "platform";
-    await request(app).post("/v1/stripe/stats").send({});
-
-    const call = fetchCalls.find((c) => c.url.includes("/stats"));
-    expect(call!.headers!["x-key-source"]).toBe("platform");
   });
 
   it("should allow empty body for unfiltered stats", async () => {
@@ -360,8 +318,8 @@ describe("Stripe catalog endpoints — app key without org context", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    // Simulate app key with NO org/user context — keySource is undefined (middleware can't resolve without orgId)
-    mockAuthContext = { appId: "distribute-frontend", orgId: undefined, userId: undefined, authType: "app_key", keySource: undefined };
+    // Simulate app key with NO org/user context
+    mockAuthContext = { appId: "distribute-frontend", orgId: undefined, userId: undefined, authType: "app_key" };
     mockFetchOk({ id: "prod_123", name: "Webinar Access" });
     appKeyApp = createApp();
   });
@@ -373,7 +331,6 @@ describe("Stripe catalog endpoints — app key without org context", () => {
     const call = fetchCalls.find((c) => c.url.includes("/products/prod_123"));
     expect(call!.url).toContain("appId=distribute-frontend");
     expect(call!.headers!["x-org-id"]).toBeUndefined();
-    expect(call!.headers!["x-key-source"]).toBeUndefined();
   });
 
   it("POST /v1/stripe/products should work without org context (no identity headers)", async () => {
@@ -385,7 +342,6 @@ describe("Stripe catalog endpoints — app key without org context", () => {
     const call = fetchCalls.find((c) => c.url.includes("/products/create"));
     expect(call!.body.appId).toBe("distribute-frontend");
     expect(call!.headers!["x-org-id"]).toBeUndefined();
-    expect(call!.headers!["x-key-source"]).toBeUndefined();
   });
 
   it("GET /v1/stripe/products/:id/prices should work without org context and omit identity headers", async () => {
@@ -394,7 +350,6 @@ describe("Stripe catalog endpoints — app key without org context", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/prices/by-product/prod_123"));
     expect(call!.headers!["x-org-id"]).toBeUndefined();
-    expect(call!.headers!["x-key-source"]).toBeUndefined();
   });
 
   it("POST /v1/stripe/prices should work without org context (no identity headers)", async () => {
@@ -405,7 +360,6 @@ describe("Stripe catalog endpoints — app key without org context", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/prices/create"));
     expect(call!.headers!["x-org-id"]).toBeUndefined();
-    expect(call!.headers!["x-key-source"]).toBeUndefined();
   });
 
   it("GET /v1/stripe/coupons/:id should work without org context and omit identity headers", async () => {
@@ -414,7 +368,6 @@ describe("Stripe catalog endpoints — app key without org context", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/coupons/WELCOME20"));
     expect(call!.headers!["x-org-id"]).toBeUndefined();
-    expect(call!.headers!["x-key-source"]).toBeUndefined();
   });
 
   it("POST /v1/stripe/coupons should work without org context (no identity headers)", async () => {
@@ -425,7 +378,6 @@ describe("Stripe catalog endpoints — app key without org context", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/coupons/create"));
     expect(call!.headers!["x-org-id"]).toBeUndefined();
-    expect(call!.headers!["x-key-source"]).toBeUndefined();
   });
 
   it("POST /v1/stripe/checkout should return 400 without org context", async () => {

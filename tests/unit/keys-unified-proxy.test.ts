@@ -74,11 +74,11 @@ beforeEach(() => {
 // -----------------------------------------------------------------------
 
 describe("POST /v1/keys — org keys only", () => {
-  it("should forward org keys with orgId", async () => {
+  it("should forward org keys with orgId and hardcoded keySource", async () => {
     const app = createApp();
     const res = await request(app)
       .post("/v1/keys")
-      .send({ keySource: "org", provider: "stripe", apiKey: "sk_live_test" });
+      .send({ provider: "stripe", apiKey: "sk_live_test" });
 
     expect(res.status).toBe(200);
     const call = fetchCalls.find((c) => c.method === "POST");
@@ -90,32 +90,12 @@ describe("POST /v1/keys — org keys only", () => {
     });
   });
 
-  it("should reject keySource 'app' — Zod validation rejects it", async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/keys")
-      .send({ keySource: "app", provider: "anthropic", apiKey: "sk-ant-test" });
-
-    expect(res.status).toBe(400);
-    expect(fetchCalls).toHaveLength(0);
-  });
-
-  it("should reject keySource 'platform' — Zod validation rejects it", async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/keys")
-      .send({ keySource: "platform", provider: "gemini", apiKey: "gemini-key" });
-
-    expect(res.status).toBe(400);
-    expect(fetchCalls).toHaveLength(0);
-  });
-
   it("should reject when no org context", async () => {
     mockAuth.orgId = "";
     const app = createApp();
     const res = await request(app)
       .post("/v1/keys")
-      .send({ keySource: "org", provider: "stripe", apiKey: "sk_live_test" });
+      .send({ provider: "stripe", apiKey: "sk_live_test" });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain("Organization context required");

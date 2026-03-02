@@ -2,7 +2,6 @@ import { Router } from "express";
 import { authenticate, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { QualifyRequestSchema } from "../schemas.js";
-import { fetchKeySource } from "../lib/billing.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
@@ -32,17 +31,8 @@ router.post("/qualify", authenticate, async (req: AuthenticatedRequest, res) => 
     // Use orgId from auth if not provided
     const orgId = sourceOrgId || req.orgId;
 
-    // Use middleware-resolved keySource when sourceOrgId matches req.orgId or is absent.
-    // Only re-resolve if sourceOrgId is a different org.
-    let keySource: string | undefined = req.keySource;
-    if (sourceOrgId && sourceOrgId !== req.orgId && req.appId) {
-      keySource = await fetchKeySource(sourceOrgId, req.appId);
-    }
-    if (!keySource) keySource = "platform";
-
-    // Build headers; override x-key-source if sourceOrgId resolved a different keySource
+    // Build headers; override x-org-id if sourceOrgId is a different org
     const headers = buildInternalHeaders(req);
-    if (keySource) headers["x-key-source"] = keySource;
     if (orgId && orgId !== req.orgId) headers["x-org-id"] = orgId;
 
     const result = await callExternalService(

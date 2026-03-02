@@ -362,13 +362,6 @@
       "UpsertKeyRequest": {
         "type": "object",
         "properties": {
-          "keySource": {
-            "type": "string",
-            "enum": [
-              "org"
-            ],
-            "description": "Key store: 'org' (organization-level, user-provided)"
-          },
           "provider": {
             "type": "string",
             "description": "Provider name (e.g. openai, anthropic, stripe)"
@@ -379,7 +372,6 @@
           }
         },
         "required": [
-          "keySource",
           "provider",
           "apiKey"
         ]
@@ -1792,7 +1784,7 @@
             "description": "Created campaign"
           },
           "400": {
-            "description": "Validation error. If keySource is 'org' and the org is missing required provider keys, returns error code `missing_keys` with lists of missing and configured providers.",
+            "description": "Validation error.",
             "content": {
               "application/json": {
                 "schema": {

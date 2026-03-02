@@ -6,20 +6,18 @@ import express from "express";
  * POST /v1/brand/sales-profile
  * Proxy to brand-service POST /sales-profile:
  *   1. Validates request body (url required)
- *   2. Resolves keySource from billing-service
- *   3. Creates a tracking run via runs-client
- *   4. Forwards to brand-service with { url, appId, orgId, userId, keyType, parentRunId }
- *   5. Returns the sales profile response as-is
+ *   2. Creates a tracking run via runs-client
+ *   3. Forwards to brand-service with { url, appId, orgId, userId, parentRunId }
+ *   4. Returns the sales profile response as-is
  */
 
-// Mock auth middleware to skip real auth — keySource resolved in middleware
+// Mock auth middleware to skip real auth
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
     req.appId = "distribute";
     req.authType = "app_key";
-    req.keySource = "org";
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -38,12 +36,6 @@ const mockCreateRun = vi.fn();
 vi.mock("@distribute/runs-client", () => ({
   createRun: (...args: unknown[]) => mockCreateRun(...args),
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
-}));
-
-// Mock billing module
-const mockFetchKeySource = vi.fn();
-vi.mock("../../src/lib/billing.js", () => ({
-  fetchKeySource: (...args: unknown[]) => mockFetchKeySource(...args),
 }));
 
 import brandRouter from "../../src/routes/brand.js";
@@ -81,7 +73,6 @@ describe("POST /v1/brand/sales-profile", () => {
     app = buildApp();
     capturedBody = undefined;
 
-    mockFetchKeySource.mockResolvedValue("org");
     mockCreateRun.mockResolvedValue({ id: "run-parent-001" });
 
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
@@ -116,7 +107,6 @@ describe("POST /v1/brand/sales-profile", () => {
       appId: "distribute",
       orgId: "org_test456",
       userId: "user_test123",
-      keyType: "org",
       parentRunId: "run-parent-001",
     });
   });

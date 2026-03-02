@@ -89,7 +89,7 @@ router.post("/api-keys/session", authenticate, requireOrg, requireUser, async (r
       "/internal/api-keys/session",
       {
         method: "POST",
-        body: { appId: req.appId, orgId: req.orgId, userId: req.userId, keySource: req.keySource },
+        body: { appId: req.appId, orgId: req.orgId, userId: req.userId },
         headers: buildInternalHeaders(req),
       }
     );
@@ -122,7 +122,6 @@ router.post("/api-keys", authenticate, requireOrg, requireUser, async (req: Auth
           orgId: req.orgId,
           userId: req.userId,
           createdBy: req.userId,
-          keySource: req.keySource,
           name,
         },
         headers: buildInternalHeaders(req),
@@ -166,7 +165,7 @@ router.delete("/api-keys/:id", authenticate, requireOrg, requireUser, async (req
       `/internal/api-keys/${id}`,
       {
         method: "DELETE",
-        body: { orgId: req.orgId, keySource: req.keySource },
+        body: { orgId: req.orgId },
         headers: buildInternalHeaders(req),
       }
     );

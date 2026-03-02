@@ -240,9 +240,7 @@ registry.registerPath({
   responses: {
     200: { description: "Created campaign" },
     400: {
-      description:
-        "Validation error. If keySource is 'org' and the org is missing required provider keys, " +
-        "returns error code `missing_keys` with lists of missing and configured providers.",
+      description: "Validation error.",
       content: errorContent,
     },
     401: { description: "Unauthorized", content: errorContent },
@@ -431,9 +429,6 @@ registry.registerPath({
 
 export const UpsertKeyRequestSchema = z
   .object({
-    keySource: z
-      .enum(["org"])
-      .describe("Key store: 'org' (organization-level, user-provided)"),
     provider: z
       .string()
       .describe("Provider name (e.g. openai, anthropic, stripe)"),

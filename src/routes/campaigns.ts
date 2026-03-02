@@ -4,7 +4,7 @@ import { callExternalService, externalServices } from "../lib/service-client.js"
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { createRun, updateRun, getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { CreateCampaignRequestSchema, BatchStatsRequestSchema } from "../schemas.js";
-import { fetchRequiredProviders, fetchOrgKeys, resolveWorkflowByName } from "./workflows.js";
+
 
 function sendTransactionalEmail(
   eventType: string,
@@ -20,7 +20,6 @@ function sendTransactionalEmail(
       campaignId,
       orgId: req.orgId,
       userId: req.userId,
-      keySource: req.keySource,
       metadata,
     },
   }).catch((err) => console.warn(`[campaigns] Transactional email ${eventType} failed:`, err.message));
@@ -48,7 +47,7 @@ async function fetchDeliveryStats(
     {
       method: "POST",
       headers: buildInternalHeaders(req),
-      body: { ...filters, appId, orgId, keySource: req.keySource },
+      body: { ...filters, appId, orgId },
     }
   ).catch((err) => {
     console.warn("[campaigns] Email-gateway stats failed:", (err as Error).message);
@@ -170,7 +169,6 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
           orgId: req.orgId,
           url: brandUrl,
           userId: req.userId,
-          keySource: req.keySource,
         },
       }
     );
@@ -188,39 +186,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     });
     console.log("[api-service] POST /v1/campaigns \u2014 step 2 done: parent run created", { parentRunId: parentRun.id });
 
-    // 3. Use keySource from auth middleware (resolved from billing-service)
-    const keySource = req.keySource;
-    console.log("[api-service] POST /v1/campaigns — step 3: keySource from auth middleware", { keySource });
-
-    // 3b. Pre-campaign key validation: if org-provided keys, check org has all required provider keys
-    if (keySource === "org") {
-      const workflow = await resolveWorkflowByName(parsed.data.workflowName);
-      if (workflow) {
-        const [requiredProviders, orgKeys] = await Promise.all([
-          fetchRequiredProviders(workflow.id as string),
-          fetchOrgKeys(req.orgId!),
-        ]);
-
-        if (requiredProviders.length > 0) {
-          const configuredSet = new Set(orgKeys.map((k) => k.provider));
-          const configured = requiredProviders.filter((p) => configuredSet.has(p));
-          const missing = requiredProviders.filter((p) => !configuredSet.has(p));
-
-          if (missing.length > 0) {
-            console.warn("[api-service] POST /v1/campaigns — missing org keys", { missing, configured });
-            await updateRun(parentRun.id, "failed").catch(() => {});
-            return res.status(400).json({
-              error: "missing_keys",
-              message: "Your organization is missing required API keys for this workflow",
-              missing,
-              configured,
-            });
-          }
-        }
-      }
-    }
-
-    // 4. Forward to campaign-service with parentRunId
+    // 3. Forward to campaign-service with parentRunId
     // Derive `type` from workflowName for campaign-service backward compat
     const { workflowName, ...restData } = parsed.data;
     const body: Record<string, unknown> = {
@@ -230,7 +196,6 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       appId: req.appId!,
       orgId: req.orgId,
       brandId: brandResult.brandId,
-      keySource,
       parentRunId: parentRun.id,
     };
 
@@ -239,7 +204,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       if (body[key] != null) body[key] = String(body[key]);
     }
 
-    console.log("[api-service] POST /v1/campaigns \u2014 step 3: forwarding to campaign-service", {
+    console.log("[api-service] POST /v1/campaigns — step 3: forwarding to campaign-service", {
       brandId: body.brandId,
       workflowName: body.workflowName,
       targetOutcome: body.targetOutcome,
@@ -320,7 +285,7 @@ router.patch("/campaigns/:id", authenticate, requireOrg, requireUser, async (req
       {
         method: "PATCH",
         headers: buildInternalHeaders(req),
-        body: { ...req.body, keySource: req.keySource },
+        body: req.body,
       }
     );
     res.json(result);
@@ -344,7 +309,7 @@ router.post("/campaigns/:id/stop", authenticate, requireOrg, requireUser, async 
       {
         method: "PATCH",
         headers: buildInternalHeaders(req),
-        body: { status: "stop", keySource: req.keySource },
+        body: { status: "stop" },
       }
     );
 
@@ -399,7 +364,7 @@ router.post("/campaigns/:id/resume", authenticate, requireOrg, requireUser, asyn
         {
           method: "PATCH",
           headers: buildInternalHeaders(req),
-          body: { status: "activate", parentRunId: parentRun.id, keySource: req.keySource },
+          body: { status: "activate", parentRunId: parentRun.id },
         }
       );
     } catch (err) {
@@ -459,7 +424,7 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
       callExternalService(
         externalServices.emailgen,
         "/stats",
-        { method: "POST", body: { campaignId: id, appId, keySource: req.keySource }, headers: internalHeaders }
+        { method: "POST", body: { campaignId: id, appId }, headers: internalHeaders }
       ).catch((err) => {
         console.warn("[campaigns] Emailgen stats failed:", (err as Error).message);
         return null;
@@ -468,7 +433,7 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
       callExternalService<{ results: Record<string, { totalCostInUsdCents: string | null }> }>(
         externalServices.campaign,
         "/campaigns/batch-budget-usage",
-        { method: "POST", body: { campaignIds: [id], keySource: req.keySource }, headers: internalHeaders }
+        { method: "POST", body: { campaignIds: [id] }, headers: internalHeaders }
       ).catch((err) => {
         console.warn("[campaigns] Budget usage failed:", (err as Error).message);
         return null;
@@ -572,7 +537,7 @@ router.post("/campaigns/batch-stats", authenticate, requireOrg, requireUser, asy
       results: Record<string, { totalCostInUsdCents: string | null }>;
     }>(externalServices.campaign, "/campaigns/batch-budget-usage", {
       method: "POST",
-      body: { campaignIds, keySource: req.keySource },
+      body: { campaignIds },
       headers: internalHeaders,
     }).catch((err) => {
       console.warn("[campaigns] Batch budget usage failed:", (err as Error).message);
@@ -604,7 +569,7 @@ router.post("/campaigns/batch-stats", authenticate, requireOrg, requireUser, asy
             callExternalService(
               externalServices.emailgen,
               "/stats",
-              { method: "POST", body: { campaignId: id, appId, keySource: req.keySource }, headers: internalHeaders }
+              { method: "POST", body: { campaignId: id, appId }, headers: internalHeaders }
             ).catch(() => null),
             fetchDeliveryStats({ campaignId: id }, req),
           ]);
@@ -908,7 +873,7 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
         callExternalService<{ stats?: { emailsGenerated?: number } }>(
           externalServices.emailgen,
           "/stats",
-          { method: "POST", body: { campaignId: id, appId, keySource: req.keySource }, headers: internalHeaders }
+          { method: "POST", body: { campaignId: id, appId }, headers: internalHeaders }
         ).catch(() => null),
         fetchDeliveryStats({ campaignId: id }, req),
       ]);

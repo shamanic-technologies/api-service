@@ -29,7 +29,6 @@ router.post("/brand/scrape", authenticate, async (req: AuthenticatedRequest, res
           sourceService: req.appId!,
           sourceOrgId: req.orgId,
           userId: req.userId,
-          keySource: req.keySource || "platform",
           skipCache,
         },
       }
@@ -73,7 +72,6 @@ router.post("/brand/sales-profile", authenticate, requireOrg, requireUser, async
           appId: req.appId!,
           orgId: req.orgId!,
           userId: req.userId!,
-          keyType: req.keySource,
           parentRunId: parentRun.id,
           skipCache,
         },
@@ -106,7 +104,6 @@ router.get("/brand/by-url", authenticate, async (req: AuthenticatedRequest, res)
     }
 
     const params = new URLSearchParams({ url });
-    if (req.keySource) params.set("keySource", req.keySource);
 
     const result = await callExternalService(
       externalServices.scraping,
@@ -128,7 +125,6 @@ router.get("/brand/by-url", authenticate, async (req: AuthenticatedRequest, res)
 router.get("/brands", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams({ orgId: req.orgId! });
-    if (req.keySource) params.set("keySource", req.keySource);
 
     const result = await callExternalService(
       externalServices.brand,
@@ -189,7 +185,6 @@ router.get("/brands/:id/sales-profile", authenticate, async (req: AuthenticatedR
 router.get("/brand/sales-profiles", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams({ orgId: req.orgId! });
-    if (req.keySource) params.set("keySource", req.keySource);
 
     const result = await callExternalService(
       externalServices.brand,
@@ -224,7 +219,6 @@ router.post("/brand/icp-suggestion", authenticate, requireOrg, requireUser, asyn
           orgId: req.orgId,
           userId: req.userId,
           appId: req.appId!,
-          keySource: req.keySource,
           url: brandUrl,
         },
       }
