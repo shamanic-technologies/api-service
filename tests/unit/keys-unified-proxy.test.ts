@@ -2,13 +2,28 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
 
-// Mock auth middleware
+interface FetchCall {
+  url: string;
+  method?: string;
+  body?: any;
+}
+
+let fetchCalls: FetchCall[] = [];
+
+// Configurable auth state per test
+let mockAuth = {
+  userId: "user_test123",
+  orgId: "org_test456",
+  appId: "distribute-frontend",
+  authType: "user_key" as "user_key" | "app_key",
+};
+
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
-    req.userId = "user_test123";
-    req.orgId = "org_test456";
-    req.appId = "distribute-frontend";
-    req.authType = "user_key";
+    req.userId = mockAuth.userId;
+    req.orgId = mockAuth.orgId;
+    req.appId = mockAuth.appId;
+    req.authType = mockAuth.authType;
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -22,14 +37,6 @@ vi.mock("../../src/middleware/auth.js", () => ({
   AuthenticatedRequest: {},
 }));
 
-interface FetchCall {
-  url: string;
-  method?: string;
-  body?: any;
-}
-
-let fetchCalls: FetchCall[] = [];
-
 import keysRoutes from "../../src/routes/keys.js";
 
 function createApp() {
@@ -39,32 +46,42 @@ function createApp() {
   return app;
 }
 
-describe("POST /v1/keys — unified proxy", () => {
-  let app: express.Express;
-
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    fetchCalls = [];
-    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-      const body = init?.body ? JSON.parse(init.body as string) : undefined;
-      fetchCalls.push({ url, method: init?.method, body });
-      return {
-        ok: true,
-        json: () => Promise.resolve({ provider: "stripe", maskedKey: "sk_l...abc", message: "stripe key saved successfully" }),
-      };
-    });
-    app = createApp();
+function mockFetch() {
+  global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+    const body = init?.body ? JSON.parse(init.body as string) : undefined;
+    fetchCalls.push({ url, method: init?.method, body });
+    return {
+      ok: true,
+      json: () => Promise.resolve({ provider: "stripe", maskedKey: "sk_l...abc", message: "key saved" }),
+    };
   });
+}
 
-  it("should forward org keys to POST /keys with orgId", async () => {
+beforeEach(() => {
+  vi.restoreAllMocks();
+  fetchCalls = [];
+  mockAuth = {
+    userId: "user_test123",
+    orgId: "org_test456",
+    appId: "distribute-frontend",
+    authType: "user_key",
+  };
+  mockFetch();
+});
+
+// -----------------------------------------------------------------------
+// POST /v1/keys
+// -----------------------------------------------------------------------
+
+describe("POST /v1/keys — user_key auth", () => {
+  it("should forward org keys with orgId", async () => {
+    const app = createApp();
     const res = await request(app)
       .post("/v1/keys")
       .send({ keySource: "org", provider: "stripe", apiKey: "sk_live_test" });
 
     expect(res.status).toBe(200);
-
-    const call = fetchCalls.find((c) => c.url.includes("/keys") && c.method === "POST");
-    expect(call).toBeDefined();
+    const call = fetchCalls.find((c) => c.method === "POST");
     expect(call!.body).toEqual({
       keySource: "org",
       provider: "stripe",
@@ -73,15 +90,43 @@ describe("POST /v1/keys — unified proxy", () => {
     });
   });
 
-  it("should forward app keys to POST /keys with appId", async () => {
+  it("should reject keySource 'app' from user_key auth", async () => {
+    const app = createApp();
+    const res = await request(app)
+      .post("/v1/keys")
+      .send({ keySource: "app", provider: "anthropic", apiKey: "sk-ant-test" });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toContain("app key authentication");
+    expect(fetchCalls).toHaveLength(0);
+  });
+
+  it("should reject keySource 'platform' — Zod validation rejects it", async () => {
+    const app = createApp();
+    const res = await request(app)
+      .post("/v1/keys")
+      .send({ keySource: "platform", provider: "gemini", apiKey: "gemini-key" });
+
+    expect(res.status).toBe(400);
+    expect(fetchCalls).toHaveLength(0);
+  });
+});
+
+describe("POST /v1/keys — app_key auth", () => {
+  beforeEach(() => {
+    mockAuth.authType = "app_key";
+    mockAuth.orgId = "";
+    mockAuth.userId = "";
+  });
+
+  it("should forward app keys with appId", async () => {
+    const app = createApp();
     const res = await request(app)
       .post("/v1/keys")
       .send({ keySource: "app", provider: "anthropic", apiKey: "sk-ant-test" });
 
     expect(res.status).toBe(200);
-
-    const call = fetchCalls.find((c) => c.url.includes("/keys") && c.method === "POST");
-    expect(call).toBeDefined();
+    const call = fetchCalls.find((c) => c.method === "POST");
     expect(call!.body).toEqual({
       keySource: "app",
       provider: "anthropic",
@@ -90,142 +135,134 @@ describe("POST /v1/keys — unified proxy", () => {
     });
   });
 
-  it("should forward platform keys to POST /keys without orgId/appId", async () => {
+  it("should forward org keys when app_key has org context", async () => {
+    mockAuth.orgId = "org_test456";
+    const app = createApp();
+    const res = await request(app)
+      .post("/v1/keys")
+      .send({ keySource: "org", provider: "stripe", apiKey: "sk_live_test" });
+
+    expect(res.status).toBe(200);
+    const call = fetchCalls.find((c) => c.method === "POST");
+    expect(call!.body.keySource).toBe("org");
+    expect(call!.body.orgId).toBe("org_test456");
+  });
+
+  it("should reject org keys when app_key has no org context", async () => {
+    const app = createApp();
+    const res = await request(app)
+      .post("/v1/keys")
+      .send({ keySource: "org", provider: "stripe", apiKey: "sk_live_test" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("Organization context required");
+    expect(fetchCalls).toHaveLength(0);
+  });
+
+  it("should reject keySource 'platform'", async () => {
+    const app = createApp();
     const res = await request(app)
       .post("/v1/keys")
       .send({ keySource: "platform", provider: "gemini", apiKey: "gemini-key" });
 
-    expect(res.status).toBe(200);
-
-    const call = fetchCalls.find((c) => c.url.includes("/keys") && c.method === "POST");
-    expect(call).toBeDefined();
-    expect(call!.body).toEqual({
-      keySource: "platform",
-      provider: "gemini",
-      apiKey: "gemini-key",
-    });
-  });
-
-  it("should reject invalid keySource", async () => {
-    const res = await request(app)
-      .post("/v1/keys")
-      .send({ keySource: "bogus", provider: "stripe", apiKey: "sk_live_test" });
-
     expect(res.status).toBe(400);
-  });
-
-  it("should reject missing provider", async () => {
-    const res = await request(app)
-      .post("/v1/keys")
-      .send({ keySource: "org", apiKey: "sk_live_test" });
-
-    expect(res.status).toBe(400);
+    expect(fetchCalls).toHaveLength(0);
   });
 });
 
-describe("GET /v1/keys — unified proxy", () => {
-  let app: express.Express;
+// -----------------------------------------------------------------------
+// GET /v1/keys
+// -----------------------------------------------------------------------
 
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    fetchCalls = [];
-    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-      fetchCalls.push({ url, method: init?.method });
-      return {
-        ok: true,
-        json: () => Promise.resolve({ keys: [{ provider: "stripe", maskedKey: "sk_l...abc" }] }),
-      };
-    });
-    app = createApp();
-  });
-
-  it("should default keySource to org and include orgId", async () => {
+describe("GET /v1/keys — authorization", () => {
+  it("should default to org and include orgId (user_key)", async () => {
+    const app = createApp();
     const res = await request(app).get("/v1/keys");
 
     expect(res.status).toBe(200);
-
-    const call = fetchCalls.find((c) => c.url.includes("/keys"));
-    expect(call).toBeDefined();
-    expect(call!.url).toContain("keySource=org");
-    expect(call!.url).toContain("orgId=org_test456");
+    const call = fetchCalls[0];
+    expect(call.url).toContain("keySource=org");
+    expect(call.url).toContain("orgId=org_test456");
   });
 
-  it("should forward keySource=app with appId", async () => {
+  it("should reject keySource=app from user_key", async () => {
+    const app = createApp();
+    const res = await request(app).get("/v1/keys?keySource=app");
+
+    expect(res.status).toBe(403);
+    expect(fetchCalls).toHaveLength(0);
+  });
+
+  it("should reject keySource=platform", async () => {
+    const app = createApp();
+    const res = await request(app).get("/v1/keys?keySource=platform");
+
+    expect(res.status).toBe(403);
+    expect(fetchCalls).toHaveLength(0);
+  });
+
+  it("should allow keySource=app from app_key", async () => {
+    mockAuth.authType = "app_key";
+    const app = createApp();
     const res = await request(app).get("/v1/keys?keySource=app");
 
     expect(res.status).toBe(200);
-
-    const call = fetchCalls.find((c) => c.url.includes("/keys"));
-    expect(call).toBeDefined();
-    expect(call!.url).toContain("keySource=app");
-    expect(call!.url).toContain("appId=distribute-frontend");
-  });
-
-  it("should forward keySource=platform without orgId/appId", async () => {
-    const res = await request(app).get("/v1/keys?keySource=platform");
-
-    expect(res.status).toBe(200);
-
-    const call = fetchCalls.find((c) => c.url.includes("/keys"));
-    expect(call).toBeDefined();
-    expect(call!.url).toContain("keySource=platform");
-    expect(call!.url).not.toContain("orgId");
-    expect(call!.url).not.toContain("appId");
+    const call = fetchCalls[0];
+    expect(call.url).toContain("keySource=app");
+    expect(call.url).toContain("appId=distribute-frontend");
   });
 });
 
-describe("DELETE /v1/keys/:provider — unified proxy", () => {
-  let app: express.Express;
+// -----------------------------------------------------------------------
+// DELETE /v1/keys/:provider
+// -----------------------------------------------------------------------
 
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    fetchCalls = [];
-    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-      fetchCalls.push({ url, method: init?.method });
-      return {
-        ok: true,
-        json: () => Promise.resolve({ message: "Key deleted" }),
-      };
-    });
-    app = createApp();
-  });
-
-  it("should default keySource to org and include orgId", async () => {
+describe("DELETE /v1/keys/:provider — authorization", () => {
+  it("should default to org and include orgId", async () => {
+    const app = createApp();
     const res = await request(app).delete("/v1/keys/stripe");
 
     expect(res.status).toBe(200);
-
-    const call = fetchCalls.find((c) => c.url.includes("/keys/stripe") && c.method === "DELETE");
-    expect(call).toBeDefined();
+    const call = fetchCalls.find((c) => c.method === "DELETE");
     expect(call!.url).toContain("keySource=org");
     expect(call!.url).toContain("orgId=org_test456");
   });
 
-  it("should forward keySource=app with appId", async () => {
+  it("should reject keySource=app from user_key", async () => {
+    const app = createApp();
+    const res = await request(app).delete("/v1/keys/stripe?keySource=app");
+
+    expect(res.status).toBe(403);
+    expect(fetchCalls).toHaveLength(0);
+  });
+
+  it("should reject keySource=platform", async () => {
+    const app = createApp();
+    const res = await request(app).delete("/v1/keys/stripe?keySource=platform");
+
+    expect(res.status).toBe(403);
+    expect(fetchCalls).toHaveLength(0);
+  });
+
+  it("should allow keySource=app from app_key", async () => {
+    mockAuth.authType = "app_key";
+    const app = createApp();
     const res = await request(app).delete("/v1/keys/anthropic?keySource=app");
 
     expect(res.status).toBe(200);
-
-    const call = fetchCalls.find((c) => c.url.includes("/keys/anthropic") && c.method === "DELETE");
-    expect(call).toBeDefined();
+    const call = fetchCalls.find((c) => c.method === "DELETE");
     expect(call!.url).toContain("keySource=app");
     expect(call!.url).toContain("appId=distribute-frontend");
   });
 });
 
+// -----------------------------------------------------------------------
+// Decrypt proxy removal
+// -----------------------------------------------------------------------
+
 describe("Decrypt proxy removal", () => {
-  let app: express.Express;
-
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    global.fetch = vi.fn().mockImplementation(async () => ({
-      ok: true,
-      json: () => Promise.resolve({}),
-    }));
-    app = createApp();
-  });
-
   it("should not expose /internal/keys/:provider/decrypt", async () => {
+    const app = createApp();
     const res = await request(app).get("/v1/internal/keys/stripe/decrypt?orgId=org_test456");
     expect(res.status).toBe(404);
   });

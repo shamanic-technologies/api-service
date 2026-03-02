@@ -474,8 +474,8 @@ registry.registerPath({
 export const UpsertKeyRequestSchema = z
   .object({
     keySource: z
-      .enum(["org", "app", "platform"])
-      .describe("Key store: 'org' (user-provided), 'app' (app-level), 'platform' (global)"),
+      .enum(["org", "app"])
+      .describe("Key store: 'org' (org-level, user-provided) or 'app' (app-level, requires app key auth)"),
     provider: z
       .string()
       .describe("Provider name (e.g. openai, anthropic, stripe)"),
@@ -489,11 +489,11 @@ registry.registerPath({
   tags: ["Keys"],
   summary: "List provider keys",
   description:
-    "List provider keys. Pass keySource query param to select the key store (org, app, platform). Defaults to 'org'.",
+    "List provider keys. Pass keySource query param to select the key store (org or app). Defaults to 'org'.",
   security: authed,
   request: {
     query: z.object({
-      keySource: z.enum(["org", "app", "platform"]).optional().describe("Key store to list from (default: 'org')"),
+      keySource: z.enum(["org", "app"]).optional().describe("Key store to list from (default: 'org')"),
     }),
   },
   responses: {
@@ -509,7 +509,7 @@ registry.registerPath({
   tags: ["Keys"],
   summary: "Upsert a provider key",
   description:
-    "Store or update a provider API key. keySource determines the key store: 'org' for org-level keys, 'app' for app-level keys, 'platform' for global keys.",
+    "Store or update a provider API key. keySource determines the key store: 'org' for org-level keys (requires org context), 'app' for app-level keys (requires app key auth).",
   security: authed,
   request: {
     body: {
@@ -536,7 +536,7 @@ registry.registerPath({
       provider: z.string().describe("Provider name"),
     }),
     query: z.object({
-      keySource: z.enum(["org", "app", "platform"]).optional().describe("Key store (default: 'org')"),
+      keySource: z.enum(["org", "app"]).optional().describe("Key store (default: 'org')"),
     }),
   },
   responses: {
