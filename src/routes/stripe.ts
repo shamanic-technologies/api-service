@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate, requireOrg, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
+import { fetchKeySource } from "../lib/billing.js";
 import {
   CreateStripeProductRequestSchema,
   CreateStripePriceRequestSchema,
@@ -18,14 +19,21 @@ const router = Router();
 /**
  * GET /v1/stripe/products/:productId
  * Retrieve a Stripe product by ID.
- * Only needs appId (to resolve Stripe key) — no org context required.
+ * When org context is present, resolves keySource so stripe-service uses
+ * the correct key (org-level BYOK vs platform).
  */
 router.get("/stripe/products/:productId", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const { productId } = req.params;
+    const qs = new URLSearchParams({ appId: req.appId! });
+    if (req.orgId) {
+      const keySource = await fetchKeySource(req.orgId, req.appId!);
+      qs.set("orgId", req.orgId);
+      qs.set("keySource", keySource);
+    }
     const result = await callExternalService(
       externalServices.stripe,
-      `/products/${encodeURIComponent(productId)}?appId=${encodeURIComponent(req.appId!)}`,
+      `/products/${encodeURIComponent(productId)}?${qs}`,
     );
     res.json(result);
   } catch (error: any) {
@@ -37,7 +45,7 @@ router.get("/stripe/products/:productId", authenticate, async (req: Authenticate
 /**
  * POST /v1/stripe/products
  * Create a Stripe product.
- * Only needs appId — orgId forwarded when available for tracking.
+ * Resolves keySource when org context is available.
  */
 router.post("/stripe/products", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
@@ -46,12 +54,19 @@ router.post("/stripe/products", authenticate, async (req: AuthenticatedRequest, 
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
 
+    const keySource = req.orgId ? await fetchKeySource(req.orgId, req.appId!) : undefined;
+
     const result = await callExternalService(
       externalServices.stripe,
       "/products/create",
       {
         method: "POST",
-        body: { appId: req.appId, ...(req.orgId && { orgId: req.orgId }), ...parsed.data },
+        body: {
+          appId: req.appId,
+          ...(req.orgId && { orgId: req.orgId }),
+          ...(keySource && { keySource }),
+          ...parsed.data,
+        },
       }
     );
     res.json(result);
@@ -68,14 +83,20 @@ router.post("/stripe/products", authenticate, async (req: AuthenticatedRequest, 
 /**
  * GET /v1/stripe/products/:productId/prices
  * List active prices for a Stripe product.
- * Only needs appId — no org context required.
+ * Resolves keySource when org context is present.
  */
 router.get("/stripe/products/:productId/prices", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const { productId } = req.params;
+    const qs = new URLSearchParams({ appId: req.appId! });
+    if (req.orgId) {
+      const keySource = await fetchKeySource(req.orgId, req.appId!);
+      qs.set("orgId", req.orgId);
+      qs.set("keySource", keySource);
+    }
     const result = await callExternalService(
       externalServices.stripe,
-      `/prices/by-product/${encodeURIComponent(productId)}?appId=${encodeURIComponent(req.appId!)}`,
+      `/prices/by-product/${encodeURIComponent(productId)}?${qs}`,
     );
     res.json(result);
   } catch (error: any) {
@@ -87,7 +108,7 @@ router.get("/stripe/products/:productId/prices", authenticate, async (req: Authe
 /**
  * POST /v1/stripe/prices
  * Create a Stripe price.
- * Only needs appId — orgId forwarded when available for tracking.
+ * Resolves keySource when org context is available.
  */
 router.post("/stripe/prices", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
@@ -96,12 +117,19 @@ router.post("/stripe/prices", authenticate, async (req: AuthenticatedRequest, re
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
 
+    const keySource = req.orgId ? await fetchKeySource(req.orgId, req.appId!) : undefined;
+
     const result = await callExternalService(
       externalServices.stripe,
       "/prices/create",
       {
         method: "POST",
-        body: { appId: req.appId, ...(req.orgId && { orgId: req.orgId }), ...parsed.data },
+        body: {
+          appId: req.appId,
+          ...(req.orgId && { orgId: req.orgId }),
+          ...(keySource && { keySource }),
+          ...parsed.data,
+        },
       }
     );
     res.json(result);
@@ -118,14 +146,20 @@ router.post("/stripe/prices", authenticate, async (req: AuthenticatedRequest, re
 /**
  * GET /v1/stripe/coupons/:couponId
  * Retrieve a Stripe coupon by ID.
- * Only needs appId — no org context required.
+ * Resolves keySource when org context is present.
  */
 router.get("/stripe/coupons/:couponId", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const { couponId } = req.params;
+    const qs = new URLSearchParams({ appId: req.appId! });
+    if (req.orgId) {
+      const keySource = await fetchKeySource(req.orgId, req.appId!);
+      qs.set("orgId", req.orgId);
+      qs.set("keySource", keySource);
+    }
     const result = await callExternalService(
       externalServices.stripe,
-      `/coupons/${encodeURIComponent(couponId)}?appId=${encodeURIComponent(req.appId!)}`,
+      `/coupons/${encodeURIComponent(couponId)}?${qs}`,
     );
     res.json(result);
   } catch (error: any) {
@@ -137,7 +171,7 @@ router.get("/stripe/coupons/:couponId", authenticate, async (req: AuthenticatedR
 /**
  * POST /v1/stripe/coupons
  * Create a Stripe coupon.
- * Only needs appId — orgId forwarded when available for tracking.
+ * Resolves keySource when org context is available.
  */
 router.post("/stripe/coupons", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
@@ -146,12 +180,19 @@ router.post("/stripe/coupons", authenticate, async (req: AuthenticatedRequest, r
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
 
+    const keySource = req.orgId ? await fetchKeySource(req.orgId, req.appId!) : undefined;
+
     const result = await callExternalService(
       externalServices.stripe,
       "/coupons/create",
       {
         method: "POST",
-        body: { appId: req.appId, ...(req.orgId && { orgId: req.orgId }), ...parsed.data },
+        body: {
+          appId: req.appId,
+          ...(req.orgId && { orgId: req.orgId }),
+          ...(keySource && { keySource }),
+          ...parsed.data,
+        },
       }
     );
     res.json(result);
@@ -177,12 +218,14 @@ router.post("/stripe/checkout", authenticate, requireOrg, async (req: Authentica
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
 
+    const keySource = await fetchKeySource(req.orgId!, req.appId!);
+
     const result = await callExternalService(
       externalServices.stripe,
       "/checkout/create",
       {
         method: "POST",
-        body: { appId: req.appId, orgId: req.orgId, userId: req.userId, ...parsed.data },
+        body: { appId: req.appId, orgId: req.orgId, userId: req.userId, keySource, ...parsed.data },
       }
     );
     res.json(result);
@@ -208,12 +251,14 @@ router.post("/stripe/stats", authenticate, requireOrg, async (req: Authenticated
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
 
+    const keySource = await fetchKeySource(req.orgId!, req.appId!);
+
     const result = await callExternalService(
       externalServices.stripe,
       "/stats",
       {
         method: "POST",
-        body: { appId: req.appId, orgId: req.orgId, ...parsed.data },
+        body: { appId: req.appId, orgId: req.orgId, keySource, ...parsed.data },
       }
     );
     res.json(result);

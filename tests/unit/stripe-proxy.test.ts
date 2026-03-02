@@ -24,6 +24,11 @@ vi.mock("../../src/middleware/auth.js", () => ({
   AuthenticatedRequest: {},
 }));
 
+const mockFetchKeySource = vi.fn().mockResolvedValue("byok");
+vi.mock("../../src/lib/billing.js", () => ({
+  fetchKeySource: (...args: unknown[]) => mockFetchKeySource(...args),
+}));
+
 interface FetchCall {
   url: string;
   method?: string;
@@ -63,6 +68,7 @@ describe("GET /v1/stripe/products/:productId", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ id: "prod_123", name: "Webinar Access" });
     app = createApp();
@@ -78,6 +84,16 @@ describe("GET /v1/stripe/products/:productId", () => {
     expect(call).toBeDefined();
     expect(call!.url).toContain("appId=distribute-frontend");
   });
+
+  it("should include keySource and orgId when org context is present", async () => {
+    await request(app).get("/v1/stripe/products/prod_123");
+
+    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute-frontend");
+
+    const call = fetchCalls.find((c) => c.url.includes("/products/prod_123"));
+    expect(call!.url).toContain("keySource=byok");
+    expect(call!.url).toContain("orgId=org_test456");
+  });
 });
 
 describe("POST /v1/stripe/products", () => {
@@ -85,12 +101,13 @@ describe("POST /v1/stripe/products", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ id: "prod_new", name: "Course" });
     app = createApp();
   });
 
-  it("should forward product creation with appId and orgId", async () => {
+  it("should forward product creation with appId, orgId, and keySource", async () => {
     const res = await request(app)
       .post("/v1/stripe/products")
       .send({ name: "Course", description: "Online course" });
@@ -103,6 +120,7 @@ describe("POST /v1/stripe/products", () => {
     expect(call!.body).toMatchObject({
       appId: "distribute-frontend",
       orgId: "org_test456",
+      keySource: "byok",
       name: "Course",
       description: "Online course",
     });
@@ -123,6 +141,7 @@ describe("GET /v1/stripe/products/:productId/prices", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ prices: [{ id: "price_123", unitAmount: 4999 }] });
     app = createApp();
@@ -138,6 +157,14 @@ describe("GET /v1/stripe/products/:productId/prices", () => {
     expect(call).toBeDefined();
     expect(call!.url).toContain("appId=distribute-frontend");
   });
+
+  it("should include keySource when org context is present", async () => {
+    await request(app).get("/v1/stripe/products/prod_123/prices");
+
+    const call = fetchCalls.find((c) => c.url.includes("/prices/by-product/prod_123"));
+    expect(call!.url).toContain("keySource=byok");
+    expect(call!.url).toContain("orgId=org_test456");
+  });
 });
 
 describe("POST /v1/stripe/prices", () => {
@@ -145,12 +172,13 @@ describe("POST /v1/stripe/prices", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ id: "price_new" });
     app = createApp();
   });
 
-  it("should forward price creation with required fields", async () => {
+  it("should forward price creation with keySource", async () => {
     const res = await request(app)
       .post("/v1/stripe/prices")
       .send({ productId: "prod_123", unitAmountCents: 4999, currency: "usd" });
@@ -160,6 +188,7 @@ describe("POST /v1/stripe/prices", () => {
     const call = fetchCalls.find((c) => c.url.includes("/prices/create"));
     expect(call!.body).toMatchObject({
       appId: "distribute-frontend",
+      keySource: "byok",
       productId: "prod_123",
       unitAmountCents: 4999,
     });
@@ -182,6 +211,7 @@ describe("GET /v1/stripe/coupons/:couponId", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ id: "WELCOME20", percentOff: 20 });
     app = createApp();
@@ -197,6 +227,14 @@ describe("GET /v1/stripe/coupons/:couponId", () => {
     expect(call).toBeDefined();
     expect(call!.url).toContain("appId=distribute-frontend");
   });
+
+  it("should include keySource when org context is present", async () => {
+    await request(app).get("/v1/stripe/coupons/WELCOME20");
+
+    const call = fetchCalls.find((c) => c.url.includes("/coupons/WELCOME20"));
+    expect(call!.url).toContain("keySource=byok");
+    expect(call!.url).toContain("orgId=org_test456");
+  });
 });
 
 describe("POST /v1/stripe/coupons", () => {
@@ -204,12 +242,13 @@ describe("POST /v1/stripe/coupons", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ id: "WELCOME20" });
     app = createApp();
   });
 
-  it("should forward coupon creation", async () => {
+  it("should forward coupon creation with keySource", async () => {
     const res = await request(app)
       .post("/v1/stripe/coupons")
       .send({ percentOff: 20, duration: "once" });
@@ -219,6 +258,7 @@ describe("POST /v1/stripe/coupons", () => {
     const call = fetchCalls.find((c) => c.url.includes("/coupons/create"));
     expect(call!.body).toMatchObject({
       appId: "distribute-frontend",
+      keySource: "byok",
       percentOff: 20,
       duration: "once",
     });
@@ -241,12 +281,13 @@ describe("POST /v1/stripe/checkout", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ url: "https://checkout.stripe.com/session_123", sessionId: "cs_123" });
     app = createApp();
   });
 
-  it("should forward checkout session creation with identity fields", async () => {
+  it("should forward checkout session creation with identity fields and keySource", async () => {
     const res = await request(app)
       .post("/v1/stripe/checkout")
       .send({
@@ -260,16 +301,35 @@ describe("POST /v1/stripe/checkout", () => {
     expect(res.status).toBe(200);
     expect(res.body.url).toContain("checkout.stripe.com");
 
+    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute-frontend");
+
     const call = fetchCalls.find((c) => c.url.includes("/checkout/create"));
     expect(call!.body).toMatchObject({
       appId: "distribute-frontend",
       orgId: "org_test456",
       userId: "user_test123",
+      keySource: "byok",
       lineItems: [{ priceId: "price_123", quantity: 1 }],
       successUrl: "https://polarity.com/success",
       cancelUrl: "https://polarity.com/cancel",
       customerEmail: "user@polarity.com",
     });
+  });
+
+  it("should forward keySource 'platform' when billing returns payg/trial", async () => {
+    mockFetchKeySource.mockResolvedValue("platform");
+    const res = await request(app)
+      .post("/v1/stripe/checkout")
+      .send({
+        lineItems: [{ priceId: "price_123", quantity: 1 }],
+        mode: "payment",
+        successUrl: "https://polarity.com/success",
+        cancelUrl: "https://polarity.com/cancel",
+      });
+
+    expect(res.status).toBe(200);
+    const call = fetchCalls.find((c) => c.url.includes("/checkout/create"));
+    expect(call!.body.keySource).toBe("platform");
   });
 
   it("should return 400 when lineItems is missing", async () => {
@@ -289,12 +349,13 @@ describe("POST /v1/stripe/stats", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ totalRevenue: 12500, totalOrders: 5 });
     app = createApp();
   });
 
-  it("should forward stats request with identity", async () => {
+  it("should forward stats request with identity and keySource", async () => {
     const res = await request(app)
       .post("/v1/stripe/stats")
       .send({ brandId: "brand_abc" });
@@ -302,12 +363,23 @@ describe("POST /v1/stripe/stats", () => {
     expect(res.status).toBe(200);
     expect(res.body.totalRevenue).toBe(12500);
 
+    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute-frontend");
+
     const call = fetchCalls.find((c) => c.url.includes("/stats"));
     expect(call!.body).toMatchObject({
       appId: "distribute-frontend",
       orgId: "org_test456",
+      keySource: "byok",
       brandId: "brand_abc",
     });
+  });
+
+  it("should forward keySource 'platform' when billing returns payg/trial", async () => {
+    mockFetchKeySource.mockResolvedValue("platform");
+    await request(app).post("/v1/stripe/stats").send({});
+
+    const call = fetchCalls.find((c) => c.url.includes("/stats"));
+    expect(call!.body.keySource).toBe("platform");
   });
 
   it("should allow empty body for unfiltered stats", async () => {
@@ -325,6 +397,7 @@ describe("Stripe catalog endpoints — app key without org context", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockFetchKeySource.mockReset().mockResolvedValue("byok");
     // Simulate app key with NO org/user context
     mockAuthContext = { appId: "distribute-frontend", orgId: undefined, userId: undefined, authType: "app_key" };
     mockFetchOk({ id: "prod_123", name: "Webinar Access" });
@@ -334,9 +407,10 @@ describe("Stripe catalog endpoints — app key without org context", () => {
   it("GET /v1/stripe/products/:id should work without org context", async () => {
     const res = await request(appKeyApp).get("/v1/stripe/products/prod_123");
     expect(res.status).toBe(200);
+    expect(mockFetchKeySource).not.toHaveBeenCalled();
   });
 
-  it("POST /v1/stripe/products should work without org context", async () => {
+  it("POST /v1/stripe/products should work without org context (no keySource)", async () => {
     const res = await request(appKeyApp)
       .post("/v1/stripe/products")
       .send({ name: "Course" });
@@ -345,14 +419,16 @@ describe("Stripe catalog endpoints — app key without org context", () => {
     const call = fetchCalls.find((c) => c.url.includes("/products/create"));
     expect(call!.body.appId).toBe("distribute-frontend");
     expect(call!.body.orgId).toBeUndefined();
+    expect(call!.body.keySource).toBeUndefined();
   });
 
   it("GET /v1/stripe/products/:id/prices should work without org context", async () => {
     const res = await request(appKeyApp).get("/v1/stripe/products/prod_123/prices");
     expect(res.status).toBe(200);
+    expect(mockFetchKeySource).not.toHaveBeenCalled();
   });
 
-  it("POST /v1/stripe/prices should work without org context", async () => {
+  it("POST /v1/stripe/prices should work without org context (no keySource)", async () => {
     const res = await request(appKeyApp)
       .post("/v1/stripe/prices")
       .send({ productId: "prod_123", unitAmountCents: 4999, currency: "usd" });
@@ -360,14 +436,16 @@ describe("Stripe catalog endpoints — app key without org context", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/prices/create"));
     expect(call!.body.orgId).toBeUndefined();
+    expect(call!.body.keySource).toBeUndefined();
   });
 
   it("GET /v1/stripe/coupons/:id should work without org context", async () => {
     const res = await request(appKeyApp).get("/v1/stripe/coupons/WELCOME20");
     expect(res.status).toBe(200);
+    expect(mockFetchKeySource).not.toHaveBeenCalled();
   });
 
-  it("POST /v1/stripe/coupons should work without org context", async () => {
+  it("POST /v1/stripe/coupons should work without org context (no keySource)", async () => {
     const res = await request(appKeyApp)
       .post("/v1/stripe/coupons")
       .send({ percentOff: 20, duration: "once" });
@@ -375,6 +453,7 @@ describe("Stripe catalog endpoints — app key without org context", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/coupons/create"));
     expect(call!.body.orgId).toBeUndefined();
+    expect(call!.body.keySource).toBeUndefined();
   });
 
   it("POST /v1/stripe/checkout should return 400 without org context", async () => {
@@ -405,6 +484,7 @@ describe("Stripe proxy — error handling", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
+    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     global.fetch = vi.fn().mockImplementation(async () => ({
       ok: false,
