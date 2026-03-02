@@ -68,7 +68,7 @@ describe("GET /v1/stripe/products/:productId", () => {
     app = createApp();
   });
 
-  it("should proxy to stripe-service with appId query param", async () => {
+  it("should proxy to stripe-service with appId and orgId query params", async () => {
     const res = await request(app).get("/v1/stripe/products/prod_123");
 
     expect(res.status).toBe(200);
@@ -77,6 +77,7 @@ describe("GET /v1/stripe/products/:productId", () => {
     const call = fetchCalls.find((c) => c.url.includes("/products/prod_123"));
     expect(call).toBeDefined();
     expect(call!.url).toContain("appId=distribute-frontend");
+    expect(call!.url).toContain("orgId=org_test456");
   });
 });
 
@@ -128,7 +129,7 @@ describe("GET /v1/stripe/products/:productId/prices", () => {
     app = createApp();
   });
 
-  it("should proxy to stripe-service prices endpoint", async () => {
+  it("should proxy to stripe-service prices endpoint with orgId", async () => {
     const res = await request(app).get("/v1/stripe/products/prod_123/prices");
 
     expect(res.status).toBe(200);
@@ -137,6 +138,7 @@ describe("GET /v1/stripe/products/:productId/prices", () => {
     const call = fetchCalls.find((c) => c.url.includes("/prices/by-product/prod_123"));
     expect(call).toBeDefined();
     expect(call!.url).toContain("appId=distribute-frontend");
+    expect(call!.url).toContain("orgId=org_test456");
   });
 });
 
@@ -187,7 +189,7 @@ describe("GET /v1/stripe/coupons/:couponId", () => {
     app = createApp();
   });
 
-  it("should proxy to stripe-service coupons endpoint", async () => {
+  it("should proxy to stripe-service coupons endpoint with orgId", async () => {
     const res = await request(app).get("/v1/stripe/coupons/WELCOME20");
 
     expect(res.status).toBe(200);
@@ -196,6 +198,7 @@ describe("GET /v1/stripe/coupons/:couponId", () => {
     const call = fetchCalls.find((c) => c.url.includes("/coupons/WELCOME20"));
     expect(call).toBeDefined();
     expect(call!.url).toContain("appId=distribute-frontend");
+    expect(call!.url).toContain("orgId=org_test456");
   });
 });
 
@@ -331,9 +334,13 @@ describe("Stripe catalog endpoints — app key without org context", () => {
     appKeyApp = createApp();
   });
 
-  it("GET /v1/stripe/products/:id should work without org context", async () => {
+  it("GET /v1/stripe/products/:id should work without org context and omit orgId", async () => {
     const res = await request(appKeyApp).get("/v1/stripe/products/prod_123");
     expect(res.status).toBe(200);
+
+    const call = fetchCalls.find((c) => c.url.includes("/products/prod_123"));
+    expect(call!.url).toContain("appId=distribute-frontend");
+    expect(call!.url).not.toContain("orgId");
   });
 
   it("POST /v1/stripe/products should work without org context", async () => {
@@ -347,9 +354,13 @@ describe("Stripe catalog endpoints — app key without org context", () => {
     expect(call!.body.orgId).toBeUndefined();
   });
 
-  it("GET /v1/stripe/products/:id/prices should work without org context", async () => {
+  it("GET /v1/stripe/products/:id/prices should work without org context and omit orgId", async () => {
     const res = await request(appKeyApp).get("/v1/stripe/products/prod_123/prices");
     expect(res.status).toBe(200);
+
+    const call = fetchCalls.find((c) => c.url.includes("/prices/by-product/prod_123"));
+    expect(call!.url).toContain("appId=distribute-frontend");
+    expect(call!.url).not.toContain("orgId");
   });
 
   it("POST /v1/stripe/prices should work without org context", async () => {
@@ -362,9 +373,13 @@ describe("Stripe catalog endpoints — app key without org context", () => {
     expect(call!.body.orgId).toBeUndefined();
   });
 
-  it("GET /v1/stripe/coupons/:id should work without org context", async () => {
+  it("GET /v1/stripe/coupons/:id should work without org context and omit orgId", async () => {
     const res = await request(appKeyApp).get("/v1/stripe/coupons/WELCOME20");
     expect(res.status).toBe(200);
+
+    const call = fetchCalls.find((c) => c.url.includes("/coupons/WELCOME20"));
+    expect(call!.url).toContain("appId=distribute-frontend");
+    expect(call!.url).not.toContain("orgId");
   });
 
   it("POST /v1/stripe/coupons should work without org context", async () => {

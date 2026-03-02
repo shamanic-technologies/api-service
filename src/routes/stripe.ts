@@ -18,14 +18,16 @@ const router = Router();
 /**
  * GET /v1/stripe/products/:productId
  * Retrieve a Stripe product by ID.
- * Only needs appId (to resolve Stripe key) — no org context required.
+ * Passes orgId when available so stripe-service can resolve org-level Stripe keys.
  */
 router.get("/stripe/products/:productId", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const { productId } = req.params;
+    const qs = new URLSearchParams({ appId: req.appId! });
+    if (req.orgId) qs.set("orgId", req.orgId);
     const result = await callExternalService(
       externalServices.stripe,
-      `/products/${encodeURIComponent(productId)}?appId=${encodeURIComponent(req.appId!)}`,
+      `/products/${encodeURIComponent(productId)}?${qs}`,
     );
     res.json(result);
   } catch (error: any) {
@@ -68,14 +70,16 @@ router.post("/stripe/products", authenticate, async (req: AuthenticatedRequest, 
 /**
  * GET /v1/stripe/products/:productId/prices
  * List active prices for a Stripe product.
- * Only needs appId — no org context required.
+ * Passes orgId when available so stripe-service can resolve org-level Stripe keys.
  */
 router.get("/stripe/products/:productId/prices", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const { productId } = req.params;
+    const qs = new URLSearchParams({ appId: req.appId! });
+    if (req.orgId) qs.set("orgId", req.orgId);
     const result = await callExternalService(
       externalServices.stripe,
-      `/prices/by-product/${encodeURIComponent(productId)}?appId=${encodeURIComponent(req.appId!)}`,
+      `/prices/by-product/${encodeURIComponent(productId)}?${qs}`,
     );
     res.json(result);
   } catch (error: any) {
@@ -118,14 +122,16 @@ router.post("/stripe/prices", authenticate, async (req: AuthenticatedRequest, re
 /**
  * GET /v1/stripe/coupons/:couponId
  * Retrieve a Stripe coupon by ID.
- * Only needs appId — no org context required.
+ * Passes orgId when available so stripe-service can resolve org-level Stripe keys.
  */
 router.get("/stripe/coupons/:couponId", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const { couponId } = req.params;
+    const qs = new URLSearchParams({ appId: req.appId! });
+    if (req.orgId) qs.set("orgId", req.orgId);
     const result = await callExternalService(
       externalServices.stripe,
-      `/coupons/${encodeURIComponent(couponId)}?appId=${encodeURIComponent(req.appId!)}`,
+      `/coupons/${encodeURIComponent(couponId)}?${qs}`,
     );
     res.json(result);
   } catch (error: any) {
