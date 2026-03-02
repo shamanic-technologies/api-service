@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
 
+// Mock billing module
+vi.mock("../../src/lib/billing.js", () => ({
+  fetchKeySource: vi.fn().mockResolvedValue("platform"),
+}));
+
 // Mock auth middleware
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
@@ -76,6 +81,7 @@ describe("POST /v1/emails/send", () => {
       appId: "distribute-frontend",
       orgId: "org_test456",
       userId: "user_test123",
+      keySource: "platform",
       eventType: "webinar_welcome",
       recipientEmail: "user@polarity.com",
       productId: "webinar-123",
