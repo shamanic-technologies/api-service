@@ -15,7 +15,7 @@ router.put("/chat/config", authenticate, requireOrg, requireUser, async (req: Au
     const result = await callExternalService(
       externalServices.chat,
       `/apps/${req.appId}/config`,
-      { method: "PUT", body: req.body, headers: buildInternalHeaders(req) }
+      { method: "PUT", body: { ...req.body, keySource: req.keySource }, headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
@@ -34,6 +34,7 @@ router.post("/chat", authenticate, requireOrg, requireUser, async (req: Authenti
         body: {
           ...req.body,
           appId: req.appId || req.body.appId,
+          keySource: req.keySource,
         },
         headers: buildInternalHeaders(req),
         expressRes: res,

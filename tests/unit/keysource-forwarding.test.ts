@@ -16,13 +16,17 @@ import express from "express";
  * 7. POST /v1/emails/send
  */
 
-// Mock auth middleware
+// Configurable auth context — tests can toggle keySource
+let mockKeySource: string | undefined = "byok";
+
+// Mock auth middleware — keySource is now resolved here (mirroring real authenticate middleware)
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
     req.appId = "distribute";
     req.authType = "app_key";
+    req.keySource = mockKeySource;
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -43,7 +47,7 @@ vi.mock("@distribute/runs-client", () => ({
   updateRun: vi.fn().mockResolvedValue({ id: "parent-run-123", status: "failed" }),
 }));
 
-// Mock billing module
+// Mock billing module (still needed for qualify.ts sourceOrgId override path)
 const mockFetchKeySource = vi.fn().mockResolvedValue("byok");
 vi.mock("../../src/lib/billing.js", () => ({
   fetchKeySource: (...args: unknown[]) => mockFetchKeySource(...args),
@@ -69,6 +73,7 @@ let fetchCalls: Array<{ url: string; method?: string; body?: Record<string, unkn
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  mockKeySource = "byok";
   mockFetchKeySource.mockResolvedValue("byok");
   fetchCalls = [];
 
@@ -83,12 +88,11 @@ beforeEach(() => {
 // 1. POST /v1/campaigns/:id/resume
 // ---------------------------------------------------------------
 describe("POST /v1/campaigns/:id/resume — keySource forwarding", () => {
-  it("should resolve keySource from billing-service and forward to campaign-service", async () => {
+  it("should forward keySource from middleware to campaign-service", async () => {
     const app = createApp(campaignRouter);
     const res = await request(app).post("/v1/campaigns/camp-123/resume").send({});
 
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
 
     const patchCall = fetchCalls.find((c) => c.url.includes("/campaigns/camp-123") && c.method === "PATCH");
     expect(patchCall).toBeDefined();
@@ -96,8 +100,8 @@ describe("POST /v1/campaigns/:id/resume — keySource forwarding", () => {
     expect(patchCall!.body!.status).toBe("activate");
   });
 
-  it("should forward keySource 'platform' when billing returns payg/trial", async () => {
-    mockFetchKeySource.mockResolvedValue("platform");
+  it("should forward keySource 'platform' when middleware resolves payg/trial", async () => {
+    mockKeySource = "platform";
     const app = createApp(campaignRouter);
     await request(app).post("/v1/campaigns/camp-123/resume").send({});
 
@@ -110,14 +114,13 @@ describe("POST /v1/campaigns/:id/resume — keySource forwarding", () => {
 // 2. POST /v1/workflows/generate
 // ---------------------------------------------------------------
 describe("POST /v1/workflows/generate — keySource forwarding", () => {
-  it("should resolve keySource and forward to workflow-service", async () => {
+  it("should forward keySource from middleware to workflow-service", async () => {
     const app = createApp(workflowRouter);
     const res = await request(app)
       .post("/v1/workflows/generate")
       .send({ description: "Generate a cold outreach workflow for SaaS founders" });
 
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
 
     const generateCall = fetchCalls.find((c) => c.url.includes("/workflows/generate") && c.method === "POST");
     expect(generateCall).toBeDefined();
@@ -127,8 +130,8 @@ describe("POST /v1/workflows/generate — keySource forwarding", () => {
     expect(generateCall!.body!.userId).toBe("user_test123");
   });
 
-  it("should forward keySource 'platform' when billing returns payg/trial", async () => {
-    mockFetchKeySource.mockResolvedValue("platform");
+  it("should forward keySource 'platform' when middleware resolves payg/trial", async () => {
+    mockKeySource = "platform";
     const app = createApp(workflowRouter);
     await request(app)
       .post("/v1/workflows/generate")
@@ -143,14 +146,13 @@ describe("POST /v1/workflows/generate — keySource forwarding", () => {
 // 4. POST /v1/leads/search
 // ---------------------------------------------------------------
 describe("POST /v1/leads/search — keySource forwarding", () => {
-  it("should resolve keySource and forward to lead-service", async () => {
+  it("should forward keySource from middleware to lead-service", async () => {
     const app = createApp(leadRouter);
     const res = await request(app)
       .post("/v1/leads/search")
       .send({ person_titles: ["CTO"] });
 
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
 
     const searchCall = fetchCalls.find((c) => c.url.includes("/search") && c.method === "POST");
     expect(searchCall).toBeDefined();
@@ -160,8 +162,8 @@ describe("POST /v1/leads/search — keySource forwarding", () => {
     expect(searchCall!.body!.userId).toBe("user_test123");
   });
 
-  it("should forward keySource 'platform' when billing returns payg/trial", async () => {
-    mockFetchKeySource.mockResolvedValue("platform");
+  it("should forward keySource 'platform' when middleware resolves payg/trial", async () => {
+    mockKeySource = "platform";
     const app = createApp(leadRouter);
     await request(app)
       .post("/v1/leads/search")
@@ -176,7 +178,7 @@ describe("POST /v1/leads/search — keySource forwarding", () => {
 // 5. POST /v1/qualify
 // ---------------------------------------------------------------
 describe("POST /v1/qualify — keySource forwarding", () => {
-  it("should resolve keySource and forward to reply-qualification service", async () => {
+  it("should forward keySource from middleware to reply-qualification service", async () => {
     const app = createApp(qualifyRouter);
     const res = await request(app)
       .post("/v1/qualify")
@@ -187,7 +189,6 @@ describe("POST /v1/qualify — keySource forwarding", () => {
       });
 
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
 
     const qualifyCall = fetchCalls.find((c) => c.url.includes("/qualify") && c.method === "POST");
     expect(qualifyCall).toBeDefined();
@@ -196,8 +197,8 @@ describe("POST /v1/qualify — keySource forwarding", () => {
     expect(qualifyCall!.body!.userId).toBe("user_test123");
   });
 
-  it("should forward keySource 'platform' when billing returns payg/trial", async () => {
-    mockFetchKeySource.mockResolvedValue("platform");
+  it("should forward keySource 'platform' when middleware resolves payg/trial", async () => {
+    mockKeySource = "platform";
     const app = createApp(qualifyRouter);
     await request(app)
       .post("/v1/qualify")
@@ -216,14 +217,13 @@ describe("POST /v1/qualify — keySource forwarding", () => {
 // 6. POST /v1/brand/scrape
 // ---------------------------------------------------------------
 describe("POST /v1/brand/scrape — keySource forwarding", () => {
-  it("should resolve keySource and forward to scraping-service", async () => {
+  it("should forward keySource from middleware to scraping-service", async () => {
     const app = createApp(brandRouter);
     const res = await request(app)
       .post("/v1/brand/scrape")
       .send({ url: "https://example.com" });
 
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
 
     const scrapeCall = fetchCalls.find((c) => c.url.includes("/scrape") && c.method === "POST");
     expect(scrapeCall).toBeDefined();
@@ -231,8 +231,8 @@ describe("POST /v1/brand/scrape — keySource forwarding", () => {
     expect(scrapeCall!.body!.userId).toBe("user_test123");
   });
 
-  it("should forward keySource 'platform' when billing returns payg/trial", async () => {
-    mockFetchKeySource.mockResolvedValue("platform");
+  it("should forward keySource 'platform' when middleware resolves payg/trial", async () => {
+    mockKeySource = "platform";
     const app = createApp(brandRouter);
     await request(app)
       .post("/v1/brand/scrape")
@@ -247,7 +247,7 @@ describe("POST /v1/brand/scrape — keySource forwarding", () => {
 // 7. POST /v1/emails/send
 // ---------------------------------------------------------------
 describe("POST /v1/emails/send — keySource forwarding", () => {
-  it("should resolve keySource and forward to transactional-email-service", async () => {
+  it("should forward keySource from middleware to transactional-email-service", async () => {
     const app = createApp(emailsRouter);
     const res = await request(app)
       .post("/v1/emails/send")
@@ -257,7 +257,6 @@ describe("POST /v1/emails/send — keySource forwarding", () => {
       });
 
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
 
     const sendCall = fetchCalls.find((c) => c.url.includes("/send") && c.method === "POST");
     expect(sendCall).toBeDefined();
@@ -267,8 +266,8 @@ describe("POST /v1/emails/send — keySource forwarding", () => {
     expect(sendCall!.body!.userId).toBe("user_test123");
   });
 
-  it("should forward keySource 'platform' when billing returns payg/trial", async () => {
-    mockFetchKeySource.mockResolvedValue("platform");
+  it("should forward keySource 'platform' when middleware resolves payg/trial", async () => {
+    mockKeySource = "platform";
     const app = createApp(emailsRouter);
     await request(app)
       .post("/v1/emails/send")

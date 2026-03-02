@@ -7,13 +7,14 @@ vi.mock("../../src/lib/billing.js", () => ({
   fetchKeySource: vi.fn().mockResolvedValue("platform"),
 }));
 
-// Mock auth middleware
+// Mock auth middleware — keySource is now resolved in middleware
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
     req.appId = "distribute-frontend";
     req.authType = "user_key";
+    req.keySource = "platform";
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {

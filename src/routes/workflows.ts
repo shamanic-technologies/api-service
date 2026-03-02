@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
+import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { GenerateWorkflowRequestSchema } from "../schemas.js";
-import { fetchKeySource } from "../lib/billing.js";
 
 const router = Router();
 
@@ -82,7 +82,8 @@ router.get("/workflows", authenticate, requireOrg, requireUser, async (req: Auth
 
     const result = await callExternalService<{ workflows: Array<{ id: string; [key: string]: unknown }> }>(
       externalServices.workflow,
-      `/workflows?${params.toString()}`
+      `/workflows?${params.toString()}`,
+      { headers: buildInternalHeaders(req) },
     );
 
     const workflows = result.workflows ?? [];
@@ -117,7 +118,8 @@ router.get("/workflows/best", authenticate, requireOrg, requireUser, async (req:
 
     const result = await callExternalService(
       externalServices.workflow,
-      `/workflows/best?${params.toString()}`
+      `/workflows/best?${params.toString()}`,
+      { headers: buildInternalHeaders(req) },
     );
 
     res.json(result);
@@ -130,8 +132,6 @@ router.get("/workflows/best", authenticate, requireOrg, requireUser, async (req:
 /**
  * GET /v1/workflows/:id/summary
  * Returns an AI-generated summary of a workflow's DAG in natural language.
- * Fetches the workflow (with DAG) from workflow-service and generates a summary
- * using the Anthropic API (via content-generation service).
  */
 router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
@@ -141,7 +141,8 @@ router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, asyn
     const [workflow, requiredProviders] = await Promise.all([
       callExternalService<{ workflow: { id: string; name: string; dag?: { nodes: Array<{ id: string; type: string; config?: Record<string, unknown> }>; edges: Array<{ from: string; to: string }> } } }>(
         externalServices.workflow,
-        `/workflows/${id}`
+        `/workflows/${id}`,
+        { headers: buildInternalHeaders(req) },
       ).then((r) => r.workflow),
       fetchRequiredProviders(id),
     ]);
@@ -161,7 +162,6 @@ router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, asyn
     }
 
     // Build a concise summary from the DAG structure
-    // Follow topological order based on edges
     const nodeMap = new Map(dag.nodes.map((n) => [n.id, n]));
     const inDegree = new Map<string, number>();
     for (const n of dag.nodes) inDegree.set(n.id, 0);
@@ -184,7 +184,6 @@ router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, asyn
       }
     }
 
-    // Generate step descriptions from ordered nodes
     const steps: string[] = [];
     for (let i = 0; i < ordered.length; i++) {
       const node = nodeMap.get(ordered[i]);
@@ -195,7 +194,6 @@ router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, asyn
       const method = config.method as string | undefined;
       const path = config.path as string | undefined;
 
-      // Build a human-readable step description
       let desc = node.id.replace(/[-_]/g, " ");
       if (node.type === "http.call" && service) {
         const providerHint = service.charAt(0).toUpperCase() + service.slice(1);
@@ -211,7 +209,6 @@ router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, asyn
       steps.push(`${i + 1}. ${desc}`);
     }
 
-    // Build summary from the steps
     const providerList = requiredProviders.length > 0
       ? ` Uses ${requiredProviders.join(", ")}.`
       : "";
@@ -238,13 +235,11 @@ router.get("/workflows/:id/key-status", authenticate, requireOrg, requireUser, a
     const { id } = req.params;
     const orgId = req.orgId!;
 
-    // Fetch required providers and org keys in parallel
     const [requiredProviders, orgKeys] = await Promise.all([
       fetchRequiredProviders(id),
       fetchOrgKeys(orgId),
     ]);
 
-    // Build a map of configured providers
     const configuredMap = new Map(orgKeys.map((k) => [k.provider, k.maskedKey]));
 
     const keys = requiredProviders.map((provider) => ({
@@ -255,12 +250,12 @@ router.get("/workflows/:id/key-status", authenticate, requireOrg, requireUser, a
 
     const missing = keys.filter((k) => !k.configured).map((k) => k.provider);
 
-    // We need the workflow name — fetch from workflow-service
     let workflowName = id;
     try {
       const wf = await callExternalService<{ workflow: { name: string } }>(
         externalServices.workflow,
-        `/workflows/${id}`
+        `/workflows/${id}`,
+        { headers: buildInternalHeaders(req) },
       );
       workflowName = wf.workflow?.name ?? id;
     } catch {
@@ -290,7 +285,8 @@ router.get("/workflows/:id", authenticate, requireOrg, requireUser, async (req: 
     const [workflow, requiredProviders] = await Promise.all([
       callExternalService(
         externalServices.workflow,
-        `/workflows/${id}`
+        `/workflows/${id}`,
+        { headers: buildInternalHeaders(req) },
       ),
       fetchRequiredProviders(id),
     ]);
@@ -323,9 +319,6 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
 
     const { description, hints, style } = parsed.data;
 
-    // Resolve keySource from billing-service
-    const keySource = await fetchKeySource(req.orgId!, req.appId!);
-
     const result = await callExternalService(
       externalServices.workflow,
       "/workflows/generate",
@@ -335,7 +328,7 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
           appId: req.appId!,
           orgId: req.orgId,
           userId: req.userId,
-          keySource,
+          keySource: req.keySource,
           description,
           hints,
           ...(style && { style }),

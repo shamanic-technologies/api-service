@@ -17,6 +17,7 @@ router.post("/activity", authenticate, requireOrg, requireUser, async (req: Auth
         eventType: "user_active",
         userId: req.userId,
         orgId: req.orgId,
+        keySource: req.keySource,
       },
     }).catch((err) => console.warn("[activity] Transactional email failed:", err.message));
 

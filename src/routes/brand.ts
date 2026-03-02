@@ -3,7 +3,7 @@ import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { createRun, getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { BrandScrapeRequestSchema, IcpSuggestionRequestSchema, SalesProfileFromUrlRequestSchema } from "../schemas.js";
-import { fetchKeySource } from "../lib/billing.js";
+import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
 
@@ -19,9 +19,6 @@ router.post("/brand/scrape", authenticate, async (req: AuthenticatedRequest, res
     }
     const { url, skipCache } = parsed.data;
 
-    // Resolve keySource from billing-service (default to "platform" if no orgId)
-    const keySource = req.orgId ? await fetchKeySource(req.orgId, req.appId!) : "platform";
-
     const result = await callExternalService(
       externalServices.scraping,
       "/scrape",
@@ -32,7 +29,7 @@ router.post("/brand/scrape", authenticate, async (req: AuthenticatedRequest, res
           sourceService: req.appId!,
           sourceOrgId: req.orgId,
           userId: req.userId,
-          keySource,
+          keySource: req.keySource || "platform",
           skipCache,
         },
       }
@@ -57,9 +54,6 @@ router.post("/brand/sales-profile", authenticate, requireOrg, requireUser, async
     }
     const { url, skipCache } = parsed.data;
 
-    // Resolve keySource from billing-service
-    const keySource = await fetchKeySource(req.orgId!, req.appId!);
-
     // Create a tracking run so brand-service can link costs
     const parentRun = await createRun({
       orgId: req.orgId!,
@@ -79,7 +73,7 @@ router.post("/brand/sales-profile", authenticate, requireOrg, requireUser, async
           appId: req.appId!,
           orgId: req.orgId!,
           userId: req.userId!,
-          keyType: keySource,
+          keyType: req.keySource,
           parentRunId: parentRun.id,
           skipCache,
         },
@@ -111,9 +105,13 @@ router.get("/brand/by-url", authenticate, async (req: AuthenticatedRequest, res)
       return res.status(400).json({ error: "url query param is required" });
     }
 
+    const params = new URLSearchParams({ url });
+    if (req.keySource) params.set("keySource", req.keySource);
+
     const result = await callExternalService(
       externalServices.scraping,
-      `/scrape/by-url?url=${encodeURIComponent(url)}`
+      `/scrape/by-url?${params}`,
+      { headers: buildInternalHeaders(req) },
     );
 
     res.json(result);
@@ -129,9 +127,13 @@ router.get("/brand/by-url", authenticate, async (req: AuthenticatedRequest, res)
  */
 router.get("/brands", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
+    const params = new URLSearchParams({ orgId: req.orgId! });
+    if (req.keySource) params.set("keySource", req.keySource);
+
     const result = await callExternalService(
       externalServices.brand,
-      `/brands?orgId=${req.orgId}`
+      `/brands?${params}`,
+      { headers: buildInternalHeaders(req) },
     );
     res.json(result);
   } catch (error: any) {
@@ -148,7 +150,8 @@ router.get("/brands/:id", authenticate, async (req: AuthenticatedRequest, res) =
   try {
     const result = await callExternalService(
       externalServices.brand,
-      `/brands/${req.params.id}`
+      `/brands/${req.params.id}`,
+      { headers: buildInternalHeaders(req) },
     );
     res.json(result);
   } catch (error: any) {
@@ -165,7 +168,8 @@ router.get("/brands/:id/sales-profile", authenticate, async (req: AuthenticatedR
   try {
     const result = await callExternalService(
       externalServices.brand,
-      `/brands/${req.params.id}/sales-profile`
+      `/brands/${req.params.id}/sales-profile`,
+      { headers: buildInternalHeaders(req) },
     );
     res.json(result);
   } catch (error: any) {
@@ -184,9 +188,13 @@ router.get("/brands/:id/sales-profile", authenticate, async (req: AuthenticatedR
  */
 router.get("/brand/sales-profiles", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
+    const params = new URLSearchParams({ orgId: req.orgId! });
+    if (req.keySource) params.set("keySource", req.keySource);
+
     const result = await callExternalService(
       externalServices.brand,
-      `/sales-profiles?orgId=${req.orgId}`
+      `/sales-profiles?${params}`,
+      { headers: buildInternalHeaders(req) },
     );
     res.json(result);
   } catch (error: any) {
@@ -207,9 +215,6 @@ router.post("/brand/icp-suggestion", authenticate, requireOrg, requireUser, asyn
     }
     const { brandUrl } = parsed.data;
 
-    // Resolve keySource from billing-service
-    const keySource = await fetchKeySource(req.orgId!, req.appId!);
-
     const result = await callExternalService(
       externalServices.brand,
       "/icp-suggestion",
@@ -219,7 +224,7 @@ router.post("/brand/icp-suggestion", authenticate, requireOrg, requireUser, asyn
           orgId: req.orgId,
           userId: req.userId,
           appId: req.appId!,
-          keySource,
+          keySource: req.keySource,
           url: brandUrl,
         },
       }
@@ -257,7 +262,8 @@ router.get("/brands/costs", authenticate, requireOrg, requireUser, async (req: A
       }>;
     }>(
       externalServices.runs,
-      `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&appId=${encodeURIComponent(req.appId!)}&groupBy=brandId`
+      `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&appId=${encodeURIComponent(req.appId!)}&groupBy=brandId`,
+      { headers: buildInternalHeaders(req) },
     );
 
     const costs: Record<string, string> = {};
@@ -294,7 +300,8 @@ router.get("/brands/:id/cost-breakdown", authenticate, requireOrg, requireUser, 
       }>;
     }>(
       externalServices.runs,
-      `/v1/stats/costs/by-cost-name?orgId=${encodeURIComponent(orgId)}&appId=${encodeURIComponent(req.appId!)}&brandId=${encodeURIComponent(id)}`
+      `/v1/stats/costs/by-cost-name?orgId=${encodeURIComponent(orgId)}&appId=${encodeURIComponent(req.appId!)}&brandId=${encodeURIComponent(id)}`,
+      { headers: buildInternalHeaders(req) },
     );
 
     res.json({ costs: data.costs || [] });
@@ -316,7 +323,8 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
     // 1. Get runs list from brand-service
     const data = await callExternalService<{ runs?: Array<{ id: string; taskName: string; status: string; startedAt: string; completedAt: string | null }> }>(
       externalServices.brand,
-      `/brands/${id}/runs`
+      `/brands/${id}/runs`,
+      { headers: buildInternalHeaders(req) },
     );
     const runs: Array<{ id: string; taskName: string; status: string; startedAt: string; completedAt: string | null }> = data.runs || [];
 
@@ -371,7 +379,8 @@ router.get("/brand/:id", authenticate, async (req: AuthenticatedRequest, res) =>
 
     const result = await callExternalService(
       externalServices.scraping,
-      `/scrape/${id}`
+      `/scrape/${id}`,
+      { headers: buildInternalHeaders(req) },
     );
 
     res.json(result);

@@ -31,8 +31,13 @@ router.post("/qualify", authenticate, async (req: AuthenticatedRequest, res) => 
     // Use orgId from auth if not provided
     const orgId = sourceOrgId || req.orgId;
 
-    // Resolve keySource from billing-service (default to "platform" if no orgId)
-    const keySource = orgId ? await fetchKeySource(orgId, req.appId!) : "platform";
+    // Use middleware-resolved keySource when sourceOrgId matches req.orgId or is absent.
+    // Only re-resolve if sourceOrgId is a different org.
+    let keySource: string | undefined = req.keySource;
+    if (sourceOrgId && sourceOrgId !== req.orgId && req.appId) {
+      keySource = await fetchKeySource(sourceOrgId, req.appId);
+    }
+    if (!keySource) keySource = "platform";
 
     const result = await callExternalService(
       externalServices.replyQualification,

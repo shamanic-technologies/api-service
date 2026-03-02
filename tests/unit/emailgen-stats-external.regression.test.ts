@@ -42,7 +42,14 @@ vi.mock("../../src/middleware/auth.js", () => ({
 }));
 
 vi.mock("../../src/lib/internal-headers.js", () => ({
-  buildInternalHeaders: () => ({}),
+  buildInternalHeaders: (req: any) => {
+    const headers: Record<string, string> = {};
+    if (req.orgId) headers["x-org-id"] = req.orgId;
+    if (req.userId) headers["x-user-id"] = req.userId;
+    if (req.appId) headers["x-app-id"] = req.appId;
+    if (req.keySource) headers["x-key-source"] = req.keySource;
+    return headers;
+  },
 }));
 
 vi.mock("@distribute/runs-client", () => ({

@@ -11,6 +11,9 @@ import express from "express";
  * No ICP resolution — that's campaign-service's job.
  */
 
+// Configurable auth context — keySource resolved in middleware
+let mockKeySource: string | undefined = "byok";
+
 // Mock auth middleware
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
@@ -18,6 +21,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
     req.orgId = "org_test456";
     req.appId = "distribute";
     req.authType = "app_key";
+    req.keySource = mockKeySource;
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -58,7 +62,7 @@ describe("POST /v1/campaigns with targetAudience", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockFetchKeySource.mockResolvedValue("byok");
+    mockKeySource = "byok";
     fetchCalls = [];
 
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
@@ -145,8 +149,8 @@ describe("POST /v1/campaigns with targetAudience", () => {
     expect(scrapeCall).toBeUndefined();
   });
 
-  it("should resolve keySource from billing-service and forward to campaign-service", async () => {
-    mockFetchKeySource.mockResolvedValue("platform");
+  it("should forward keySource from middleware to campaign-service", async () => {
+    mockKeySource = "platform";
 
     const app = createApp();
     const res = await request(app)
@@ -166,15 +170,14 @@ describe("POST /v1/campaigns with targetAudience", () => {
       });
 
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
 
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.appId === "distribute");
     expect(campaignCall).toBeDefined();
     expect(campaignCall!.body!.keySource).toBe("platform");
   });
 
-  it("should default to 'platform' keySource when billing-service is unreachable", async () => {
-    mockFetchKeySource.mockResolvedValue("platform"); // billing.ts fallback
+  it("should default to 'platform' keySource when middleware resolves fallback", async () => {
+    mockKeySource = "platform";
 
     const app = createApp();
     const res = await request(app)
