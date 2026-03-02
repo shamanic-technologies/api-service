@@ -13,7 +13,6 @@ import leadsRoutes from "./routes/leads.js";
 import activityRoutes from "./routes/activity.js";
 import workflowsRoutes from "./routes/workflows.js";
 import performanceRoutes from "./routes/performance.js";
-import appsRoutes from "./routes/apps.js";
 import chatRoutes from "./routes/chat.js";
 import billingRoutes from "./routes/billing.js";
 import { stripeWebhookHandler } from "./routes/billing.js";
@@ -47,7 +46,7 @@ app.use(cors({
 
 // Stripe webhook must be mounted BEFORE express.json() — needs raw body for signature verification
 app.post(
-  "/v1/billing/webhooks/stripe/:appId",
+  "/v1/billing/webhooks/stripe",
   express.raw({ type: "application/json" }),
   stripeWebhookHandler,
 );
@@ -77,9 +76,6 @@ app.use(
 // Public routes
 app.use(healthRoutes);
 app.use(performanceRoutes);
-
-// Public API routes
-app.use("/v1", appsRoutes);
 
 // Authenticated routes
 app.use("/v1", meRoutes);

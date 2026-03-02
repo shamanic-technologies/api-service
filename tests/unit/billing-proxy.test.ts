@@ -92,9 +92,9 @@ describe("Stripe webhook proxy", () => {
     expect(content).toContain("req.body"); // raw Buffer
   });
 
-  it("should proxy to billing-service /v1/webhooks/stripe/:appId", () => {
+  it("should proxy to billing-service /v1/webhooks/stripe/ with hardcoded appId", () => {
     expect(content).toContain("/v1/webhooks/stripe/");
-    expect(content).toContain("appId");
+    expect(content).toContain("DEFAULT_APP_ID");
   });
 });
 
@@ -120,7 +120,7 @@ describe("Billing OpenAPI schemas", () => {
     expect(schemaContent).toContain('path: "/v1/billing/accounts/mode"');
     expect(schemaContent).toContain('path: "/v1/billing/credits/deduct"');
     expect(schemaContent).toContain('path: "/v1/billing/checkout-sessions"');
-    expect(schemaContent).toContain('path: "/v1/billing/webhooks/stripe/{appId}"');
+    expect(schemaContent).toContain('path: "/v1/billing/webhooks/stripe"');
   });
 
   it("should use Billing tag", () => {
@@ -135,8 +135,8 @@ describe("Billing OpenAPI schemas", () => {
 
   it("should not require auth on stripe webhook path", () => {
     const webhookSection = schemaContent.slice(
-      schemaContent.indexOf('path: "/v1/billing/webhooks/stripe/{appId}"'),
-      schemaContent.indexOf('path: "/v1/billing/webhooks/stripe/{appId}"') + 500,
+      schemaContent.indexOf('path: "/v1/billing/webhooks/stripe"'),
+      schemaContent.indexOf('path: "/v1/billing/webhooks/stripe"') + 500,
     );
     expect(webhookSection).not.toContain("security: authed");
   });

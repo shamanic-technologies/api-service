@@ -32,7 +32,7 @@ Authorization: Bearer distrib.usr_abc123...
 
 ### 2. App key (\`distrib.app_*\`)
 
-Issued when an app registers via \`POST /v1/apps/register\`. The key identifies the **app**, not a user or org. To access endpoints that require org/user context (campaigns, keys, activity, etc.), you must also send two identity headers:
+A server-to-server key for programmatic access. The key identifies the app. To access endpoints that require org/user context (campaigns, keys, activity, etc.), you must also send two identity headers:
 
 | Header | Description | Example |
 |--------|-------------|---------|
@@ -65,11 +65,10 @@ The API service resolves these external IDs to internal UUIDs via \`client-servi
   ],
   tags: [
     { name: "Health", description: "Health check and debug endpoints" },
-    { name: "Apps", description: "App registration" },
     { name: "Performance", description: "Public performance leaderboard" },
     { name: "User", description: "Current user information" },
     { name: "Campaigns", description: "Campaign management" },
-    { name: "Keys", description: "BYOK key management" },
+    { name: "Keys", description: "Provider key management" },
     { name: "API Keys", description: "API key management" },
     { name: "Leads", description: "Lead search" },
     { name: "Qualify", description: "Email reply qualification" },

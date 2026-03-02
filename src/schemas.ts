@@ -120,46 +120,6 @@ registry.registerPath({
 });
 
 // ===================================================================
-// APPS
-// ===================================================================
-
-export const RegisterAppRequestSchema = z
-  .object({
-    name: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/, "App name must be lowercase alphanumeric with hyphens").describe("Unique app name (lowercase, alphanumeric with hyphens)"),
-  })
-  .openapi("RegisterAppRequest");
-
-export const RegisterAppResponseSchema = z
-  .object({
-    appId: z.string().describe("The registered app ID"),
-    apiKey: z.string().optional().describe("API key (only returned on first creation — save it)"),
-    message: z.string().optional().describe("Status message"),
-  })
-  .openapi("RegisterAppResponse");
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/apps/register",
-  tags: ["Apps"],
-  summary: "Register an app",
-  description:
-    "Register a new app and receive an API key. Idempotent: returns existing appId if already registered. The API key is only shown on first creation.",
-  request: {
-    body: {
-      content: { "application/json": { schema: RegisterAppRequestSchema } },
-    },
-  },
-  responses: {
-    200: {
-      description: "App registered (or already exists)",
-      content: { "application/json": { schema: RegisterAppResponseSchema } },
-    },
-    400: { description: "Invalid request", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-// ===================================================================
 // PERFORMANCE
 // ===================================================================
 
@@ -171,11 +131,6 @@ registry.registerPath({
   description:
     "Returns performance leaderboard data including brands, workflows, and hero stats. Requires authentication.",
   security: authed,
-  request: {
-    query: z.object({
-      appId: z.string().optional().describe("Filter by application ID (opt-in, omit to return all)"),
-    }),
-  },
   responses: {
     200: { description: "Leaderboard data with brands, workflows, and hero stats" },
     401: { description: "Unauthorized", content: errorContent },
@@ -480,8 +435,8 @@ registry.registerPath({
 export const UpsertKeyRequestSchema = z
   .object({
     keySource: z
-      .enum(["org", "app"])
-      .describe("Key store: 'org' (org-level, user-provided) or 'app' (app-level, requires app key auth)"),
+      .enum(["org"])
+      .describe("Key store: 'org' (organization-level, user-provided)"),
     provider: z
       .string()
       .describe("Provider name (e.g. openai, anthropic, stripe)"),
@@ -495,13 +450,8 @@ registry.registerPath({
   tags: ["Keys"],
   summary: "List provider keys",
   description:
-    "List provider keys. Pass keySource query param to select the key store (org or app). Defaults to 'org'.",
+    "List provider keys for the organization.",
   security: authed,
-  request: {
-    query: z.object({
-      keySource: z.enum(["org", "app"]).optional().describe("Key store to list from (default: 'org')"),
-    }),
-  },
   responses: {
     200: { description: "List of provider keys (masked)" },
     401: { description: "Unauthorized", content: errorContent },
@@ -515,7 +465,7 @@ registry.registerPath({
   tags: ["Keys"],
   summary: "Upsert a provider key",
   description:
-    "Store or update a provider API key. keySource determines the key store: 'org' for org-level keys (requires org context), 'app' for app-level keys (requires app key auth).",
+    "Store or update a provider API key for the organization.",
   security: authed,
   request: {
     body: {
@@ -535,14 +485,11 @@ registry.registerPath({
   path: "/v1/keys/{provider}",
   tags: ["Keys"],
   summary: "Delete a provider key",
-  description: "Remove a provider key. Pass keySource query param to select the key store (default: 'org').",
+  description: "Remove a provider key for the organization.",
   security: authed,
   request: {
     params: z.object({
       provider: z.string().describe("Provider name"),
-    }),
-    query: z.object({
-      keySource: z.enum(["org", "app"]).optional().describe("Key store (default: 'org')"),
     }),
   },
   responses: {
@@ -982,7 +929,6 @@ registry.registerPath({
   security: authed,
   request: {
     query: z.object({
-      appId: z.string().optional().describe("Filter by application ID (opt-in, omit to return all)"),
       category: z.string().optional().describe("Filter by category (e.g. 'sales', 'pr')"),
       channel: z.string().optional().describe("Filter by channel (e.g. 'email')"),
       audienceType: z.string().optional().describe("Filter by audience type (e.g. 'cold-outreach')"),
@@ -1023,7 +969,6 @@ registry.registerPath({
   security: authed,
   request: {
     query: z.object({
-      appId: z.string().optional().describe("Filter by application ID (opt-in, omit to return all)"),
       category: z.string().optional().describe("Filter by category (e.g. 'sales')"),
       channel: z.string().optional().describe("Filter by channel (e.g. 'email')"),
       audienceType: z.string().optional().describe("Filter by audience type (e.g. 'cold-outreach')"),
@@ -1393,7 +1338,6 @@ export const DeductCreditsRequestSchema = z
   .object({
     amount_cents: z.number().int().positive().describe("Amount to deduct in cents"),
     description: z.string().min(1).describe("Reason for the deduction"),
-    app_id: z.string().min(1).describe("App ID"),
     user_id: z.string().uuid().optional().describe("User ID"),
   })
   .openapi("DeductCreditsRequest");
@@ -1519,16 +1463,11 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/v1/billing/webhooks/stripe/{appId}",
+  path: "/v1/billing/webhooks/stripe",
   tags: ["Billing"],
   summary: "Stripe webhook",
   description:
     "Stripe webhook endpoint. No authentication — Stripe validates via signature header.",
-  request: {
-    params: z.object({
-      appId: z.string().describe("App ID"),
-    }),
-  },
   responses: {
     200: { description: "Webhook processed" },
     400: { description: "Invalid signature", content: errorContent },

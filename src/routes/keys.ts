@@ -5,56 +5,18 @@ import { UpsertKeyRequestSchema, CreateApiKeyRequestSchema } from "../schemas.js
 
 const router = Router();
 
-const ALLOWED_KEY_SOURCES = ["org", "app"] as const;
-type AllowedKeySource = (typeof ALLOWED_KEY_SOURCES)[number];
-
-/**
- * Validate keySource + authType combination.
- * - "org"  → any authenticated user with org context
- * - "app"  → only app key auth (authType === "app_key")
- * - "platform" → never allowed via public API
- */
-function validateKeySourceAccess(
-  keySource: string,
-  req: AuthenticatedRequest,
-): { error: string; status: number } | { keySource: AllowedKeySource } {
-  if (!ALLOWED_KEY_SOURCES.includes(keySource as AllowedKeySource)) {
-    return { status: 403, error: `keySource "${keySource}" is not allowed via the public API` };
-  }
-
-  if (keySource === "app" && req.authType !== "app_key") {
-    return { status: 403, error: "keySource 'app' requires app key authentication" };
-  }
-
-  if (keySource === "org" && !req.orgId) {
-    return { status: 400, error: "Organization context required for org keys" };
-  }
-
-  if (keySource === "app" && !req.appId) {
-    return { status: 403, error: "App key authentication required for app keys" };
-  }
-
-  return { keySource: keySource as AllowedKeySource };
-}
-
 // -----------------------------------------------------------------------
 // Provider keys — transparent proxy to key-service unified /keys endpoints
 // -----------------------------------------------------------------------
 
 /**
  * GET /v1/keys
- * List provider keys. keySource query param selects the key store (default: "org").
+ * List provider keys for the organization.
  */
 router.get("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
-    const keySource = (req.query.keySource as string) || "org";
-    const access = validateKeySourceAccess(keySource, req);
-    if ("error" in access) return res.status(access.status).json({ error: access.error });
-
-    const params = new URLSearchParams({ keySource: access.keySource });
-    if (access.keySource === "org") params.set("orgId", req.orgId!);
-    if (access.keySource === "app") params.set("appId", req.appId!);
-
+    if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
+    const params = new URLSearchParams({ keySource: "org", orgId: req.orgId });
     const result = await callExternalService(externalServices.key, `/keys?${params}`);
     res.json(result);
   } catch (error: any) {
@@ -65,7 +27,7 @@ router.get("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
 
 /**
  * POST /v1/keys
- * Upsert a provider key. keySource in body determines the key store.
+ * Upsert a provider key for the organization.
  */
 router.post("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
@@ -73,18 +35,12 @@ router.post("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
     if (!parsed.success) {
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
-    const { keySource, provider, apiKey } = parsed.data;
+    if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
 
-    const access = validateKeySourceAccess(keySource, req);
-    if ("error" in access) return res.status(access.status).json({ error: access.error });
-
-    const body: Record<string, string> = { keySource: access.keySource, provider, apiKey };
-    if (access.keySource === "org") body.orgId = req.orgId!;
-    if (access.keySource === "app") body.appId = req.appId!;
-
+    const { provider, apiKey } = parsed.data;
     const result = await callExternalService(externalServices.key, "/keys", {
       method: "POST",
-      body,
+      body: { keySource: "org", provider, apiKey, orgId: req.orgId },
     });
     res.json(result);
   } catch (error: any) {
@@ -95,20 +51,13 @@ router.post("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
 
 /**
  * DELETE /v1/keys/:provider
- * Delete a provider key. keySource query param selects the key store (default: "org").
+ * Delete a provider key for the organization.
  */
 router.delete("/keys/:provider", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
+    if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
     const { provider } = req.params;
-    const keySource = (req.query.keySource as string) || "org";
-
-    const access = validateKeySourceAccess(keySource, req);
-    if ("error" in access) return res.status(access.status).json({ error: access.error });
-
-    const params = new URLSearchParams({ keySource: access.keySource });
-    if (access.keySource === "org") params.set("orgId", req.orgId!);
-    if (access.keySource === "app") params.set("appId", req.appId!);
-
+    const params = new URLSearchParams({ keySource: "org", orgId: req.orgId });
     const result = await callExternalService(
       externalServices.key,
       `/keys/${encodeURIComponent(provider)}?${params}`,
