@@ -5,6 +5,7 @@ import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { createRun, updateRun, getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { CreateCampaignRequestSchema, BatchStatsRequestSchema } from "../schemas.js";
 import { fetchKeySource } from "../lib/billing.js";
+import { fetchRequiredProviders, fetchOrgKeys, resolveWorkflowByName } from "./workflows.js";
 
 function sendTransactionalEmail(
   eventType: string,
@@ -188,6 +189,34 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     // 3. Resolve keySource from billing-service (byok vs pay-as-you-go)
     const keySource = await fetchKeySource(req.orgId!, req.appId!);
     console.log("[api-service] POST /v1/campaigns — step 3: resolved keySource from billing-service", { keySource });
+
+    // 3b. Pre-campaign key validation: if BYOK, check org has all required provider keys
+    if (keySource === "byok") {
+      const workflow = await resolveWorkflowByName(parsed.data.workflowName);
+      if (workflow) {
+        const [requiredProviders, orgKeys] = await Promise.all([
+          fetchRequiredProviders(workflow.id as string),
+          fetchOrgKeys(req.orgId!),
+        ]);
+
+        if (requiredProviders.length > 0) {
+          const configuredSet = new Set(orgKeys.map((k) => k.provider));
+          const configured = requiredProviders.filter((p) => configuredSet.has(p));
+          const missing = requiredProviders.filter((p) => !configuredSet.has(p));
+
+          if (missing.length > 0) {
+            console.warn("[api-service] POST /v1/campaigns — missing BYOK keys", { missing, configured });
+            await updateRun(parentRun.id, "failed").catch(() => {});
+            return res.status(400).json({
+              error: "missing_keys",
+              message: "Your organization is missing required API keys for this workflow",
+              missing,
+              configured,
+            });
+          }
+        }
+      }
+    }
 
     // 4. Forward to campaign-service with parentRunId
     // Derive `type` from workflowName for campaign-service backward compat

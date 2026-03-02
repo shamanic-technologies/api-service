@@ -35,7 +35,7 @@ describe("Workflow proxy routes", () => {
 
   it("should proxy GET /workflows/:id", () => {
     expect(content).toContain('"/workflows/:id"');
-    expect(content).toContain("req.params.id");
+    expect(content).toContain("req.params");
   });
 
   it("should proxy GET /workflows/best", () => {
@@ -45,14 +45,17 @@ describe("Workflow proxy routes", () => {
 
   it("should define /workflows/best before /workflows/:id to avoid param capture", () => {
     const bestIndex = content.indexOf('"/workflows/best"');
-    const idIndex = content.indexOf('"/workflows/:id"');
+    // Find the standalone /:id route (not /:id/summary or /:id/key-status)
+    const idMatch = content.match(/router\.\w+\("\/workflows\/:id"[^/]/);
+    expect(idMatch).not.toBeNull();
+    const idIndex = idMatch!.index!;
     expect(bestIndex).toBeLessThan(idIndex);
   });
 
   it("should forward query params on /workflows/best", () => {
     // Extract the best workflow handler block
     const bestStart = content.indexOf('"/workflows/best"');
-    const bestEnd = content.indexOf('"/workflows/:id"');
+    const bestEnd = content.indexOf('"/workflows/:id/summary"');
     const bestBlock = content.slice(bestStart, bestEnd);
 
     expect(bestBlock).toContain("category");
@@ -77,6 +80,62 @@ describe("Workflow proxy routes", () => {
     const listBlock = content.slice(listStart, bestStart);
 
     expect(listBlock).toContain("humanId");
+  });
+});
+
+describe("Workflow proxy routes — new endpoints", () => {
+  const routePath = path.join(__dirname, "../../src/routes/workflows.ts");
+  const content = fs.readFileSync(routePath, "utf-8");
+
+  it("should define GET /workflows/:id/summary", () => {
+    expect(content).toContain('"/workflows/:id/summary"');
+  });
+
+  it("should define GET /workflows/:id/key-status", () => {
+    expect(content).toContain('"/workflows/:id/key-status"');
+  });
+
+  it("should define summary and key-status before /:id to avoid param capture", () => {
+    const summaryIndex = content.indexOf('"/workflows/:id/summary"');
+    const keyStatusIndex = content.indexOf('"/workflows/:id/key-status"');
+    const idMatch = content.match(/router\.\w+\("\/workflows\/:id"[^/]/);
+    expect(idMatch).not.toBeNull();
+    const idIndex = idMatch!.index!;
+    expect(summaryIndex).toBeLessThan(idIndex);
+    expect(keyStatusIndex).toBeLessThan(idIndex);
+  });
+
+  it("should export fetchRequiredProviders and fetchOrgKeys helpers", () => {
+    expect(content).toContain("export { fetchRequiredProviders");
+    expect(content).toContain("fetchOrgKeys");
+    expect(content).toContain("resolveWorkflowByName");
+  });
+});
+
+describe("Workflow schemas — summary and key-status endpoints", () => {
+  const schemaPath = path.join(__dirname, "../../src/schemas.ts");
+  const content = fs.readFileSync(schemaPath, "utf-8");
+
+  it("should register /v1/workflows/{id}/summary path", () => {
+    expect(content).toContain('path: "/v1/workflows/{id}/summary"');
+  });
+
+  it("should register /v1/workflows/{id}/key-status path", () => {
+    expect(content).toContain('path: "/v1/workflows/{id}/key-status"');
+  });
+
+  it("should define WorkflowSummaryResponse schema", () => {
+    expect(content).toContain('"WorkflowSummaryResponse"');
+    expect(content).toContain("requiredProviders");
+  });
+
+  it("should define WorkflowKeyStatusResponse schema", () => {
+    expect(content).toContain('"WorkflowKeyStatusResponse"');
+  });
+
+  it("should define MissingKeysError schema", () => {
+    expect(content).toContain('"MissingKeysError"');
+    expect(content).toContain('"missing_keys"');
   });
 });
 

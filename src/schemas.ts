@@ -287,6 +287,12 @@ registry.registerPath({
   },
   responses: {
     200: { description: "Created campaign" },
+    400: {
+      description:
+        "Validation error. If keySource is 'byok' and the org is missing required provider keys, " +
+        "returns error code `missing_keys` with lists of missing and configured providers.",
+      content: errorContent,
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -1155,6 +1161,94 @@ registry.registerPath({
     500: { description: "Internal error", content: errorContent },
   },
 });
+
+// ===================================================================
+// WORKFLOW SUMMARY & KEY STATUS
+// ===================================================================
+
+const WorkflowIdParam = z.object({
+  id: z.string().describe("Workflow ID"),
+});
+
+export const WorkflowSummaryResponseSchema = z
+  .object({
+    workflowName: z.string().describe("Workflow name"),
+    summary: z.string().describe("Natural-language summary of the workflow"),
+    requiredProviders: z.array(z.string()).describe("List of external provider names required by this workflow"),
+    steps: z.array(z.string()).describe("Ordered list of workflow steps in human-readable format"),
+  })
+  .openapi("WorkflowSummaryResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/workflows/{id}/summary",
+  tags: ["Workflows"],
+  summary: "Get workflow summary",
+  description:
+    "Returns a human-readable summary of a workflow's DAG, including ordered steps and required providers. " +
+    "Useful for showing users what a workflow does without exposing the raw DAG.",
+  security: authed,
+  request: {
+    params: WorkflowIdParam,
+  },
+  responses: {
+    200: {
+      description: "Workflow summary",
+      content: { "application/json": { schema: WorkflowSummaryResponseSchema } },
+    },
+    404: { description: "Workflow not found", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+export const WorkflowKeyStatusItemSchema = z
+  .object({
+    provider: z.string().describe("Provider name (e.g. 'apollo', 'anthropic')"),
+    configured: z.boolean().describe("Whether the org has a key configured for this provider"),
+    maskedKey: z.string().nullable().describe("Masked key value, or null if not configured"),
+  })
+  .openapi("WorkflowKeyStatusItem");
+
+export const WorkflowKeyStatusResponseSchema = z
+  .object({
+    workflowName: z.string().describe("Workflow name"),
+    ready: z.boolean().describe("True if all required provider keys are configured"),
+    keys: z.array(WorkflowKeyStatusItemSchema).describe("Status of each required provider key"),
+    missing: z.array(z.string()).describe("List of provider names with missing keys"),
+  })
+  .openapi("WorkflowKeyStatusResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/workflows/{id}/key-status",
+  tags: ["Workflows"],
+  summary: "Get key status for a workflow",
+  description:
+    "Compares the workflow's required providers against the org's configured BYOK keys. " +
+    "Returns which keys are present and which are missing, along with an overall readiness flag.",
+  security: authed,
+  request: {
+    params: WorkflowIdParam,
+  },
+  responses: {
+    200: {
+      description: "Key status for the workflow",
+      content: { "application/json": { schema: WorkflowKeyStatusResponseSchema } },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+export const MissingKeysErrorSchema = z
+  .object({
+    error: z.literal("missing_keys").describe("Error code"),
+    message: z.string().describe("Human-readable error message"),
+    missing: z.array(z.string()).describe("Provider names with missing keys"),
+    configured: z.array(z.string()).describe("Provider names with configured keys"),
+  })
+  .openapi("MissingKeysError");
 
 // ===================================================================
 // CAMPAIGNS SSE STREAM
