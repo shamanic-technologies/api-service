@@ -398,26 +398,29 @@
           "campaignIds"
         ]
       },
-      "AddByokKeyRequest": {
+      "UpsertKeyRequest": {
         "type": "object",
         "properties": {
+          "keySource": {
+            "type": "string",
+            "enum": [
+              "org",
+              "app",
+              "platform"
+            ],
+            "description": "Key store: 'org' (user-provided), 'app' (app-level), 'platform' (global)"
+          },
           "provider": {
             "type": "string",
-            "description": "Provider name (e.g. openai, anthropic, apollo)"
+            "description": "Provider name (e.g. openai, anthropic, stripe)"
           },
           "apiKey": {
             "type": "string",
             "description": "The API key value"
-          },
-          "scope": {
-            "type": "string",
-            "enum": [
-              "app"
-            ],
-            "description": "Key scope: 'app' for app-level key (no org/user needed). Omit for org-level BYOK."
           }
         },
         "required": [
+          "keySource",
           "provider",
           "apiKey"
         ]
@@ -2489,16 +2492,51 @@
         "tags": [
           "Keys"
         ],
-        "summary": "List BYOK keys",
-        "description": "List all BYOK (Bring Your Own Key) API keys for the organization",
+        "summary": "List provider keys",
+        "description": "List provider keys. Pass keySource query param to select the key store (org, app, platform). Defaults to 'org'.",
         "security": [
           {
             "bearerAuth": []
           }
         ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "org",
+                "app",
+                "platform"
+              ],
+              "description": "Key store to list from (default: 'org')"
+            },
+            "required": false,
+            "description": "Key store to list from (default: 'org')",
+            "name": "keySource",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          }
+        ],
         "responses": {
           "200": {
-            "description": "List of BYOK keys"
+            "description": "List of provider keys (masked)"
           },
           "401": {
             "description": "Unauthorized",
@@ -2520,34 +2558,14 @@
               }
             }
           }
-        },
-        "parameters": [
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          }
-        ]
+        }
       },
       "post": {
         "tags": [
           "Keys"
         ],
-        "summary": "Add a provider key",
-        "description": "Store a provider API key. Use scope:'app' for app-level keys (no org/user needed). Omit scope for org-level BYOK keys.",
+        "summary": "Upsert a provider key",
+        "description": "Store or update a provider API key. keySource determines the key store: 'org' for org-level keys, 'app' for app-level keys, 'platform' for global keys.",
         "security": [
           {
             "bearerAuth": []
@@ -2557,7 +2575,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/AddByokKeyRequest"
+                "$ref": "#/components/schemas/UpsertKeyRequest"
               }
             }
           }
@@ -2624,8 +2642,8 @@
         "tags": [
           "Keys"
         ],
-        "summary": "Delete a BYOK key",
-        "description": "Remove a BYOK API key for a specific provider",
+        "summary": "Delete a provider key",
+        "description": "Remove a provider key. Pass keySource query param to select the key store (default: 'org').",
         "security": [
           {
             "bearerAuth": []
@@ -2641,6 +2659,21 @@
             "description": "Provider name",
             "name": "provider",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "org",
+                "app",
+                "platform"
+              ],
+              "description": "Key store (default: 'org')"
+            },
+            "required": false,
+            "description": "Key store (default: 'org')",
+            "name": "keySource",
+            "in": "query"
           },
           {
             "name": "x-org-id",
@@ -2667,72 +2700,6 @@
           },
           "401": {
             "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/internal/keys/{provider}/decrypt": {
-      "get": {
-        "tags": [
-          "Keys"
-        ],
-        "summary": "Decrypt a BYOK key (internal)",
-        "description": "Get decrypted BYOK key value. Internal service-to-service endpoint.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Provider name"
-            },
-            "required": true,
-            "description": "Provider name",
-            "name": "provider",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Organization ID"
-            },
-            "required": true,
-            "description": "Organization ID",
-            "name": "orgId",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Decrypted key"
-          },
-          "400": {
-            "description": "Missing orgId query parameter",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Key not found",
             "content": {
               "application/json": {
                 "schema": {

@@ -1,20 +1,32 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
-import { AddByokKeyRequestSchema, CreateApiKeyRequestSchema } from "../schemas.js";
+import { UpsertKeyRequestSchema, CreateApiKeyRequestSchema } from "../schemas.js";
 
 const router = Router();
 
+// -----------------------------------------------------------------------
+// Provider keys — transparent proxy to key-service unified /keys endpoints
+// -----------------------------------------------------------------------
+
 /**
  * GET /v1/keys
- * List BYOK keys for the organization
+ * List provider keys. keySource query param selects the key store (default: "org").
  */
-router.get("/keys", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.get("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
-    const result = await callExternalService(
-      externalServices.key,
-      `/internal/keys?orgId=${req.orgId}`
-    );
+    const keySource = (req.query.keySource as string) || "org";
+
+    const params = new URLSearchParams({ keySource });
+    if (keySource === "org") {
+      if (!req.orgId) return res.status(400).json({ error: "Organization context required for org keys" });
+      params.set("orgId", req.orgId);
+    } else if (keySource === "app") {
+      if (!req.appId) return res.status(403).json({ error: "App key authentication required for app keys" });
+      params.set("appId", req.appId);
+    }
+
+    const result = await callExternalService(externalServices.key, `/keys?${params}`);
     res.json(result);
   } catch (error: any) {
     console.error("List keys error:", error);
@@ -24,68 +36,58 @@ router.get("/keys", authenticate, requireOrg, requireUser, async (req: Authentic
 
 /**
  * POST /v1/keys
- * Add a provider key. Supports:
- * - scope: "app" → app-scoped key (requires app key auth, no org/user needed)
- * - no scope → BYOK org-scoped key (requires org + user context)
+ * Upsert a provider key. keySource in body determines the key store.
  */
 router.post("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
-    const parsed = AddByokKeyRequestSchema.safeParse(req.body);
+    const parsed = UpsertKeyRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
-    const { provider, apiKey, scope } = parsed.data;
+    const { keySource, provider, apiKey } = parsed.data;
 
-    if (scope === "app") {
-      if (!req.appId) {
-        return res.status(403).json({ error: "App-scoped keys require app key authentication" });
-      }
+    const body: Record<string, string> = { keySource, provider, apiKey };
 
-      const result = await callExternalService(
-        externalServices.key,
-        "/internal/app-keys",
-        {
-          method: "POST",
-          body: { appId: req.appId, provider, apiKey },
-        }
-      );
-      return res.json(result);
+    if (keySource === "org") {
+      if (!req.orgId) return res.status(400).json({ error: "Organization context required for org keys" });
+      body.orgId = req.orgId;
+    } else if (keySource === "app") {
+      if (!req.appId) return res.status(403).json({ error: "App key authentication required for app keys" });
+      body.appId = req.appId;
     }
 
-    // Default: BYOK key (requires org + user)
-    if (!req.orgId) {
-      return res.status(400).json({ error: "Organization context required" });
-    }
-    if (!req.userId) {
-      return res.status(401).json({ error: "User identity required" });
-    }
-
-    const result = await callExternalService(
-      externalServices.key,
-      "/internal/keys",
-      {
-        method: "POST",
-        body: { orgId: req.orgId, provider, apiKey },
-      }
-    );
+    const result = await callExternalService(externalServices.key, "/keys", {
+      method: "POST",
+      body,
+    });
     res.json(result);
   } catch (error: any) {
-    console.error("Add key error:", error);
-    res.status(500).json({ error: error.message || "Failed to add key" });
+    console.error("Upsert key error:", error);
+    res.status(500).json({ error: error.message || "Failed to upsert key" });
   }
 });
 
 /**
  * DELETE /v1/keys/:provider
- * Remove a BYOK key
+ * Delete a provider key. keySource query param selects the key store (default: "org").
  */
-router.delete("/keys/:provider", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.delete("/keys/:provider", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const { provider } = req.params;
+    const keySource = (req.query.keySource as string) || "org";
+
+    const params = new URLSearchParams({ keySource });
+    if (keySource === "org") {
+      if (!req.orgId) return res.status(400).json({ error: "Organization context required for org keys" });
+      params.set("orgId", req.orgId);
+    } else if (keySource === "app") {
+      if (!req.appId) return res.status(403).json({ error: "App key authentication required for app keys" });
+      params.set("appId", req.appId);
+    }
 
     const result = await callExternalService(
       externalServices.key,
-      `/internal/keys/${provider}?orgId=${req.orgId}`,
+      `/keys/${encodeURIComponent(provider)}?${params}`,
       { method: "DELETE" }
     );
     res.json(result);
@@ -95,33 +97,9 @@ router.delete("/keys/:provider", authenticate, requireOrg, requireUser, async (r
   }
 });
 
-/**
- * GET /internal/keys/:provider/decrypt
- * Get decrypted BYOK key (for internal service-to-service use)
- * Requires X-API-Key header for service auth
- */
-router.get("/internal/keys/:provider/decrypt", async (req, res) => {
-  try {
-    const { provider } = req.params;
-    const orgId = req.query.orgId as string;
-
-    if (!orgId) {
-      return res.status(400).json({ error: "orgId required" });
-    }
-
-    const result = await callExternalService(
-      externalServices.key,
-      `/internal/keys/${provider}/decrypt?orgId=${orgId}`
-    );
-    res.json(result);
-  } catch (error: any) {
-    if (error.message?.includes("404")) {
-      return res.status(404).json({ error: `${req.params.provider} key not configured` });
-    }
-    console.error("Decrypt key error:", error);
-    res.status(500).json({ error: error.message || "Failed to decrypt key" });
-  }
-});
+// -----------------------------------------------------------------------
+// API keys — user-facing API key management (unchanged, uses /internal/api-keys)
+// -----------------------------------------------------------------------
 
 /**
  * POST /v1/api-keys/session
