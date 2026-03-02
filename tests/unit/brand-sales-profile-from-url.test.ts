@@ -19,7 +19,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
     req.orgId = "org_test456";
     req.appId = "distribute";
     req.authType = "app_key";
-    req.keySource = "byok";
+    req.keySource = "org";
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -81,7 +81,7 @@ describe("POST /v1/brand/sales-profile", () => {
     app = buildApp();
     capturedBody = undefined;
 
-    mockFetchKeySource.mockResolvedValue("byok");
+    mockFetchKeySource.mockResolvedValue("org");
     mockCreateRun.mockResolvedValue({ id: "run-parent-001" });
 
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
@@ -116,7 +116,7 @@ describe("POST /v1/brand/sales-profile", () => {
       appId: "distribute",
       orgId: "org_test456",
       userId: "user_test123",
-      keyType: "byok",
+      keyType: "org",
       parentRunId: "run-parent-001",
     });
   });

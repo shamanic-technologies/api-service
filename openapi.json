@@ -65,7 +65,7 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Bearer token authentication.\n\nUse an API key (`distrib.usr_*`) as your Bearer token. Create one via `POST /v1/api-keys` or in the dashboard.\n\nFor multi-tenant platforms: app keys (`distrib.app_*`) are also supported — see the Platform section in the API description."
+        "description": "Bearer token authentication.\n\nUse an API key (`distrib.usr_*`) as your Bearer token. Create one via `POST /v1/api-keys` or in the dashboard.\n\nYour key carries your org and user identity. No extra headers needed."
       }
     },
     "schemas": {
@@ -1792,7 +1792,7 @@
             "description": "Created campaign"
           },
           "400": {
-            "description": "Validation error. If keySource is 'byok' and the org is missing required provider keys, returns error code `missing_keys` with lists of missing and configured providers.",
+            "description": "Validation error. If keySource is 'org' and the org is missing required provider keys, returns error code `missing_keys` with lists of missing and configured providers.",
             "content": {
               "application/json": {
                 "schema": {

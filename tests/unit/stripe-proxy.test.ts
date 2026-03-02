@@ -3,7 +3,7 @@ import express from "express";
 import request from "supertest";
 
 // Configurable auth context — tests can toggle org/user presence
-let mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456" as string | undefined, userId: "user_test123" as string | undefined, authType: "user_key" as string, keySource: "byok" as string | undefined };
+let mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456" as string | undefined, userId: "user_test123" as string | undefined, authType: "user_key" as string, keySource: "org" as string | undefined };
 
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
@@ -25,7 +25,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
   AuthenticatedRequest: {},
 }));
 
-const mockFetchKeySource = vi.fn().mockResolvedValue("byok");
+const mockFetchKeySource = vi.fn().mockResolvedValue("org");
 vi.mock("../../src/lib/billing.js", () => ({
   fetchKeySource: (...args: unknown[]) => mockFetchKeySource(...args),
 }));
@@ -61,7 +61,7 @@ function mockFetchOk(responseData: any = {}) {
 // ---------------------------------------------------------------------------
 
 function resetAuthContext() {
-  mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456", userId: "user_test123", authType: "user_key", keySource: "byok" };
+  mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456", userId: "user_test123", authType: "user_key", keySource: "org" };
 }
 
 describe("GET /v1/stripe/products/:productId", () => {
@@ -84,7 +84,7 @@ describe("GET /v1/stripe/products/:productId", () => {
     expect(call).toBeDefined();
     expect(call!.url).toContain("appId=distribute-frontend");
     expect(call!.url).toContain("orgId=org_test456");
-    expect(call!.url).toContain("keySource=byok");
+    expect(call!.url).toContain("keySource=org");
   });
 });
 
@@ -111,7 +111,7 @@ describe("POST /v1/stripe/products", () => {
     expect(call!.body).toMatchObject({
       appId: "distribute-frontend",
       orgId: "org_test456",
-      keySource: "byok",
+      keySource: "org",
       name: "Course",
       description: "Online course",
     });
@@ -147,7 +147,7 @@ describe("GET /v1/stripe/products/:productId/prices", () => {
     expect(call).toBeDefined();
     expect(call!.url).toContain("appId=distribute-frontend");
     expect(call!.url).toContain("orgId=org_test456");
-    expect(call!.url).toContain("keySource=byok");
+    expect(call!.url).toContain("keySource=org");
   });
 });
 
@@ -171,7 +171,7 @@ describe("POST /v1/stripe/prices", () => {
     const call = fetchCalls.find((c) => c.url.includes("/prices/create"));
     expect(call!.body).toMatchObject({
       appId: "distribute-frontend",
-      keySource: "byok",
+      keySource: "org",
       productId: "prod_123",
       unitAmountCents: 4999,
     });
@@ -209,7 +209,7 @@ describe("GET /v1/stripe/coupons/:couponId", () => {
     expect(call).toBeDefined();
     expect(call!.url).toContain("appId=distribute-frontend");
     expect(call!.url).toContain("orgId=org_test456");
-    expect(call!.url).toContain("keySource=byok");
+    expect(call!.url).toContain("keySource=org");
   });
 });
 
@@ -233,7 +233,7 @@ describe("POST /v1/stripe/coupons", () => {
     const call = fetchCalls.find((c) => c.url.includes("/coupons/create"));
     expect(call!.body).toMatchObject({
       appId: "distribute-frontend",
-      keySource: "byok",
+      keySource: "org",
       percentOff: 20,
       duration: "once",
     });
@@ -280,7 +280,7 @@ describe("POST /v1/stripe/checkout", () => {
       appId: "distribute-frontend",
       orgId: "org_test456",
       userId: "user_test123",
-      keySource: "byok",
+      keySource: "org",
       lineItems: [{ priceId: "price_123", quantity: 1 }],
       successUrl: "https://polarity.com/success",
       cancelUrl: "https://polarity.com/cancel",
@@ -338,7 +338,7 @@ describe("POST /v1/stripe/stats", () => {
     expect(call!.body).toMatchObject({
       appId: "distribute-frontend",
       orgId: "org_test456",
-      keySource: "byok",
+      keySource: "org",
       brandId: "brand_abc",
     });
   });
