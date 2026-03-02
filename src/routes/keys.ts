@@ -5,6 +5,38 @@ import { UpsertKeyRequestSchema, CreateApiKeyRequestSchema } from "../schemas.js
 
 const router = Router();
 
+const ALLOWED_KEY_SOURCES = ["org", "app"] as const;
+type AllowedKeySource = (typeof ALLOWED_KEY_SOURCES)[number];
+
+/**
+ * Validate keySource + authType combination.
+ * - "org"  → any authenticated user with org context
+ * - "app"  → only app key auth (authType === "app_key")
+ * - "platform" → never allowed via public API
+ */
+function validateKeySourceAccess(
+  keySource: string,
+  req: AuthenticatedRequest,
+): { error: string; status: number } | { keySource: AllowedKeySource } {
+  if (!ALLOWED_KEY_SOURCES.includes(keySource as AllowedKeySource)) {
+    return { status: 403, error: `keySource "${keySource}" is not allowed via the public API` };
+  }
+
+  if (keySource === "app" && req.authType !== "app_key") {
+    return { status: 403, error: "keySource 'app' requires app key authentication" };
+  }
+
+  if (keySource === "org" && !req.orgId) {
+    return { status: 400, error: "Organization context required for org keys" };
+  }
+
+  if (keySource === "app" && !req.appId) {
+    return { status: 403, error: "App key authentication required for app keys" };
+  }
+
+  return { keySource: keySource as AllowedKeySource };
+}
+
 // -----------------------------------------------------------------------
 // Provider keys — transparent proxy to key-service unified /keys endpoints
 // -----------------------------------------------------------------------
@@ -16,15 +48,12 @@ const router = Router();
 router.get("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const keySource = (req.query.keySource as string) || "org";
+    const access = validateKeySourceAccess(keySource, req);
+    if ("error" in access) return res.status(access.status).json({ error: access.error });
 
-    const params = new URLSearchParams({ keySource });
-    if (keySource === "org") {
-      if (!req.orgId) return res.status(400).json({ error: "Organization context required for org keys" });
-      params.set("orgId", req.orgId);
-    } else if (keySource === "app") {
-      if (!req.appId) return res.status(403).json({ error: "App key authentication required for app keys" });
-      params.set("appId", req.appId);
-    }
+    const params = new URLSearchParams({ keySource: access.keySource });
+    if (access.keySource === "org") params.set("orgId", req.orgId!);
+    if (access.keySource === "app") params.set("appId", req.appId!);
 
     const result = await callExternalService(externalServices.key, `/keys?${params}`);
     res.json(result);
@@ -46,15 +75,12 @@ router.post("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
     }
     const { keySource, provider, apiKey } = parsed.data;
 
-    const body: Record<string, string> = { keySource, provider, apiKey };
+    const access = validateKeySourceAccess(keySource, req);
+    if ("error" in access) return res.status(access.status).json({ error: access.error });
 
-    if (keySource === "org") {
-      if (!req.orgId) return res.status(400).json({ error: "Organization context required for org keys" });
-      body.orgId = req.orgId;
-    } else if (keySource === "app") {
-      if (!req.appId) return res.status(403).json({ error: "App key authentication required for app keys" });
-      body.appId = req.appId;
-    }
+    const body: Record<string, string> = { keySource: access.keySource, provider, apiKey };
+    if (access.keySource === "org") body.orgId = req.orgId!;
+    if (access.keySource === "app") body.appId = req.appId!;
 
     const result = await callExternalService(externalServices.key, "/keys", {
       method: "POST",
@@ -76,14 +102,12 @@ router.delete("/keys/:provider", authenticate, async (req: AuthenticatedRequest,
     const { provider } = req.params;
     const keySource = (req.query.keySource as string) || "org";
 
-    const params = new URLSearchParams({ keySource });
-    if (keySource === "org") {
-      if (!req.orgId) return res.status(400).json({ error: "Organization context required for org keys" });
-      params.set("orgId", req.orgId);
-    } else if (keySource === "app") {
-      if (!req.appId) return res.status(403).json({ error: "App key authentication required for app keys" });
-      params.set("appId", req.appId);
-    }
+    const access = validateKeySourceAccess(keySource, req);
+    if ("error" in access) return res.status(access.status).json({ error: access.error });
+
+    const params = new URLSearchParams({ keySource: access.keySource });
+    if (access.keySource === "org") params.set("orgId", req.orgId!);
+    if (access.keySource === "app") params.set("appId", req.appId!);
 
     const result = await callExternalService(
       externalServices.key,

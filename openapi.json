@@ -405,10 +405,9 @@
             "type": "string",
             "enum": [
               "org",
-              "app",
-              "platform"
+              "app"
             ],
-            "description": "Key store: 'org' (user-provided), 'app' (app-level), 'platform' (global)"
+            "description": "Key store: 'org' (org-level, user-provided) or 'app' (app-level, requires app key auth)"
           },
           "provider": {
             "type": "string",
@@ -2493,7 +2492,7 @@
           "Keys"
         ],
         "summary": "List provider keys",
-        "description": "List provider keys. Pass keySource query param to select the key store (org, app, platform). Defaults to 'org'.",
+        "description": "List provider keys. Pass keySource query param to select the key store (org or app). Defaults to 'org'.",
         "security": [
           {
             "bearerAuth": []
@@ -2505,8 +2504,7 @@
               "type": "string",
               "enum": [
                 "org",
-                "app",
-                "platform"
+                "app"
               ],
               "description": "Key store to list from (default: 'org')"
             },
@@ -2565,7 +2563,7 @@
           "Keys"
         ],
         "summary": "Upsert a provider key",
-        "description": "Store or update a provider API key. keySource determines the key store: 'org' for org-level keys, 'app' for app-level keys, 'platform' for global keys.",
+        "description": "Store or update a provider API key. keySource determines the key store: 'org' for org-level keys (requires org context), 'app' for app-level keys (requires app key auth).",
         "security": [
           {
             "bearerAuth": []
@@ -2665,8 +2663,7 @@
               "type": "string",
               "enum": [
                 "org",
-                "app",
-                "platform"
+                "app"
               ],
               "description": "Key store (default: 'org')"
             },
