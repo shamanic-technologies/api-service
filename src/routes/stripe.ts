@@ -8,7 +8,6 @@ import {
   CreateStripeCheckoutRequestSchema,
   StripeStatsRequestSchema,
 } from "../schemas.js";
-import { API_SERVICE_APP_ID } from "../startup.js";
 
 const router = Router();
 
@@ -26,7 +25,7 @@ router.get("/stripe/products/:productId", authenticate, async (req: Authenticate
     const { productId } = req.params;
     const result = await callExternalService(
       externalServices.stripe,
-      `/products/${encodeURIComponent(productId)}?appId=${encodeURIComponent(API_SERVICE_APP_ID)}`,
+      `/products/${encodeURIComponent(productId)}?appId=${encodeURIComponent(req.appId!)}`,
     );
     res.json(result);
   } catch (error: any) {
@@ -52,7 +51,7 @@ router.post("/stripe/products", authenticate, async (req: AuthenticatedRequest, 
       "/products/create",
       {
         method: "POST",
-        body: { appId: API_SERVICE_APP_ID, ...(req.orgId && { orgId: req.orgId }), ...parsed.data },
+        body: { appId: req.appId, ...(req.orgId && { orgId: req.orgId }), ...parsed.data },
       }
     );
     res.json(result);
@@ -76,7 +75,7 @@ router.get("/stripe/products/:productId/prices", authenticate, async (req: Authe
     const { productId } = req.params;
     const result = await callExternalService(
       externalServices.stripe,
-      `/prices/by-product/${encodeURIComponent(productId)}?appId=${encodeURIComponent(API_SERVICE_APP_ID)}`,
+      `/prices/by-product/${encodeURIComponent(productId)}?appId=${encodeURIComponent(req.appId!)}`,
     );
     res.json(result);
   } catch (error: any) {
@@ -102,7 +101,7 @@ router.post("/stripe/prices", authenticate, async (req: AuthenticatedRequest, re
       "/prices/create",
       {
         method: "POST",
-        body: { appId: API_SERVICE_APP_ID, ...(req.orgId && { orgId: req.orgId }), ...parsed.data },
+        body: { appId: req.appId, ...(req.orgId && { orgId: req.orgId }), ...parsed.data },
       }
     );
     res.json(result);
@@ -126,7 +125,7 @@ router.get("/stripe/coupons/:couponId", authenticate, async (req: AuthenticatedR
     const { couponId } = req.params;
     const result = await callExternalService(
       externalServices.stripe,
-      `/coupons/${encodeURIComponent(couponId)}?appId=${encodeURIComponent(API_SERVICE_APP_ID)}`,
+      `/coupons/${encodeURIComponent(couponId)}?appId=${encodeURIComponent(req.appId!)}`,
     );
     res.json(result);
   } catch (error: any) {
@@ -152,7 +151,7 @@ router.post("/stripe/coupons", authenticate, async (req: AuthenticatedRequest, r
       "/coupons/create",
       {
         method: "POST",
-        body: { appId: API_SERVICE_APP_ID, ...(req.orgId && { orgId: req.orgId }), ...parsed.data },
+        body: { appId: req.appId, ...(req.orgId && { orgId: req.orgId }), ...parsed.data },
       }
     );
     res.json(result);
@@ -183,7 +182,7 @@ router.post("/stripe/checkout", authenticate, requireOrg, async (req: Authentica
       "/checkout/create",
       {
         method: "POST",
-        body: { appId: API_SERVICE_APP_ID, orgId: req.orgId, userId: req.userId, ...parsed.data },
+        body: { appId: req.appId, orgId: req.orgId, userId: req.userId, ...parsed.data },
       }
     );
     res.json(result);
@@ -214,7 +213,7 @@ router.post("/stripe/stats", authenticate, requireOrg, async (req: Authenticated
       "/stats",
       {
         method: "POST",
-        body: { appId: API_SERVICE_APP_ID, orgId: req.orgId, ...parsed.data },
+        body: { appId: req.appId, orgId: req.orgId, ...parsed.data },
       }
     );
     res.json(result);
