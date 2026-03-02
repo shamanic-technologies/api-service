@@ -95,6 +95,10 @@ export async function authenticate(
 
 /**
  * Validate API key against key-service /validate
+ *
+ * Uses fetch directly (not callExternalService) because:
+ * 1. /validate uses bearerAuth only — no service header needed
+ * 2. 401 responses are expected (invalid keys) and should not log stack traces
  */
 async function validateKey(apiKey: string): Promise<{
   type: "app" | "user";
@@ -102,23 +106,32 @@ async function validateKey(apiKey: string): Promise<{
   orgId?: string;
   userId?: string;
 } | null> {
+  const url = `${externalServices.key.url}/validate`;
+
   try {
-    const result = await callExternalService<{
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+
+    if (response.status === 401) return null;
+
+    if (!response.ok) {
+      console.error(`[auth] key-service /validate error: ${response.status}`);
+      return null;
+    }
+
+    const result = await response.json() as {
       valid: boolean;
       type: "app" | "user";
       appId?: string;
       orgId?: string;
       userId?: string;
-    }>(
-      externalServices.key,
-      "/validate",
-      { headers: { Authorization: `Bearer ${apiKey}` } }
-    );
+    };
 
     if (!result.valid) return null;
     return result;
   } catch (error) {
-    console.error("API key validation error:", error);
+    console.error("[auth] key-service /validate unreachable:", (error as Error).message);
     return null;
   }
 }
