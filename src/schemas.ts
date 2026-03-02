@@ -14,13 +14,11 @@ registry.registerComponent("securitySchemes", "bearerAuth", {
   type: "http",
   scheme: "bearer",
   description:
-    "Bearer token authentication. Two key types are supported:\n\n" +
-    "- **User key** (`distrib.usr_*`): carries app, org, and user context. No extra headers needed. " +
-    "Recommended for API/MCP access.\n" +
-    "- **App key** (`distrib.app_*`): identifies the app only (server-to-server). To access endpoints " +
-    "that require org/user context, also send `x-org-id` and `x-user-id` headers with your external IDs " +
-    "(e.g. Clerk IDs). The API resolves them to internal UUIDs via client-service.\n\n" +
-    "See the top-level API description for full details and examples.",
+    "Bearer token authentication.\n\n" +
+    "Use an API key (`distrib.usr_*`) as your Bearer token. " +
+    "Create one via `POST /v1/api-keys` or in the dashboard.\n\n" +
+    "For multi-tenant platforms: app keys (`distrib.app_*`) are also supported — " +
+    "see the Platform section in the API description.",
 });
 
 const authed: Record<string, string[]>[] = [{ bearerAuth: [] }];
@@ -140,10 +138,10 @@ export const RegisterAppResponseSchema = z
 registry.registerPath({
   method: "post",
   path: "/v1/apps/register",
-  tags: ["Apps"],
-  summary: "Register an app",
+  tags: ["Platform"],
+  summary: "Register a platform app",
   description:
-    "Register a new app and receive an API key. Idempotent: returns existing appId if already registered. The API key is only shown on first creation.",
+    "Register a multi-tenant platform app and receive an app key. Not needed for standard API access — use `POST /v1/api-keys` instead to create an API key. Idempotent: returns existing appId if already registered. The app key is only shown on first creation.",
   request: {
     body: {
       content: { "application/json": { schema: RegisterAppRequestSchema } },
@@ -481,7 +479,7 @@ export const UpsertKeyRequestSchema = z
   .object({
     keySource: z
       .enum(["org", "app"])
-      .describe("Key store: 'org' (org-level, user-provided) or 'app' (app-level, requires app key auth)"),
+      .describe("Key scope. Use 'org' to store keys for your organization. 'app' is for multi-tenant platforms only (requires app key auth)"),
     provider: z
       .string()
       .describe("Provider name (e.g. openai, anthropic, stripe)"),
@@ -495,11 +493,11 @@ registry.registerPath({
   tags: ["Keys"],
   summary: "List provider keys",
   description:
-    "List provider keys. Pass keySource query param to select the key store (org or app). Defaults to 'org'.",
+    "List stored provider keys (masked). Defaults to org-level keys.",
   security: authed,
   request: {
     query: z.object({
-      keySource: z.enum(["org", "app"]).optional().describe("Key store to list from (default: 'org')"),
+      keySource: z.enum(["org", "app"]).optional().describe("Key scope (default: 'org'). Use 'app' only for multi-tenant platforms"),
     }),
   },
   responses: {
@@ -515,7 +513,7 @@ registry.registerPath({
   tags: ["Keys"],
   summary: "Upsert a provider key",
   description:
-    "Store or update a provider API key. keySource determines the key store: 'org' for org-level keys (requires org context), 'app' for app-level keys (requires app key auth).",
+    "Store or update a provider API key (e.g. OpenAI, Anthropic). Most users should use keySource: 'org'. The 'app' key source is reserved for multi-tenant platforms managing keys on behalf of their users.",
   security: authed,
   request: {
     body: {
@@ -535,14 +533,14 @@ registry.registerPath({
   path: "/v1/keys/{provider}",
   tags: ["Keys"],
   summary: "Delete a provider key",
-  description: "Remove a provider key. Pass keySource query param to select the key store (default: 'org').",
+  description: "Remove a stored provider key. Defaults to org-level keys.",
   security: authed,
   request: {
     params: z.object({
       provider: z.string().describe("Provider name"),
     }),
     query: z.object({
-      keySource: z.enum(["org", "app"]).optional().describe("Key store (default: 'org')"),
+      keySource: z.enum(["org", "app"]).optional().describe("Key scope (default: 'org'). Use 'app' only for multi-tenant platforms"),
     }),
   },
   responses: {
@@ -568,7 +566,7 @@ export const CreateApiKeyRequestSchema = z
 registry.registerPath({
   method: "get",
   path: "/v1/api-keys",
-  tags: ["API Keys"],
+  tags: ["Authentication"],
   summary: "List API keys",
   description: "List all API keys for the organization",
   security: authed,
@@ -582,9 +580,9 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/v1/api-keys",
-  tags: ["API Keys"],
+  tags: ["Authentication"],
   summary: "Create an API key",
-  description: "Generate a new permanent API key for the organization",
+  description: "Create a new API key for your organization. This is the recommended way to authenticate with the API.",
   security: authed,
   request: {
     body: {
@@ -603,7 +601,7 @@ registry.registerPath({
 registry.registerPath({
   method: "delete",
   path: "/v1/api-keys/{id}",
-  tags: ["API Keys"],
+  tags: ["Authentication"],
   summary: "Revoke an API key",
   description: "Delete/revoke an API key by ID",
   security: authed,
@@ -620,7 +618,7 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/v1/api-keys/session",
-  tags: ["API Keys"],
+  tags: ["Authentication"],
   summary: "Get or create session API key",
   description:
     "Get or create a short-lived session API key for Foxy chat integration",

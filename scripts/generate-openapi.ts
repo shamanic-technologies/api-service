@@ -14,30 +14,43 @@ const document = generator.generateDocument({
   openapi: "3.0.0",
   info: {
     title: "distribute API",
-    description: `API Gateway for distribute. Handles authentication, proxies to internal services, and exposes the public REST API.
+    description: `API Gateway for distribute.
 
-## Authentication
+## Quick Start
 
-All authenticated endpoints require a Bearer token in the \`Authorization\` header.
-
-There are two key types, each with different identity resolution behavior:
-
-### 1. User key (\`distrib.usr_*\`)
-
-Issued per-user via \`POST /v1/api-keys\`. The key already carries the user's internal org UUID — no extra headers needed.
+1. Create an API key in the distribute dashboard, or via \`POST /v1/api-keys\`
+2. Use it as a Bearer token — that's it, no extra headers needed
 
 \`\`\`
 Authorization: Bearer distrib.usr_abc123...
 \`\`\`
 
-### 2. App key (\`distrib.app_*\`)
+Your key carries your org and user identity. All endpoints work out of the box.
 
-Issued when an app registers via \`POST /v1/apps/register\`. The key identifies the **app**, not a user or org. To access endpoints that require org/user context (campaigns, keys, activity, etc.), you must also send two identity headers:
+## Storing provider keys (BYOK)
 
-| Header | Description | Example |
-|--------|-------------|---------|
-| \`x-org-id\` | External organization ID (e.g. Clerk org ID) | \`org_2xyz...\` |
-| \`x-user-id\` | External user ID (e.g. Clerk user ID) | \`user_2abc...\` |
+To store your own provider API keys (e.g. OpenAI, Anthropic) for use in workflows:
+
+\`\`\`
+POST /v1/keys
+Authorization: Bearer distrib.usr_abc123...
+
+{ "keySource": "org", "provider": "openai", "apiKey": "sk-..." }
+\`\`\`
+
+## Error codes
+
+| Code | Meaning |
+|------|---------|
+| 401 | Missing or invalid Bearer token |
+| 400 | Organization context required (missing \`x-org-id\` — app key only) |
+| 502 | Identity resolution failed (internal service unreachable) |
+
+## Advanced: Platform integration
+
+> Most users do not need this section. It is for multi-tenant platforms that manage keys on behalf of multiple organizations.
+
+If you're building a platform that operates across multiple orgs/users, register via \`POST /v1/apps/register\` to receive an app key (\`distrib.app_*\`). App keys identify the **platform**, not a user or org. To access org-scoped endpoints, send identity headers:
 
 \`\`\`
 Authorization: Bearer distrib.app_abc123...
@@ -45,16 +58,7 @@ x-org-id: org_2xyzABC
 x-user-id: user_2abcDEF
 \`\`\`
 
-The API service resolves these external IDs to internal UUIDs via \`client-service\`. Both headers are **optional** — if omitted, the request proceeds without org/user context, which is fine for endpoints that only need app-level auth (e.g. \`GET /v1/me\`). But endpoints that require org context (e.g. \`GET /v1/campaigns\`) will return \`400 Organization context required\`.
-
-### Error codes
-
-| Code | Meaning |
-|------|---------|
-| 401 | Missing or invalid Bearer token |
-| 400 | Org context required but \`x-org-id\` header not provided (app key only) |
-| 401 | User identity required but \`x-user-id\` header not provided (app key only) |
-| 502 | Identity resolution failed (client-service unreachable) |
+The API resolves these external IDs (e.g. Clerk IDs) to internal UUIDs via client-service. Both headers are **optional** — omit them for endpoints that only need app-level auth.
 `,
     version: "1.0.0",
   },
@@ -65,18 +69,24 @@ The API service resolves these external IDs to internal UUIDs via \`client-servi
   ],
   tags: [
     { name: "Health", description: "Health check and debug endpoints" },
-    { name: "Apps", description: "App registration" },
+    { name: "Authentication", description: "Create and manage your API keys" },
+    {
+      name: "Keys",
+      description: "Store and manage provider API keys (BYOK)",
+    },
     { name: "Performance", description: "Public performance leaderboard" },
     { name: "User", description: "Current user information" },
     { name: "Campaigns", description: "Campaign management" },
-    { name: "Keys", description: "BYOK key management" },
-    { name: "API Keys", description: "API key management" },
     { name: "Leads", description: "Lead search" },
     { name: "Qualify", description: "Email reply qualification" },
     { name: "Brand", description: "Brand scraping and management" },
     { name: "Activity", description: "User activity tracking" },
     { name: "Chat", description: "AI chat with SSE streaming" },
     { name: "Billing", description: "Billing, credits, and checkout" },
+    {
+      name: "Platform",
+      description: "Multi-tenant platform registration (advanced)",
+    },
   ],
 });
 
