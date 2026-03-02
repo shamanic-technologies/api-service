@@ -2,6 +2,7 @@ import { Router, raw, Request, Response } from "express";
 import { authenticate, requireOrg, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
+import { DEFAULT_APP_ID } from "../lib/constants.js";
 
 const router = Router();
 
@@ -76,7 +77,7 @@ router.post("/billing/credits/deduct", authenticate, requireOrg, async (req: Aut
     const result = await callExternalService(
       externalServices.billing,
       "/v1/credits/deduct",
-      { method: "POST", body: req.body, headers: billingHeaders(req) }
+      { method: "POST", body: { ...req.body, app_id: req.appId }, headers: billingHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
@@ -105,7 +106,7 @@ router.post("/billing/checkout-sessions", authenticate, requireOrg, async (req: 
  */
 export async function stripeWebhookHandler(req: Request, res: Response) {
   try {
-    const { appId } = req.params;
+    const appId = DEFAULT_APP_ID;
     const response = await fetch(
       `${externalServices.billing.url}/v1/webhooks/stripe/${appId}`,
       {

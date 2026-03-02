@@ -17,8 +17,7 @@ registry.registerComponent("securitySchemes", "bearerAuth", {
     "Bearer token authentication.\n\n" +
     "Use an API key (`distrib.usr_*`) as your Bearer token. " +
     "Create one via `POST /v1/api-keys` or in the dashboard.\n\n" +
-    "For multi-tenant platforms: app keys (`distrib.app_*`) are also supported — " +
-    "see the Platform section in the API description.",
+    "Your key carries your org and user identity. No extra headers needed.",
 });
 
 const authed: Record<string, string[]>[] = [{ bearerAuth: [] }];
@@ -118,46 +117,6 @@ registry.registerPath({
 });
 
 // ===================================================================
-// APPS
-// ===================================================================
-
-export const RegisterAppRequestSchema = z
-  .object({
-    name: z.string().min(1).max(100).regex(/^[a-z0-9-]+$/, "App name must be lowercase alphanumeric with hyphens").describe("Unique app name (lowercase, alphanumeric with hyphens)"),
-  })
-  .openapi("RegisterAppRequest");
-
-export const RegisterAppResponseSchema = z
-  .object({
-    appId: z.string().describe("The registered app ID"),
-    apiKey: z.string().optional().describe("API key (only returned on first creation — save it)"),
-    message: z.string().optional().describe("Status message"),
-  })
-  .openapi("RegisterAppResponse");
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/apps/register",
-  tags: ["Platform"],
-  summary: "Register a platform app",
-  description:
-    "Register a multi-tenant platform app and receive an app key. Not needed for standard API access — use `POST /v1/api-keys` instead to create an API key. Idempotent: returns existing appId if already registered. The app key is only shown on first creation.",
-  request: {
-    body: {
-      content: { "application/json": { schema: RegisterAppRequestSchema } },
-    },
-  },
-  responses: {
-    200: {
-      description: "App registered (or already exists)",
-      content: { "application/json": { schema: RegisterAppResponseSchema } },
-    },
-    400: { description: "Invalid request", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-// ===================================================================
 // PERFORMANCE
 // ===================================================================
 
@@ -169,11 +128,6 @@ registry.registerPath({
   description:
     "Returns performance leaderboard data including brands, workflows, and hero stats. Requires authentication.",
   security: authed,
-  request: {
-    query: z.object({
-      appId: z.string().optional().describe("Filter by application ID (opt-in, omit to return all)"),
-    }),
-  },
   responses: {
     200: { description: "Leaderboard data with brands, workflows, and hero stats" },
     401: { description: "Unauthorized", content: errorContent },
@@ -478,8 +432,8 @@ registry.registerPath({
 export const UpsertKeyRequestSchema = z
   .object({
     keySource: z
-      .enum(["org", "app"])
-      .describe("Key scope. Use 'org' to store keys for your organization. 'app' is for multi-tenant platforms only (requires app key auth)"),
+      .enum(["org"])
+      .describe("Key store: 'org' (organization-level, user-provided)"),
     provider: z
       .string()
       .describe("Provider name (e.g. openai, anthropic, stripe)"),
@@ -493,13 +447,8 @@ registry.registerPath({
   tags: ["Keys"],
   summary: "List provider keys",
   description:
-    "List stored provider keys (masked). Defaults to org-level keys.",
+    "List provider keys for the organization.",
   security: authed,
-  request: {
-    query: z.object({
-      keySource: z.enum(["org", "app"]).optional().describe("Key scope (default: 'org'). Use 'app' only for multi-tenant platforms"),
-    }),
-  },
   responses: {
     200: { description: "List of provider keys (masked)" },
     401: { description: "Unauthorized", content: errorContent },
@@ -513,7 +462,7 @@ registry.registerPath({
   tags: ["Keys"],
   summary: "Upsert a provider key",
   description:
-    "Store or update a provider API key (e.g. OpenAI, Anthropic). Most users should use keySource: 'org'. The 'app' key source is reserved for multi-tenant platforms managing keys on behalf of their users.",
+    "Store or update a provider API key for the organization.",
   security: authed,
   request: {
     body: {
@@ -533,14 +482,11 @@ registry.registerPath({
   path: "/v1/keys/{provider}",
   tags: ["Keys"],
   summary: "Delete a provider key",
-  description: "Remove a stored provider key. Defaults to org-level keys.",
+  description: "Remove a provider key for the organization.",
   security: authed,
   request: {
     params: z.object({
       provider: z.string().describe("Provider name"),
-    }),
-    query: z.object({
-      keySource: z.enum(["org", "app"]).optional().describe("Key scope (default: 'org'). Use 'app' only for multi-tenant platforms"),
     }),
   },
   responses: {
@@ -980,7 +926,6 @@ registry.registerPath({
   security: authed,
   request: {
     query: z.object({
-      appId: z.string().optional().describe("Filter by application ID (opt-in, omit to return all)"),
       category: z.string().optional().describe("Filter by category (e.g. 'sales', 'pr')"),
       channel: z.string().optional().describe("Filter by channel (e.g. 'email')"),
       audienceType: z.string().optional().describe("Filter by audience type (e.g. 'cold-outreach')"),
@@ -1021,7 +966,6 @@ registry.registerPath({
   security: authed,
   request: {
     query: z.object({
-      appId: z.string().optional().describe("Filter by application ID (opt-in, omit to return all)"),
       category: z.string().optional().describe("Filter by category (e.g. 'sales')"),
       channel: z.string().optional().describe("Filter by channel (e.g. 'email')"),
       audienceType: z.string().optional().describe("Filter by audience type (e.g. 'cold-outreach')"),
@@ -1391,7 +1335,6 @@ export const DeductCreditsRequestSchema = z
   .object({
     amount_cents: z.number().int().positive().describe("Amount to deduct in cents"),
     description: z.string().min(1).describe("Reason for the deduction"),
-    app_id: z.string().min(1).describe("App ID"),
     user_id: z.string().uuid().optional().describe("User ID"),
   })
   .openapi("DeductCreditsRequest");
@@ -1517,16 +1460,11 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/v1/billing/webhooks/stripe/{appId}",
+  path: "/v1/billing/webhooks/stripe",
   tags: ["Billing"],
   summary: "Stripe webhook",
   description:
     "Stripe webhook endpoint. No authentication — Stripe validates via signature header.",
-  request: {
-    params: z.object({
-      appId: z.string().describe("App ID"),
-    }),
-  },
   responses: {
     200: { description: "Webhook processed" },
     400: { description: "Invalid signature", content: errorContent },

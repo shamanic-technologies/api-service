@@ -14,13 +14,9 @@ describe("OpenAPI spec — auth documentation", () => {
     expect(schemasContent).toContain("POST /v1/api-keys");
   });
 
-  it("should mention app key as multi-tenant platform option", () => {
-    expect(schemasContent).toContain("distrib.app_*");
-    expect(schemasContent).toContain("multi-tenant platform");
-  });
-
-  it("should reference Platform section for app key details", () => {
-    expect(schemasContent).toContain("Platform section");
+  it("should not reference Platform section or app registration", () => {
+    expect(schemasContent).not.toContain("Platform section");
+    expect(schemasContent).not.toContain("/v1/apps/register");
   });
 });
 
@@ -43,15 +39,9 @@ describe("OpenAPI spec — info description", () => {
     expect(generatorContent).toContain("Identity resolution failed");
   });
 
-  it("should push app key docs to Advanced: Platform integration section", () => {
-    expect(generatorContent).toContain("## Advanced: Platform integration");
-    expect(generatorContent).toContain("multi-tenant platform");
-  });
-
-  it("should document app key flow with identity headers in platform section", () => {
-    expect(generatorContent).toContain("Authorization: Bearer distrib.app_abc123");
-    expect(generatorContent).toContain("x-org-id: org_2xyzABC");
-    expect(generatorContent).toContain("x-user-id: user_2abcDEF");
+  it("should not include Advanced: Platform integration section", () => {
+    expect(generatorContent).not.toContain("## Advanced: Platform integration");
+    expect(generatorContent).not.toContain("/v1/apps/register");
   });
 });
 
@@ -82,8 +72,9 @@ describe("OpenAPI spec — tag structure", () => {
     expect(schemasContent).toContain('tags: ["Authentication"]');
   });
 
-  it("should use Platform tag for app registration", () => {
-    expect(schemasContent).toContain('tags: ["Platform"]');
+  it("should not have Platform tag", () => {
+    expect(generatorContent).not.toContain('"Platform"');
+    expect(schemasContent).not.toContain('tags: ["Platform"]');
   });
 
   it("should define Authentication tag before Keys tag", () => {
@@ -91,20 +82,15 @@ describe("OpenAPI spec — tag structure", () => {
     const keysTagPos = generatorContent.indexOf('"Keys"');
     expect(authTagPos).toBeLessThan(keysTagPos);
   });
-
-  it("should define Platform tag last", () => {
-    const platformTagPos = generatorContent.indexOf('"Platform"');
-    const billingTagPos = generatorContent.indexOf('"Billing"');
-    expect(platformTagPos).toBeGreaterThan(billingTagPos);
-  });
 });
 
 describe("OpenAPI spec — keySource clarity", () => {
-  it("should describe keySource 'app' as multi-tenant platforms only", () => {
-    expect(schemasContent).toContain("multi-tenant platforms only");
-  });
-
-  it("should recommend 'org' as the default keySource", () => {
-    expect(schemasContent).toContain("Most users should use keySource: 'org'");
+  it("should only allow 'org' keySource in UpsertKeyRequestSchema", () => {
+    const upsertBlock = schemasContent.slice(
+      schemasContent.indexOf("UpsertKeyRequestSchema"),
+      schemasContent.indexOf("UpsertKeyRequestSchema") + 300,
+    );
+    expect(upsertBlock).toContain('"org"');
+    expect(upsertBlock).not.toMatch(/enum\(\[.*"app".*\]\)/);
   });
 });

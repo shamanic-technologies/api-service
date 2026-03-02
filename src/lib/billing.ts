@@ -1,6 +1,6 @@
 import { callExternalService, externalServices } from "./service-client.js";
 
-export type KeySource = "platform" | "app" | "byok";
+export type KeySource = "platform" | "byok";
 
 interface BillingAccount {
   id: string;

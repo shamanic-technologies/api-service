@@ -73,7 +73,7 @@ beforeEach(() => {
 // POST /v1/keys
 // -----------------------------------------------------------------------
 
-describe("POST /v1/keys — user_key auth", () => {
+describe("POST /v1/keys — org keys only", () => {
   it("should forward org keys with orgId", async () => {
     const app = createApp();
     const res = await request(app)
@@ -90,14 +90,13 @@ describe("POST /v1/keys — user_key auth", () => {
     });
   });
 
-  it("should reject keySource 'app' from user_key auth", async () => {
+  it("should reject keySource 'app' — Zod validation rejects it", async () => {
     const app = createApp();
     const res = await request(app)
       .post("/v1/keys")
       .send({ keySource: "app", provider: "anthropic", apiKey: "sk-ant-test" });
 
-    expect(res.status).toBe(403);
-    expect(res.body.error).toContain("app key authentication");
+    expect(res.status).toBe(400);
     expect(fetchCalls).toHaveLength(0);
   });
 
@@ -110,45 +109,9 @@ describe("POST /v1/keys — user_key auth", () => {
     expect(res.status).toBe(400);
     expect(fetchCalls).toHaveLength(0);
   });
-});
 
-describe("POST /v1/keys — app_key auth", () => {
-  beforeEach(() => {
-    mockAuth.authType = "app_key";
+  it("should reject when no org context", async () => {
     mockAuth.orgId = "";
-    mockAuth.userId = "";
-  });
-
-  it("should forward app keys with appId", async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/keys")
-      .send({ keySource: "app", provider: "anthropic", apiKey: "sk-ant-test" });
-
-    expect(res.status).toBe(200);
-    const call = fetchCalls.find((c) => c.method === "POST");
-    expect(call!.body).toEqual({
-      keySource: "app",
-      provider: "anthropic",
-      apiKey: "sk-ant-test",
-      appId: "distribute-frontend",
-    });
-  });
-
-  it("should forward org keys when app_key has org context", async () => {
-    mockAuth.orgId = "org_test456";
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/keys")
-      .send({ keySource: "org", provider: "stripe", apiKey: "sk_live_test" });
-
-    expect(res.status).toBe(200);
-    const call = fetchCalls.find((c) => c.method === "POST");
-    expect(call!.body.keySource).toBe("org");
-    expect(call!.body.orgId).toBe("org_test456");
-  });
-
-  it("should reject org keys when app_key has no org context", async () => {
     const app = createApp();
     const res = await request(app)
       .post("/v1/keys")
@@ -158,24 +121,14 @@ describe("POST /v1/keys — app_key auth", () => {
     expect(res.body.error).toContain("Organization context required");
     expect(fetchCalls).toHaveLength(0);
   });
-
-  it("should reject keySource 'platform'", async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/keys")
-      .send({ keySource: "platform", provider: "gemini", apiKey: "gemini-key" });
-
-    expect(res.status).toBe(400);
-    expect(fetchCalls).toHaveLength(0);
-  });
 });
 
 // -----------------------------------------------------------------------
 // GET /v1/keys
 // -----------------------------------------------------------------------
 
-describe("GET /v1/keys — authorization", () => {
-  it("should default to org and include orgId (user_key)", async () => {
+describe("GET /v1/keys — org keys only", () => {
+  it("should list org keys with orgId", async () => {
     const app = createApp();
     const res = await request(app).get("/v1/keys");
 
@@ -185,31 +138,14 @@ describe("GET /v1/keys — authorization", () => {
     expect(call.url).toContain("orgId=org_test456");
   });
 
-  it("should reject keySource=app from user_key", async () => {
+  it("should reject when no org context", async () => {
+    mockAuth.orgId = "";
     const app = createApp();
-    const res = await request(app).get("/v1/keys?keySource=app");
+    const res = await request(app).get("/v1/keys");
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("Organization context required");
     expect(fetchCalls).toHaveLength(0);
-  });
-
-  it("should reject keySource=platform", async () => {
-    const app = createApp();
-    const res = await request(app).get("/v1/keys?keySource=platform");
-
-    expect(res.status).toBe(403);
-    expect(fetchCalls).toHaveLength(0);
-  });
-
-  it("should allow keySource=app from app_key", async () => {
-    mockAuth.authType = "app_key";
-    const app = createApp();
-    const res = await request(app).get("/v1/keys?keySource=app");
-
-    expect(res.status).toBe(200);
-    const call = fetchCalls[0];
-    expect(call.url).toContain("keySource=app");
-    expect(call.url).toContain("appId=distribute-frontend");
   });
 });
 
@@ -217,8 +153,8 @@ describe("GET /v1/keys — authorization", () => {
 // DELETE /v1/keys/:provider
 // -----------------------------------------------------------------------
 
-describe("DELETE /v1/keys/:provider — authorization", () => {
-  it("should default to org and include orgId", async () => {
+describe("DELETE /v1/keys/:provider — org keys only", () => {
+  it("should delete org key with orgId", async () => {
     const app = createApp();
     const res = await request(app).delete("/v1/keys/stripe");
 
@@ -228,31 +164,14 @@ describe("DELETE /v1/keys/:provider — authorization", () => {
     expect(call!.url).toContain("orgId=org_test456");
   });
 
-  it("should reject keySource=app from user_key", async () => {
+  it("should reject when no org context", async () => {
+    mockAuth.orgId = "";
     const app = createApp();
-    const res = await request(app).delete("/v1/keys/stripe?keySource=app");
+    const res = await request(app).delete("/v1/keys/stripe");
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("Organization context required");
     expect(fetchCalls).toHaveLength(0);
-  });
-
-  it("should reject keySource=platform", async () => {
-    const app = createApp();
-    const res = await request(app).delete("/v1/keys/stripe?keySource=platform");
-
-    expect(res.status).toBe(403);
-    expect(fetchCalls).toHaveLength(0);
-  });
-
-  it("should allow keySource=app from app_key", async () => {
-    mockAuth.authType = "app_key";
-    const app = createApp();
-    const res = await request(app).delete("/v1/keys/anthropic?keySource=app");
-
-    expect(res.status).toBe(200);
-    const call = fetchCalls.find((c) => c.method === "DELETE");
-    expect(call!.url).toContain("keySource=app");
-    expect(call!.url).toContain("appId=distribute-frontend");
   });
 });
 

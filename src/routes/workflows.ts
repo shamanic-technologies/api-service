@@ -75,7 +75,6 @@ router.get("/workflows", authenticate, requireOrg, requireUser, async (req: Auth
     const params = new URLSearchParams();
 
     if (req.query.orgId) params.set("orgId", req.query.orgId as string);
-    if (req.query.appId) params.set("appId", req.query.appId as string);
     if (req.query.category) params.set("category", req.query.category as string);
     if (req.query.channel) params.set("channel", req.query.channel as string);
     if (req.query.audienceType) params.set("audienceType", req.query.audienceType as string);
@@ -111,7 +110,6 @@ router.get("/workflows/best", authenticate, requireOrg, requireUser, async (req:
   try {
     const params = new URLSearchParams();
 
-    if (req.query.appId) params.set("appId", req.query.appId as string);
     if (req.query.category) params.set("category", req.query.category as string);
     if (req.query.channel) params.set("channel", req.query.channel as string);
     if (req.query.audienceType) params.set("audienceType", req.query.audienceType as string);

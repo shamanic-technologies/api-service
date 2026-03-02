@@ -616,10 +616,9 @@ function buildCategorySections(data: LeaderboardData): CategorySection[] {
   });
 }
 
-// Authenticated route — appId is an optional filter
 router.get("/performance/leaderboard", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
-    const appId = req.query.appId as string | undefined;
+    const appId = req.appId;
 
     const { data, orgIds } = await buildLeaderboardData(appId);
 

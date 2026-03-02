@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "distribute API",
-    "description": "API Gateway for distribute.\n\n## Quick Start\n\n1. Create an API key in the distribute dashboard, or via `POST /v1/api-keys`\n2. Use it as a Bearer token — that's it, no extra headers needed\n\n```\nAuthorization: Bearer distrib.usr_abc123...\n```\n\nYour key carries your org and user identity. All endpoints work out of the box.\n\n## Storing provider keys (BYOK)\n\nTo store your own provider API keys (e.g. OpenAI, Anthropic) for use in workflows:\n\n```\nPOST /v1/keys\nAuthorization: Bearer distrib.usr_abc123...\n\n{ \"keySource\": \"org\", \"provider\": \"openai\", \"apiKey\": \"sk-...\" }\n```\n\n## Error codes\n\n| Code | Meaning |\n|------|---------|\n| 401 | Missing or invalid Bearer token |\n| 400 | Organization context required (missing `x-org-id` — app key only) |\n| 502 | Identity resolution failed (internal service unreachable) |\n\n## Advanced: Platform integration\n\n> Most users do not need this section. It is for multi-tenant platforms that manage keys on behalf of multiple organizations.\n\nIf you're building a platform that operates across multiple orgs/users, register via `POST /v1/apps/register` to receive an app key (`distrib.app_*`). App keys identify the **platform**, not a user or org. To access org-scoped endpoints, send identity headers:\n\n```\nAuthorization: Bearer distrib.app_abc123...\nx-org-id: org_2xyzABC\nx-user-id: user_2abcDEF\n```\n\nThe API resolves these external IDs (e.g. Clerk IDs) to internal UUIDs via client-service. Both headers are **optional** — omit them for endpoints that only need app-level auth.\n",
+    "description": "API Gateway for distribute.\n\n## Quick Start\n\n1. Create an API key in the distribute dashboard, or via `POST /v1/api-keys`\n2. Use it as a Bearer token — that's it, no extra headers needed\n\n```\nAuthorization: Bearer distrib.usr_abc123...\n```\n\nYour key carries your org and user identity. All endpoints work out of the box.\n\n## Storing provider keys (BYOK)\n\nTo store your own provider API keys (e.g. OpenAI, Anthropic) for use in workflows:\n\n```\nPOST /v1/keys\nAuthorization: Bearer distrib.usr_abc123...\n\n{ \"keySource\": \"org\", \"provider\": \"openai\", \"apiKey\": \"sk-...\" }\n```\n\n## Error codes\n\n| Code | Meaning |\n|------|---------|\n| 401 | Missing or invalid Bearer token |\n| 400 | Organization context required (missing `x-org-id` — app key only) |\n| 502 | Identity resolution failed (internal service unreachable) |\n\n",
     "version": "1.0.0"
   },
   "servers": [
@@ -21,7 +21,7 @@
     },
     {
       "name": "Keys",
-      "description": "Store and manage provider API keys (BYOK)"
+      "description": "Provider key management"
     },
     {
       "name": "Performance",
@@ -58,10 +58,6 @@
     {
       "name": "Billing",
       "description": "Billing, credits, and checkout"
-    },
-    {
-      "name": "Platform",
-      "description": "Multi-tenant platform registration (advanced)"
     }
   ],
   "components": {
@@ -121,41 +117,6 @@
         },
         "required": [
           "error"
-        ]
-      },
-      "RegisterAppResponse": {
-        "type": "object",
-        "properties": {
-          "appId": {
-            "type": "string",
-            "description": "The registered app ID"
-          },
-          "apiKey": {
-            "type": "string",
-            "description": "API key (only returned on first creation — save it)"
-          },
-          "message": {
-            "type": "string",
-            "description": "Status message"
-          }
-        },
-        "required": [
-          "appId"
-        ]
-      },
-      "RegisterAppRequest": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 100,
-            "pattern": "^[a-z0-9-]+$",
-            "description": "Unique app name (lowercase, alphanumeric with hyphens)"
-          }
-        },
-        "required": [
-          "name"
         ]
       },
       "MeResponse": {
@@ -404,10 +365,9 @@
           "keySource": {
             "type": "string",
             "enum": [
-              "org",
-              "app"
+              "org"
             ],
-            "description": "Key scope. Use 'org' to store keys for your organization. 'app' is for multi-tenant platforms only (requires app key auth)"
+            "description": "Key store: 'org' (organization-level, user-provided)"
           },
           "provider": {
             "type": "string",
@@ -1030,11 +990,6 @@
             "minLength": 1,
             "description": "Reason for the deduction"
           },
-          "app_id": {
-            "type": "string",
-            "minLength": 1,
-            "description": "App ID"
-          },
           "user_id": {
             "type": "string",
             "format": "uuid",
@@ -1043,8 +998,7 @@
         },
         "required": [
           "amount_cents",
-          "description",
-          "app_id"
+          "description"
         ]
       },
       "CreateCheckoutSessionRequest": {
@@ -1620,56 +1574,6 @@
         }
       }
     },
-    "/v1/apps/register": {
-      "post": {
-        "tags": [
-          "Platform"
-        ],
-        "summary": "Register a platform app",
-        "description": "Register a multi-tenant platform app and receive an app key. Not needed for standard API access — use `POST /v1/api-keys` instead to create an API key. Idempotent: returns existing appId if already registered. The app key is only shown on first creation.",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RegisterAppRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "App registered (or already exists)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RegisterAppResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/performance/leaderboard": {
       "get": {
         "tags": [
@@ -1680,36 +1584,6 @@
         "security": [
           {
             "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by application ID (opt-in, omit to return all)"
-            },
-            "required": false,
-            "description": "Filter by application ID (opt-in, omit to return all)",
-            "name": "appId",
-            "in": "query"
-          },
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
           }
         ],
         "responses": {
@@ -1736,7 +1610,27 @@
               }
             }
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          }
+        ]
       }
     },
     "/v1/me": {
@@ -2591,44 +2485,10 @@
           "Keys"
         ],
         "summary": "List provider keys",
-        "description": "List stored provider keys (masked). Defaults to org-level keys.",
+        "description": "List provider keys for the organization.",
         "security": [
           {
             "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "org",
-                "app"
-              ],
-              "description": "Key scope (default: 'org'). Use 'app' only for multi-tenant platforms"
-            },
-            "required": false,
-            "description": "Key scope (default: 'org'). Use 'app' only for multi-tenant platforms",
-            "name": "keySource",
-            "in": "query"
-          },
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
           }
         ],
         "responses": {
@@ -2655,14 +2515,34 @@
               }
             }
           }
-        }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          }
+        ]
       },
       "post": {
         "tags": [
           "Keys"
         ],
         "summary": "Upsert a provider key",
-        "description": "Store or update a provider API key (e.g. OpenAI, Anthropic). Most users should use keySource: 'org'. The 'app' key source is reserved for multi-tenant platforms managing keys on behalf of their users.",
+        "description": "Store or update a provider API key for the organization.",
         "security": [
           {
             "bearerAuth": []
@@ -2740,7 +2620,7 @@
           "Keys"
         ],
         "summary": "Delete a provider key",
-        "description": "Remove a stored provider key. Defaults to org-level keys.",
+        "description": "Remove a provider key for the organization.",
         "security": [
           {
             "bearerAuth": []
@@ -2756,20 +2636,6 @@
             "description": "Provider name",
             "name": "provider",
             "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "org",
-                "app"
-              ],
-              "description": "Key scope (default: 'org'). Use 'app' only for multi-tenant platforms"
-            },
-            "required": false,
-            "description": "Key scope (default: 'org'). Use 'app' only for multi-tenant platforms",
-            "name": "keySource",
-            "in": "query"
           },
           {
             "name": "x-org-id",
@@ -4028,16 +3894,6 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by application ID (opt-in, omit to return all)"
-            },
-            "required": false,
-            "description": "Filter by application ID (opt-in, omit to return all)",
-            "name": "appId",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
               "description": "Filter by category (e.g. 'sales', 'pr')"
             },
             "required": false,
@@ -4203,16 +4059,6 @@
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by application ID (opt-in, omit to return all)"
-            },
-            "required": false,
-            "description": "Filter by application ID (opt-in, omit to return all)",
-            "name": "appId",
-            "in": "query"
-          },
           {
             "schema": {
               "type": "string",
@@ -5251,25 +5097,13 @@
         ]
       }
     },
-    "/v1/billing/webhooks/stripe/{appId}": {
+    "/v1/billing/webhooks/stripe": {
       "post": {
         "tags": [
           "Billing"
         ],
         "summary": "Stripe webhook",
         "description": "Stripe webhook endpoint. No authentication — Stripe validates via signature header.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "App ID"
-            },
-            "required": true,
-            "description": "App ID",
-            "name": "appId",
-            "in": "path"
-          }
-        ],
         "responses": {
           "200": {
             "description": "Webhook processed"

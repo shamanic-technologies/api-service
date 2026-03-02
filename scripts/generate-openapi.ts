@@ -46,19 +46,6 @@ Authorization: Bearer distrib.usr_abc123...
 | 400 | Organization context required (missing \`x-org-id\` — app key only) |
 | 502 | Identity resolution failed (internal service unreachable) |
 
-## Advanced: Platform integration
-
-> Most users do not need this section. It is for multi-tenant platforms that manage keys on behalf of multiple organizations.
-
-If you're building a platform that operates across multiple orgs/users, register via \`POST /v1/apps/register\` to receive an app key (\`distrib.app_*\`). App keys identify the **platform**, not a user or org. To access org-scoped endpoints, send identity headers:
-
-\`\`\`
-Authorization: Bearer distrib.app_abc123...
-x-org-id: org_2xyzABC
-x-user-id: user_2abcDEF
-\`\`\`
-
-The API resolves these external IDs (e.g. Clerk IDs) to internal UUIDs via client-service. Both headers are **optional** — omit them for endpoints that only need app-level auth.
 `,
     version: "1.0.0",
   },
@@ -70,10 +57,7 @@ The API resolves these external IDs (e.g. Clerk IDs) to internal UUIDs via clien
   tags: [
     { name: "Health", description: "Health check and debug endpoints" },
     { name: "Authentication", description: "Create and manage your API keys" },
-    {
-      name: "Keys",
-      description: "Store and manage provider API keys (BYOK)",
-    },
+    { name: "Keys", description: "Provider key management" },
     { name: "Performance", description: "Public performance leaderboard" },
     { name: "User", description: "Current user information" },
     { name: "Campaigns", description: "Campaign management" },
@@ -83,10 +67,6 @@ The API resolves these external IDs (e.g. Clerk IDs) to internal UUIDs via clien
     { name: "Activity", description: "User activity tracking" },
     { name: "Chat", description: "AI chat with SSE streaming" },
     { name: "Billing", description: "Billing, credits, and checkout" },
-    {
-      name: "Platform",
-      description: "Multi-tenant platform registration (advanced)",
-    },
   ],
 });
 

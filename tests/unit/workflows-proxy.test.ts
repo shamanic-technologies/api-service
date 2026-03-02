@@ -64,14 +64,13 @@ describe("Workflow proxy routes", () => {
     expect(bestBlock).toContain("objective");
   });
 
-  it("should not default appId — it is an opt-in filter", () => {
-    // appId should only be forwarded if explicitly passed in query params
+  it("should not expose appId as a query param", () => {
+    // appId is no longer a public-facing query param — it's resolved from auth
     const listStart = content.indexOf('"/workflows"');
     const bestStart = content.indexOf('"/workflows/best"');
     const listBlock = content.slice(listStart, bestStart);
 
-    expect(listBlock).toContain('req.query.appId');
-    expect(listBlock).not.toContain('"distribute"');
+    expect(listBlock).not.toContain('req.query.appId');
   });
 
   it("should forward humanId query param on GET /workflows", () => {
