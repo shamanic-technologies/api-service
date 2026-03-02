@@ -468,32 +468,36 @@ registry.registerPath({
 });
 
 // ===================================================================
-// BYOK KEYS
+// PROVIDER KEYS
 // ===================================================================
 
-export const AddByokKeyRequestSchema = z
+export const UpsertKeyRequestSchema = z
   .object({
+    keySource: z
+      .enum(["org", "app", "platform"])
+      .describe("Key store: 'org' (user-provided), 'app' (app-level), 'platform' (global)"),
     provider: z
       .string()
-      .describe("Provider name (e.g. openai, anthropic, apollo)"),
+      .describe("Provider name (e.g. openai, anthropic, stripe)"),
     apiKey: z.string().describe("The API key value"),
-    scope: z
-      .enum(["app"])
-      .optional()
-      .describe("Key scope: 'app' for app-level key (no org/user needed). Omit for org-level BYOK."),
   })
-  .openapi("AddByokKeyRequest");
+  .openapi("UpsertKeyRequest");
 
 registry.registerPath({
   method: "get",
   path: "/v1/keys",
   tags: ["Keys"],
-  summary: "List BYOK keys",
+  summary: "List provider keys",
   description:
-    "List all BYOK (Bring Your Own Key) API keys for the organization",
+    "List provider keys. Pass keySource query param to select the key store (org, app, platform). Defaults to 'org'.",
   security: authed,
+  request: {
+    query: z.object({
+      keySource: z.enum(["org", "app", "platform"]).optional().describe("Key store to list from (default: 'org')"),
+    }),
+  },
   responses: {
-    200: { description: "List of BYOK keys" },
+    200: { description: "List of provider keys (masked)" },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -503,13 +507,13 @@ registry.registerPath({
   method: "post",
   path: "/v1/keys",
   tags: ["Keys"],
-  summary: "Add a provider key",
+  summary: "Upsert a provider key",
   description:
-    "Store a provider API key. Use scope:'app' for app-level keys (no org/user needed). Omit scope for org-level BYOK keys.",
+    "Store or update a provider API key. keySource determines the key store: 'org' for org-level keys, 'app' for app-level keys, 'platform' for global keys.",
   security: authed,
   request: {
     body: {
-      content: { "application/json": { schema: AddByokKeyRequestSchema } },
+      content: { "application/json": { schema: UpsertKeyRequestSchema } },
     },
   },
   responses: {
@@ -524,40 +528,20 @@ registry.registerPath({
   method: "delete",
   path: "/v1/keys/{provider}",
   tags: ["Keys"],
-  summary: "Delete a BYOK key",
-  description: "Remove a BYOK API key for a specific provider",
+  summary: "Delete a provider key",
+  description: "Remove a provider key. Pass keySource query param to select the key store (default: 'org').",
   security: authed,
   request: {
     params: z.object({
       provider: z.string().describe("Provider name"),
     }),
+    query: z.object({
+      keySource: z.enum(["org", "app", "platform"]).optional().describe("Key store (default: 'org')"),
+    }),
   },
   responses: {
     200: { description: "Key deleted" },
     401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/internal/keys/{provider}/decrypt",
-  tags: ["Keys"],
-  summary: "Decrypt a BYOK key (internal)",
-  description:
-    "Get decrypted BYOK key value. Internal service-to-service endpoint.",
-  request: {
-    params: z.object({
-      provider: z.string().describe("Provider name"),
-    }),
-    query: z.object({
-      orgId: z.string().describe("Organization ID"),
-    }),
-  },
-  responses: {
-    200: { description: "Decrypted key" },
-    400: { description: "Missing orgId query parameter", content: errorContent },
-    404: { description: "Key not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
