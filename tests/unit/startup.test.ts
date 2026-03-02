@@ -12,7 +12,7 @@ vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
 }));
 
-import { registerPlatformKeys } from "../../src/startup.js";
+import { registerPlatformKeys, API_SERVICE_APP_ID } from "../../src/startup.js";
 
 function setAllEnvVars() {
   process.env.ANTHROPIC_API_KEY = "sk-ant-test";
@@ -55,6 +55,13 @@ describe("registerPlatformKeys", () => {
         });
       }
 
+      if (url.includes("/internal/app-keys") && body?.appId) {
+        return new Response(JSON.stringify({ provider: body?.provider, maskedKey: "sk-...xxx", message: "App key saved" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+
       return new Response(JSON.stringify({}), { status: 200, headers: { "Content-Type": "application/json" } });
     });
   });
@@ -63,27 +70,39 @@ describe("registerPlatformKeys", () => {
     process.env = { ...originalEnv };
   });
 
-  it("should register all platform keys without appId", async () => {
+  it("should register platform keys without appId and stripe keys as app keys", async () => {
     setAllEnvVars();
 
     await registerPlatformKeys();
 
-    const platformKeyCalls = fetchCalls.filter((c) => c.url.includes("/keys") && c.body?.keySource === "platform");
-    expect(platformKeyCalls).toHaveLength(8);
+    // Platform keys — registered via POST /keys with keySource: "platform"
+    const platformKeyCalls = fetchCalls.filter((c) => c.url.includes("/keys") && !c.url.includes("/internal/") && c.body?.keySource === "platform");
+    expect(platformKeyCalls).toHaveLength(6);
 
-    const providers = platformKeyCalls.map((c) => c.body?.provider);
-    expect(providers).toContain("anthropic");
-    expect(providers).toContain("apollo");
-    expect(providers).toContain("instantly");
-    expect(providers).toContain("firecrawl");
-    expect(providers).toContain("gemini");
-    expect(providers).toContain("postmark");
-    expect(providers).toContain("stripe");
-    expect(providers).toContain("stripe-webhook");
+    const platformProviders = platformKeyCalls.map((c) => c.body?.provider);
+    expect(platformProviders).toContain("anthropic");
+    expect(platformProviders).toContain("apollo");
+    expect(platformProviders).toContain("instantly");
+    expect(platformProviders).toContain("firecrawl");
+    expect(platformProviders).toContain("gemini");
+    expect(platformProviders).toContain("postmark");
 
     for (const call of platformKeyCalls) {
       expect(call.body).toHaveProperty("keySource", "platform");
       expect(call.body).not.toHaveProperty("appId");
+    }
+
+    // App keys — registered via POST /internal/app-keys with appId
+    const appKeyCalls = fetchCalls.filter((c) => c.url.includes("/internal/app-keys"));
+    expect(appKeyCalls).toHaveLength(2);
+
+    const appProviders = appKeyCalls.map((c) => c.body?.provider);
+    expect(appProviders).toContain("stripe");
+    expect(appProviders).toContain("stripe-webhook");
+
+    for (const call of appKeyCalls) {
+      expect(call.body).toHaveProperty("appId", API_SERVICE_APP_ID);
+      expect(call.body).not.toHaveProperty("keySource");
     }
   });
 
@@ -92,14 +111,14 @@ describe("registerPlatformKeys", () => {
     await expect(registerPlatformKeys()).rejects.toThrow("Missing required env vars");
   });
 
-  it("should throw when key-service returns an error", async () => {
+  it("should throw when key-service returns an error for platform keys", async () => {
     setAllEnvVars();
 
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
       fetchCalls.push({ url, body });
 
-      if (url.includes("/keys") && body?.keySource === "platform") {
+      if (url.includes("/keys")) {
         return new Response(JSON.stringify({ error: "Service unavailable" }), {
           status: 503,
           headers: { "Content-Type": "application/json" },
