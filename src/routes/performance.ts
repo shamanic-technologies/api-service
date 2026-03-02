@@ -177,9 +177,31 @@ interface InstantlyGroupStats {
   repliesUnsubscribe: number;
 }
 
+/** Convert instantly stats to DeliveryStats.
+ *  emailsReplied = ALL reply types (positive + auto + not-interested + ooo + unsub).
+ *  repliesInterested = positive replies only (emailsReplied from instantly = lead_interested). */
+function instantlyGroupToDeliveryStats(s: InstantlyGroupStats): DeliveryStats {
+  const totalReplies = (s.emailsReplied || 0) +
+    (s.repliesAutoReply || 0) +
+    (s.repliesNotInterested || 0) +
+    (s.repliesOutOfOffice || 0) +
+    (s.repliesUnsubscribe || 0);
+  return {
+    emailsSent: s.emailsSent || 0,
+    emailsOpened: s.emailsOpened || 0,
+    emailsClicked: s.emailsClicked || 0,
+    emailsReplied: totalReplies,
+    emailsBounced: s.emailsBounced || 0,
+    repliesInterested: s.emailsReplied || 0,
+  };
+}
+
 /** Fetch run IDs grouped by workflow name across all orgs from runs-service. */
 async function fetchRunIdsByWorkflow(orgIds: string[], appId?: string): Promise<Record<string, string[]>> {
-  if (!appId || orgIds.length === 0) return {};
+  if (!appId || orgIds.length === 0) {
+    console.warn(`[leaderboard] fetchRunIdsByWorkflow skipped: appId=${appId ?? "none"}, orgIds=${orgIds.length}`);
+    return {};
+  }
 
   const merged: Record<string, string[]> = {};
 
@@ -194,12 +216,16 @@ async function fetchRunIdsByWorkflow(orgIds: string[], appId?: string): Promise<
           if (!merged[workflowName]) merged[workflowName] = [];
           merged[workflowName].push(...runIds);
         }
-      } catch {
-        // Ignore per-org failures
+      } catch (err) {
+        console.warn(`[leaderboard] run-ids-by-workflow failed for orgId=${orgId}:`, (err as Error).message);
       }
     })
   );
 
+  const totalRunIds = Object.values(merged).reduce((s, ids) => s + ids.length, 0);
+  if (totalRunIds === 0) {
+    console.warn(`[leaderboard] fetchRunIdsByWorkflow returned 0 run IDs across ${orgIds.length} orgs`);
+  }
   return merged;
 }
 
@@ -233,21 +259,34 @@ async function fetchInstantlyGroupedStats(
     for (const group of result.groups || []) {
       if (group.key) {
         map.set(group.key, {
-          stats: {
-            emailsSent: group.stats.emailsSent || 0,
-            emailsOpened: group.stats.emailsOpened || 0,
-            emailsClicked: group.stats.emailsClicked || 0,
-            emailsReplied: group.stats.emailsReplied || 0,
-            emailsBounced: group.stats.emailsBounced || 0,
-            repliesInterested: group.stats.emailsReplied || 0, // emailsReplied IS positive replies
-          },
+          stats: instantlyGroupToDeliveryStats(group.stats),
           recipients: group.recipients || 0,
         });
       }
     }
     return map;
-  } catch {
+  } catch (err) {
+    console.warn("[leaderboard] instantly grouped stats failed:", (err as Error).message);
     return new Map();
+  }
+}
+
+/** Fetch aggregate stats from instantly-service for an appId (all orgs combined).
+ *  Used as fallback when per-workflow run-id grouping fails. */
+async function fetchInstantlyAggregateStats(appId: string): Promise<DeliveryStats> {
+  try {
+    const result = await callExternalService<{
+      stats: InstantlyGroupStats;
+      recipients: number;
+    }>(
+      externalServices.instantly,
+      "/stats",
+      { method: "POST", body: { appId } }
+    );
+    return instantlyGroupToDeliveryStats(result.stats);
+  } catch (err) {
+    console.warn("[leaderboard] instantly aggregate stats failed:", (err as Error).message);
+    return EMPTY_STATS;
   }
 }
 
@@ -312,7 +351,7 @@ async function enrichWithDeliveryStats(data: LeaderboardData, orgIds: string[], 
     })(),
   ]);
 
-  // Apply instantly-service stats to workflows
+  // Apply instantly-service per-workflow stats to workflows
   let anyWorkflowEnriched = false;
   for (const wf of data.workflows) {
     const result = instantlyResults.get(wf.workflowName);
@@ -322,9 +361,41 @@ async function enrichWithDeliveryStats(data: LeaderboardData, orgIds: string[], 
       anyWorkflowEnriched = true;
     }
   }
-
-  // Fallback 1: email-gateway groupBy (for workflows not covered by instantly)
   if (!anyWorkflowEnriched && data.workflows.length > 0) {
+    console.warn(`[leaderboard] instantly per-workflow path returned no data (orgIds=${orgIds.length}, appId=${appId ?? "none"})`);
+  }
+
+  // Fallback 1: instantly aggregate stats distributed proportionally across workflows.
+  // This catches cases where run-ids-by-workflow fails (org ID mismatch, auth issue)
+  // but instantly-service still has aggregate data for the appId.
+  if (!anyWorkflowEnriched && appId && data.workflows.length > 0) {
+    const instantlyAggregate = await fetchInstantlyAggregateStats(appId);
+    if (instantlyAggregate.emailsSent > 0) {
+      console.warn("[leaderboard] using instantly aggregate fallback (proportional distribution)");
+      const totalCost = data.workflows.reduce((s, w) => s + w.totalCostUsdCents, 0);
+      if (totalCost > 0) {
+        for (const wf of data.workflows) {
+          const share = wf.totalCostUsdCents / totalCost;
+          const distributed: DeliveryStats = {
+            emailsSent: Math.round(instantlyAggregate.emailsSent * share),
+            emailsOpened: Math.round(instantlyAggregate.emailsOpened * share),
+            emailsClicked: Math.round(instantlyAggregate.emailsClicked * share),
+            emailsReplied: Math.round(instantlyAggregate.emailsReplied * share),
+            emailsBounced: Math.round(instantlyAggregate.emailsBounced * share),
+            repliesInterested: Math.round(instantlyAggregate.repliesInterested * share),
+          };
+          if (distributed.emailsSent > 0) {
+            applyStatsToWorkflow(wf, distributed);
+            anyWorkflowEnriched = true;
+          }
+        }
+      }
+    }
+  }
+
+  // Fallback 2: email-gateway groupBy (for workflows not covered by instantly)
+  if (!anyWorkflowEnriched && data.workflows.length > 0) {
+    console.warn("[leaderboard] falling back to email-gateway groupBy");
     const workflowStatsMap = await fetchWorkflowDeliveryStats(appId);
     for (const wf of data.workflows) {
       const stats = workflowStatsMap.get(wf.workflowName);
@@ -335,8 +406,9 @@ async function enrichWithDeliveryStats(data: LeaderboardData, orgIds: string[], 
     }
   }
 
-  // Fallback 2: proportional distribution from aggregate email-gateway stats
+  // Fallback 3: proportional distribution from aggregate email-gateway stats
   if (!anyWorkflowEnriched && data.workflows.length > 0) {
+    console.warn("[leaderboard] falling back to email-gateway aggregate (proportional distribution)");
     const aggregateStats = await fetchBroadcastDeliveryStats(appId ? { appId } : {});
     if (aggregateStats.emailsSent > 0) {
       const totalCost = data.workflows.reduce((s, w) => s + w.totalCostUsdCents, 0);

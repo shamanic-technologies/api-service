@@ -805,6 +805,111 @@ describe("GET /performance/leaderboard", () => {
     expect(wf.recipients).toBe(80);
     expect(wf.costPerReplyCents).toBe(500); // 4000 / 8
   });
+
+  it("should sum all reply types in emailsReplied from instantly-service", async () => {
+    const app = createApp();
+    const brands = [{ id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" }];
+    const workflowGroups: MockRunsGroup[] = [
+      { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "4000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 10 },
+    ];
+    const runIdsByWorkflow = {
+      "sales-email-cold-outreach-sienna": ["run-1"],
+    };
+    // Instantly returns: 3 positive replies + 10 auto-reply + 2 not-interested + 1 OOO
+    const instantlyGroups = [
+      {
+        key: "sales-email-cold-outreach-sienna",
+        stats: {
+          emailsSent: 100, emailsOpened: 50, emailsClicked: 5,
+          emailsReplied: 3, // positive replies only
+          repliesAutoReply: 10, repliesNotInterested: 2,
+          repliesOutOfOffice: 1, repliesUnsubscribe: 0,
+        },
+        recipients: 80,
+      },
+    ];
+
+    const mock = setupMocks(brands, [], workflowGroups, runIdsByWorkflow, instantlyGroups);
+    mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
+      const result = mock(_service, path, opts);
+      if (result !== null) return result;
+      if (path === "/stats") {
+        return Promise.resolve(makeGatewayResponse(null));
+      }
+      return Promise.resolve(null);
+    });
+
+    const res = await request(app).get("/performance/leaderboard?appId=distribute");
+
+    expect(res.status).toBe(200);
+    const wf = res.body.workflows[0];
+    // emailsReplied = ALL reply types: 3 + 10 + 2 + 1 + 0 = 16
+    expect(wf.emailsReplied).toBe(16);
+    // repliesInterested = only positive replies (emailsReplied from instantly)
+    expect(wf.repliesInterested).toBe(3);
+    // replyRate uses total replies
+    expect(wf.replyRate).toBe(0.16); // 16/100
+    // interestedRate uses positive replies only
+    expect(wf.interestedRate).toBe(0.03); // 3/100
+    // costPerReply uses total replies
+    expect(wf.costPerReplyCents).toBe(250); // 4000 / 16
+  });
+
+  it("should use instantly aggregate fallback when per-workflow path returns empty", async () => {
+    const app = createApp();
+    const brands = [{ id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" }];
+    const workflowGroups: MockRunsGroup[] = [
+      { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "6000.0000", actualCostInUsdCents: "6000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 30 },
+      { dimensions: { workflowName: "sales-email-cold-outreach-darmstadt" }, totalCostInUsdCents: "4000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 20 },
+    ];
+
+    // Empty run-ids-by-workflow → empty instantly grouped → triggers aggregate fallback
+    const mock = setupMocks(brands, [], workflowGroups, {}, []);
+    mockCallExternalService.mockImplementation((service: any, path: string, opts: any) => {
+      const result = mock(service, path, opts);
+      if (result !== null) return result;
+
+      if (path === "/stats") {
+        // Distinguish instantly from email-gateway by service URL
+        if (service.url === "http://mock-instantly") {
+          // Instantly aggregate: 100 sent, 50 opened, 5 positive + 10 auto-reply = 15 total
+          return Promise.resolve({
+            stats: makeInstantlyStats({
+              emailsSent: 100, emailsOpened: 50, emailsClicked: 8,
+              emailsReplied: 5, repliesAutoReply: 10,
+            }),
+            recipients: 80,
+          });
+        }
+        // Email-gateway per-brand stats
+        const body = opts?.body || {};
+        if (body.brandId) {
+          return Promise.resolve(makeGatewayResponse({ emailsSent: 100, emailsOpened: 50 }));
+        }
+        return Promise.resolve(makeGatewayResponse(null));
+      }
+      return Promise.resolve(null);
+    });
+
+    const res = await request(app).get("/performance/leaderboard?appId=distribute");
+
+    expect(res.status).toBe(200);
+    // Workflows get proportional instantly aggregate stats (60%/40% split by cost)
+    const sienna = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-sienna");
+    expect(sienna).toBeDefined();
+    expect(sienna.emailsSent).toBe(60); // 100 * 0.6
+    expect(sienna.emailsOpened).toBe(30); // 50 * 0.6
+    // Total replies = 5 + 10 = 15, sienna gets 60% = 9
+    expect(sienna.emailsReplied).toBe(9); // Math.round(15 * 0.6)
+    // Interested = 5 positive, sienna gets 60% = 3
+    expect(sienna.repliesInterested).toBe(3); // Math.round(5 * 0.6)
+
+    const darmstadt = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-darmstadt");
+    expect(darmstadt).toBeDefined();
+    expect(darmstadt.emailsSent).toBe(40); // 100 * 0.4
+    expect(darmstadt.emailsReplied).toBe(6); // Math.round(15 * 0.4)
+    expect(darmstadt.repliesInterested).toBe(2); // Math.round(5 * 0.4)
+  });
 });
 
 describe("Regression: performance leaderboard must require auth but NOT filter by org/user", () => {
@@ -969,7 +1074,8 @@ describe("Regression: performance leaderboard must use broadcast-only stats", ()
     expect(content).toContain("repliesInterested");
     expect(content).toContain("interestedRate");
     expect(content).toContain("recipients");
-    // emailsReplied IS positive replies in instantly-service
-    expect(content).toContain("emailsReplied IS positive replies");
+    // emailsReplied = ALL reply types, repliesInterested = positive only
+    expect(content).toContain("emailsReplied = ALL reply types");
+    expect(content).toContain("repliesInterested = positive replies only");
   });
 });
