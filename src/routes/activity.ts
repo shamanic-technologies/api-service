@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
+import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
 
@@ -12,12 +13,12 @@ router.post("/activity", authenticate, requireOrg, requireUser, async (req: Auth
   try {
     callExternalService(externalServices.transactionalEmail, "/send", {
       method: "POST",
+      headers: buildInternalHeaders(req),
       body: {
         appId: req.appId!,
         eventType: "user_active",
         userId: req.userId,
         orgId: req.orgId,
-        keySource: req.keySource,
       },
     }).catch((err) => console.warn("[activity] Transactional email failed:", err.message));
 

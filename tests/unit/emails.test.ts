@@ -32,6 +32,7 @@ interface FetchCall {
   url: string;
   method?: string;
   body?: any;
+  headers?: Record<string, string>;
 }
 
 let fetchCalls: FetchCall[] = [];
@@ -53,7 +54,8 @@ describe("POST /v1/emails/send", () => {
     fetchCalls = [];
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
-      fetchCalls.push({ url, method: init?.method, body });
+      const headers = init?.headers ? Object.fromEntries(Object.entries(init.headers)) : undefined;
+      fetchCalls.push({ url, method: init?.method, body, headers });
       return {
         ok: true,
         json: () => Promise.resolve({ results: [{ email: "test@example.com", sent: true }] }),
@@ -82,12 +84,15 @@ describe("POST /v1/emails/send", () => {
       appId: "distribute-frontend",
       orgId: "org_test456",
       userId: "user_test123",
-      keySource: "platform",
       eventType: "webinar_welcome",
       recipientEmail: "user@polarity.com",
       productId: "webinar-123",
       metadata: { name: "Kevin" },
     });
+    expect(sendCall!.body.keySource).toBeUndefined();
+    expect(sendCall!.headers!["x-org-id"]).toBe("org_test456");
+    expect(sendCall!.headers!["x-user-id"]).toBe("user_test123");
+    expect(sendCall!.headers!["x-key-source"]).toBe("platform");
   });
 
   it("should return 400 when eventType is missing", async () => {
@@ -124,7 +129,8 @@ describe("POST /v1/emails/stats", () => {
     fetchCalls = [];
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
-      fetchCalls.push({ url, method: init?.method, body });
+      const headers = init?.headers ? Object.fromEntries(Object.entries(init.headers)) : undefined;
+      fetchCalls.push({ url, method: init?.method, body, headers });
       return {
         ok: true,
         json: () => Promise.resolve({ stats: { totalEmails: 42, sent: 40, failed: 2 } }),
@@ -133,7 +139,7 @@ describe("POST /v1/emails/stats", () => {
     app = createApp();
   });
 
-  it("should forward stats request with appId, orgId, userId and keySource", async () => {
+  it("should forward stats request with filters in body and identity in headers", async () => {
     const res = await request(app)
       .post("/v1/emails/stats")
       .send({ eventType: "webinar_welcome" });
@@ -146,10 +152,13 @@ describe("POST /v1/emails/stats", () => {
     expect(statsCall!.body).toMatchObject({
       appId: "distribute-frontend",
       orgId: "org_test456",
-      userId: "user_test123",
-      keySource: "platform",
       eventType: "webinar_welcome",
     });
+    expect(statsCall!.body.userId).toBeUndefined();
+    expect(statsCall!.body.keySource).toBeUndefined();
+    expect(statsCall!.headers!["x-org-id"]).toBe("org_test456");
+    expect(statsCall!.headers!["x-user-id"]).toBe("user_test123");
+    expect(statsCall!.headers!["x-key-source"]).toBe("platform");
   });
 
   it("should allow empty body for unfiltered stats", async () => {
@@ -169,7 +178,8 @@ describe("PUT /v1/emails/templates", () => {
     fetchCalls = [];
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
-      fetchCalls.push({ url, method: init?.method, body });
+      const headers = init?.headers ? Object.fromEntries(Object.entries(init.headers)) : undefined;
+      fetchCalls.push({ url, method: init?.method, body, headers });
       return {
         ok: true,
         json: () => Promise.resolve({ templates: [{ name: "webinar_welcome", action: "created" }] }),
@@ -178,7 +188,7 @@ describe("PUT /v1/emails/templates", () => {
     app = createApp();
   });
 
-  it("should forward template deployment with appId, orgId, userId and keySource", async () => {
+  it("should forward template deployment with appId in body and identity in headers", async () => {
     const res = await request(app)
       .put("/v1/emails/templates")
       .send({
@@ -199,9 +209,6 @@ describe("PUT /v1/emails/templates", () => {
     expect(deployCall!.method).toBe("PUT");
     expect(deployCall!.body).toMatchObject({
       appId: "distribute-frontend",
-      orgId: "org_test456",
-      userId: "user_test123",
-      keySource: "platform",
       templates: [
         {
           name: "webinar_welcome",
@@ -210,6 +217,12 @@ describe("PUT /v1/emails/templates", () => {
         },
       ],
     });
+    expect(deployCall!.body.orgId).toBeUndefined();
+    expect(deployCall!.body.userId).toBeUndefined();
+    expect(deployCall!.body.keySource).toBeUndefined();
+    expect(deployCall!.headers!["x-org-id"]).toBe("org_test456");
+    expect(deployCall!.headers!["x-user-id"]).toBe("user_test123");
+    expect(deployCall!.headers!["x-key-source"]).toBe("platform");
   });
 
   it("should return 400 when templates array is empty", async () => {

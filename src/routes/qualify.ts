@@ -3,6 +3,7 @@ import { authenticate, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { QualifyRequestSchema } from "../schemas.js";
 import { fetchKeySource } from "../lib/billing.js";
+import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
 
@@ -39,11 +40,17 @@ router.post("/qualify", authenticate, async (req: AuthenticatedRequest, res) => 
     }
     if (!keySource) keySource = "platform";
 
+    // Build headers; override x-key-source if sourceOrgId resolved a different keySource
+    const headers = buildInternalHeaders(req);
+    if (keySource) headers["x-key-source"] = keySource;
+    if (orgId && orgId !== req.orgId) headers["x-org-id"] = orgId;
+
     const result = await callExternalService(
       externalServices.replyQualification,
       "/qualify",
       {
         method: "POST",
+        headers,
         body: {
           sourceService,
           sourceOrgId: orgId,
@@ -55,7 +62,6 @@ router.post("/qualify", authenticate, async (req: AuthenticatedRequest, res) => 
           bodyHtml,
           appId: req.appId!,
           userId: req.userId,
-          keySource,
           byokApiKey,
         },
       }
