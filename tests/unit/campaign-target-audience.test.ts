@@ -12,7 +12,7 @@ import express from "express";
  */
 
 // Configurable auth context — keySource resolved in middleware
-let mockKeySource: string | undefined = "byok";
+let mockKeySource: string | undefined = "org";
 
 // Mock auth middleware
 vi.mock("../../src/middleware/auth.js", () => ({
@@ -42,8 +42,8 @@ vi.mock("@distribute/runs-client", () => ({
   updateRun: vi.fn().mockResolvedValue({ id: "parent-run-123", status: "failed" }),
 }));
 
-// Mock billing module — default to "byok"
-const mockFetchKeySource = vi.fn().mockResolvedValue("byok");
+// Mock billing module — default to "org"
+const mockFetchKeySource = vi.fn().mockResolvedValue("org");
 vi.mock("../../src/lib/billing.js", () => ({
   fetchKeySource: (...args: unknown[]) => mockFetchKeySource(...args),
 }));
@@ -62,7 +62,7 @@ describe("POST /v1/campaigns with targetAudience", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockKeySource = "byok";
+    mockKeySource = "org";
     fetchCalls = [];
 
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
@@ -137,7 +137,7 @@ describe("POST /v1/campaigns with targetAudience", () => {
     expect(campaignCall!.body!.socialProof).toBe("Backed by 60 sponsors including Acme, Globex");
     expect(campaignCall!.body!.brandId).toBe("brand-uuid-123");
     expect(campaignCall!.body!.orgId).toBe("org_test456");
-    expect(campaignCall!.body!.keySource).toBe("byok");
+    expect(campaignCall!.body!.keySource).toBe("org");
 
     // Verify NO Apollo fields were sent
     expect(campaignCall!.body!.personTitles).toBeUndefined();

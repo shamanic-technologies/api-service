@@ -1,6 +1,6 @@
 import { callExternalService, externalServices } from "./service-client.js";
 
-export type KeySource = "platform" | "byok";
+export type KeySource = "platform" | "org";
 
 interface BillingAccount {
   id: string;
@@ -22,6 +22,6 @@ export async function fetchKeySource(orgId: string, appId: string): Promise<KeyS
     "/v1/accounts",
     { headers: { "x-app-id": appId, "x-org-id": orgId, "x-key-source": "platform" } }
   );
-  if (result.billingMode === "byok") return "byok";
+  if (result.billingMode === "byok") return "org";
   return "platform";
 }

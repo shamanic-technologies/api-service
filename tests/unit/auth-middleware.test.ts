@@ -5,7 +5,7 @@ import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../
 
 // Mock billing module — keySource resolution is best-effort in middleware
 vi.mock("../../src/lib/billing.js", () => ({
-  fetchKeySource: vi.fn().mockResolvedValue("byok"),
+  fetchKeySource: vi.fn().mockResolvedValue("org"),
 }));
 
 // Mock callExternalService for both key-service /validate and client-service /resolve

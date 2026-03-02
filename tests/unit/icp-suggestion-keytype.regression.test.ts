@@ -11,7 +11,7 @@ import express from "express";
  */
 
 // Configurable auth context — keySource resolved in middleware
-let mockKeySource: string | undefined = "byok";
+let mockKeySource: string | undefined = "org";
 
 // Mock auth middleware to skip real auth
 vi.mock("../../src/middleware/auth.js", () => ({
@@ -40,7 +40,7 @@ vi.mock("@distribute/runs-client", () => ({
 }));
 
 // Mock billing module
-const mockFetchKeySource = vi.fn().mockResolvedValue("byok");
+const mockFetchKeySource = vi.fn().mockResolvedValue("org");
 vi.mock("../../src/lib/billing.js", () => ({
   fetchKeySource: (...args: unknown[]) => mockFetchKeySource(...args),
 }));
@@ -57,7 +57,7 @@ function createBrandApp() {
 describe("POST /v1/brand/icp-suggestion", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockKeySource = "byok";
+    mockKeySource = "org";
   });
 
   it("should resolve keySource from billing-service and forward to brand-service", async () => {
@@ -80,7 +80,7 @@ describe("POST /v1/brand/icp-suggestion", () => {
       .send({ brandUrl: "https://example.com" });
 
     expect(capturedBody).toBeDefined();
-    expect(capturedBody!.keySource).toBe("byok");
+    expect(capturedBody!.keySource).toBe("org");
     expect(capturedBody!.appId).toBe("distribute");
     expect(capturedBody!.url).toBe("https://example.com");
     expect(capturedBody!.orgId).toBe("org_test456");
@@ -111,15 +111,15 @@ describe("POST /v1/brand/icp-suggestion", () => {
     expect(capturedBody!.keySource).toBe("platform");
   });
 
-  it("should return 400 with helpful message when Anthropic BYOK key is missing", async () => {
-    const errorBody = JSON.stringify({ error: "No Anthropic API key found (keyType: byok)" });
+  it("should return 400 with helpful message when Anthropic org key is missing", async () => {
+    const errorBody = JSON.stringify({ error: "No Anthropic API key found (keyType: org)" });
     global.fetch = vi.fn().mockImplementation(async (_url: string) => {
       if (typeof _url === "string" && _url.includes("/icp-suggestion")) {
         return {
           ok: false,
           status: 400,
           text: () => Promise.resolve(errorBody),
-          json: () => Promise.resolve({ error: "No Anthropic API key found (keyType: byok)" }),
+          json: () => Promise.resolve({ error: "No Anthropic API key found (keyType: org)" }),
         };
       }
       return { ok: true, json: () => Promise.resolve({}) };
@@ -132,7 +132,7 @@ describe("POST /v1/brand/icp-suggestion", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error).toContain("Anthropic API key not configured");
-    expect(res.body.error).toContain("BYOK");
+    expect(res.body.error).toContain("API Keys");
   });
 
   it("should return 400 when brandUrl is missing", async () => {
