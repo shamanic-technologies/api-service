@@ -3,7 +3,7 @@ import express from "express";
 import request from "supertest";
 
 // Configurable auth context — tests can toggle org/user presence
-let mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456" as string | undefined, userId: "user_test123" as string | undefined, authType: "user_key" as string, keySource: "byok" as string | undefined };
+let mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456" as string | undefined, userId: "user_test123" as string | undefined, authType: "user_key" as string, keySource: "org" as string | undefined };
 
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
@@ -25,7 +25,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
   AuthenticatedRequest: {},
 }));
 
-const mockFetchKeySource = vi.fn().mockResolvedValue("byok");
+const mockFetchKeySource = vi.fn().mockResolvedValue("org");
 vi.mock("../../src/lib/billing.js", () => ({
   fetchKeySource: (...args: unknown[]) => mockFetchKeySource(...args),
 }));
@@ -63,7 +63,7 @@ function mockFetchOk(responseData: any = {}) {
 // ---------------------------------------------------------------------------
 
 function resetAuthContext() {
-  mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456", userId: "user_test123", authType: "user_key", keySource: "byok" };
+  mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456", userId: "user_test123", authType: "user_key", keySource: "org" };
 }
 
 describe("GET /v1/stripe/products/:productId", () => {
@@ -87,7 +87,7 @@ describe("GET /v1/stripe/products/:productId", () => {
     expect(call!.url).toContain("appId=distribute-frontend");
     expect(call!.headers!["x-org-id"]).toBe("org_test456");
     expect(call!.headers!["x-user-id"]).toBe("user_test123");
-    expect(call!.headers!["x-key-source"]).toBe("byok");
+    expect(call!.headers!["x-key-source"]).toBe("org");
   });
 });
 
@@ -115,7 +115,7 @@ describe("POST /v1/stripe/products", () => {
     expect(call!.body.orgId).toBeUndefined();
     expect(call!.body.keySource).toBeUndefined();
     expect(call!.headers!["x-org-id"]).toBe("org_test456");
-    expect(call!.headers!["x-key-source"]).toBe("byok");
+    expect(call!.headers!["x-key-source"]).toBe("org");
   });
 
   it("should return 400 when name is missing", async () => {
@@ -148,7 +148,7 @@ describe("GET /v1/stripe/products/:productId/prices", () => {
     expect(call).toBeDefined();
     expect(call!.url).toContain("appId=distribute-frontend");
     expect(call!.headers!["x-org-id"]).toBe("org_test456");
-    expect(call!.headers!["x-key-source"]).toBe("byok");
+    expect(call!.headers!["x-key-source"]).toBe("org");
   });
 });
 
@@ -172,7 +172,7 @@ describe("POST /v1/stripe/prices", () => {
     const call = fetchCalls.find((c) => c.url.includes("/prices/create"));
     expect(call!.body).toMatchObject({ appId: "distribute-frontend", productId: "prod_123", unitAmountCents: 4999 });
     expect(call!.body.keySource).toBeUndefined();
-    expect(call!.headers!["x-key-source"]).toBe("byok");
+    expect(call!.headers!["x-key-source"]).toBe("org");
   });
 
   it("should return 400 when productId is missing", async () => {
@@ -207,7 +207,7 @@ describe("GET /v1/stripe/coupons/:couponId", () => {
     expect(call).toBeDefined();
     expect(call!.url).toContain("appId=distribute-frontend");
     expect(call!.headers!["x-org-id"]).toBe("org_test456");
-    expect(call!.headers!["x-key-source"]).toBe("byok");
+    expect(call!.headers!["x-key-source"]).toBe("org");
   });
 });
 
@@ -231,7 +231,7 @@ describe("POST /v1/stripe/coupons", () => {
     const call = fetchCalls.find((c) => c.url.includes("/coupons/create"));
     expect(call!.body).toMatchObject({ appId: "distribute-frontend", percentOff: 20, duration: "once" });
     expect(call!.body.keySource).toBeUndefined();
-    expect(call!.headers!["x-key-source"]).toBe("byok");
+    expect(call!.headers!["x-key-source"]).toBe("org");
   });
 
   it("should return 400 when duration is missing", async () => {
@@ -280,7 +280,7 @@ describe("POST /v1/stripe/checkout", () => {
     });
     expect(call!.headers!["x-org-id"]).toBe("org_test456");
     expect(call!.headers!["x-user-id"]).toBe("user_test123");
-    expect(call!.headers!["x-key-source"]).toBe("byok");
+    expect(call!.headers!["x-key-source"]).toBe("org");
   });
 
   it("should forward keySource 'platform' in headers when middleware resolves payg/trial", async () => {
@@ -334,7 +334,7 @@ describe("POST /v1/stripe/stats", () => {
     expect(call!.body.orgId).toBeUndefined();
     expect(call!.body.keySource).toBeUndefined();
     expect(call!.headers!["x-org-id"]).toBe("org_test456");
-    expect(call!.headers!["x-key-source"]).toBe("byok");
+    expect(call!.headers!["x-key-source"]).toBe("org");
   });
 
   it("should forward keySource 'platform' in headers when middleware resolves payg/trial", async () => {

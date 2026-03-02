@@ -192,8 +192,8 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     const keySource = req.keySource;
     console.log("[api-service] POST /v1/campaigns — step 3: keySource from auth middleware", { keySource });
 
-    // 3b. Pre-campaign key validation: if BYOK, check org has all required provider keys
-    if (keySource === "byok") {
+    // 3b. Pre-campaign key validation: if org-provided keys, check org has all required provider keys
+    if (keySource === "org") {
       const workflow = await resolveWorkflowByName(parsed.data.workflowName);
       if (workflow) {
         const [requiredProviders, orgKeys] = await Promise.all([
@@ -207,7 +207,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
           const missing = requiredProviders.filter((p) => !configuredSet.has(p));
 
           if (missing.length > 0) {
-            console.warn("[api-service] POST /v1/campaigns — missing BYOK keys", { missing, configured });
+            console.warn("[api-service] POST /v1/campaigns — missing org keys", { missing, configured });
             await updateRun(parentRun.id, "failed").catch(() => {});
             return res.status(400).json({
               error: "missing_keys",

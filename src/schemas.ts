@@ -241,7 +241,7 @@ registry.registerPath({
     200: { description: "Created campaign" },
     400: {
       description:
-        "Validation error. If keySource is 'byok' and the org is missing required provider keys, " +
+        "Validation error. If keySource is 'org' and the org is missing required provider keys, " +
         "returns error code `missing_keys` with lists of missing and configured providers.",
       content: errorContent,
     },

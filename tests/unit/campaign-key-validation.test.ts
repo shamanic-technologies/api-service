@@ -3,7 +3,7 @@ import express from "express";
 import request from "supertest";
 
 // Configurable auth context — keySource resolved in middleware
-let mockKeySource: string | undefined = "byok";
+let mockKeySource: string | undefined = "org";
 
 // Mock auth middleware
 vi.mock("../../src/middleware/auth.js", () => ({
@@ -34,7 +34,7 @@ vi.mock("@distribute/runs-client", () => ({
 }));
 
 // Mock billing module
-const mockFetchKeySource = vi.fn().mockResolvedValue("byok");
+const mockFetchKeySource = vi.fn().mockResolvedValue("org");
 vi.mock("../../src/lib/billing.js", () => ({
   fetchKeySource: (...args: unknown[]) => mockFetchKeySource(...args),
 }));
@@ -65,12 +65,12 @@ const validCampaignBody = {
 // ---------------------------------------------------------------------------
 // Pre-campaign key validation on POST /v1/campaigns
 // ---------------------------------------------------------------------------
-describe("POST /v1/campaigns — pre-campaign BYOK key validation", () => {
+describe("POST /v1/campaigns — pre-campaign org key validation", () => {
   let app: express.Express;
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockKeySource = "byok";
+    mockKeySource = "org";
   });
 
   it("should return 400 with missing_keys when org lacks required providers", async () => {
@@ -178,7 +178,7 @@ describe("POST /v1/campaigns — pre-campaign BYOK key validation", () => {
     expect(res.body.campaign).toBeDefined();
   });
 
-  it("should skip validation when keySource is platform (not byok)", async () => {
+  it("should skip validation when keySource is platform (not org)", async () => {
     mockKeySource = "platform";
 
     global.fetch = vi.fn().mockImplementation(async (url: string) => {

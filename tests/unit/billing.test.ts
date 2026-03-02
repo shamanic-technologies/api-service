@@ -75,11 +75,11 @@ describe("fetchKeySource", () => {
     expect(result).toBe("platform");
   });
 
-  it("should return 'byok' for byok billing mode", async () => {
+  it("should return 'org' for byok billing mode", async () => {
     global.fetch = vi.fn().mockResolvedValue(mockBillingAccountResponse("byok"));
 
     const result = await fetchKeySource("org-123", "distribute");
-    expect(result).toBe("byok");
+    expect(result).toBe("org");
   });
 
   it("should throw when billing-service is unreachable", async () => {

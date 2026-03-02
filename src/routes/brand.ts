@@ -86,7 +86,7 @@ router.post("/brand/sales-profile", authenticate, requireOrg, requireUser, async
     const msg = error.message || "Failed to extract sales profile";
     if (msg.includes("No Anthropic API key found")) {
       return res.status(400).json({
-        error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys (BYOK).",
+        error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
       });
     }
     res.status(500).json({ error: msg });
@@ -235,7 +235,7 @@ router.post("/brand/icp-suggestion", authenticate, requireOrg, requireUser, asyn
     const msg = error.message || "Failed to get ICP suggestion";
     if (msg.includes("No Anthropic API key found")) {
       return res.status(400).json({
-        error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys (BYOK).",
+        error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
       });
     }
     res.status(500).json({ error: msg });

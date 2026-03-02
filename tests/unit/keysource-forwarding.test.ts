@@ -17,7 +17,7 @@ import express from "express";
  */
 
 // Configurable auth context — tests can toggle keySource
-let mockKeySource: string | undefined = "byok";
+let mockKeySource: string | undefined = "org";
 
 // Mock auth middleware — keySource is now resolved here (mirroring real authenticate middleware)
 vi.mock("../../src/middleware/auth.js", () => ({
@@ -48,7 +48,7 @@ vi.mock("@distribute/runs-client", () => ({
 }));
 
 // Mock billing module (still needed for qualify.ts sourceOrgId override path)
-const mockFetchKeySource = vi.fn().mockResolvedValue("byok");
+const mockFetchKeySource = vi.fn().mockResolvedValue("org");
 vi.mock("../../src/lib/billing.js", () => ({
   fetchKeySource: (...args: unknown[]) => mockFetchKeySource(...args),
 }));
@@ -73,8 +73,8 @@ let fetchCalls: Array<{ url: string; method?: string; body?: Record<string, unkn
 
 beforeEach(() => {
   vi.restoreAllMocks();
-  mockKeySource = "byok";
-  mockFetchKeySource.mockResolvedValue("byok");
+  mockKeySource = "org";
+  mockFetchKeySource.mockResolvedValue("org");
   fetchCalls = [];
 
   global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
@@ -97,7 +97,7 @@ describe("POST /v1/campaigns/:id/resume — keySource forwarding", () => {
 
     const patchCall = fetchCalls.find((c) => c.url.includes("/campaigns/camp-123") && c.method === "PATCH");
     expect(patchCall).toBeDefined();
-    expect(patchCall!.body!.keySource).toBe("byok");
+    expect(patchCall!.body!.keySource).toBe("org");
     expect(patchCall!.body!.status).toBe("activate");
   });
 
@@ -125,7 +125,7 @@ describe("POST /v1/workflows/generate — keySource forwarding", () => {
 
     const generateCall = fetchCalls.find((c) => c.url.includes("/workflows/generate") && c.method === "POST");
     expect(generateCall).toBeDefined();
-    expect(generateCall!.body!.keySource).toBe("byok");
+    expect(generateCall!.body!.keySource).toBe("org");
     expect(generateCall!.body!.appId).toBe("distribute");
     expect(generateCall!.body!.orgId).toBe("org_test456");
     expect(generateCall!.body!.userId).toBe("user_test123");
@@ -157,7 +157,7 @@ describe("POST /v1/leads/search — keySource forwarding", () => {
 
     const searchCall = fetchCalls.find((c) => c.url.includes("/search") && c.method === "POST");
     expect(searchCall).toBeDefined();
-    expect(searchCall!.body!.keySource).toBe("byok");
+    expect(searchCall!.body!.keySource).toBe("org");
     expect(searchCall!.body!.appId).toBe("distribute");
     expect(searchCall!.body!.orgId).toBe("org_test456");
     expect(searchCall!.body!.userId).toBe("user_test123");
@@ -193,7 +193,7 @@ describe("POST /v1/qualify — keySource forwarding", () => {
 
     const qualifyCall = fetchCalls.find((c) => c.url.includes("/qualify") && c.method === "POST");
     expect(qualifyCall).toBeDefined();
-    expect(qualifyCall!.headers!["x-key-source"]).toBe("byok");
+    expect(qualifyCall!.headers!["x-key-source"]).toBe("org");
     expect(qualifyCall!.body!.appId).toBe("distribute");
     expect(qualifyCall!.body!.userId).toBe("user_test123");
   });
@@ -228,7 +228,7 @@ describe("POST /v1/brand/scrape — keySource forwarding", () => {
 
     const scrapeCall = fetchCalls.find((c) => c.url.includes("/scrape") && c.method === "POST");
     expect(scrapeCall).toBeDefined();
-    expect(scrapeCall!.body!.keySource).toBe("byok");
+    expect(scrapeCall!.body!.keySource).toBe("org");
     expect(scrapeCall!.body!.userId).toBe("user_test123");
   });
 
@@ -261,7 +261,7 @@ describe("POST /v1/emails/send — keySource forwarding", () => {
 
     const sendCall = fetchCalls.find((c) => c.url.includes("/send") && c.method === "POST");
     expect(sendCall).toBeDefined();
-    expect(sendCall!.headers!["x-key-source"]).toBe("byok");
+    expect(sendCall!.headers!["x-key-source"]).toBe("org");
     expect(sendCall!.headers!["x-org-id"]).toBe("org_test456");
     expect(sendCall!.headers!["x-user-id"]).toBe("user_test123");
     expect(sendCall!.body!.appId).toBe("distribute");
