@@ -69,7 +69,7 @@ function createApp(...routers: express.Router[]) {
   return app;
 }
 
-let fetchCalls: Array<{ url: string; method?: string; body?: Record<string, unknown> }>;
+let fetchCalls: Array<{ url: string; method?: string; body?: Record<string, unknown>; headers?: Record<string, string> }>;
 
 beforeEach(() => {
   vi.restoreAllMocks();
@@ -79,7 +79,8 @@ beforeEach(() => {
 
   global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
     const body = init?.body ? JSON.parse(init.body as string) : undefined;
-    fetchCalls.push({ url, method: init?.method, body });
+    const headers = init?.headers ? Object.fromEntries(Object.entries(init.headers)) : undefined;
+    fetchCalls.push({ url, method: init?.method, body, headers });
     return { ok: true, json: () => Promise.resolve({ campaign: { id: "c-1", status: "ongoing" } }) };
   });
 });
@@ -178,7 +179,7 @@ describe("POST /v1/leads/search — keySource forwarding", () => {
 // 5. POST /v1/qualify
 // ---------------------------------------------------------------
 describe("POST /v1/qualify — keySource forwarding", () => {
-  it("should forward keySource from middleware to reply-qualification service", async () => {
+  it("should forward keySource in headers to reply-qualification service", async () => {
     const app = createApp(qualifyRouter);
     const res = await request(app)
       .post("/v1/qualify")
@@ -192,12 +193,12 @@ describe("POST /v1/qualify — keySource forwarding", () => {
 
     const qualifyCall = fetchCalls.find((c) => c.url.includes("/qualify") && c.method === "POST");
     expect(qualifyCall).toBeDefined();
-    expect(qualifyCall!.body!.keySource).toBe("org");
+    expect(qualifyCall!.headers!["x-key-source"]).toBe("org");
     expect(qualifyCall!.body!.appId).toBe("distribute");
     expect(qualifyCall!.body!.userId).toBe("user_test123");
   });
 
-  it("should forward keySource 'platform' when middleware resolves payg/trial", async () => {
+  it("should forward keySource 'platform' in headers when middleware resolves payg/trial", async () => {
     mockKeySource = "platform";
     const app = createApp(qualifyRouter);
     await request(app)
@@ -209,7 +210,7 @@ describe("POST /v1/qualify — keySource forwarding", () => {
       });
 
     const qualifyCall = fetchCalls.find((c) => c.url.includes("/qualify") && c.method === "POST");
-    expect(qualifyCall!.body!.keySource).toBe("platform");
+    expect(qualifyCall!.headers!["x-key-source"]).toBe("platform");
   });
 });
 
@@ -247,7 +248,7 @@ describe("POST /v1/brand/scrape — keySource forwarding", () => {
 // 7. POST /v1/emails/send
 // ---------------------------------------------------------------
 describe("POST /v1/emails/send — keySource forwarding", () => {
-  it("should forward keySource from middleware to transactional-email-service", async () => {
+  it("should forward keySource in headers to transactional-email-service", async () => {
     const app = createApp(emailsRouter);
     const res = await request(app)
       .post("/v1/emails/send")
@@ -260,13 +261,15 @@ describe("POST /v1/emails/send — keySource forwarding", () => {
 
     const sendCall = fetchCalls.find((c) => c.url.includes("/send") && c.method === "POST");
     expect(sendCall).toBeDefined();
-    expect(sendCall!.body!.keySource).toBe("org");
+    expect(sendCall!.headers!["x-key-source"]).toBe("org");
+    expect(sendCall!.headers!["x-org-id"]).toBe("org_test456");
+    expect(sendCall!.headers!["x-user-id"]).toBe("user_test123");
     expect(sendCall!.body!.appId).toBe("distribute");
     expect(sendCall!.body!.orgId).toBe("org_test456");
     expect(sendCall!.body!.userId).toBe("user_test123");
   });
 
-  it("should forward keySource 'platform' when middleware resolves payg/trial", async () => {
+  it("should forward keySource 'platform' in headers when middleware resolves payg/trial", async () => {
     mockKeySource = "platform";
     const app = createApp(emailsRouter);
     await request(app)
@@ -277,6 +280,6 @@ describe("POST /v1/emails/send — keySource forwarding", () => {
       });
 
     const sendCall = fetchCalls.find((c) => c.url.includes("/send") && c.method === "POST");
-    expect(sendCall!.body!.keySource).toBe("platform");
+    expect(sendCall!.headers!["x-key-source"]).toBe("platform");
   });
 });

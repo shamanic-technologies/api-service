@@ -8,6 +8,7 @@ import {
   CreateStripeCheckoutRequestSchema,
   StripeStatsRequestSchema,
 } from "../schemas.js";
+import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
 
@@ -23,11 +24,10 @@ router.get("/stripe/products/:productId", authenticate, async (req: Authenticate
   try {
     const { productId } = req.params;
     const qs = new URLSearchParams({ appId: req.appId! });
-    if (req.orgId) qs.set("orgId", req.orgId);
-    if (req.keySource) qs.set("keySource", req.keySource);
     const result = await callExternalService(
       externalServices.stripe,
       `/products/${encodeURIComponent(productId)}?${qs}`,
+      { headers: buildInternalHeaders(req) },
     );
     res.json(result);
   } catch (error: any) {
@@ -52,10 +52,9 @@ router.post("/stripe/products", authenticate, async (req: AuthenticatedRequest, 
       "/products/create",
       {
         method: "POST",
+        headers: buildInternalHeaders(req),
         body: {
           appId: req.appId,
-          ...(req.orgId && { orgId: req.orgId }),
-          ...(req.keySource && { keySource: req.keySource }),
           ...parsed.data,
         },
       }
@@ -79,11 +78,10 @@ router.get("/stripe/products/:productId/prices", authenticate, async (req: Authe
   try {
     const { productId } = req.params;
     const qs = new URLSearchParams({ appId: req.appId! });
-    if (req.orgId) qs.set("orgId", req.orgId);
-    if (req.keySource) qs.set("keySource", req.keySource);
     const result = await callExternalService(
       externalServices.stripe,
       `/prices/by-product/${encodeURIComponent(productId)}?${qs}`,
+      { headers: buildInternalHeaders(req) },
     );
     res.json(result);
   } catch (error: any) {
@@ -108,10 +106,9 @@ router.post("/stripe/prices", authenticate, async (req: AuthenticatedRequest, re
       "/prices/create",
       {
         method: "POST",
+        headers: buildInternalHeaders(req),
         body: {
           appId: req.appId,
-          ...(req.orgId && { orgId: req.orgId }),
-          ...(req.keySource && { keySource: req.keySource }),
           ...parsed.data,
         },
       }
@@ -135,11 +132,10 @@ router.get("/stripe/coupons/:couponId", authenticate, async (req: AuthenticatedR
   try {
     const { couponId } = req.params;
     const qs = new URLSearchParams({ appId: req.appId! });
-    if (req.orgId) qs.set("orgId", req.orgId);
-    if (req.keySource) qs.set("keySource", req.keySource);
     const result = await callExternalService(
       externalServices.stripe,
       `/coupons/${encodeURIComponent(couponId)}?${qs}`,
+      { headers: buildInternalHeaders(req) },
     );
     res.json(result);
   } catch (error: any) {
@@ -164,10 +160,9 @@ router.post("/stripe/coupons", authenticate, async (req: AuthenticatedRequest, r
       "/coupons/create",
       {
         method: "POST",
+        headers: buildInternalHeaders(req),
         body: {
           appId: req.appId,
-          ...(req.orgId && { orgId: req.orgId }),
-          ...(req.keySource && { keySource: req.keySource }),
           ...parsed.data,
         },
       }
@@ -199,7 +194,8 @@ router.post("/stripe/checkout", authenticate, requireOrg, async (req: Authentica
       "/checkout/create",
       {
         method: "POST",
-        body: { appId: req.appId, orgId: req.orgId, userId: req.userId, keySource: req.keySource, ...parsed.data },
+        headers: buildInternalHeaders(req),
+        body: { appId: req.appId, ...parsed.data },
       }
     );
     res.json(result);
@@ -229,7 +225,8 @@ router.post("/stripe/stats", authenticate, requireOrg, async (req: Authenticated
       "/stats",
       {
         method: "POST",
-        body: { appId: req.appId, orgId: req.orgId, keySource: req.keySource, ...parsed.data },
+        headers: buildInternalHeaders(req),
+        body: { appId: req.appId, ...parsed.data },
       }
     );
     res.json(result);

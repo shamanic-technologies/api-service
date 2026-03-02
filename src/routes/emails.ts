@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { SendEmailRequestSchema, EmailStatsRequestSchema, DeployEmailTemplatesRequestSchema } from "../schemas.js";
+import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
 
@@ -21,11 +22,11 @@ router.post("/emails/send", authenticate, requireOrg, async (req: AuthenticatedR
       "/send",
       {
         method: "POST",
+        headers: buildInternalHeaders(req),
         body: {
           appId: req.appId,
           orgId: req.orgId,
           userId: req.userId,
-          keySource: req.keySource,
           ...parsed.data,
         },
       }
@@ -53,11 +54,10 @@ router.post("/emails/stats", authenticate, requireOrg, async (req: Authenticated
       "/stats",
       {
         method: "POST",
+        headers: buildInternalHeaders(req),
         body: {
           appId: req.appId,
           orgId: req.orgId,
-          userId: req.userId,
-          keySource: req.keySource,
           ...parsed.data,
         },
       }
@@ -85,11 +85,9 @@ router.put("/emails/templates", authenticate, requireOrg, async (req: Authentica
       "/templates",
       {
         method: "PUT",
+        headers: buildInternalHeaders(req),
         body: {
           appId: req.appId,
-          orgId: req.orgId,
-          userId: req.userId,
-          keySource: req.keySource,
           ...parsed.data,
         },
       }
