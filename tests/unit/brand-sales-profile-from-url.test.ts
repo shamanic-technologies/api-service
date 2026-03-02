@@ -12,13 +12,14 @@ import express from "express";
  *   5. Returns the sales profile response as-is
  */
 
-// Mock auth middleware to skip real auth
+// Mock auth middleware to skip real auth — keySource resolved in middleware
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
     req.appId = "distribute";
     req.authType = "app_key";
+    req.keySource = "byok";
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -99,9 +100,6 @@ describe("POST /v1/brand/sales-profile", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(fakeSalesProfile);
-
-    // Verify keySource was resolved
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
 
     // Verify a tracking run was created
     expect(mockCreateRun).toHaveBeenCalledWith({

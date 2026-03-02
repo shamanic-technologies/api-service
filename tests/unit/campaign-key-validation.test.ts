@@ -2,6 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
 
+// Configurable auth context — keySource resolved in middleware
+let mockKeySource: string | undefined = "byok";
+
 // Mock auth middleware
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
@@ -9,6 +12,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
     req.orgId = "org_test456";
     req.appId = "distribute";
     req.authType = "user_key";
+    req.keySource = mockKeySource;
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -66,7 +70,7 @@ describe("POST /v1/campaigns — pre-campaign BYOK key validation", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockFetchKeySource.mockResolvedValue("byok");
+    mockKeySource = "byok";
   });
 
   it("should return 400 with missing_keys when org lacks required providers", async () => {
@@ -175,7 +179,7 @@ describe("POST /v1/campaigns — pre-campaign BYOK key validation", () => {
   });
 
   it("should skip validation when keySource is platform (not byok)", async () => {
-    mockFetchKeySource.mockResolvedValue("platform");
+    mockKeySource = "platform";
 
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
       if (url.includes("/brands")) return { ok: true, json: () => Promise.resolve({ brandId: "brand-123" }) };

@@ -24,4 +24,13 @@ describe("buildInternalHeaders", () => {
     // Should check if req.appId exists before adding
     expect(content).toContain("if (req.appId)");
   });
+
+  it("should include x-key-source when req.keySource is set", () => {
+    expect(content).toContain('"x-key-source"');
+    expect(content).toContain("req.keySource");
+  });
+
+  it("should conditionally add x-key-source (not always)", () => {
+    expect(content).toContain("if (req.keySource)");
+  });
 });

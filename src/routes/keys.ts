@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
+import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { UpsertKeyRequestSchema, CreateApiKeyRequestSchema } from "../schemas.js";
 
 const router = Router();
@@ -17,7 +18,9 @@ router.get("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
     const params = new URLSearchParams({ keySource: "org", orgId: req.orgId });
-    const result = await callExternalService(externalServices.key, `/keys?${params}`);
+    const result = await callExternalService(externalServices.key, `/keys?${params}`, {
+      headers: buildInternalHeaders(req),
+    });
     res.json(result);
   } catch (error: any) {
     console.error("List keys error:", error);
@@ -41,6 +44,7 @@ router.post("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
     const result = await callExternalService(externalServices.key, "/keys", {
       method: "POST",
       body: { keySource: "org", provider, apiKey, orgId: req.orgId },
+      headers: buildInternalHeaders(req),
     });
     res.json(result);
   } catch (error: any) {
@@ -61,7 +65,7 @@ router.delete("/keys/:provider", authenticate, async (req: AuthenticatedRequest,
     const result = await callExternalService(
       externalServices.key,
       `/keys/${encodeURIComponent(provider)}?${params}`,
-      { method: "DELETE" }
+      { method: "DELETE", headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
@@ -85,7 +89,8 @@ router.post("/api-keys/session", authenticate, requireOrg, requireUser, async (r
       "/internal/api-keys/session",
       {
         method: "POST",
-        body: { appId: req.appId, orgId: req.orgId, userId: req.userId },
+        body: { appId: req.appId, orgId: req.orgId, userId: req.userId, keySource: req.keySource },
+        headers: buildInternalHeaders(req),
       }
     );
     res.json(result);
@@ -117,8 +122,10 @@ router.post("/api-keys", authenticate, requireOrg, requireUser, async (req: Auth
           orgId: req.orgId,
           userId: req.userId,
           createdBy: req.userId,
+          keySource: req.keySource,
           name,
         },
+        headers: buildInternalHeaders(req),
       }
     );
     res.json(result);
@@ -136,7 +143,8 @@ router.get("/api-keys", authenticate, requireOrg, requireUser, async (req: Authe
   try {
     const result = await callExternalService(
       externalServices.key,
-      `/internal/api-keys?orgId=${req.orgId}`
+      `/internal/api-keys?orgId=${req.orgId}`,
+      { headers: buildInternalHeaders(req) },
     );
     res.json(result);
   } catch (error: any) {
@@ -158,7 +166,8 @@ router.delete("/api-keys/:id", authenticate, requireOrg, requireUser, async (req
       `/internal/api-keys/${id}`,
       {
         method: "DELETE",
-        body: { orgId: req.orgId },
+        body: { orgId: req.orgId, keySource: req.keySource },
+        headers: buildInternalHeaders(req),
       }
     );
     res.json(result);

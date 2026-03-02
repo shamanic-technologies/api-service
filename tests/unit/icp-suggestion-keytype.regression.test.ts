@@ -10,6 +10,9 @@ import express from "express";
  * instead of a generic 500.
  */
 
+// Configurable auth context — keySource resolved in middleware
+let mockKeySource: string | undefined = "byok";
+
 // Mock auth middleware to skip real auth
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
@@ -17,6 +20,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
     req.orgId = "org_test456";
     req.appId = "distribute";
     req.authType = "app_key";
+    req.keySource = mockKeySource;
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -53,7 +57,7 @@ function createBrandApp() {
 describe("POST /v1/brand/icp-suggestion", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockFetchKeySource.mockResolvedValue("byok");
+    mockKeySource = "byok";
   });
 
   it("should resolve keySource from billing-service and forward to brand-service", async () => {
@@ -80,11 +84,10 @@ describe("POST /v1/brand/icp-suggestion", () => {
     expect(capturedBody!.appId).toBe("distribute");
     expect(capturedBody!.url).toBe("https://example.com");
     expect(capturedBody!.orgId).toBe("org_test456");
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
   });
 
-  it("should forward keySource 'platform' when billing-service returns payg", async () => {
-    mockFetchKeySource.mockResolvedValue("platform");
+  it("should forward keySource 'platform' when middleware resolves payg", async () => {
+    mockKeySource = "platform";
 
     let capturedBody: Record<string, unknown> | undefined;
 

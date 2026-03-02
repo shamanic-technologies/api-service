@@ -2,7 +2,6 @@ import { Router } from "express";
 import { authenticate, requireOrg, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { SendEmailRequestSchema, EmailStatsRequestSchema, DeployEmailTemplatesRequestSchema } from "../schemas.js";
-import { fetchKeySource } from "../lib/billing.js";
 
 const router = Router();
 
@@ -17,8 +16,6 @@ router.post("/emails/send", authenticate, requireOrg, async (req: AuthenticatedR
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
 
-    const keySource = await fetchKeySource(req.orgId!, req.appId!);
-
     const result = await callExternalService(
       externalServices.transactionalEmail,
       "/send",
@@ -28,7 +25,7 @@ router.post("/emails/send", authenticate, requireOrg, async (req: AuthenticatedR
           appId: req.appId,
           orgId: req.orgId,
           userId: req.userId,
-          keySource,
+          keySource: req.keySource,
           ...parsed.data,
         },
       }
@@ -59,6 +56,7 @@ router.post("/emails/stats", authenticate, requireOrg, async (req: Authenticated
         body: {
           appId: req.appId,
           orgId: req.orgId,
+          keySource: req.keySource,
           ...parsed.data,
         },
       }
@@ -88,6 +86,7 @@ router.put("/emails/templates", authenticate, requireOrg, async (req: Authentica
         method: "PUT",
         body: {
           appId: req.appId,
+          keySource: req.keySource,
           ...parsed.data,
         },
       }

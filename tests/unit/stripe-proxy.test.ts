@@ -3,7 +3,7 @@ import express from "express";
 import request from "supertest";
 
 // Configurable auth context — tests can toggle org/user presence
-let mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456" as string | undefined, userId: "user_test123" as string | undefined, authType: "user_key" as string };
+let mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456" as string | undefined, userId: "user_test123" as string | undefined, authType: "user_key" as string, keySource: "byok" as string | undefined };
 
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
@@ -11,6 +11,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
     req.authType = mockAuthContext.authType;
     if (mockAuthContext.orgId) req.orgId = mockAuthContext.orgId;
     if (mockAuthContext.userId) req.userId = mockAuthContext.userId;
+    if (mockAuthContext.keySource) req.keySource = mockAuthContext.keySource;
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -60,7 +61,7 @@ function mockFetchOk(responseData: any = {}) {
 // ---------------------------------------------------------------------------
 
 function resetAuthContext() {
-  mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456", userId: "user_test123", authType: "user_key" };
+  mockAuthContext = { appId: "distribute-frontend", orgId: "org_test456", userId: "user_test123", authType: "user_key", keySource: "byok" };
 }
 
 describe("GET /v1/stripe/products/:productId", () => {
@@ -68,7 +69,6 @@ describe("GET /v1/stripe/products/:productId", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ id: "prod_123", name: "Webinar Access" });
     app = createApp();
@@ -79,8 +79,6 @@ describe("GET /v1/stripe/products/:productId", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.name).toBe("Webinar Access");
-
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute-frontend");
 
     const call = fetchCalls.find((c) => c.url.includes("/products/prod_123"));
     expect(call).toBeDefined();
@@ -95,7 +93,6 @@ describe("POST /v1/stripe/products", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ id: "prod_new", name: "Course" });
     app = createApp();
@@ -135,7 +132,6 @@ describe("GET /v1/stripe/products/:productId/prices", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ prices: [{ id: "price_123", unitAmount: 4999 }] });
     app = createApp();
@@ -160,7 +156,6 @@ describe("POST /v1/stripe/prices", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ id: "price_new" });
     app = createApp();
@@ -199,7 +194,6 @@ describe("GET /v1/stripe/coupons/:couponId", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ id: "WELCOME20", percentOff: 20 });
     app = createApp();
@@ -224,7 +218,6 @@ describe("POST /v1/stripe/coupons", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ id: "WELCOME20" });
     app = createApp();
@@ -263,7 +256,6 @@ describe("POST /v1/stripe/checkout", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ url: "https://checkout.stripe.com/session_123", sessionId: "cs_123" });
     app = createApp();
@@ -283,8 +275,6 @@ describe("POST /v1/stripe/checkout", () => {
     expect(res.status).toBe(200);
     expect(res.body.url).toContain("checkout.stripe.com");
 
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute-frontend");
-
     const call = fetchCalls.find((c) => c.url.includes("/checkout/create"));
     expect(call!.body).toMatchObject({
       appId: "distribute-frontend",
@@ -298,8 +288,8 @@ describe("POST /v1/stripe/checkout", () => {
     });
   });
 
-  it("should forward keySource 'platform' when billing returns payg/trial", async () => {
-    mockFetchKeySource.mockResolvedValue("platform");
+  it("should forward keySource 'platform' when middleware resolves payg/trial", async () => {
+    mockAuthContext.keySource = "platform";
     const res = await request(app)
       .post("/v1/stripe/checkout")
       .send({
@@ -331,7 +321,6 @@ describe("POST /v1/stripe/stats", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     mockFetchOk({ totalRevenue: 12500, totalOrders: 5 });
     app = createApp();
@@ -345,8 +334,6 @@ describe("POST /v1/stripe/stats", () => {
     expect(res.status).toBe(200);
     expect(res.body.totalRevenue).toBe(12500);
 
-    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute-frontend");
-
     const call = fetchCalls.find((c) => c.url.includes("/stats"));
     expect(call!.body).toMatchObject({
       appId: "distribute-frontend",
@@ -356,8 +343,8 @@ describe("POST /v1/stripe/stats", () => {
     });
   });
 
-  it("should forward keySource 'platform' when billing returns payg/trial", async () => {
-    mockFetchKeySource.mockResolvedValue("platform");
+  it("should forward keySource 'platform' when middleware resolves payg/trial", async () => {
+    mockAuthContext.keySource = "platform";
     await request(app).post("/v1/stripe/stats").send({});
 
     const call = fetchCalls.find((c) => c.url.includes("/stats"));
@@ -379,9 +366,8 @@ describe("Stripe catalog endpoints — app key without org context", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockFetchKeySource.mockReset().mockResolvedValue("byok");
-    // Simulate app key with NO org/user context
-    mockAuthContext = { appId: "distribute-frontend", orgId: undefined, userId: undefined, authType: "app_key" };
+    // Simulate app key with NO org/user context — keySource is undefined (middleware can't resolve without orgId)
+    mockAuthContext = { appId: "distribute-frontend", orgId: undefined, userId: undefined, authType: "app_key", keySource: undefined };
     mockFetchOk({ id: "prod_123", name: "Webinar Access" });
     appKeyApp = createApp();
   });
@@ -389,7 +375,6 @@ describe("Stripe catalog endpoints — app key without org context", () => {
   it("GET /v1/stripe/products/:id should work without org context and omit orgId/keySource", async () => {
     const res = await request(appKeyApp).get("/v1/stripe/products/prod_123");
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).not.toHaveBeenCalled();
 
     const call = fetchCalls.find((c) => c.url.includes("/products/prod_123"));
     expect(call!.url).toContain("appId=distribute-frontend");
@@ -412,7 +397,6 @@ describe("Stripe catalog endpoints — app key without org context", () => {
   it("GET /v1/stripe/products/:id/prices should work without org context and omit orgId/keySource", async () => {
     const res = await request(appKeyApp).get("/v1/stripe/products/prod_123/prices");
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).not.toHaveBeenCalled();
 
     const call = fetchCalls.find((c) => c.url.includes("/prices/by-product/prod_123"));
     expect(call!.url).not.toContain("orgId");
@@ -433,7 +417,6 @@ describe("Stripe catalog endpoints — app key without org context", () => {
   it("GET /v1/stripe/coupons/:id should work without org context and omit orgId/keySource", async () => {
     const res = await request(appKeyApp).get("/v1/stripe/coupons/WELCOME20");
     expect(res.status).toBe(200);
-    expect(mockFetchKeySource).not.toHaveBeenCalled();
 
     const call = fetchCalls.find((c) => c.url.includes("/coupons/WELCOME20"));
     expect(call!.url).not.toContain("orgId");
@@ -479,7 +462,6 @@ describe("Stripe proxy — error handling", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockFetchKeySource.mockResolvedValue("byok");
     resetAuthContext();
     global.fetch = vi.fn().mockImplementation(async () => ({
       ok: false,

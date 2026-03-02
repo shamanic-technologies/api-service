@@ -1,11 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import { callExternalService, externalServices } from "../lib/service-client.js";
+import { fetchKeySource } from "../lib/billing.js";
 
 export interface AuthenticatedRequest extends Request {
   userId?: string;
   orgId?: string;
   appId?: string;
   authType?: "app_key" | "user_key";
+  keySource?: string;
 }
 
 /**
@@ -77,15 +79,23 @@ export async function authenticate(
           path: req.path,
         });
       }
-
-      return next();
+    } else {
+      // User key: all identity comes from the key itself — no headers needed
+      req.appId = validation.appId;
+      req.orgId = validation.orgId;
+      req.userId = validation.userId;
+      req.authType = "user_key";
     }
 
-    // User key: all identity comes from the key itself — no headers needed
-    req.appId = validation.appId;
-    req.orgId = validation.orgId;
-    req.userId = validation.userId;
-    req.authType = "user_key";
+    // Resolve keySource from billing-service (best-effort — don't block on failure)
+    if (req.orgId && req.appId) {
+      try {
+        req.keySource = await fetchKeySource(req.orgId, req.appId);
+      } catch (err) {
+        console.warn("[auth] Failed to resolve keySource:", (err as Error).message);
+      }
+    }
+
     return next();
   } catch (error) {
     console.error("Auth error:", error);

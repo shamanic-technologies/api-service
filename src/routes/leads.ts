@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
+import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { LeadSearchRequestSchema } from "../schemas.js";
-import { fetchKeySource } from "../lib/billing.js";
 
 const router = Router();
 
@@ -24,15 +24,12 @@ router.post("/leads/search", authenticate, requireOrg, requireUser, async (req: 
       per_page,
     } = parsed.data;
 
-    // Resolve keySource from billing-service
-    const keySource = await fetchKeySource(req.orgId!, req.appId!);
-
     const result = await callExternalService(
       externalServices.lead,
       "/search",
       {
         method: "POST",
-        headers: { "x-app-id": req.appId!, "x-org-id": req.orgId! },
+        headers: buildInternalHeaders(req),
         body: {
           personTitles: person_titles,
           organizationLocations: organization_locations,
@@ -42,7 +39,7 @@ router.post("/leads/search", authenticate, requireOrg, requireUser, async (req: 
           appId: req.appId!,
           orgId: req.orgId,
           userId: req.userId,
-          keySource,
+          keySource: req.keySource,
         },
       }
     );
