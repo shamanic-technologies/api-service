@@ -56,6 +56,7 @@ router.post("/emails/stats", authenticate, requireOrg, async (req: Authenticated
         body: {
           appId: req.appId,
           orgId: req.orgId,
+          userId: req.userId,
           keySource: req.keySource,
           ...parsed.data,
         },
@@ -86,6 +87,8 @@ router.put("/emails/templates", authenticate, requireOrg, async (req: Authentica
         method: "PUT",
         body: {
           appId: req.appId,
+          orgId: req.orgId,
+          userId: req.userId,
           keySource: req.keySource,
           ...parsed.data,
         },
