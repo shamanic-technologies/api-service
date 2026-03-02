@@ -21,6 +21,9 @@ function setAllEnvVars() {
   process.env.FIRECRAWL_API_KEY = "fc-test";
   process.env.GEMINI_API_KEY = "gemini-test";
   process.env.POSTMARK_API_KEY = "postmark-test";
+  process.env.POSTMARK_BROADCAST_STREAM_ID = "broadcast";
+  process.env.POSTMARK_INBOUND_STREAM_ID = "inbound";
+  process.env.POSTMARK_TRANSACTIONAL_STREAM_ID = "outbound";
   process.env.STRIPE_SECRET_KEY = "sk_test_stripe";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
 }
@@ -32,6 +35,9 @@ function deleteAllEnvVars() {
   delete process.env.FIRECRAWL_API_KEY;
   delete process.env.GEMINI_API_KEY;
   delete process.env.POSTMARK_API_KEY;
+  delete process.env.POSTMARK_BROADCAST_STREAM_ID;
+  delete process.env.POSTMARK_INBOUND_STREAM_ID;
+  delete process.env.POSTMARK_TRANSACTIONAL_STREAM_ID;
   delete process.env.STRIPE_SECRET_KEY;
   delete process.env.STRIPE_WEBHOOK_SECRET;
 }
@@ -69,7 +75,7 @@ describe("registerPlatformKeys", () => {
     await registerPlatformKeys();
 
     const platformKeyCalls = fetchCalls.filter((c) => c.url.includes("/keys") && c.body?.keySource === "platform");
-    expect(platformKeyCalls).toHaveLength(8);
+    expect(platformKeyCalls).toHaveLength(11);
 
     const providers = platformKeyCalls.map((c) => c.body?.provider);
     expect(providers).toContain("anthropic");
@@ -78,6 +84,9 @@ describe("registerPlatformKeys", () => {
     expect(providers).toContain("firecrawl");
     expect(providers).toContain("gemini");
     expect(providers).toContain("postmark");
+    expect(providers).toContain("postmark-broadcast-stream");
+    expect(providers).toContain("postmark-inbound-stream");
+    expect(providers).toContain("postmark-transactional-stream");
     expect(providers).toContain("stripe");
     expect(providers).toContain("stripe-webhook");
 
