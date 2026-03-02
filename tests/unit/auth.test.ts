@@ -24,16 +24,22 @@ describe("Auth middleware — Bearer key authentication", () => {
 });
 
 describe("Auth middleware — key-service validation", () => {
-  it("should validate keys via key-service /validate", () => {
-    expect(content).toContain('"/validate"');
-    expect(content).toContain("callExternalService");
-    expect(content).toContain("externalServices.key");
+  it("should validate keys via key-service /validate using fetch directly", () => {
+    expect(content).toContain("/validate");
+    expect(content).toContain("externalServices.key.url");
+    // Uses fetch directly (not callExternalService) so /validate
+    // only gets bearerAuth, no X-API-Key service header
+    expect(content).toContain("await fetch(url");
   });
 
   it("should distinguish app keys from user keys", () => {
     expect(content).toContain('"app"');
     expect(content).toContain('"user"');
     expect(content).toContain("validation.type");
+  });
+
+  it("should handle 401 from key-service gracefully without logging stack traces", () => {
+    expect(content).toContain("response.status === 401");
   });
 });
 
