@@ -133,7 +133,7 @@ describe("POST /v1/emails/stats", () => {
     app = createApp();
   });
 
-  it("should forward stats request with appId and orgId", async () => {
+  it("should forward stats request with appId, orgId, userId and keySource", async () => {
     const res = await request(app)
       .post("/v1/emails/stats")
       .send({ eventType: "webinar_welcome" });
@@ -146,6 +146,8 @@ describe("POST /v1/emails/stats", () => {
     expect(statsCall!.body).toMatchObject({
       appId: "distribute-frontend",
       orgId: "org_test456",
+      userId: "user_test123",
+      keySource: "platform",
       eventType: "webinar_welcome",
     });
   });
@@ -176,7 +178,7 @@ describe("PUT /v1/emails/templates", () => {
     app = createApp();
   });
 
-  it("should forward template deployment with appId", async () => {
+  it("should forward template deployment with appId, orgId, userId and keySource", async () => {
     const res = await request(app)
       .put("/v1/emails/templates")
       .send({
@@ -197,6 +199,9 @@ describe("PUT /v1/emails/templates", () => {
     expect(deployCall!.method).toBe("PUT");
     expect(deployCall!.body).toMatchObject({
       appId: "distribute-frontend",
+      orgId: "org_test456",
+      userId: "user_test123",
+      keySource: "platform",
       templates: [
         {
           name: "webinar_welcome",
