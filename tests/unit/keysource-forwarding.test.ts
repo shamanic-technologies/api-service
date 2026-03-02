@@ -13,6 +13,7 @@ import express from "express";
  * 4. POST /v1/leads/search
  * 5. POST /v1/qualify
  * 6. POST /v1/brand/scrape
+ * 7. POST /v1/emails/send
  */
 
 // Mock auth middleware
@@ -53,6 +54,7 @@ import workflowRouter from "../../src/routes/workflows.js";
 import brandRouter from "../../src/routes/brand.js";
 import leadRouter from "../../src/routes/leads.js";
 import qualifyRouter from "../../src/routes/qualify.js";
+import emailsRouter from "../../src/routes/emails.js";
 
 function createApp(...routers: express.Router[]) {
   const app = express();
@@ -238,5 +240,44 @@ describe("POST /v1/brand/scrape — keySource forwarding", () => {
 
     const scrapeCall = fetchCalls.find((c) => c.url.includes("/scrape") && c.method === "POST");
     expect(scrapeCall!.body!.keySource).toBe("platform");
+  });
+});
+
+// ---------------------------------------------------------------
+// 7. POST /v1/emails/send
+// ---------------------------------------------------------------
+describe("POST /v1/emails/send — keySource forwarding", () => {
+  it("should resolve keySource and forward to transactional-email-service", async () => {
+    const app = createApp(emailsRouter);
+    const res = await request(app)
+      .post("/v1/emails/send")
+      .send({
+        eventType: "contact_form",
+        recipientEmail: "contact@growthagency.dev",
+      });
+
+    expect(res.status).toBe(200);
+    expect(mockFetchKeySource).toHaveBeenCalledWith("org_test456", "distribute");
+
+    const sendCall = fetchCalls.find((c) => c.url.includes("/send") && c.method === "POST");
+    expect(sendCall).toBeDefined();
+    expect(sendCall!.body!.keySource).toBe("byok");
+    expect(sendCall!.body!.appId).toBe("distribute");
+    expect(sendCall!.body!.orgId).toBe("org_test456");
+    expect(sendCall!.body!.userId).toBe("user_test123");
+  });
+
+  it("should forward keySource 'platform' when billing returns payg/trial", async () => {
+    mockFetchKeySource.mockResolvedValue("platform");
+    const app = createApp(emailsRouter);
+    await request(app)
+      .post("/v1/emails/send")
+      .send({
+        eventType: "contact_form",
+        recipientEmail: "contact@growthagency.dev",
+      });
+
+    const sendCall = fetchCalls.find((c) => c.url.includes("/send") && c.method === "POST");
+    expect(sendCall!.body!.keySource).toBe("platform");
   });
 });
