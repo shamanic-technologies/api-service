@@ -12,7 +12,7 @@
  * 6. Workflows use {category}-{channel}-{audienceType}-{signatureName} naming.
  * 7. Per-workflow email stats via instantly-service POST /stats/grouped
  *    (run-ids-by-workflow → grouped stats), with email-gateway fallback.
- * 8. emailsReplied from instantly-service = positive replies only (lead_interested).
+ * 8. emailsReplied = positive replies only (lead_interested). Auto-reply, not-interested, OOO excluded.
  * 9. Recipients count per workflow from instantly-service.
  *
  * Fix: Use brand-service as source of truth for brands (like dashboard does),
@@ -806,7 +806,7 @@ describe("GET /performance/leaderboard", () => {
     expect(wf.costPerReplyCents).toBe(500); // 4000 / 8
   });
 
-  it("should sum all reply types in emailsReplied from instantly-service", async () => {
+  it("should only count positive replies in emailsReplied from instantly-service", async () => {
     const app = createApp();
     const brands = [{ id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" }];
     const workflowGroups: MockRunsGroup[] = [
@@ -843,16 +843,16 @@ describe("GET /performance/leaderboard", () => {
 
     expect(res.status).toBe(200);
     const wf = res.body.workflows[0];
-    // emailsReplied = ALL reply types: 3 + 10 + 2 + 1 + 0 = 16
-    expect(wf.emailsReplied).toBe(16);
-    // repliesInterested = only positive replies (emailsReplied from instantly)
+    // emailsReplied = positive replies ONLY (auto-reply, not-interested, OOO, unsub are excluded)
+    expect(wf.emailsReplied).toBe(3);
+    // repliesInterested mirrors emailsReplied (both are positive replies)
     expect(wf.repliesInterested).toBe(3);
-    // replyRate uses total replies
-    expect(wf.replyRate).toBe(0.16); // 16/100
-    // interestedRate uses positive replies only
+    // replyRate uses positive replies only
+    expect(wf.replyRate).toBe(0.03); // 3/100
+    // interestedRate mirrors replyRate
     expect(wf.interestedRate).toBe(0.03); // 3/100
-    // costPerReply uses total replies
-    expect(wf.costPerReplyCents).toBe(250); // 4000 / 16
+    // costPerReply uses positive replies
+    expect(wf.costPerReplyCents).toBe(1333); // Math.round(4000 / 3)
   });
 
   it("should use instantly aggregate fallback when per-workflow path returns empty", async () => {
@@ -872,7 +872,7 @@ describe("GET /performance/leaderboard", () => {
       if (path === "/stats") {
         // Distinguish instantly from email-gateway by service URL
         if (service.url === "http://mock-instantly") {
-          // Instantly aggregate: 100 sent, 50 opened, 5 positive + 10 auto-reply = 15 total
+          // Instantly aggregate: 100 sent, 50 opened, 5 positive replies (auto-reply excluded)
           return Promise.resolve({
             stats: makeInstantlyStats({
               emailsSent: 100, emailsOpened: 50, emailsClicked: 8,
@@ -899,15 +899,14 @@ describe("GET /performance/leaderboard", () => {
     expect(sienna).toBeDefined();
     expect(sienna.emailsSent).toBe(60); // 100 * 0.6
     expect(sienna.emailsOpened).toBe(30); // 50 * 0.6
-    // Total replies = 5 + 10 = 15, sienna gets 60% = 9
-    expect(sienna.emailsReplied).toBe(9); // Math.round(15 * 0.6)
-    // Interested = 5 positive, sienna gets 60% = 3
+    // Positive replies = 5, sienna gets 60% = 3
+    expect(sienna.emailsReplied).toBe(3); // Math.round(5 * 0.6)
     expect(sienna.repliesInterested).toBe(3); // Math.round(5 * 0.6)
 
     const darmstadt = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-darmstadt");
     expect(darmstadt).toBeDefined();
     expect(darmstadt.emailsSent).toBe(40); // 100 * 0.4
-    expect(darmstadt.emailsReplied).toBe(6); // Math.round(15 * 0.4)
+    expect(darmstadt.emailsReplied).toBe(2); // Math.round(5 * 0.4)
     expect(darmstadt.repliesInterested).toBe(2); // Math.round(5 * 0.4)
   });
 });
@@ -1074,8 +1073,8 @@ describe("Regression: performance leaderboard must use broadcast-only stats", ()
     expect(content).toContain("repliesInterested");
     expect(content).toContain("interestedRate");
     expect(content).toContain("recipients");
-    // emailsReplied = ALL reply types, repliesInterested = positive only
-    expect(content).toContain("emailsReplied = ALL reply types");
-    expect(content).toContain("repliesInterested = positive replies only");
+    // emailsReplied IS positive replies only, repliesInterested mirrors it
+    expect(content).toContain("emailsReplied IS positive replies only");
+    expect(content).toContain("repliesInterested mirrors emailsReplied");
   });
 });

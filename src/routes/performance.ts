@@ -178,19 +178,14 @@ interface InstantlyGroupStats {
 }
 
 /** Convert instantly stats to DeliveryStats.
- *  emailsReplied = ALL reply types (positive + auto + not-interested + ooo + unsub).
- *  repliesInterested = positive replies only (emailsReplied from instantly = lead_interested). */
+ *  emailsReplied IS positive replies only (emailsReplied from instantly = lead_interested).
+ *  repliesInterested mirrors emailsReplied (both are positive replies). */
 function instantlyGroupToDeliveryStats(s: InstantlyGroupStats): DeliveryStats {
-  const totalReplies = (s.emailsReplied || 0) +
-    (s.repliesAutoReply || 0) +
-    (s.repliesNotInterested || 0) +
-    (s.repliesOutOfOffice || 0) +
-    (s.repliesUnsubscribe || 0);
   return {
     emailsSent: s.emailsSent || 0,
     emailsOpened: s.emailsOpened || 0,
     emailsClicked: s.emailsClicked || 0,
-    emailsReplied: totalReplies,
+    emailsReplied: s.emailsReplied || 0,
     emailsBounced: s.emailsBounced || 0,
     repliesInterested: s.emailsReplied || 0,
   };
