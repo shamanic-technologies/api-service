@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "distribute API",
-    "description": "API Gateway for distribute. Handles authentication, proxies to internal services, and exposes the public REST API.\n\n## Authentication\n\nAll authenticated endpoints require a Bearer token in the `Authorization` header.\n\nThere are two key types, each with different identity resolution behavior:\n\n### 1. User key (`distrib.usr_*`)\n\nIssued per-user via `POST /v1/api-keys`. The key already carries the user's internal org UUID — no extra headers needed.\n\n```\nAuthorization: Bearer distrib.usr_abc123...\n```\n\n### 2. App key (`distrib.app_*`)\n\nIssued when an app registers via `POST /v1/apps/register`. The key identifies the **app**, not a user or org. To access endpoints that require org/user context (campaigns, keys, activity, etc.), you must also send two identity headers:\n\n| Header | Description | Example |\n|--------|-------------|---------|\n| `x-org-id` | External organization ID (e.g. Clerk org ID) | `org_2xyz...` |\n| `x-user-id` | External user ID (e.g. Clerk user ID) | `user_2abc...` |\n\n```\nAuthorization: Bearer distrib.app_abc123...\nx-org-id: org_2xyzABC\nx-user-id: user_2abcDEF\n```\n\nThe API service resolves these external IDs to internal UUIDs via `client-service`. Both headers are **optional** — if omitted, the request proceeds without org/user context, which is fine for endpoints that only need app-level auth (e.g. `GET /v1/me`). But endpoints that require org context (e.g. `GET /v1/campaigns`) will return `400 Organization context required`.\n\n### Error codes\n\n| Code | Meaning |\n|------|---------|\n| 401 | Missing or invalid Bearer token |\n| 400 | Org context required but `x-org-id` header not provided (app key only) |\n| 401 | User identity required but `x-user-id` header not provided (app key only) |\n| 502 | Identity resolution failed (client-service unreachable) |\n",
+    "description": "API Gateway for distribute.\n\n## Quick Start\n\n1. Create an API key in the distribute dashboard, or via `POST /v1/api-keys`\n2. Use it as a Bearer token — that's it, no extra headers needed\n\n```\nAuthorization: Bearer distrib.usr_abc123...\n```\n\nYour key carries your org and user identity. All endpoints work out of the box.\n\n## Storing provider keys (BYOK)\n\nTo store your own provider API keys (e.g. OpenAI, Anthropic) for use in workflows:\n\n```\nPOST /v1/keys\nAuthorization: Bearer distrib.usr_abc123...\n\n{ \"keySource\": \"org\", \"provider\": \"openai\", \"apiKey\": \"sk-...\" }\n```\n\n## Error codes\n\n| Code | Meaning |\n|------|---------|\n| 401 | Missing or invalid Bearer token |\n| 400 | Organization context required (missing `x-org-id` — app key only) |\n| 502 | Identity resolution failed (internal service unreachable) |\n\n## Advanced: Platform integration\n\n> Most users do not need this section. It is for multi-tenant platforms that manage keys on behalf of multiple organizations.\n\nIf you're building a platform that operates across multiple orgs/users, register via `POST /v1/apps/register` to receive an app key (`distrib.app_*`). App keys identify the **platform**, not a user or org. To access org-scoped endpoints, send identity headers:\n\n```\nAuthorization: Bearer distrib.app_abc123...\nx-org-id: org_2xyzABC\nx-user-id: user_2abcDEF\n```\n\nThe API resolves these external IDs (e.g. Clerk IDs) to internal UUIDs via client-service. Both headers are **optional** — omit them for endpoints that only need app-level auth.\n",
     "version": "1.0.0"
   },
   "servers": [
@@ -16,8 +16,12 @@
       "description": "Health check and debug endpoints"
     },
     {
-      "name": "Apps",
-      "description": "App registration"
+      "name": "Authentication",
+      "description": "Create and manage your API keys"
+    },
+    {
+      "name": "Keys",
+      "description": "Store and manage provider API keys (BYOK)"
     },
     {
       "name": "Performance",
@@ -30,14 +34,6 @@
     {
       "name": "Campaigns",
       "description": "Campaign management"
-    },
-    {
-      "name": "Keys",
-      "description": "BYOK key management"
-    },
-    {
-      "name": "API Keys",
-      "description": "API key management"
     },
     {
       "name": "Leads",
@@ -62,6 +58,10 @@
     {
       "name": "Billing",
       "description": "Billing, credits, and checkout"
+    },
+    {
+      "name": "Platform",
+      "description": "Multi-tenant platform registration (advanced)"
     }
   ],
   "components": {
@@ -69,7 +69,7 @@
       "bearerAuth": {
         "type": "http",
         "scheme": "bearer",
-        "description": "Bearer token authentication. Two key types are supported:\n\n- **User key** (`distrib.usr_*`): carries app, org, and user context. No extra headers needed. Recommended for API/MCP access.\n- **App key** (`distrib.app_*`): identifies the app only (server-to-server). To access endpoints that require org/user context, also send `x-org-id` and `x-user-id` headers with your external IDs (e.g. Clerk IDs). The API resolves them to internal UUIDs via client-service.\n\nSee the top-level API description for full details and examples."
+        "description": "Bearer token authentication.\n\nUse an API key (`distrib.usr_*`) as your Bearer token. Create one via `POST /v1/api-keys` or in the dashboard.\n\nFor multi-tenant platforms: app keys (`distrib.app_*`) are also supported — see the Platform section in the API description."
       }
     },
     "schemas": {
@@ -407,7 +407,7 @@
               "org",
               "app"
             ],
-            "description": "Key store: 'org' (org-level, user-provided) or 'app' (app-level, requires app key auth)"
+            "description": "Key scope. Use 'org' to store keys for your organization. 'app' is for multi-tenant platforms only (requires app key auth)"
           },
           "provider": {
             "type": "string",
@@ -1623,10 +1623,10 @@
     "/v1/apps/register": {
       "post": {
         "tags": [
-          "Apps"
+          "Platform"
         ],
-        "summary": "Register an app",
-        "description": "Register a new app and receive an API key. Idempotent: returns existing appId if already registered. The API key is only shown on first creation.",
+        "summary": "Register a platform app",
+        "description": "Register a multi-tenant platform app and receive an app key. Not needed for standard API access — use `POST /v1/api-keys` instead to create an API key. Idempotent: returns existing appId if already registered. The app key is only shown on first creation.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -2591,7 +2591,7 @@
           "Keys"
         ],
         "summary": "List provider keys",
-        "description": "List provider keys. Pass keySource query param to select the key store (org or app). Defaults to 'org'.",
+        "description": "List stored provider keys (masked). Defaults to org-level keys.",
         "security": [
           {
             "bearerAuth": []
@@ -2605,10 +2605,10 @@
                 "org",
                 "app"
               ],
-              "description": "Key store to list from (default: 'org')"
+              "description": "Key scope (default: 'org'). Use 'app' only for multi-tenant platforms"
             },
             "required": false,
-            "description": "Key store to list from (default: 'org')",
+            "description": "Key scope (default: 'org'). Use 'app' only for multi-tenant platforms",
             "name": "keySource",
             "in": "query"
           },
@@ -2662,7 +2662,7 @@
           "Keys"
         ],
         "summary": "Upsert a provider key",
-        "description": "Store or update a provider API key. keySource determines the key store: 'org' for org-level keys (requires org context), 'app' for app-level keys (requires app key auth).",
+        "description": "Store or update a provider API key (e.g. OpenAI, Anthropic). Most users should use keySource: 'org'. The 'app' key source is reserved for multi-tenant platforms managing keys on behalf of their users.",
         "security": [
           {
             "bearerAuth": []
@@ -2740,7 +2740,7 @@
           "Keys"
         ],
         "summary": "Delete a provider key",
-        "description": "Remove a provider key. Pass keySource query param to select the key store (default: 'org').",
+        "description": "Remove a stored provider key. Defaults to org-level keys.",
         "security": [
           {
             "bearerAuth": []
@@ -2764,10 +2764,10 @@
                 "org",
                 "app"
               ],
-              "description": "Key store (default: 'org')"
+              "description": "Key scope (default: 'org'). Use 'app' only for multi-tenant platforms"
             },
             "required": false,
-            "description": "Key store (default: 'org')",
+            "description": "Key scope (default: 'org'). Use 'app' only for multi-tenant platforms",
             "name": "keySource",
             "in": "query"
           },
@@ -2820,7 +2820,7 @@
     "/v1/api-keys": {
       "get": {
         "tags": [
-          "API Keys"
+          "Authentication"
         ],
         "summary": "List API keys",
         "description": "List all API keys for the organization",
@@ -2877,10 +2877,10 @@
       },
       "post": {
         "tags": [
-          "API Keys"
+          "Authentication"
         ],
         "summary": "Create an API key",
-        "description": "Generate a new permanent API key for the organization",
+        "description": "Create a new API key for your organization. This is the recommended way to authenticate with the API.",
         "security": [
           {
             "bearerAuth": []
@@ -2945,7 +2945,7 @@
     "/v1/api-keys/{id}": {
       "delete": {
         "tags": [
-          "API Keys"
+          "Authentication"
         ],
         "summary": "Revoke an API key",
         "description": "Delete/revoke an API key by ID",
@@ -3014,7 +3014,7 @@
     "/v1/api-keys/session": {
       "post": {
         "tags": [
-          "API Keys"
+          "Authentication"
         ],
         "summary": "Get or create session API key",
         "description": "Get or create a short-lived session API key for Foxy chat integration",
