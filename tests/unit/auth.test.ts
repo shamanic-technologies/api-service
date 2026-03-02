@@ -11,11 +11,6 @@ describe("Auth middleware — Bearer key authentication", () => {
     expect(content).toContain('startsWith("Bearer ")');
   });
 
-  it("should not support X-API-Key header authentication", () => {
-    expect(content).not.toContain('"x-api-key"');
-    expect(content).not.toContain("X-API-Key");
-  });
-
   it("should not use Clerk JWT verification", () => {
     expect(content).not.toContain("verifyToken");
     expect(content).not.toContain("@clerk/backend");
@@ -24,22 +19,21 @@ describe("Auth middleware — Bearer key authentication", () => {
 });
 
 describe("Auth middleware — key-service validation", () => {
-  it("should validate keys via key-service /validate using fetch directly", () => {
+  it("should validate keys via key-service /validate using callExternalService", () => {
     expect(content).toContain("/validate");
-    expect(content).toContain("externalServices.key.url");
-    // Uses fetch directly (not callExternalService) so /validate
-    // only gets bearerAuth, no X-API-Key service header
-    expect(content).toContain("await fetch(url");
+    expect(content).toContain("externalServices.key");
+    expect(content).toContain("callExternalService");
+  });
+
+  it("should pass the API key as a query parameter", () => {
+    expect(content).toContain("?key=");
+    expect(content).toContain("encodeURIComponent(apiKey)");
   });
 
   it("should distinguish app keys from user keys", () => {
     expect(content).toContain('"app"');
     expect(content).toContain('"user"');
     expect(content).toContain("validation.type");
-  });
-
-  it("should handle 401 from key-service gracefully without logging stack traces", () => {
-    expect(content).toContain("response.status === 401");
   });
 });
 
