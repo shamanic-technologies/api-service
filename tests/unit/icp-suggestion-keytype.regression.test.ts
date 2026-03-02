@@ -3,15 +3,12 @@ import request from "supertest";
 import express from "express";
 
 /**
- * Regression test: POST /v1/brand/icp-suggestion must resolve keySource
- * from billing-service and forward it to brand-service.
+ * Regression test: POST /v1/brand/icp-suggestion must forward identity
+ * to brand-service.
  *
  * Also verifies that a missing-key error returns 400 with a helpful message
  * instead of a generic 500.
  */
-
-// Configurable auth context — keySource resolved in middleware
-let mockKeySource: string | undefined = "org";
 
 // Mock auth middleware to skip real auth
 vi.mock("../../src/middleware/auth.js", () => ({
@@ -20,7 +17,6 @@ vi.mock("../../src/middleware/auth.js", () => ({
     req.orgId = "org_test456";
     req.appId = "distribute";
     req.authType = "app_key";
-    req.keySource = mockKeySource;
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -39,12 +35,6 @@ vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
 }));
 
-// Mock billing module
-const mockFetchKeySource = vi.fn().mockResolvedValue("org");
-vi.mock("../../src/lib/billing.js", () => ({
-  fetchKeySource: (...args: unknown[]) => mockFetchKeySource(...args),
-}));
-
 import brandRouter from "../../src/routes/brand.js";
 
 function createBrandApp() {
@@ -57,10 +47,9 @@ function createBrandApp() {
 describe("POST /v1/brand/icp-suggestion", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockKeySource = "org";
   });
 
-  it("should resolve keySource from billing-service and forward to brand-service", async () => {
+  it("should forward identity fields to brand-service", async () => {
     let capturedBody: Record<string, unknown> | undefined;
 
     global.fetch = vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
@@ -80,35 +69,9 @@ describe("POST /v1/brand/icp-suggestion", () => {
       .send({ brandUrl: "https://example.com" });
 
     expect(capturedBody).toBeDefined();
-    expect(capturedBody!.keySource).toBe("org");
     expect(capturedBody!.appId).toBe("distribute");
     expect(capturedBody!.url).toBe("https://example.com");
     expect(capturedBody!.orgId).toBe("org_test456");
-  });
-
-  it("should forward keySource 'platform' when middleware resolves payg", async () => {
-    mockKeySource = "platform";
-
-    let capturedBody: Record<string, unknown> | undefined;
-
-    global.fetch = vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
-      if (typeof _url === "string" && _url.includes("/icp-suggestion")) {
-        capturedBody = JSON.parse(init?.body as string);
-        return {
-          ok: true,
-          json: () => Promise.resolve({ icp: { person_titles: ["CTO"] } }),
-        };
-      }
-      return { ok: true, json: () => Promise.resolve({}) };
-    });
-
-    const app = createBrandApp();
-    await request(app)
-      .post("/v1/brand/icp-suggestion")
-      .send({ brandUrl: "https://example.com" });
-
-    expect(capturedBody).toBeDefined();
-    expect(capturedBody!.keySource).toBe("platform");
   });
 
   it("should return 400 with helpful message when Anthropic org key is missing", async () => {

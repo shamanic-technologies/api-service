@@ -107,7 +107,6 @@ describe("Workflow proxy routes — new endpoints", () => {
   it("should export fetchRequiredProviders and fetchOrgKeys helpers", () => {
     expect(content).toContain("export { fetchRequiredProviders");
     expect(content).toContain("fetchOrgKeys");
-    expect(content).toContain("resolveWorkflowByName");
   });
 });
 

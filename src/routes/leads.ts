@@ -39,7 +39,6 @@ router.post("/leads/search", authenticate, requireOrg, requireUser, async (req: 
           appId: req.appId!,
           orgId: req.orgId,
           userId: req.userId,
-          keySource: req.keySource,
         },
       }
     );

@@ -23,7 +23,7 @@ router.post("/users/resolve", authenticate, requireOrg, async (req: Authenticate
       "/resolve",
       {
         method: "POST",
-        body: { appId: req.appId, keySource: req.keySource, ...parsed.data },
+        body: { appId: req.appId, ...parsed.data },
         headers: buildInternalHeaders(req),
       }
     );

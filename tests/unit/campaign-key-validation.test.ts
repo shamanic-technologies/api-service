@@ -2,9 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
 
-// Configurable auth context — keySource resolved in middleware
-let mockKeySource: string | undefined = "org";
-
 // Mock auth middleware
 vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
@@ -12,7 +9,6 @@ vi.mock("../../src/middleware/auth.js", () => ({
     req.orgId = "org_test456";
     req.appId = "distribute";
     req.authType = "user_key";
-    req.keySource = mockKeySource;
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -33,14 +29,7 @@ vi.mock("@distribute/runs-client", () => ({
   updateRun: vi.fn().mockResolvedValue({ id: "parent-run-123", status: "failed" }),
 }));
 
-// Mock billing module
-const mockFetchKeySource = vi.fn().mockResolvedValue("org");
-vi.mock("../../src/lib/billing.js", () => ({
-  fetchKeySource: (...args: unknown[]) => mockFetchKeySource(...args),
-}));
-
 import campaignRouter from "../../src/routes/campaigns.js";
-import { updateRun } from "@distribute/runs-client";
 
 function createApp() {
   const app = express();
@@ -63,127 +52,19 @@ const validCampaignBody = {
 };
 
 // ---------------------------------------------------------------------------
-// Pre-campaign key validation on POST /v1/campaigns
+// Pre-campaign key validation removed — campaigns no longer validate keys
+// at the gateway level. Downstream services handle key resolution directly.
 // ---------------------------------------------------------------------------
-describe("POST /v1/campaigns — pre-campaign org key validation", () => {
+describe("POST /v1/campaigns — no gateway-level key validation", () => {
   let app: express.Express;
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockKeySource = "org";
   });
 
-  it("should return 400 with missing_keys when org lacks required providers", async () => {
-    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-      // Brand upsert
-      if (url.includes("/brands")) {
-        return { ok: true, json: () => Promise.resolve({ brandId: "brand-123" }) };
-      }
-      // Workflow list (resolve by name)
-      if (url.includes("/workflows?name=")) {
-        return {
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              workflows: [{ id: "wf-1", name: "sales-email-cold-outreach-v1" }],
-            }),
-        };
-      }
-      // Required providers
-      if (url.includes("/required-providers")) {
-        return {
-          ok: true,
-          json: () => Promise.resolve({ providers: ["apollo", "anthropic", "instantly"] }),
-        };
-      }
-      // Org keys — only apollo and anthropic configured
-      if (url.includes("/keys?")) {
-        return {
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              keys: [
-                { provider: "apollo", maskedKey: "apol...123" },
-                { provider: "anthropic", maskedKey: "sk-...abc" },
-              ],
-            }),
-        };
-      }
-      return { ok: true, json: () => Promise.resolve({}) };
-    });
-
-    app = createApp();
-    const res = await request(app).post("/v1/campaigns").send(validCampaignBody);
-
-    expect(res.status).toBe(400);
-    expect(res.body.error).toBe("missing_keys");
-    expect(res.body.missing).toEqual(["instantly"]);
-    expect(res.body.configured).toEqual(["apollo", "anthropic"]);
-    expect(res.body.message).toContain("missing required API keys");
-  });
-
-  it("should mark parent run as failed when keys are missing", async () => {
+  it("should forward campaign creation without calling required-providers or org keys", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
       if (url.includes("/brands")) return { ok: true, json: () => Promise.resolve({ brandId: "brand-123" }) };
-      if (url.includes("/workflows?name=")) {
-        return { ok: true, json: () => Promise.resolve({ workflows: [{ id: "wf-1", name: "sales-email-cold-outreach-v1" }] }) };
-      }
-      if (url.includes("/required-providers")) {
-        return { ok: true, json: () => Promise.resolve({ providers: ["instantly"] }) };
-      }
-      if (url.includes("/keys?")) {
-        return { ok: true, json: () => Promise.resolve({ keys: [] }) };
-      }
-      return { ok: true, json: () => Promise.resolve({}) };
-    });
-
-    app = createApp();
-    await request(app).post("/v1/campaigns").send(validCampaignBody);
-
-    expect(updateRun).toHaveBeenCalledWith("parent-run-123", "failed");
-  });
-
-  it("should pass through when all required keys are configured", async () => {
-    global.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (url.includes("/brands")) return { ok: true, json: () => Promise.resolve({ brandId: "brand-123" }) };
-      if (url.includes("/workflows?name=")) {
-        return { ok: true, json: () => Promise.resolve({ workflows: [{ id: "wf-1", name: "sales-email-cold-outreach-v1" }] }) };
-      }
-      if (url.includes("/required-providers")) {
-        return { ok: true, json: () => Promise.resolve({ providers: ["apollo", "anthropic"] }) };
-      }
-      if (url.includes("/keys?")) {
-        return {
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              keys: [
-                { provider: "apollo", maskedKey: "apol...123" },
-                { provider: "anthropic", maskedKey: "sk-...abc" },
-              ],
-            }),
-        };
-      }
-      // Campaign creation succeeds
-      if (url.includes("/campaigns") && !url.includes("/keys") && !url.includes("/workflows")) {
-        return { ok: true, json: () => Promise.resolve({ campaign: { id: "camp-1", status: "ongoing" } }) };
-      }
-      return { ok: true, json: () => Promise.resolve({}) };
-    });
-
-    app = createApp();
-    const res = await request(app).post("/v1/campaigns").send(validCampaignBody);
-
-    expect(res.status).toBe(200);
-    expect(res.body.campaign).toBeDefined();
-  });
-
-  it("should skip validation when keySource is platform (not org)", async () => {
-    mockKeySource = "platform";
-
-    global.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (url.includes("/brands")) return { ok: true, json: () => Promise.resolve({ brandId: "brand-123" }) };
-      // Campaign creation succeeds
       if (url.includes("/campaigns") && !url.includes("/workflows")) {
         return { ok: true, json: () => Promise.resolve({ campaign: { id: "camp-1", status: "ongoing" } }) };
       }
@@ -194,33 +75,32 @@ describe("POST /v1/campaigns — pre-campaign org key validation", () => {
     const res = await request(app).post("/v1/campaigns").send(validCampaignBody);
 
     expect(res.status).toBe(200);
-    // Should not call workflow required-providers or key-service when platform
+    expect(res.body.campaign).toBeDefined();
+
+    // Should NOT call workflow required-providers or key-service org keys
     const calls = (global.fetch as any).mock.calls.map((c: any) => c[0]);
     expect(calls.some((u: string) => u.includes("/required-providers"))).toBe(false);
     expect(calls.some((u: string) => u.includes("/keys?keySource=org"))).toBe(false);
   });
 
-  it("should skip validation when workflow has no required providers", async () => {
-    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+  it("should not include keySource in campaign-service request body", async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       if (url.includes("/brands")) return { ok: true, json: () => Promise.resolve({ brandId: "brand-123" }) };
-      if (url.includes("/workflows?name=")) {
-        return { ok: true, json: () => Promise.resolve({ workflows: [{ id: "wf-1", name: "sales-email-cold-outreach-v1" }] }) };
-      }
-      if (url.includes("/required-providers")) {
-        return { ok: true, json: () => Promise.resolve({ providers: [] }) };
-      }
-      if (url.includes("/keys?")) {
-        return { ok: true, json: () => Promise.resolve({ keys: [] }) };
-      }
-      if (url.includes("/campaigns") && !url.includes("/workflows") && !url.includes("/keys")) {
+      if (url.includes("/campaigns") && !url.includes("/workflows")) {
         return { ok: true, json: () => Promise.resolve({ campaign: { id: "camp-1", status: "ongoing" } }) };
       }
       return { ok: true, json: () => Promise.resolve({}) };
     });
 
     app = createApp();
-    const res = await request(app).post("/v1/campaigns").send(validCampaignBody);
+    await request(app).post("/v1/campaigns").send(validCampaignBody);
 
-    expect(res.status).toBe(200);
+    // Find the campaign-service call and check its body
+    const campaignCall = (global.fetch as any).mock.calls.find(
+      (c: any) => c[0].includes("/campaigns") && !c[0].includes("/workflows") && c[1]?.method === "POST"
+    );
+    expect(campaignCall).toBeDefined();
+    const body = JSON.parse(campaignCall[1].body);
+    expect(body).not.toHaveProperty("keySource");
   });
 });

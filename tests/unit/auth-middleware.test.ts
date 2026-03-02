@@ -3,11 +3,6 @@ import express from "express";
 import request from "supertest";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../../src/middleware/auth.js";
 
-// Mock billing module — keySource resolution is best-effort in middleware
-vi.mock("../../src/lib/billing.js", () => ({
-  fetchKeySource: vi.fn().mockResolvedValue("org"),
-}));
-
 // Mock callExternalService for both key-service /validate and client-service /resolve
 vi.mock("../../src/lib/service-client.js", () => {
   const mockCallExternalService = vi.fn();

@@ -6,13 +6,9 @@ import express from "express";
  * Tests for campaign creation with targetAudience field.
  * The api-service:
  * 1. Upserts brand via brand-service to get brandId
- * 2. Resolves keySource from billing-service
- * 3. Forwards targetAudience + brandId + budget to campaign-service
+ * 2. Forwards targetAudience + brandId + budget to campaign-service
  * No ICP resolution — that's campaign-service's job.
  */
-
-// Configurable auth context — keySource resolved in middleware
-let mockKeySource: string | undefined = "org";
 
 // Mock auth middleware
 vi.mock("../../src/middleware/auth.js", () => ({
@@ -21,7 +17,6 @@ vi.mock("../../src/middleware/auth.js", () => ({
     req.orgId = "org_test456";
     req.appId = "distribute";
     req.authType = "app_key";
-    req.keySource = mockKeySource;
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -42,12 +37,6 @@ vi.mock("@distribute/runs-client", () => ({
   updateRun: vi.fn().mockResolvedValue({ id: "parent-run-123", status: "failed" }),
 }));
 
-// Mock billing module — default to "org"
-const mockFetchKeySource = vi.fn().mockResolvedValue("org");
-vi.mock("../../src/lib/billing.js", () => ({
-  fetchKeySource: (...args: unknown[]) => mockFetchKeySource(...args),
-}));
-
 import campaignRouter from "../../src/routes/campaigns.js";
 
 function createApp() {
@@ -62,7 +51,6 @@ describe("POST /v1/campaigns with targetAudience", () => {
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    mockKeySource = "org";
     fetchCalls = [];
 
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
@@ -137,7 +125,6 @@ describe("POST /v1/campaigns with targetAudience", () => {
     expect(campaignCall!.body!.socialProof).toBe("Backed by 60 sponsors including Acme, Globex");
     expect(campaignCall!.body!.brandId).toBe("brand-uuid-123");
     expect(campaignCall!.body!.orgId).toBe("org_test456");
-    expect(campaignCall!.body!.keySource).toBe("org");
 
     // Verify NO Apollo fields were sent
     expect(campaignCall!.body!.personTitles).toBeUndefined();
@@ -147,59 +134,6 @@ describe("POST /v1/campaigns with targetAudience", () => {
     // Verify scraping is NOT called (handled by campaign-service DAG)
     const scrapeCall = fetchCalls.find((c) => c.url.includes("/scrape"));
     expect(scrapeCall).toBeUndefined();
-  });
-
-  it("should forward keySource from middleware to campaign-service", async () => {
-    mockKeySource = "platform";
-
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/campaigns")
-      .send({
-        name: "Platform Key Campaign",
-        workflowName: "sales-email-cold-outreach-sienna",
-        brandUrl: "https://example.com",
-        targetAudience: "CTOs at SaaS startups",
-        targetOutcome: "Book sales demos",
-        valueForTarget: "Access to enterprise analytics",
-        urgency: "Recruitment closes in 30 days",
-        scarcity: "Only 10 spots available",
-        riskReversal: "Free trial for 2 weeks",
-        socialProof: "Backed by 60 sponsors",
-        maxBudgetDailyUsd: 10,
-      });
-
-    expect(res.status).toBe(200);
-
-    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.appId === "distribute");
-    expect(campaignCall).toBeDefined();
-    expect(campaignCall!.body!.keySource).toBe("platform");
-  });
-
-  it("should default to 'platform' keySource when middleware resolves fallback", async () => {
-    mockKeySource = "platform";
-
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/campaigns")
-      .send({
-        name: "Fallback Campaign",
-        workflowName: "sales-email-cold-outreach-sienna",
-        brandUrl: "https://example.com",
-        targetAudience: "CTOs at SaaS startups",
-        targetOutcome: "Book sales demos",
-        valueForTarget: "Access to enterprise analytics",
-        urgency: "Recruitment closes in 30 days",
-        scarcity: "Only 10 spots available",
-        riskReversal: "Free trial for 2 weeks",
-        socialProof: "Backed by 60 sponsors",
-        maxBudgetDailyUsd: 10,
-      });
-
-    expect(res.status).toBe(200);
-
-    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.appId === "distribute");
-    expect(campaignCall!.body!.keySource).toBe("platform");
   });
 
   it("should reject when targetAudience is missing with didactic error", async () => {
