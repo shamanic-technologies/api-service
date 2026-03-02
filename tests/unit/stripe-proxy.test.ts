@@ -76,7 +76,7 @@ describe("GET /v1/stripe/products/:productId", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/products/prod_123"));
     expect(call).toBeDefined();
-    expect(call!.url).toContain("appId=distribute-frontend");
+    expect(call!.url).toContain("appId=api-service");
   });
 });
 
@@ -101,7 +101,7 @@ describe("POST /v1/stripe/products", () => {
     expect(call).toBeDefined();
     expect(call!.method).toBe("POST");
     expect(call!.body).toMatchObject({
-      appId: "distribute-frontend",
+      appId: "api-service",
       orgId: "org_test456",
       name: "Course",
       description: "Online course",
@@ -136,7 +136,7 @@ describe("GET /v1/stripe/products/:productId/prices", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/prices/by-product/prod_123"));
     expect(call).toBeDefined();
-    expect(call!.url).toContain("appId=distribute-frontend");
+    expect(call!.url).toContain("appId=api-service");
   });
 });
 
@@ -159,7 +159,7 @@ describe("POST /v1/stripe/prices", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/prices/create"));
     expect(call!.body).toMatchObject({
-      appId: "distribute-frontend",
+      appId: "api-service",
       productId: "prod_123",
       unitAmountCents: 4999,
     });
@@ -195,7 +195,7 @@ describe("GET /v1/stripe/coupons/:couponId", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/coupons/WELCOME20"));
     expect(call).toBeDefined();
-    expect(call!.url).toContain("appId=distribute-frontend");
+    expect(call!.url).toContain("appId=api-service");
   });
 });
 
@@ -218,7 +218,7 @@ describe("POST /v1/stripe/coupons", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/coupons/create"));
     expect(call!.body).toMatchObject({
-      appId: "distribute-frontend",
+      appId: "api-service",
       percentOff: 20,
       duration: "once",
     });
@@ -262,7 +262,7 @@ describe("POST /v1/stripe/checkout", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/checkout/create"));
     expect(call!.body).toMatchObject({
-      appId: "distribute-frontend",
+      appId: "api-service",
       orgId: "org_test456",
       userId: "user_test123",
       lineItems: [{ priceId: "price_123", quantity: 1 }],
@@ -304,7 +304,7 @@ describe("POST /v1/stripe/stats", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/stats"));
     expect(call!.body).toMatchObject({
-      appId: "distribute-frontend",
+      appId: "api-service",
       orgId: "org_test456",
       brandId: "brand_abc",
     });
@@ -343,7 +343,7 @@ describe("Stripe catalog endpoints — app key without org context", () => {
     expect(res.status).toBe(200);
 
     const call = fetchCalls.find((c) => c.url.includes("/products/create"));
-    expect(call!.body.appId).toBe("distribute-frontend");
+    expect(call!.body.appId).toBe("api-service");
     expect(call!.body.orgId).toBeUndefined();
   });
 
