@@ -7,7 +7,7 @@ import { UpsertKeyRequestSchema, CreateApiKeyRequestSchema } from "../schemas.js
 const router = Router();
 
 // -----------------------------------------------------------------------
-// Provider keys — transparent proxy to key-service unified /keys endpoints
+// Provider keys — transparent proxy to key-service /internal/keys endpoints
 // -----------------------------------------------------------------------
 
 /**
@@ -18,7 +18,7 @@ router.get("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
     const params = new URLSearchParams({ orgId: req.orgId });
-    const result = await callExternalService(externalServices.key, `/keys?${params}`, {
+    const result = await callExternalService(externalServices.key, `/internal/keys?${params}`, {
       headers: buildInternalHeaders(req),
     });
     res.json(result);
@@ -41,7 +41,7 @@ router.post("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
     if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
 
     const { provider, apiKey } = parsed.data;
-    const result = await callExternalService(externalServices.key, "/keys", {
+    const result = await callExternalService(externalServices.key, "/internal/keys", {
       method: "POST",
       body: { provider, apiKey, orgId: req.orgId },
       headers: buildInternalHeaders(req),
@@ -64,7 +64,7 @@ router.delete("/keys/:provider", authenticate, async (req: AuthenticatedRequest,
     const params = new URLSearchParams({ orgId: req.orgId });
     const result = await callExternalService(
       externalServices.key,
-      `/keys/${encodeURIComponent(provider)}?${params}`,
+      `/internal/keys/${encodeURIComponent(provider)}?${params}`,
       { method: "DELETE", headers: buildInternalHeaders(req) }
     );
     res.json(result);
