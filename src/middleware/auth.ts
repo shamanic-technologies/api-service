@@ -87,7 +87,6 @@ export async function authenticate(
         const run = await createRun({
           orgId: req.orgId,
           userId: req.userId,
-          appId: "api-service",
           serviceName: "api-service",
           taskName: `${req.method} ${req.baseUrl}${req.path}`,
         });

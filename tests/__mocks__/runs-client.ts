@@ -29,7 +29,6 @@ export type Run = {
   id: string;
   organizationId: string;
   userId: string | null;
-  appId: string;
   brandId: string | null;
   campaignId: string | null;
   serviceName: string;
@@ -57,7 +56,6 @@ export type RunWithOwnCost = Run & {
 export type CreateRunParams = {
   orgId: string;
   userId?: string;
-  appId: string;
   brandId?: string;
   campaignId?: string;
   serviceName: string;
@@ -68,18 +66,20 @@ export type CreateRunParams = {
 export type CostItem = {
   costName: string;
   quantity: number;
+  costSource: "platform" | "org";
 };
 
 export type ListRunsParams = {
   orgId: string;
   userId?: string;
-  appId?: string;
   brandId?: string;
   campaignId?: string;
   serviceName?: string;
   taskName?: string;
   status?: string;
   parentRunId?: string;
+  startedAfter?: string;
+  startedBefore?: string;
   limit?: number;
   offset?: number;
 };
@@ -89,7 +89,6 @@ export async function createRun(_params: CreateRunParams): Promise<Run> {
     id: "mock-run-id",
     organizationId: "mock-org-uuid",
     userId: null,
-    appId: "distribute",
     brandId: null,
     campaignId: null,
     serviceName: "mock-service",
@@ -108,7 +107,6 @@ export async function updateRun(_runId: string, _status: "completed" | "failed")
     id: _runId,
     organizationId: "mock-org-uuid",
     userId: null,
-    appId: "distribute",
     brandId: null,
     campaignId: null,
     serviceName: "mock-service",
