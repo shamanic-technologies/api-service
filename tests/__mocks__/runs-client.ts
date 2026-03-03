@@ -102,7 +102,7 @@ export async function createRun(_params: CreateRunParams): Promise<Run> {
   };
 }
 
-export async function updateRun(_runId: string, _status: "completed" | "failed"): Promise<Run> {
+export async function updateRun(_runId: string, _status: "completed" | "failed", _orgId?: string): Promise<Run> {
   return {
     id: _runId,
     organizationId: "mock-org-uuid",
@@ -120,7 +120,7 @@ export async function updateRun(_runId: string, _status: "completed" | "failed")
   };
 }
 
-export async function addCosts(_runId: string, _costs: CostItem[]): Promise<{ costs: RunCost[] }> {
+export async function addCosts(_runId: string, _costs: CostItem[], _orgId?: string): Promise<{ costs: RunCost[] }> {
   return { costs: [] };
 }
 
@@ -128,10 +128,10 @@ export async function listRuns(_params: ListRunsParams): Promise<{ runs: RunWith
   return { runs: [], limit: 50, offset: 0 };
 }
 
-export async function getRun(_runId: string): Promise<RunWithCosts | null> {
+export async function getRun(_runId: string, _orgId?: string): Promise<RunWithCosts | null> {
   return null;
 }
 
-export async function getRunsBatch(_runIds: string[]): Promise<Map<string, RunWithCosts>> {
+export async function getRunsBatch(_runIds: string[], _orgId?: string): Promise<Map<string, RunWithCosts>> {
   return new Map();
 }

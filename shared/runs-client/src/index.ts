@@ -108,13 +108,14 @@ export interface SummaryBreakdown {
 
 async function runsRequest<T>(
   path: string,
-  options: { method?: string; body?: unknown } = {}
+  options: { method?: string; body?: unknown; headers?: Record<string, string> } = {}
 ): Promise<T> {
-  const { method = "GET", body } = options;
+  const { method = "GET", body, headers: extraHeaders = {} } = options;
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "X-API-Key": RUNS_SERVICE_API_KEY,
+    ...extraHeaders,
   };
 
   const response = await fetch(`${RUNS_SERVICE_URL}${path}`, {
@@ -131,6 +132,15 @@ async function runsRequest<T>(
   return response.json() as Promise<T>;
 }
 
+/** Build inter-service identity headers from available params */
+function identityHeaders(opts: { orgId?: string; userId?: string; runId?: string }): Record<string, string> {
+  const h: Record<string, string> = {};
+  if (opts.orgId) h["x-org-id"] = opts.orgId;
+  if (opts.userId) h["x-user-id"] = opts.userId;
+  if (opts.runId) h["x-run-id"] = opts.runId;
+  return h;
+}
+
 // ─── Public API ──────────────────────────────────────────────────────────────
 
 /**
@@ -140,6 +150,7 @@ export async function createRun(params: CreateRunParams): Promise<Run> {
   return runsRequest<Run>("/v1/runs", {
     method: "POST",
     body: params,
+    headers: identityHeaders({ orgId: params.orgId, userId: params.userId }),
   });
 }
 
@@ -148,11 +159,13 @@ export async function createRun(params: CreateRunParams): Promise<Run> {
  */
 export async function updateRun(
   runId: string,
-  status: "completed" | "failed"
+  status: "completed" | "failed",
+  orgId?: string
 ): Promise<Run> {
   return runsRequest<Run>(`/v1/runs/${runId}`, {
     method: "PATCH",
     body: { status },
+    headers: identityHeaders({ orgId, runId }),
   });
 }
 
@@ -163,19 +176,23 @@ export async function updateRun(
  */
 export async function addCosts(
   runId: string,
-  items: CostItem[]
+  items: CostItem[],
+  orgId?: string
 ): Promise<{ costs: RunCost[] }> {
   return runsRequest<{ costs: RunCost[] }>(`/v1/runs/${runId}/costs`, {
     method: "POST",
     body: { items },
+    headers: identityHeaders({ orgId, runId }),
   });
 }
 
 /**
  * Get a single run with costs (including descendant runs and their costs).
  */
-export async function getRun(runId: string): Promise<RunWithCosts> {
-  return runsRequest<RunWithCosts>(`/v1/runs/${runId}`);
+export async function getRun(runId: string, orgId?: string): Promise<RunWithCosts> {
+  return runsRequest<RunWithCosts>(`/v1/runs/${runId}`, {
+    headers: identityHeaders({ orgId, runId }),
+  });
 }
 
 /**
@@ -199,7 +216,8 @@ export async function listRuns(
   if (params.offset) searchParams.set("offset", String(params.offset));
 
   return runsRequest<{ runs: RunWithOwnCost[]; limit: number; offset: number }>(
-    `/v1/runs?${searchParams.toString()}`
+    `/v1/runs?${searchParams.toString()}`,
+    { headers: identityHeaders({ orgId: params.orgId, userId: params.userId }) }
   );
 }
 
@@ -208,10 +226,11 @@ export async function listRuns(
  * Returns a Map of runId → RunWithCosts.
  */
 export async function getRunsBatch(
-  runIds: string[]
+  runIds: string[],
+  orgId?: string
 ): Promise<Map<string, RunWithCosts>> {
   if (runIds.length === 0) return new Map();
-  const results = await Promise.all(runIds.map((id) => getRun(id)));
+  const results = await Promise.all(runIds.map((id) => getRun(id, orgId)));
   return new Map(results.map((r) => [r.id, r]));
 }
 
@@ -229,6 +248,7 @@ export async function getRunSummary(
   if (params.groupBy) searchParams.set("groupBy", params.groupBy);
 
   return runsRequest<{ breakdown: SummaryBreakdown[] }>(
-    `/v1/runs/summary?${searchParams.toString()}`
+    `/v1/runs/summary?${searchParams.toString()}`,
+    { headers: identityHeaders({ orgId: params.organizationId }) }
   );
 }
