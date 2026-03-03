@@ -23,10 +23,9 @@ const router = Router();
 router.get("/stripe/products/:productId", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const { productId } = req.params;
-    const qs = new URLSearchParams({ appId: req.appId! });
     const result = await callExternalService(
       externalServices.stripe,
-      `/products/${encodeURIComponent(productId)}?${qs}`,
+      `/products/${encodeURIComponent(productId)}`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
@@ -53,10 +52,7 @@ router.post("/stripe/products", authenticate, async (req: AuthenticatedRequest, 
       {
         method: "POST",
         headers: buildInternalHeaders(req),
-        body: {
-          appId: req.appId,
-          ...parsed.data,
-        },
+        body: parsed.data,
       }
     );
     res.json(result);
@@ -77,10 +73,9 @@ router.post("/stripe/products", authenticate, async (req: AuthenticatedRequest, 
 router.get("/stripe/products/:productId/prices", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const { productId } = req.params;
-    const qs = new URLSearchParams({ appId: req.appId! });
     const result = await callExternalService(
       externalServices.stripe,
-      `/prices/by-product/${encodeURIComponent(productId)}?${qs}`,
+      `/prices/by-product/${encodeURIComponent(productId)}`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
@@ -107,10 +102,7 @@ router.post("/stripe/prices", authenticate, async (req: AuthenticatedRequest, re
       {
         method: "POST",
         headers: buildInternalHeaders(req),
-        body: {
-          appId: req.appId,
-          ...parsed.data,
-        },
+        body: parsed.data,
       }
     );
     res.json(result);
@@ -131,10 +123,9 @@ router.post("/stripe/prices", authenticate, async (req: AuthenticatedRequest, re
 router.get("/stripe/coupons/:couponId", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const { couponId } = req.params;
-    const qs = new URLSearchParams({ appId: req.appId! });
     const result = await callExternalService(
       externalServices.stripe,
-      `/coupons/${encodeURIComponent(couponId)}?${qs}`,
+      `/coupons/${encodeURIComponent(couponId)}`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
@@ -161,10 +152,7 @@ router.post("/stripe/coupons", authenticate, async (req: AuthenticatedRequest, r
       {
         method: "POST",
         headers: buildInternalHeaders(req),
-        body: {
-          appId: req.appId,
-          ...parsed.data,
-        },
+        body: parsed.data,
       }
     );
     res.json(result);
@@ -195,7 +183,7 @@ router.post("/stripe/checkout", authenticate, requireOrg, async (req: Authentica
       {
         method: "POST",
         headers: buildInternalHeaders(req),
-        body: { appId: req.appId, ...parsed.data },
+        body: parsed.data,
       }
     );
     res.json(result);
@@ -226,7 +214,7 @@ router.post("/stripe/stats", authenticate, requireOrg, async (req: Authenticated
       {
         method: "POST",
         headers: buildInternalHeaders(req),
-        body: { appId: req.appId, ...parsed.data },
+        body: parsed.data,
       }
     );
     res.json(result);

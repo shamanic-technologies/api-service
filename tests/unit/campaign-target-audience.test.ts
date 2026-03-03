@@ -15,7 +15,6 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
-    req.appId = "distribute";
     req.authType = "app_key";
     next();
   },
@@ -106,13 +105,13 @@ describe("POST /v1/campaigns with targetAudience", () => {
     expect(res.body.campaign.id).toBe("campaign-123");
 
     // Verify brand upsert was called
-    const brandCall = fetchCalls.find((c) => c.url.includes("/brands") && c.body?.appId === "distribute");
+    const brandCall = fetchCalls.find((c) => c.url.includes("/brands") && c.body?.orgId === "org_test456");
     expect(brandCall).toBeDefined();
     expect(brandCall!.body!.url).toBe("https://example.com");
     expect(brandCall!.body!.orgId).toBe("org_test456");
 
     // Verify campaign-service received all fields including workflowName and derived type
-    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.appId === "distribute");
+    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
     expect(campaignCall).toBeDefined();
     expect(campaignCall!.body!.workflowName).toBe("sales-email-cold-outreach-sienna");
     expect(campaignCall!.body!.type).toBe("cold-email-outreach");
@@ -275,7 +274,7 @@ describe("POST /v1/campaigns with targetAudience", () => {
         maxBudgetWeeklyUsd: 100,
       });
 
-    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.appId === "distribute");
+    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
     expect(campaignCall!.body!.maxBudgetDailyUsd).toBe("25");
     expect(campaignCall!.body!.maxBudgetWeeklyUsd).toBe("100");
   });

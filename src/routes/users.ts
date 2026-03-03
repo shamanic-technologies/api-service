@@ -23,7 +23,7 @@ router.post("/users/resolve", authenticate, requireOrg, async (req: Authenticate
       "/resolve",
       {
         method: "POST",
-        body: { appId: req.appId, ...parsed.data },
+        body: parsed.data,
         headers: buildInternalHeaders(req),
       }
     );
@@ -47,7 +47,6 @@ router.get("/users", authenticate, requireOrg, async (req: AuthenticatedRequest,
 
     const { email, limit, offset } = parsed.data;
     const params = new URLSearchParams({
-      appId: req.appId!,
       orgId: req.orgId!,
       limit: String(limit),
       offset: String(offset),

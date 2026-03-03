@@ -5,16 +5,12 @@ import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
 
-// PUT /v1/chat/config — register app chat config
+// PUT /v1/chat/config — register chat config
 router.put("/chat/config", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    if (!req.appId) {
-      return res.status(403).json({ error: "App key authentication required for config registration" });
-    }
-
     const result = await callExternalService(
       externalServices.chat,
-      `/apps/${req.appId}/config`,
+      "/config",
       { method: "PUT", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -31,10 +27,7 @@ router.post("/chat", authenticate, requireOrg, requireUser, async (req: Authenti
       "/chat",
       {
         method: "POST",
-        body: {
-          ...req.body,
-          appId: req.appId || req.body.appId,
-        },
+        body: req.body,
         headers: buildInternalHeaders(req),
         expressRes: res,
       }

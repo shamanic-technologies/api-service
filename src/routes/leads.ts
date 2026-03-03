@@ -36,7 +36,6 @@ router.post("/leads/search", authenticate, requireOrg, requireUser, async (req: 
           qOrganizationIndustryTagIds: organization_industries,
           organizationNumEmployeesRanges: organization_num_employees_ranges,
           perPage: Math.min(per_page, 100),
-          appId: req.appId!,
           orgId: req.orgId,
           userId: req.userId,
         },

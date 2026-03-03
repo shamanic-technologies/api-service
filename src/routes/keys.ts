@@ -17,7 +17,7 @@ const router = Router();
 router.get("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
-    const params = new URLSearchParams({ keySource: "org", orgId: req.orgId });
+    const params = new URLSearchParams({ orgId: req.orgId });
     const result = await callExternalService(externalServices.key, `/keys?${params}`, {
       headers: buildInternalHeaders(req),
     });
@@ -43,7 +43,7 @@ router.post("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
     const { provider, apiKey } = parsed.data;
     const result = await callExternalService(externalServices.key, "/keys", {
       method: "POST",
-      body: { keySource: "org", provider, apiKey, orgId: req.orgId },
+      body: { provider, apiKey, orgId: req.orgId },
       headers: buildInternalHeaders(req),
     });
     res.json(result);
@@ -61,7 +61,7 @@ router.delete("/keys/:provider", authenticate, async (req: AuthenticatedRequest,
   try {
     if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
     const { provider } = req.params;
-    const params = new URLSearchParams({ keySource: "org", orgId: req.orgId });
+    const params = new URLSearchParams({ orgId: req.orgId });
     const result = await callExternalService(
       externalServices.key,
       `/keys/${encodeURIComponent(provider)}?${params}`,
@@ -89,7 +89,7 @@ router.post("/api-keys/session", authenticate, requireOrg, requireUser, async (r
       "/internal/api-keys/session",
       {
         method: "POST",
-        body: { appId: req.appId, orgId: req.orgId, userId: req.userId },
+        body: { orgId: req.orgId, userId: req.userId },
         headers: buildInternalHeaders(req),
       }
     );
@@ -118,7 +118,6 @@ router.post("/api-keys", authenticate, requireOrg, requireUser, async (req: Auth
       {
         method: "POST",
         body: {
-          appId: req.appId,
           orgId: req.orgId,
           userId: req.userId,
           createdBy: req.userId,

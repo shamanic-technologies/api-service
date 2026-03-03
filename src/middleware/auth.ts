@@ -4,15 +4,14 @@ import { callExternalService, externalServices } from "../lib/service-client.js"
 export interface AuthenticatedRequest extends Request {
   userId?: string;
   orgId?: string;
-  appId?: string;
   authType?: "app_key" | "user_key";
 }
 
 /**
  * Authenticate via API key (app key or user key)
- * - App key (distrib.app_*): resolved via key-service → appId, then external IDs
+ * - App key (distrib.app_*): resolved via key-service, then external IDs
  *   from x-org-id/x-user-id headers resolved to internal UUIDs via client-service
- * - User key (distrib.usr_*): resolved via key-service → appId, orgId, userId
+ * - User key (distrib.usr_*): resolved via key-service → orgId, userId
  */
 export async function authenticate(
   req: AuthenticatedRequest,
@@ -34,9 +33,8 @@ export async function authenticate(
       return res.status(401).json({ error: "Invalid API key" });
     }
 
-    // App key: set appId, optionally resolve external IDs
+    // App key: optionally resolve external IDs
     if (validation.type === "app") {
-      req.appId = validation.appId;
       req.authType = "app_key";
 
       const externalOrgId = req.headers["x-org-id"] as string | undefined;
@@ -44,14 +42,12 @@ export async function authenticate(
 
       if (externalOrgId && externalUserId) {
         const resolved = await resolveExternalIds(
-          validation.appId!,
           externalOrgId,
           externalUserId,
         );
 
         if (!resolved) {
           console.error("[auth] Identity resolution returned null", {
-            appId: validation.appId,
             externalOrgId,
             externalUserId,
           });
@@ -61,7 +57,6 @@ export async function authenticate(
         if (!resolved.orgId || !resolved.userId) {
           console.error("[auth] Identity resolution returned empty IDs", {
             resolved,
-            appId: validation.appId,
             externalOrgId,
             externalUserId,
           });
@@ -79,7 +74,6 @@ export async function authenticate(
       }
     } else {
       // User key: all identity comes from the key itself — no headers needed
-      req.appId = validation.appId;
       req.orgId = validation.orgId;
       req.userId = validation.userId;
       req.authType = "user_key";
@@ -99,7 +93,6 @@ export async function authenticate(
  */
 async function validateKey(apiKey: string): Promise<{
   type: "app" | "user";
-  appId?: string;
   orgId?: string;
   userId?: string;
 } | null> {
@@ -107,7 +100,6 @@ async function validateKey(apiKey: string): Promise<{
     const result = await callExternalService<{
       valid: boolean;
       type: "app" | "user";
-      appId?: string;
       orgId?: string;
       userId?: string;
     }>(
@@ -127,7 +119,6 @@ async function validateKey(apiKey: string): Promise<{
  * Resolve external org/user IDs to internal UUIDs via client-service POST /resolve
  */
 async function resolveExternalIds(
-  appId: string,
   externalOrgId: string,
   externalUserId: string,
 ): Promise<{ orgId: string; userId: string } | null> {
@@ -140,7 +131,7 @@ async function resolveExternalIds(
       "/resolve",
       {
         method: "POST",
-        body: { appId, externalOrgId, externalUserId },
+        body: { externalOrgId, externalUserId },
       }
     );
     return result;
@@ -162,7 +153,6 @@ export function requireOrg(
     console.warn("[auth] requireOrg blocked request", {
       path: req.path,
       authType: req.authType,
-      hasAppId: !!req.appId,
       hasOrgHeader: !!req.headers["x-org-id"],
       hasUserHeader: !!req.headers["x-user-id"],
     });

@@ -26,9 +26,9 @@ export async function registerPlatformKeys(): Promise<void> {
 
   for (const { provider, envVar } of PLATFORM_KEYS) {
     const apiKey = process.env[envVar]!;
-    await callExternalService(externalServices.key, "/keys", {
+    await callExternalService(externalServices.key, "/internal/platform-keys", {
       method: "POST",
-      body: { keySource: "platform", provider, apiKey },
+      body: { provider, apiKey },
     });
     console.log(`[api-service] Platform key registered: ${provider}`);
   }

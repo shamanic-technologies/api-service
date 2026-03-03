@@ -7,7 +7,6 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
-    req.appId = "distribute-frontend";
     req.authType = "user_key";
     next();
   },
@@ -67,7 +66,7 @@ describe("POST /v1/users/resolve", () => {
     app = createApp();
   });
 
-  it("should proxy to client-service /resolve with appId injected", async () => {
+  it("should proxy to client-service /resolve without appId", async () => {
     const res = await request(app)
       .post("/v1/users/resolve")
       .send({
@@ -85,12 +84,12 @@ describe("POST /v1/users/resolve", () => {
     expect(call).toBeDefined();
     expect(call!.method).toBe("POST");
     expect(call!.body).toMatchObject({
-      appId: "distribute-frontend",
       externalOrgId: "clerk_org_abc",
       externalUserId: "anon_user_123",
       email: "user@polarity.com",
       firstName: "Kevin",
     });
+    expect(call!.body.appId).toBeUndefined();
   });
 
   it("should pass through optional contact fields", async () => {
@@ -109,7 +108,6 @@ describe("POST /v1/users/resolve", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/resolve"));
     expect(call!.body).toMatchObject({
-      appId: "distribute-frontend",
       externalOrgId: "clerk_org_abc",
       externalUserId: "anon_user_456",
       email: "jane@example.com",
@@ -117,6 +115,7 @@ describe("POST /v1/users/resolve", () => {
       lastName: "Doe",
       imageUrl: "https://example.com/avatar.png",
     });
+    expect(call!.body.appId).toBeUndefined();
   });
 
   it("should work with only required fields (no contact info)", async () => {
@@ -131,10 +130,10 @@ describe("POST /v1/users/resolve", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/resolve"));
     expect(call!.body).toMatchObject({
-      appId: "distribute-frontend",
       externalOrgId: "clerk_org_abc",
       externalUserId: "anon_user_789",
     });
+    expect(call!.body.appId).toBeUndefined();
     // No optional fields sent
     expect(call!.body.email).toBeUndefined();
     expect(call!.body.firstName).toBeUndefined();
@@ -222,7 +221,7 @@ describe("GET /v1/users", () => {
     app = createApp();
   });
 
-  it("should proxy to client-service /users with appId and orgId", async () => {
+  it("should proxy to client-service /users with orgId (no appId)", async () => {
     const res = await request(app).get("/v1/users");
 
     expect(res.status).toBe(200);
@@ -232,7 +231,7 @@ describe("GET /v1/users", () => {
     const call = fetchCalls.find((c) => c.url.includes("/users?"));
     expect(call).toBeDefined();
     const url = new URL(call!.url);
-    expect(url.searchParams.get("appId")).toBe("distribute-frontend");
+    expect(url.searchParams.has("appId")).toBe(false);
     expect(url.searchParams.get("orgId")).toBe("org_test456");
     expect(url.searchParams.get("limit")).toBe("50");
     expect(url.searchParams.get("offset")).toBe("0");

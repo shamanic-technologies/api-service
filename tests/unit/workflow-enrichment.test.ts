@@ -7,7 +7,6 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
-    req.appId = "distribute";
     req.authType = "user_key";
     next();
   },
@@ -336,7 +335,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
 
     const keysCall = fetchCalls.find((c) => c.url.includes("/keys?"));
     expect(keysCall).toBeDefined();
-    expect(keysCall!.url).toContain("keySource=org");
+    expect(keysCall!.url).not.toContain("keySource");
     expect(keysCall!.url).toContain("orgId=org_test456");
   });
 });

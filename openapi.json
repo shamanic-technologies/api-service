@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "distribute API",
-    "description": "API Gateway for distribute.\n\n## Quick Start\n\n1. Create an API key in the distribute dashboard, or via `POST /v1/api-keys`\n2. Use it as a Bearer token — that's it, no extra headers needed\n\n```\nAuthorization: Bearer distrib.usr_abc123...\n```\n\nYour key carries your org and user identity. All endpoints work out of the box.\n\n## Storing provider keys (BYOK)\n\nTo store your own provider API keys (e.g. OpenAI, Anthropic) for use in workflows:\n\n```\nPOST /v1/keys\nAuthorization: Bearer distrib.usr_abc123...\n\n{ \"keySource\": \"org\", \"provider\": \"openai\", \"apiKey\": \"sk-...\" }\n```\n\n## Error codes\n\n| Code | Meaning |\n|------|---------|\n| 401 | Missing or invalid Bearer token |\n| 400 | Organization context required (missing `x-org-id` — app key only) |\n| 502 | Identity resolution failed (internal service unreachable) |\n\n",
+    "description": "API Gateway for distribute.\n\n## Quick Start\n\n1. Create an API key in the distribute dashboard, or via `POST /v1/api-keys`\n2. Use it as a Bearer token — that's it, no extra headers needed\n\n```\nAuthorization: Bearer distrib.usr_abc123...\n```\n\nYour key carries your org and user identity. All endpoints work out of the box.\n\n## Storing provider keys (BYOK)\n\nTo store your own provider API keys (e.g. OpenAI, Anthropic) for use in workflows:\n\n```\nPOST /v1/keys\nAuthorization: Bearer distrib.usr_abc123...\n\n{ \"provider\": \"openai\", \"apiKey\": \"sk-...\" }\n```\n\n## Error codes\n\n| Code | Meaning |\n|------|---------|\n| 401 | Missing or invalid Bearer token |\n| 400 | Organization context required (missing `x-org-id` — app key only) |\n| 502 | Identity resolution failed (internal service unreachable) |\n\n",
     "version": "1.0.0"
   },
   "servers": [
@@ -5129,7 +5129,7 @@
           "Emails"
         ],
         "summary": "Send a transactional email",
-        "description": "Send a templated transactional email. Uses the org's appId for template lookup and dedup. Dedup strategy depends on eventType (once-only, daily, product-scoped, or none).",
+        "description": "Send a templated transactional email. Uses the org context for template lookup and dedup. Dedup strategy depends on eventType (once-only, daily, product-scoped, or none).",
         "security": [
           {
             "bearerAuth": []

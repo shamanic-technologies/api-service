@@ -16,7 +16,6 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
-    req.appId = "distribute";
     req.authType = "app_key";
     next();
   },
@@ -96,7 +95,6 @@ describe("POST /v1/brand/sales-profile", () => {
     expect(mockCreateRun).toHaveBeenCalledWith({
       orgId: "org_test456",
       userId: "user_test123",
-      appId: "distribute",
       serviceName: "api-service",
       taskName: "sales-profile-from-url",
     });
@@ -104,7 +102,6 @@ describe("POST /v1/brand/sales-profile", () => {
     // Verify the body forwarded to brand-service
     expect(capturedBody).toEqual({
       url: "https://example.com",
-      appId: "distribute",
       orgId: "org_test456",
       userId: "user_test123",
       parentRunId: "run-parent-001",

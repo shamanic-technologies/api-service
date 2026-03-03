@@ -50,7 +50,6 @@ router.post("/qualify", authenticate, async (req: AuthenticatedRequest, res) => 
           subject,
           bodyText,
           bodyHtml,
-          appId: req.appId!,
           userId: req.userId,
           byokApiKey,
         },

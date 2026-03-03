@@ -54,7 +54,7 @@ describe("registerPlatformKeys", () => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
       fetchCalls.push({ url, body });
 
-      if (url.includes("/keys") && body?.keySource === "platform") {
+      if (url.includes("/internal/platform-keys")) {
         return new Response(JSON.stringify({ provider: body?.provider, maskedKey: "sk-...xxx", message: "Platform key saved" }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -69,12 +69,12 @@ describe("registerPlatformKeys", () => {
     process.env = { ...originalEnv };
   });
 
-  it("should register all platform keys without appId", async () => {
+  it("should register all platform keys without appId or keySource", async () => {
     setAllEnvVars();
 
     await registerPlatformKeys();
 
-    const platformKeyCalls = fetchCalls.filter((c) => c.url.includes("/keys") && c.body?.keySource === "platform");
+    const platformKeyCalls = fetchCalls.filter((c) => c.url.includes("/internal/platform-keys"));
     expect(platformKeyCalls).toHaveLength(11);
 
     const providers = platformKeyCalls.map((c) => c.body?.provider);
@@ -91,8 +91,10 @@ describe("registerPlatformKeys", () => {
     expect(providers).toContain("stripe-webhook");
 
     for (const call of platformKeyCalls) {
-      expect(call.body).toHaveProperty("keySource", "platform");
+      expect(call.body).not.toHaveProperty("keySource");
       expect(call.body).not.toHaveProperty("appId");
+      expect(call.body).toHaveProperty("provider");
+      expect(call.body).toHaveProperty("apiKey");
     }
   });
 
@@ -108,7 +110,7 @@ describe("registerPlatformKeys", () => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
       fetchCalls.push({ url, body });
 
-      if (url.includes("/keys") && body?.keySource === "platform") {
+      if (url.includes("/internal/platform-keys")) {
         return new Response(JSON.stringify({ error: "Service unavailable" }), {
           status: 503,
           headers: { "Content-Type": "application/json" },

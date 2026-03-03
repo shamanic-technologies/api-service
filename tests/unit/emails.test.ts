@@ -7,7 +7,6 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
-    req.appId = "distribute-frontend";
     req.authType = "user_key";
     next();
   },
@@ -75,7 +74,6 @@ describe("POST /v1/emails/send", () => {
     expect(sendCall).toBeDefined();
     expect(sendCall!.method).toBe("POST");
     expect(sendCall!.body).toMatchObject({
-      appId: "distribute-frontend",
       orgId: "org_test456",
       userId: "user_test123",
       eventType: "webinar_welcome",
@@ -142,7 +140,6 @@ describe("POST /v1/emails/stats", () => {
     const statsCall = fetchCalls.find((c) => c.url.includes("/stats"));
     expect(statsCall).toBeDefined();
     expect(statsCall!.body).toMatchObject({
-      appId: "distribute-frontend",
       orgId: "org_test456",
       eventType: "webinar_welcome",
     });
@@ -178,7 +175,7 @@ describe("PUT /v1/emails/templates", () => {
     app = createApp();
   });
 
-  it("should forward template deployment with appId in body and identity in headers", async () => {
+  it("should forward template deployment with identity in headers", async () => {
     const res = await request(app)
       .put("/v1/emails/templates")
       .send({
@@ -198,7 +195,6 @@ describe("PUT /v1/emails/templates", () => {
     expect(deployCall).toBeDefined();
     expect(deployCall!.method).toBe("PUT");
     expect(deployCall!.body).toMatchObject({
-      appId: "distribute-frontend",
       templates: [
         {
           name: "webinar_welcome",
@@ -207,6 +203,7 @@ describe("PUT /v1/emails/templates", () => {
         },
       ],
     });
+    expect(deployCall!.body.appId).toBeUndefined();
     expect(deployCall!.body.orgId).toBeUndefined();
     expect(deployCall!.body.userId).toBeUndefined();
     expect(deployCall!.headers!["x-org-id"]).toBe("org_test456");

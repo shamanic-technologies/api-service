@@ -26,7 +26,7 @@ router.post("/brand/scrape", authenticate, async (req: AuthenticatedRequest, res
         method: "POST",
         body: {
           url,
-          sourceService: req.appId!,
+          sourceService: "api-service",
           sourceOrgId: req.orgId,
           userId: req.userId,
           skipCache,
@@ -57,7 +57,6 @@ router.post("/brand/sales-profile", authenticate, requireOrg, requireUser, async
     const parentRun = await createRun({
       orgId: req.orgId!,
       userId: req.userId,
-      appId: req.appId!,
       serviceName: "api-service",
       taskName: "sales-profile-from-url",
     });
@@ -69,7 +68,6 @@ router.post("/brand/sales-profile", authenticate, requireOrg, requireUser, async
         method: "POST",
         body: {
           url,
-          appId: req.appId!,
           orgId: req.orgId!,
           userId: req.userId!,
           parentRunId: parentRun.id,
@@ -218,7 +216,6 @@ router.post("/brand/icp-suggestion", authenticate, requireOrg, requireUser, asyn
         body: {
           orgId: req.orgId,
           userId: req.userId,
-          appId: req.appId!,
           url: brandUrl,
         },
       }
@@ -256,7 +253,7 @@ router.get("/brands/costs", authenticate, requireOrg, requireUser, async (req: A
       }>;
     }>(
       externalServices.runs,
-      `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&appId=${encodeURIComponent(req.appId!)}&groupBy=brandId`,
+      `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&groupBy=brandId`,
       { headers: buildInternalHeaders(req) },
     );
 
@@ -294,7 +291,7 @@ router.get("/brands/:id/cost-breakdown", authenticate, requireOrg, requireUser, 
       }>;
     }>(
       externalServices.runs,
-      `/v1/stats/costs/by-cost-name?orgId=${encodeURIComponent(orgId)}&appId=${encodeURIComponent(req.appId!)}&brandId=${encodeURIComponent(id)}`,
+      `/v1/stats/costs/by-cost-name?orgId=${encodeURIComponent(orgId)}&brandId=${encodeURIComponent(id)}`,
       { headers: buildInternalHeaders(req) },
     );
 
