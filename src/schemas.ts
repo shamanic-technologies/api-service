@@ -1509,7 +1509,7 @@ registry.registerPath({
   tags: ["Emails"],
   summary: "Send a transactional email",
   description:
-    "Send a templated transactional email. Uses the org's appId for template lookup and dedup. " +
+    "Send a templated transactional email. Uses the org context for template lookup and dedup. " +
     "Dedup strategy depends on eventType (once-only, daily, product-scoped, or none).",
   security: authed,
   request: {

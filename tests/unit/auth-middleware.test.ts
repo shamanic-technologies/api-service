@@ -35,7 +35,7 @@ function createApp() {
 
   // Endpoint that only requires auth (no requireOrg)
   app.get("/v1/me", authenticate, (req: AuthenticatedRequest, res) => {
-    res.json({ appId: req.appId || null, orgId: req.orgId || null, userId: req.userId || null, authType: req.authType });
+    res.json({ orgId: req.orgId || null, userId: req.userId || null, authType: req.authType });
   });
 
   return app;
@@ -52,7 +52,7 @@ describe("Auth middleware — app key with identity headers", () => {
   it("should resolve external IDs to internal UUIDs via client-service", async () => {
     // First call: key-service /validate (via callExternalService)
     mockCall.mockResolvedValueOnce({
-      valid: true, type: "app", appId: "test-app",
+      valid: true, type: "app",
     });
     // Second call: client-service /resolve (via callExternalService)
     mockCall.mockResolvedValueOnce({
@@ -91,7 +91,6 @@ describe("Auth middleware — app key with identity headers", () => {
       {
         method: "POST",
         body: {
-          appId: "test-app",
           externalOrgId: "org_2clerkOrg",
           externalUserId: "user_2clerkUser",
         },
@@ -100,7 +99,7 @@ describe("Auth middleware — app key with identity headers", () => {
   });
 
   it("should return 400 from requireOrg when identity headers are missing", async () => {
-    mockCall.mockResolvedValueOnce({ valid: true, type: "app", appId: "test-app" });
+    mockCall.mockResolvedValueOnce({ valid: true, type: "app" });
 
     const res = await request(app)
       .get("/v1/workflows")
@@ -112,7 +111,7 @@ describe("Auth middleware — app key with identity headers", () => {
   });
 
   it("should return 502 when client-service resolution fails", async () => {
-    mockCall.mockResolvedValueOnce({ valid: true, type: "app", appId: "test-app" });
+    mockCall.mockResolvedValueOnce({ valid: true, type: "app" });
     mockCall.mockRejectedValueOnce(new Error("Connection refused"));
 
     const res = await request(app)
@@ -126,7 +125,7 @@ describe("Auth middleware — app key with identity headers", () => {
   });
 
   it("should return 502 when client-service returns empty orgId", async () => {
-    mockCall.mockResolvedValueOnce({ valid: true, type: "app", appId: "test-app" });
+    mockCall.mockResolvedValueOnce({ valid: true, type: "app" });
     mockCall.mockResolvedValueOnce({ orgId: null, userId: null });
 
     const res = await request(app)
@@ -140,18 +139,18 @@ describe("Auth middleware — app key with identity headers", () => {
   });
 
   it("should allow /v1/me without identity headers for app keys", async () => {
-    mockCall.mockResolvedValueOnce({ valid: true, type: "app", appId: "test-app" });
+    mockCall.mockResolvedValueOnce({ valid: true, type: "app" });
 
     const res = await request(app)
       .get("/v1/me")
       .set("Authorization", "Bearer mcpf_app_test123");
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ appId: "test-app", orgId: null, userId: null, authType: "app_key" });
+    expect(res.body).toEqual({ orgId: null, userId: null, authType: "app_key" });
   });
 
   it("should return 400 when only x-org-id is provided without x-user-id", async () => {
-    mockCall.mockResolvedValueOnce({ valid: true, type: "app", appId: "test-app" });
+    mockCall.mockResolvedValueOnce({ valid: true, type: "app" });
 
     const res = await request(app)
       .get("/v1/workflows")
@@ -172,11 +171,10 @@ describe("Auth middleware — user key", () => {
     app = createApp();
   });
 
-  it("should set appId, orgId, userId from key-service without client-service call", async () => {
+  it("should set orgId, userId from key-service without client-service call", async () => {
     mockCall.mockResolvedValueOnce({
       valid: true,
       type: "user",
-      appId: "distribute-frontend",
       orgId: "org-uuid-direct",
       userId: "user-uuid-direct",
     });
@@ -196,7 +194,6 @@ describe("Auth middleware — user key", () => {
     mockCall.mockResolvedValueOnce({
       valid: true,
       type: "user",
-      appId: "distribute-frontend",
       orgId: "org-uuid-direct",
       userId: "user-uuid-direct",
     });

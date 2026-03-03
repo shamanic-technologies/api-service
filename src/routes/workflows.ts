@@ -44,7 +44,7 @@ interface KeyItem {
 async function fetchOrgKeys(orgId: string): Promise<KeyItem[]> {
   const result = await callExternalService<{ keys: KeyItem[] }>(
     externalServices.key,
-    `/keys?keySource=org&orgId=${encodeURIComponent(orgId)}`
+    `/keys?orgId=${encodeURIComponent(orgId)}`
   );
   return result.keys ?? [];
 }
@@ -313,7 +313,6 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
       {
         method: "POST",
         body: {
-          appId: req.appId!,
           orgId: req.orgId,
           userId: req.userId,
           description,

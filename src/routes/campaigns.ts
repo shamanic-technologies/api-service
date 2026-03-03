@@ -14,7 +14,6 @@ function sendTransactionalEmail(
   callExternalService(externalServices.transactionalEmail, "/send", {
     method: "POST",
     body: {
-      appId: req.appId!,
       eventType,
       brandId,
       campaignId,
@@ -40,14 +39,13 @@ async function fetchDeliveryStats(
   req: AuthenticatedRequest,
 ): Promise<Record<string, number> | null> {
   const orgId = req.orgId!;
-  const appId = req.appId!;
   const deliveryResult = await callExternalService<{ transactional: EmailGatewayStats; broadcast: EmailGatewayStats }>(
     externalServices.emailGateway,
     "/stats",
     {
       method: "POST",
       headers: buildInternalHeaders(req),
-      body: { ...filters, appId, orgId },
+      body: { ...filters, orgId },
     }
   ).catch((err) => {
     console.warn("[campaigns] Email-gateway stats failed:", (err as Error).message);
@@ -165,7 +163,6 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       {
         method: "POST",
         body: {
-          appId: req.appId!,
           orgId: req.orgId,
           url: brandUrl,
           userId: req.userId,
@@ -179,7 +176,6 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     const parentRun = await createRun({
       orgId: req.orgId!,
       userId: req.userId,
-      appId: req.appId!,
       brandId: brandResult.brandId,
       serviceName: "api-service",
       taskName: "create-campaign",
@@ -193,7 +189,6 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       ...restData,
       workflowName,
       type: "cold-email-outreach",
-      appId: req.appId!,
       orgId: req.orgId,
       brandId: brandResult.brandId,
       parentRunId: parentRun.id,
@@ -350,7 +345,6 @@ router.post("/campaigns/:id/resume", authenticate, requireOrg, requireUser, asyn
     const parentRun = await createRun({
       orgId: req.orgId!,
       userId: req.userId,
-      appId: req.appId!,
       campaignId: id,
       serviceName: "api-service",
       taskName: "resume-campaign",
@@ -408,7 +402,6 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
   try {
     const { id } = req.params;
     const orgId = req.orgId!;
-    const appId = req.appId!;
     const internalHeaders = buildInternalHeaders(req);
 
     // Fetch stats from all services in parallel using campaignId filter
@@ -424,7 +417,7 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
       callExternalService(
         externalServices.emailgen,
         "/stats",
-        { method: "POST", body: { campaignId: id, appId }, headers: internalHeaders }
+        { method: "POST", body: { campaignId: id }, headers: internalHeaders }
       ).catch((err) => {
         console.warn("[campaigns] Emailgen stats failed:", (err as Error).message);
         return null;
@@ -441,7 +434,7 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
       // Full cost breakdown by cost name from runs-service (single source of truth)
       callExternalService<{ costs: Array<{ costName: string; totalCostInUsdCents: string; actualCostInUsdCents: string; provisionedCostInUsdCents: string; totalQuantity: string }> }>(
         externalServices.runs,
-        `/v1/stats/costs/by-cost-name?orgId=${encodeURIComponent(orgId)}&appId=${encodeURIComponent(appId)}&campaignId=${encodeURIComponent(id)}`,
+        `/v1/stats/costs/by-cost-name?orgId=${encodeURIComponent(orgId)}&campaignId=${encodeURIComponent(id)}`,
         { headers: internalHeaders }
       ).catch((err) => {
         console.warn("[campaigns] Cost breakdown failed:", (err as Error).message);
@@ -450,7 +443,7 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
       // Lead-serve run count from runs-service (source of truth for leadsServed)
       callExternalService<{ groups: Array<{ dimensions: Record<string, string | null>; runCount: number }> }>(
         externalServices.runs,
-        `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&appId=${encodeURIComponent(appId)}&campaignId=${encodeURIComponent(id)}&taskName=lead-serve&groupBy=serviceName`,
+        `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&campaignId=${encodeURIComponent(id)}&taskName=lead-serve&groupBy=serviceName`,
         { headers: internalHeaders }
       ).catch((err) => {
         console.warn("[campaigns] Lead-serve runs stats failed:", (err as Error).message);
@@ -529,7 +522,6 @@ router.post("/campaigns/batch-stats", authenticate, requireOrg, requireUser, asy
     const { campaignIds } = parsed.data;
 
     const orgId = req.orgId!;
-    const appId = req.appId!;
     const internalHeaders = buildInternalHeaders(req);
 
     // Fetch budget usage and lead-serve run counts in bulk (one call each)
@@ -549,7 +541,7 @@ router.post("/campaigns/batch-stats", authenticate, requireOrg, requireUser, asy
       groups: Array<{ dimensions: Record<string, string | null>; runCount: number }>;
     }>(
       externalServices.runs,
-      `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&appId=${encodeURIComponent(appId)}&taskName=lead-serve&groupBy=campaignId`,
+      `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&taskName=lead-serve&groupBy=campaignId`,
       { headers: internalHeaders },
     ).catch((err) => {
       console.warn("[campaigns] Batch lead-serve runs stats failed:", (err as Error).message);
@@ -569,7 +561,7 @@ router.post("/campaigns/batch-stats", authenticate, requireOrg, requireUser, asy
             callExternalService(
               externalServices.emailgen,
               "/stats",
-              { method: "POST", body: { campaignId: id, appId }, headers: internalHeaders }
+              { method: "POST", body: { campaignId: id }, headers: internalHeaders }
             ).catch(() => null),
             fetchDeliveryStats({ campaignId: id }, req),
           ]);
@@ -832,8 +824,6 @@ router.get("/brands/:brandId/delivery-stats", authenticate, requireOrg, requireU
  */
 router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   const { id } = req.params;
-  const orgId = req.orgId!;
-  const appId = req.appId!;
   const internalHeaders = buildInternalHeaders(req);
 
   // SSE headers
@@ -873,7 +863,7 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
         callExternalService<{ stats?: { emailsGenerated?: number } }>(
           externalServices.emailgen,
           "/stats",
-          { method: "POST", body: { campaignId: id, appId }, headers: internalHeaders }
+          { method: "POST", body: { campaignId: id }, headers: internalHeaders }
         ).catch(() => null),
         fetchDeliveryStats({ campaignId: id }, req),
       ]);

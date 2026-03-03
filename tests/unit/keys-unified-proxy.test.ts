@@ -14,7 +14,6 @@ let fetchCalls: FetchCall[] = [];
 let mockAuth = {
   userId: "user_test123",
   orgId: "org_test456",
-  appId: "distribute-frontend",
   authType: "user_key" as "user_key" | "app_key",
 };
 
@@ -22,7 +21,6 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = mockAuth.userId;
     req.orgId = mockAuth.orgId;
-    req.appId = mockAuth.appId;
     req.authType = mockAuth.authType;
     next();
   },
@@ -63,7 +61,6 @@ beforeEach(() => {
   mockAuth = {
     userId: "user_test123",
     orgId: "org_test456",
-    appId: "distribute-frontend",
     authType: "user_key",
   };
   mockFetch();
@@ -74,7 +71,7 @@ beforeEach(() => {
 // -----------------------------------------------------------------------
 
 describe("POST /v1/keys — org keys only", () => {
-  it("should forward org keys with orgId and hardcoded keySource", async () => {
+  it("should forward org keys with orgId (no keySource)", async () => {
     const app = createApp();
     const res = await request(app)
       .post("/v1/keys")
@@ -83,7 +80,6 @@ describe("POST /v1/keys — org keys only", () => {
     expect(res.status).toBe(200);
     const call = fetchCalls.find((c) => c.method === "POST");
     expect(call!.body).toEqual({
-      keySource: "org",
       provider: "stripe",
       apiKey: "sk_live_test",
       orgId: "org_test456",
@@ -108,13 +104,13 @@ describe("POST /v1/keys — org keys only", () => {
 // -----------------------------------------------------------------------
 
 describe("GET /v1/keys — org keys only", () => {
-  it("should list org keys with orgId", async () => {
+  it("should list org keys with orgId (no keySource)", async () => {
     const app = createApp();
     const res = await request(app).get("/v1/keys");
 
     expect(res.status).toBe(200);
     const call = fetchCalls[0];
-    expect(call.url).toContain("keySource=org");
+    expect(call.url).not.toContain("keySource");
     expect(call.url).toContain("orgId=org_test456");
   });
 
@@ -134,13 +130,13 @@ describe("GET /v1/keys — org keys only", () => {
 // -----------------------------------------------------------------------
 
 describe("DELETE /v1/keys/:provider — org keys only", () => {
-  it("should delete org key with orgId", async () => {
+  it("should delete org key with orgId (no keySource)", async () => {
     const app = createApp();
     const res = await request(app).delete("/v1/keys/stripe");
 
     expect(res.status).toBe(200);
     const call = fetchCalls.find((c) => c.method === "DELETE");
-    expect(call!.url).toContain("keySource=org");
+    expect(call!.url).not.toContain("keySource");
     expect(call!.url).toContain("orgId=org_test456");
   });
 

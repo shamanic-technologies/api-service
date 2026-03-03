@@ -15,13 +15,9 @@ describe("buildInternalHeaders", () => {
     expect(content).toContain("req.userId");
   });
 
-  it("should include x-app-id when req.appId is set", () => {
-    expect(content).toContain('"x-app-id"');
-    expect(content).toContain("req.appId");
-  });
-
-  it("should conditionally add x-app-id (not always)", () => {
-    expect(content).toContain("if (req.appId)");
+  it("should NOT include x-app-id (removed)", () => {
+    expect(content).not.toContain('"x-app-id"');
+    expect(content).not.toContain("req.appId");
   });
 
   it("should NOT include x-key-source (removed)", () => {

@@ -47,10 +47,10 @@ describe("Billing proxy routes", () => {
     expect(authMatches!.length).toBe(7); // 6 routes + 1 import
   });
 
-  it("should use billingHeaders (with x-key-source) for all authenticated endpoints", () => {
+  it("should use buildInternalHeaders for all authenticated endpoints (no x-key-source)", () => {
     expect(content).toContain("buildInternalHeaders");
-    expect(content).toContain('"x-key-source": "platform"');
-    const headerMatches = content.match(/billingHeaders\(req\)/g);
+    expect(content).not.toContain('"x-key-source"');
+    const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
     expect(headerMatches!.length).toBe(6);
   });
@@ -92,9 +92,9 @@ describe("Stripe webhook proxy", () => {
     expect(content).toContain("req.body"); // raw Buffer
   });
 
-  it("should proxy to billing-service /v1/webhooks/stripe/ with hardcoded appId", () => {
-    expect(content).toContain("/v1/webhooks/stripe/");
-    expect(content).toContain("DEFAULT_APP_ID");
+  it("should proxy to billing-service /v1/webhooks/stripe (no appId)", () => {
+    expect(content).toContain("/v1/webhooks/stripe");
+    expect(content).not.toContain("DEFAULT_APP_ID");
   });
 });
 

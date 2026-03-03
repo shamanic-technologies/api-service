@@ -24,7 +24,6 @@ router.post("/emails/send", authenticate, requireOrg, async (req: AuthenticatedR
         method: "POST",
         headers: buildInternalHeaders(req),
         body: {
-          appId: req.appId,
           orgId: req.orgId,
           userId: req.userId,
           ...parsed.data,
@@ -56,7 +55,6 @@ router.post("/emails/stats", authenticate, requireOrg, async (req: Authenticated
         method: "POST",
         headers: buildInternalHeaders(req),
         body: {
-          appId: req.appId,
           orgId: req.orgId,
           ...parsed.data,
         },
@@ -87,7 +85,6 @@ router.put("/emails/templates", authenticate, requireOrg, async (req: Authentica
         method: "PUT",
         headers: buildInternalHeaders(req),
         body: {
-          appId: req.appId,
           ...parsed.data,
         },
       }

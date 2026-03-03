@@ -2,14 +2,8 @@ import { Router, raw, Request, Response } from "express";
 import { authenticate, requireOrg, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
-import { DEFAULT_APP_ID } from "../lib/constants.js";
 
 const router = Router();
-
-/** Build billing-service headers: internal headers + x-key-source: "platform" */
-function billingHeaders(req: AuthenticatedRequest): Record<string, string> {
-  return { ...buildInternalHeaders(req), "x-key-source": "platform" };
-}
 
 // GET /v1/billing/accounts — get or create billing account
 router.get("/billing/accounts", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
@@ -17,7 +11,7 @@ router.get("/billing/accounts", authenticate, requireOrg, async (req: Authentica
     const result = await callExternalService(
       externalServices.billing,
       "/v1/accounts",
-      { headers: billingHeaders(req) }
+      { headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
@@ -29,7 +23,7 @@ router.get("/billing/accounts", authenticate, requireOrg, async (req: Authentica
 // Ensures account exists (upsert) before querying balance
 router.get("/billing/accounts/balance", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
-    const headers = billingHeaders(req);
+    const headers = buildInternalHeaders(req);
     // Ensure billing account exists (auto-creates if missing)
     await callExternalService(externalServices.billing, "/v1/accounts", { headers });
     const result = await callExternalService(
@@ -49,7 +43,7 @@ router.get("/billing/accounts/transactions", authenticate, requireOrg, async (re
     const result = await callExternalService(
       externalServices.billing,
       "/v1/accounts/transactions",
-      { headers: billingHeaders(req) }
+      { headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
@@ -63,7 +57,7 @@ router.patch("/billing/accounts/mode", authenticate, requireOrg, async (req: Aut
     const result = await callExternalService(
       externalServices.billing,
       "/v1/accounts/mode",
-      { method: "PATCH", body: req.body, headers: billingHeaders(req) }
+      { method: "PATCH", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
@@ -77,7 +71,7 @@ router.post("/billing/credits/deduct", authenticate, requireOrg, async (req: Aut
     const result = await callExternalService(
       externalServices.billing,
       "/v1/credits/deduct",
-      { method: "POST", body: { ...req.body, app_id: req.appId }, headers: billingHeaders(req) }
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
@@ -91,7 +85,7 @@ router.post("/billing/checkout-sessions", authenticate, requireOrg, async (req: 
     const result = await callExternalService(
       externalServices.billing,
       "/v1/checkout-sessions",
-      { method: "POST", body: req.body, headers: billingHeaders(req) }
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
@@ -106,9 +100,8 @@ router.post("/billing/checkout-sessions", authenticate, requireOrg, async (req: 
  */
 export async function stripeWebhookHandler(req: Request, res: Response) {
   try {
-    const appId = DEFAULT_APP_ID;
     const response = await fetch(
-      `${externalServices.billing.url}/v1/webhooks/stripe/${appId}`,
+      `${externalServices.billing.url}/v1/webhooks/stripe`,
       {
         method: "POST",
         headers: {

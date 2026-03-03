@@ -29,9 +29,9 @@ describe("OpenAPI spec — info description", () => {
     expect(generatorContent).toContain("Authorization: Bearer distrib.usr_abc123");
   });
 
-  it("should include BYOK section with org keySource example", () => {
+  it("should include BYOK section without keySource", () => {
     expect(generatorContent).toContain("## Storing provider keys (BYOK)");
-    expect(generatorContent).toContain('"keySource": "org"');
+    expect(generatorContent).not.toContain('"keySource"');
   });
 
   it("should document error codes for auth failures", () => {

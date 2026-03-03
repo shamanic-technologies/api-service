@@ -7,7 +7,6 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
-    req.appId = "distribute-frontend";
     req.authType = "user_key";
     next();
   },
@@ -54,7 +53,6 @@ describe("POST /v1/api-keys — identity forwarding", () => {
           id: "key-uuid-123",
           key: "mcpf_usr_abc123",
           name: "Polarity Course",
-          appId: "distribute-frontend",
           orgId: "org_test456",
           userId: "user_test123",
           createdBy: "user_test123",
@@ -65,7 +63,7 @@ describe("POST /v1/api-keys — identity forwarding", () => {
     app = createApp();
   });
 
-  it("should pass appId, orgId, userId, and createdBy to key-service", async () => {
+  it("should pass orgId, userId, and createdBy to key-service", async () => {
     const res = await request(app)
       .post("/v1/api-keys")
       .send({ name: "Polarity Course" });
@@ -78,7 +76,6 @@ describe("POST /v1/api-keys — identity forwarding", () => {
     );
     expect(createCall).toBeDefined();
     expect(createCall!.body).toEqual({
-      appId: "distribute-frontend",
       orgId: "org_test456",
       userId: "user_test123",
       createdBy: "user_test123",
@@ -109,7 +106,7 @@ describe("POST /v1/api-keys/session — identity forwarding", () => {
     app = createApp();
   });
 
-  it("should pass appId, orgId, and userId to key-service session endpoint", async () => {
+  it("should pass orgId and userId to key-service session endpoint", async () => {
     const res = await request(app)
       .post("/v1/api-keys/session")
       .send({});
@@ -121,7 +118,6 @@ describe("POST /v1/api-keys/session — identity forwarding", () => {
     );
     expect(sessionCall).toBeDefined();
     expect(sessionCall!.body).toEqual({
-      appId: "distribute-frontend",
       orgId: "org_test456",
       userId: "user_test123",
     });

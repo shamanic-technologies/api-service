@@ -15,7 +15,6 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
-    req.appId = "distribute";
     req.authType = "app_key";
     next();
   },
@@ -69,7 +68,7 @@ describe("POST /v1/brand/icp-suggestion", () => {
       .send({ brandUrl: "https://example.com" });
 
     expect(capturedBody).toBeDefined();
-    expect(capturedBody!.appId).toBe("distribute");
+    expect(capturedBody!.appId).toBeUndefined();
     expect(capturedBody!.url).toBe("https://example.com");
     expect(capturedBody!.orgId).toBe("org_test456");
   });

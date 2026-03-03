@@ -35,7 +35,7 @@ To store your own provider API keys (e.g. OpenAI, Anthropic) for use in workflow
 POST /v1/keys
 Authorization: Bearer distrib.usr_abc123...
 
-{ "keySource": "org", "provider": "openai", "apiKey": "sk-..." }
+{ "provider": "openai", "apiKey": "sk-..." }
 \`\`\`
 
 ## Error codes

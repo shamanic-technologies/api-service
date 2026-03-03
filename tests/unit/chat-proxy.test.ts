@@ -33,10 +33,9 @@ describe("Chat proxy routes", () => {
     expect(configSection).toContain("requireUser");
   });
 
-  it("should check req.appId on config and return 403 if missing", () => {
-    expect(content).toContain("req.appId");
-    expect(content).toContain("403");
-    expect(content).toContain("App key authentication required");
+  it("should NOT check req.appId on config (appId removed)", () => {
+    expect(content).not.toContain("req.appId");
+    expect(content).not.toContain("App key authentication required");
   });
 
   it("should use authenticate, requireOrg, requireUser on chat endpoint", () => {
@@ -55,8 +54,9 @@ describe("Chat proxy routes", () => {
     expect(content).toContain("callExternalService");
   });
 
-  it("should proxy config to /apps/{appId}/config on chat-service", () => {
-    expect(content).toContain("`/apps/${req.appId}/config`");
+  it("should proxy config to /config on chat-service (no appId in path)", () => {
+    expect(content).toContain('"/config"');
+    expect(content).not.toContain("/apps/");
     expect(content).toContain("externalServices.chat");
   });
 
@@ -65,8 +65,8 @@ describe("Chat proxy routes", () => {
     expect(content).toContain("externalServices.chat");
   });
 
-  it("should set appId in chat body from req.appId", () => {
-    expect(content).toContain("appId: req.appId");
+  it("should NOT set appId in chat body (appId removed)", () => {
+    expect(content).not.toContain("appId");
   });
 
   it("should use buildInternalHeaders for identity forwarding", () => {

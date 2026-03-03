@@ -29,8 +29,8 @@ describe("POST /v1/workflows/generate route", () => {
     expect(content).toContain('method: "POST"');
   });
 
-  it("should pass appId and orgId from auth context", () => {
-    expect(content).toContain("appId: req.appId!");
+  it("should pass orgId (but not appId) from auth context", () => {
+    expect(content).not.toContain("appId: req.appId");
     expect(content).toContain("orgId: req.orgId");
   });
 

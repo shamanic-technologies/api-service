@@ -15,7 +15,6 @@ router.post("/activity", authenticate, requireOrg, requireUser, async (req: Auth
       method: "POST",
       headers: buildInternalHeaders(req),
       body: {
-        appId: req.appId!,
         eventType: "user_active",
         userId: req.userId,
         orgId: req.orgId,

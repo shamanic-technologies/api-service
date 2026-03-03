@@ -13,7 +13,6 @@ export interface Run {
   parentRunId: string | null;
   organizationId: string;
   userId: string | null;
-  appId: string;
   brandId: string | null;
   campaignId: string | null;
   serviceName: string;
@@ -62,7 +61,6 @@ export interface RunWithOwnCost extends Run {
 export interface CreateRunParams {
   orgId: string;
   userId?: string;
-  appId: string;
   brandId?: string;
   campaignId?: string;
   serviceName: string;
@@ -73,12 +71,12 @@ export interface CreateRunParams {
 export interface CostItem {
   costName: string;
   quantity: number;
+  costSource: "platform" | "org";
 }
 
 export interface ListRunsParams {
   orgId: string;
   userId?: string;
-  appId?: string;
   brandId?: string;
   campaignId?: string;
   serviceName?: string;
@@ -161,6 +159,7 @@ export async function updateRun(
 /**
  * Add cost line items to a run.
  * Cost names must be registered in costs-service.
+ * Each item must include costSource ("platform" or "org").
  */
 export async function addCosts(
   runId: string,
@@ -188,7 +187,6 @@ export async function listRuns(
   const searchParams = new URLSearchParams();
   searchParams.set("orgId", params.orgId);
   if (params.userId) searchParams.set("userId", params.userId);
-  if (params.appId) searchParams.set("appId", params.appId);
   if (params.brandId) searchParams.set("brandId", params.brandId);
   if (params.campaignId) searchParams.set("campaignId", params.campaignId);
   if (params.serviceName) searchParams.set("serviceName", params.serviceName);
