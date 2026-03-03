@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
-import { createRun, getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
+import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { BrandScrapeRequestSchema, IcpSuggestionRequestSchema, SalesProfileFromUrlRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
@@ -53,24 +53,16 @@ router.post("/brand/sales-profile", authenticate, requireOrg, requireUser, async
     }
     const { url, skipCache } = parsed.data;
 
-    // Create a tracking run so brand-service can link costs
-    const parentRun = await createRun({
-      orgId: req.orgId!,
-      userId: req.userId,
-      serviceName: "api-service",
-      taskName: "sales-profile-from-url",
-    });
-
     const result = await callExternalService(
       externalServices.brand,
       "/sales-profile",
       {
         method: "POST",
+        headers: buildInternalHeaders(req),
         body: {
           url,
           orgId: req.orgId!,
           userId: req.userId!,
-          parentRunId: parentRun.id,
           skipCache,
         },
       }

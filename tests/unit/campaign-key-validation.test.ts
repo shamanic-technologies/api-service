@@ -22,11 +22,9 @@ vi.mock("../../src/middleware/auth.js", () => ({
   AuthenticatedRequest: {},
 }));
 
-// Mock runs-client
+// Mock runs-client (campaigns.ts only uses getRunsBatch now)
 vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
-  createRun: vi.fn().mockResolvedValue({ id: "parent-run-123" }),
-  updateRun: vi.fn().mockResolvedValue({ id: "parent-run-123", status: "failed" }),
 }));
 
 import campaignRouter from "../../src/routes/campaigns.js";

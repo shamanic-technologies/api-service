@@ -3,6 +3,12 @@ import express from "express";
 import request from "supertest";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../../src/middleware/auth.js";
 
+// Mock runs-client (auth middleware creates a run on every authenticated request)
+vi.mock("@distribute/runs-client", () => ({
+  createRun: vi.fn().mockResolvedValue({ id: "mock-run-id" }),
+  updateRun: vi.fn().mockResolvedValue({ id: "mock-run-id", status: "completed" }),
+}));
+
 // Mock callExternalService for both key-service /validate and client-service /resolve
 vi.mock("../../src/lib/service-client.js", () => {
   const mockCallExternalService = vi.fn();

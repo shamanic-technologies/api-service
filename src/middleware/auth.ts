@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import { callExternalService, externalServices } from "../lib/service-client.js";
+import { createRun, updateRun } from "@distribute/runs-client";
 
 export interface AuthenticatedRequest extends Request {
   userId?: string;
   orgId?: string;
+  runId?: string;
   authType?: "app_key" | "user_key";
 }
 
@@ -77,6 +79,30 @@ export async function authenticate(
       req.orgId = validation.orgId;
       req.userId = validation.userId;
       req.authType = "user_key";
+    }
+
+    // Create a request run for tracking (best-effort — don't block if runs-service is down)
+    if (req.orgId) {
+      try {
+        const run = await createRun({
+          orgId: req.orgId,
+          userId: req.userId,
+          appId: "api-service",
+          serviceName: "api-service",
+          taskName: `${req.method} ${req.baseUrl}${req.path}`,
+        });
+        req.runId = run.id;
+
+        // Auto-close the run when the response finishes
+        res.on("finish", () => {
+          const status = res.statusCode < 400 ? "completed" : "failed";
+          updateRun(run.id, status).catch((e: unknown) =>
+            console.warn("[auth] Failed to update run:", (e as Error).message)
+          );
+        });
+      } catch (err) {
+        console.warn("[auth] Failed to create request run:", (err as Error).message);
+      }
     }
 
     return next();

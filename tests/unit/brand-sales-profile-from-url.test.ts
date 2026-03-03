@@ -6,8 +6,8 @@ import express from "express";
  * POST /v1/brand/sales-profile
  * Proxy to brand-service POST /sales-profile:
  *   1. Validates request body (url required)
- *   2. Creates a tracking run via runs-client
- *   3. Forwards to brand-service with { url, appId, orgId, userId, parentRunId }
+ *   2. Forwards to brand-service with { url, orgId, userId }
+ *   3. Run tracking is handled by auth middleware via x-run-id header
  *   4. Returns the sales profile response as-is
  */
 
@@ -30,10 +30,8 @@ vi.mock("../../src/middleware/auth.js", () => ({
   AuthenticatedRequest: {},
 }));
 
-// Mock runs-client
-const mockCreateRun = vi.fn();
+// Mock runs-client (brand.ts only uses getRunsBatch now — run creation is in auth middleware)
 vi.mock("@distribute/runs-client", () => ({
-  createRun: (...args: unknown[]) => mockCreateRun(...args),
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
 }));
 
@@ -72,8 +70,6 @@ describe("POST /v1/brand/sales-profile", () => {
     app = buildApp();
     capturedBody = undefined;
 
-    mockCreateRun.mockResolvedValue({ id: "run-parent-001" });
-
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       if (typeof url === "string" && url.includes("/sales-profile")) {
         capturedBody = JSON.parse(init?.body as string);
@@ -91,20 +87,11 @@ describe("POST /v1/brand/sales-profile", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual(fakeSalesProfile);
 
-    // Verify a tracking run was created
-    expect(mockCreateRun).toHaveBeenCalledWith({
-      orgId: "org_test456",
-      userId: "user_test123",
-      serviceName: "api-service",
-      taskName: "sales-profile-from-url",
-    });
-
-    // Verify the body forwarded to brand-service
+    // Verify the body forwarded to brand-service (no parentRunId — tracked via x-run-id header)
     expect(capturedBody).toEqual({
       url: "https://example.com",
       orgId: "org_test456",
       userId: "user_test123",
-      parentRunId: "run-parent-001",
     });
   });
 
@@ -124,7 +111,6 @@ describe("POST /v1/brand/sales-profile", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("Invalid request");
-    expect(mockCreateRun).not.toHaveBeenCalled();
   });
 
   it("should return 400 with helpful message when Anthropic key is missing", async () => {

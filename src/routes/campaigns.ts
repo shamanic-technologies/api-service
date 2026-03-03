@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
-import { createRun, updateRun, getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
+import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { CreateCampaignRequestSchema, BatchStatsRequestSchema } from "../schemas.js";
 
 
@@ -171,18 +171,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     );
     console.log("[api-service] POST /v1/campaigns \u2014 step 1 done: brand upserted", { brandId: brandResult.brandId });
 
-    // 2. Create parent run so all downstream runs are linked
-    console.log("[api-service] POST /v1/campaigns \u2014 step 2: creating parent run");
-    const parentRun = await createRun({
-      orgId: req.orgId!,
-      userId: req.userId,
-      brandId: brandResult.brandId,
-      serviceName: "api-service",
-      taskName: "create-campaign",
-    });
-    console.log("[api-service] POST /v1/campaigns \u2014 step 2 done: parent run created", { parentRunId: parentRun.id });
-
-    // 3. Forward to campaign-service with parentRunId
+    // 2. Forward to campaign-service (run tracking via x-run-id header)
     // Derive `type` from workflowName for campaign-service backward compat
     const { workflowName, ...restData } = parsed.data;
     const body: Record<string, unknown> = {
@@ -191,7 +180,6 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       type: "cold-email-outreach",
       orgId: req.orgId,
       brandId: brandResult.brandId,
-      parentRunId: parentRun.id,
     };
 
     // Convert budget numbers to strings (campaign-service expects string type)
@@ -199,28 +187,21 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       if (body[key] != null) body[key] = String(body[key]);
     }
 
-    console.log("[api-service] POST /v1/campaigns — step 3: forwarding to campaign-service", {
+    console.log("[api-service] POST /v1/campaigns — step 2: forwarding to campaign-service", {
       brandId: body.brandId,
       workflowName: body.workflowName,
       targetOutcome: body.targetOutcome,
       maxLeads: body.maxLeads,
-      parentRunId: parentRun.id,
     });
-    let result;
-    try {
-      result = await callExternalService(
-        externalServices.campaign,
-        "/campaigns",
-        {
-          method: "POST",
-          headers: buildInternalHeaders(req),
-          body,
-        }
-      );
-    } catch (err) {
-      await updateRun(parentRun.id, "failed").catch(() => {});
-      throw err;
-    }
+    const result = await callExternalService(
+      externalServices.campaign,
+      "/campaigns",
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body,
+      }
+    );
     console.log("[api-service] POST /v1/campaigns \u2014 step 3 done: campaign created", {
       campaignId: (result as any).campaign?.id,
       status: (result as any).campaign?.status,
@@ -310,13 +291,6 @@ router.post("/campaigns/:id/stop", authenticate, requireOrg, requireUser, async 
 
     const campaign = (result as any).campaign;
 
-    // Close the parent run now that the campaign is stopped
-    if (campaign?.parentRunId) {
-      updateRun(campaign.parentRunId, "completed").catch((err) =>
-        console.warn("[campaigns] Failed to complete parent run:", (err as Error).message)
-      );
-    }
-
     // Fire-and-forget transactional email
     if (campaign?.brandId) {
       sendTransactionalEmail("campaign_stopped", req, {
@@ -341,30 +315,15 @@ router.post("/campaigns/:id/resume", authenticate, requireOrg, requireUser, asyn
   try {
     const { id } = req.params;
 
-    // Create parent run for the resume/activate operation
-    const parentRun = await createRun({
-      orgId: req.orgId!,
-      userId: req.userId,
-      campaignId: id,
-      serviceName: "api-service",
-      taskName: "resume-campaign",
-    });
-
-    let result;
-    try {
-      result = await callExternalService(
-        externalServices.campaign,
-        `/campaigns/${id}`,
-        {
-          method: "PATCH",
-          headers: buildInternalHeaders(req),
-          body: { status: "activate", parentRunId: parentRun.id },
-        }
-      );
-    } catch (err) {
-      await updateRun(parentRun.id, "failed").catch(() => {});
-      throw err;
-    }
+    const result = await callExternalService(
+      externalServices.campaign,
+      `/campaigns/${id}`,
+      {
+        method: "PATCH",
+        headers: buildInternalHeaders(req),
+        body: { status: "activate" },
+      }
+    );
     res.json(result);
   } catch (error: any) {
     console.error("Resume campaign error:", error);
