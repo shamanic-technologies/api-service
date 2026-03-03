@@ -54,7 +54,7 @@ describe("registerPlatformKeys", () => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
       fetchCalls.push({ url, body });
 
-      if (url.includes("/internal/platform-keys")) {
+      if (url.includes("/platform-keys")) {
         return new Response(JSON.stringify({ provider: body?.provider, maskedKey: "sk-...xxx", message: "Platform key saved" }), {
           status: 200,
           headers: { "Content-Type": "application/json" },
@@ -74,7 +74,7 @@ describe("registerPlatformKeys", () => {
 
     await registerPlatformKeys();
 
-    const platformKeyCalls = fetchCalls.filter((c) => c.url.includes("/internal/platform-keys"));
+    const platformKeyCalls = fetchCalls.filter((c) => c.url.includes("/platform-keys"));
     expect(platformKeyCalls).toHaveLength(11);
 
     const providers = platformKeyCalls.map((c) => c.body?.provider);
@@ -110,7 +110,7 @@ describe("registerPlatformKeys", () => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
       fetchCalls.push({ url, body });
 
-      if (url.includes("/internal/platform-keys")) {
+      if (url.includes("/platform-keys")) {
         return new Response(JSON.stringify({ error: "Service unavailable" }), {
           status: 503,
           headers: { "Content-Type": "application/json" },

@@ -265,7 +265,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
           json: () => Promise.resolve({ providers: ["apollo", "anthropic", "instantly"] }),
         };
       }
-      if (url.includes("/keys?")) {
+      if (url.match(/\/keys$/) || url.includes("/keys?")) {
         return {
           ok: true,
           json: () =>
@@ -307,7 +307,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
       if (url.includes("/required-providers")) {
         return { ok: true, json: () => Promise.resolve({ providers: ["apollo"] }) };
       }
-      if (url.includes("/keys?")) {
+      if (url.match(/\/keys$/) || url.includes("/keys?")) {
         return {
           ok: true,
           json: () => Promise.resolve({ keys: [{ provider: "apollo", maskedKey: "apol...123" }] }),
@@ -330,12 +330,12 @@ describe("GET /v1/workflows/:id/key-status", () => {
     expect(res.body.missing).toEqual([]);
   });
 
-  it("should fetch org keys with correct orgId", async () => {
+  it("should fetch org keys via /keys without orgId in query (uses headers)", async () => {
     await request(app).get("/v1/workflows/wf-1/key-status");
 
-    const keysCall = fetchCalls.find((c) => c.url.includes("/keys?"));
+    const keysCall = fetchCalls.find((c) => c.url.match(/\/keys$/));
     expect(keysCall).toBeDefined();
     expect(keysCall!.url).not.toContain("keySource");
-    expect(keysCall!.url).toContain("orgId=org_test456");
+    expect(keysCall!.url).not.toContain("orgId");
   });
 });

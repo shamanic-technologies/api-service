@@ -71,7 +71,7 @@ beforeEach(() => {
 // -----------------------------------------------------------------------
 
 describe("POST /v1/keys — org keys only", () => {
-  it("should forward org keys with orgId (no keySource)", async () => {
+  it("should forward org keys without orgId in body (no keySource)", async () => {
     const app = createApp();
     const res = await request(app)
       .post("/v1/keys")
@@ -82,7 +82,6 @@ describe("POST /v1/keys — org keys only", () => {
     expect(call!.body).toEqual({
       provider: "stripe",
       apiKey: "sk_live_test",
-      orgId: "org_test456",
     });
   });
 
@@ -104,14 +103,15 @@ describe("POST /v1/keys — org keys only", () => {
 // -----------------------------------------------------------------------
 
 describe("GET /v1/keys — org keys only", () => {
-  it("should list org keys with orgId (no keySource)", async () => {
+  it("should list org keys without orgId in query (no keySource)", async () => {
     const app = createApp();
     const res = await request(app).get("/v1/keys");
 
     expect(res.status).toBe(200);
     const call = fetchCalls[0];
     expect(call.url).not.toContain("keySource");
-    expect(call.url).toContain("orgId=org_test456");
+    expect(call.url).not.toContain("orgId");
+    expect(call.url).toContain("/keys");
   });
 
   it("should reject when no org context", async () => {
@@ -130,14 +130,15 @@ describe("GET /v1/keys — org keys only", () => {
 // -----------------------------------------------------------------------
 
 describe("DELETE /v1/keys/:provider — org keys only", () => {
-  it("should delete org key with orgId (no keySource)", async () => {
+  it("should delete org key without orgId in query (no keySource)", async () => {
     const app = createApp();
     const res = await request(app).delete("/v1/keys/stripe");
 
     expect(res.status).toBe(200);
     const call = fetchCalls.find((c) => c.method === "DELETE");
     expect(call!.url).not.toContain("keySource");
-    expect(call!.url).toContain("orgId=org_test456");
+    expect(call!.url).not.toContain("orgId");
+    expect(call!.url).toContain("/keys/stripe");
   });
 
   it("should reject when no org context", async () => {

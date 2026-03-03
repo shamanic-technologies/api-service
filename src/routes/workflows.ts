@@ -41,10 +41,11 @@ interface KeyItem {
 /**
  * Fetch the org's configured BYOK keys from key-service.
  */
-async function fetchOrgKeys(orgId: string): Promise<KeyItem[]> {
+async function fetchOrgKeys(headers: Record<string, string>): Promise<KeyItem[]> {
   const result = await callExternalService<{ keys: KeyItem[] }>(
     externalServices.key,
-    `/internal/keys?orgId=${encodeURIComponent(orgId)}`
+    "/keys",
+    { headers },
   );
   return result.keys ?? [];
 }
@@ -221,11 +222,10 @@ router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, asyn
 router.get("/workflows/:id/key-status", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
-    const orgId = req.orgId!;
 
     const [requiredProviders, orgKeys] = await Promise.all([
       fetchRequiredProviders(id),
-      fetchOrgKeys(orgId),
+      fetchOrgKeys(buildInternalHeaders(req)),
     ]);
 
     const configuredMap = new Map(orgKeys.map((k) => [k.provider, k.maskedKey]));
