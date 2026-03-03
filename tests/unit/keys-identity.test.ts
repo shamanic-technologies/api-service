@@ -25,6 +25,7 @@ interface FetchCall {
   url: string;
   method?: string;
   body?: any;
+  headers?: Record<string, string>;
 }
 
 let fetchCalls: FetchCall[] = [];
@@ -38,7 +39,7 @@ function createApp() {
   return app;
 }
 
-describe("POST /v1/api-keys — identity forwarding", () => {
+describe("POST /v1/api-keys — identity forwarding via headers", () => {
   let app: express.Express;
 
   beforeEach(() => {
@@ -46,7 +47,10 @@ describe("POST /v1/api-keys — identity forwarding", () => {
     fetchCalls = [];
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
-      fetchCalls.push({ url, method: init?.method, body });
+      const headers = Object.fromEntries(
+        Object.entries(init?.headers ?? {}).filter(([_, v]) => v)
+      ) as Record<string, string>;
+      fetchCalls.push({ url, method: init?.method, body, headers });
       return {
         ok: true,
         json: () => Promise.resolve({
@@ -63,7 +67,7 @@ describe("POST /v1/api-keys — identity forwarding", () => {
     app = createApp();
   });
 
-  it("should pass orgId, userId, and createdBy to key-service", async () => {
+  it("should pass createdBy and name in body, orgId/userId only in headers", async () => {
     const res = await request(app)
       .post("/v1/api-keys")
       .send({ name: "Polarity Course" });
@@ -72,19 +76,20 @@ describe("POST /v1/api-keys — identity forwarding", () => {
     expect(res.body.key).toBe("mcpf_usr_abc123");
 
     const createCall = fetchCalls.find(
-      (c) => c.url.includes("/internal/api-keys") && c.method === "POST"
+      (c) => c.url.includes("/api-keys") && c.method === "POST" && !c.url.includes("session")
     );
     expect(createCall).toBeDefined();
     expect(createCall!.body).toEqual({
-      orgId: "org_test456",
-      userId: "user_test123",
       createdBy: "user_test123",
       name: "Polarity Course",
     });
+    // orgId and userId should NOT be in the body
+    expect(createCall!.body).not.toHaveProperty("orgId");
+    expect(createCall!.body).not.toHaveProperty("userId");
   });
 });
 
-describe("POST /v1/api-keys/session — identity forwarding", () => {
+describe("POST /v1/api-keys/session — identity forwarding via headers only", () => {
   let app: express.Express;
 
   beforeEach(() => {
@@ -106,7 +111,7 @@ describe("POST /v1/api-keys/session — identity forwarding", () => {
     app = createApp();
   });
 
-  it("should pass orgId and userId to key-service session endpoint", async () => {
+  it("should not pass any body to key-service session endpoint", async () => {
     const res = await request(app)
       .post("/v1/api-keys/session")
       .send({});
@@ -114,12 +119,10 @@ describe("POST /v1/api-keys/session — identity forwarding", () => {
     expect(res.status).toBe(200);
 
     const sessionCall = fetchCalls.find(
-      (c) => c.url.includes("/internal/api-keys/session") && c.method === "POST"
+      (c) => c.url.includes("/api-keys/session") && c.method === "POST"
     );
     expect(sessionCall).toBeDefined();
-    expect(sessionCall!.body).toEqual({
-      orgId: "org_test456",
-      userId: "user_test123",
-    });
+    // No body should be sent — orgId and userId come from headers
+    expect(sessionCall!.body).toBeUndefined();
   });
 });

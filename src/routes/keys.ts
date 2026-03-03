@@ -7,7 +7,7 @@ import { UpsertKeyRequestSchema, CreateApiKeyRequestSchema } from "../schemas.js
 const router = Router();
 
 // -----------------------------------------------------------------------
-// Provider keys — transparent proxy to key-service /internal/keys endpoints
+// Provider keys — transparent proxy to key-service /keys endpoints
 // -----------------------------------------------------------------------
 
 /**
@@ -17,8 +17,7 @@ const router = Router();
 router.get("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
-    const params = new URLSearchParams({ orgId: req.orgId });
-    const result = await callExternalService(externalServices.key, `/internal/keys?${params}`, {
+    const result = await callExternalService(externalServices.key, "/keys", {
       headers: buildInternalHeaders(req),
     });
     res.json(result);
@@ -41,9 +40,9 @@ router.post("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
     if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
 
     const { provider, apiKey } = parsed.data;
-    const result = await callExternalService(externalServices.key, "/internal/keys", {
+    const result = await callExternalService(externalServices.key, "/keys", {
       method: "POST",
-      body: { provider, apiKey, orgId: req.orgId },
+      body: { provider, apiKey },
       headers: buildInternalHeaders(req),
     });
     res.json(result);
@@ -61,10 +60,9 @@ router.delete("/keys/:provider", authenticate, async (req: AuthenticatedRequest,
   try {
     if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
     const { provider } = req.params;
-    const params = new URLSearchParams({ orgId: req.orgId });
     const result = await callExternalService(
       externalServices.key,
-      `/internal/keys/${encodeURIComponent(provider)}?${params}`,
+      `/keys/${encodeURIComponent(provider)}`,
       { method: "DELETE", headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -75,7 +73,7 @@ router.delete("/keys/:provider", authenticate, async (req: AuthenticatedRequest,
 });
 
 // -----------------------------------------------------------------------
-// API keys — user-facing API key management (unchanged, uses /internal/api-keys)
+// API keys — user-facing API key management
 // -----------------------------------------------------------------------
 
 /**
@@ -86,10 +84,9 @@ router.post("/api-keys/session", authenticate, requireOrg, requireUser, async (r
   try {
     const result = await callExternalService(
       externalServices.key,
-      "/internal/api-keys/session",
+      "/api-keys/session",
       {
         method: "POST",
-        body: { orgId: req.orgId, userId: req.userId },
         headers: buildInternalHeaders(req),
       }
     );
@@ -114,12 +111,10 @@ router.post("/api-keys", authenticate, requireOrg, requireUser, async (req: Auth
 
     const result = await callExternalService(
       externalServices.key,
-      "/internal/api-keys",
+      "/api-keys",
       {
         method: "POST",
         body: {
-          orgId: req.orgId,
-          userId: req.userId,
           createdBy: req.userId,
           name,
         },
@@ -141,7 +136,7 @@ router.get("/api-keys", authenticate, requireOrg, requireUser, async (req: Authe
   try {
     const result = await callExternalService(
       externalServices.key,
-      `/internal/api-keys?orgId=${req.orgId}`,
+      "/api-keys",
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
@@ -161,10 +156,9 @@ router.delete("/api-keys/:id", authenticate, requireOrg, requireUser, async (req
 
     const result = await callExternalService(
       externalServices.key,
-      `/internal/api-keys/${id}`,
+      `/api-keys/${id}`,
       {
         method: "DELETE",
-        body: { orgId: req.orgId },
         headers: buildInternalHeaders(req),
       }
     );
