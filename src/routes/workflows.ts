@@ -44,7 +44,7 @@ interface KeyItem {
 async function fetchOrgKeys(orgId: string): Promise<KeyItem[]> {
   const result = await callExternalService<{ keys: KeyItem[] }>(
     externalServices.key,
-    `/keys?orgId=${encodeURIComponent(orgId)}`
+    `/internal/keys?orgId=${encodeURIComponent(orgId)}`
   );
   return result.keys ?? [];
 }
