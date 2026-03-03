@@ -13,6 +13,7 @@ function sendTransactionalEmail(
 ) {
   callExternalService(externalServices.transactionalEmail, "/send", {
     method: "POST",
+    headers: buildInternalHeaders(req),
     body: {
       eventType,
       brandId,
