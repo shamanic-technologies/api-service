@@ -319,7 +319,7 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
     const runIds = runs.map((r) => r.id);
     let runMap = new Map<string, RunWithCosts>();
     try {
-      runMap = await getRunsBatch(runIds);
+      runMap = await getRunsBatch(runIds, req.orgId);
     } catch (err) {
       console.warn("Failed to fetch run costs for brand runs:", err);
     }

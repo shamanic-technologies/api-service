@@ -650,7 +650,7 @@ router.get("/campaigns/:id/leads", authenticate, requireOrg, requireUser, async 
     let runMap = new Map<string, RunWithCosts>();
     if (enrichmentRunIds.length > 0) {
       try {
-        runMap = await getRunsBatch(enrichmentRunIds);
+        runMap = await getRunsBatch(enrichmentRunIds, req.orgId);
       } catch (err) {
         console.warn("Failed to fetch lead enrichment run costs:", err);
       }
@@ -714,7 +714,7 @@ router.get("/campaigns/:id/emails", authenticate, requireOrg, requireUser, async
     let runMap = new Map<string, RunWithCosts>();
     if (generationRunIds.length > 0) {
       try {
-        runMap = await getRunsBatch(generationRunIds);
+        runMap = await getRunsBatch(generationRunIds, req.orgId);
       } catch (err) {
         console.warn("Failed to fetch run costs:", err);
       }
