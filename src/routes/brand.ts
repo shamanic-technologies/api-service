@@ -148,9 +148,10 @@ router.get("/brands/:id", authenticate, async (req: AuthenticatedRequest, res) =
 
 /**
  * GET /v1/brands/:id/sales-profile
- * Get sales profile for a specific brand
+ * Get-or-create: returns the sales profile for a brand, triggering extraction
+ * automatically if none exists yet. Always returns a profile.
  */
-router.get("/brands/:id/sales-profile", authenticate, async (req: AuthenticatedRequest, res) => {
+router.get("/brands/:id/sales-profile", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.brand,
@@ -159,11 +160,14 @@ router.get("/brands/:id/sales-profile", authenticate, async (req: AuthenticatedR
     );
     res.json(result);
   } catch (error: any) {
-    if (error.statusCode === 404 || error.message?.includes("404")) {
-      return res.status(404).json({ error: "Sales profile not found" });
-    }
     console.error("Get brand sales profile error:", error);
-    res.status(500).json({ error: error.message || "Failed to get sales profile" });
+    const msg = error.message || "Failed to get sales profile";
+    if (msg.includes("No Anthropic API key found")) {
+      return res.status(400).json({
+        error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
+      });
+    }
+    res.status(500).json({ error: msg });
   }
 });
 
