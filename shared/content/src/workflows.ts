@@ -1,3 +1,5 @@
+import type { OutcomeType } from "./outcomes.js";
+
 export type WorkflowCategory = "sales" | "pr";
 export type WorkflowChannel = "email";
 export type WorkflowAudienceType = "cold-outreach";
@@ -15,6 +17,8 @@ export interface WorkflowDefinition {
   audienceType: WorkflowAudienceType;
   /** Icon identifier for UI */
   icon: string;
+  /** Which outcomes this workflow can deliver, ordered by relevance. */
+  targetOutcomes: OutcomeType[];
 }
 
 export const WORKFLOW_DEFINITIONS: WorkflowDefinition[] = [
@@ -27,6 +31,7 @@ export const WORKFLOW_DEFINITIONS: WorkflowDefinition[] = [
     channel: "email",
     audienceType: "cold-outreach",
     icon: "envelope",
+    targetOutcomes: ["interested-replies", "link-clicks"],
   },
   {
     sectionKey: "pr-email-cold-outreach",
@@ -37,6 +42,7 @@ export const WORKFLOW_DEFINITIONS: WorkflowDefinition[] = [
     channel: "email",
     audienceType: "cold-outreach",
     icon: "newspaper",
+    targetOutcomes: ["press-mentions"],
   },
 ];
 
