@@ -359,6 +359,59 @@
           "campaignIds"
         ]
       },
+      "CampaignRepliesResponse": {
+        "type": "object",
+        "properties": {
+          "replies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "email": {
+                  "type": "string",
+                  "description": "Lead email address"
+                },
+                "emailsReplied": {
+                  "type": "number",
+                  "description": "Total replies from this lead"
+                },
+                "repliesWillingToMeet": {
+                  "type": "number",
+                  "description": "Willing to meet replies"
+                },
+                "repliesInterested": {
+                  "type": "number",
+                  "description": "Interested replies"
+                },
+                "repliesNotInterested": {
+                  "type": "number",
+                  "description": "Not interested replies"
+                },
+                "repliesOutOfOffice": {
+                  "type": "number",
+                  "description": "Out of office replies"
+                },
+                "repliesUnsubscribe": {
+                  "type": "number",
+                  "description": "Unsubscribe replies"
+                }
+              },
+              "required": [
+                "email",
+                "emailsReplied",
+                "repliesWillingToMeet",
+                "repliesInterested",
+                "repliesNotInterested",
+                "repliesOutOfOffice",
+                "repliesUnsubscribe"
+              ]
+            }
+          }
+        },
+        "required": [
+          "replies"
+        ]
+      },
       "UpsertKeyRequest": {
         "type": "object",
         "properties": {
@@ -517,6 +570,57 @@
         },
         "required": [
           "url"
+        ]
+      },
+      "BrandDeliveryStatsResponse": {
+        "type": "object",
+        "properties": {
+          "emailsSent": {
+            "type": "number"
+          },
+          "emailsDelivered": {
+            "type": "number"
+          },
+          "emailsOpened": {
+            "type": "number"
+          },
+          "emailsClicked": {
+            "type": "number"
+          },
+          "emailsReplied": {
+            "type": "number"
+          },
+          "emailsBounced": {
+            "type": "number"
+          },
+          "repliesWillingToMeet": {
+            "type": "number"
+          },
+          "repliesInterested": {
+            "type": "number"
+          },
+          "repliesNotInterested": {
+            "type": "number"
+          },
+          "repliesOutOfOffice": {
+            "type": "number"
+          },
+          "repliesUnsubscribe": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "emailsSent",
+          "emailsDelivered",
+          "emailsOpened",
+          "emailsClicked",
+          "emailsReplied",
+          "emailsBounced",
+          "repliesWillingToMeet",
+          "repliesInterested",
+          "repliesNotInterested",
+          "repliesOutOfOffice",
+          "repliesUnsubscribe"
         ]
       },
       "BestWorkflowResponse": {
@@ -1720,6 +1824,16 @@
             "in": "query"
           },
           {
+            "schema": {
+              "type": "string",
+              "description": "Filter by status (e.g. 'active', 'stopped', 'all')"
+            },
+            "required": false,
+            "description": "Filter by status (e.g. 'active', 'stopped', 'all')",
+            "name": "status",
+            "in": "query"
+          },
+          {
             "name": "x-org-id",
             "in": "header",
             "required": false,
@@ -2452,6 +2566,82 @@
         "responses": {
           "200": {
             "description": "Campaign emails with generation run data"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/campaigns/{id}/replies": {
+      "get": {
+        "tags": [
+          "Campaigns"
+        ],
+        "summary": "Get campaign replies",
+        "description": "Get email replies for a campaign, grouped by lead email. Returns only leads who have at least one reply, with reply type breakdown.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign ID"
+            },
+            "required": true,
+            "description": "Campaign ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of reply records per lead",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignRepliesResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -3885,6 +4075,82 @@
         "responses": {
           "200": {
             "description": "Brand extraction runs with cost data"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/brands/{brandId}/delivery-stats": {
+      "get": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "Get brand delivery stats",
+        "description": "Get aggregated email delivery statistics for all campaigns under a brand (broadcast only, excludes transactional)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID"
+            },
+            "required": true,
+            "description": "Brand ID",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delivery statistics for the brand",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandDeliveryStatsResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",

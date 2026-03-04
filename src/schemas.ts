@@ -215,6 +215,7 @@ registry.registerPath({
   request: {
     query: z.object({
       brandId: z.string().optional().describe("Filter by brand ID"),
+      status: z.string().optional().describe("Filter by status (e.g. 'active', 'stopped', 'all')"),
     }),
   },
   responses: {
@@ -418,6 +419,43 @@ registry.registerPath({
   request: { params: CampaignIdParam },
   responses: {
     200: { description: "Campaign emails with generation run data" },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/campaigns/{id}/replies",
+  tags: ["Campaigns"],
+  summary: "Get campaign replies",
+  description:
+    "Get email replies for a campaign, grouped by lead email. Returns only leads who have at least one reply, with reply type breakdown.",
+  security: authed,
+  request: { params: CampaignIdParam },
+  responses: {
+    200: {
+      description: "List of reply records per lead",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              replies: z.array(
+                z.object({
+                  email: z.string().describe("Lead email address"),
+                  emailsReplied: z.number().describe("Total replies from this lead"),
+                  repliesWillingToMeet: z.number().describe("Willing to meet replies"),
+                  repliesInterested: z.number().describe("Interested replies"),
+                  repliesNotInterested: z.number().describe("Not interested replies"),
+                  repliesOutOfOffice: z.number().describe("Out of office replies"),
+                  repliesUnsubscribe: z.number().describe("Unsubscribe replies"),
+                })
+              ),
+            })
+            .openapi("CampaignRepliesResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -901,6 +939,47 @@ registry.registerPath({
   request: { params: BrandIdParam },
   responses: {
     200: { description: "Brand extraction runs with cost data" },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+const BrandIdByBrandIdParam = z.object({
+  brandId: z.string().describe("Brand ID"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/delivery-stats",
+  tags: ["Brand"],
+  summary: "Get brand delivery stats",
+  description:
+    "Get aggregated email delivery statistics for all campaigns under a brand (broadcast only, excludes transactional)",
+  security: authed,
+  request: { params: BrandIdByBrandIdParam },
+  responses: {
+    200: {
+      description: "Delivery statistics for the brand",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              emailsSent: z.number(),
+              emailsDelivered: z.number(),
+              emailsOpened: z.number(),
+              emailsClicked: z.number(),
+              emailsReplied: z.number(),
+              emailsBounced: z.number(),
+              repliesWillingToMeet: z.number(),
+              repliesInterested: z.number(),
+              repliesNotInterested: z.number(),
+              repliesOutOfOffice: z.number(),
+              repliesUnsubscribe: z.number(),
+            })
+            .openapi("BrandDeliveryStatsResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
