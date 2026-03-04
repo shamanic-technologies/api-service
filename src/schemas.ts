@@ -784,14 +784,16 @@ registry.registerPath({
   method: "get",
   path: "/v1/brands/{id}/sales-profile",
   tags: ["Brand"],
-  summary: "Get brand sales profile",
-  description: "Get the sales profile for a specific brand",
+  summary: "Get or create brand sales profile",
+  description:
+    "Get the sales profile for a brand. If none exists, automatically triggers " +
+    "extraction (scrape + AI analysis) and returns the result. Always returns a profile.",
   security: authed,
   request: { params: BrandIdParam },
   responses: {
-    200: { description: "Brand sales profile" },
+    200: { description: "Brand sales profile (includes cached, brandId, and profile fields)" },
+    400: { description: "Anthropic API key not configured", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Sales profile not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
