@@ -129,7 +129,7 @@ async function runsRequest<T>(
     throw new Error(`runs-service ${method} ${path} failed: ${response.status} - ${errorText}`);
   }
 
-  return response.json() as Promise<T>;
+  return await response.json() as T;
 }
 
 /** Build inter-service identity headers from available params */
