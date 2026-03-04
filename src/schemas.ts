@@ -694,15 +694,11 @@ export const BrandScrapeRequestSchema = z
   })
   .openapi("BrandScrapeRequest");
 
-export const SalesProfileFromUrlRequestSchema = z
+export const BrandUpsertRequestSchema = z
   .object({
-    url: z.string().min(1).describe("Brand website URL to extract a sales profile from"),
-    skipCache: z
-      .boolean()
-      .optional()
-      .describe("Skip cached results and force re-extraction"),
+    url: z.string().min(1).describe("Brand website URL"),
   })
-  .openapi("SalesProfileFromUrlRequest");
+  .openapi("BrandUpsertRequest");
 
 export const IcpSuggestionRequestSchema = z
   .object({
@@ -784,29 +780,49 @@ registry.registerPath({
   method: "get",
   path: "/v1/brands/{id}/sales-profile",
   tags: ["Brand"],
-  summary: "Get or create brand sales profile",
+  summary: "Get brand sales profile",
   description:
-    "Get the sales profile for a brand. If none exists, automatically triggers " +
-    "extraction (scrape + AI analysis) and returns the result. Always returns a profile.",
+    "Get the sales profile for a brand. Returns 404 if none exists.",
   security: authed,
   request: { params: BrandIdParam },
   responses: {
-    200: { description: "Brand sales profile (includes cached, brandId, and profile fields)" },
-    400: { description: "Anthropic API key not configured", content: errorContent },
+    200: { description: "Brand sales profile" },
     401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Sales profile not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
 
 registry.registerPath({
-  method: "get",
-  path: "/v1/brand/sales-profiles",
+  method: "post",
+  path: "/v1/brands/{id}/sales-profile",
   tags: ["Brand"],
-  summary: "List sales profiles",
-  description: "Get all sales profiles (brands) for the organization",
+  summary: "Create brand sales profile",
+  description:
+    "Trigger AI extraction to create a sales profile for the brand. Returns 409 if a profile already exists.",
   security: authed,
+  request: { params: BrandIdParam },
   responses: {
-    200: { description: "List of sales profiles" },
+    200: { description: "Sales profile created" },
+    400: { description: "Anthropic API key not configured", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: { description: "Sales profile already exists", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/sales-profile",
+  tags: ["Brand"],
+  summary: "Refresh brand sales profile",
+  description:
+    "Force re-extraction of the sales profile for the brand.",
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "Sales profile refreshed" },
+    400: { description: "Anthropic API key not configured", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -837,23 +853,21 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/v1/brand/sales-profile",
+  path: "/v1/brands",
   tags: ["Brand"],
-  summary: "Extract sales profile from URL",
+  summary: "Upsert brand",
   description:
-    "Extract a sales profile from a brand website URL. " +
-    "Upserts the brand and returns the profile synchronously (with cache). " +
-    "Use this to pre-fill campaign forms for new URLs.",
+    "Upsert a brand from a URL. Returns the brandId.",
   security: authed,
   request: {
     body: {
       content: {
-        "application/json": { schema: SalesProfileFromUrlRequestSchema },
+        "application/json": { schema: BrandUpsertRequestSchema },
       },
     },
   },
   responses: {
-    200: { description: "Sales profile extracted from the URL" },
+    200: { description: "Brand upserted, returns brandId" },
     400: { description: "Invalid request", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },

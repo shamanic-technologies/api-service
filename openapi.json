@@ -506,17 +506,13 @@
           "brandUrl"
         ]
       },
-      "SalesProfileFromUrlRequest": {
+      "BrandUpsertRequest": {
         "type": "object",
         "properties": {
           "url": {
             "type": "string",
             "minLength": 1,
-            "description": "Brand website URL to extract a sales profile from"
-          },
-          "skipCache": {
-            "type": "boolean",
-            "description": "Skip cached results and force re-extraction"
+            "description": "Brand website URL"
           }
         },
         "required": [
@@ -3307,6 +3303,82 @@
             "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
           }
         ]
+      },
+      "post": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "Upsert brand",
+        "description": "Upsert a brand from a URL. Returns the brandId.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrandUpsertRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Brand upserted, returns brandId"
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          }
+        ]
       }
     },
     "/v1/brands/{id}": {
@@ -3383,8 +3455,8 @@
         "tags": [
           "Brand"
         ],
-        "summary": "Get or create brand sales profile",
-        "description": "Get the sales profile for a brand. If none exists, automatically triggers extraction (scrape + AI analysis) and returns the result. Always returns a profile.",
+        "summary": "Get brand sales profile",
+        "description": "Get the sales profile for a brand. Returns 404 if none exists.",
         "security": [
           {
             "bearerAuth": []
@@ -3422,7 +3494,171 @@
         ],
         "responses": {
           "200": {
-            "description": "Brand sales profile (includes cached, brandId, and profile fields)"
+            "description": "Brand sales profile"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sales profile not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "Create brand sales profile",
+        "description": "Trigger AI extraction to create a sales profile for the brand. Returns 409 if a profile already exists.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID"
+            },
+            "required": true,
+            "description": "Brand ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales profile created"
+          },
+          "400": {
+            "description": "Anthropic API key not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Sales profile already exists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "Refresh brand sales profile",
+        "description": "Force re-extraction of the sales profile for the brand.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID"
+            },
+            "required": true,
+            "description": "Brand ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales profile refreshed"
           },
           "400": {
             "description": "Anthropic API key not configured",
@@ -3457,65 +3693,6 @@
         }
       }
     },
-    "/v1/brand/sales-profiles": {
-      "get": {
-        "tags": [
-          "Brand"
-        ],
-        "summary": "List sales profiles",
-        "description": "Get all sales profiles (brands) for the organization",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of sales profiles"
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          }
-        ]
-      }
-    },
     "/v1/brand/icp-suggestion": {
       "post": {
         "tags": [
@@ -3540,84 +3717,6 @@
         "responses": {
           "200": {
             "description": "ICP suggestion (Apollo-compatible search params)"
-          },
-          "400": {
-            "description": "Invalid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          }
-        ]
-      }
-    },
-    "/v1/brand/sales-profile": {
-      "post": {
-        "tags": [
-          "Brand"
-        ],
-        "summary": "Extract sales profile from URL",
-        "description": "Extract a sales profile from a brand website URL. Upserts the brand and returns the profile synchronously (with cache). Use this to pre-fill campaign forms for new URLs.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SalesProfileFromUrlRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Sales profile extracted from the URL"
           },
           "400": {
             "description": "Invalid request",

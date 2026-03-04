@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
-import { BrandScrapeRequestSchema, IcpSuggestionRequestSchema, SalesProfileFromUrlRequestSchema } from "../schemas.js";
+import { BrandScrapeRequestSchema, BrandUpsertRequestSchema, IcpSuggestionRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
@@ -42,42 +42,34 @@ router.post("/brand/scrape", authenticate, async (req: AuthenticatedRequest, res
 });
 
 /**
- * POST /v1/brand/sales-profile
- * Extract a sales profile from a URL (upserts the brand, returns profile synchronously)
+ * POST /v1/brands
+ * Upsert a brand from a URL. Returns { brandId }.
  */
-router.post("/brand/sales-profile", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.post("/brands", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const parsed = SalesProfileFromUrlRequestSchema.safeParse(req.body);
+    const parsed = BrandUpsertRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
-    const { url, skipCache } = parsed.data;
 
-    const result = await callExternalService(
+    const result = await callExternalService<{ brandId: string }>(
       externalServices.brand,
-      "/sales-profile",
+      "/brands",
       {
         method: "POST",
         headers: buildInternalHeaders(req),
         body: {
-          url,
+          url: parsed.data.url,
           orgId: req.orgId!,
           userId: req.userId!,
-          skipCache,
         },
       }
     );
 
     res.json(result);
   } catch (error: any) {
-    console.error("Sales profile from URL error:", error.message);
-    const msg = error.message || "Failed to extract sales profile";
-    if (msg.includes("No Anthropic API key found")) {
-      return res.status(400).json({
-        error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
-      });
-    }
-    res.status(500).json({ error: msg });
+    console.error("Brand upsert error:", error.message);
+    res.status(500).json({ error: error.message || "Failed to upsert brand" });
   }
 });
 
@@ -148,8 +140,7 @@ router.get("/brands/:id", authenticate, async (req: AuthenticatedRequest, res) =
 
 /**
  * GET /v1/brands/:id/sales-profile
- * Get-or-create: returns the sales profile for a brand, triggering extraction
- * automatically if none exists yet. Always returns a profile.
+ * Read-only: returns the sales profile for a brand, or 404 if none exists.
  */
 router.get("/brands/:id/sales-profile", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
@@ -161,34 +152,69 @@ router.get("/brands/:id/sales-profile", authenticate, requireOrg, requireUser, a
     res.json(result);
   } catch (error: any) {
     console.error("Get brand sales profile error:", error);
-    const msg = error.message || "Failed to get sales profile";
+    const statusCode = error.statusCode || 500;
+    if (statusCode === 404) {
+      return res.status(404).json({ error: "Sales profile not found" });
+    }
+    res.status(statusCode).json({ error: error.message || "Failed to get sales profile" });
+  }
+});
+
+/**
+ * POST /v1/brands/:id/sales-profile
+ * Create: triggers AI extraction for the brand. Returns 409 if a profile already exists.
+ */
+router.post("/brands/:id/sales-profile", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.brand,
+      `/brands/${req.params.id}/sales-profile`,
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+      },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Create brand sales profile error:", error);
+    const msg = error.message || "Failed to create sales profile";
     if (msg.includes("No Anthropic API key found")) {
       return res.status(400).json({
         error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
       });
     }
-    res.status(500).json({ error: msg });
+    const statusCode = error.statusCode || 500;
+    if (statusCode === 409) {
+      return res.status(409).json({ error: "Sales profile already exists. Use PUT to refresh." });
+    }
+    res.status(statusCode).json({ error: msg });
   }
 });
 
 /**
- * GET /v1/brand/sales-profiles
- * Get all sales profiles (brands) for the organization
- * NOTE: Must be before /:id route to avoid matching "sales-profiles" as an id
+ * PUT /v1/brands/:id/sales-profile
+ * Refresh: forces re-extraction of the sales profile.
  */
-router.get("/brand/sales-profiles", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.put("/brands/:id/sales-profile", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const params = new URLSearchParams({ orgId: req.orgId! });
-
     const result = await callExternalService(
       externalServices.brand,
-      `/sales-profiles?${params}`,
-      { headers: buildInternalHeaders(req) },
+      `/brands/${req.params.id}/sales-profile`,
+      {
+        method: "PUT",
+        headers: buildInternalHeaders(req),
+      },
     );
     res.json(result);
   } catch (error: any) {
-    console.error("Get sales profiles error:", error);
-    res.status(500).json({ error: error.message || "Failed to get sales profiles" });
+    console.error("Refresh brand sales profile error:", error);
+    const msg = error.message || "Failed to refresh sales profile";
+    if (msg.includes("No Anthropic API key found")) {
+      return res.status(400).json({
+        error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
+      });
+    }
+    res.status(error.statusCode || 500).json({ error: msg });
   }
 });
 
