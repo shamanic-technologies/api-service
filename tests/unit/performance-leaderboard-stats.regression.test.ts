@@ -1146,4 +1146,72 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
       expect(opts.headers?.["x-org-id"]).toBe("org-1");
     }
   });
+
+  it("should pass per-org x-org-id on GET /brands?orgId=... calls (fetchAllBrands)", async () => {
+    const app = createApp();
+    const brands = [
+      { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
+    ];
+
+    const baseMock = setupMocks(brands, [], [], {}, []);
+    mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
+      const result = baseMock(_service, path, opts);
+      if (result !== null) return result;
+      return Promise.resolve({});
+    });
+
+    const res = await request(app)
+      .get("/performance/leaderboard")
+      .set("x-org-id", "admin-org-uuid")
+      .set("x-user-id", "admin-user-uuid");
+
+    expect(res.status).toBe(200);
+
+    // Find all GET /brands?orgId=... calls
+    const brandsCalls = mockCallExternalService.mock.calls.filter(
+      (c: any) => typeof c[1] === "string" && c[1].startsWith("/brands?orgId=")
+    );
+    expect(brandsCalls.length).toBeGreaterThan(0);
+    for (const call of brandsCalls) {
+      const opts = call[2] as { headers?: Record<string, string> };
+      expect(opts.headers?.["x-org-id"]).toBeDefined();
+      // x-org-id should be the org being queried, not the admin's org
+      expect(opts.headers?.["x-org-id"]).toBe("org-1");
+    }
+  });
+
+  it("should pass per-brand x-org-id on email-gateway /stats calls", async () => {
+    const app = createApp();
+    const brands = [
+      { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
+    ];
+
+    const baseMock = setupMocks(brands, [], [], {}, []);
+    mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
+      const result = baseMock(_service, path, opts);
+      if (result !== null) return result;
+      if (path === "/stats") {
+        return Promise.resolve(makeGatewayResponse({ emailsSent: 10, emailsOpened: 5 }));
+      }
+      return Promise.resolve({});
+    });
+
+    const res = await request(app)
+      .get("/performance/leaderboard")
+      .set("x-org-id", "admin-org-uuid")
+      .set("x-user-id", "admin-user-uuid");
+
+    expect(res.status).toBe(200);
+
+    // Find per-brand email-gateway /stats calls (ones with brandId in body)
+    const statsCallsWithBrand = mockCallExternalService.mock.calls.filter(
+      (c: any) => typeof c[1] === "string" && c[1] === "/stats" &&
+        c[2]?.body?.brandId === "brand-1"
+    );
+    // Per-brand calls should have x-org-id set to the brand's org
+    for (const call of statsCallsWithBrand) {
+      const opts = call[2] as { headers?: Record<string, string> };
+      expect(opts.headers?.["x-org-id"]).toBe("org-1");
+    }
+  });
 });

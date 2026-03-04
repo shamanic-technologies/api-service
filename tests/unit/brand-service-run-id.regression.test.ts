@@ -70,7 +70,7 @@ describe("all brand-service calls include internal headers", () => {
     // and enrichWithDeliveryStats → all downstream service calls.
     expect(src).toContain("buildInternalHeaders(req)");
     expect(src).toContain("buildLeaderboardData(headers)");
-    expect(src).toContain("enrichWithDeliveryStats(data, orgIds, headers)");
+    expect(src).toContain("enrichWithDeliveryStats(data, orgIds, headers, brandOrgMap)");
   });
 });
 
