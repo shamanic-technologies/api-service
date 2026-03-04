@@ -18,8 +18,24 @@ describe("Auth middleware — Bearer key authentication", () => {
   });
 });
 
+describe("Auth middleware — admin key authentication", () => {
+  it("should check Bearer token against ADMIN_DISTRIBUTE_API_KEY env var", () => {
+    expect(content).toContain("ADMIN_DISTRIBUTE_API_KEY");
+    expect(content).toContain("process.env.ADMIN_DISTRIBUTE_API_KEY");
+  });
+
+  it("should set authType to admin for admin key", () => {
+    expect(content).toContain('"admin"');
+  });
+
+  it("should resolve external IDs via client-service for admin requests", () => {
+    expect(content).toContain("Admin identity resolution");
+    expect(content).toContain("resolveExternalIds");
+  });
+});
+
 describe("Auth middleware — key-service validation", () => {
-  it("should validate keys via key-service /validate using callExternalService", () => {
+  it("should validate client keys via key-service /validate using callExternalService", () => {
     expect(content).toContain("/validate");
     expect(content).toContain("externalServices.key");
     expect(content).toContain("callExternalService");
@@ -59,11 +75,10 @@ describe("Auth middleware — app key identity resolution", () => {
   it("should resolve external IDs via client-service POST /resolve", () => {
     expect(content).toContain('"/resolve"');
     expect(content).toContain("externalServices.client");
-    expect(content).toContain("method: \"POST\"");
+    expect(content).toContain('method: "POST"');
   });
 
   it("should send externalOrgId and externalUserId to client-service (no appId in resolve body)", () => {
-    // appId should not appear in the /resolve call body or the AuthenticatedRequest interface
     expect(content).not.toContain("req.appId");
     expect(content).not.toContain("appId?: string");
     expect(content).toContain("externalOrgId");
