@@ -840,18 +840,27 @@
           },
           "configured": {
             "type": "boolean",
-            "description": "Whether the org has a key configured for this provider"
+            "description": "Whether a key is available for this provider (via platform or org key)"
           },
           "maskedKey": {
             "type": "string",
             "nullable": true,
-            "description": "Masked key value, or null if not configured"
+            "description": "Masked org key value, or null if not configured"
+          },
+          "keySource": {
+            "type": "string",
+            "enum": [
+              "org",
+              "platform"
+            ],
+            "description": "Key source preference: 'platform' (default) or 'org' (BYOK)"
           }
         },
         "required": [
           "provider",
           "configured",
-          "maskedKey"
+          "maskedKey",
+          "keySource"
         ]
       },
       "WorkflowKeyStatusResponse": {
@@ -4331,7 +4340,7 @@
           "Workflows"
         ],
         "summary": "Get key status for a workflow",
-        "description": "Compares the workflow's required providers against the org's configured BYOK keys. Returns which keys are present and which are missing, along with an overall readiness flag.",
+        "description": "Compares the workflow's required providers against the org's key configuration, taking into account key source preferences (platform vs org). Providers using platform keys are always ready. Returns which keys are present and which are missing, along with an overall readiness flag.",
         "security": [
           {
             "bearerAuth": []
