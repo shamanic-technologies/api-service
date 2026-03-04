@@ -106,7 +106,9 @@ export async function callExternalService<T>(
       } catch {
         errorMessage = `Service call failed: ${response.status} - ${errorText}`;
       }
-      throw new Error(errorMessage);
+      const err = new Error(errorMessage) as Error & { statusCode: number };
+      err.statusCode = response.status;
+      throw err;
     }
 
     return response.json();

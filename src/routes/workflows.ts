@@ -329,7 +329,7 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
     res.json(result);
   } catch (error: any) {
     console.error("Generate workflow error:", error.message);
-    const status = error.message?.includes("422") ? 422 : 500;
+    const status = error.statusCode === 422 || error.message?.includes("422") ? 422 : 500;
     res.status(status).json({ error: error.message || "Failed to generate workflow" });
   }
 });
