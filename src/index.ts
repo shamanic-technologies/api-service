@@ -108,7 +108,7 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 });
 
 // Listen on :: for Railway private networking (IPv4 & IPv6 support)
-app.listen(Number(PORT), "::", () => {
+const server = app.listen(Number(PORT), "::", () => {
   console.log(`API Gateway running on port ${PORT}`);
   registerPlatformKeys().catch((err) => {
     console.error("[api-service] FATAL: Platform key registration failed:", err.message);
@@ -116,4 +116,26 @@ app.listen(Number(PORT), "::", () => {
   });
 });
 
+// ── Graceful shutdown ─────────────────────────────────────────────────────────
+// Railway sends SIGTERM before stopping a container. Without this handler,
+// the process dies immediately — killing in-flight requests and causing 500s.
+// We stop accepting new connections and let existing ones drain.
+const SHUTDOWN_TIMEOUT_MS = 8_000; // Railway sends SIGKILL after ~10s
+
+function gracefulShutdown(signal: string) {
+  console.log(`[shutdown] Received ${signal}, draining connections…`);
+  server.close(() => {
+    console.log("[shutdown] All connections drained, exiting.");
+    process.exit(0);
+  });
+  setTimeout(() => {
+    console.error("[shutdown] Drain timeout reached, forcing exit.");
+    process.exit(1);
+  }, SHUTDOWN_TIMEOUT_MS).unref();
+}
+
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+
+export { server };
 export default app;
