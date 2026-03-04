@@ -18,11 +18,12 @@ interface WorkflowProviders {
  * Fetch requiredProviders for a single workflow by ID from workflow-service.
  * Returns an empty array on failure (best-effort enrichment).
  */
-async function fetchRequiredProviders(workflowId: string): Promise<string[]> {
+async function fetchRequiredProviders(workflowId: string, headers: Record<string, string> = {}): Promise<string[]> {
   try {
     const result = await callExternalService<WorkflowProviders>(
       externalServices.workflow,
-      `/workflows/${workflowId}/required-providers`
+      `/workflows/${workflowId}/required-providers`,
+      { headers },
     );
     return result.providers ?? [];
   } catch (err) {
@@ -78,9 +79,10 @@ router.get("/workflows", authenticate, requireOrg, requireUser, async (req: Auth
     const workflows = result.workflows ?? [];
 
     // Enrich each workflow with requiredProviders in parallel
+    const internalHeaders = buildInternalHeaders(req);
     const enriched = await Promise.all(
       workflows.map(async (wf) => {
-        const requiredProviders = await fetchRequiredProviders(wf.id);
+        const requiredProviders = await fetchRequiredProviders(wf.id, internalHeaders);
         return { ...wf, requiredProviders };
       })
     );
@@ -133,7 +135,7 @@ router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, asyn
         `/workflows/${id}`,
         { headers: buildInternalHeaders(req) },
       ).then((r) => r.workflow),
-      fetchRequiredProviders(id),
+      fetchRequiredProviders(id, buildInternalHeaders(req)),
     ]);
 
     if (!workflow) {
@@ -223,9 +225,10 @@ router.get("/workflows/:id/key-status", authenticate, requireOrg, requireUser, a
   try {
     const { id } = req.params;
 
+    const internalHeaders = buildInternalHeaders(req);
     const [requiredProviders, orgKeys] = await Promise.all([
-      fetchRequiredProviders(id),
-      fetchOrgKeys(buildInternalHeaders(req)),
+      fetchRequiredProviders(id, internalHeaders),
+      fetchOrgKeys(internalHeaders),
     ]);
 
     const configuredMap = new Map(orgKeys.map((k) => [k.provider, k.maskedKey]));
@@ -276,7 +279,7 @@ router.get("/workflows/:id", authenticate, requireOrg, requireUser, async (req: 
         `/workflows/${id}`,
         { headers: buildInternalHeaders(req) },
       ),
-      fetchRequiredProviders(id),
+      fetchRequiredProviders(id, buildInternalHeaders(req)),
     ]);
 
     const wfObj = workflow as { workflow?: Record<string, unknown> };
