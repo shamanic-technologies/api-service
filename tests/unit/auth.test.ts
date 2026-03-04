@@ -34,8 +34,8 @@ describe("Auth middleware — admin key authentication", () => {
   });
 });
 
-describe("Auth middleware — key-service validation", () => {
-  it("should validate client keys via key-service /validate using callExternalService", () => {
+describe("Auth middleware — key-service validation (user keys only)", () => {
+  it("should validate user keys via key-service /validate using callExternalService", () => {
     expect(content).toContain("/validate");
     expect(content).toContain("externalServices.key");
     expect(content).toContain("callExternalService");
@@ -46,43 +46,27 @@ describe("Auth middleware — key-service validation", () => {
     expect(content).toContain("encodeURIComponent(apiKey)");
   });
 
-  it("should distinguish app keys from user keys", () => {
-    expect(content).toContain('"app"');
-    expect(content).toContain('"user"');
-    expect(content).toContain("validation.type");
+  it("should not have app_key auth type", () => {
+    expect(content).not.toContain('"app_key"');
+    expect(content).not.toContain("app_key");
   });
 });
 
-describe("Auth middleware — app key identity resolution", () => {
+describe("Auth middleware — identity resolution", () => {
   it("should read external IDs from x-org-id and x-user-id headers", () => {
     expect(content).toContain('"x-org-id"');
     expect(content).toContain('"x-user-id"');
   });
 
-  it("should make x-org-id and x-user-id optional for app keys", () => {
-    expect(content).not.toContain("App key authentication requires x-org-id and x-user-id headers");
-  });
-
-  it("should NOT set appId on the request (appId removed from interface)", () => {
+  it("should NOT set appId on the request", () => {
     expect(content).not.toContain("req.appId");
     expect(content).not.toContain("appId?: string");
-  });
-
-  it("should only resolve external IDs when both headers are provided", () => {
-    expect(content).toContain("if (externalOrgId && externalUserId)");
   });
 
   it("should resolve external IDs via client-service POST /resolve", () => {
     expect(content).toContain('"/resolve"');
     expect(content).toContain("externalServices.client");
     expect(content).toContain('method: "POST"');
-  });
-
-  it("should send externalOrgId and externalUserId to client-service (no appId in resolve body)", () => {
-    expect(content).not.toContain("req.appId");
-    expect(content).not.toContain("appId?: string");
-    expect(content).toContain("externalOrgId");
-    expect(content).toContain("externalUserId");
   });
 
   it("should return 502 when identity resolution fails", () => {
@@ -93,14 +77,6 @@ describe("Auth middleware — app key identity resolution", () => {
   it("should return 502 when identity resolution returns incomplete data", () => {
     expect(content).toContain("Identity resolution returned incomplete data");
     expect(content).toContain("!resolved.orgId || !resolved.userId");
-  });
-
-  it("should warn when only one identity header is provided", () => {
-    expect(content).toContain("App key request has only one identity header");
-  });
-
-  it("should set authType to app_key for app key authentication", () => {
-    expect(content).toContain('"app_key"');
   });
 });
 

@@ -319,7 +319,7 @@ describe("Stripe catalog endpoints — app key without org context", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     // Simulate app key with NO org/user context
-    mockAuthContext = { orgId: undefined, userId: undefined, authType: "app_key" };
+    mockAuthContext = { orgId: undefined, userId: undefined, authType: "admin" };
     mockFetchOk({ id: "prod_123", name: "Webinar Access" });
     appKeyApp = createApp();
   });

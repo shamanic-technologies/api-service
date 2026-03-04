@@ -14,7 +14,7 @@ let fetchCalls: FetchCall[] = [];
 let mockAuth = {
   userId: "user_test123",
   orgId: "org_test456",
-  authType: "user_key" as "user_key" | "app_key",
+  authType: "user_key" as "user_key" | "admin",
 };
 
 vi.mock("../../src/middleware/auth.js", () => ({

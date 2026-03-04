@@ -59,7 +59,6 @@ describe("Auth middleware — admin key", () => {
   });
 
   it("should authenticate with admin key and resolve external IDs via client-service", async () => {
-    // Admin key matches env var → client-service /resolve called
     mockCall.mockResolvedValueOnce({
       orgId: "org-uuid-123",
       userId: "user-uuid-456",
@@ -102,7 +101,6 @@ describe("Auth middleware — admin key", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ orgId: null, userId: null, authType: "admin" });
-    // No external calls at all
     expect(mockCall).not.toHaveBeenCalled();
   });
 
@@ -131,129 +129,6 @@ describe("Auth middleware — admin key", () => {
   });
 });
 
-describe("Auth middleware — app key with identity headers", () => {
-  let app: express.Express;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    process.env.ADMIN_DISTRIBUTE_API_KEY = ADMIN_KEY;
-    app = createApp();
-  });
-
-  it("should resolve external IDs to internal UUIDs via client-service", async () => {
-    // First call: key-service /validate (via callExternalService)
-    mockCall.mockResolvedValueOnce({
-      valid: true, type: "app",
-    });
-    // Second call: client-service /resolve (via callExternalService)
-    mockCall.mockResolvedValueOnce({
-      orgId: "org-uuid-123",
-      userId: "user-uuid-456",
-      orgCreated: false,
-      userCreated: false,
-    });
-
-    const res = await request(app)
-      .get("/v1/workflows")
-      .set("Authorization", "Bearer mcpf_app_test123")
-      .set("x-org-id", "org_2clerkOrg")
-      .set("x-user-id", "user_2clerkUser");
-
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({
-      orgId: "org-uuid-123",
-      userId: "user-uuid-456",
-      authType: "app_key",
-    });
-
-    // Verify callExternalService was called for /validate with ?key= query param
-    expect(mockCall).toHaveBeenCalledTimes(2);
-    expect(mockCall).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ url: "http://key-service" }),
-      "/validate?key=mcpf_app_test123",
-    );
-
-    // Verify client-service was called with correct body
-    expect(mockCall).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ url: "http://client-service" }),
-      "/resolve",
-      {
-        method: "POST",
-        body: {
-          externalOrgId: "org_2clerkOrg",
-          externalUserId: "user_2clerkUser",
-        },
-      },
-    );
-  });
-
-  it("should return 400 from requireOrg when identity headers are missing", async () => {
-    mockCall.mockResolvedValueOnce({ valid: true, type: "app" });
-
-    const res = await request(app)
-      .get("/v1/workflows")
-      .set("Authorization", "Bearer mcpf_app_test123");
-    // No x-org-id or x-user-id headers
-
-    expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Organization context required");
-  });
-
-  it("should return 502 when client-service resolution fails", async () => {
-    mockCall.mockResolvedValueOnce({ valid: true, type: "app" });
-    mockCall.mockRejectedValueOnce(new Error("Connection refused"));
-
-    const res = await request(app)
-      .get("/v1/workflows")
-      .set("Authorization", "Bearer mcpf_app_test123")
-      .set("x-org-id", "org_2clerkOrg")
-      .set("x-user-id", "user_2clerkUser");
-
-    expect(res.status).toBe(502);
-    expect(res.body.error).toBe("Identity resolution failed");
-  });
-
-  it("should return 502 when client-service returns empty orgId", async () => {
-    mockCall.mockResolvedValueOnce({ valid: true, type: "app" });
-    mockCall.mockResolvedValueOnce({ orgId: null, userId: null });
-
-    const res = await request(app)
-      .get("/v1/workflows")
-      .set("Authorization", "Bearer mcpf_app_test123")
-      .set("x-org-id", "org_2clerkOrg")
-      .set("x-user-id", "user_2clerkUser");
-
-    expect(res.status).toBe(502);
-    expect(res.body.error).toBe("Identity resolution returned incomplete data");
-  });
-
-  it("should allow /v1/me without identity headers for app keys", async () => {
-    mockCall.mockResolvedValueOnce({ valid: true, type: "app" });
-
-    const res = await request(app)
-      .get("/v1/me")
-      .set("Authorization", "Bearer mcpf_app_test123");
-
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual({ orgId: null, userId: null, authType: "app_key" });
-  });
-
-  it("should return 400 when only x-org-id is provided without x-user-id", async () => {
-    mockCall.mockResolvedValueOnce({ valid: true, type: "app" });
-
-    const res = await request(app)
-      .get("/v1/workflows")
-      .set("Authorization", "Bearer mcpf_app_test123")
-      .set("x-org-id", "org_2clerkOrg");
-    // No x-user-id → resolution skipped → requireOrg fires
-
-    expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Organization context required");
-  });
-});
-
 describe("Auth middleware — user key", () => {
   let app: express.Express;
 
@@ -266,7 +141,6 @@ describe("Auth middleware — user key", () => {
   it("should set orgId, userId from key-service without client-service call", async () => {
     mockCall.mockResolvedValueOnce({
       valid: true,
-      type: "user",
       orgId: "org-uuid-direct",
       userId: "user-uuid-direct",
     });
@@ -285,7 +159,6 @@ describe("Auth middleware — user key", () => {
   it("should pass requireOrg and requireUser when user key carries full identity", async () => {
     mockCall.mockResolvedValueOnce({
       valid: true,
-      type: "user",
       orgId: "org-uuid-direct",
       userId: "user-uuid-direct",
     });
@@ -339,7 +212,6 @@ describe("Auth middleware — error cases", () => {
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe("Invalid API key");
-    // Only one callExternalService call for /validate
     expect(mockCall).toHaveBeenCalledTimes(1);
   });
 });
