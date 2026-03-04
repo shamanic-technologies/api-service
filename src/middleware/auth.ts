@@ -90,7 +90,9 @@ export async function authenticate(
         // Auto-close the run when the response finishes
         res.on("finish", () => {
           const status = res.statusCode < 400 ? "completed" : "failed";
-          updateRun(run.id, status, req.orgId).catch((e: unknown) =>
+          const headers: Record<string, string> = {};
+          if (req.userId) headers["x-user-id"] = req.userId;
+          updateRun(run.id, status, req.orgId, headers).catch((e: unknown) =>
             console.warn("[auth] Failed to update run:", (e as Error).message)
           );
         });

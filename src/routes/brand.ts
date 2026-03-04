@@ -24,6 +24,7 @@ router.post("/brand/scrape", authenticate, async (req: AuthenticatedRequest, res
       "/scrape",
       {
         method: "POST",
+        headers: buildInternalHeaders(req),
         body: {
           url,
           sourceService: "api-service",
@@ -350,7 +351,7 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
     const runIds = runs.map((r) => r.id);
     let runMap = new Map<string, RunWithCosts>();
     try {
-      runMap = await getRunsBatch(runIds, req.orgId);
+      runMap = await getRunsBatch(runIds, req.orgId, buildInternalHeaders(req));
     } catch (err) {
       console.warn("Failed to fetch run costs for brand runs:", err);
     }
