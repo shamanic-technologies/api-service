@@ -454,10 +454,16 @@ async function fetchAllBrands(headers: Record<string, string> = {}): Promise<{
   orgIds: string[];
 }> {
   // Get all org IDs from brand-service
-  const resp = await callExternalService<{ organization_ids: string[] }>(
-    externalServices.brand, "/org-ids", { headers }
-  );
-  const orgIds = resp.organization_ids || [];
+  let orgIds: string[];
+  try {
+    const resp = await callExternalService<{ organization_ids: string[] }>(
+      externalServices.brand, "/org-ids", { headers }
+    );
+    orgIds = resp.organization_ids || [];
+  } catch (err) {
+    console.warn("[leaderboard] Failed to fetch org-ids from brand-service:", (err as Error).message);
+    return { brands: [], orgIds: [] };
+  }
 
   if (orgIds.length === 0) return { brands: [], orgIds: [] };
 
