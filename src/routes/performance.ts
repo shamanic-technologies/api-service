@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { authenticate, AuthenticatedRequest } from "../middleware/auth.js";
+import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { getWorkflowCategory, getWorkflowDisplayName, getSectionKey, getSignatureName, SECTION_LABELS, type WorkflowCategory } from "@distribute/content";
 
 const router = Router();
@@ -448,13 +449,13 @@ async function enrichWithDeliveryStats(data: LeaderboardData, orgIds: string[]):
 
 /** Get all brands across all orgs from brand-service.
  *  This is more reliable than /campaigns/list which only returns ongoing campaigns. */
-async function fetchAllBrands(): Promise<{
+async function fetchAllBrands(headers: Record<string, string> = {}): Promise<{
   brands: Array<{ id: string; domain: string | null; name: string | null; brandUrl: string | null }>;
   orgIds: string[];
 }> {
   // Get all org IDs from brand-service
   const resp = await callExternalService<{ organization_ids: string[] }>(
-    externalServices.brand, "/org-ids"
+    externalServices.brand, "/org-ids", { headers }
   );
   const orgIds = resp.organization_ids || [];
 
@@ -466,7 +467,7 @@ async function fetchAllBrands(): Promise<{
       try {
         const { brands } = await callExternalService<{
           brands: Array<{ id: string; domain: string | null; name: string | null; brandUrl: string | null }>;
-        }>(externalServices.brand, `/brands?orgId=${encodeURIComponent(orgId)}`);
+        }>(externalServices.brand, `/brands?orgId=${encodeURIComponent(orgId)}`, { headers });
         return brands || [];
       } catch {
         return [];
@@ -500,10 +501,10 @@ interface RunsStatsGroup {
 
 /** Build leaderboard data from brand-service + runs-service public endpoint.
  *  Uses brand-service for brands, runs-service for costs + workflows. */
-async function buildLeaderboardData(): Promise<{ data: LeaderboardData; orgIds: string[] }> {
+async function buildLeaderboardData(headers: Record<string, string> = {}): Promise<{ data: LeaderboardData; orgIds: string[] }> {
   // 1. Get brands + workflow stats + brand costs in parallel
   const [{ brands: allBrands, orgIds }, workflowStatsResult, brandCosts] = await Promise.all([
-    fetchAllBrands(),
+    fetchAllBrands(headers),
     // Workflow stats from runs-service public endpoint
     callExternalService<{ groups: RunsStatsGroup[] }>(
       externalServices.runs,
@@ -617,7 +618,7 @@ function buildCategorySections(data: LeaderboardData): CategorySection[] {
 
 router.get("/performance/leaderboard", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
-    const { data, orgIds } = await buildLeaderboardData();
+    const { data, orgIds } = await buildLeaderboardData(buildInternalHeaders(req));
 
     // Enrich with delivery stats (instantly-service for workflows, email-gateway for brands)
     try {
