@@ -61,6 +61,14 @@ export async function authenticate(
 
         req.orgId = resolved.orgId;
         req.userId = resolved.userId;
+      } else if (externalUserId) {
+        // Admin with user context only (e.g. cross-org leaderboard)
+        const userId = await resolveExternalUserId(externalUserId);
+        if (userId) req.userId = userId;
+      } else if (externalOrgId) {
+        // Admin with org context only
+        const orgId = await resolveExternalOrgId(externalOrgId);
+        if (orgId) req.orgId = orgId;
       }
       // Admin without org/user context is valid (e.g. listing all orgs)
 
@@ -155,6 +163,40 @@ async function resolveExternalIds(
     return result;
   } catch (error) {
     console.error("[auth] Failed to resolve external IDs:", (error as Error).message);
+    return null;
+  }
+}
+
+/**
+ * Resolve a single external user ID to internal UUID via client-service.
+ * Used for admin requests with user context but no org context (cross-org views).
+ */
+async function resolveExternalUserId(externalUserId: string): Promise<string | null> {
+  try {
+    const result = await callExternalService<{ user: { id: string } }>(
+      externalServices.client,
+      `/users/by-clerk/${encodeURIComponent(externalUserId)}`
+    );
+    return result.user?.id || null;
+  } catch (error) {
+    console.error("[auth] Failed to resolve external user ID:", (error as Error).message);
+    return null;
+  }
+}
+
+/**
+ * Resolve a single external org ID to internal UUID via client-service.
+ * Used for admin requests with org context but no user context.
+ */
+async function resolveExternalOrgId(externalOrgId: string): Promise<string | null> {
+  try {
+    const result = await callExternalService<{ org: { id: string } }>(
+      externalServices.client,
+      `/orgs/by-clerk/${encodeURIComponent(externalOrgId)}`
+    );
+    return result.org?.id || null;
+  } catch (error) {
+    console.error("[auth] Failed to resolve external org ID:", (error as Error).message);
     return null;
   }
 }
