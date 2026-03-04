@@ -38,7 +38,7 @@ router.post("/brand/scrape", authenticate, async (req: AuthenticatedRequest, res
     res.json(result);
   } catch (error: any) {
     console.error("Brand scrape error:", error.message);
-    res.status(500).json({ error: error.message || "Failed to scrape brand" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to scrape brand" });
   }
 });
 
@@ -70,7 +70,7 @@ router.post("/brands", authenticate, requireOrg, requireUser, async (req: Authen
     res.json(result);
   } catch (error: any) {
     console.error("Brand upsert error:", error.message);
-    res.status(500).json({ error: error.message || "Failed to upsert brand" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to upsert brand" });
   }
 });
 
@@ -97,7 +97,7 @@ router.get("/brand/by-url", authenticate, async (req: AuthenticatedRequest, res)
     res.json(result);
   } catch (error: any) {
     console.error("Get brand error:", error);
-    res.status(500).json({ error: error.message || "Failed to get brand" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand" });
   }
 });
 
@@ -117,7 +117,7 @@ router.get("/brands", authenticate, requireOrg, requireUser, async (req: Authent
     res.json(result);
   } catch (error: any) {
     console.error("Get brands error:", error);
-    res.status(500).json({ error: error.message || "Failed to get brands" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brands" });
   }
 });
 
@@ -135,7 +135,7 @@ router.get("/brands/:id", authenticate, async (req: AuthenticatedRequest, res) =
     res.json(result);
   } catch (error: any) {
     console.error("Get brand by id error:", error);
-    res.status(500).json({ error: error.message || "Failed to get brand" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand" });
   }
 });
 
@@ -253,7 +253,7 @@ router.post("/brand/icp-suggestion", authenticate, requireOrg, requireUser, asyn
         error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
       });
     }
-    res.status(500).json({ error: msg });
+    res.status(error.statusCode || 500).json({ error: msg });
   }
 });
 
@@ -291,7 +291,7 @@ router.get("/brands/costs", authenticate, requireOrg, requireUser, async (req: A
     res.json({ costs });
   } catch (error: any) {
     console.error("Get brands costs error:", error);
-    res.status(500).json({ error: error.message || "Failed to get brands costs" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brands costs" });
   }
 });
 
@@ -322,7 +322,7 @@ router.get("/brands/:id/cost-breakdown", authenticate, requireOrg, requireUser, 
     res.json({ costs: data.costs || [] });
   } catch (error: any) {
     console.error("Get brand cost breakdown error:", error);
-    res.status(500).json({ error: error.message || "Failed to get brand cost breakdown" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand cost breakdown" });
   }
 });
 
@@ -380,7 +380,7 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
     res.json({ runs: enriched });
   } catch (error: any) {
     console.error("Get brand runs error:", error);
-    res.status(500).json({ error: error.message || "Failed to get brand runs" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand runs" });
   }
 });
 
@@ -401,7 +401,7 @@ router.get("/brand/:id", authenticate, async (req: AuthenticatedRequest, res) =>
     res.json(result);
   } catch (error: any) {
     console.error("Get brand error:", error);
-    res.status(500).json({ error: error.message || "Failed to get brand" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand" });
   }
 });
 
