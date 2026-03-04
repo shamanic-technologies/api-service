@@ -66,11 +66,11 @@ describe("all brand-service calls include internal headers", () => {
     );
 
     // The route handler builds headers from the request and threads them through
-    // buildLeaderboardData → fetchAllBrands → callExternalService(brand, …, { headers })
-    // and enrichWithDeliveryStats → all downstream service calls.
+    // buildLeaderboardData → fetchAllBrands → callExternalService(brand, …, { headers }).
+    // Stats calls use public endpoints (no identity headers).
     expect(src).toContain("buildInternalHeaders(req)");
     expect(src).toContain("buildLeaderboardData(headers)");
-    expect(src).toContain("enrichWithDeliveryStats(data, orgIds, headers, brandOrgMap)");
+    expect(src).toContain("enrichWithDeliveryStats(data)");
   });
 });
 

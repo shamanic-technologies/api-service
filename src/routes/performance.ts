@@ -121,18 +121,18 @@ function toBroadcastDeliveryStats(b: BroadcastStatsResponse | undefined | null):
   };
 }
 
-/** Fetch broadcast delivery stats from email-gateway.
+/** Fetch broadcast delivery stats from email-gateway (public endpoint, no identity headers).
  *  Only uses broadcast stats (outreach emails).
  *  Transactional stats are transactional/test emails — not relevant. */
-async function fetchBroadcastDeliveryStats(filters: Record<string, string>, headers: Record<string, string> = {}): Promise<DeliveryStats> {
+async function fetchBroadcastDeliveryStats(filters: Record<string, string>): Promise<DeliveryStats> {
   try {
     const result = await callExternalService<{
       transactional: BroadcastStatsResponse;
       broadcast: BroadcastStatsResponse;
     }>(
       externalServices.emailGateway,
-      "/stats",
-      { method: "POST", body: filters, headers }
+      "/stats/public",
+      { method: "POST", body: filters }
     );
 
     return toBroadcastDeliveryStats(result.broadcast);
@@ -141,15 +141,15 @@ async function fetchBroadcastDeliveryStats(filters: Record<string, string>, head
   }
 }
 
-/** Fetch broadcast delivery stats grouped by workflow name. Returns a map of workflowName → stats. */
-async function fetchWorkflowDeliveryStats(headers: Record<string, string> = {}): Promise<Map<string, DeliveryStats>> {
+/** Fetch broadcast delivery stats grouped by workflow name (public endpoint, no identity headers). */
+async function fetchWorkflowDeliveryStats(): Promise<Map<string, DeliveryStats>> {
   try {
     const result = await callExternalService<{
       groups: Array<{ key: string; broadcast: BroadcastStatsResponse }>;
     }>(
       externalServices.emailGateway,
-      "/stats",
-      { method: "POST", body: { type: "broadcast", groupBy: "workflowName" }, headers }
+      "/stats/public",
+      { method: "POST", body: { type: "broadcast", groupBy: "workflowName" } }
     );
 
     const map = new Map<string, DeliveryStats>();
@@ -192,44 +192,27 @@ function instantlyGroupToDeliveryStats(s: InstantlyGroupStats): DeliveryStats {
   };
 }
 
-/** Fetch run IDs grouped by workflow name across all orgs from runs-service. */
-async function fetchRunIdsByWorkflow(orgIds: string[], headers: Record<string, string> = {}): Promise<Record<string, string[]>> {
-  if (orgIds.length === 0) {
-    console.warn(`[leaderboard] fetchRunIdsByWorkflow skipped: orgIds=0`);
+/** Fetch run IDs grouped by workflow name from runs-service (public endpoint, no identity headers). */
+async function fetchRunIdsByWorkflow(): Promise<Record<string, string[]>> {
+  try {
+    const result = await callExternalService<{ groups: Record<string, string[]> }>(
+      externalServices.runs,
+      "/v1/stats/public/run-ids-by-workflow"
+    );
+    const totalRunIds = Object.values(result.groups || {}).reduce((s, ids) => s + ids.length, 0);
+    if (totalRunIds === 0) {
+      console.warn("[leaderboard] fetchRunIdsByWorkflow returned 0 run IDs");
+    }
+    return result.groups || {};
+  } catch (err) {
+    console.warn("[leaderboard] run-ids-by-workflow failed:", (err as Error).message);
     return {};
   }
-
-  const merged: Record<string, string[]> = {};
-
-  await Promise.all(
-    orgIds.map(async (orgId) => {
-      try {
-        const result = await callExternalService<{ groups: Record<string, string[]> }>(
-          externalServices.runs,
-          `/v1/stats/run-ids-by-workflow?orgId=${encodeURIComponent(orgId)}`,
-          { headers: { ...headers, "x-org-id": orgId } }
-        );
-        for (const [workflowName, runIds] of Object.entries(result.groups || {})) {
-          if (!merged[workflowName]) merged[workflowName] = [];
-          merged[workflowName].push(...runIds);
-        }
-      } catch (err) {
-        console.warn(`[leaderboard] run-ids-by-workflow failed for orgId=${orgId}:`, (err as Error).message);
-      }
-    })
-  );
-
-  const totalRunIds = Object.values(merged).reduce((s, ids) => s + ids.length, 0);
-  if (totalRunIds === 0) {
-    console.warn(`[leaderboard] fetchRunIdsByWorkflow returned 0 run IDs across ${orgIds.length} orgs`);
-  }
-  return merged;
 }
 
-/** Fetch grouped stats from instantly-service via POST /stats/grouped. */
+/** Fetch grouped stats from instantly-service via POST /stats/grouped/public (no identity headers). */
 async function fetchInstantlyGroupedStats(
-  runIdsByWorkflow: Record<string, string[]>,
-  headers: Record<string, string> = {}
+  runIdsByWorkflow: Record<string, string[]>
 ): Promise<Map<string, { stats: DeliveryStats; recipients: number }>> {
   const groups: Record<string, { runIds: string[] }> = {};
   for (const [workflowName, runIds] of Object.entries(runIdsByWorkflow)) {
@@ -249,8 +232,8 @@ async function fetchInstantlyGroupedStats(
       }>;
     }>(
       externalServices.instantly,
-      "/stats/grouped",
-      { method: "POST", body: { groups }, headers }
+      "/stats/grouped/public",
+      { method: "POST", body: { groups } }
     );
 
     const map = new Map<string, { stats: DeliveryStats; recipients: number }>();
@@ -269,21 +252,20 @@ async function fetchInstantlyGroupedStats(
   }
 }
 
-/** Fetch aggregate stats from instantly-service for an appId (all orgs combined).
+/** Fetch aggregate stats from instantly-service (public endpoint, no identity headers).
  *  Used as fallback when per-workflow run-id grouping fails. */
-async function fetchInstantlyAggregateStats(headers: Record<string, string> = {}): Promise<DeliveryStats> {
+async function fetchInstantlyAggregateStats(): Promise<DeliveryStats> {
   try {
     const result = await callExternalService<{
       stats: InstantlyGroupStats;
       recipients: number;
     }>(
       externalServices.instantly,
-      "/stats",
-      { method: "POST", body: {}, headers }
+      "/stats/public",
+      { method: "POST", body: {} }
     );
     return instantlyGroupToDeliveryStats(result.stats);
-  } catch (err) {
-    console.warn("[leaderboard] instantly aggregate stats failed:", (err as Error).message);
+  } catch {
     return EMPTY_STATS;
   }
 }
@@ -330,24 +312,22 @@ function applyStatsToWorkflow(wf: WorkflowEntry, stats: DeliveryStats) {
  * Workflows: instantly-service via run-ids-by-workflow → POST /stats/grouped,
  *   with email-gateway groupBy as fallback, then proportional distribution.
  */
-async function enrichWithDeliveryStats(data: LeaderboardData, orgIds: string[], headers: Record<string, string> = {}, brandOrgMap: Map<string, string> = new Map()): Promise<void> {
+async function enrichWithDeliveryStats(data: LeaderboardData): Promise<void> {
   // Fetch per-brand stats (email-gateway) + workflow stats (instantly-service) in parallel
   const [, instantlyResults] = await Promise.all([
-    // Per-brand stats (email-gateway, unchanged)
+    // Per-brand stats (email-gateway public endpoint)
     Promise.all(
       data.brands.map(async (brand) => {
         if (!brand.brandId) return;
-        const brandOrgId = brandOrgMap.get(brand.brandId);
-        const brandHeaders = brandOrgId ? { ...headers, "x-org-id": brandOrgId } : headers;
-        const stats = await fetchBroadcastDeliveryStats({ brandId: brand.brandId }, brandHeaders);
+        const stats = await fetchBroadcastDeliveryStats({ brandId: brand.brandId });
         if (stats.emailsSent === 0) return;
         applyStatsToBrand(brand, stats);
       })
     ),
-    // Workflow stats via instantly-service (run-ids-by-workflow → POST /stats/grouped)
+    // Workflow stats via instantly-service (run-ids-by-workflow → POST /stats/grouped/public)
     (async () => {
-      const runIdsByWorkflow = await fetchRunIdsByWorkflow(orgIds, headers);
-      return fetchInstantlyGroupedStats(runIdsByWorkflow, headers);
+      const runIdsByWorkflow = await fetchRunIdsByWorkflow();
+      return fetchInstantlyGroupedStats(runIdsByWorkflow);
     })(),
   ]);
 
@@ -362,14 +342,14 @@ async function enrichWithDeliveryStats(data: LeaderboardData, orgIds: string[], 
     }
   }
   if (!anyWorkflowEnriched && data.workflows.length > 0) {
-    console.warn(`[leaderboard] instantly per-workflow path returned no data (orgIds=${orgIds.length})`);
+    console.warn("[leaderboard] instantly per-workflow path returned no data");
   }
 
   // Fallback 1: instantly aggregate stats distributed proportionally across workflows.
   // This catches cases where run-ids-by-workflow fails (org ID mismatch, auth issue)
   // but instantly-service still has aggregate data.
   if (!anyWorkflowEnriched && data.workflows.length > 0) {
-    const instantlyAggregate = await fetchInstantlyAggregateStats(headers);
+    const instantlyAggregate = await fetchInstantlyAggregateStats();
     if (instantlyAggregate.emailsSent > 0) {
       console.warn("[leaderboard] using instantly aggregate fallback (proportional distribution)");
       const totalCost = data.workflows.reduce((s, w) => s + w.totalCostUsdCents, 0);
@@ -396,7 +376,7 @@ async function enrichWithDeliveryStats(data: LeaderboardData, orgIds: string[], 
   // Fallback 2: email-gateway groupBy (for workflows not covered by instantly)
   if (!anyWorkflowEnriched && data.workflows.length > 0) {
     console.warn("[leaderboard] falling back to email-gateway groupBy");
-    const workflowStatsMap = await fetchWorkflowDeliveryStats(headers);
+    const workflowStatsMap = await fetchWorkflowDeliveryStats();
     for (const wf of data.workflows) {
       const stats = workflowStatsMap.get(wf.workflowName);
       if (stats && stats.emailsSent > 0) {
@@ -409,7 +389,7 @@ async function enrichWithDeliveryStats(data: LeaderboardData, orgIds: string[], 
   // Fallback 3: proportional distribution from aggregate email-gateway stats
   if (!anyWorkflowEnriched && data.workflows.length > 0) {
     console.warn("[leaderboard] falling back to email-gateway aggregate (proportional distribution)");
-    const aggregateStats = await fetchBroadcastDeliveryStats({}, headers);
+    const aggregateStats = await fetchBroadcastDeliveryStats({});
     if (aggregateStats.emailsSent > 0) {
       const totalCost = data.workflows.reduce((s, w) => s + w.totalCostUsdCents, 0);
       if (totalCost > 0) {
@@ -453,11 +433,9 @@ async function enrichWithDeliveryStats(data: LeaderboardData, orgIds: string[], 
 
 /** Get all brands across all orgs from brand-service.
  *  This is more reliable than /campaigns/list which only returns ongoing campaigns. */
-async function fetchAllBrands(headers: Record<string, string> = {}): Promise<{
-  brands: Array<{ id: string; domain: string | null; name: string | null; brandUrl: string | null }>;
-  orgIds: string[];
-  brandOrgMap: Map<string, string>;
-}> {
+async function fetchAllBrands(headers: Record<string, string> = {}): Promise<
+  Array<{ id: string; domain: string | null; name: string | null; brandUrl: string | null }>
+> {
   // Get all org IDs from brand-service
   let orgIds: string[];
   try {
@@ -467,10 +445,10 @@ async function fetchAllBrands(headers: Record<string, string> = {}): Promise<{
     orgIds = resp.organization_ids || [];
   } catch (err) {
     console.warn("[leaderboard] Failed to fetch org-ids from brand-service:", (err as Error).message);
-    return { brands: [], orgIds: [], brandOrgMap: new Map() };
+    return [];
   }
 
-  if (orgIds.length === 0) return { brands: [], orgIds: [], brandOrgMap: new Map() };
+  if (orgIds.length === 0) return [];
 
   // Fetch brands for each org in parallel
   const brandArrays = await Promise.all(
@@ -479,28 +457,25 @@ async function fetchAllBrands(headers: Record<string, string> = {}): Promise<{
         const { brands } = await callExternalService<{
           brands: Array<{ id: string; domain: string | null; name: string | null; brandUrl: string | null }>;
         }>(externalServices.brand, `/brands?orgId=${encodeURIComponent(orgId)}`, { headers: { ...headers, "x-org-id": orgId } });
-        return (brands || []).map((b) => ({ ...b, _orgId: orgId }));
+        return brands || [];
       } catch {
         return [];
       }
     })
   );
 
-  // Deduplicate by brand ID and build brandId → orgId map
+  // Deduplicate by brand ID
   const seen = new Set<string>();
   const allBrands: Array<{ id: string; domain: string | null; name: string | null; brandUrl: string | null }> = [];
-  const brandOrgMap = new Map<string, string>();
   for (const arr of brandArrays) {
     for (const b of arr) {
       if (!seen.has(b.id)) {
         seen.add(b.id);
-        const { _orgId, ...brand } = b;
-        allBrands.push(brand);
-        brandOrgMap.set(b.id, _orgId);
+        allBrands.push(b);
       }
     }
   }
-  return { brands: allBrands, orgIds, brandOrgMap };
+  return allBrands;
 }
 
 /** Response shape from runs-service /v1/stats/public/leaderboard (costs are strings). */
@@ -515,9 +490,9 @@ interface RunsStatsGroup {
 
 /** Build leaderboard data from brand-service + runs-service public endpoint.
  *  Uses brand-service for brands, runs-service for costs + workflows. */
-async function buildLeaderboardData(headers: Record<string, string> = {}): Promise<{ data: LeaderboardData; orgIds: string[]; brandOrgMap: Map<string, string> }> {
+async function buildLeaderboardData(headers: Record<string, string> = {}): Promise<{ data: LeaderboardData }> {
   // 1. Get brands + workflow stats + brand costs in parallel
-  const [{ brands: allBrands, orgIds, brandOrgMap }, workflowStatsResult, brandCosts] = await Promise.all([
+  const [allBrands, workflowStatsResult, brandCosts] = await Promise.all([
     fetchAllBrands(headers),
     // Workflow stats from runs-service public endpoint
     callExternalService<{ groups: RunsStatsGroup[] }>(
@@ -581,8 +556,6 @@ async function buildLeaderboardData(headers: Record<string, string> = {}): Promi
 
   return {
     data: { brands, workflows, hero: null, updatedAt: new Date().toISOString(), availableCategories, categorySections: [] },
-    orgIds,
-    brandOrgMap,
   };
 }
 
@@ -636,11 +609,11 @@ function buildCategorySections(data: LeaderboardData): CategorySection[] {
 router.get("/performance/leaderboard", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const headers = buildInternalHeaders(req);
-    const { data, orgIds, brandOrgMap } = await buildLeaderboardData(headers);
+    const { data } = await buildLeaderboardData(headers);
 
     // Enrich with delivery stats (instantly-service for workflows, email-gateway for brands)
     try {
-      await enrichWithDeliveryStats(data, orgIds, headers, brandOrgMap);
+      await enrichWithDeliveryStats(data);
     } catch (err) {
       console.warn("Failed to enrich leaderboard with delivery stats:", err);
     }
