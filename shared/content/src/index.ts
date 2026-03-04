@@ -26,6 +26,7 @@ export {
   WORKFLOW_DEFINITIONS,
   getWorkflowDefinition,
   getWorkflowDefinitionsByCategory,
+  getWorkflowDefinitionsByTag,
   WORKFLOW_CATEGORY_LABELS,
   SECTION_LABELS,
   parseWorkflowName,
