@@ -252,74 +252,96 @@ describe("GET /v1/workflows/:id/summary", () => {
 describe("GET /v1/workflows/:id/key-status", () => {
   let app: express.Express;
 
-  beforeEach(() => {
-    vi.restoreAllMocks();
-    fetchCalls = [];
+  /** Helper to build a fetch mock with configurable key sources */
+  function buildFetchMock(opts: {
+    requiredProviders?: string[];
+    orgKeys?: Array<{ provider: string; maskedKey: string }>;
+    keySources?: Array<{ provider: string; keySource: "org" | "platform" }>;
+    workflowName?: string;
+  } = {}) {
+    const {
+      requiredProviders = ["apollo", "anthropic", "instantly"],
+      orgKeys = [
+        { provider: "apollo", maskedKey: "apol...123" },
+        { provider: "anthropic", maskedKey: "sk-...abc" },
+      ],
+      keySources = [],
+      workflowName = "sales-email-cold-outreach-v1",
+    } = opts;
 
-    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+    return vi.fn().mockImplementation(async (url: string) => {
       fetchCalls.push({ url });
 
       if (url.includes("/required-providers")) {
-        return {
-          ok: true,
-          json: () => Promise.resolve({ providers: ["apollo", "anthropic", "instantly"] }),
-        };
+        return { ok: true, json: () => Promise.resolve({ providers: requiredProviders }) };
+      }
+      if (url.includes("/keys/sources")) {
+        return { ok: true, json: () => Promise.resolve({ sources: keySources }) };
       }
       if (url.match(/\/keys$/) || url.includes("/keys?")) {
-        return {
-          ok: true,
-          json: () =>
-            Promise.resolve({
-              keys: [
-                { provider: "apollo", maskedKey: "apol...123" },
-                { provider: "anthropic", maskedKey: "sk-...abc" },
-              ],
-            }),
-        };
+        return { ok: true, json: () => Promise.resolve({ keys: orgKeys }) };
       }
       if (url.match(/\/workflows\/wf-1$/)) {
-        return {
-          ok: true,
-          json: () => Promise.resolve({ workflow: { name: "sales-email-cold-outreach-v1" } }),
-        };
+        return { ok: true, json: () => Promise.resolve({ workflow: { name: workflowName } }) };
       }
       return { ok: true, json: () => Promise.resolve({}) };
     });
+  }
 
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    fetchCalls = [];
+    global.fetch = buildFetchMock();
     app = createApp();
   });
 
-  it("should return key status with missing providers", async () => {
+  it("should return key status with missing providers (org source, no key)", async () => {
+    // All providers use org keys, but instantly has no key configured
+    global.fetch = buildFetchMock({
+      keySources: [
+        { provider: "apollo", keySource: "org" },
+        { provider: "anthropic", keySource: "org" },
+        { provider: "instantly", keySource: "org" },
+      ],
+    });
+    app = createApp();
+
     const res = await request(app).get("/v1/workflows/wf-1/key-status");
 
     expect(res.status).toBe(200);
     expect(res.body.workflowName).toBe("sales-email-cold-outreach-v1");
     expect(res.body.ready).toBe(false);
     expect(res.body.keys).toHaveLength(3);
-    expect(res.body.keys).toContainEqual({ provider: "apollo", configured: true, maskedKey: "apol...123" });
-    expect(res.body.keys).toContainEqual({ provider: "anthropic", configured: true, maskedKey: "sk-...abc" });
-    expect(res.body.keys).toContainEqual({ provider: "instantly", configured: false, maskedKey: null });
+    expect(res.body.keys).toContainEqual({ provider: "apollo", configured: true, maskedKey: "apol...123", keySource: "org" });
+    expect(res.body.keys).toContainEqual({ provider: "anthropic", configured: true, maskedKey: "sk-...abc", keySource: "org" });
+    expect(res.body.keys).toContainEqual({ provider: "instantly", configured: false, maskedKey: null, keySource: "org" });
     expect(res.body.missing).toEqual(["instantly"]);
   });
 
-  it("should return ready=true when all keys are configured", async () => {
-    global.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (url.includes("/required-providers")) {
-        return { ok: true, json: () => Promise.resolve({ providers: ["apollo"] }) };
-      }
-      if (url.match(/\/keys$/) || url.includes("/keys?")) {
-        return {
-          ok: true,
-          json: () => Promise.resolve({ keys: [{ provider: "apollo", maskedKey: "apol...123" }] }),
-        };
-      }
-      if (url.match(/\/workflows\/wf-1$/)) {
-        return {
-          ok: true,
-          json: () => Promise.resolve({ workflow: { name: "simple-flow" } }),
-        };
-      }
-      return { ok: true, json: () => Promise.resolve({}) };
+  it("should return ready=true when all providers use platform keys (default)", async () => {
+    // No key sources set → all default to platform → always ready
+    global.fetch = buildFetchMock({
+      requiredProviders: ["anthropic", "apollo"],
+      orgKeys: [], // No org keys configured
+      keySources: [], // Defaults to platform
+    });
+    app = createApp();
+
+    const res = await request(app).get("/v1/workflows/wf-1/key-status");
+
+    expect(res.status).toBe(200);
+    expect(res.body.ready).toBe(true);
+    expect(res.body.missing).toEqual([]);
+    expect(res.body.keys).toContainEqual({ provider: "anthropic", configured: true, maskedKey: null, keySource: "platform" });
+    expect(res.body.keys).toContainEqual({ provider: "apollo", configured: true, maskedKey: null, keySource: "platform" });
+  });
+
+  it("should return ready=true when all org-source keys are configured", async () => {
+    global.fetch = buildFetchMock({
+      requiredProviders: ["apollo"],
+      orgKeys: [{ provider: "apollo", maskedKey: "apol...123" }],
+      keySources: [{ provider: "apollo", keySource: "org" }],
+      workflowName: "simple-flow",
     });
     app = createApp();
 
@@ -330,12 +352,68 @@ describe("GET /v1/workflows/:id/key-status", () => {
     expect(res.body.missing).toEqual([]);
   });
 
+  it("should handle mixed key sources correctly", async () => {
+    // anthropic uses platform (ready), instantly uses org but has no key (missing)
+    global.fetch = buildFetchMock({
+      requiredProviders: ["anthropic", "instantly"],
+      orgKeys: [],
+      keySources: [
+        { provider: "instantly", keySource: "org" },
+        // anthropic not listed → defaults to platform
+      ],
+    });
+    app = createApp();
+
+    const res = await request(app).get("/v1/workflows/wf-1/key-status");
+
+    expect(res.status).toBe(200);
+    expect(res.body.ready).toBe(false);
+    expect(res.body.keys).toContainEqual({ provider: "anthropic", configured: true, maskedKey: null, keySource: "platform" });
+    expect(res.body.keys).toContainEqual({ provider: "instantly", configured: false, maskedKey: null, keySource: "org" });
+    expect(res.body.missing).toEqual(["instantly"]);
+  });
+
+  it("should fetch key sources from /keys/sources", async () => {
+    await request(app).get("/v1/workflows/wf-1/key-status");
+
+    const sourcesCall = fetchCalls.find((c) => c.url.includes("/keys/sources"));
+    expect(sourcesCall).toBeDefined();
+  });
+
   it("should fetch org keys via /keys without orgId in query (uses headers)", async () => {
     await request(app).get("/v1/workflows/wf-1/key-status");
 
-    const keysCall = fetchCalls.find((c) => c.url.match(/\/keys$/));
+    const keysCall = fetchCalls.find((c) => c.url.match(/\/keys$/) && !c.url.includes("/keys/sources"));
     expect(keysCall).toBeDefined();
     expect(keysCall!.url).not.toContain("keySource");
     expect(keysCall!.url).not.toContain("orgId");
+  });
+
+  it("should gracefully handle key sources fetch failure (default to platform)", async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      fetchCalls.push({ url });
+
+      if (url.includes("/required-providers")) {
+        return { ok: true, json: () => Promise.resolve({ providers: ["anthropic"] }) };
+      }
+      if (url.includes("/keys/sources")) {
+        return { ok: false, text: () => Promise.resolve("Internal error") };
+      }
+      if (url.match(/\/keys$/) || url.includes("/keys?")) {
+        return { ok: true, json: () => Promise.resolve({ keys: [] }) };
+      }
+      if (url.match(/\/workflows\/wf-1$/)) {
+        return { ok: true, json: () => Promise.resolve({ workflow: { name: "test-flow" } }) };
+      }
+      return { ok: true, json: () => Promise.resolve({}) };
+    });
+    app = createApp();
+
+    const res = await request(app).get("/v1/workflows/wf-1/key-status");
+
+    // Should default to platform → configured = true
+    expect(res.status).toBe(200);
+    expect(res.body.ready).toBe(true);
+    expect(res.body.keys).toContainEqual({ provider: "anthropic", configured: true, maskedKey: null, keySource: "platform" });
   });
 });

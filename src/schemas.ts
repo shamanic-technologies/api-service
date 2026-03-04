@@ -1142,8 +1142,9 @@ registry.registerPath({
 export const WorkflowKeyStatusItemSchema = z
   .object({
     provider: z.string().describe("Provider name (e.g. 'apollo', 'anthropic')"),
-    configured: z.boolean().describe("Whether the org has a key configured for this provider"),
-    maskedKey: z.string().nullable().describe("Masked key value, or null if not configured"),
+    configured: z.boolean().describe("Whether a key is available for this provider (via platform or org key)"),
+    maskedKey: z.string().nullable().describe("Masked org key value, or null if not configured"),
+    keySource: z.enum(["org", "platform"]).describe("Key source preference: 'platform' (default) or 'org' (BYOK)"),
   })
   .openapi("WorkflowKeyStatusItem");
 
@@ -1162,7 +1163,9 @@ registry.registerPath({
   tags: ["Workflows"],
   summary: "Get key status for a workflow",
   description:
-    "Compares the workflow's required providers against the org's configured BYOK keys. " +
+    "Compares the workflow's required providers against the org's key configuration, " +
+    "taking into account key source preferences (platform vs org). " +
+    "Providers using platform keys are always ready. " +
     "Returns which keys are present and which are missing, along with an overall readiness flag.",
   security: authed,
   request: {

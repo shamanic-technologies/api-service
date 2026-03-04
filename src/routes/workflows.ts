@@ -51,6 +51,29 @@ async function fetchOrgKeys(headers: Record<string, string>): Promise<KeyItem[]>
   return result.keys ?? [];
 }
 
+interface KeySourceItem {
+  provider: string;
+  keySource: "org" | "platform";
+}
+
+/**
+ * Fetch the org's key source preferences from key-service.
+ * Providers not listed default to "platform".
+ */
+async function fetchKeySources(headers: Record<string, string>): Promise<KeySourceItem[]> {
+  try {
+    const result = await callExternalService<{ sources: KeySourceItem[] }>(
+      externalServices.key,
+      "/keys/sources",
+      { headers },
+    );
+    return result.sources ?? [];
+  } catch (err) {
+    console.warn("[workflows] Failed to fetch key sources:", (err as Error).message);
+    return [];
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
@@ -226,18 +249,27 @@ router.get("/workflows/:id/key-status", authenticate, requireOrg, requireUser, a
     const { id } = req.params;
 
     const internalHeaders = buildInternalHeaders(req);
-    const [requiredProviders, orgKeys] = await Promise.all([
+    const [requiredProviders, orgKeys, keySources] = await Promise.all([
       fetchRequiredProviders(id, internalHeaders),
       fetchOrgKeys(internalHeaders),
+      fetchKeySources(internalHeaders),
     ]);
 
     const configuredMap = new Map(orgKeys.map((k) => [k.provider, k.maskedKey]));
+    const sourceMap = new Map(keySources.map((s) => [s.provider, s.keySource]));
 
-    const keys = requiredProviders.map((provider) => ({
-      provider,
-      configured: configuredMap.has(provider),
-      maskedKey: configuredMap.get(provider) ?? null,
-    }));
+    const keys = requiredProviders.map((provider) => {
+      const keySource = sourceMap.get(provider) ?? "platform";
+      const hasOrgKey = configuredMap.has(provider);
+      // Platform keys are always available; org keys must be explicitly configured
+      const configured = keySource === "platform" || hasOrgKey;
+      return {
+        provider,
+        configured,
+        maskedKey: configuredMap.get(provider) ?? null,
+        keySource,
+      };
+    });
 
     const missing = keys.filter((k) => !k.configured).map((k) => k.provider);
 
@@ -337,6 +369,6 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
 // ---------------------------------------------------------------------------
 // Exported helpers
 // ---------------------------------------------------------------------------
-export { fetchRequiredProviders, fetchOrgKeys };
+export { fetchRequiredProviders, fetchOrgKeys, fetchKeySources };
 
 export default router;
