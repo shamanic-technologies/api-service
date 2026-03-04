@@ -17,6 +17,12 @@ export {
 export type { Feature, Step, FaqItem, SupportedClient, ByokProvider } from "./features.js";
 export { BRAND } from "./brand.js";
 export {
+  OUTCOME_DEFINITIONS,
+  OUTCOME_LABELS,
+  getOutcomeDefinition,
+} from "./outcomes.js";
+export type { OutcomeType, OutcomeDefinition } from "./outcomes.js";
+export {
   WORKFLOW_DEFINITIONS,
   getWorkflowDefinition,
   getWorkflowDefinitionsByCategory,

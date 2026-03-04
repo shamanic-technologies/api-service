@@ -26,6 +26,7 @@ describe("WORKFLOW_DEFINITIONS", () => {
       expect(wf.channel).toBeTruthy();
       expect(wf.audienceType).toBeTruthy();
       expect(wf.icon).toBeTruthy();
+      expect(wf.targetOutcomes.length).toBeGreaterThanOrEqual(1);
     }
   });
 
