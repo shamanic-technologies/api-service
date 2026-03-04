@@ -90,6 +90,11 @@ describe("Auth middleware — admin key", () => {
           externalOrgId: "org_2clerkOrg",
           externalUserId: "user_2clerkUser",
         },
+        headers: {
+          "x-run-id": "auth",
+          "x-org-id": "auth",
+          "x-user-id": "auth",
+        },
       },
     );
   });
