@@ -159,7 +159,7 @@ router.get("/brands/:id/sales-profile", authenticate, async (req: AuthenticatedR
     );
     res.json(result);
   } catch (error: any) {
-    if (error.message?.includes("404")) {
+    if (error.statusCode === 404 || error.message?.includes("404")) {
       return res.status(404).json({ error: "Sales profile not found" });
     }
     console.error("Get brand sales profile error:", error);
