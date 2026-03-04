@@ -750,6 +750,69 @@ router.get("/campaigns/:id/emails", authenticate, requireOrg, requireUser, async
 });
 
 /**
+ * GET /v1/campaigns/:id/replies
+ * Get email replies for a campaign, grouped by lead email.
+ * Returns only leads who have at least one reply, with reply type breakdown.
+ */
+router.get("/campaigns/:id/replies", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await callExternalService<{
+      groups: Array<{
+        key: string;
+        broadcast: {
+          emailsReplied: number;
+          repliesWillingToMeet: number;
+          repliesInterested: number;
+          repliesNotInterested: number;
+          repliesOutOfOffice: number;
+          repliesUnsubscribe: number;
+        } | null;
+      }>;
+    }>(
+      externalServices.emailGateway,
+      "/stats",
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body: { campaignId: id, orgId: req.orgId, groupBy: "leadEmail" },
+      }
+    );
+
+    const replies = (result.groups || [])
+      .filter((g) => {
+        const b = g.broadcast;
+        return b && (
+          (b.emailsReplied || 0) > 0 ||
+          (b.repliesWillingToMeet || 0) > 0 ||
+          (b.repliesInterested || 0) > 0 ||
+          (b.repliesNotInterested || 0) > 0 ||
+          (b.repliesOutOfOffice || 0) > 0 ||
+          (b.repliesUnsubscribe || 0) > 0
+        );
+      })
+      .map((g) => {
+        const b = g.broadcast!;
+        return {
+          email: g.key,
+          emailsReplied: b.emailsReplied || 0,
+          repliesWillingToMeet: b.repliesWillingToMeet || 0,
+          repliesInterested: b.repliesInterested || 0,
+          repliesNotInterested: b.repliesNotInterested || 0,
+          repliesOutOfOffice: b.repliesOutOfOffice || 0,
+          repliesUnsubscribe: b.repliesUnsubscribe || 0,
+        };
+      });
+
+    res.json({ replies });
+  } catch (error: any) {
+    console.error("Get campaign replies error:", error);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get campaign replies" });
+  }
+});
+
+/**
  * GET /v1/brands/:brandId/delivery-stats
  * Get delivery stats for all campaigns under a brand (single email-gateway call)
  */
