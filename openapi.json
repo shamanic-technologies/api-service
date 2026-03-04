@@ -131,8 +131,8 @@
           "authType": {
             "type": "string",
             "enum": [
-              "app_key",
-              "user_key"
+              "user_key",
+              "admin"
             ]
           }
         }

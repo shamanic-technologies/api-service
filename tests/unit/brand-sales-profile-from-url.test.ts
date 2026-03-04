@@ -16,7 +16,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
-    req.authType = "app_key";
+    req.authType = "admin";
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {

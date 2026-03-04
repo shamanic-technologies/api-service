@@ -6,7 +6,7 @@ export interface AuthenticatedRequest extends Request {
   userId?: string;
   orgId?: string;
   runId?: string;
-  authType?: "app_key" | "user_key" | "admin";
+  authType?: "user_key" | "admin";
 }
 
 /**
@@ -15,9 +15,7 @@ export interface AuthenticatedRequest extends Request {
  * 1. Admin key → Bearer token matches ADMIN_DISTRIBUTE_API_KEY env var (dashboard).
  *    External Clerk IDs from x-org-id / x-user-id are resolved via client-service.
  *
- * 2. Client key → Bearer token validated via key-service.
- *    - App key (distrib.app_*): external IDs from x-org-id/x-user-id resolved via client-service.
- *    - User key (distrib.usr_*): identity comes from the key itself.
+ * 2. User key (distrib.usr_*) → validated via key-service. Identity comes from the key itself.
  */
 export async function authenticate(
   req: AuthenticatedRequest,
@@ -67,53 +65,15 @@ export async function authenticate(
       // Admin without org/user context is valid (e.g. listing all orgs)
 
     } else {
-      // ── Path 2: Client auth via key-service ──
+      // ── Path 2: User key auth via key-service ──
       const validation = await validateKey(key);
       if (!validation) {
         return res.status(401).json({ error: "Invalid API key" });
       }
 
-      if (validation.type === "app") {
-        req.authType = "app_key";
-
-        const externalOrgId = req.headers["x-org-id"] as string | undefined;
-        const externalUserId = req.headers["x-user-id"] as string | undefined;
-
-        if (externalOrgId && externalUserId) {
-          const resolved = await resolveExternalIds(externalOrgId, externalUserId);
-
-          if (!resolved) {
-            console.error("[auth] Identity resolution returned null", {
-              externalOrgId,
-              externalUserId,
-            });
-            return res.status(502).json({ error: "Identity resolution failed" });
-          }
-
-          if (!resolved.orgId || !resolved.userId) {
-            console.error("[auth] Identity resolution returned empty IDs", {
-              resolved,
-              externalOrgId,
-              externalUserId,
-            });
-            return res.status(502).json({ error: "Identity resolution returned incomplete data" });
-          }
-
-          req.orgId = resolved.orgId;
-          req.userId = resolved.userId;
-        } else if (externalOrgId || externalUserId) {
-          console.warn("[auth] App key request has only one identity header", {
-            hasOrgId: !!externalOrgId,
-            hasUserId: !!externalUserId,
-            path: req.path,
-          });
-        }
-      } else {
-        // User key: all identity comes from the key itself
-        req.orgId = validation.orgId;
-        req.userId = validation.userId;
-        req.authType = "user_key";
-      }
+      req.orgId = validation.orgId;
+      req.userId = validation.userId;
+      req.authType = "user_key";
     }
 
     // Create a request run for tracking (best-effort — don't block if runs-service is down)
@@ -147,19 +107,15 @@ export async function authenticate(
 }
 
 /**
- * Validate API key against key-service /validate
- *
- * Uses callExternalService (X-API-Key auth) with the key passed as ?key= query param.
+ * Validate user API key against key-service /validate
  */
 async function validateKey(apiKey: string): Promise<{
-  type: "app" | "user";
   orgId?: string;
   userId?: string;
 } | null> {
   try {
     const result = await callExternalService<{
       valid: boolean;
-      type: "app" | "user";
       orgId?: string;
       userId?: string;
     }>(

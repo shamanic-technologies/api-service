@@ -155,7 +155,7 @@ registry.registerPath({
             .object({
               userId: z.string().optional(),
               orgId: z.string().optional(),
-              authType: z.enum(["app_key", "user_key"]).optional(),
+              authType: z.enum(["user_key", "admin"]).optional(),
             })
             .openapi("MeResponse"),
         },
