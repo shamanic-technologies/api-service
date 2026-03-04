@@ -19,6 +19,8 @@ export interface WorkflowDefinition {
   icon: string;
   /** Which outcomes this workflow can deliver, ordered by relevance. */
   targetOutcomes: OutcomeType[];
+  /** Free-form tags describing channels/techniques used (e.g. ["email", "linkedin"]). */
+  tags: string[];
 }
 
 export const WORKFLOW_DEFINITIONS: WorkflowDefinition[] = [
@@ -32,6 +34,7 @@ export const WORKFLOW_DEFINITIONS: WorkflowDefinition[] = [
     audienceType: "cold-outreach",
     icon: "envelope",
     targetOutcomes: ["interested-replies", "link-clicks"],
+    tags: ["email"],
   },
   {
     sectionKey: "pr-email-cold-outreach",
@@ -43,6 +46,7 @@ export const WORKFLOW_DEFINITIONS: WorkflowDefinition[] = [
     audienceType: "cold-outreach",
     icon: "newspaper",
     targetOutcomes: ["press-mentions"],
+    tags: ["email"],
   },
 ];
 
@@ -51,6 +55,9 @@ export const getWorkflowDefinition = (sectionKey: string) =>
 
 export const getWorkflowDefinitionsByCategory = (cat: WorkflowCategory) =>
   WORKFLOW_DEFINITIONS.filter((w) => w.category === cat);
+
+export const getWorkflowDefinitionsByTag = (tag: string) =>
+  WORKFLOW_DEFINITIONS.filter((w) => w.tags.includes(tag));
 
 export interface ParsedWorkflowName {
   category: WorkflowCategory;
