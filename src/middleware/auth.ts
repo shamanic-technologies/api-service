@@ -148,12 +148,6 @@ async function resolveExternalIds(
       {
         method: "POST",
         body: { externalOrgId, externalUserId },
-        // Called during auth before a run exists — pass placeholder headers
-        headers: {
-          "x-run-id": "auth",
-          "x-org-id": "auth",
-          "x-user-id": "auth",
-        },
       }
     );
     return result;
