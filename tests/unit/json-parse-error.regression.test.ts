@@ -94,14 +94,14 @@ describe("callExternalService – malformed JSON response handling", () => {
     );
   });
 
-  it("should return 500 for POST sales-profile when brand-service returns malformed JSON", async () => {
+  it("should return 500 for POST brands when brand-service returns malformed JSON", async () => {
     global.fetch = vi.fn().mockImplementation(async () => ({
       ok: true,
       json: () => Promise.reject(new SyntaxError("Unexpected end of JSON input")),
     }));
 
     const res = await request(app)
-      .post("/v1/brand/sales-profile")
+      .post("/v1/brands")
       .send({ url: "https://example.com" });
 
     expect(res.status).toBe(500);
