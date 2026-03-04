@@ -11,7 +11,7 @@ global.fetch = vi.fn().mockResolvedValue({
   json: () => Promise.resolve({}),
 });
 
-process.env.API_SERVICE_API_KEY = "test-service-secret";
+process.env.ADMIN_DISTRIBUTE_API_KEY = "test-admin-distribute-key";
 process.env.KEY_SERVICE_URL = "http://localhost:3001";
 process.env.KEY_SERVICE_API_KEY = "test-key-service-api-key";
 process.env.LEAD_SERVICE_URL = "http://localhost:3006";

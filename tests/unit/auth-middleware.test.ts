@@ -24,6 +24,8 @@ vi.mock("../../src/lib/service-client.js", () => {
 import { callExternalService } from "../../src/lib/service-client.js";
 const mockCall = vi.mocked(callExternalService);
 
+const ADMIN_KEY = "test-admin-distribute-key";
+
 function createApp() {
   const app = express();
   app.use(express.json());
@@ -47,11 +49,94 @@ function createApp() {
   return app;
 }
 
+describe("Auth middleware — admin key", () => {
+  let app: express.Express;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.ADMIN_DISTRIBUTE_API_KEY = ADMIN_KEY;
+    app = createApp();
+  });
+
+  it("should authenticate with admin key and resolve external IDs via client-service", async () => {
+    // Admin key matches env var → client-service /resolve called
+    mockCall.mockResolvedValueOnce({
+      orgId: "org-uuid-123",
+      userId: "user-uuid-456",
+      orgCreated: false,
+      userCreated: false,
+    });
+
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("Authorization", `Bearer ${ADMIN_KEY}`)
+      .set("x-org-id", "org_2clerkOrg")
+      .set("x-user-id", "user_2clerkUser");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      orgId: "org-uuid-123",
+      userId: "user-uuid-456",
+      authType: "admin",
+    });
+
+    // Only client-service /resolve called — NO key-service /validate
+    expect(mockCall).toHaveBeenCalledTimes(1);
+    expect(mockCall).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "http://client-service" }),
+      "/resolve",
+      {
+        method: "POST",
+        body: {
+          externalOrgId: "org_2clerkOrg",
+          externalUserId: "user_2clerkUser",
+        },
+      },
+    );
+  });
+
+  it("should allow admin key without org/user headers (admin-only access)", async () => {
+    const res = await request(app)
+      .get("/v1/me")
+      .set("Authorization", `Bearer ${ADMIN_KEY}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ orgId: null, userId: null, authType: "admin" });
+    // No external calls at all
+    expect(mockCall).not.toHaveBeenCalled();
+  });
+
+  it("should return 502 when client-service resolution fails for admin key", async () => {
+    mockCall.mockRejectedValueOnce(new Error("Connection refused"));
+
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("Authorization", `Bearer ${ADMIN_KEY}`)
+      .set("x-org-id", "org_2clerkOrg")
+      .set("x-user-id", "user_2clerkUser");
+
+    expect(res.status).toBe(502);
+    expect(res.body.error).toBe("Identity resolution failed");
+  });
+
+  it("should return 401 when Bearer token does not match admin key and key-service rejects it", async () => {
+    mockCall.mockResolvedValueOnce({ valid: false });
+
+    const res = await request(app)
+      .get("/v1/me")
+      .set("Authorization", "Bearer wrong-key");
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe("Invalid API key");
+  });
+});
+
 describe("Auth middleware — app key with identity headers", () => {
   let app: express.Express;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.ADMIN_DISTRIBUTE_API_KEY = ADMIN_KEY;
     app = createApp();
   });
 
@@ -174,6 +259,7 @@ describe("Auth middleware — user key", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.ADMIN_DISTRIBUTE_API_KEY = ADMIN_KEY;
     app = createApp();
   });
 
@@ -223,6 +309,7 @@ describe("Auth middleware — error cases", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    process.env.ADMIN_DISTRIBUTE_API_KEY = ADMIN_KEY;
     app = createApp();
   });
 
