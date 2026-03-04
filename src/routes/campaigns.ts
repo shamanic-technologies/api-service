@@ -163,6 +163,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       "/brands",
       {
         method: "POST",
+        headers: buildInternalHeaders(req),
         body: {
           orgId: req.orgId,
           url: brandUrl,
