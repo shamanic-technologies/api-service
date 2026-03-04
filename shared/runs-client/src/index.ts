@@ -146,11 +146,11 @@ function identityHeaders(opts: { orgId?: string; userId?: string; runId?: string
 /**
  * Create a new run in runs-service.
  */
-export async function createRun(params: CreateRunParams): Promise<Run> {
+export async function createRun(params: CreateRunParams, headers?: Record<string, string>): Promise<Run> {
   return runsRequest<Run>("/v1/runs", {
     method: "POST",
     body: params,
-    headers: identityHeaders({ orgId: params.orgId, userId: params.userId }),
+    headers: { ...identityHeaders({ orgId: params.orgId, userId: params.userId }), ...headers },
   });
 }
 
@@ -160,12 +160,13 @@ export async function createRun(params: CreateRunParams): Promise<Run> {
 export async function updateRun(
   runId: string,
   status: "completed" | "failed",
-  orgId?: string
+  orgId?: string,
+  headers?: Record<string, string>
 ): Promise<Run> {
   return runsRequest<Run>(`/v1/runs/${runId}`, {
     method: "PATCH",
     body: { status },
-    headers: identityHeaders({ orgId, runId }),
+    headers: { ...identityHeaders({ orgId, runId }), ...headers },
   });
 }
 
@@ -177,21 +178,22 @@ export async function updateRun(
 export async function addCosts(
   runId: string,
   items: CostItem[],
-  orgId?: string
+  orgId?: string,
+  headers?: Record<string, string>
 ): Promise<{ costs: RunCost[] }> {
   return runsRequest<{ costs: RunCost[] }>(`/v1/runs/${runId}/costs`, {
     method: "POST",
     body: { items },
-    headers: identityHeaders({ orgId, runId }),
+    headers: { ...identityHeaders({ orgId, runId }), ...headers },
   });
 }
 
 /**
  * Get a single run with costs (including descendant runs and their costs).
  */
-export async function getRun(runId: string, orgId?: string): Promise<RunWithCosts> {
+export async function getRun(runId: string, orgId?: string, headers?: Record<string, string>): Promise<RunWithCosts> {
   return runsRequest<RunWithCosts>(`/v1/runs/${runId}`, {
-    headers: identityHeaders({ orgId, runId }),
+    headers: { ...identityHeaders({ orgId, runId }), ...headers },
   });
 }
 
@@ -199,7 +201,8 @@ export async function getRun(runId: string, orgId?: string): Promise<RunWithCost
  * List runs with filters. Returns runs with ownCostInUsdCents.
  */
 export async function listRuns(
-  params: ListRunsParams
+  params: ListRunsParams,
+  headers?: Record<string, string>
 ): Promise<{ runs: RunWithOwnCost[]; limit: number; offset: number }> {
   const searchParams = new URLSearchParams();
   searchParams.set("orgId", params.orgId);
@@ -217,7 +220,7 @@ export async function listRuns(
 
   return runsRequest<{ runs: RunWithOwnCost[]; limit: number; offset: number }>(
     `/v1/runs?${searchParams.toString()}`,
-    { headers: identityHeaders({ orgId: params.orgId, userId: params.userId }) }
+    { headers: { ...identityHeaders({ orgId: params.orgId, userId: params.userId }), ...headers } }
   );
 }
 
@@ -227,10 +230,11 @@ export async function listRuns(
  */
 export async function getRunsBatch(
   runIds: string[],
-  orgId?: string
+  orgId?: string,
+  headers?: Record<string, string>
 ): Promise<Map<string, RunWithCosts>> {
   if (runIds.length === 0) return new Map();
-  const results = await Promise.all(runIds.map((id) => getRun(id, orgId)));
+  const results = await Promise.all(runIds.map((id) => getRun(id, orgId, headers)));
   return new Map(results.map((r) => [r.id, r]));
 }
 
@@ -238,7 +242,8 @@ export async function getRunsBatch(
  * Get aggregated cost summary.
  */
 export async function getRunSummary(
-  params: RunSummaryParams
+  params: RunSummaryParams,
+  headers?: Record<string, string>
 ): Promise<{ breakdown: SummaryBreakdown[] }> {
   const searchParams = new URLSearchParams();
   searchParams.set("organizationId", params.organizationId);
@@ -249,6 +254,6 @@ export async function getRunSummary(
 
   return runsRequest<{ breakdown: SummaryBreakdown[] }>(
     `/v1/runs/summary?${searchParams.toString()}`,
-    { headers: identityHeaders({ orgId: params.organizationId }) }
+    { headers: { ...identityHeaders({ orgId: params.organizationId }), ...headers } }
   );
 }
