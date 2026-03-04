@@ -205,6 +205,7 @@ router.post("/brand/icp-suggestion", authenticate, requireOrg, requireUser, asyn
       "/icp-suggestion",
       {
         method: "POST",
+        headers: buildInternalHeaders(req),
         body: {
           orgId: req.orgId,
           userId: req.userId,

@@ -315,6 +315,7 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
       "/workflows/generate",
       {
         method: "POST",
+        headers: buildInternalHeaders(req),
         body: {
           orgId: req.orgId,
           userId: req.userId,
