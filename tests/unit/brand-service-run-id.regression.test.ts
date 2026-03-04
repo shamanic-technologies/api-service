@@ -65,9 +65,12 @@ describe("all brand-service calls include internal headers", () => {
       "utf-8"
     );
 
-    // The route handler passes buildInternalHeaders(req) into buildLeaderboardData,
-    // which forwards headers to fetchAllBrands → callExternalService(brand, …, { headers })
-    expect(src).toContain("buildLeaderboardData(buildInternalHeaders(req))");
+    // The route handler builds headers from the request and threads them through
+    // buildLeaderboardData → fetchAllBrands → callExternalService(brand, …, { headers })
+    // and enrichWithDeliveryStats → all downstream service calls.
+    expect(src).toContain("buildInternalHeaders(req)");
+    expect(src).toContain("buildLeaderboardData(headers)");
+    expect(src).toContain("enrichWithDeliveryStats(data, orgIds, headers)");
   });
 });
 

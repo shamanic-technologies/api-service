@@ -1078,3 +1078,72 @@ describe("Regression: performance leaderboard must use broadcast-only stats", ()
     expect(content).toContain("repliesInterested mirrors emailsReplied");
   });
 });
+
+/**
+ * Regression: all callExternalService calls in the leaderboard must forward
+ * x-org-id headers. Without them, runs-service, instantly-service, and
+ * email-gateway all reject with 400 "x-org-id header is required".
+ */
+describe("leaderboard forwards x-org-id headers to all service calls", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("should pass x-org-id header on all callExternalService calls", async () => {
+    const app = createApp();
+    const brands = [
+      { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
+    ];
+    const workflowGroups: MockRunsGroup[] = [
+      { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "5000", actualCostInUsdCents: "4000", provisionedCostInUsdCents: "1000", cancelledCostInUsdCents: "0", runCount: 10 },
+    ];
+    const runIdsByWorkflow = { "sales-email-cold-outreach-sienna": ["run-1"] };
+    const instantlyGroups = [
+      { key: "sales-email-cold-outreach-sienna", stats: { emailsSent: 10, emailsOpened: 5 }, recipients: 8 },
+    ];
+
+    const baseMock = setupMocks(brands, [], workflowGroups, runIdsByWorkflow, instantlyGroups);
+    mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
+      const result = baseMock(_service, path, opts);
+      if (result !== null) return result;
+      if (path === "/stats") {
+        return Promise.resolve(makeGatewayResponse({ emailsSent: 10, emailsOpened: 5 }));
+      }
+      return Promise.resolve({});
+    });
+
+    // Simulate an authenticated request with x-org-id and x-user-id
+    const res = await request(app)
+      .get("/performance/leaderboard")
+      .set("x-org-id", "admin-org-uuid")
+      .set("x-user-id", "admin-user-uuid");
+
+    expect(res.status).toBe(200);
+
+    // Verify every callExternalService call received headers with x-org-id
+    for (const call of mockCallExternalService.mock.calls) {
+      const opts = call[2] as { headers?: Record<string, string> } | undefined;
+      // /org-ids is an internal endpoint that may not need org headers (admin scope)
+      // but all other calls must have headers
+      if (call[1] !== "/org-ids") {
+        expect(opts?.headers).toBeDefined();
+      }
+    }
+
+    // Specifically verify run-ids-by-workflow passes the per-org x-org-id
+    const runIdsCalls = mockCallExternalService.mock.calls.filter(
+      (c: any) => typeof c[1] === "string" && c[1].includes("/v1/stats/run-ids-by-workflow")
+    );
+    expect(runIdsCalls.length).toBeGreaterThan(0);
+    for (const call of runIdsCalls) {
+      const opts = call[2] as { headers?: Record<string, string> };
+      expect(opts.headers?.["x-org-id"]).toBeDefined();
+      // x-org-id should be the org being queried (from orgIds), not the admin's org
+      expect(opts.headers?.["x-org-id"]).toBe("org-1");
+    }
+  });
+});
