@@ -20,7 +20,7 @@ import emailsRoutes from "./routes/emails.js";
 import stripeRoutes from "./routes/stripe.js";
 import usersRoutes from "./routes/users.js";
 import { apiReference } from "@scalar/express-api-reference";
-import { registerPlatformKeys, deployEmailTemplates } from "./startup.js";
+import { registerPlatformKeys } from "./startup.js";
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -113,9 +113,6 @@ const server = app.listen(Number(PORT), "::", () => {
   registerPlatformKeys().catch((err) => {
     console.error("[api-service] FATAL: Platform key registration failed:", err.message);
     process.exit(1);
-  });
-  deployEmailTemplates().catch((err) => {
-    console.error("[api-service] WARN: Email template deployment failed:", err.message);
   });
 });
 

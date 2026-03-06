@@ -30,12 +30,12 @@ describe("Transactional email service rename (lifecycle → transactionalEmail)"
     expect(activityContent).not.toContain("externalServices.lifecycle");
   });
 
-  it("should reference externalServices.transactionalEmail in campaigns route", () => {
+  it("should not reference externalServices.transactionalEmail in campaigns route (moved to dashboard)", () => {
     const campaignsContent = fs.readFileSync(
       path.join(__dirname, "../../src/routes/campaigns.ts"),
       "utf-8",
     );
-    expect(campaignsContent).toContain("externalServices.transactionalEmail");
+    expect(campaignsContent).not.toContain("externalServices.transactionalEmail");
     expect(campaignsContent).not.toContain("externalServices.lifecycle");
   });
 

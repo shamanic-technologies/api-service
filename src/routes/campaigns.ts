@@ -5,26 +5,6 @@ import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { CreateCampaignRequestSchema, BatchStatsRequestSchema } from "../schemas.js";
 
-
-function sendTransactionalEmail(
-  eventType: string,
-  req: AuthenticatedRequest,
-  { brandId, campaignId, ...metadata }: Record<string, unknown>
-) {
-  callExternalService(externalServices.transactionalEmail, "/send", {
-    method: "POST",
-    headers: buildInternalHeaders(req),
-    body: {
-      eventType,
-      brandId,
-      campaignId,
-      orgId: req.orgId,
-      userId: req.userId,
-      metadata,
-    },
-  }).catch((err) => console.warn(`[campaigns] Transactional email ${eventType} failed:`, err.message));
-}
-
 const router = Router();
 
 interface EmailGatewayStats {
@@ -209,17 +189,6 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       status: (result as any).campaign?.status,
     });
 
-    // Fire-and-forget transactional email
-    const campaign = (result as any).campaign;
-    if (campaign?.brandId && campaign?.id) {
-      console.log("[api-service] POST /v1/campaigns \u2014 step 4: sending transactional email campaign_created");
-      sendTransactionalEmail("campaign_created", req, {
-        brandId: campaign.brandId,
-        campaignId: campaign.id,
-        campaignName: parsed.data.name || campaign.name,
-      });
-    }
-
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] POST /v1/campaigns \u2014 FAILED:", error.message, error.stack);
@@ -290,17 +259,6 @@ router.post("/campaigns/:id/stop", authenticate, requireOrg, requireUser, async 
         body: { status: "stop" },
       }
     );
-
-    const campaign = (result as any).campaign;
-
-    // Fire-and-forget transactional email
-    if (campaign?.brandId) {
-      sendTransactionalEmail("campaign_stopped", req, {
-        brandId: campaign.brandId,
-        campaignId: id,
-        campaignName: campaign?.name,
-      });
-    }
 
     res.json(result);
   } catch (error: any) {
