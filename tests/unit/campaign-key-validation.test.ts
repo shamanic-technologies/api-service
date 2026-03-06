@@ -62,9 +62,6 @@ describe("POST /v1/campaigns — no gateway-level key validation", () => {
 
   it("should forward campaign creation without calling required-providers or org keys", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (url.includes("/workflows?status=all")) {
-        return { ok: true, json: () => Promise.resolve({ workflows: [{ id: "wf-1", name: "sales-email-cold-outreach-v1", status: "active", upgradedTo: null }] }) };
-      }
       if (url.includes("/brands")) return { ok: true, json: () => Promise.resolve({ brandId: "brand-123" }) };
       if (url.includes("/campaigns") && !url.includes("/workflows")) {
         return { ok: true, json: () => Promise.resolve({ campaign: { id: "camp-1", status: "ongoing" } }) };
@@ -86,9 +83,6 @@ describe("POST /v1/campaigns — no gateway-level key validation", () => {
 
   it("should not include keySource in campaign-service request body", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-      if (url.includes("/workflows?status=all")) {
-        return { ok: true, json: () => Promise.resolve({ workflows: [{ id: "wf-1", name: "sales-email-cold-outreach-v1", status: "active", upgradedTo: null }] }) };
-      }
       if (url.includes("/brands")) return { ok: true, json: () => Promise.resolve({ brandId: "brand-123" }) };
       if (url.includes("/campaigns") && !url.includes("/workflows")) {
         return { ok: true, json: () => Promise.resolve({ campaign: { id: "camp-1", status: "ongoing" } }) };

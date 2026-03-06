@@ -245,8 +245,6 @@ registry.registerPath({
       content: errorContent,
     },
     401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Workflow not found", content: errorContent },
-    410: { description: "Workflow is deprecated with no active replacement", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
