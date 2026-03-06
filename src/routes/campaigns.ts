@@ -310,17 +310,6 @@ router.post("/campaigns/:id/stop", authenticate, requireOrg, requireUser, async 
 });
 
 /**
- * POST /v1/campaigns/:id/resume
- * @deprecated — Create a new campaign instead of resuming a stopped one.
- */
-router.post("/campaigns/:id/resume", authenticate, requireOrg, requireUser, async (_req: AuthenticatedRequest, res) => {
-  res.status(410).json({
-    error:
-      "This endpoint has been deprecated. Please create a new campaign instead of resuming a stopped one.",
-  });
-});
-
-/**
  * GET /v1/campaigns/:id/runs
  * Get campaign runs/history
  */

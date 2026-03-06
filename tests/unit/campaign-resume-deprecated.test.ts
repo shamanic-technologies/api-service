@@ -36,20 +36,16 @@ function createApp() {
   return app;
 }
 
-describe("POST /v1/campaigns/:id/resume — deprecated", () => {
-  it("returns 410 Gone with deprecation message", async () => {
+describe("POST /v1/campaigns/:id/resume — removed", () => {
+  it("returns 404 (route no longer exists)", async () => {
     const app = createApp();
     const res = await request(app).post("/v1/campaigns/camp_123/resume");
-
-    expect(res.status).toBe(410);
-    expect(res.body.error).toMatch(/deprecated/i);
-    expect(res.body.error).toMatch(/new campaign/i);
+    expect(res.status).toBe(404);
   });
 
-  it("is marked deprecated in the OpenAPI spec", async () => {
+  it("is absent from the OpenAPI spec", async () => {
     const spec = await import("../../openapi.json");
     const path = spec.default.paths["/v1/campaigns/{id}/resume"];
-    expect(path).toBeDefined();
-    expect(path.post.deprecated).toBe(true);
+    expect(path).toBeUndefined();
   });
 });
