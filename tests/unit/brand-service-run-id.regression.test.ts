@@ -70,7 +70,7 @@ describe("all brand-service calls include internal headers", () => {
     // Stats calls use public endpoints (no identity headers).
     expect(src).toContain("buildInternalHeaders(req)");
     expect(src).toContain("buildLeaderboardData(headers)");
-    expect(src).toContain("enrichWithDeliveryStats(data, orgIds)");
+    expect(src).toContain("enrichWithDeliveryStats(data)");
   });
 });
 
