@@ -56,6 +56,9 @@ describe("Campaign duplicate name handling (409 Conflict)", () => {
 
   it("POST /v1/campaigns should return 409 when campaign name already exists", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes("/workflows?status=all")) {
+        return { ok: true, json: () => Promise.resolve({ workflows: [{ id: "wf-1", name: "sales-email-cold-outreach-v1", status: "active", upgradedTo: null }] }) };
+      }
       if (url.includes("/brands")) {
         return { ok: true, json: () => Promise.resolve({ brandId: "brand-123" }) };
       }

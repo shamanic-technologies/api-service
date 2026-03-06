@@ -5,6 +5,70 @@ import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { CreateCampaignRequestSchema, BatchStatsRequestSchema } from "../schemas.js";
 
+interface WorkflowListItem {
+  id: string;
+  name: string;
+  status: "active" | "deprecated";
+  upgradedTo: string | null;
+}
+
+/**
+ * Resolve a workflow name to its active replacement.
+ * If the workflow is deprecated and has an upgrade, follows the chain.
+ * Throws with statusCode 404 if not found, 410 if deprecated with no upgrade.
+ */
+async function resolveActiveWorkflowName(
+  workflowName: string,
+  headers: Record<string, string>,
+): Promise<string> {
+  const result = await callExternalService<{ workflows: WorkflowListItem[] }>(
+    externalServices.workflow,
+    "/workflows?status=all",
+    { headers },
+  );
+  const workflows = result.workflows ?? [];
+  const byName = new Map(workflows.map((w) => [w.name, w]));
+  const byId = new Map(workflows.map((w) => [w.id, w]));
+
+  const wf = byName.get(workflowName);
+  if (!wf) {
+    const err = new Error(`Workflow "${workflowName}" not found`) as Error & { statusCode: number };
+    err.statusCode = 404;
+    throw err;
+  }
+  if (wf.status === "active") return wf.name;
+
+  // Follow the upgrade chain (max 10 hops to prevent loops)
+  let current = wf;
+  for (let i = 0; i < 10; i++) {
+    if (!current.upgradedTo) {
+      const err = new Error(
+        `Workflow "${workflowName}" is deprecated with no replacement`,
+      ) as Error & { statusCode: number };
+      err.statusCode = 410;
+      throw err;
+    }
+    const next = byId.get(current.upgradedTo);
+    if (!next) {
+      const err = new Error(
+        `Workflow "${workflowName}" is deprecated; replacement not found`,
+      ) as Error & { statusCode: number };
+      err.statusCode = 410;
+      throw err;
+    }
+    if (next.status === "active") {
+      console.log(`[api-service] Workflow "${workflowName}" is deprecated, auto-resolved to "${next.name}"`);
+      return next.name;
+    }
+    current = next;
+  }
+  const err = new Error(
+    `Workflow "${workflowName}" has a circular or too-long deprecation chain`,
+  ) as Error & { statusCode: number };
+  err.statusCode = 410;
+  throw err;
+}
+
 const router = Router();
 
 interface EmailGatewayStats {
@@ -136,29 +200,36 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       maxLeads: parsed.data.maxLeads,
     });
 
-    // 1. Upsert brand to get brandId
-    console.log("[api-service] POST /v1/campaigns \u2014 step 1: upserting brand", { brandUrl, orgId: req.orgId });
-    const brandResult = await callExternalService<{ brandId: string }>(
-      externalServices.brand,
-      "/brands",
-      {
-        method: "POST",
-        headers: buildInternalHeaders(req),
-        body: {
-          orgId: req.orgId,
-          url: brandUrl,
-          userId: req.userId,
-        },
-      }
-    );
-    console.log("[api-service] POST /v1/campaigns \u2014 step 1 done: brand upserted", { brandId: brandResult.brandId });
+    // 1. Upsert brand + resolve workflow name in parallel
+    console.log("[api-service] POST /v1/campaigns \u2014 step 1: upserting brand + resolving workflow", { brandUrl, orgId: req.orgId, workflowName: parsed.data.workflowName });
+    const [brandResult, resolvedWorkflowName] = await Promise.all([
+      callExternalService<{ brandId: string }>(
+        externalServices.brand,
+        "/brands",
+        {
+          method: "POST",
+          headers: buildInternalHeaders(req),
+          body: {
+            orgId: req.orgId,
+            url: brandUrl,
+            userId: req.userId,
+          },
+        }
+      ),
+      resolveActiveWorkflowName(parsed.data.workflowName, buildInternalHeaders(req)),
+    ]);
+    console.log("[api-service] POST /v1/campaigns \u2014 step 1 done: brand upserted, workflow resolved", {
+      brandId: brandResult.brandId,
+      requestedWorkflow: parsed.data.workflowName,
+      resolvedWorkflow: resolvedWorkflowName,
+    });
 
     // 2. Forward to campaign-service (run tracking via x-run-id header)
     // Derive `type` from workflowName for campaign-service backward compat
-    const { workflowName, ...restData } = parsed.data;
+    const { workflowName: _requestedWorkflowName, ...restData } = parsed.data;
     const body: Record<string, unknown> = {
       ...restData,
-      workflowName,
+      workflowName: resolvedWorkflowName,
       type: "cold-email-outreach",
       orgId: req.orgId,
       brandId: brandResult.brandId,
@@ -885,4 +956,5 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
   });
 });
 
+export { resolveActiveWorkflowName };
 export default router;

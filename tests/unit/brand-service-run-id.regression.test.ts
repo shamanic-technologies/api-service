@@ -120,6 +120,10 @@ describe("campaign brand upsert sends internal headers", () => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
       fetchCalls.push({ url: url as string, method: init?.method || "GET", headers, body });
 
+      // Workflow resolution
+      if (typeof url === "string" && url.includes("/workflows?status=all")) {
+        return { ok: true, json: () => Promise.resolve({ workflows: [{ id: "wf-1", name: "sales-email-cold-outreach-sienna", status: "active", upgradedTo: null }] }) };
+      }
       // Brand upsert response
       if (typeof url === "string" && url.includes("/brands") && init?.method === "POST") {
         return { ok: true, json: () => Promise.resolve({ brandId: "brand_abc" }) };
