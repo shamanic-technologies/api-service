@@ -22,6 +22,18 @@ registry.registerComponent("securitySchemes", "bearerAuth", {
 
 const authed: Record<string, string[]>[] = [{ bearerAuth: [] }];
 
+registry.registerComponent("securitySchemes", "apiKeyAuth", {
+  type: "apiKey",
+  in: "header",
+  name: "X-API-Key",
+  description:
+    "Platform API key for internal/admin operations.\n\n" +
+    "Used for cold-start operations (e.g. template deployment) " +
+    "where no user session exists.",
+});
+
+const platformAuth: Record<string, string[]>[] = [{ apiKeyAuth: [] }];
+
 // ---------------------------------------------------------------------------
 // Common schemas
 // ---------------------------------------------------------------------------
@@ -1636,6 +1648,31 @@ registry.registerPath({
     "Idempotent upsert of email templates. Safe to call on every cold start. " +
     "Templates support {{variable}} interpolation from metadata passed at send time.",
   security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: DeployEmailTemplatesRequestSchema } },
+    },
+  },
+  responses: {
+    200: { description: "Templates deployed" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ── Internal (platform-level) ──
+
+registry.registerPath({
+  method: "put",
+  path: "/internal/emails/templates",
+  tags: ["Internal"],
+  summary: "Deploy email templates (platform)",
+  description:
+    "Platform-level template deployment — no identity headers required. " +
+    "Authenticated by X-API-Key only. Used at cold start when no Clerk session exists. " +
+    "Same body format as PUT /v1/emails/templates.",
+  security: platformAuth,
   request: {
     body: {
       content: { "application/json": { schema: DeployEmailTemplatesRequestSchema } },

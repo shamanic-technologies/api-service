@@ -177,6 +177,24 @@ async function resolveExternalIds(
 }
 
 /**
+ * Platform-level auth — validates X-API-Key only.
+ * No identity resolution, no run tracking.
+ * Used for platform operations at cold start (e.g. template deployment).
+ */
+export async function authenticatePlatform(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) {
+  const apiKey = req.headers["x-api-key"] as string | undefined;
+  if (!apiKey || apiKey !== process.env.ADMIN_DISTRIBUTE_API_KEY) {
+    return res.status(401).json({ error: "Invalid or missing platform API key" });
+  }
+  req.authType = "admin";
+  return next();
+}
+
+/**
  * Require organization context
  */
 export function requireOrg(

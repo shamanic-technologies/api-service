@@ -67,6 +67,7 @@ Authorization: Bearer distrib.usr_abc123...
     { name: "Activity", description: "User activity tracking" },
     { name: "Chat", description: "AI chat with SSE streaming" },
     { name: "Billing", description: "Billing, credits, and checkout" },
+    { name: "Internal", description: "Platform-level operations (API key auth, no identity headers)" },
   ],
 });
 
