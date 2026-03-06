@@ -252,23 +252,6 @@ async function fetchInstantlyGroupedStats(
   }
 }
 
-/** Fetch aggregate stats from instantly-service (public endpoint, no identity headers).
- *  Used as fallback when per-workflow run-id grouping fails. */
-async function fetchInstantlyAggregateStats(): Promise<DeliveryStats> {
-  try {
-    const result = await callExternalService<{
-      stats: InstantlyGroupStats;
-      recipients: number;
-    }>(
-      externalServices.instantly,
-      "/stats/public",
-      { method: "POST", body: {} }
-    );
-    return instantlyGroupToDeliveryStats(result.stats);
-  } catch {
-    return EMPTY_STATS;
-  }
-}
 
 function applyStatsToBrand(brand: BrandEntry, stats: DeliveryStats) {
   brand.emailsSent = stats.emailsSent;
@@ -310,7 +293,7 @@ function applyStatsToWorkflow(wf: WorkflowEntry, stats: DeliveryStats) {
  * Enrich leaderboard with delivery stats.
  * Brands: email-gateway (broadcast stats by brandId).
  * Workflows: instantly-service via run-ids-by-workflow → POST /stats/grouped,
- *   with email-gateway groupBy as fallback, then proportional distribution.
+ *   with email-gateway groupBy as fallback.
  */
 async function enrichWithDeliveryStats(data: LeaderboardData): Promise<void> {
   // Fetch per-brand stats (email-gateway) + workflow stats (instantly-service) in parallel
@@ -345,35 +328,7 @@ async function enrichWithDeliveryStats(data: LeaderboardData): Promise<void> {
     console.warn("[leaderboard] instantly per-workflow path returned no data");
   }
 
-  // Fallback 1: instantly aggregate stats distributed proportionally across workflows.
-  // This catches cases where run-ids-by-workflow fails (org ID mismatch, auth issue)
-  // but instantly-service still has aggregate data.
-  if (!anyWorkflowEnriched && data.workflows.length > 0) {
-    const instantlyAggregate = await fetchInstantlyAggregateStats();
-    if (instantlyAggregate.emailsSent > 0) {
-      console.warn("[leaderboard] using instantly aggregate fallback (proportional distribution)");
-      const totalCost = data.workflows.reduce((s, w) => s + w.totalCostUsdCents, 0);
-      if (totalCost > 0) {
-        for (const wf of data.workflows) {
-          const share = wf.totalCostUsdCents / totalCost;
-          const distributed: DeliveryStats = {
-            emailsSent: Math.round(instantlyAggregate.emailsSent * share),
-            emailsOpened: Math.round(instantlyAggregate.emailsOpened * share),
-            emailsClicked: Math.round(instantlyAggregate.emailsClicked * share),
-            emailsReplied: Math.round(instantlyAggregate.emailsReplied * share),
-            emailsBounced: Math.round(instantlyAggregate.emailsBounced * share),
-            repliesInterested: Math.round(instantlyAggregate.repliesInterested * share),
-          };
-          if (distributed.emailsSent > 0) {
-            applyStatsToWorkflow(wf, distributed);
-            anyWorkflowEnriched = true;
-          }
-        }
-      }
-    }
-  }
-
-  // Fallback 2: email-gateway groupBy (for workflows not covered by instantly)
+  // Fallback: email-gateway groupBy (for workflows not covered by instantly)
   if (!anyWorkflowEnriched && data.workflows.length > 0) {
     console.warn("[leaderboard] falling back to email-gateway groupBy");
     const workflowStatsMap = await fetchWorkflowDeliveryStats();
@@ -385,32 +340,6 @@ async function enrichWithDeliveryStats(data: LeaderboardData): Promise<void> {
       }
     }
   }
-
-  // Fallback 3: proportional distribution from aggregate email-gateway stats
-  if (!anyWorkflowEnriched && data.workflows.length > 0) {
-    console.warn("[leaderboard] falling back to email-gateway aggregate (proportional distribution)");
-    const aggregateStats = await fetchBroadcastDeliveryStats({});
-    if (aggregateStats.emailsSent > 0) {
-      const totalCost = data.workflows.reduce((s, w) => s + w.totalCostUsdCents, 0);
-      if (totalCost > 0) {
-        for (const wf of data.workflows) {
-          const share = wf.totalCostUsdCents / totalCost;
-          const distributed: DeliveryStats = {
-            emailsSent: Math.round(aggregateStats.emailsSent * share),
-            emailsOpened: Math.round(aggregateStats.emailsOpened * share),
-            emailsClicked: Math.round(aggregateStats.emailsClicked * share),
-            emailsReplied: Math.round(aggregateStats.emailsReplied * share),
-            emailsBounced: Math.round(aggregateStats.emailsBounced * share),
-            repliesInterested: Math.round(aggregateStats.repliesInterested * share),
-          };
-          if (distributed.emailsSent > 0) {
-            applyStatsToWorkflow(wf, distributed);
-          }
-        }
-      }
-    }
-  }
-
 
   // Recompute hero stats: best $/open and $/reply across brands
   const brandsWithCostPerOpen = data.brands.filter((b) => b.costPerOpenCents !== null && b.costPerOpenCents > 0);
@@ -533,7 +462,7 @@ async function buildLeaderboardData(headers: Record<string, string> = {}): Promi
     costPerOpenCents: null, costPerClickCents: null, costPerReplyCents: null,
   }));
 
-  // 3. Build workflow entries directly from runs-service data (no proportional distribution)
+  // 3. Build workflow entries directly from runs-service data
   const workflows: WorkflowEntry[] = (workflowStatsResult.groups || []).map((g) => {
       const name = g.dimensions.workflowName || "unknown";
       return {

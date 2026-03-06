@@ -12,6 +12,8 @@
  * 6. Workflows use {category}-{channel}-{audienceType}-{signatureName} naming.
  * 7. Per-workflow email stats via instantly-service POST /stats/grouped
  *    (run-ids-by-workflow → grouped stats), with email-gateway fallback.
+ * 10. Removed proportional distribution fallbacks now that runs-service
+ *     supports cross-org run-ids-by-workflow without orgId.
  * 8. emailsReplied = positive replies only (lead_interested). Auto-reply, not-interested, OOO excluded.
  * 9. Recipients count per workflow from instantly-service.
  *
@@ -463,12 +465,11 @@ describe("GET /performance/leaderboard", () => {
     expect(section.brands).toHaveLength(1);
   });
 
-  it("should fall back to email-gateway when instantly-service returns empty, then proportional", async () => {
+  it("should leave workflow stats at zero when both instantly and email-gateway return empty", async () => {
     const app = createApp();
     const brands = [
       { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
     ];
-    // Two workflows with different costs — proportional distribution should split by cost share
     const workflowGroups: MockRunsGroup[] = [
       { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "6000.0000", actualCostInUsdCents: "6000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 30 },
       { dimensions: { workflowName: "sales-email-cold-outreach-darmstadt" }, totalCostInUsdCents: "4000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 20 },
@@ -481,7 +482,7 @@ describe("GET /performance/leaderboard", () => {
       if (result !== null) return result;
       if (path === "/stats/public") {
         const body = opts?.body || {};
-        // email-gateway groupBy also returns empty — simulates old emails without workflowName
+        // email-gateway groupBy also returns empty
         if (body.groupBy === "workflowName") {
           return Promise.resolve({ groups: [] });
         }
@@ -489,11 +490,7 @@ describe("GET /performance/leaderboard", () => {
         if (body.brandId) {
           return Promise.resolve(makeGatewayResponse({ emailsSent: 100, emailsOpened: 50, emailsClicked: 10, emailsReplied: 8 }));
         }
-        // Aggregate stats (fallback)
-        return Promise.resolve(makeGatewayResponse({
-          emailsSent: 100, emailsOpened: 50, emailsClicked: 10, emailsReplied: 8,
-          repliesWillingToMeet: 3, repliesInterested: 2,
-        }));
+        return Promise.resolve(makeGatewayResponse(null));
       }
       return Promise.resolve(null);
     });
@@ -501,27 +498,15 @@ describe("GET /performance/leaderboard", () => {
     const res = await request(app).get("/performance/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
-    // Workflows should get proportional stats based on cost share (60% / 40%)
+    // Without proportional fallback, workflows should have 0 email stats
     const sienna = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-sienna");
     expect(sienna).toBeDefined();
-    expect(sienna.emailsSent).toBe(60); // 100 * 0.6
-    expect(sienna.emailsOpened).toBe(30); // 50 * 0.6
-    expect(sienna.emailsReplied).toBe(5); // Math.round(8 * 0.6)
-    expect(sienna.repliesInterested).toBe(3); // Math.round(5 * 0.6)
-    expect(sienna.openRate).toBeGreaterThan(0);
-    expect(sienna.replyRate).toBeGreaterThan(0);
-    expect(sienna.interestedRate).toBeGreaterThan(0);
+    expect(sienna.emailsSent).toBe(0);
+    expect(sienna.emailsOpened).toBe(0);
 
     const darmstadt = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-darmstadt");
     expect(darmstadt).toBeDefined();
-    expect(darmstadt.emailsSent).toBe(40); // 100 * 0.4
-    expect(darmstadt.emailsOpened).toBe(20); // 50 * 0.4
-    expect(darmstadt.emailsReplied).toBe(3); // Math.round(8 * 0.4)
-    expect(darmstadt.repliesInterested).toBe(2); // Math.round(5 * 0.4)
-
-    // Category sections should also have stats from the fallback
-    expect(res.body.categorySections.length).toBe(1);
-    expect(res.body.categorySections[0].stats.emailsSent).toBe(100); // 60 + 40
+    expect(darmstadt.emailsSent).toBe(0);
   });
 
   it("should fall back to email-gateway groupBy when instantly-service returns empty", async () => {
@@ -855,7 +840,7 @@ describe("GET /performance/leaderboard", () => {
     expect(wf.costPerReplyCents).toBe(1333); // Math.round(4000 / 3)
   });
 
-  it("should use instantly aggregate fallback when per-workflow path returns empty", async () => {
+  it("should NOT use proportional distribution — workflows get zero stats when instantly returns empty", async () => {
     const app = createApp();
     const brands = [{ id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" }];
     const workflowGroups: MockRunsGroup[] = [
@@ -863,28 +848,21 @@ describe("GET /performance/leaderboard", () => {
       { dimensions: { workflowName: "sales-email-cold-outreach-darmstadt" }, totalCostInUsdCents: "4000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 20 },
     ];
 
-    // Empty run-ids-by-workflow → empty instantly grouped → triggers aggregate fallback
+    // Empty run-ids-by-workflow → empty instantly grouped → NO proportional fallback
     const mock = setupMocks(brands, [], workflowGroups, {}, []);
     mockCallExternalService.mockImplementation((service: any, path: string, opts: any) => {
       const result = mock(service, path, opts);
       if (result !== null) return result;
 
       if (path === "/stats/public") {
-        // Distinguish instantly from email-gateway by service URL
-        if (service.url === "http://mock-instantly") {
-          // Instantly aggregate: 100 sent, 50 opened, 5 positive replies (auto-reply excluded)
-          return Promise.resolve({
-            stats: makeInstantlyStats({
-              emailsSent: 100, emailsOpened: 50, emailsClicked: 8,
-              emailsReplied: 5, repliesAutoReply: 10,
-            }),
-            recipients: 80,
-          });
-        }
         // Email-gateway per-brand stats
         const body = opts?.body || {};
         if (body.brandId) {
           return Promise.resolve(makeGatewayResponse({ emailsSent: 100, emailsOpened: 50 }));
+        }
+        // email-gateway groupBy returns empty
+        if (body.groupBy === "workflowName") {
+          return Promise.resolve({ groups: [] });
         }
         return Promise.resolve(makeGatewayResponse(null));
       }
@@ -894,20 +872,17 @@ describe("GET /performance/leaderboard", () => {
     const res = await request(app).get("/performance/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
-    // Workflows get proportional instantly aggregate stats (60%/40% split by cost)
+    // No proportional distribution — workflows have zero email stats
     const sienna = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-sienna");
     expect(sienna).toBeDefined();
-    expect(sienna.emailsSent).toBe(60); // 100 * 0.6
-    expect(sienna.emailsOpened).toBe(30); // 50 * 0.6
-    // Positive replies = 5, sienna gets 60% = 3
-    expect(sienna.emailsReplied).toBe(3); // Math.round(5 * 0.6)
-    expect(sienna.repliesInterested).toBe(3); // Math.round(5 * 0.6)
+    expect(sienna.emailsSent).toBe(0);
+    expect(sienna.emailsOpened).toBe(0);
+    expect(sienna.emailsReplied).toBe(0);
 
     const darmstadt = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-darmstadt");
     expect(darmstadt).toBeDefined();
-    expect(darmstadt.emailsSent).toBe(40); // 100 * 0.4
-    expect(darmstadt.emailsReplied).toBe(2); // Math.round(5 * 0.4)
-    expect(darmstadt.repliesInterested).toBe(2); // Math.round(5 * 0.4)
+    expect(darmstadt.emailsSent).toBe(0);
+    expect(darmstadt.emailsReplied).toBe(0);
   });
 });
 
@@ -1076,6 +1051,24 @@ describe("Regression: performance leaderboard must use broadcast-only stats", ()
     // emailsReplied IS positive replies only, repliesInterested mirrors it
     expect(content).toContain("emailsReplied IS positive replies only");
     expect(content).toContain("repliesInterested mirrors emailsReplied");
+  });
+
+  it("should NOT use proportional distribution fallbacks (cross-org data from runs-service)", () => {
+    const fs = require("fs");
+    const path = require("path");
+    const content = fs.readFileSync(
+      path.join(__dirname, "../../src/routes/performance.ts"),
+      "utf-8"
+    );
+
+    // run-ids-by-workflow is called without orgId — runs-service returns cross-org data
+    expect(content).toContain("/v1/stats/public/run-ids-by-workflow");
+    expect(content).not.toMatch(/run-ids-by-workflow\?orgId/);
+    // No proportional distribution of aggregate stats
+    expect(content).not.toContain("proportional");
+    expect(content).not.toContain("fetchInstantlyAggregateStats");
+    // email-gateway groupBy fallback is kept as a legitimate alternate source
+    expect(content).toContain("fetchWorkflowDeliveryStats");
   });
 });
 
