@@ -135,7 +135,7 @@ describe("registerPlatformKeys", () => {
 });
 
 describe("deployEmailTemplates", () => {
-  let fetchCalls: Array<{ url: string; method?: string; body?: Record<string, unknown> }>;
+  let fetchCalls: Array<{ url: string; method?: string; body?: Record<string, unknown>; headers?: Record<string, string> }>;
 
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -143,7 +143,8 @@ describe("deployEmailTemplates", () => {
 
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
-      fetchCalls.push({ url, method: init?.method, body });
+      const headers = init?.headers as Record<string, string> | undefined;
+      fetchCalls.push({ url, method: init?.method, body, headers });
 
       if (url.includes("/templates")) {
         return new Response(
@@ -241,6 +242,16 @@ describe("deployEmailTemplates", () => {
       expect(tpl.htmlBody).not.toContain("logo-horizontal.jpg");
       expect(tpl.htmlBody).not.toContain("<!DOCTYPE html>");
     }
+  });
+
+  it("should send required identity headers for template deployment", async () => {
+    await deployEmailTemplates();
+
+    const call = fetchCalls.find((c) => c.url.includes("/templates"))!;
+    expect(call.headers).toHaveProperty("x-org-id", "00000000-0000-0000-0000-000000000000");
+    expect(call.headers).toHaveProperty("x-user-id", "00000000-0000-0000-0000-000000000000");
+    expect(call.headers).toHaveProperty("x-run-id");
+    expect(call.headers!["x-run-id"]).toBeTruthy();
   });
 
   it("should throw when transactional-email-service returns an error", async () => {
