@@ -298,14 +298,16 @@ registry.registerPath({
   method: "post",
   path: "/v1/campaigns/{id}/resume",
   tags: ["Campaigns"],
-  summary: "Resume a campaign",
-  description: "Resume a stopped campaign",
+  summary: "Resume a campaign (deprecated)",
+  description:
+    "**Deprecated.** This endpoint is no longer supported. " +
+    "Create a new campaign instead of resuming a stopped one.",
+  deprecated: true,
   security: authed,
   request: { params: CampaignIdParam },
   responses: {
-    200: { description: "Resumed campaign" },
+    410: { description: "Gone — endpoint deprecated", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
   },
 });
 
