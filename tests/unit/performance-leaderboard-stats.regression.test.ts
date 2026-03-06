@@ -1128,7 +1128,7 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
       (c: any) => typeof c[1] === "string" && (
         c[1] === "/stats/public" ||
         c[1] === "/stats/grouped/public" ||
-        c[1] === "/v1/stats/public/run-ids-by-workflow"
+        (c[1] as string).startsWith("/v1/stats/public/run-ids-by-workflow")
       )
     );
     expect(publicStatsCalls.length).toBeGreaterThan(0);
@@ -1219,6 +1219,47 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
     }
   });
 
+  it("regression: run-ids-by-workflow must pass orgId as query parameter", async () => {
+    // Bug: fetchRunIdsByWorkflow called /v1/stats/public/run-ids-by-workflow without orgId,
+    // but runs-service requires orgId as a query parameter. This caused 400 errors and
+    // forced fallback to proportional distribution (lower quality data).
+    // Fix: iterate over all orgIds and pass orgId as query param per-org.
+    const app = createApp();
+    const brands = [
+      { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
+    ];
+    const workflowGroups: MockRunsGroup[] = [
+      { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "5000", actualCostInUsdCents: "5000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 10 },
+    ];
+    const runIdsByWorkflow = { "sales-email-cold-outreach-sienna": ["run-1"] };
+    const instantlyGroups = [
+      { key: "sales-email-cold-outreach-sienna", stats: { emailsSent: 10, emailsOpened: 5 }, recipients: 8 },
+    ];
+
+    const baseMock = setupMocks(brands, [], workflowGroups, runIdsByWorkflow, instantlyGroups);
+    mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
+      const result = baseMock(_service, path, opts);
+      if (result !== null) return result;
+      if (path === "/stats/public") {
+        return Promise.resolve(makeGatewayResponse({ emailsSent: 10, emailsOpened: 5 }));
+      }
+      return Promise.resolve({});
+    });
+
+    const res = await request(app).get("/performance/leaderboard");
+    expect(res.status).toBe(200);
+
+    // Verify run-ids-by-workflow was called with orgId query parameter
+    const runIdsCalls = mockCallExternalService.mock.calls.filter(
+      (c: any) => typeof c[1] === "string" && (c[1] as string).startsWith("/v1/stats/public/run-ids-by-workflow")
+    );
+    expect(runIdsCalls.length).toBeGreaterThan(0);
+    for (const call of runIdsCalls) {
+      const path = call[1] as string;
+      expect(path).toContain("orgId=");
+    }
+  });
+
   it("regression: leaderboard should succeed without identity headers (public landing page)", async () => {
     // Bug: POST /stats to email-gateway and instantly-service required x-org-id, x-user-id, x-run-id.
     // The leaderboard is called from the landing page without any user context.
@@ -1262,7 +1303,7 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
       (c: any) => typeof c[1] === "string" && (
         c[1] === "/stats/public" ||
         c[1] === "/stats/grouped/public" ||
-        c[1] === "/v1/stats/public/run-ids-by-workflow"
+        (c[1] as string).startsWith("/v1/stats/public/run-ids-by-workflow")
       )
     );
     for (const call of allStatsCalls) {
