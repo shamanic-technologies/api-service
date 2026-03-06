@@ -81,14 +81,7 @@ function makeGatewayResponse(broadcast: Record<string, number> | null) {
   };
 }
 
-function makeGroupedGatewayResponse(groups: Array<{ key: string; broadcast: Record<string, number> }>) {
-  return {
-    groups: groups.map((g) => ({
-      key: g.key,
-      broadcast: makeBroadcastStats(g.broadcast),
-    })),
-  };
-}
+
 
 function makeInstantlyStats(overrides: Partial<Record<string, number>> = {}) {
   return {
@@ -482,11 +475,6 @@ describe("GET /performance/leaderboard", () => {
       if (result !== null) return result;
       if (path === "/stats/public") {
         const body = opts?.body || {};
-        // email-gateway groupBy also returns empty
-        if (body.groupBy === "workflowName") {
-          return Promise.resolve({ groups: [] });
-        }
-        // Per-brand stats
         if (body.brandId) {
           return Promise.resolve(makeGatewayResponse({ emailsSent: 100, emailsOpened: 50, emailsClicked: 10, emailsReplied: 8 }));
         }
@@ -498,7 +486,7 @@ describe("GET /performance/leaderboard", () => {
     const res = await request(app).get("/performance/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
-    // Without proportional fallback, workflows should have 0 email stats
+    // No fallbacks — workflows stay at zero when instantly has no data
     const sienna = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-sienna");
     expect(sienna).toBeDefined();
     expect(sienna.emailsSent).toBe(0);
@@ -509,7 +497,7 @@ describe("GET /performance/leaderboard", () => {
     expect(darmstadt.emailsSent).toBe(0);
   });
 
-  it("should fall back to email-gateway groupBy when instantly-service returns empty", async () => {
+  it("should NOT fall back to email-gateway groupBy — workflows get zero stats when instantly is empty", async () => {
     const app = createApp();
     const brands = [
       { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
@@ -525,12 +513,6 @@ describe("GET /performance/leaderboard", () => {
       if (result !== null) return result;
       if (path === "/stats/public") {
         const body = opts?.body || {};
-        // email-gateway groupBy returns data (fallback 1)
-        if (body.groupBy === "workflowName") {
-          return Promise.resolve(makeGroupedGatewayResponse([
-            { key: "sales-email-cold-outreach-sienna", broadcast: { emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5, repliesWillingToMeet: 2, repliesInterested: 1 } },
-          ]));
-        }
         if (body.brandId) {
           return Promise.resolve(makeGatewayResponse({ emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5 }));
         }
@@ -544,14 +526,10 @@ describe("GET /performance/leaderboard", () => {
     expect(res.status).toBe(200);
     const sienna = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-sienna");
     expect(sienna).toBeDefined();
-    // Stats from email-gateway fallback
-    expect(sienna.emailsSent).toBe(30);
-    expect(sienna.emailsOpened).toBe(15);
-    expect(sienna.emailsReplied).toBe(5);
-    // repliesInterested from email-gateway = willingToMeet + interested
-    expect(sienna.repliesInterested).toBe(3); // 2 + 1
-    // recipients not set from email-gateway fallback
-    expect(sienna.recipients).toBe(0);
+    // No fallback — workflows stay at zero when instantly has no data
+    expect(sienna.emailsSent).toBe(0);
+    expect(sienna.emailsOpened).toBe(0);
+    expect(sienna.emailsReplied).toBe(0);
   });
 
   it("should filter out brands with no cost and no email activity", async () => {
@@ -660,7 +638,7 @@ describe("GET /performance/leaderboard", () => {
     expect(res.body.hero.bestCostPerReply.costPerReplyCents).toBe(125);
   });
 
-  it("should work without appId filter — falls back to email-gateway for workflows", async () => {
+  it("should work without appId filter — runs-service called without appId", async () => {
     const app = createApp();
     const brands = [
       { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
@@ -672,7 +650,6 @@ describe("GET /performance/leaderboard", () => {
       { dimensions: { brandId: "brand-1" }, totalCostInUsdCents: "5000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "1000.0000", cancelledCostInUsdCents: "0", runCount: 10 },
     ];
 
-    // No appId → fetchRunIdsByWorkflow skips (requires appId) → falls back to email-gateway
     const mock = setupMocks(brands, brandCostGroups, workflowGroups);
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
@@ -680,13 +657,6 @@ describe("GET /performance/leaderboard", () => {
 
       if (path === "/stats/public") {
         const body = opts?.body || {};
-        if (body.groupBy === "workflowName") {
-          // Without appId filter, appId should NOT be in the body
-          expect(body.appId).toBeUndefined();
-          return Promise.resolve(makeGroupedGatewayResponse([
-            { key: "sales-email-cold-outreach-sienna", broadcast: { emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5, repliesWillingToMeet: 2, repliesInterested: 1 } },
-          ]));
-        }
         if (body.brandId) {
           expect(body.appId).toBeUndefined();
           return Promise.resolve(makeGatewayResponse({ emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5 }));
@@ -702,8 +672,8 @@ describe("GET /performance/leaderboard", () => {
     expect(res.status).toBe(200);
     expect(res.body.brands).toHaveLength(1);
     expect(res.body.workflows).toHaveLength(1);
-    // Falls back to email-gateway since no appId → no run-ids-by-workflow call
-    expect(res.body.workflows[0].emailsSent).toBe(30);
+    // No email-gateway fallback — workflow has zero email stats when instantly has no data
+    expect(res.body.workflows[0].emailsSent).toBe(0);
 
     // Verify runs-service was called WITHOUT appId in the URL
     const runsCall = mockCallExternalService.mock.calls.find(
@@ -725,10 +695,6 @@ describe("GET /performance/leaderboard", () => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
       if (path === "/stats/public") {
-        const body = opts?.body || {};
-        if (body.groupBy === "workflowName") {
-          return Promise.resolve({ groups: [] });
-        }
         return Promise.resolve(makeGatewayResponse(null));
       }
       return Promise.resolve(null);
@@ -916,18 +882,12 @@ describe("Regression: performance leaderboard must require auth but NOT filter b
       { dimensions: { brandId: "brand-1" }, totalCostInUsdCents: "5000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "1000.0000", cancelledCostInUsdCents: "0", runCount: 10 },
     ];
 
-    // No appId → falls back to email-gateway for workflows
     const mock = setupMocks(brands, brandCostGroups, workflowGroups);
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
       if (path === "/stats/public") {
         const body = opts?.body || {};
-        if (body.groupBy === "workflowName") {
-          return Promise.resolve(makeGroupedGatewayResponse([
-            { key: "sales-email-cold-outreach-sienna", broadcast: { emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5 } },
-          ]));
-        }
         if (body.brandId) {
           return Promise.resolve(makeGatewayResponse({ emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5 }));
         }
@@ -988,9 +948,9 @@ describe("Regression: performance leaderboard must use broadcast-only stats", ()
     expect(content).toContain("fetchInstantlyGroupedStats");
     expect(content).toContain("/stats/grouped/public");
     expect(content).toContain("/v1/stats/public/run-ids-by-workflow");
-    // Email-gateway fallback still exists
-    expect(content).toContain("fetchWorkflowDeliveryStats");
-    expect(content).toContain('groupBy: "workflowName"');
+    // No email-gateway fallback for workflows — instantly-service is the single source of truth
+    expect(content).not.toContain("fetchWorkflowDeliveryStats");
+    expect(content).not.toContain('groupBy: "workflowName"');
     expect(content).toContain("anyWorkflowEnriched");
   });
 
@@ -1067,8 +1027,8 @@ describe("Regression: performance leaderboard must use broadcast-only stats", ()
     // No proportional distribution of aggregate stats
     expect(content).not.toContain("proportional");
     expect(content).not.toContain("fetchInstantlyAggregateStats");
-    // email-gateway groupBy fallback is kept as a legitimate alternate source
-    expect(content).toContain("fetchWorkflowDeliveryStats");
+    // No email-gateway fallback for workflows — instantly-service is the single source
+    expect(content).not.toContain("fetchWorkflowDeliveryStats");
   });
 });
 
