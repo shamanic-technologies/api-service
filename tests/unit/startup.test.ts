@@ -158,7 +158,7 @@ describe("deployEmailTemplates", () => {
     });
   });
 
-  it("should deploy campaign_created and campaign_stopped templates via PUT /templates", async () => {
+  it("should deploy all 7 templates via PUT /templates", async () => {
     await deployEmailTemplates();
 
     const templateCalls = fetchCalls.filter((c) => c.url.includes("/templates"));
@@ -168,37 +168,78 @@ describe("deployEmailTemplates", () => {
     expect(call.method).toBe("PUT");
 
     const templates = call.body?.templates as Array<{ name: string; subject: string; htmlBody: string; textBody: string }>;
-    expect(templates).toHaveLength(2);
+    expect(templates).toHaveLength(7);
 
     const names = templates.map((t) => t.name);
     expect(names).toContain("campaign_created");
     expect(names).toContain("campaign_stopped");
+    expect(names).toContain("waitlist");
+    expect(names).toContain("welcome");
+    expect(names).toContain("signup_notification");
+    expect(names).toContain("signin_notification");
+    expect(names).toContain("user_active");
   });
 
-  it("should use Distribute branding with working logo URL", async () => {
+  it("should use Distribute branding on user-facing templates", async () => {
     await deployEmailTemplates();
 
     const call = fetchCalls.find((c) => c.url.includes("/templates"))!;
     const templates = call.body?.templates as Array<{ name: string; htmlBody: string }>;
+    const branded = templates.filter((t) =>
+      ["campaign_created", "campaign_stopped", "waitlist", "welcome"].includes(t.name),
+    );
 
-    for (const tpl of templates) {
+    expect(branded).toHaveLength(4);
+    for (const tpl of branded) {
       expect(tpl.htmlBody).toContain("https://distribute.you/logo-horizontal.jpg");
       expect(tpl.htmlBody).toContain("Distribute");
-      expect(tpl.htmlBody).toContain("https://dashboard.distribute.you");
       expect(tpl.htmlBody).not.toContain("mcpfactory");
       expect(tpl.htmlBody).not.toContain("MCP Factory");
     }
   });
 
-  it("should include {{campaignName}} interpolation variable", async () => {
+  it("should include {{campaignName}} interpolation in campaign templates", async () => {
     await deployEmailTemplates();
 
     const call = fetchCalls.find((c) => c.url.includes("/templates"))!;
     const templates = call.body?.templates as Array<{ name: string; htmlBody: string; subject: string }>;
+    const campaignTemplates = templates.filter((t) => t.name.startsWith("campaign_"));
 
-    for (const tpl of templates) {
+    for (const tpl of campaignTemplates) {
       expect(tpl.subject).toContain("{{campaignName}}");
       expect(tpl.htmlBody).toContain("{{campaignName}}");
+    }
+  });
+
+  it("should include {{timestamp}} interpolation in admin notification templates", async () => {
+    await deployEmailTemplates();
+
+    const call = fetchCalls.find((c) => c.url.includes("/templates"))!;
+    const templates = call.body?.templates as Array<{ name: string; htmlBody: string; textBody: string }>;
+    const adminTemplates = templates.filter((t) =>
+      ["signup_notification", "signin_notification", "user_active"].includes(t.name),
+    );
+
+    expect(adminTemplates).toHaveLength(3);
+    for (const tpl of adminTemplates) {
+      expect(tpl.htmlBody).toContain("{{timestamp}}");
+      expect(tpl.textBody).toContain("{{timestamp}}");
+      expect(tpl.htmlBody).toContain("{{email}}");
+    }
+  });
+
+  it("admin notification templates should not use branded layout", async () => {
+    await deployEmailTemplates();
+
+    const call = fetchCalls.find((c) => c.url.includes("/templates"))!;
+    const templates = call.body?.templates as Array<{ name: string; htmlBody: string }>;
+    const adminTemplates = templates.filter((t) =>
+      ["signup_notification", "signin_notification", "user_active"].includes(t.name),
+    );
+
+    for (const tpl of adminTemplates) {
+      expect(tpl.htmlBody).not.toContain("logo-horizontal.jpg");
+      expect(tpl.htmlBody).not.toContain("<!DOCTYPE html>");
     }
   });
 

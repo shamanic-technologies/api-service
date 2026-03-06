@@ -61,6 +61,7 @@ function emailLayout(content: string): string {
 }
 
 const EMAIL_TEMPLATES = [
+  // ── Campaign templates (user-facing, branded layout) ───────────────────────
   {
     name: "campaign_created",
     subject: "Campaign created: {{campaignName}}",
@@ -89,6 +90,63 @@ const EMAIL_TEMPLATES = [
         <a href="${DASHBOARD_URL}" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 24px;border-radius:6px;text-decoration:none;font-size:16px;">View in dashboard</a>
       </p>`),
     textBody: `Campaign stopped: {{campaignName}}\n\nYour campaign "{{campaignName}}" has been stopped. You can resume it at any time from your dashboard.\n\nView in dashboard: ${DASHBOARD_URL}`,
+  },
+
+  // ── User-facing templates (branded layout) ─────────────────────────────────
+  {
+    name: "waitlist",
+    subject: "Welcome to the Distribute Waitlist!",
+    htmlBody: emailLayout(`
+      <h1 style="color:#1a1a1a;font-size:24px;margin-bottom:20px;">You're on the list!</h1>
+      <p style="color:#4a4a4a;font-size:16px;line-height:1.6;margin-bottom:20px;">
+        Thanks for joining the Distribute waitlist. We'll notify you as soon as we're ready to launch.
+      </p>
+      <p style="color:#4a4a4a;font-size:16px;line-height:1.6;margin-bottom:20px;">
+        In the meantime, you can:
+      </p>
+      <ul style="color:#4a4a4a;font-size:16px;line-height:1.8;margin-bottom:30px;">
+        <li><a href="https://docs.distribute.you" style="color:#6366f1;">Read the documentation</a></li>
+        <li><a href="https://github.com/shamanic-technologies/distribute" style="color:#6366f1;">Star us on GitHub</a></li>
+      </ul>`),
+    textBody: "You're on the list!\n\nThanks for joining the Distribute waitlist. We'll notify you as soon as we're ready to launch.\n\nIn the meantime, you can:\n- Read the documentation: https://docs.distribute.you\n- Star us on GitHub: https://github.com/shamanic-technologies/distribute",
+  },
+  {
+    name: "welcome",
+    subject: "Welcome to Distribute!",
+    htmlBody: emailLayout(`
+      <h1 style="color:#1a1a1a;font-size:24px;margin-bottom:20px;">Welcome aboard!</h1>
+      <p style="color:#4a4a4a;font-size:16px;line-height:1.6;margin-bottom:20px;">
+        Your Distribute account is ready. You can now create campaigns, find leads, and automate your outreach.
+      </p>
+      <p style="color:#4a4a4a;font-size:16px;line-height:1.6;margin-bottom:20px;">
+        Get started:
+      </p>
+      <ul style="color:#4a4a4a;font-size:16px;line-height:1.8;margin-bottom:30px;">
+        <li><a href="${DASHBOARD_URL}" style="color:#6366f1;">Open your dashboard</a></li>
+        <li><a href="https://docs.distribute.you" style="color:#6366f1;">Read the documentation</a></li>
+      </ul>`),
+    textBody: `Welcome aboard!\n\nYour Distribute account is ready. You can now create campaigns, find leads, and automate your outreach.\n\nGet started:\n- Open your dashboard: ${DASHBOARD_URL}\n- Read the documentation: https://docs.distribute.you`,
+  },
+
+  // ── Admin notification templates (plain, no layout) ────────────────────────
+  // Caller must pass { timestamp: new Date().toISOString() } in metadata
+  {
+    name: "signup_notification",
+    subject: "New signup: {{email}}",
+    htmlBody: "<p>New user signed up: <strong>{{email}}</strong> at {{timestamp}}</p>",
+    textBody: "New user signed up: {{email}} at {{timestamp}}",
+  },
+  {
+    name: "signin_notification",
+    subject: "Sign-in: {{email}}",
+    htmlBody: "<p>User signed in: <strong>{{email}}</strong> at {{timestamp}}</p>",
+    textBody: "User signed in: {{email}} at {{timestamp}}",
+  },
+  {
+    name: "user_active",
+    subject: "User active: {{email}}",
+    htmlBody: "<p>User is back: <strong>{{email}}</strong> at {{timestamp}}</p>",
+    textBody: "User is back: {{email}} at {{timestamp}}",
   },
 ];
 
