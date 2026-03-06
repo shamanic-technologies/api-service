@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { callExternalService, externalServices } from "./lib/service-client.js";
 
 // ── Platform keys ────────────────────────────────────────────────────────────
@@ -155,6 +156,11 @@ export async function deployEmailTemplates(): Promise<void> {
 
   await callExternalService(externalServices.transactionalEmail, "/templates", {
     method: "PUT",
+    headers: {
+      "x-org-id": "00000000-0000-0000-0000-000000000000",
+      "x-user-id": "00000000-0000-0000-0000-000000000000",
+      "x-run-id": randomUUID(),
+    },
     body: { templates: EMAIL_TEMPLATES },
   });
 
