@@ -215,3 +215,52 @@ describe("Auth middleware — error cases", () => {
     expect(mockCall).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("Auth middleware — run creation is mandatory", () => {
+  let app: express.Express;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.ADMIN_DISTRIBUTE_API_KEY = ADMIN_KEY;
+    app = createApp();
+  });
+
+  it("should return 502 when createRun fails (runs-service down)", async () => {
+    const { createRun } = await import("@distribute/runs-client");
+    vi.mocked(createRun).mockRejectedValueOnce(new Error("Connection refused"));
+
+    // User key auth succeeds
+    mockCall.mockResolvedValueOnce({
+      valid: true,
+      orgId: "org-uuid-direct",
+      userId: "user-uuid-direct",
+    });
+
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("Authorization", "Bearer mcpf_usr_test123");
+
+    expect(res.status).toBe(502);
+    expect(res.body.error).toBe("Run tracking unavailable");
+  });
+
+  it("should return 502 when createRun fails for admin auth too", async () => {
+    const { createRun } = await import("@distribute/runs-client");
+    vi.mocked(createRun).mockRejectedValueOnce(new Error("Connection refused"));
+
+    // Admin auth with identity resolution succeeds
+    mockCall.mockResolvedValueOnce({
+      orgId: "org-uuid-123",
+      userId: "user-uuid-456",
+    });
+
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("Authorization", `Bearer ${ADMIN_KEY}`)
+      .set("x-org-id", "org_2clerkOrg")
+      .set("x-user-id", "user_2clerkUser");
+
+    expect(res.status).toBe(502);
+    expect(res.body.error).toBe("Run tracking unavailable");
+  });
+});

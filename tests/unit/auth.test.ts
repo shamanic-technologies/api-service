@@ -90,6 +90,17 @@ describe("Auth middleware — user key authentication", () => {
   });
 });
 
+describe("Auth middleware — run creation is mandatory (not best-effort)", () => {
+  it("should return 502 when run creation fails, not silently continue", () => {
+    expect(content).toContain("Run tracking unavailable");
+    expect(content).toContain("return res.status(502)");
+  });
+
+  it("should not swallow run creation errors with console.warn", () => {
+    expect(content).not.toContain('console.warn("[auth] Failed to create request run:');
+  });
+});
+
 describe("Auth middleware — requireOrg and requireUser exports", () => {
   it("should export requireOrg middleware", () => {
     expect(content).toContain("export function requireOrg");
