@@ -49,7 +49,7 @@ function createApp() {
   return app;
 }
 
-describe("Auth middleware — admin key", () => {
+describe("Auth middleware — admin key via X-API-Key", () => {
   let app: express.Express;
 
   beforeEach(() => {
@@ -58,7 +58,7 @@ describe("Auth middleware — admin key", () => {
     app = createApp();
   });
 
-  it("should authenticate with admin key and resolve external IDs via client-service", async () => {
+  it("should authenticate with X-API-Key and resolve external IDs via client-service", async () => {
     mockCall.mockResolvedValueOnce({
       orgId: "org-uuid-123",
       userId: "user-uuid-456",
@@ -68,9 +68,9 @@ describe("Auth middleware — admin key", () => {
 
     const res = await request(app)
       .get("/v1/workflows")
-      .set("Authorization", `Bearer ${ADMIN_KEY}`)
-      .set("x-org-id", "org_2clerkOrg")
-      .set("x-user-id", "user_2clerkUser");
+      .set("X-API-Key", ADMIN_KEY)
+      .set("x-external-org-id", "ext_org_123")
+      .set("x-external-user-id", "ext_user_456");
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
@@ -87,49 +87,140 @@ describe("Auth middleware — admin key", () => {
       {
         method: "POST",
         body: {
-          externalOrgId: "org_2clerkOrg",
-          externalUserId: "user_2clerkUser",
+          externalOrgId: "ext_org_123",
+          externalUserId: "ext_user_456",
         },
       },
     );
   });
 
-  it("should allow admin key without org/user headers (admin-only access)", async () => {
+  it("should forward optional profile headers to POST /resolve", async () => {
+    mockCall.mockResolvedValueOnce({
+      orgId: "org-uuid-123",
+      userId: "user-uuid-456",
+    });
+
     const res = await request(app)
-      .get("/v1/me")
-      .set("Authorization", `Bearer ${ADMIN_KEY}`);
+      .get("/v1/workflows")
+      .set("X-API-Key", ADMIN_KEY)
+      .set("x-external-org-id", "ext_org_123")
+      .set("x-external-user-id", "ext_user_456")
+      .set("x-email", "john@example.com")
+      .set("x-first-name", "John")
+      .set("x-last-name", "Doe");
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ orgId: null, userId: null, authType: "admin" });
+    expect(mockCall).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "http://client-service" }),
+      "/resolve",
+      {
+        method: "POST",
+        body: {
+          externalOrgId: "ext_org_123",
+          externalUserId: "ext_user_456",
+          email: "john@example.com",
+          firstName: "John",
+          lastName: "Doe",
+        },
+      },
+    );
+  });
+
+  it("should not include empty profile headers in POST /resolve body", async () => {
+    mockCall.mockResolvedValueOnce({
+      orgId: "org-uuid-123",
+      userId: "user-uuid-456",
+    });
+
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("X-API-Key", ADMIN_KEY)
+      .set("x-external-org-id", "ext_org_123")
+      .set("x-external-user-id", "ext_user_456");
+
+    expect(res.status).toBe(200);
+    expect(mockCall).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "http://client-service" }),
+      "/resolve",
+      {
+        method: "POST",
+        body: {
+          externalOrgId: "ext_org_123",
+          externalUserId: "ext_user_456",
+        },
+      },
+    );
+  });
+
+  it("should return 400 when x-external-org-id is missing", async () => {
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("X-API-Key", ADMIN_KEY)
+      .set("x-external-user-id", "ext_user_456");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Admin auth requires both x-external-org-id and x-external-user-id");
     expect(mockCall).not.toHaveBeenCalled();
   });
 
-  it("should return 502 when client-service resolution fails for admin key", async () => {
+  it("should return 400 when x-external-user-id is missing", async () => {
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("X-API-Key", ADMIN_KEY)
+      .set("x-external-org-id", "ext_org_123");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Admin auth requires both x-external-org-id and x-external-user-id");
+    expect(mockCall).not.toHaveBeenCalled();
+  });
+
+  it("should return 400 when both external ID headers are missing", async () => {
+    const res = await request(app)
+      .get("/v1/me")
+      .set("X-API-Key", ADMIN_KEY);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Admin auth requires both x-external-org-id and x-external-user-id");
+  });
+
+  it("should return 401 when X-API-Key does not match admin key", async () => {
+    const res = await request(app)
+      .get("/v1/me")
+      .set("X-API-Key", "wrong-key")
+      .set("x-external-org-id", "ext_org_123")
+      .set("x-external-user-id", "ext_user_456");
+
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe("Invalid admin key");
+    expect(mockCall).not.toHaveBeenCalled();
+  });
+
+  it("should return 502 when client-service resolution fails", async () => {
     mockCall.mockRejectedValueOnce(new Error("Connection refused"));
 
     const res = await request(app)
       .get("/v1/workflows")
-      .set("Authorization", `Bearer ${ADMIN_KEY}`)
-      .set("x-org-id", "org_2clerkOrg")
-      .set("x-user-id", "user_2clerkUser");
+      .set("X-API-Key", ADMIN_KEY)
+      .set("x-external-org-id", "ext_org_123")
+      .set("x-external-user-id", "ext_user_456");
 
     expect(res.status).toBe(502);
     expect(res.body.error).toBe("Identity resolution failed");
   });
 
-  it("should return 401 when Bearer token does not match admin key and key-service rejects it", async () => {
+  it("should no longer accept admin key via Bearer token", async () => {
     mockCall.mockResolvedValueOnce({ valid: false });
 
     const res = await request(app)
       .get("/v1/me")
-      .set("Authorization", "Bearer wrong-key");
+      .set("Authorization", `Bearer ${ADMIN_KEY}`);
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe("Invalid API key");
   });
 });
 
-describe("Auth middleware — user key", () => {
+describe("Auth middleware — user key via Bearer", () => {
   let app: express.Express;
 
   beforeEach(() => {
@@ -186,7 +277,7 @@ describe("Auth middleware — error cases", () => {
     app = createApp();
   });
 
-  it("should return 401 when no Authorization header", async () => {
+  it("should return 401 when no authentication header is present", async () => {
     const res = await request(app).get("/v1/me");
     expect(res.status).toBe(401);
     expect(res.body.error).toBe("Missing authentication");
@@ -256,9 +347,9 @@ describe("Auth middleware — run creation is mandatory", () => {
 
     const res = await request(app)
       .get("/v1/workflows")
-      .set("Authorization", `Bearer ${ADMIN_KEY}`)
-      .set("x-org-id", "org_2clerkOrg")
-      .set("x-user-id", "user_2clerkUser");
+      .set("X-API-Key", ADMIN_KEY)
+      .set("x-external-org-id", "ext_org_123")
+      .set("x-external-user-id", "ext_user_456");
 
     expect(res.status).toBe(502);
     expect(res.body.error).toBe("Run tracking unavailable");
