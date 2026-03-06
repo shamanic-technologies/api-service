@@ -12,7 +12,7 @@ vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
 }));
 
-import { registerPlatformKeys } from "../../src/startup.js";
+import { registerPlatformKeys, deployEmailTemplates } from "../../src/startup.js";
 
 function setAllEnvVars() {
   process.env.ANTHROPIC_API_KEY = "sk-ant-test";
@@ -131,5 +131,85 @@ describe("registerPlatformKeys", () => {
     delete process.env.STRIPE_SECRET_KEY;
 
     await expect(registerPlatformKeys()).rejects.toThrow("STRIPE_SECRET_KEY");
+  });
+});
+
+describe("deployEmailTemplates", () => {
+  let fetchCalls: Array<{ url: string; method?: string; body?: Record<string, unknown> }>;
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    fetchCalls = [];
+
+    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(init.body as string) : undefined;
+      fetchCalls.push({ url, method: init?.method, body });
+
+      if (url.includes("/templates")) {
+        return new Response(
+          JSON.stringify({
+            templates: (body?.templates as unknown[])?.map((t: any) => ({ name: t.name, action: "updated" })) ?? [],
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+
+      return new Response(JSON.stringify({}), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+  });
+
+  it("should deploy campaign_created and campaign_stopped templates via PUT /templates", async () => {
+    await deployEmailTemplates();
+
+    const templateCalls = fetchCalls.filter((c) => c.url.includes("/templates"));
+    expect(templateCalls).toHaveLength(1);
+
+    const call = templateCalls[0]!;
+    expect(call.method).toBe("PUT");
+
+    const templates = call.body?.templates as Array<{ name: string; subject: string; htmlBody: string; textBody: string }>;
+    expect(templates).toHaveLength(2);
+
+    const names = templates.map((t) => t.name);
+    expect(names).toContain("campaign_created");
+    expect(names).toContain("campaign_stopped");
+  });
+
+  it("should use Distribute branding with working logo URL", async () => {
+    await deployEmailTemplates();
+
+    const call = fetchCalls.find((c) => c.url.includes("/templates"))!;
+    const templates = call.body?.templates as Array<{ name: string; htmlBody: string }>;
+
+    for (const tpl of templates) {
+      expect(tpl.htmlBody).toContain("https://distribute.you/logo-horizontal.jpg");
+      expect(tpl.htmlBody).toContain("Distribute");
+      expect(tpl.htmlBody).toContain("https://dashboard.distribute.you");
+      expect(tpl.htmlBody).not.toContain("mcpfactory");
+      expect(tpl.htmlBody).not.toContain("MCP Factory");
+    }
+  });
+
+  it("should include {{campaignName}} interpolation variable", async () => {
+    await deployEmailTemplates();
+
+    const call = fetchCalls.find((c) => c.url.includes("/templates"))!;
+    const templates = call.body?.templates as Array<{ name: string; htmlBody: string; subject: string }>;
+
+    for (const tpl of templates) {
+      expect(tpl.subject).toContain("{{campaignName}}");
+      expect(tpl.htmlBody).toContain("{{campaignName}}");
+    }
+  });
+
+  it("should throw when transactional-email-service returns an error", async () => {
+    global.fetch = vi.fn().mockImplementation(async () => {
+      return new Response(JSON.stringify({ error: "Service unavailable" }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    await expect(deployEmailTemplates()).rejects.toThrow();
   });
 });
