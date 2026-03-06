@@ -10,17 +10,15 @@
  * 4. Campaign costs came from campaign-service which only lists ongoing campaigns.
  * 5. Switched to runs-service public leaderboard endpoint with string cost values.
  * 6. Workflows use {category}-{channel}-{audienceType}-{signatureName} naming.
- * 7. Per-workflow email stats via instantly-service POST /stats/grouped
- *    (run-ids-by-workflow → grouped stats), with email-gateway fallback.
- * 10. Removed proportional distribution fallbacks now that runs-service
- *     supports cross-org run-ids-by-workflow without orgId.
- * 8. emailsReplied = positive replies only (lead_interested). Auto-reply, not-interested, OOO excluded.
- * 9. Recipients count per workflow from instantly-service.
+ * 7. All delivery stats (brands + workflows) come from email-gateway POST /stats/public.
+ *    Workflows use { type: "broadcast", groupBy: "workflowName" }.
+ * 8. emailsReplied = positive replies only (repliesWillingToMeet + repliesInterested).
+ * 9. Recipients count per workflow from email-gateway broadcast stats.
  *
  * Fix: Use brand-service as source of truth for brands (like dashboard does),
  * use correct field names, only read broadcast stats for brands,
  * use runs-service /v1/stats/public/leaderboard for costs (public, cross-org, string values).
- * Per-workflow email stats via instantly-service POST /stats/grouped.
+ * All delivery stats via email-gateway (single source of truth).
  * Categories parsed from workflow name format via @distribute/content.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -83,22 +81,11 @@ function makeGatewayResponse(broadcast: Record<string, number> | null) {
 
 
 
-function makeInstantlyStats(overrides: Partial<Record<string, number>> = {}) {
-  return {
-    emailsSent: 0, emailsDelivered: 0, emailsOpened: 0,
-    emailsClicked: 0, emailsReplied: 0, emailsBounced: 0,
-    repliesAutoReply: 0, repliesNotInterested: 0,
-    repliesOutOfOffice: 0, repliesUnsubscribe: 0,
-    ...overrides,
-  };
-}
-
-function makeInstantlyGroupedResponse(groups: Array<{ key: string; stats: Record<string, number>; recipients: number }>) {
+function makeGroupedGatewayResponse(groups: Array<{ key: string; broadcast: Record<string, number> }>) {
   return {
     groups: groups.map((g) => ({
       key: g.key,
-      stats: makeInstantlyStats(g.stats),
-      recipients: g.recipients,
+      broadcast: makeBroadcastStats(g.broadcast),
     })),
   };
 }
@@ -113,15 +100,14 @@ interface MockRunsGroup {
   runCount: number;
 }
 
-/** Helper: set up mocks for brand-service + runs-service + instantly-service */
+/** Helper: set up mocks for brand-service + runs-service + email-gateway */
 function setupMocks(
   brands: Array<{ id: string; domain: string | null; name: string | null; brandUrl: string | null }>,
   brandCostGroups: MockRunsGroup[] = [],
   workflowGroups: MockRunsGroup[] = [],
-  runIdsByWorkflow: Record<string, string[]> = {},
-  instantlyGroups: Array<{ key: string; stats: Record<string, number>; recipients: number }> = [],
+  workflowEmailStats: Array<{ key: string; broadcast: Record<string, number> }> = [],
 ) {
-  return (_service: any, path: string, _opts: any) => {
+  return (_service: any, path: string, opts: any) => {
     // Brand-service: /org-ids
     if (path === "/org-ids") {
       return Promise.resolve({ organization_ids: ["org-1"] });
@@ -140,13 +126,12 @@ function setupMocks(
       }
       return Promise.resolve({ groups: [] });
     }
-    // Runs-service: /v1/stats/public/run-ids-by-workflow
-    if (path.startsWith("/v1/stats/public/run-ids-by-workflow")) {
-      return Promise.resolve({ groups: runIdsByWorkflow });
-    }
-    // Instantly-service: /stats/grouped/public
-    if (path === "/stats/grouped/public") {
-      return Promise.resolve(makeInstantlyGroupedResponse(instantlyGroups));
+    // Email-gateway: /stats/public with groupBy=workflowName (workflow stats)
+    if (path === "/stats/public") {
+      const body = opts?.body || {};
+      if (body.groupBy === "workflowName") {
+        return Promise.resolve(makeGroupedGatewayResponse(workflowEmailStats));
+      }
     }
     return null; // Will be handled by per-test overrides
   };
@@ -161,7 +146,7 @@ describe("GET /performance/leaderboard", () => {
     vi.restoreAllMocks();
   });
 
-  it("should return brands from brand-service with per-workflow stats from instantly-service", async () => {
+  it("should return brands and workflows with stats from email-gateway", async () => {
     const app = createApp();
     const brands = [
       { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
@@ -171,21 +156,17 @@ describe("GET /performance/leaderboard", () => {
       { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "5000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "1000.0000", cancelledCostInUsdCents: "0", runCount: 10 },
       { dimensions: { workflowName: "sales-email-cold-outreach-darmstadt" }, totalCostInUsdCents: "3000.0000", actualCostInUsdCents: "2000.0000", provisionedCostInUsdCents: "1000.0000", cancelledCostInUsdCents: "0", runCount: 5 },
     ];
-    const runIdsByWorkflow = {
-      "sales-email-cold-outreach-sienna": ["run-1", "run-2"],
-      "sales-email-cold-outreach-darmstadt": ["run-3"],
-    };
-    const instantlyGroups = [
-      { key: "sales-email-cold-outreach-sienna", stats: { emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5 }, recipients: 25 },
-      { key: "sales-email-cold-outreach-darmstadt", stats: { emailsSent: 20, emailsOpened: 10, emailsClicked: 2, emailsReplied: 3 }, recipients: 18 },
+    const workflowEmailStats = [
+      { key: "sales-email-cold-outreach-sienna", broadcast: { emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5, repliesWillingToMeet: 3, repliesInterested: 2, recipients: 25 } },
+      { key: "sales-email-cold-outreach-darmstadt", broadcast: { emailsSent: 20, emailsOpened: 10, emailsClicked: 2, emailsReplied: 3, repliesWillingToMeet: 2, repliesInterested: 1, recipients: 18 } },
     ];
 
-    const mock = setupMocks(brands, [], workflowGroups, runIdsByWorkflow, instantlyGroups);
+    const mock = setupMocks(brands, [], workflowGroups, workflowEmailStats);
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
 
-      // Email-gateway stats for brands
+      // Email-gateway stats for brands (per-brandId calls)
       if (path === "/stats/public") {
         const body = opts?.body || {};
         if (body.brandId === "brand-1") {
@@ -216,7 +197,7 @@ describe("GET /performance/leaderboard", () => {
     expect(brand2).toBeDefined();
     expect(brand2.emailsSent).toBe(20);
 
-    // Workflows should have stats from instantly-service
+    // Workflows should have stats from email-gateway
     expect(res.body.workflows).toHaveLength(2);
     const siennaWf = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-sienna");
     expect(siennaWf).toBeDefined();
@@ -224,10 +205,9 @@ describe("GET /performance/leaderboard", () => {
     expect(siennaWf.runCount).toBe(10);
     expect(siennaWf.emailsSent).toBe(30);
     expect(siennaWf.emailsOpened).toBe(15);
-    // emailsReplied = positive replies only from instantly
     expect(siennaWf.emailsReplied).toBe(5);
-    // repliesInterested = emailsReplied (same value, since emailsReplied IS positive replies)
-    expect(siennaWf.repliesInterested).toBe(5);
+    // repliesInterested = repliesWillingToMeet + repliesInterested from email-gateway
+    expect(siennaWf.repliesInterested).toBe(5); // 3 + 2
     expect(siennaWf.recipients).toBe(25);
     expect(siennaWf.interestedRate).toBeGreaterThan(0);
 
@@ -241,7 +221,7 @@ describe("GET /performance/leaderboard", () => {
     expect(darmstadtWf).toBeDefined();
     expect(darmstadtWf.emailsSent).toBe(20);
     expect(darmstadtWf.emailsReplied).toBe(3);
-    expect(darmstadtWf.repliesInterested).toBe(3);
+    expect(darmstadtWf.repliesInterested).toBe(3); // 2 + 1
     expect(darmstadtWf.recipients).toBe(18);
 
     // availableCategories
@@ -317,14 +297,11 @@ describe("GET /performance/leaderboard", () => {
     const workflowGroups: MockRunsGroup[] = [
       { dimensions: { workflowName: "sales-email-cold-outreach-phoenix" }, totalCostInUsdCents: "10000.5000000000", actualCostInUsdCents: "8000.3000000000", provisionedCostInUsdCents: "2000.2000000000", cancelledCostInUsdCents: "0", runCount: 5 },
     ];
-    const runIdsByWorkflow = {
-      "sales-email-cold-outreach-phoenix": ["run-1"],
-    };
-    const instantlyGroups = [
-      { key: "sales-email-cold-outreach-phoenix", stats: { emailsSent: 10, emailsOpened: 5, emailsClicked: 1, emailsReplied: 2 }, recipients: 8 },
+    const workflowEmailStats = [
+      { key: "sales-email-cold-outreach-phoenix", broadcast: { emailsSent: 10, emailsOpened: 5, emailsClicked: 1, emailsReplied: 2, repliesWillingToMeet: 1, repliesInterested: 1, recipients: 8 } },
     ];
 
-    const mock = setupMocks(brands, brandCostGroups, workflowGroups, runIdsByWorkflow, instantlyGroups);
+    const mock = setupMocks(brands, brandCostGroups, workflowGroups, workflowEmailStats);
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
@@ -358,14 +335,11 @@ describe("GET /performance/leaderboard", () => {
       { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "5000.0000", actualCostInUsdCents: "5000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 10 },
       { dimensions: { workflowName: "" }, totalCostInUsdCents: "9000.0000", actualCostInUsdCents: "9000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 100 },
     ];
-    const runIdsByWorkflow = {
-      "sales-email-cold-outreach-sienna": ["run-1"],
-    };
-    const instantlyGroups = [
-      { key: "sales-email-cold-outreach-sienna", stats: { emailsSent: 10, emailsOpened: 5, emailsReplied: 2 }, recipients: 8 },
+    const workflowEmailStats = [
+      { key: "sales-email-cold-outreach-sienna", broadcast: { emailsSent: 10, emailsOpened: 5, emailsReplied: 2, repliesWillingToMeet: 1, repliesInterested: 1, recipients: 8 } },
     ];
 
-    const mock = setupMocks(brands, [], workflowGroups, runIdsByWorkflow, instantlyGroups);
+    const mock = setupMocks(brands, [], workflowGroups, workflowEmailStats);
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
@@ -389,7 +363,7 @@ describe("GET /performance/leaderboard", () => {
     expect(unknown.signatureName).toBeNull();
   });
 
-  it("should return categorySections with stats from instantly-service", async () => {
+  it("should return categorySections with stats from email-gateway", async () => {
     const app = createApp();
     const brands = [
       { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
@@ -398,16 +372,12 @@ describe("GET /performance/leaderboard", () => {
       { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "4000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 10 },
       { dimensions: { workflowName: "sales-email-cold-outreach-darmstadt" }, totalCostInUsdCents: "2000.0000", actualCostInUsdCents: "2000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 5 },
     ];
-    const runIdsByWorkflow = {
-      "sales-email-cold-outreach-sienna": ["run-1", "run-2"],
-      "sales-email-cold-outreach-darmstadt": ["run-3"],
-    };
-    const instantlyGroups = [
-      { key: "sales-email-cold-outreach-sienna", stats: { emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5 }, recipients: 25 },
-      { key: "sales-email-cold-outreach-darmstadt", stats: { emailsSent: 20, emailsOpened: 10, emailsClicked: 2, emailsReplied: 3 }, recipients: 18 },
+    const workflowEmailStats = [
+      { key: "sales-email-cold-outreach-sienna", broadcast: { emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5, repliesWillingToMeet: 3, repliesInterested: 2, recipients: 25 } },
+      { key: "sales-email-cold-outreach-darmstadt", broadcast: { emailsSent: 20, emailsOpened: 10, emailsClicked: 2, emailsReplied: 3, repliesWillingToMeet: 2, repliesInterested: 1, recipients: 18 } },
     ];
 
-    const mock = setupMocks(brands, [], workflowGroups, runIdsByWorkflow, instantlyGroups);
+    const mock = setupMocks(brands, [], workflowGroups, workflowEmailStats);
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
@@ -436,8 +406,8 @@ describe("GET /performance/leaderboard", () => {
     expect(section.stats.totalCostUsdCents).toBe(6000); // 4000 + 2000
     expect(section.stats.emailsSent).toBe(50); // 30 + 20
     expect(section.stats.emailsReplied).toBe(8); // 5 + 3
-    // repliesInterested = emailsReplied for instantly-service data
-    expect(section.stats.repliesInterested).toBe(8); // 5 + 3
+    // repliesInterested = (willingToMeet + interested) per workflow: (3+2) + (2+1) = 8
+    expect(section.stats.repliesInterested).toBe(8);
     expect(section.stats.recipients).toBe(43); // 25 + 18
     expect(section.stats.interestedRate).toBeGreaterThan(0);
 
@@ -458,7 +428,7 @@ describe("GET /performance/leaderboard", () => {
     expect(section.brands).toHaveLength(1);
   });
 
-  it("should leave workflow stats at zero when both instantly and email-gateway return empty", async () => {
+  it("should leave workflow stats at zero when email-gateway returns empty groups", async () => {
     const app = createApp();
     const brands = [
       { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
@@ -468,8 +438,8 @@ describe("GET /performance/leaderboard", () => {
       { dimensions: { workflowName: "sales-email-cold-outreach-darmstadt" }, totalCostInUsdCents: "4000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 20 },
     ];
 
-    // Empty instantly response — no run IDs found
-    const mock = setupMocks(brands, [], workflowGroups, {}, []);
+    // Empty workflow stats from email-gateway
+    const mock = setupMocks(brands, [], workflowGroups, []);
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
@@ -486,7 +456,6 @@ describe("GET /performance/leaderboard", () => {
     const res = await request(app).get("/performance/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
-    // No fallbacks — workflows stay at zero when instantly has no data
     const sienna = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-sienna");
     expect(sienna).toBeDefined();
     expect(sienna.emailsSent).toBe(0);
@@ -495,41 +464,6 @@ describe("GET /performance/leaderboard", () => {
     const darmstadt = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-darmstadt");
     expect(darmstadt).toBeDefined();
     expect(darmstadt.emailsSent).toBe(0);
-  });
-
-  it("should NOT fall back to email-gateway groupBy — workflows get zero stats when instantly is empty", async () => {
-    const app = createApp();
-    const brands = [
-      { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
-    ];
-    const workflowGroups: MockRunsGroup[] = [
-      { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "4000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 10 },
-    ];
-
-    // Empty instantly response — no run IDs
-    const mock = setupMocks(brands, [], workflowGroups, {}, []);
-    mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
-      const result = mock(_service, path, opts);
-      if (result !== null) return result;
-      if (path === "/stats/public") {
-        const body = opts?.body || {};
-        if (body.brandId) {
-          return Promise.resolve(makeGatewayResponse({ emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5 }));
-        }
-        return Promise.resolve(makeGatewayResponse(null));
-      }
-      return Promise.resolve(null);
-    });
-
-    const res = await request(app).get("/performance/leaderboard?appId=distribute");
-
-    expect(res.status).toBe(200);
-    const sienna = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-sienna");
-    expect(sienna).toBeDefined();
-    // No fallback — workflows stay at zero when instantly has no data
-    expect(sienna.emailsSent).toBe(0);
-    expect(sienna.emailsOpened).toBe(0);
-    expect(sienna.emailsReplied).toBe(0);
   });
 
   it("should filter out brands with no cost and no email activity", async () => {
@@ -547,14 +481,11 @@ describe("GET /performance/leaderboard", () => {
     const workflowGroups: MockRunsGroup[] = [
       { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "700.0000", actualCostInUsdCents: "700.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 4 },
     ];
-    const runIdsByWorkflow = {
-      "sales-email-cold-outreach-sienna": ["run-1"],
-    };
-    const instantlyGroups = [
-      { key: "sales-email-cold-outreach-sienna", stats: { emailsSent: 10, emailsOpened: 5, emailsClicked: 1, emailsReplied: 1 }, recipients: 8 },
+    const workflowEmailStats = [
+      { key: "sales-email-cold-outreach-sienna", broadcast: { emailsSent: 10, emailsOpened: 5, emailsClicked: 1, emailsReplied: 1, recipients: 8 } },
     ];
 
-    const mock = setupMocks(brands, brandCostGroups, workflowGroups, runIdsByWorkflow, instantlyGroups);
+    const mock = setupMocks(brands, brandCostGroups, workflowGroups, workflowEmailStats);
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
@@ -597,14 +528,11 @@ describe("GET /performance/leaderboard", () => {
     const workflowGroups: MockRunsGroup[] = [
       { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "1300.0000", actualCostInUsdCents: "1300.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 8 },
     ];
-    const runIdsByWorkflow = {
-      "sales-email-cold-outreach-sienna": ["run-1"],
-    };
-    const instantlyGroups = [
-      { key: "sales-email-cold-outreach-sienna", stats: { emailsSent: 50, emailsOpened: 25, emailsClicked: 5, emailsReplied: 8 }, recipients: 40 },
+    const workflowEmailStats = [
+      { key: "sales-email-cold-outreach-sienna", broadcast: { emailsSent: 50, emailsOpened: 25, emailsClicked: 5, emailsReplied: 8, recipients: 40 } },
     ];
 
-    const mock = setupMocks(brands, brandCostGroups, workflowGroups, runIdsByWorkflow, instantlyGroups);
+    const mock = setupMocks(brands, brandCostGroups, workflowGroups, workflowEmailStats);
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
@@ -672,7 +600,7 @@ describe("GET /performance/leaderboard", () => {
     expect(res.status).toBe(200);
     expect(res.body.brands).toHaveLength(1);
     expect(res.body.workflows).toHaveLength(1);
-    // No email-gateway fallback — workflow has zero email stats when instantly has no data
+    // Workflow has zero email stats when email-gateway has no workflow data
     expect(res.body.workflows[0].emailsSent).toBe(0);
 
     // Verify runs-service was called WITHOUT appId in the URL
@@ -713,20 +641,17 @@ describe("GET /performance/leaderboard", () => {
     expect(res.body.categorySections).toHaveLength(0);
   });
 
-  it("should pass correct runIds to instantly-service grouped stats", async () => {
+  it("should call email-gateway with groupBy=workflowName for workflow stats", async () => {
     const app = createApp();
     const brands = [{ id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" }];
     const workflowGroups: MockRunsGroup[] = [
       { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "4000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 10 },
     ];
-    const runIdsByWorkflow = {
-      "sales-email-cold-outreach-sienna": ["run-1", "run-2", "run-3"],
-    };
-    const instantlyGroups = [
-      { key: "sales-email-cold-outreach-sienna", stats: { emailsSent: 100, emailsOpened: 50, emailsClicked: 10, emailsReplied: 8 }, recipients: 80 },
+    const workflowEmailStats = [
+      { key: "sales-email-cold-outreach-sienna", broadcast: { emailsSent: 100, emailsOpened: 50, emailsClicked: 10, emailsReplied: 8, repliesWillingToMeet: 5, repliesInterested: 3, recipients: 80 } },
     ];
 
-    const mock = setupMocks(brands, [], workflowGroups, runIdsByWorkflow, instantlyGroups);
+    const mock = setupMocks(brands, [], workflowGroups, workflowEmailStats);
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
@@ -740,47 +665,44 @@ describe("GET /performance/leaderboard", () => {
 
     expect(res.status).toBe(200);
 
-    // Verify instantly-service /stats/grouped/public was called with correct body
-    const instantlyCall = mockCallExternalService.mock.calls.find(
-      (call: any[]) => typeof call[1] === "string" && call[1] === "/stats/grouped/public"
+    // Verify email-gateway /stats/public was called with groupBy=workflowName
+    const groupByCall = mockCallExternalService.mock.calls.find(
+      (call: any[]) => typeof call[1] === "string" && call[1] === "/stats/public" && call[2]?.body?.groupBy === "workflowName"
     );
-    expect(instantlyCall).toBeDefined();
-    expect(instantlyCall![2].body.groups["sales-email-cold-outreach-sienna"].runIds).toEqual(["run-1", "run-2", "run-3"]);
+    expect(groupByCall).toBeDefined();
+    expect(groupByCall![2].body.type).toBe("broadcast");
 
-    // Verify workflow stats from instantly
+    // Verify workflow stats
     const wf = res.body.workflows[0];
     expect(wf.emailsSent).toBe(100);
     expect(wf.emailsOpened).toBe(50);
     expect(wf.emailsReplied).toBe(8);
-    expect(wf.repliesInterested).toBe(8);
+    expect(wf.repliesInterested).toBe(8); // 5 + 3
     expect(wf.recipients).toBe(80);
     expect(wf.costPerReplyCents).toBe(500); // 4000 / 8
   });
 
-  it("should only count positive replies in emailsReplied from instantly-service", async () => {
+  it("should compute repliesInterested from willingToMeet + interested fields", async () => {
     const app = createApp();
     const brands = [{ id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" }];
     const workflowGroups: MockRunsGroup[] = [
       { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "4000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 10 },
     ];
-    const runIdsByWorkflow = {
-      "sales-email-cold-outreach-sienna": ["run-1"],
-    };
-    // Instantly returns: 3 positive replies + 10 auto-reply + 2 not-interested + 1 OOO
-    const instantlyGroups = [
+    // Email-gateway returns: 3 emailsReplied (all replies), willingToMeet=2, interested=1
+    const workflowEmailStats = [
       {
         key: "sales-email-cold-outreach-sienna",
-        stats: {
+        broadcast: {
           emailsSent: 100, emailsOpened: 50, emailsClicked: 5,
-          emailsReplied: 3, // positive replies only
-          repliesAutoReply: 10, repliesNotInterested: 2,
-          repliesOutOfOffice: 1, repliesUnsubscribe: 0,
+          emailsReplied: 3,
+          repliesWillingToMeet: 2, repliesInterested: 1,
+          repliesNotInterested: 5, repliesOutOfOffice: 2, repliesUnsubscribe: 1,
+          recipients: 80,
         },
-        recipients: 80,
       },
     ];
 
-    const mock = setupMocks(brands, [], workflowGroups, runIdsByWorkflow, instantlyGroups);
+    const mock = setupMocks(brands, [], workflowGroups, workflowEmailStats);
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
@@ -794,62 +716,14 @@ describe("GET /performance/leaderboard", () => {
 
     expect(res.status).toBe(200);
     const wf = res.body.workflows[0];
-    // emailsReplied = positive replies ONLY (auto-reply, not-interested, OOO, unsub are excluded)
     expect(wf.emailsReplied).toBe(3);
-    // repliesInterested mirrors emailsReplied (both are positive replies)
+    // repliesInterested = willingToMeet + interested = 2 + 1 = 3
     expect(wf.repliesInterested).toBe(3);
-    // replyRate uses positive replies only
     expect(wf.replyRate).toBe(0.03); // 3/100
-    // interestedRate mirrors replyRate
     expect(wf.interestedRate).toBe(0.03); // 3/100
-    // costPerReply uses positive replies
     expect(wf.costPerReplyCents).toBe(1333); // Math.round(4000 / 3)
   });
 
-  it("should NOT use proportional distribution — workflows get zero stats when instantly returns empty", async () => {
-    const app = createApp();
-    const brands = [{ id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" }];
-    const workflowGroups: MockRunsGroup[] = [
-      { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "6000.0000", actualCostInUsdCents: "6000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 30 },
-      { dimensions: { workflowName: "sales-email-cold-outreach-darmstadt" }, totalCostInUsdCents: "4000.0000", actualCostInUsdCents: "4000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 20 },
-    ];
-
-    // Empty run-ids-by-workflow → empty instantly grouped → NO proportional fallback
-    const mock = setupMocks(brands, [], workflowGroups, {}, []);
-    mockCallExternalService.mockImplementation((service: any, path: string, opts: any) => {
-      const result = mock(service, path, opts);
-      if (result !== null) return result;
-
-      if (path === "/stats/public") {
-        // Email-gateway per-brand stats
-        const body = opts?.body || {};
-        if (body.brandId) {
-          return Promise.resolve(makeGatewayResponse({ emailsSent: 100, emailsOpened: 50 }));
-        }
-        // email-gateway groupBy returns empty
-        if (body.groupBy === "workflowName") {
-          return Promise.resolve({ groups: [] });
-        }
-        return Promise.resolve(makeGatewayResponse(null));
-      }
-      return Promise.resolve(null);
-    });
-
-    const res = await request(app).get("/performance/leaderboard?appId=distribute");
-
-    expect(res.status).toBe(200);
-    // No proportional distribution — workflows have zero email stats
-    const sienna = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-sienna");
-    expect(sienna).toBeDefined();
-    expect(sienna.emailsSent).toBe(0);
-    expect(sienna.emailsOpened).toBe(0);
-    expect(sienna.emailsReplied).toBe(0);
-
-    const darmstadt = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-darmstadt");
-    expect(darmstadt).toBeDefined();
-    expect(darmstadt.emailsSent).toBe(0);
-    expect(darmstadt.emailsReplied).toBe(0);
-  });
 });
 
 describe("Regression: performance leaderboard must require auth but NOT filter by org/user", () => {
@@ -935,7 +809,7 @@ describe("Regression: performance leaderboard must use broadcast-only stats", ()
     expect(content).not.toMatch(/[bt]\.replied\b/);
   });
 
-  it("should use instantly-service for per-workflow stats with email-gateway fallback", () => {
+  it("should use email-gateway for all delivery stats (brands + workflows)", () => {
     const fs = require("fs");
     const path = require("path");
     const content = fs.readFileSync(
@@ -943,15 +817,16 @@ describe("Regression: performance leaderboard must use broadcast-only stats", ()
       "utf-8"
     );
 
-    // Instantly-service integration (public endpoints)
-    expect(content).toContain("fetchRunIdsByWorkflow");
-    expect(content).toContain("fetchInstantlyGroupedStats");
-    expect(content).toContain("/stats/grouped/public");
-    expect(content).toContain("/v1/stats/public/run-ids-by-workflow");
-    // No email-gateway fallback for workflows — instantly-service is the single source of truth
-    expect(content).not.toContain("fetchWorkflowDeliveryStats");
-    expect(content).not.toContain('groupBy: "workflowName"');
-    expect(content).toContain("anyWorkflowEnriched");
+    // All stats come from email-gateway
+    expect(content).toContain("fetchWorkflowDeliveryStats");
+    expect(content).toContain("fetchBroadcastDeliveryStats");
+    expect(content).toContain('groupBy: "workflowName"');
+    // No instantly-service or runs-service run-ids-by-workflow
+    expect(content).not.toContain("fetchRunIdsByWorkflow");
+    expect(content).not.toContain("fetchInstantlyGroupedStats");
+    expect(content).not.toContain("/stats/grouped/public");
+    expect(content).not.toContain("run-ids-by-workflow");
+    expect(content).not.toContain("externalServices.instantly");
   });
 
   it("should use brand-service and runs-service public leaderboard", () => {
@@ -1008,34 +883,13 @@ describe("Regression: performance leaderboard must use broadcast-only stats", ()
     expect(content).toContain("repliesInterested");
     expect(content).toContain("interestedRate");
     expect(content).toContain("recipients");
-    // emailsReplied IS positive replies only, repliesInterested mirrors it
-    expect(content).toContain("emailsReplied IS positive replies only");
-    expect(content).toContain("repliesInterested mirrors emailsReplied");
-  });
-
-  it("should NOT use proportional distribution fallbacks (cross-org data from runs-service)", () => {
-    const fs = require("fs");
-    const path = require("path");
-    const content = fs.readFileSync(
-      path.join(__dirname, "../../src/routes/performance.ts"),
-      "utf-8"
-    );
-
-    // run-ids-by-workflow is called without orgId — runs-service returns cross-org data
-    expect(content).toContain("/v1/stats/public/run-ids-by-workflow");
-    expect(content).not.toMatch(/run-ids-by-workflow\?orgId/);
-    // No proportional distribution of aggregate stats
-    expect(content).not.toContain("proportional");
-    expect(content).not.toContain("fetchInstantlyAggregateStats");
-    // No email-gateway fallback for workflows — instantly-service is the single source
-    expect(content).not.toContain("fetchWorkflowDeliveryStats");
   });
 });
 
 /**
  * Regression: all callExternalService calls in the leaderboard must forward
- * x-org-id headers. Without them, runs-service, instantly-service, and
- * email-gateway all reject with 400 "x-org-id header is required".
+ * x-org-id headers. Without them, runs-service and email-gateway
+ * reject with 400 "x-org-id header is required".
  */
 describe("leaderboard forwards x-org-id headers to all service calls", () => {
   beforeEach(() => {
@@ -1054,12 +908,11 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
     const workflowGroups: MockRunsGroup[] = [
       { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "5000", actualCostInUsdCents: "4000", provisionedCostInUsdCents: "1000", cancelledCostInUsdCents: "0", runCount: 10 },
     ];
-    const runIdsByWorkflow = { "sales-email-cold-outreach-sienna": ["run-1"] };
-    const instantlyGroups = [
-      { key: "sales-email-cold-outreach-sienna", stats: { emailsSent: 10, emailsOpened: 5 }, recipients: 8 },
+    const workflowEmailStats = [
+      { key: "sales-email-cold-outreach-sienna", broadcast: { emailsSent: 10, emailsOpened: 5, recipients: 8 } },
     ];
 
-    const baseMock = setupMocks(brands, [], workflowGroups, runIdsByWorkflow, instantlyGroups);
+    const baseMock = setupMocks(brands, [], workflowGroups, workflowEmailStats);
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = baseMock(_service, path, opts);
       if (result !== null) return result;
@@ -1078,11 +931,7 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
 
     // Stats calls should use public endpoints (no identity headers)
     const publicStatsCalls = mockCallExternalService.mock.calls.filter(
-      (c: any) => typeof c[1] === "string" && (
-        c[1] === "/stats/public" ||
-        c[1] === "/stats/grouped/public" ||
-        c[1] === "/v1/stats/public/run-ids-by-workflow"
-      )
+      (c: any) => typeof c[1] === "string" && c[1] === "/stats/public"
     );
     expect(publicStatsCalls.length).toBeGreaterThan(0);
     for (const call of publicStatsCalls) {
@@ -1108,7 +957,7 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
       { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
     ];
 
-    const baseMock = setupMocks(brands, [], [], {}, []);
+    const baseMock = setupMocks(brands, [], [], []);
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = baseMock(_service, path, opts);
       if (result !== null) return result;
@@ -1141,7 +990,7 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
       { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
     ];
 
-    const baseMock = setupMocks(brands, [], [], {}, []);
+    const baseMock = setupMocks(brands, [], [], []);
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = baseMock(_service, path, opts);
       if (result !== null) return result;
@@ -1173,10 +1022,9 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
   });
 
   it("regression: leaderboard should succeed without identity headers (public landing page)", async () => {
-    // Bug: POST /stats to email-gateway and instantly-service required x-org-id, x-user-id, x-run-id.
+    // Bug: POST /stats to email-gateway required x-org-id, x-user-id, x-run-id.
     // The leaderboard is called from the landing page without any user context.
-    // Fix: all stats calls now use /stats/public, /stats/grouped/public, /v1/stats/public/run-ids-by-workflow
-    // which only require X-API-Key (serviceAuth), no identity headers.
+    // Fix: all stats calls now use /stats/public which only requires X-API-Key, no identity headers.
     const app = createApp();
     const brands = [
       { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
@@ -1184,14 +1032,11 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
     const workflowGroups: MockRunsGroup[] = [
       { dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "5000.0000", actualCostInUsdCents: "5000.0000", provisionedCostInUsdCents: "0", cancelledCostInUsdCents: "0", runCount: 10 },
     ];
-    const runIdsByWorkflow = {
-      "sales-email-cold-outreach-sienna": ["run-1"],
-    };
-    const instantlyGroups = [
-      { key: "sales-email-cold-outreach-sienna", stats: { emailsSent: 30, emailsOpened: 15, emailsReplied: 5 }, recipients: 25 },
+    const workflowEmailStats = [
+      { key: "sales-email-cold-outreach-sienna", broadcast: { emailsSent: 30, emailsOpened: 15, emailsReplied: 5, repliesWillingToMeet: 3, repliesInterested: 2, recipients: 25 } },
     ];
 
-    const baseMock = setupMocks(brands, [], workflowGroups, runIdsByWorkflow, instantlyGroups);
+    const baseMock = setupMocks(brands, [], workflowGroups, workflowEmailStats);
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = baseMock(_service, path, opts);
       if (result !== null) return result;
@@ -1212,11 +1057,7 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
 
     // Verify no identity headers were sent on any stats call
     const allStatsCalls = mockCallExternalService.mock.calls.filter(
-      (c: any) => typeof c[1] === "string" && (
-        c[1] === "/stats/public" ||
-        c[1] === "/stats/grouped/public" ||
-        c[1] === "/v1/stats/public/run-ids-by-workflow"
-      )
+      (c: any) => typeof c[1] === "string" && c[1] === "/stats/public"
     );
     for (const call of allStatsCalls) {
       const opts = call[2] as { headers?: Record<string, string> };
