@@ -84,7 +84,7 @@ export async function authenticate(
       req.authType = "user_key";
     }
 
-    // Create a request run for tracking (best-effort — don't block if runs-service is down)
+    // Create a request run for tracking — mandatory, fail the request if runs-service is down
     if (req.orgId) {
       try {
         const run = await createRun({
@@ -101,11 +101,12 @@ export async function authenticate(
           const headers: Record<string, string> = {};
           if (req.userId) headers["x-user-id"] = req.userId;
           updateRun(run.id, status, req.orgId, headers).catch((e: unknown) =>
-            console.warn("[auth] Failed to update run:", (e as Error).message)
+            console.error("[auth] Failed to close run:", (e as Error).message)
           );
         });
       } catch (err) {
-        console.warn("[auth] Failed to create request run:", (err as Error).message);
+        console.error("[auth] Failed to create request run:", (err as Error).message);
+        return res.status(502).json({ error: "Run tracking unavailable" });
       }
     }
 
