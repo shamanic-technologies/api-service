@@ -1477,7 +1477,7 @@
           "externalOrgId": {
             "type": "string",
             "minLength": 1,
-            "description": "External organization ID (e.g. Clerk org ID)"
+            "description": "External organization ID from identity provider"
           },
           "externalUserId": {
             "type": "string",
@@ -1518,7 +1518,7 @@
           },
           "externalId": {
             "type": "string",
-            "description": "External user ID (e.g. Clerk user ID)"
+            "description": "External user ID from identity provider"
           },
           "email": {
             "type": "string",

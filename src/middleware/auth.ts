@@ -10,12 +10,14 @@ export interface AuthenticatedRequest extends Request {
 }
 
 /**
- * Authenticate via Bearer token. Two paths:
+ * Authenticate requests. Two paths:
  *
- * 1. Admin key → Bearer token matches ADMIN_DISTRIBUTE_API_KEY env var (dashboard).
- *    External Clerk IDs from x-org-id / x-user-id are resolved via client-service.
+ * 1. Admin (dashboard) → X-API-Key header matches ADMIN_DISTRIBUTE_API_KEY env var.
+ *    External IDs from x-external-org-id / x-external-user-id are resolved via client-service POST /resolve.
+ *    Optional profile headers (x-email, x-first-name, x-last-name) are forwarded.
  *
- * 2. User key (distrib.usr_*) → validated via key-service. Identity comes from the key itself.
+ * 2. User key (distrib.usr_*) → Authorization: Bearer validated via key-service.
+ *    Identity comes from the key itself.
  */
 export async function authenticate(
   req: AuthenticatedRequest,
@@ -23,57 +25,48 @@ export async function authenticate(
   next: NextFunction
 ) {
   try {
+    const apiKey = req.headers["x-api-key"] as string | undefined;
     const authHeader = req.headers.authorization;
 
-    if (!authHeader?.startsWith("Bearer ")) {
-      return res.status(401).json({ error: "Missing authentication" });
-    }
-
-    const key = authHeader.slice(7);
-
-    // ── Path 1: Admin / dashboard auth ──
-    if (key === process.env.ADMIN_DISTRIBUTE_API_KEY) {
+    if (apiKey) {
+      // ── Path 1: Admin auth via X-API-Key ──
+      if (apiKey !== process.env.ADMIN_DISTRIBUTE_API_KEY) {
+        return res.status(401).json({ error: "Invalid admin key" });
+      }
       req.authType = "admin";
 
-      // Dashboard sends external Clerk IDs → resolve to internal UUIDs
-      const externalOrgId = req.headers["x-org-id"] as string | undefined;
-      const externalUserId = req.headers["x-user-id"] as string | undefined;
+      const externalOrgId = req.headers["x-external-org-id"] as string | undefined;
+      const externalUserId = req.headers["x-external-user-id"] as string | undefined;
 
-      if (externalOrgId && externalUserId) {
-        const resolved = await resolveExternalIds(externalOrgId, externalUserId);
-
-        if (!resolved) {
-          console.error("[auth] Admin identity resolution returned null", {
-            externalOrgId,
-            externalUserId,
-          });
-          return res.status(502).json({ error: "Identity resolution failed" });
-        }
-
-        if (!resolved.orgId || !resolved.userId) {
-          console.error("[auth] Admin identity resolution returned empty IDs", {
-            resolved,
-            externalOrgId,
-            externalUserId,
-          });
-          return res.status(502).json({ error: "Identity resolution returned incomplete data" });
-        }
-
-        req.orgId = resolved.orgId;
-        req.userId = resolved.userId;
-      } else if (externalUserId) {
-        // Admin with user context only (e.g. cross-org leaderboard)
-        const userId = await resolveExternalUserId(externalUserId);
-        if (userId) req.userId = userId;
-      } else if (externalOrgId) {
-        // Admin with org context only
-        const orgId = await resolveExternalOrgId(externalOrgId);
-        if (orgId) req.orgId = orgId;
+      if (!externalOrgId || !externalUserId) {
+        return res.status(400).json({ error: "Admin auth requires both x-external-org-id and x-external-user-id" });
       }
-      // Admin without org/user context is valid (e.g. listing all orgs)
 
-    } else {
-      // ── Path 2: User key auth via key-service ──
+      const resolved = await resolveExternalIds(externalOrgId, externalUserId, req);
+
+      if (!resolved) {
+        console.error("[auth] Admin identity resolution returned null", {
+          externalOrgId,
+          externalUserId,
+        });
+        return res.status(502).json({ error: "Identity resolution failed" });
+      }
+
+      if (!resolved.orgId || !resolved.userId) {
+        console.error("[auth] Admin identity resolution returned empty IDs", {
+          resolved,
+          externalOrgId,
+          externalUserId,
+        });
+        return res.status(502).json({ error: "Identity resolution returned incomplete data" });
+      }
+
+      req.orgId = resolved.orgId;
+      req.userId = resolved.userId;
+
+    } else if (authHeader?.startsWith("Bearer ")) {
+      // ── Path 2: User key auth via Bearer ──
+      const key = authHeader.slice(7);
       const validation = await validateKey(key);
       if (!validation) {
         return res.status(401).json({ error: "Invalid API key" });
@@ -82,6 +75,9 @@ export async function authenticate(
       req.orgId = validation.orgId;
       req.userId = validation.userId;
       req.authType = "user_key";
+
+    } else {
+      return res.status(401).json({ error: "Missing authentication" });
     }
 
     // Create a request run for tracking — mandatory, fail the request if runs-service is down
@@ -143,13 +139,25 @@ async function validateKey(apiKey: string): Promise<{
 }
 
 /**
- * Resolve external org/user IDs to internal UUIDs via client-service POST /resolve
+ * Resolve external org/user IDs to internal UUIDs via client-service POST /resolve.
+ * Forwards optional profile headers (x-email, x-first-name, x-last-name) for non-destructive upsert.
  */
 async function resolveExternalIds(
   externalOrgId: string,
   externalUserId: string,
+  req: Request,
 ): Promise<{ orgId: string; userId: string } | null> {
   try {
+    const body: Record<string, string> = { externalOrgId, externalUserId };
+
+    const email = req.headers["x-email"] as string | undefined;
+    const firstName = req.headers["x-first-name"] as string | undefined;
+    const lastName = req.headers["x-last-name"] as string | undefined;
+
+    if (email) body.email = email;
+    if (firstName) body.firstName = firstName;
+    if (lastName) body.lastName = lastName;
+
     const result = await callExternalService<{
       orgId: string;
       userId: string;
@@ -158,46 +166,12 @@ async function resolveExternalIds(
       "/resolve",
       {
         method: "POST",
-        body: { externalOrgId, externalUserId },
+        body,
       }
     );
     return result;
   } catch (error) {
     console.error("[auth] Failed to resolve external IDs:", (error as Error).message);
-    return null;
-  }
-}
-
-/**
- * Resolve a single external user ID to internal UUID via client-service.
- * Used for admin requests with user context but no org context (cross-org views).
- */
-async function resolveExternalUserId(externalUserId: string): Promise<string | null> {
-  try {
-    const result = await callExternalService<{ user: { id: string } }>(
-      externalServices.client,
-      `/users/by-clerk/${encodeURIComponent(externalUserId)}`
-    );
-    return result.user?.id || null;
-  } catch (error) {
-    console.error("[auth] Failed to resolve external user ID:", (error as Error).message);
-    return null;
-  }
-}
-
-/**
- * Resolve a single external org ID to internal UUID via client-service.
- * Used for admin requests with org context but no user context.
- */
-async function resolveExternalOrgId(externalOrgId: string): Promise<string | null> {
-  try {
-    const result = await callExternalService<{ org: { id: string } }>(
-      externalServices.client,
-      `/orgs/by-clerk/${encodeURIComponent(externalOrgId)}`
-    );
-    return result.org?.id || null;
-  } catch (error) {
-    console.error("[auth] Failed to resolve external org ID:", (error as Error).message);
     return null;
   }
 }
@@ -214,8 +188,8 @@ export function requireOrg(
     console.warn("[auth] requireOrg blocked request", {
       path: req.path,
       authType: req.authType,
-      hasOrgHeader: !!req.headers["x-org-id"],
-      hasUserHeader: !!req.headers["x-user-id"],
+      hasOrgHeader: !!req.headers["x-external-org-id"],
+      hasUserHeader: !!req.headers["x-external-user-id"],
     });
     return res.status(400).json({ error: "Organization context required" });
   }

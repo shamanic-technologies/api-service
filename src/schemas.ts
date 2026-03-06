@@ -1876,7 +1876,7 @@ registry.registerPath({
 
 export const ResolveUserRequestSchema = z
   .object({
-    externalOrgId: z.string().min(1).describe("External organization ID (e.g. Clerk org ID)"),
+    externalOrgId: z.string().min(1).describe("External organization ID from identity provider"),
     externalUserId: z.string().min(1).describe("External user ID — use a generated UUID for anonymous users"),
     email: z.string().email().optional().describe("User email address"),
     firstName: z.string().optional().describe("User first name"),
@@ -1933,7 +1933,7 @@ export const ListUsersQuerySchema = z
 export const ListUsersUserSchema = z
   .object({
     id: z.string().uuid().describe("Internal user UUID"),
-    externalId: z.string().describe("External user ID (e.g. Clerk user ID)"),
+    externalId: z.string().describe("External user ID from identity provider"),
     email: z.string().nullable().describe("User email address"),
     firstName: z.string().nullable().describe("User first name"),
     lastName: z.string().nullable().describe("User last name"),
