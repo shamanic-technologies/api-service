@@ -17,6 +17,7 @@ import chatRoutes from "./routes/chat.js";
 import billingRoutes from "./routes/billing.js";
 import { stripeWebhookHandler } from "./routes/billing.js";
 import emailsRoutes from "./routes/emails.js";
+import internalEmailsRoutes from "./routes/internal-emails.js";
 import stripeRoutes from "./routes/stripe.js";
 import usersRoutes from "./routes/users.js";
 import { apiReference } from "@scalar/express-api-reference";
@@ -76,6 +77,9 @@ app.use(
 // Public routes
 app.use(healthRoutes);
 app.use(performanceRoutes);
+
+// Internal platform routes (API key only, no identity)
+app.use("/internal", internalEmailsRoutes);
 
 // Authenticated routes
 app.use("/v1", meRoutes);

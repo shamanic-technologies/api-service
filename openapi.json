@@ -58,6 +58,10 @@
     {
       "name": "Billing",
       "description": "Billing, credits, and checkout"
+    },
+    {
+      "name": "Internal",
+      "description": "Platform-level operations (API key auth, no identity headers)"
     }
   ],
   "components": {
@@ -66,6 +70,12 @@
         "type": "http",
         "scheme": "bearer",
         "description": "Bearer token authentication.\n\nUse an API key (`distrib.usr_*`) as your Bearer token. Create one via `POST /v1/api-keys` or in the dashboard.\n\nYour key carries your org and user identity. No extra headers needed."
+      },
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "Platform API key for internal/admin operations.\n\nUsed for cold-start operations (e.g. template deployment) where no user session exists."
       }
     },
     "schemas": {
@@ -5584,6 +5594,84 @@
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeployEmailTemplatesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Templates deployed"
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          }
+        ]
+      }
+    },
+    "/internal/emails/templates": {
+      "put": {
+        "tags": [
+          "Internal"
+        ],
+        "summary": "Deploy email templates (platform)",
+        "description": "Platform-level template deployment — no identity headers required. Authenticated by X-API-Key only. Used at cold start when no Clerk session exists. Same body format as PUT /v1/emails/templates.",
+        "security": [
+          {
+            "apiKeyAuth": []
           }
         ],
         "requestBody": {
