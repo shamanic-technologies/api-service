@@ -311,26 +311,13 @@ router.post("/campaigns/:id/stop", authenticate, requireOrg, requireUser, async 
 
 /**
  * POST /v1/campaigns/:id/resume
- * Resume a stopped campaign
+ * @deprecated — Create a new campaign instead of resuming a stopped one.
  */
-router.post("/campaigns/:id/resume", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await callExternalService(
-      externalServices.campaign,
-      `/campaigns/${id}`,
-      {
-        method: "PATCH",
-        headers: buildInternalHeaders(req),
-        body: { status: "activate" },
-      }
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("Resume campaign error:", error);
-    res.status(500).json({ error: error.message || "Failed to resume campaign" });
-  }
+router.post("/campaigns/:id/resume", authenticate, requireOrg, requireUser, async (_req: AuthenticatedRequest, res) => {
+  res.status(410).json({
+    error:
+      "This endpoint has been deprecated. Please create a new campaign instead of resuming a stopped one.",
+  });
 });
 
 /**

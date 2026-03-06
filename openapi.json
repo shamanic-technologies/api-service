@@ -2165,8 +2165,9 @@
         "tags": [
           "Campaigns"
         ],
-        "summary": "Resume a campaign",
-        "description": "Resume a stopped campaign",
+        "summary": "Resume a campaign (deprecated)",
+        "description": "**Deprecated.** This endpoint is no longer supported. Create a new campaign instead of resuming a stopped one.",
+        "deprecated": true,
         "security": [
           {
             "bearerAuth": []
@@ -2203,9 +2204,6 @@
           }
         ],
         "responses": {
-          "200": {
-            "description": "Resumed campaign"
-          },
           "401": {
             "description": "Unauthorized",
             "content": {
@@ -2216,8 +2214,8 @@
               }
             }
           },
-          "500": {
-            "description": "Internal error",
+          "410": {
+            "description": "Gone — endpoint deprecated",
             "content": {
               "application/json": {
                 "schema": {
