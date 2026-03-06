@@ -24,6 +24,7 @@ function setAllEnvVars() {
   process.env.POSTMARK_BROADCAST_STREAM_ID = "broadcast";
   process.env.POSTMARK_INBOUND_STREAM_ID = "inbound";
   process.env.POSTMARK_TRANSACTIONAL_STREAM_ID = "outbound";
+  process.env.POSTMARK_FROM_ADDRESS = "growth@distribute.you";
   process.env.STRIPE_SECRET_KEY = "sk_test_stripe";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
 }
@@ -38,6 +39,7 @@ function deleteAllEnvVars() {
   delete process.env.POSTMARK_BROADCAST_STREAM_ID;
   delete process.env.POSTMARK_INBOUND_STREAM_ID;
   delete process.env.POSTMARK_TRANSACTIONAL_STREAM_ID;
+  delete process.env.POSTMARK_FROM_ADDRESS;
   delete process.env.STRIPE_SECRET_KEY;
   delete process.env.STRIPE_WEBHOOK_SECRET;
 }
@@ -75,7 +77,7 @@ describe("registerPlatformKeys", () => {
     await registerPlatformKeys();
 
     const platformKeyCalls = fetchCalls.filter((c) => c.url.includes("/platform-keys"));
-    expect(platformKeyCalls).toHaveLength(11);
+    expect(platformKeyCalls).toHaveLength(12);
 
     const providers = platformKeyCalls.map((c) => c.body?.provider);
     expect(providers).toContain("anthropic");
@@ -87,6 +89,7 @@ describe("registerPlatformKeys", () => {
     expect(providers).toContain("postmark-broadcast-stream");
     expect(providers).toContain("postmark-inbound-stream");
     expect(providers).toContain("postmark-transactional-stream");
+    expect(providers).toContain("postmark-from-address");
     expect(providers).toContain("stripe");
     expect(providers).toContain("stripe-webhook");
 

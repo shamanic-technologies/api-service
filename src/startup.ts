@@ -10,6 +10,7 @@ const PLATFORM_KEYS: { provider: string; envVar: string }[] = [
   { provider: "postmark-broadcast-stream", envVar: "POSTMARK_BROADCAST_STREAM_ID" },
   { provider: "postmark-inbound-stream", envVar: "POSTMARK_INBOUND_STREAM_ID" },
   { provider: "postmark-transactional-stream", envVar: "POSTMARK_TRANSACTIONAL_STREAM_ID" },
+  { provider: "postmark-from-address", envVar: "POSTMARK_FROM_ADDRESS" },
   { provider: "stripe", envVar: "STRIPE_SECRET_KEY" },
   { provider: "stripe-webhook", envVar: "STRIPE_WEBHOOK_SECRET" },
 ];
