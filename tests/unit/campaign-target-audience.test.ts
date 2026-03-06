@@ -54,11 +54,6 @@ describe("POST /v1/campaigns with targetAudience", () => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
       fetchCalls.push({ url, body });
 
-      // Workflow resolution
-      if (url.includes("/workflows?status=all")) {
-        return { ok: true, json: () => Promise.resolve({ workflows: [{ id: "wf-1", name: "sales-email-cold-outreach-sienna", status: "active", upgradedTo: null }] }) };
-      }
-
       // Brand upsert
       if (url.includes("/brands") && init?.method === "POST") {
         return {
@@ -284,9 +279,6 @@ describe("POST /v1/campaigns with targetAudience", () => {
 
   it("should fail when brand upsert fails", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-      if (url.includes("/workflows?status=all")) {
-        return { ok: true, json: () => Promise.resolve({ workflows: [{ id: "wf-1", name: "sales-email-cold-outreach-sienna", status: "active", upgradedTo: null }] }) };
-      }
       if (url.includes("/brands") && init?.method === "POST") {
         return {
           ok: false,
