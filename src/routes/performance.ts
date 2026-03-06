@@ -141,28 +141,6 @@ async function fetchBroadcastDeliveryStats(filters: Record<string, string>): Pro
   }
 }
 
-/** Fetch broadcast delivery stats grouped by workflow name (public endpoint, no identity headers). */
-async function fetchWorkflowDeliveryStats(): Promise<Map<string, DeliveryStats>> {
-  try {
-    const result = await callExternalService<{
-      groups: Array<{ key: string; broadcast: BroadcastStatsResponse }>;
-    }>(
-      externalServices.emailGateway,
-      "/stats/public",
-      { method: "POST", body: { type: "broadcast", groupBy: "workflowName" } }
-    );
-
-    const map = new Map<string, DeliveryStats>();
-    for (const group of result.groups || []) {
-      if (group.key) {
-        map.set(group.key, toBroadcastDeliveryStats(group.broadcast));
-      }
-    }
-    return map;
-  } catch {
-    return new Map();
-  }
-}
 
 /** Stats shape returned by instantly-service POST /stats/grouped. */
 interface InstantlyGroupStats {
@@ -292,8 +270,7 @@ function applyStatsToWorkflow(wf: WorkflowEntry, stats: DeliveryStats) {
 /**
  * Enrich leaderboard with delivery stats.
  * Brands: email-gateway (broadcast stats by brandId).
- * Workflows: instantly-service via run-ids-by-workflow → POST /stats/grouped,
- *   with email-gateway groupBy as fallback.
+ * Workflows: instantly-service via run-ids-by-workflow → POST /stats/grouped.
  */
 async function enrichWithDeliveryStats(data: LeaderboardData): Promise<void> {
   // Fetch per-brand stats (email-gateway) + workflow stats (instantly-service) in parallel
@@ -326,19 +303,6 @@ async function enrichWithDeliveryStats(data: LeaderboardData): Promise<void> {
   }
   if (!anyWorkflowEnriched && data.workflows.length > 0) {
     console.warn("[leaderboard] instantly per-workflow path returned no data");
-  }
-
-  // Fallback: email-gateway groupBy (for workflows not covered by instantly)
-  if (!anyWorkflowEnriched && data.workflows.length > 0) {
-    console.warn("[leaderboard] falling back to email-gateway groupBy");
-    const workflowStatsMap = await fetchWorkflowDeliveryStats();
-    for (const wf of data.workflows) {
-      const stats = workflowStatsMap.get(wf.workflowName);
-      if (stats && stats.emailsSent > 0) {
-        applyStatsToWorkflow(wf, stats);
-        anyWorkflowEnriched = true;
-      }
-    }
   }
 
   // Recompute hero stats: best $/open and $/reply across brands
