@@ -223,7 +223,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] POST /v1/campaigns \u2014 FAILED:", error.message, error.stack);
-    res.status(500).json({ error: error.message || "Failed to create campaign" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to create campaign" });
   }
 });
 
@@ -269,7 +269,7 @@ router.patch("/campaigns/:id", authenticate, requireOrg, requireUser, async (req
     res.json(result);
   } catch (error: any) {
     console.error("Update campaign error:", error);
-    res.status(500).json({ error: error.message || "Failed to update campaign" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to update campaign" });
   }
 });
 
