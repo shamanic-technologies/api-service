@@ -21,7 +21,7 @@ import internalEmailsRoutes from "./routes/internal-emails.js";
 import stripeRoutes from "./routes/stripe.js";
 import usersRoutes from "./routes/users.js";
 import { apiReference } from "@scalar/express-api-reference";
-import { registerPlatformKeys, registerPrompts } from "./startup.js";
+import { registerPlatformKeys } from "./startup.js";
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -114,12 +114,10 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 // Listen on :: for Railway private networking (IPv4 & IPv6 support)
 const server = app.listen(Number(PORT), "::", () => {
   console.log(`API Gateway running on port ${PORT}`);
-  registerPlatformKeys()
-    .then(() => registerPrompts())
-    .catch((err) => {
-      console.error("[api-service] FATAL: Startup registration failed:", err.message);
-      process.exit(1);
-    });
+  registerPlatformKeys().catch((err) => {
+    console.error("[api-service] FATAL: Platform key registration failed:", err.message);
+    process.exit(1);
+  });
 });
 
 // ── Graceful shutdown ─────────────────────────────────────────────────────────
