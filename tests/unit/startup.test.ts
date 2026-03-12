@@ -12,7 +12,7 @@ vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
 }));
 
-import { registerPlatformKeys } from "../../src/startup.js";
+import { registerPlatformKeys, registerPlatformPrompts } from "../../src/startup.js";
 
 function setAllEnvVars() {
   process.env.ANTHROPIC_API_KEY = "sk-ant-test";
@@ -131,5 +131,86 @@ describe("registerPlatformKeys", () => {
     delete process.env.STRIPE_SECRET_KEY;
 
     await expect(registerPlatformKeys()).rejects.toThrow("STRIPE_SECRET_KEY");
+  });
+});
+
+describe("registerPlatformPrompts", () => {
+  let fetchCalls: Array<{ url: string; method?: string; body?: Record<string, unknown> }>;
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    fetchCalls = [];
+
+    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(init.body as string) : undefined;
+      fetchCalls.push({ url, method: init?.method, body });
+
+      return new Response(JSON.stringify({ type: "cold-email", message: "Platform prompt registered" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+  });
+
+  it("should call PUT /platform-prompts on content-generation-service", async () => {
+    await registerPlatformPrompts();
+
+    const promptCalls = fetchCalls.filter((c) => c.url.includes("/platform-prompts"));
+    expect(promptCalls).toHaveLength(1);
+    expect(promptCalls[0].method).toBe("PUT");
+  });
+
+  it("should send cold-email type with all 6 template variables", async () => {
+    await registerPlatformPrompts();
+
+    const call = fetchCalls.find((c) => c.url.includes("/platform-prompts"));
+    expect(call!.body).toHaveProperty("type", "cold-email");
+    expect(call!.body!.variables).toEqual([
+      "leadFirstName",
+      "leadLastName",
+      "leadTitle",
+      "leadCompanyName",
+      "leadCompanyIndustry",
+      "clientCompanyName",
+    ]);
+  });
+
+  it("should include mustache placeholders and a resolved date in the prompt", async () => {
+    await registerPlatformPrompts();
+
+    const call = fetchCalls.find((c) => c.url.includes("/platform-prompts"));
+    const prompt = call!.body!.prompt as string;
+    expect(prompt).toContain("{{leadFirstName}}");
+    expect(prompt).toContain("{{clientCompanyName}}");
+    expect(prompt).toMatch(/Today is \d{4}-\d{2}-\d{2}\./);
+    expect(prompt).not.toContain("${");
+  });
+
+  it("should NOT send identity headers (x-org-id, x-user-id, x-run-id)", async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(init.body as string) : undefined;
+      const headers = init?.headers as Record<string, string> | undefined;
+      fetchCalls.push({ url, method: init?.method, body, headers } as any);
+
+      return new Response(JSON.stringify({}), { status: 200, headers: { "Content-Type": "application/json" } });
+    });
+
+    await registerPlatformPrompts();
+
+    const call = fetchCalls.find((c) => c.url.includes("/platform-prompts")) as any;
+    expect(call.headers).not.toHaveProperty("x-org-id");
+    expect(call.headers).not.toHaveProperty("x-user-id");
+    expect(call.headers).not.toHaveProperty("x-run-id");
+  });
+
+  it("should throw when content-generation-service returns an error", async () => {
+    global.fetch = vi.fn().mockImplementation(async () => {
+      return new Response(JSON.stringify({ error: "Service unavailable" }), {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+
+    await expect(registerPlatformPrompts()).rejects.toThrow();
   });
 });
