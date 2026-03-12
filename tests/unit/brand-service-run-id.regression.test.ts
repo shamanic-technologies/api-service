@@ -54,7 +54,10 @@ describe("all brand-service calls include internal headers", () => {
     expect(matches.length).toBeGreaterThan(0);
 
     for (const idx of matches) {
-      const callBlock = src.slice(idx, idx + 400);
+      // Check the call and surrounding context — headers may be stored
+      // in a local variable derived from buildInternalHeaders above
+      const contextStart = Math.max(0, idx - 200);
+      const callBlock = src.slice(contextStart, idx + 400);
       expect(callBlock).toContain("buildInternalHeaders");
     }
   });
