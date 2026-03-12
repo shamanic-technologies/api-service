@@ -4,7 +4,6 @@ import { callExternalService, externalServices } from "../lib/service-client.js"
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { CreateCampaignRequestSchema, BatchStatsRequestSchema } from "../schemas.js";
-import { ensureColdEmailPrompt } from "../lib/prompts.js";
 
 const router = Router();
 
@@ -137,26 +136,22 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       maxLeads: parsed.data.maxLeads,
     });
 
-    // 1. Upsert brand + ensure cold-email prompt is registered for this org (parallel)
-    console.log("[api-service] POST /v1/campaigns \u2014 step 1: upserting brand + registering prompt", { brandUrl, orgId: req.orgId });
-    const internalHeaders = buildInternalHeaders(req);
-    const [brandResult] = await Promise.all([
-      callExternalService<{ brandId: string }>(
-        externalServices.brand,
-        "/brands",
-        {
-          method: "POST",
-          headers: internalHeaders,
-          body: {
-            orgId: req.orgId,
-            url: brandUrl,
-            userId: req.userId,
-          },
-        }
-      ),
-      ensureColdEmailPrompt(internalHeaders),
-    ]);
-    console.log("[api-service] POST /v1/campaigns \u2014 step 1 done: brand upserted + prompt registered", { brandId: brandResult.brandId });
+    // 1. Upsert brand to get brandId
+    console.log("[api-service] POST /v1/campaigns \u2014 step 1: upserting brand", { brandUrl, orgId: req.orgId });
+    const brandResult = await callExternalService<{ brandId: string }>(
+      externalServices.brand,
+      "/brands",
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body: {
+          orgId: req.orgId,
+          url: brandUrl,
+          userId: req.userId,
+        },
+      }
+    );
+    console.log("[api-service] POST /v1/campaigns \u2014 step 1 done: brand upserted", { brandId: brandResult.brandId });
 
     // 2. Forward to campaign-service (run tracking via x-run-id header)
     // Derive `type` from workflowName for campaign-service backward compat
