@@ -179,8 +179,8 @@ describe("registerPrompts", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/prompts"));
     expect(call?.headers).toMatchObject({
-      "x-org-id": "system",
-      "x-user-id": "system",
+      "x-org-id": "00000000-0000-0000-0000-000000000000",
+      "x-user-id": "00000000-0000-0000-0000-000000000000",
       "x-run-id": "startup",
     });
   });
