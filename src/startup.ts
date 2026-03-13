@@ -130,6 +130,27 @@ const COLD_EMAIL_VARIABLES = [
   "clientCompanyName",
 ];
 
+// ── Platform chat config ──────────────────────────────────────────────────
+
+export async function registerPlatformChatConfig(): Promise<void> {
+  console.log("[api-service] Registering platform chat config with chat-service...");
+
+  await callExternalService(externalServices.chat, "/platform-config", {
+    method: "PUT",
+    body: {
+      systemPrompt:
+        "You are a helpful assistant embedded in a workflow management dashboard. " +
+        "You help users understand their workflows — what each step does, how the DAG is structured, " +
+        "what inputs and outputs are expected, and how to troubleshoot issues. " +
+        "Be concise and practical. When referencing workflow steps, use their names.",
+    },
+  });
+
+  console.log("[api-service] Platform chat config registered");
+}
+
+// ── Platform prompts ────────────────────────────────────────────────────────
+
 export async function registerPlatformPrompts(): Promise<void> {
   console.log("[api-service] Registering platform prompts with content-generation-service...");
 

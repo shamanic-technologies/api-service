@@ -1083,6 +1083,29 @@
           "message"
         ]
       },
+      "PlatformChatConfigRequest": {
+        "type": "object",
+        "properties": {
+          "systemPrompt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "System prompt for the AI assistant"
+          },
+          "mcpServerUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "MCP server URL for tool calling"
+          },
+          "mcpKeyName": {
+            "type": "string",
+            "minLength": 1,
+            "description": "MCP key name for auth resolution"
+          }
+        },
+        "required": [
+          "systemPrompt"
+        ]
+      },
       "SwitchBillingModeRequest": {
         "type": "object",
         "properties": {
@@ -5141,6 +5164,84 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          }
+        ]
+      }
+    },
+    "/platform-chat/config": {
+      "put": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Deploy platform-level chat config",
+        "description": "Register or update the global chat configuration (system prompt, MCP server). Platform-level — no org/user identity required. Used by the dashboard at cold start. Idempotent (safe to call on every boot).",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlatformChatConfigRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Config registered"
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing platform API key",
             "content": {
               "application/json": {
                 "schema": {

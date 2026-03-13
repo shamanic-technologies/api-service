@@ -21,8 +21,9 @@ import internalEmailsRoutes from "./routes/internal-emails.js";
 import stripeRoutes from "./routes/stripe.js";
 import usersRoutes from "./routes/users.js";
 import platformRoutes from "./routes/platform.js";
+import platformChatRoutes from "./routes/platform-chat.js";
 import { apiReference } from "@scalar/express-api-reference";
-import { registerPlatformKeys, registerPlatformPrompts } from "./startup.js";
+import { registerPlatformKeys, registerPlatformPrompts, registerPlatformChatConfig } from "./startup.js";
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -81,6 +82,7 @@ app.use(performanceRoutes);
 
 // Internal platform routes (API key only, no identity)
 app.use("/internal", internalEmailsRoutes);
+app.use("/platform-chat", platformChatRoutes);
 
 // Authenticated routes
 app.use("/v1", meRoutes);
@@ -118,6 +120,7 @@ const server = app.listen(Number(PORT), "::", () => {
   console.log(`API Gateway running on port ${PORT}`);
   registerPlatformKeys()
     .then(() => registerPlatformPrompts())
+    .then(() => registerPlatformChatConfig())
     .catch((err) => {
       console.error("[api-service] FATAL: Startup registration failed:", err.message);
       process.exit(1);

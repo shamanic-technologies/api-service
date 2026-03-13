@@ -1413,6 +1413,41 @@ registry.registerPath({
 });
 
 // ===================================================================
+// PLATFORM CHAT CONFIG
+// ===================================================================
+
+export const PlatformChatConfigRequestSchema = z
+  .object({
+    systemPrompt: z.string().min(1).describe("System prompt for the AI assistant"),
+    mcpServerUrl: z.string().url().optional().describe("MCP server URL for tool calling"),
+    mcpKeyName: z.string().min(1).optional().describe("MCP key name for auth resolution"),
+  })
+  .openapi("PlatformChatConfigRequest");
+
+registry.registerPath({
+  method: "put",
+  path: "/platform-chat/config",
+  tags: ["Chat"],
+  summary: "Deploy platform-level chat config",
+  description:
+    "Register or update the global chat configuration (system prompt, MCP server). " +
+    "Platform-level — no org/user identity required. " +
+    "Used by the dashboard at cold start. Idempotent (safe to call on every boot).",
+  security: platformAuth,
+  request: {
+    body: {
+      content: { "application/json": { schema: PlatformChatConfigRequestSchema } },
+    },
+  },
+  responses: {
+    200: { description: "Config registered" },
+    400: { description: "Invalid request", content: errorContent },
+    401: { description: "Invalid or missing platform API key", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ===================================================================
 // BILLING
 // ===================================================================
 
