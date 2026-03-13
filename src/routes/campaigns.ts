@@ -2,57 +2,11 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
+import { fetchDeliveryStats } from "../lib/delivery-stats.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { CreateCampaignRequestSchema } from "../schemas.js";
 
 const router = Router();
-
-interface EmailGatewayStats {
-  emailsSent: number; emailsDelivered: number; emailsOpened: number; emailsClicked: number;
-  emailsReplied: number; emailsBounced: number; repliesWillingToMeet: number;
-  repliesInterested: number; repliesNotInterested: number; repliesOutOfOffice: number;
-  repliesUnsubscribe: number; recipients: number;
-}
-
-/** Fetch delivery stats from email-gateway (aggregates transactional + broadcast). */
-async function fetchDeliveryStats(
-  filters: { campaignId?: string; brandId?: string },
-  req: AuthenticatedRequest,
-): Promise<Record<string, number> | null> {
-  const orgId = req.orgId!;
-  const params = new URLSearchParams({ orgId });
-  if (filters.campaignId) params.set("campaignId", filters.campaignId);
-  if (filters.brandId) params.set("brandId", filters.brandId);
-  const deliveryResult = await callExternalService<{ transactional: EmailGatewayStats; broadcast: EmailGatewayStats }>(
-    externalServices.emailGateway,
-    `/stats?${params}`,
-    {
-      headers: buildInternalHeaders(req),
-    }
-  ).catch((err) => {
-    console.warn("[campaigns] Email-gateway stats failed:", (err as Error).message);
-    return null;
-  });
-
-  // Only use broadcast stats (outreach emails via Instantly).
-  // Transactional stats are transactional/test emails via Postmark — not relevant.
-  const b = (deliveryResult as any)?.broadcast;
-  if (!b) return null;
-
-  return {
-    emailsSent: b.emailsSent || 0,
-    emailsDelivered: b.emailsDelivered || 0,
-    emailsOpened: b.emailsOpened || 0,
-    emailsClicked: b.emailsClicked || 0,
-    emailsReplied: b.emailsReplied || 0,
-    emailsBounced: b.emailsBounced || 0,
-    repliesWillingToMeet: b.repliesWillingToMeet || 0,
-    repliesInterested: b.repliesInterested || 0,
-    repliesNotInterested: b.repliesNotInterested || 0,
-    repliesOutOfOffice: b.repliesOutOfOffice || 0,
-    repliesUnsubscribe: b.repliesUnsubscribe || 0,
-  };
-}
 
 /**
  * GET /v1/campaigns
@@ -555,35 +509,6 @@ router.get("/campaigns/:id/emails", authenticate, requireOrg, requireUser, async
   } catch (error: any) {
     console.error("Get campaign emails error:", error);
     res.status(500).json({ error: error.message || "Failed to get campaign emails" });
-  }
-});
-
-/**
- * GET /v1/brands/:brandId/stats
- * Get delivery stats for all campaigns under a brand (single email-gateway call)
- */
-router.get("/brands/:brandId/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { brandId } = req.params;
-
-    const delivery = await fetchDeliveryStats({ brandId }, req);
-
-    res.json(delivery ?? {
-      emailsSent: 0,
-      emailsDelivered: 0,
-      emailsOpened: 0,
-      emailsClicked: 0,
-      emailsReplied: 0,
-      emailsBounced: 0,
-      repliesWillingToMeet: 0,
-      repliesInterested: 0,
-      repliesNotInterested: 0,
-      repliesOutOfOffice: 0,
-      repliesUnsubscribe: 0,
-    });
-  } catch (error: any) {
-    console.error("Get brand delivery stats error:", error);
-    res.status(500).json({ error: error.message || "Failed to get brand delivery stats" });
   }
 });
 

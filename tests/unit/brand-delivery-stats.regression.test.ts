@@ -4,8 +4,9 @@
  * so each campaign got org-wide totals. With N campaigns, sent/opened were
  * inflated by a factor of N.
  *
- * Fix: GET /v1/brands/:brandId/delivery-stats makes a single email-gateway call
+ * Fix: GET /v1/brands/:id/stats makes a single email-gateway call
  * with brandId filter, returning only broadcast (outreach) stats.
+ * This route now lives in brand.ts (not campaigns.ts).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -55,16 +56,16 @@ vi.mock("@distribute/runs-client", () => ({
 
 import express from "express";
 import request from "supertest";
-import campaignsRouter from "../../src/routes/campaigns.js";
+import brandRouter from "../../src/routes/brand.js";
 
 function createApp() {
   const app = express();
   app.use(express.json());
-  app.use("/v1", campaignsRouter);
+  app.use("/v1", brandRouter);
   return app;
 }
 
-describe("GET /v1/brands/:brandId/stats", () => {
+describe("GET /v1/brands/:id/stats", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -172,41 +173,33 @@ describe("GET /v1/brands/:brandId/stats", () => {
 });
 
 describe("Regression: fetchDeliveryStats must use broadcast only", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   it("fetchDeliveryStats should only read broadcast stats in source code", () => {
     const fs = require("fs");
     const path = require("path");
     const content = fs.readFileSync(
-      path.join(__dirname, "../../src/routes/campaigns.ts"),
+      path.join(__dirname, "../../src/lib/delivery-stats.ts"),
       "utf-8"
     );
 
-    // The endpoint should exist (renamed from /delivery-stats to /stats)
-    expect(content).toContain("/brands/:brandId/stats");
     // Should only use broadcast, not sum transactional + broadcast
     expect(content).toContain("Only use broadcast stats");
     expect(content).not.toMatch(/sum\(t\?\.emails/);
   });
 
-  it("brand page should use brand-level delivery stats without fallback", () => {
+  it("brand delivery stats route should be in brand.ts, not campaigns.ts", () => {
     const fs = require("fs");
     const path = require("path");
-    const pagePath = path.join(__dirname, "../../../../apps/dashboard/src/app/(dashboard)/brands/[brandId]/workflows/[sectionKey]/page.tsx");
-    if (!fs.existsSync(pagePath)) {
-      // Dashboard file not available in this workspace — skip
-      return;
-    }
-    const content = fs.readFileSync(pagePath, "utf-8");
+    const brandContent = fs.readFileSync(
+      path.join(__dirname, "../../src/routes/brand.ts"),
+      "utf-8"
+    );
+    const campaignsContent = fs.readFileSync(
+      path.join(__dirname, "../../src/routes/campaigns.ts"),
+      "utf-8"
+    );
 
-    expect(content).toContain("getBrandDeliveryStats");
-    // Should NOT fall back to per-campaign sum for delivery stats
-    expect(content).not.toMatch(/brandDelivery\?\.\w+ \?\? campaignTotals\.\w+/);
+    expect(brandContent).toContain('"/brands/:id/stats"');
+    expect(campaignsContent).not.toContain('"/brands/:brandId/stats"');
+    expect(campaignsContent).not.toContain('"/brands/:id/stats"');
   });
 });
