@@ -10,15 +10,20 @@ const router = Router();
 // Helpers
 // ---------------------------------------------------------------------------
 
+interface ProviderInfo {
+  name: string;
+  domain: string | null;
+}
+
 interface WorkflowProviders {
-  providers: string[];
+  providers: ProviderInfo[];
 }
 
 /**
  * Fetch requiredProviders for a single workflow by ID from workflow-service.
  * Returns an empty array on failure (best-effort enrichment).
  */
-async function fetchRequiredProviders(workflowId: string, headers: Record<string, string> = {}): Promise<string[]> {
+async function fetchRequiredProviders(workflowId: string, headers: Record<string, string> = {}): Promise<ProviderInfo[]> {
   try {
     const result = await callExternalService<WorkflowProviders>(
       externalServices.workflow,
@@ -223,8 +228,9 @@ router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, asyn
       steps.push(`${i + 1}. ${desc}`);
     }
 
-    const providerList = requiredProviders.length > 0
-      ? ` Uses ${requiredProviders.join(", ")}.`
+    const providerNames = requiredProviders.map((p) => p.name);
+    const providerList = providerNames.length > 0
+      ? ` Uses ${providerNames.join(", ")}.`
       : "";
     const summary = `This workflow has ${ordered.length} step${ordered.length === 1 ? "" : "s"}.${providerList}`;
 
@@ -258,15 +264,16 @@ router.get("/workflows/:id/key-status", authenticate, requireOrg, requireUser, a
     const configuredMap = new Map(orgKeys.map((k) => [k.provider, k.maskedKey]));
     const sourceMap = new Map(keySources.map((s) => [s.provider, s.keySource]));
 
-    const keys = requiredProviders.map((provider) => {
-      const keySource = sourceMap.get(provider) ?? "platform";
-      const hasOrgKey = configuredMap.has(provider);
+    const keys = requiredProviders.map((p) => {
+      const providerName = p.name;
+      const keySource = sourceMap.get(providerName) ?? "platform";
+      const hasOrgKey = configuredMap.has(providerName);
       // Platform keys are always available; org keys must be explicitly configured
       const configured = keySource === "platform" || hasOrgKey;
       return {
-        provider,
+        provider: providerName,
         configured,
-        maskedKey: configuredMap.get(provider) ?? null,
+        maskedKey: configuredMap.get(providerName) ?? null,
         keySource,
       };
     });

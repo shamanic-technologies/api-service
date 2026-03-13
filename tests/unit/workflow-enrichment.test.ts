@@ -56,7 +56,7 @@ describe("GET /v1/workflows — enrichment with requiredProviders", () => {
       if (url.includes("/required-providers")) {
         return {
           ok: true,
-          json: () => Promise.resolve({ providers: ["apollo", "anthropic"], endpoints: [] }),
+          json: () => Promise.resolve({ providers: [{ name: "apollo", domain: "apollo.io" }, { name: "anthropic", domain: "anthropic.com" }], endpoints: [] }),
         };
       }
       if (url.includes("/workflows?") || (url.includes("/workflows") && !url.includes("/"))) {
@@ -82,8 +82,8 @@ describe("GET /v1/workflows — enrichment with requiredProviders", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.workflows).toHaveLength(2);
-    expect(res.body.workflows[0].requiredProviders).toEqual(["apollo", "anthropic"]);
-    expect(res.body.workflows[1].requiredProviders).toEqual(["apollo", "anthropic"]);
+    expect(res.body.workflows[0].requiredProviders).toEqual([{ name: "apollo", domain: "apollo.io" }, { name: "anthropic", domain: "anthropic.com" }]);
+    expect(res.body.workflows[1].requiredProviders).toEqual([{ name: "apollo", domain: "apollo.io" }, { name: "anthropic", domain: "anthropic.com" }]);
   });
 
   it("should call required-providers for each workflow", async () => {
@@ -103,7 +103,7 @@ describe("GET /v1/workflows — enrichment with requiredProviders", () => {
         if (callCount === 1) {
           return { ok: false, text: () => Promise.resolve("Internal error") };
         }
-        return { ok: true, json: () => Promise.resolve({ providers: ["firecrawl"] }) };
+        return { ok: true, json: () => Promise.resolve({ providers: [{ name: "firecrawl", domain: "firecrawl.dev" }] }) };
       }
       return {
         ok: true,
@@ -122,7 +122,7 @@ describe("GET /v1/workflows — enrichment with requiredProviders", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.workflows[0].requiredProviders).toEqual([]);
-    expect(res.body.workflows[1].requiredProviders).toEqual(["firecrawl"]);
+    expect(res.body.workflows[1].requiredProviders).toEqual([{ name: "firecrawl", domain: "firecrawl.dev" }]);
   });
 });
 
@@ -142,7 +142,7 @@ describe("GET /v1/workflows/:id — enrichment with requiredProviders", () => {
       if (url.includes("/required-providers")) {
         return {
           ok: true,
-          json: () => Promise.resolve({ providers: ["instantly", "anthropic"] }),
+          json: () => Promise.resolve({ providers: [{ name: "instantly", domain: "instantly.ai" }, { name: "anthropic", domain: "anthropic.com" }] }),
         };
       }
       if (url.match(/\/workflows\/wf-\d+$/)) {
@@ -161,7 +161,7 @@ describe("GET /v1/workflows/:id — enrichment with requiredProviders", () => {
     const res = await request(app).get("/v1/workflows/wf-1");
 
     expect(res.status).toBe(200);
-    expect(res.body.workflow.requiredProviders).toEqual(["instantly", "anthropic"]);
+    expect(res.body.workflow.requiredProviders).toEqual([{ name: "instantly", domain: "instantly.ai" }, { name: "anthropic", domain: "anthropic.com" }]);
   });
 });
 
@@ -179,7 +179,7 @@ describe("GET /v1/workflows/:id/summary", () => {
       if (url.includes("/required-providers")) {
         return {
           ok: true,
-          json: () => Promise.resolve({ providers: ["apollo", "anthropic", "instantly"] }),
+          json: () => Promise.resolve({ providers: [{ name: "apollo", domain: "apollo.io" }, { name: "anthropic", domain: "anthropic.com" }, { name: "instantly", domain: "instantly.ai" }] }),
         };
       }
       if (url.match(/\/workflows\/wf-1$/)) {
@@ -216,7 +216,7 @@ describe("GET /v1/workflows/:id/summary", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.workflowName).toBe("sales-email-cold-outreach-v1");
-    expect(res.body.requiredProviders).toEqual(["apollo", "anthropic", "instantly"]);
+    expect(res.body.requiredProviders).toEqual([{ name: "apollo", domain: "apollo.io" }, { name: "anthropic", domain: "anthropic.com" }, { name: "instantly", domain: "instantly.ai" }]);
     expect(res.body.steps).toHaveLength(4);
     expect(res.body.steps[0]).toContain("1.");
     expect(res.body.steps[0]).toContain("find leads");
@@ -257,7 +257,7 @@ describe("GET /v1/workflows/:id/summary", () => {
   it("should handle workflow with no DAG", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
       if (url.includes("/required-providers")) {
-        return { ok: true, json: () => Promise.resolve({ providers: [] }) };
+        return { ok: true, json: () => Promise.resolve({ providers: [] as any[] }) };
       }
       return {
         ok: true,
@@ -301,7 +301,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
       fetchCalls.push({ url });
 
       if (url.includes("/required-providers")) {
-        return { ok: true, json: () => Promise.resolve({ providers: requiredProviders }) };
+        return { ok: true, json: () => Promise.resolve({ providers: requiredProviders.map((p: string) => ({ name: p, domain: null })) }) };
       }
       if (url.includes("/keys/sources")) {
         return { ok: true, json: () => Promise.resolve({ sources: keySources }) };
@@ -422,7 +422,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
       fetchCalls.push({ url });
 
       if (url.includes("/required-providers")) {
-        return { ok: true, json: () => Promise.resolve({ providers: ["anthropic"] }) };
+        return { ok: true, json: () => Promise.resolve({ providers: [{ name: "anthropic", domain: "anthropic.com" }] }) };
       }
       if (url.includes("/keys/sources")) {
         return { ok: false, text: () => Promise.resolve("Internal error") };
