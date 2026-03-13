@@ -412,10 +412,10 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
 });
 
 /**
- * POST /v1/campaigns/batch-stats
+ * POST /v1/campaigns/stats/batch
  * Get stats for multiple campaigns in one call
  */
-router.post("/campaigns/batch-stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.post("/campaigns/stats/batch", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = BatchStatsRequestSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -691,11 +691,12 @@ router.get("/campaigns/:id/emails", authenticate, requireOrg, requireUser, async
 });
 
 /**
- * GET /v1/campaigns/:id/replies
+ * GET /v1/campaigns/:id/stats/replies
  * Get email replies for a campaign, grouped by lead email.
  * Returns only leads who have at least one reply, with reply type breakdown.
+ * Equivalent to stats with groupBy=leadEmail.
  */
-router.get("/campaigns/:id/replies", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.get("/campaigns/:id/stats/replies", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
 
@@ -757,10 +758,10 @@ router.get("/campaigns/:id/replies", authenticate, requireOrg, requireUser, asyn
 });
 
 /**
- * GET /v1/brands/:brandId/delivery-stats
+ * GET /v1/brands/:brandId/stats
  * Get delivery stats for all campaigns under a brand (single email-gateway call)
  */
-router.get("/brands/:brandId/delivery-stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.get("/brands/:brandId/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { brandId } = req.params;
 

@@ -433,7 +433,7 @@ function buildCategorySections(data: LeaderboardData): CategorySection[] {
   });
 }
 
-router.get("/performance/leaderboard", authenticate, async (req: AuthenticatedRequest, res) => {
+router.get("/stats/leaderboard", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const headers = buildInternalHeaders(req);
     const { data } = await buildLeaderboardData(headers);

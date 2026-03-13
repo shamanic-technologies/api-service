@@ -258,11 +258,11 @@ router.post("/brand/icp-suggestion", authenticate, requireOrg, requireUser, asyn
 });
 
 /**
- * GET /v1/brands/costs
+ * GET /v1/brands/stats/costs
  * Get total costs grouped by brandId from runs-service.
  * Returns a map of brandId -> totalCostInUsdCents.
  */
-router.get("/brands/costs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.get("/brands/stats/costs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const orgId = req.orgId!;
 
@@ -296,11 +296,11 @@ router.get("/brands/costs", authenticate, requireOrg, requireUser, async (req: A
 });
 
 /**
- * GET /v1/brands/:id/cost-breakdown
+ * GET /v1/brands/:id/stats/costs
  * Get cost breakdown by cost name for all runs associated with a brand.
- * Uses runs-service as the single source of truth.
+ * Uses runs-service as the single source of truth (groupBy=costName).
  */
-router.get("/brands/:id/cost-breakdown", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.get("/brands/:id/stats/costs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     const orgId = req.orgId!;
