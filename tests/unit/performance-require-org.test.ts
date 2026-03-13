@@ -42,11 +42,11 @@ import performanceRouter from "../../src/routes/performance.js";
 function createApp() {
   const app = express();
   app.use(express.json());
-  app.use(performanceRouter);
+  app.use("/v1", performanceRouter);
   return app;
 }
 
-describe("GET /performance/leaderboard — graceful brand-service failure", () => {
+describe("GET /v1/stats/leaderboard — graceful brand-service failure", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -60,25 +60,21 @@ describe("GET /performance/leaderboard — graceful brand-service failure", () =
         return Promise.reject(new Error("Missing required headers"));
       }
       // runs-service returns workflow stats
-      if (path.includes("/v1/stats/public/leaderboard") && path.includes("workflowName")) {
+      if (path.includes("/v1/stats/public/costs") && path.includes("workflowName")) {
         return Promise.resolve({ groups: [{ dimensions: { workflowName: "sales-email-cold-outreach-sienna" }, totalCostInUsdCents: "1000.0000", actualCostInUsdCents: "800.0000", provisionedCostInUsdCents: "200.0000", cancelledCostInUsdCents: "0", runCount: 5 }] });
       }
       // runs-service brand costs
-      if (path.includes("/v1/stats/public/leaderboard") && path.includes("brandId")) {
+      if (path.includes("/v1/stats/public/costs") && path.includes("brandId")) {
         return Promise.resolve({ groups: [] });
       }
-      // instantly stats
-      if (path === "/stats" || path === "/stats/grouped") {
-        return Promise.resolve({ stats: {}, groups: [] });
-      }
-      // run-ids-by-workflow
-      if (path.includes("/v1/stats/run-ids-by-workflow")) {
-        return Promise.resolve({ groups: {} });
+      // email-gateway public stats
+      if (path.startsWith("/stats/public")) {
+        return Promise.resolve({ groups: [] });
       }
       return Promise.resolve({});
     });
 
-    const res = await request(app).get("/performance/leaderboard");
+    const res = await request(app).get("/v1/stats/leaderboard");
 
     expect(res.status).toBe(200);
     // Brands are empty because brand-service failed

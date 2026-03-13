@@ -7,6 +7,9 @@
  * Fix: campaigns.ts now fetches lead-serve run counts from runs-service
  * (GET /v1/stats/costs?taskName=lead-serve&groupBy=...) and uses that as the
  * source of truth for leadsServed, overriding the lead-service stats.
+ *
+ * Note: the batch-stats endpoint (POST /v1/campaigns/stats/batch) has been
+ * removed. Only the single-campaign stats endpoint remains.
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
@@ -18,38 +21,26 @@ describe("leadsServed uses runs-service as source of truth", () => {
 
   it("should fetch lead-serve run counts from runs-service in single-campaign stats", () => {
     // The single-campaign stats endpoint must call runs-service with taskName=lead-serve
-    const statsSection = content.slice(
-      content.indexOf("GET /v1/campaigns/:id/stats"),
-      content.indexOf("POST /v1/campaigns/batch-stats")
-    );
+    const statsStart = content.indexOf("GET /v1/campaigns/:id/stats");
+    expect(statsStart).toBeGreaterThan(-1);
+    const statsSection = content.slice(statsStart, statsStart + 3000);
     expect(statsSection).toContain("taskName=lead-serve");
     expect(statsSection).toContain("groupBy=serviceName");
   });
 
   it("should override leadsServed from runs-service in single-campaign stats", () => {
-    const statsSection = content.slice(
-      content.indexOf("GET /v1/campaigns/:id/stats"),
-      content.indexOf("POST /v1/campaigns/batch-stats")
-    );
+    const statsStart = content.indexOf("GET /v1/campaigns/:id/stats");
+    expect(statsStart).toBeGreaterThan(-1);
+    // Use a generous slice to capture the full endpoint handler
+    const statsSection = content.slice(statsStart, statsStart + 5000);
     // Must have a runs-service override that sets leadsServed from runCount
     expect(statsSection).toContain("leadsFromRuns");
     expect(statsSection).toContain("stats.leadsServed");
     expect(statsSection).toContain("runCount");
   });
 
-  it("should fetch lead-serve run counts from runs-service in batch stats", () => {
-    const batchSection = content.slice(
-      content.indexOf("POST /v1/campaigns/batch-stats")
-    );
-    expect(batchSection).toContain("taskName=lead-serve");
-    expect(batchSection).toContain("groupBy=campaignId");
-  });
-
-  it("should override leadsServed from runs-service in batch stats", () => {
-    const batchSection = content.slice(
-      content.indexOf("POST /v1/campaigns/batch-stats")
-    );
-    expect(batchSection).toContain("leadsRunCount");
-    expect(batchSection).toContain("merged.leadsServed");
+  it("batch-stats endpoint should no longer exist", () => {
+    expect(content).not.toContain("POST /v1/campaigns/batch-stats");
+    expect(content).not.toContain("campaigns/stats/batch");
   });
 });

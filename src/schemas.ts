@@ -205,15 +205,6 @@ export const CreateCampaignRequestSchema = z
   })
   .openapi("CreateCampaignRequest");
 
-export const BatchStatsRequestSchema = z
-  .object({
-    campaignIds: z
-      .array(z.string())
-      .min(1)
-      .describe("Array of campaign IDs to fetch stats for"),
-  })
-  .openapi("BatchStatsRequest");
-
 // -- Paths --
 
 registry.registerPath({
@@ -370,26 +361,6 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: "post",
-  path: "/v1/campaigns/stats/batch",
-  tags: ["Campaigns"],
-  summary: "Batch get campaign stats",
-  description: "Get stats for multiple campaigns in a single request",
-  security: authed,
-  request: {
-    body: {
-      content: { "application/json": { schema: BatchStatsRequestSchema } },
-    },
-  },
-  responses: {
-    200: { description: "Stats keyed by campaign ID" },
-    400: { description: "Invalid request", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
   method: "get",
   path: "/v1/campaigns/{id}/leads",
   tags: ["Campaigns"],
@@ -416,43 +387,6 @@ registry.registerPath({
   request: { params: CampaignIdParam },
   responses: {
     200: { description: "Campaign emails with generation run data" },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/campaigns/{id}/stats/replies",
-  tags: ["Campaigns"],
-  summary: "Get campaign replies",
-  description:
-    "Get email replies for a campaign, grouped by lead email. Returns only leads who have at least one reply, with reply type breakdown.",
-  security: authed,
-  request: { params: CampaignIdParam },
-  responses: {
-    200: {
-      description: "List of reply records per lead",
-      content: {
-        "application/json": {
-          schema: z
-            .object({
-              replies: z.array(
-                z.object({
-                  email: z.string().describe("Lead email address"),
-                  emailsReplied: z.number().describe("Total replies from this lead"),
-                  repliesWillingToMeet: z.number().describe("Willing to meet replies"),
-                  repliesInterested: z.number().describe("Interested replies"),
-                  repliesNotInterested: z.number().describe("Not interested replies"),
-                  repliesOutOfOffice: z.number().describe("Out of office replies"),
-                  repliesUnsubscribe: z.number().describe("Unsubscribe replies"),
-                })
-              ),
-            })
-            .openapi("CampaignRepliesResponse"),
-        },
-      },
-    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },

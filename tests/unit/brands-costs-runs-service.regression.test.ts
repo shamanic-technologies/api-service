@@ -11,8 +11,8 @@ describe("brands costs endpoint uses runs-service", () => {
   const routePath = path.join(__dirname, "../../src/routes/brand.ts");
   const content = fs.readFileSync(routePath, "utf-8");
 
-  it("should have a GET /brands/costs route", () => {
-    expect(content).toContain('router.get("/brands/costs"');
+  it("should have a GET /brands/stats/costs route", () => {
+    expect(content).toContain('router.get("/brands/stats/costs"');
   });
 
   it("should call runs-service /v1/stats/costs with groupBy=brandId", () => {
@@ -22,10 +22,10 @@ describe("brands costs endpoint uses runs-service", () => {
   });
 
   it("should not use campaign-service for brand-level costs", () => {
-    // The /brands/costs route should not depend on campaign-service
+    // The /brands/stats/costs route should not depend on campaign-service
     const brandsRoute = content.slice(
-      content.indexOf('router.get("/brands/costs"'),
-      content.indexOf("}", content.indexOf('router.get("/brands/costs"') + 200) + 1
+      content.indexOf('router.get("/brands/stats/costs"'),
+      content.indexOf("}", content.indexOf('router.get("/brands/stats/costs"') + 200) + 1
     );
     expect(brandsRoute).not.toContain("externalServices.campaign");
   });

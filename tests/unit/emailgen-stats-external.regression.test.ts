@@ -79,24 +79,28 @@ describe("Campaign stats: emailsGenerated from content-generation service", () =
     const app = createApp();
 
     mockCallExternalService.mockImplementation((service: any, path: string, opts: any) => {
-      // Content-generation /stats
-      if (service.url === "http://mock-emailgen" && path === "/stats") {
+      // Content-generation /stats (GET with query params)
+      if (service.url === "http://mock-emailgen" && path.startsWith("/stats")) {
         return Promise.resolve({ stats: { emailsGenerated: 5 } });
       }
       // Lead-service /stats
       if (service.url === "http://mock-lead" && path.startsWith("/stats")) {
         return Promise.resolve({ served: 3, buffered: 0, skipped: 0 });
       }
-      // Email-gateway /stats
-      if (service.url === "http://mock-email" && path === "/stats") {
+      // Email-gateway /stats (GET with query params)
+      if (service.url === "http://mock-email" && path.startsWith("/stats")) {
         return Promise.resolve({
           transactional: null,
           broadcast: { emailsSent: 4, emailsDelivered: 4, emailsOpened: 2, emailsClicked: 0, emailsReplied: 1, emailsBounced: 0, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0 },
         });
       }
       // Campaign-service budget
-      if (path === "/campaigns/batch-budget-usage") {
+      if (path === "/stats/batch-budget") {
         return Promise.resolve({ results: {} });
+      }
+      // Runs-service costs
+      if (service.url === "http://mock-runs" && path.startsWith("/v1/stats/costs")) {
+        return Promise.resolve({ groups: [] });
       }
       return Promise.resolve(null);
     });
@@ -132,11 +136,14 @@ describe("Campaign stats: emailsGenerated from content-generation service", () =
       if (service.url === "http://mock-lead" && path.startsWith("/stats")) {
         return Promise.resolve({ served: 2, buffered: 0, skipped: 0 });
       }
-      if (service.url === "http://mock-email" && path === "/stats") {
+      if (service.url === "http://mock-email" && path.startsWith("/stats")) {
         return Promise.resolve({ transactional: null, broadcast: { emailsSent: 1, emailsDelivered: 1, emailsOpened: 0, emailsClicked: 0, emailsReplied: 0, emailsBounced: 0, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0 } });
       }
-      if (path === "/campaigns/batch-budget-usage") {
+      if (path === "/stats/batch-budget") {
         return Promise.resolve({ results: {} });
+      }
+      if (service.url === "http://mock-runs" && path.startsWith("/v1/stats/costs")) {
+        return Promise.resolve({ groups: [] });
       }
       return Promise.resolve(null);
     });
@@ -155,13 +162,16 @@ describe("Campaign stats: emailsGenerated from content-generation service", () =
     const app = createApp();
 
     mockCallExternalService.mockImplementation((service: any, path: string, opts: any) => {
-      if (service.url === "http://mock-emailgen" && path === "/stats") {
+      if (service.url === "http://mock-emailgen" && path.startsWith("/stats")) {
         // Verify the org header is passed
         expect(opts.headers["x-org-id"]).toBe("org1");
         return Promise.resolve({ stats: { emailsGenerated: 2 } });
       }
-      if (path === "/campaigns/batch-budget-usage") {
+      if (path === "/stats/batch-budget") {
         return Promise.resolve({ results: {} });
+      }
+      if (service.url === "http://mock-runs" && path.startsWith("/v1/stats/costs")) {
+        return Promise.resolve({ groups: [] });
       }
       return Promise.resolve(null);
     });

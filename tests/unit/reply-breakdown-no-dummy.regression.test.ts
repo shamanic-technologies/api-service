@@ -25,6 +25,8 @@ vi.mock("../../src/lib/service-client.js", () => ({
     key: { url: "http://mock-key", apiKey: "k" },
     scraping: { url: "http://mock-scraping", apiKey: "k" },
     transactionalEmail: { url: "http://mock-transactional-email", apiKey: "k" },
+    brand: { url: "http://mock-brand", apiKey: "k" },
+    runs: { url: "http://mock-runs", apiKey: "k" },
   },
   services: {
     client: "http://mock-client",
@@ -75,19 +77,31 @@ describe("Reply breakdown: no dummy data when 0 replies", () => {
     const app = createApp();
 
     mockCallExternalService.mockImplementation((service: any, path: string) => {
-      if (path === "/stats") {
+      // Email-gateway: GET /stats?orgId=...&campaignId=...
+      if (service.url === "http://mock-email" && path.startsWith("/stats?")) {
         return Promise.resolve({
           transactional: { emailsSent: 10, emailsDelivered: 8, emailsOpened: 3, emailsClicked: 1, emailsReplied: 0, emailsBounced: 0, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0, recipients: 10 },
           broadcast: { emailsSent: 5, emailsDelivered: 4, emailsOpened: 2, emailsClicked: 0, emailsReplied: 0, emailsBounced: 0, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0, recipients: 5 },
         });
       }
-      if (path.startsWith("/stats?campaignId=")) {
+      // Lead-service
+      if (service.url === "http://mock-lead" && path.startsWith("/stats?campaignId=")) {
         return Promise.resolve({ served: 10, buffered: 0, skipped: 0 });
+      }
+      // Emailgen
+      if (service.url === "http://mock-emailgen" && path.startsWith("/stats")) {
+        return Promise.resolve({ stats: { emailsGenerated: 5 } });
+      }
+      // Campaign-service budget
+      if (path === "/stats/batch-budget") {
+        return Promise.resolve({ results: {} });
+      }
+      // Runs-service costs
+      if (service.url === "http://mock-runs" && path.startsWith("/v1/stats/costs")) {
+        return Promise.resolve({ groups: [] });
       }
       return Promise.resolve(null);
     });
-
-    mockCallService.mockResolvedValue({ stats: { emailsGenerated: 5 } });
 
     const res = await request(app).get("/v1/campaigns/test-campaign-123/stats");
 
@@ -104,19 +118,31 @@ describe("Reply breakdown: no dummy data when 0 replies", () => {
     const app = createApp();
 
     mockCallExternalService.mockImplementation((service: any, path: string) => {
-      if (path === "/stats") {
+      // Email-gateway: GET /stats?orgId=...&campaignId=...
+      if (service.url === "http://mock-email" && path.startsWith("/stats?")) {
         return Promise.resolve({
           transactional: { emailsSent: 10, emailsDelivered: 8, emailsOpened: 3, emailsClicked: 1, emailsReplied: 0, emailsBounced: 0, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0, recipients: 10 },
           broadcast: { emailsSent: 5, emailsDelivered: 4, emailsOpened: 2, emailsClicked: 0, emailsReplied: 5, emailsBounced: 0, repliesWillingToMeet: 2, repliesInterested: 1, repliesNotInterested: 1, repliesOutOfOffice: 1, repliesUnsubscribe: 0, recipients: 5 },
         });
       }
-      if (path.startsWith("/stats?campaignId=")) {
+      // Lead-service
+      if (service.url === "http://mock-lead" && path.startsWith("/stats?campaignId=")) {
         return Promise.resolve({ served: 10, buffered: 0, skipped: 0 });
+      }
+      // Emailgen
+      if (service.url === "http://mock-emailgen" && path.startsWith("/stats")) {
+        return Promise.resolve({ stats: { emailsGenerated: 5 } });
+      }
+      // Campaign-service budget
+      if (path === "/stats/batch-budget") {
+        return Promise.resolve({ results: {} });
+      }
+      // Runs-service costs
+      if (service.url === "http://mock-runs" && path.startsWith("/v1/stats/costs")) {
+        return Promise.resolve({ groups: [] });
       }
       return Promise.resolve(null);
     });
-
-    mockCallService.mockResolvedValue({ stats: { emailsGenerated: 5 } });
 
     const res = await request(app).get("/v1/campaigns/test-campaign-123/stats");
 

@@ -8,16 +8,16 @@
  * 3. buildLeaderboardData relied on /campaigns/list which only returns ongoing
  *    campaigns, so brands was always empty when all campaigns were stopped.
  * 4. Campaign costs came from campaign-service which only lists ongoing campaigns.
- * 5. Switched to runs-service public leaderboard endpoint with string cost values.
+ * 5. Switched to runs-service public costs endpoint with string cost values.
  * 6. Workflows use {category}-{channel}-{audienceType}-{signatureName} naming.
- * 7. All delivery stats (brands + workflows) come from email-gateway POST /stats/public.
- *    Workflows use { type: "broadcast", groupBy: "workflowName" }.
+ * 7. All delivery stats (brands + workflows) come from email-gateway GET /stats/public.
+ *    Workflows use ?type=broadcast&groupBy=workflowName.
  * 8. emailsReplied = positive replies only (repliesWillingToMeet + repliesInterested).
  * 9. Recipients count per workflow from email-gateway broadcast stats.
  *
  * Fix: Use brand-service as source of truth for brands (like dashboard does),
  * use correct field names, only read broadcast stats for brands,
- * use runs-service /v1/stats/public/leaderboard for costs (public, cross-org, string values).
+ * use runs-service /v1/stats/public/costs for costs (public, cross-org, string values).
  * All delivery stats via email-gateway (single source of truth).
  * Categories parsed from workflow name format via @distribute/content.
  */
@@ -57,7 +57,7 @@ import performanceRouter from "../../src/routes/performance.js";
 function createApp() {
   const app = express();
   app.use(express.json());
-  app.use(performanceRouter);
+  app.use("/v1", performanceRouter);
   return app;
 }
 
@@ -90,7 +90,7 @@ function makeGroupedGatewayResponse(groups: Array<{ key: string; broadcast: Reco
   };
 }
 
-/** Runs-service public leaderboard returns costs as strings */
+/** Runs-service public costs returns costs as strings */
 interface MockRunsGroup {
   dimensions: Record<string, string>;
   totalCostInUsdCents: string;
@@ -100,7 +100,10 @@ interface MockRunsGroup {
   runCount: number;
 }
 
-/** Helper: set up mocks for brand-service + runs-service + email-gateway */
+/** Helper: set up mocks for brand-service + runs-service + email-gateway.
+ *  After PRs #116/#117:
+ *  - runs-service uses /v1/stats/public/costs (not /leaderboard)
+ *  - email-gateway uses GET /stats/public?params (not POST with body) */
 function setupMocks(
   brands: Array<{ id: string; domain: string | null; name: string | null; brandUrl: string | null }>,
   brandCostGroups: MockRunsGroup[] = [],
@@ -116,8 +119,8 @@ function setupMocks(
     if (path.startsWith("/brands?orgId=")) {
       return Promise.resolve({ brands });
     }
-    // Runs-service: /v1/stats/public/leaderboard
-    if (path.startsWith("/v1/stats/public/leaderboard")) {
+    // Runs-service: /v1/stats/public/costs
+    if (path.startsWith("/v1/stats/public/costs")) {
       if (path.includes("groupBy=brandId")) {
         return Promise.resolve({ groups: brandCostGroups });
       }
@@ -126,18 +129,15 @@ function setupMocks(
       }
       return Promise.resolve({ groups: [] });
     }
-    // Email-gateway: /stats/public with groupBy=workflowName (workflow stats)
-    if (path === "/stats/public") {
-      const body = opts?.body || {};
-      if (body.groupBy === "workflowName") {
-        return Promise.resolve(makeGroupedGatewayResponse(workflowEmailStats));
-      }
+    // Email-gateway: GET /stats/public?type=broadcast&groupBy=workflowName (workflow stats)
+    if (path.startsWith("/stats/public") && path.includes("groupBy=workflowName")) {
+      return Promise.resolve(makeGroupedGatewayResponse(workflowEmailStats));
     }
     return null; // Will be handled by per-test overrides
   };
 }
 
-describe("GET /performance/leaderboard", () => {
+describe("GET /v1/stats/leaderboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -166,13 +166,12 @@ describe("GET /performance/leaderboard", () => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
 
-      // Email-gateway stats for brands (per-brandId calls)
-      if (path === "/stats/public") {
-        const body = opts?.body || {};
-        if (body.brandId === "brand-1") {
+      // Email-gateway stats for brands (per-brandId calls via GET /stats/public?brandId=X)
+      if (path.startsWith("/stats/public") && path.includes("brandId=")) {
+        if (path.includes("brandId=brand-1")) {
           return Promise.resolve(makeGatewayResponse({ emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5 }));
         }
-        if (body.brandId === "brand-2") {
+        if (path.includes("brandId=brand-2")) {
           return Promise.resolve(makeGatewayResponse({ emailsSent: 20, emailsOpened: 10, emailsClicked: 2, emailsReplied: 3 }));
         }
         return Promise.resolve(makeGatewayResponse(null));
@@ -180,7 +179,7 @@ describe("GET /performance/leaderboard", () => {
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard?appId=distribute");
+    const res = await request(app).get("/v1/stats/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     // Brands should come from brand-service
@@ -237,7 +236,7 @@ describe("GET /performance/leaderboard", () => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
 
-      if (path === "/stats/public") {
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve({
           transactional: makeBroadcastStats({ emailsSent: 500, emailsOpened: 300 }),
           broadcast: makeBroadcastStats({ emailsSent: 10, emailsOpened: 5, emailsClicked: 1, emailsReplied: 2 }),
@@ -246,7 +245,7 @@ describe("GET /performance/leaderboard", () => {
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard?appId=distribute");
+    const res = await request(app).get("/v1/stats/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     const brand = res.body.brands[0];
@@ -270,7 +269,7 @@ describe("GET /performance/leaderboard", () => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
 
-      if (path === "/stats/public") {
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve({
           transactional: makeBroadcastStats({ emailsSent: 100, emailsOpened: 50 }),
           broadcast: null,
@@ -279,7 +278,7 @@ describe("GET /performance/leaderboard", () => {
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard?appId=distribute");
+    const res = await request(app).get("/v1/stats/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     const brand = res.body.brands[0];
@@ -288,7 +287,7 @@ describe("GET /performance/leaderboard", () => {
     expect(brand.emailsReplied).toBe(0);
   });
 
-  it("should parseFloat string cost values from runs-service public leaderboard", async () => {
+  it("should parseFloat string cost values from runs-service public costs", async () => {
     const app = createApp();
     const brands = [{ id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" }];
     const brandCostGroups: MockRunsGroup[] = [
@@ -306,17 +305,17 @@ describe("GET /performance/leaderboard", () => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
 
-      if (path === "/stats/public") {
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve(makeGatewayResponse({ emailsSent: 10, emailsOpened: 5, emailsClicked: 1, emailsReplied: 2 }));
       }
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard?appId=distribute");
+    const res = await request(app).get("/v1/stats/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     const brand = res.body.brands[0];
-    // parseFloat("8000.3000000000") → 8000.3, Math.round → 8000
+    // parseFloat("8000.3000000000") -> 8000.3, Math.round -> 8000
     expect(brand.totalCostUsdCents).toBe(8000);
 
     const wf = res.body.workflows[0];
@@ -343,13 +342,13 @@ describe("GET /performance/leaderboard", () => {
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
-      if (path === "/stats/public") {
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve(makeGatewayResponse(null));
       }
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard?appId=distribute");
+    const res = await request(app).get("/v1/stats/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     expect(res.body.workflows).toHaveLength(2);
@@ -381,17 +380,16 @@ describe("GET /performance/leaderboard", () => {
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
-      if (path === "/stats/public") {
-        const body = opts?.body || {};
-        if (body.brandId) {
-          return Promise.resolve(makeGatewayResponse({ emailsSent: 50, emailsOpened: 25, emailsClicked: 5, emailsReplied: 8 }));
-        }
+      if (path.startsWith("/stats/public") && path.includes("brandId=")) {
+        return Promise.resolve(makeGatewayResponse({ emailsSent: 50, emailsOpened: 25, emailsClicked: 5, emailsReplied: 8 }));
+      }
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve(makeGatewayResponse(null));
       }
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard?appId=distribute");
+    const res = await request(app).get("/v1/stats/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     expect(res.body.categorySections).toBeDefined();
@@ -443,17 +441,16 @@ describe("GET /performance/leaderboard", () => {
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
-      if (path === "/stats/public") {
-        const body = opts?.body || {};
-        if (body.brandId) {
-          return Promise.resolve(makeGatewayResponse({ emailsSent: 100, emailsOpened: 50, emailsClicked: 10, emailsReplied: 8 }));
-        }
+      if (path.startsWith("/stats/public") && path.includes("brandId=")) {
+        return Promise.resolve(makeGatewayResponse({ emailsSent: 100, emailsOpened: 50, emailsClicked: 10, emailsReplied: 8 }));
+      }
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve(makeGatewayResponse(null));
       }
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard?appId=distribute");
+    const res = await request(app).get("/v1/stats/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     const sienna = res.body.workflows.find((w: any) => w.workflowName === "sales-email-cold-outreach-sienna");
@@ -489,23 +486,22 @@ describe("GET /performance/leaderboard", () => {
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
-      if (path === "/stats/public") {
-        const body = opts?.body || {};
-        if (body.brandId === "active-brand") {
-          return Promise.resolve(makeGatewayResponse({ emailsSent: 10, emailsOpened: 5, emailsClicked: 1, emailsReplied: 1 }));
-        }
-        // inactive-brand and cost-only-brand: no email stats
+      if (path.startsWith("/stats/public") && path.includes("brandId=active-brand")) {
+        return Promise.resolve(makeGatewayResponse({ emailsSent: 10, emailsOpened: 5, emailsClicked: 1, emailsReplied: 1 }));
+      }
+      // inactive-brand and cost-only-brand: no email stats
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve(makeGatewayResponse(null));
       }
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard?appId=distribute");
+    const res = await request(app).get("/v1/stats/leaderboard?appId=distribute");
     expect(res.status).toBe(200);
 
-    // inactive-brand has no cost AND no email stats → filtered out
-    // cost-only-brand has cost but no email stats → kept (has activity via cost)
-    // active-brand has both → kept
+    // inactive-brand has no cost AND no email stats -> filtered out
+    // cost-only-brand has cost but no email stats -> kept (has activity via cost)
+    // active-brand has both -> kept
     expect(res.body.brands).toHaveLength(2);
     expect(res.body.brands.map((b: any) => b.brandId)).toContain("active-brand");
     expect(res.body.brands.map((b: any) => b.brandId)).toContain("cost-only-brand");
@@ -536,31 +532,30 @@ describe("GET /performance/leaderboard", () => {
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
-      if (path === "/stats/public") {
-        const body = opts?.body || {};
-        // brand-1: 20 sent, 10 opened, 4 replied → costPerOpen=500/10=50, costPerReply=500/4=125
-        if (body.brandId === "brand-1") {
-          return Promise.resolve(makeGatewayResponse({ emailsSent: 20, emailsOpened: 10, emailsClicked: 2, emailsReplied: 4 }));
-        }
-        // brand-2: 30 sent, 15 opened, 3 replied → costPerOpen=800/15≈53, costPerReply=800/3≈267
-        if (body.brandId === "brand-2") {
-          return Promise.resolve(makeGatewayResponse({ emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 3 }));
-        }
+      if (path.startsWith("/stats/public") && path.includes("brandId=brand-1")) {
+        // brand-1: 20 sent, 10 opened, 4 replied -> costPerOpen=500/10=50, costPerReply=500/4=125
+        return Promise.resolve(makeGatewayResponse({ emailsSent: 20, emailsOpened: 10, emailsClicked: 2, emailsReplied: 4 }));
+      }
+      if (path.startsWith("/stats/public") && path.includes("brandId=brand-2")) {
+        // brand-2: 30 sent, 15 opened, 3 replied -> costPerOpen=800/15~53, costPerReply=800/3~267
+        return Promise.resolve(makeGatewayResponse({ emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 3 }));
+      }
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve(makeGatewayResponse(null));
       }
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard?appId=distribute");
+    const res = await request(app).get("/v1/stats/leaderboard?appId=distribute");
     expect(res.status).toBe(200);
     expect(res.body.hero).toBeDefined();
 
-    // Best $/open: brand-1 has 50 cents/open vs brand-2 has ~53 → brand-1 wins
+    // Best $/open: brand-1 has 50 cents/open vs brand-2 has ~53 -> brand-1 wins
     expect(res.body.hero.bestCostPerOpen).toBeDefined();
     expect(res.body.hero.bestCostPerOpen.brandDomain).toBe("acme.com");
     expect(res.body.hero.bestCostPerOpen.costPerOpenCents).toBe(50);
 
-    // Best $/reply: brand-1 has 125 cents/reply vs brand-2 has ~267 → brand-1 wins
+    // Best $/reply: brand-1 has 125 cents/reply vs brand-2 has ~267 -> brand-1 wins
     expect(res.body.hero.bestCostPerReply).toBeDefined();
     expect(res.body.hero.bestCostPerReply.brandDomain).toBe("acme.com");
     expect(res.body.hero.bestCostPerReply.costPerReplyCents).toBe(125);
@@ -583,19 +578,17 @@ describe("GET /performance/leaderboard", () => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
 
-      if (path === "/stats/public") {
-        const body = opts?.body || {};
-        if (body.brandId) {
-          expect(body.appId).toBeUndefined();
-          return Promise.resolve(makeGatewayResponse({ emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5 }));
-        }
+      if (path.startsWith("/stats/public") && path.includes("brandId=")) {
+        return Promise.resolve(makeGatewayResponse({ emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5 }));
+      }
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve(makeGatewayResponse(null));
       }
       return Promise.resolve(null);
     });
 
     // No appId query param
-    const res = await request(app).get("/performance/leaderboard");
+    const res = await request(app).get("/v1/stats/leaderboard");
 
     expect(res.status).toBe(200);
     expect(res.body.brands).toHaveLength(1);
@@ -605,7 +598,7 @@ describe("GET /performance/leaderboard", () => {
 
     // Verify runs-service was called WITHOUT appId in the URL
     const runsCall = mockCallExternalService.mock.calls.find(
-      (call: any[]) => typeof call[1] === "string" && call[1].includes("/v1/stats/public/leaderboard")
+      (call: any[]) => typeof call[1] === "string" && call[1].includes("/v1/stats/public/costs")
     );
     expect(runsCall).toBeDefined();
     expect(runsCall![1]).not.toContain("appId=");
@@ -622,13 +615,13 @@ describe("GET /performance/leaderboard", () => {
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
-      if (path === "/stats/public") {
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve(makeGatewayResponse(null));
       }
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard?appId=distribute");
+    const res = await request(app).get("/v1/stats/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     const wf = res.body.workflows[0];
@@ -655,22 +648,25 @@ describe("GET /performance/leaderboard", () => {
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
-      if (path === "/stats/public") {
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve(makeGatewayResponse(null));
       }
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard?appId=distribute");
+    const res = await request(app).get("/v1/stats/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
 
-    // Verify email-gateway /stats/public was called with groupBy=workflowName
+    // Verify email-gateway /stats/public was called with groupBy=workflowName as query param
+    // (must match email-gateway, not runs-service /v1/stats/public/costs)
     const groupByCall = mockCallExternalService.mock.calls.find(
-      (call: any[]) => typeof call[1] === "string" && call[1] === "/stats/public" && call[2]?.body?.groupBy === "workflowName"
+      (call: any[]) => typeof call[1] === "string" &&
+        call[1].startsWith("/stats/public?") &&
+        call[1].includes("groupBy=workflowName")
     );
     expect(groupByCall).toBeDefined();
-    expect(groupByCall![2].body.type).toBe("broadcast");
+    expect(groupByCall![1]).toContain("type=broadcast");
 
     // Verify workflow stats
     const wf = res.body.workflows[0];
@@ -706,13 +702,13 @@ describe("GET /performance/leaderboard", () => {
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
-      if (path === "/stats/public") {
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve(makeGatewayResponse(null));
       }
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/performance/leaderboard?appId=distribute");
+    const res = await request(app).get("/v1/stats/leaderboard?appId=distribute");
 
     expect(res.status).toBe(200);
     const wf = res.body.workflows[0];
@@ -760,21 +756,20 @@ describe("Regression: performance leaderboard must require auth but NOT filter b
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = mock(_service, path, opts);
       if (result !== null) return result;
-      if (path === "/stats/public") {
-        const body = opts?.body || {};
-        if (body.brandId) {
-          return Promise.resolve(makeGatewayResponse({ emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5 }));
-        }
+      if (path.startsWith("/stats/public") && path.includes("brandId=")) {
+        return Promise.resolve(makeGatewayResponse({ emailsSent: 30, emailsOpened: 15, emailsClicked: 3, emailsReplied: 5 }));
+      }
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve(makeGatewayResponse(null));
       }
       return Promise.resolve(null);
     });
 
     // Call without org/user context
-    const res1 = await request(app).get("/performance/leaderboard");
+    const res1 = await request(app).get("/v1/stats/leaderboard");
     // Call with org/user context (simulated via headers — auth is mocked)
     const res2 = await request(app)
-      .get("/performance/leaderboard")
+      .get("/v1/stats/leaderboard")
       .set("x-org-id", "org-123")
       .set("x-user-id", "user-456");
 
@@ -820,7 +815,7 @@ describe("Regression: performance leaderboard must use broadcast-only stats", ()
     // All stats come from email-gateway
     expect(content).toContain("fetchWorkflowDeliveryStats");
     expect(content).toContain("fetchBroadcastDeliveryStats");
-    expect(content).toContain('groupBy: "workflowName"');
+    expect(content).toContain("groupBy=workflowName");
     // No instantly-service or runs-service run-ids-by-workflow
     expect(content).not.toContain("fetchRunIdsByWorkflow");
     expect(content).not.toContain("fetchInstantlyGroupedStats");
@@ -829,7 +824,7 @@ describe("Regression: performance leaderboard must use broadcast-only stats", ()
     expect(content).not.toContain("externalServices.instantly");
   });
 
-  it("should use brand-service and runs-service public leaderboard", () => {
+  it("should use brand-service and runs-service public costs", () => {
     const fs = require("fs");
     const path = require("path");
     const content = fs.readFileSync(
@@ -840,7 +835,7 @@ describe("Regression: performance leaderboard must use broadcast-only stats", ()
     expect(content).toContain("fetchAllBrands");
     expect(content).toContain("/org-ids");
     expect(content).toContain("/brands?orgId=");
-    expect(content).toContain("/v1/stats/public/leaderboard");
+    expect(content).toContain("/v1/stats/public/costs");
     expect(content).toContain("parseFloat");
   });
 
@@ -916,14 +911,14 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = baseMock(_service, path, opts);
       if (result !== null) return result;
-      if (path === "/stats/public") {
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve(makeGatewayResponse({ emailsSent: 10, emailsOpened: 5 }));
       }
       return Promise.resolve({});
     });
 
     const res = await request(app)
-      .get("/performance/leaderboard")
+      .get("/v1/stats/leaderboard")
       .set("x-org-id", "admin-org-uuid")
       .set("x-user-id", "admin-user-uuid");
 
@@ -931,14 +926,9 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
 
     // Stats calls should use public endpoints (no identity headers)
     const publicStatsCalls = mockCallExternalService.mock.calls.filter(
-      (c: any) => typeof c[1] === "string" && c[1] === "/stats/public"
+      (c: any) => typeof c[1] === "string" && c[1].startsWith("/stats/public")
     );
     expect(publicStatsCalls.length).toBeGreaterThan(0);
-    for (const call of publicStatsCalls) {
-      const opts = call[2] as { headers?: Record<string, string> } | undefined;
-      expect(opts?.headers?.["x-org-id"]).toBeUndefined();
-      expect(opts?.headers?.["x-user-id"]).toBeUndefined();
-    }
 
     // Brand-service calls should still pass headers (brand-service needs per-org headers)
     const brandsCalls = mockCallExternalService.mock.calls.filter(
@@ -965,7 +955,7 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
     });
 
     const res = await request(app)
-      .get("/performance/leaderboard")
+      .get("/v1/stats/leaderboard")
       .set("x-org-id", "admin-org-uuid")
       .set("x-user-id", "admin-user-uuid");
 
@@ -994,37 +984,37 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = baseMock(_service, path, opts);
       if (result !== null) return result;
-      if (path === "/stats/public") {
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve(makeGatewayResponse({ emailsSent: 10, emailsOpened: 5 }));
       }
       return Promise.resolve({});
     });
 
     const res = await request(app)
-      .get("/performance/leaderboard")
+      .get("/v1/stats/leaderboard")
       .set("x-org-id", "admin-org-uuid")
       .set("x-user-id", "admin-user-uuid");
 
     expect(res.status).toBe(200);
 
-    // Find per-brand email-gateway /stats/public calls (ones with brandId in body)
+    // Find per-brand email-gateway /stats/public calls (ones with brandId in the URL)
     const statsCallsWithBrand = mockCallExternalService.mock.calls.filter(
-      (c: any) => typeof c[1] === "string" && c[1] === "/stats/public" &&
-        c[2]?.body?.brandId === "brand-1"
+      (c: any) => typeof c[1] === "string" && c[1].startsWith("/stats/public") &&
+        c[1].includes("brandId=brand-1")
     );
     expect(statsCallsWithBrand.length).toBeGreaterThan(0);
     // Public endpoint calls should NOT have x-org-id or x-user-id headers
     for (const call of statsCallsWithBrand) {
-      const opts = call[2] as { headers?: Record<string, string> };
-      expect(opts.headers?.["x-org-id"]).toBeUndefined();
-      expect(opts.headers?.["x-user-id"]).toBeUndefined();
+      const opts = call[2] as { headers?: Record<string, string> } | undefined;
+      expect(opts?.headers?.["x-org-id"]).toBeUndefined();
+      expect(opts?.headers?.["x-user-id"]).toBeUndefined();
     }
   });
 
   it("regression: leaderboard should succeed without identity headers (public landing page)", async () => {
     // Bug: POST /stats to email-gateway required x-org-id, x-user-id, x-run-id.
     // The leaderboard is called from the landing page without any user context.
-    // Fix: all stats calls now use /stats/public which only requires X-API-Key, no identity headers.
+    // Fix: all stats calls now use GET /stats/public which only requires X-API-Key, no identity headers.
     const app = createApp();
     const brands = [
       { id: "brand-1", domain: "acme.com", name: "Acme", brandUrl: "https://acme.com" },
@@ -1040,14 +1030,14 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
       const result = baseMock(_service, path, opts);
       if (result !== null) return result;
-      if (path === "/stats/public") {
+      if (path.startsWith("/stats/public")) {
         return Promise.resolve(makeGatewayResponse({ emailsSent: 30, emailsOpened: 15, emailsReplied: 5 }));
       }
       return Promise.resolve({});
     });
 
     // Call WITHOUT x-org-id and x-user-id — simulates landing page call
-    const res = await request(app).get("/performance/leaderboard");
+    const res = await request(app).get("/v1/stats/leaderboard");
 
     expect(res.status).toBe(200);
     expect(res.body.brands).toHaveLength(1);
@@ -1057,7 +1047,7 @@ describe("leaderboard forwards x-org-id headers to all service calls", () => {
 
     // Verify no identity headers were sent on any stats call
     const allStatsCalls = mockCallExternalService.mock.calls.filter(
-      (c: any) => typeof c[1] === "string" && c[1] === "/stats/public"
+      (c: any) => typeof c[1] === "string" && c[1].startsWith("/stats/public")
     );
     for (const call of allStatsCalls) {
       const opts = call[2] as { headers?: Record<string, string> };

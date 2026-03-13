@@ -27,6 +27,7 @@ vi.mock("../../src/lib/service-client.js", () => ({
     scraping: { url: "http://mock-scraping", apiKey: "k" },
     transactionalEmail: { url: "http://mock-transactional-email", apiKey: "k" },
     brand: { url: "http://mock-brand", apiKey: "k" },
+    runs: { url: "http://mock-runs", apiKey: "k" },
   },
   services: {
     client: "http://mock-client",
@@ -63,7 +64,7 @@ function createApp() {
   return app;
 }
 
-describe("GET /v1/brands/:brandId/delivery-stats", () => {
+describe("GET /v1/brands/:brandId/stats", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -76,8 +77,8 @@ describe("GET /v1/brands/:brandId/delivery-stats", () => {
     const app = createApp();
 
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
-      if (path === "/stats") {
-        expect(opts.body.brandId).toBe("brand-123");
+      if (path.startsWith("/stats?")) {
+        expect(path).toContain("brandId=brand-123");
         return Promise.resolve({
           transactional: {
             emailsSent: 50, emailsDelivered: 48, emailsOpened: 30,
@@ -98,7 +99,7 @@ describe("GET /v1/brands/:brandId/delivery-stats", () => {
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/v1/brands/brand-123/delivery-stats");
+    const res = await request(app).get("/v1/brands/brand-123/stats");
 
     expect(res.status).toBe(200);
     // Should return ONLY broadcast stats, not transactional
@@ -116,7 +117,7 @@ describe("GET /v1/brands/:brandId/delivery-stats", () => {
 
     mockCallExternalService.mockRejectedValue(new Error("gateway down"));
 
-    const res = await request(app).get("/v1/brands/brand-123/delivery-stats");
+    const res = await request(app).get("/v1/brands/brand-123/stats");
 
     expect(res.status).toBe(200);
     expect(res.body.emailsSent).toBe(0);
@@ -138,7 +139,7 @@ describe("GET /v1/brands/:brandId/delivery-stats", () => {
       broadcast: null,
     });
 
-    const res = await request(app).get("/v1/brands/brand-123/delivery-stats");
+    const res = await request(app).get("/v1/brands/brand-123/stats");
 
     expect(res.status).toBe(200);
     // No broadcast = no outreach stats, should be zeros
@@ -161,10 +162,10 @@ describe("GET /v1/brands/:brandId/delivery-stats", () => {
       },
     });
 
-    await request(app).get("/v1/brands/brand-123/delivery-stats");
+    await request(app).get("/v1/brands/brand-123/stats");
 
     const emailGatewayCalls = mockCallExternalService.mock.calls.filter(
-      (call: any[]) => call[1] === "/stats"
+      (call: any[]) => typeof call[1] === "string" && call[1].startsWith("/stats?")
     );
     expect(emailGatewayCalls).toHaveLength(1);
   });
@@ -187,8 +188,8 @@ describe("Regression: fetchDeliveryStats must use broadcast only", () => {
       "utf-8"
     );
 
-    // The endpoint should exist
-    expect(content).toContain("/brands/:brandId/delivery-stats");
+    // The endpoint should exist (renamed from /delivery-stats to /stats)
+    expect(content).toContain("/brands/:brandId/stats");
     // Should only use broadcast, not sum transactional + broadcast
     expect(content).toContain("Only use broadcast stats");
     expect(content).not.toMatch(/sum\(t\?\.emails/);
