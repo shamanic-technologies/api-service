@@ -22,6 +22,8 @@ import stripeRoutes from "./routes/stripe.js";
 import usersRoutes from "./routes/users.js";
 import platformRoutes from "./routes/platform.js";
 import platformChatRoutes from "./routes/platform-chat.js";
+import emailGatewayRoutes from "./routes/email-gateway.js";
+import runsRoutes from "./routes/runs.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { registerPlatformKeys, registerPlatformPrompts, registerPlatformChatConfig } from "./startup.js";
 import { readFileSync, existsSync } from "fs";
@@ -100,6 +102,8 @@ app.use("/v1", emailsRoutes);
 app.use("/v1", stripeRoutes);
 app.use("/v1", usersRoutes);
 app.use("/v1", platformRoutes);
+app.use("/v1", emailGatewayRoutes);
+app.use("/v1", runsRoutes);
 
 // 404 handler
 app.use((req, res) => {

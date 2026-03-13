@@ -4,7 +4,6 @@ import { callExternalService, externalServices } from "../lib/service-client.js"
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { BrandScrapeRequestSchema, BrandUpsertRequestSchema, IcpSuggestionRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
-import { fetchDeliveryStats } from "../lib/delivery-stats.js";
 
 const router = Router();
 
@@ -255,111 +254,6 @@ router.post("/brand/icp-suggestion", authenticate, requireOrg, requireUser, asyn
       });
     }
     res.status(error.statusCode || 500).json({ error: msg });
-  }
-});
-
-/**
- * GET /v1/brands/stats/costs
- * Get total costs grouped by brandId from runs-service.
- * Returns a map of brandId -> totalCostInUsdCents.
- */
-router.get("/brands/stats/costs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const orgId = req.orgId!;
-
-    const data = await callExternalService<{
-      groups: Array<{
-        dimensions: { brandId: string | null };
-        totalCostInUsdCents: string;
-        actualCostInUsdCents: string;
-        provisionedCostInUsdCents: string;
-        cancelledCostInUsdCents: string;
-        runCount: number;
-      }>;
-    }>(
-      externalServices.runs,
-      `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&groupBy=brandId`,
-      { headers: buildInternalHeaders(req) },
-    );
-
-    const costs: Record<string, string> = {};
-    for (const group of data.groups || []) {
-      if (group.dimensions.brandId) {
-        costs[group.dimensions.brandId] = group.totalCostInUsdCents;
-      }
-    }
-
-    res.json({ costs });
-  } catch (error: any) {
-    console.error("Get brands costs error:", error);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brands costs" });
-  }
-});
-
-/**
- * GET /v1/brands/:id/stats/costs
- * Get cost breakdown by cost name for all runs associated with a brand.
- * Uses runs-service as the single source of truth (groupBy=costName).
- */
-router.get("/brands/:id/stats/costs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { id } = req.params;
-    const orgId = req.orgId!;
-
-    const data = await callExternalService<{
-      groups: Array<{
-        key: string;
-        totalCostInUsdCents: string;
-        actualCostInUsdCents: string;
-        provisionedCostInUsdCents: string;
-        totalQuantity: string;
-      }>;
-    }>(
-      externalServices.runs,
-      `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&brandId=${encodeURIComponent(id)}&groupBy=costName`,
-      { headers: buildInternalHeaders(req) },
-    );
-
-    const costs = (data.groups || []).map((g) => ({
-      costName: g.key,
-      totalCostInUsdCents: g.totalCostInUsdCents,
-      actualCostInUsdCents: g.actualCostInUsdCents,
-      provisionedCostInUsdCents: g.provisionedCostInUsdCents,
-      totalQuantity: g.totalQuantity,
-    }));
-    res.json({ costs });
-  } catch (error: any) {
-    console.error("Get brand cost breakdown error:", error);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand cost breakdown" });
-  }
-});
-
-/**
- * GET /v1/brands/:id/stats
- * Get delivery stats (email-gateway) for all campaigns under a brand.
- */
-router.get("/brands/:id/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { id } = req.params;
-
-    const delivery = await fetchDeliveryStats({ brandId: id }, req);
-
-    res.json(delivery ?? {
-      emailsSent: 0,
-      emailsDelivered: 0,
-      emailsOpened: 0,
-      emailsClicked: 0,
-      emailsReplied: 0,
-      emailsBounced: 0,
-      repliesWillingToMeet: 0,
-      repliesInterested: 0,
-      repliesNotInterested: 0,
-      repliesOutOfOffice: 0,
-      repliesUnsubscribe: 0,
-    });
-  } catch (error: any) {
-    console.error("Get brand delivery stats error:", error);
-    res.status(500).json({ error: error.message || "Failed to get brand delivery stats" });
   }
 });
 

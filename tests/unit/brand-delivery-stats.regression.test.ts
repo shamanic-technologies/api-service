@@ -4,9 +4,9 @@
  * so each campaign got org-wide totals. With N campaigns, sent/opened were
  * inflated by a factor of N.
  *
- * Fix: GET /v1/brands/:id/stats makes a single email-gateway call
+ * Fix: GET /v1/email-gateway/stats makes a single email-gateway call
  * with brandId filter, returning only broadcast (outreach) stats.
- * This route now lives in brand.ts (not campaigns.ts).
+ * This route now lives in email-gateway.ts (not brand.ts or campaigns.ts).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
@@ -56,16 +56,16 @@ vi.mock("@distribute/runs-client", () => ({
 
 import express from "express";
 import request from "supertest";
-import brandRouter from "../../src/routes/brand.js";
+import emailGatewayRouter from "../../src/routes/email-gateway.js";
 
 function createApp() {
   const app = express();
   app.use(express.json());
-  app.use("/v1", brandRouter);
+  app.use("/v1", emailGatewayRouter);
   return app;
 }
 
-describe("GET /v1/brands/:id/stats", () => {
+describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -100,7 +100,7 @@ describe("GET /v1/brands/:id/stats", () => {
       return Promise.resolve(null);
     });
 
-    const res = await request(app).get("/v1/brands/brand-123/stats");
+    const res = await request(app).get("/v1/email-gateway/stats?brandId=brand-123");
 
     expect(res.status).toBe(200);
     // Should return ONLY broadcast stats, not transactional
@@ -118,7 +118,7 @@ describe("GET /v1/brands/:id/stats", () => {
 
     mockCallExternalService.mockRejectedValue(new Error("gateway down"));
 
-    const res = await request(app).get("/v1/brands/brand-123/stats");
+    const res = await request(app).get("/v1/email-gateway/stats?brandId=brand-123");
 
     expect(res.status).toBe(200);
     expect(res.body.emailsSent).toBe(0);
@@ -140,7 +140,7 @@ describe("GET /v1/brands/:id/stats", () => {
       broadcast: null,
     });
 
-    const res = await request(app).get("/v1/brands/brand-123/stats");
+    const res = await request(app).get("/v1/email-gateway/stats?brandId=brand-123");
 
     expect(res.status).toBe(200);
     // No broadcast = no outreach stats, should be zeros
@@ -163,7 +163,7 @@ describe("GET /v1/brands/:id/stats", () => {
       },
     });
 
-    await request(app).get("/v1/brands/brand-123/stats");
+    await request(app).get("/v1/email-gateway/stats?brandId=brand-123");
 
     const emailGatewayCalls = mockCallExternalService.mock.calls.filter(
       (call: any[]) => typeof call[1] === "string" && call[1].startsWith("/stats?")
@@ -183,14 +183,14 @@ describe("Regression: fetchDeliveryStats must use broadcast only", () => {
 
     // Should only use broadcast, not sum transactional + broadcast
     expect(content).toContain("Only use broadcast stats");
-    expect(content).not.toMatch(/sum\(t\?\.emails/);
+    expect(content).not.toMatch(/sum\(t?\.emails/);
   });
 
-  it("brand delivery stats route should be in brand.ts, not campaigns.ts", () => {
+  it("delivery stats route should be in email-gateway.ts, using fetchDeliveryStats from lib/delivery-stats.ts", () => {
     const fs = require("fs");
     const path = require("path");
-    const brandContent = fs.readFileSync(
-      path.join(__dirname, "../../src/routes/brand.ts"),
+    const emailGatewayContent = fs.readFileSync(
+      path.join(__dirname, "../../src/routes/email-gateway.ts"),
       "utf-8"
     );
     const campaignsContent = fs.readFileSync(
@@ -198,7 +198,8 @@ describe("Regression: fetchDeliveryStats must use broadcast only", () => {
       "utf-8"
     );
 
-    expect(brandContent).toContain('"/brands/:id/stats"');
+    expect(emailGatewayContent).toContain('"/email-gateway/stats"');
+    expect(emailGatewayContent).toContain("fetchDeliveryStats");
     expect(campaignsContent).not.toContain('"/brands/:brandId/stats"');
     expect(campaignsContent).not.toContain('"/brands/:id/stats"');
   });
