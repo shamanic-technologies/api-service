@@ -20,6 +20,7 @@ import emailsRoutes from "./routes/emails.js";
 import internalEmailsRoutes from "./routes/internal-emails.js";
 import stripeRoutes from "./routes/stripe.js";
 import usersRoutes from "./routes/users.js";
+import platformRoutes from "./routes/platform.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { registerPlatformKeys, registerPlatformPrompts } from "./startup.js";
 import { readFileSync, existsSync } from "fs";
@@ -96,6 +97,7 @@ app.use("/v1", billingRoutes);
 app.use("/v1", emailsRoutes);
 app.use("/v1", stripeRoutes);
 app.use("/v1", usersRoutes);
+app.use("/v1", platformRoutes);
 
 // 404 handler
 app.use((req, res) => {
