@@ -129,6 +129,330 @@
           "error"
         ]
       },
+      "LeaderboardResponse": {
+        "type": "object",
+        "properties": {
+          "brands": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "brandId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "brandUrl": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "brandDomain": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "emailsSent": {
+                  "type": "number"
+                },
+                "emailsOpened": {
+                  "type": "number"
+                },
+                "emailsClicked": {
+                  "type": "number"
+                },
+                "emailsReplied": {
+                  "type": "number"
+                },
+                "totalCostUsdCents": {
+                  "type": "number"
+                },
+                "openRate": {
+                  "type": "number"
+                },
+                "clickRate": {
+                  "type": "number"
+                },
+                "replyRate": {
+                  "type": "number"
+                },
+                "costPerOpenCents": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "costPerClickCents": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "costPerReplyCents": {
+                  "type": "number",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "brandId",
+                "brandUrl",
+                "brandDomain",
+                "emailsSent",
+                "emailsOpened",
+                "emailsClicked",
+                "emailsReplied",
+                "totalCostUsdCents",
+                "openRate",
+                "clickRate",
+                "replyRate",
+                "costPerOpenCents",
+                "costPerClickCents",
+                "costPerReplyCents"
+              ]
+            }
+          },
+          "workflows": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "workflowName": {
+                  "type": "string"
+                },
+                "displayName": {
+                  "type": "string"
+                },
+                "signatureName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "category": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "sectionKey": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "runCount": {
+                  "type": "number"
+                },
+                "emailsSent": {
+                  "type": "number"
+                },
+                "emailsOpened": {
+                  "type": "number"
+                },
+                "emailsClicked": {
+                  "type": "number"
+                },
+                "emailsReplied": {
+                  "type": "number"
+                },
+                "repliesInterested": {
+                  "type": "number"
+                },
+                "recipients": {
+                  "type": "number"
+                },
+                "totalCostUsdCents": {
+                  "type": "number"
+                },
+                "openRate": {
+                  "type": "number"
+                },
+                "clickRate": {
+                  "type": "number"
+                },
+                "replyRate": {
+                  "type": "number"
+                },
+                "interestedRate": {
+                  "type": "number"
+                },
+                "costPerOpenCents": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "costPerClickCents": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "costPerReplyCents": {
+                  "type": "number",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "workflowName",
+                "displayName",
+                "signatureName",
+                "category",
+                "sectionKey",
+                "runCount",
+                "emailsSent",
+                "emailsOpened",
+                "emailsClicked",
+                "emailsReplied",
+                "repliesInterested",
+                "recipients",
+                "totalCostUsdCents",
+                "openRate",
+                "clickRate",
+                "replyRate",
+                "interestedRate",
+                "costPerOpenCents",
+                "costPerClickCents",
+                "costPerReplyCents"
+              ]
+            }
+          },
+          "hero": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "bestCostPerOpen": {
+                "type": "object",
+                "nullable": true,
+                "properties": {
+                  "brandDomain": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "costPerOpenCents": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "brandDomain",
+                  "costPerOpenCents"
+                ]
+              },
+              "bestCostPerReply": {
+                "type": "object",
+                "nullable": true,
+                "properties": {
+                  "brandDomain": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "costPerReplyCents": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "brandDomain",
+                  "costPerReplyCents"
+                ]
+              }
+            },
+            "required": [
+              "bestCostPerOpen",
+              "bestCostPerReply"
+            ]
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "availableCategories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "categorySections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "sectionKey": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "stats": {
+                  "type": "object",
+                  "properties": {
+                    "emailsSent": {
+                      "type": "number"
+                    },
+                    "emailsOpened": {
+                      "type": "number"
+                    },
+                    "emailsReplied": {
+                      "type": "number"
+                    },
+                    "repliesInterested": {
+                      "type": "number"
+                    },
+                    "recipients": {
+                      "type": "number"
+                    },
+                    "totalCostUsdCents": {
+                      "type": "number"
+                    },
+                    "openRate": {
+                      "type": "number"
+                    },
+                    "replyRate": {
+                      "type": "number"
+                    },
+                    "interestedRate": {
+                      "type": "number"
+                    },
+                    "costPerOpenCents": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "costPerReplyCents": {
+                      "type": "number",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "emailsSent",
+                    "emailsOpened",
+                    "emailsReplied",
+                    "repliesInterested",
+                    "recipients",
+                    "totalCostUsdCents",
+                    "openRate",
+                    "replyRate",
+                    "interestedRate",
+                    "costPerOpenCents",
+                    "costPerReplyCents"
+                  ]
+                },
+                "workflows": {
+                  "type": "array",
+                  "items": {
+                    "nullable": true
+                  }
+                },
+                "brands": {
+                  "type": "array",
+                  "items": {
+                    "nullable": true
+                  }
+                }
+              },
+              "required": [
+                "category",
+                "sectionKey",
+                "label",
+                "stats",
+                "workflows",
+                "brands"
+              ]
+            }
+          }
+        },
+        "required": [
+          "brands",
+          "workflows",
+          "hero",
+          "updatedAt",
+          "availableCategories",
+          "categorySections"
+        ]
+      },
       "MeResponse": {
         "type": "object",
         "properties": {
@@ -312,6 +636,9 @@
           "emailsSent": {
             "type": "number"
           },
+          "emailsDelivered": {
+            "type": "number"
+          },
           "emailsOpened": {
             "type": "number"
           },
@@ -338,6 +665,42 @@
           },
           "repliesUnsubscribe": {
             "type": "number"
+          },
+          "totalCostInUsdCents": {
+            "type": "string",
+            "nullable": true,
+            "description": "Total cost from campaign-service budget tracking"
+          },
+          "costBreakdown": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "costName": {
+                  "type": "string"
+                },
+                "totalCostInUsdCents": {
+                  "type": "string"
+                },
+                "actualCostInUsdCents": {
+                  "type": "string"
+                },
+                "provisionedCostInUsdCents": {
+                  "type": "string"
+                },
+                "totalQuantity": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "costName",
+                "totalCostInUsdCents",
+                "actualCostInUsdCents",
+                "provisionedCostInUsdCents",
+                "totalQuantity"
+              ]
+            },
+            "description": "Per-cost-name breakdown from runs-service"
           }
         },
         "required": [
@@ -653,6 +1016,57 @@
           "repliesNotInterested",
           "repliesOutOfOffice",
           "repliesUnsubscribe"
+        ]
+      },
+      "RunsCostStatsResponse": {
+        "type": "object",
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "dimensions": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "description": "Dimension key-value pairs (e.g. { brandId: '...' })"
+                },
+                "totalCostInUsdCents": {
+                  "type": "string"
+                },
+                "actualCostInUsdCents": {
+                  "type": "string"
+                },
+                "provisionedCostInUsdCents": {
+                  "type": "string"
+                },
+                "cancelledCostInUsdCents": {
+                  "type": "string"
+                },
+                "runCount": {
+                  "type": "number"
+                },
+                "totalQuantity": {
+                  "type": "string",
+                  "description": "Present when groupBy includes costName"
+                }
+              },
+              "required": [
+                "dimensions",
+                "totalCostInUsdCents",
+                "actualCostInUsdCents",
+                "provisionedCostInUsdCents",
+                "cancelledCostInUsdCents",
+                "runCount"
+              ]
+            }
+          }
+        },
+        "required": [
+          "groups"
         ]
       },
       "BestWorkflowResponse": {
@@ -1238,6 +1652,36 @@
           "eventType"
         ]
       },
+      "TransactionalEmailStatsResponse": {
+        "type": "object",
+        "properties": {
+          "stats": {
+            "type": "object",
+            "properties": {
+              "totalEmails": {
+                "type": "number",
+                "description": "Total email events"
+              },
+              "sent": {
+                "type": "number",
+                "description": "Successfully sent"
+              },
+              "failed": {
+                "type": "number",
+                "description": "Failed to send"
+              }
+            },
+            "required": [
+              "totalEmails",
+              "sent",
+              "failed"
+            ]
+          }
+        },
+        "required": [
+          "stats"
+        ]
+      },
       "DeployEmailTemplatesRequest": {
         "type": "object",
         "properties": {
@@ -1484,6 +1928,43 @@
           "lineItems",
           "successUrl",
           "cancelUrl"
+        ]
+      },
+      "StripeStatsResponse": {
+        "type": "object",
+        "properties": {
+          "totalPayments": {
+            "type": "number",
+            "description": "Total number of payments"
+          },
+          "totalAmountInCents": {
+            "type": "number",
+            "description": "Total payment amount in cents"
+          },
+          "successCount": {
+            "type": "number",
+            "description": "Successful payments"
+          },
+          "failureCount": {
+            "type": "number",
+            "description": "Failed payments"
+          },
+          "refundCount": {
+            "type": "number",
+            "description": "Refunded payments"
+          },
+          "disputeCount": {
+            "type": "number",
+            "description": "Disputed payments"
+          }
+        },
+        "required": [
+          "totalPayments",
+          "totalAmountInCents",
+          "successCount",
+          "failureCount",
+          "refundCount",
+          "disputeCount"
         ]
       },
       "ResolveUserResponse": {
@@ -1884,7 +2365,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Leaderboard data with brands, workflows, and hero stats"
+            "description": "Leaderboard data with brands, workflows, and hero stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeaderboardResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -5129,7 +5617,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Cost stats grouped by the requested dimension"
+            "description": "Cost stats grouped by the requested dimension",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunsCostStatsResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Missing groupBy parameter",
@@ -7226,7 +7721,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Aggregated email stats"
+            "description": "Aggregated email stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionalEmailStatsResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -8260,7 +8762,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Aggregated sales stats"
+            "description": "Aggregated sales stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StripeStatsResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation error",
