@@ -370,7 +370,7 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
         const withCosts = runMap.get(run.id);
         const allCosts = [
           ...(withCosts?.costs || []),
-          ...(withCosts?.descendantRuns?.flatMap((dr) => dr.costs) || []),
+          ...(withCosts?.descendantRuns?.flatMap((dr: { costs: unknown[] }) => dr.costs) || []),
         ];
         return {
           id: run.id,
