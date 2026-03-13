@@ -1,33 +1,33 @@
 /**
- * Regression test: the GET /v1/brands/costs endpoint must use runs-service
- * /v1/stats/costs?groupBy=brandId to get total costs per brand,
+ * Regression test: the GET /v1/runs/stats/costs endpoint must use runs-service
+ * /v1/stats/costs with groupBy param to get total costs,
  * NOT campaign-service batch-budget-usage.
+ *
+ * This route now lives in runs.ts (not brand.ts).
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
 
-describe("brands costs endpoint uses runs-service", () => {
-  const routePath = path.join(__dirname, "../../src/routes/brand.ts");
-  const content = fs.readFileSync(routePath, "utf-8");
+describe("runs stats costs endpoint uses runs-service", () => {
+  const runsRoutePath = path.join(__dirname, "../../src/routes/runs.ts");
+  const runsContent = fs.readFileSync(runsRoutePath, "utf-8");
 
-  it("should have a GET /brands/stats/costs route", () => {
-    expect(content).toContain('router.get("/brands/stats/costs"');
+  it("should have a GET /runs/stats/costs route in runs.ts", () => {
+    expect(runsContent).toContain('router.get("/runs/stats/costs"');
   });
 
-  it("should call runs-service /v1/stats/costs with groupBy=brandId", () => {
-    expect(content).toContain("/v1/stats/costs?");
-    expect(content).toContain("groupBy=brandId");
-    expect(content).toContain("externalServices.runs");
+  it("should call runs-service /v1/stats/costs with groupBy param", () => {
+    expect(runsContent).toContain("/v1/stats/costs?");
+    expect(runsContent).toContain("groupBy");
+    expect(runsContent).toContain("externalServices.runs");
   });
 
-  it("should not use campaign-service for brand-level costs", () => {
-    // The /brands/stats/costs route should not depend on campaign-service
-    const brandsRoute = content.slice(
-      content.indexOf('router.get("/brands/stats/costs"'),
-      content.indexOf("}", content.indexOf('router.get("/brands/stats/costs"') + 200) + 1
-    );
-    expect(brandsRoute).not.toContain("externalServices.campaign");
+  it("should not have brand cost routes in brand.ts anymore", () => {
+    const brandRoutePath = path.join(__dirname, "../../src/routes/brand.ts");
+    const brandContent = fs.readFileSync(brandRoutePath, "utf-8");
+    expect(brandContent).not.toContain('"/brands/stats/costs"');
+    expect(brandContent).not.toContain('"/brands/:id/stats/costs"');
   });
 
   it("should map runs-service groups to brandId -> totalCostInUsdCents", () => {

@@ -845,22 +845,6 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/brands/{id}/stats/costs",
-  tags: ["Brand"],
-  summary: "Get brand cost breakdown",
-  description:
-    "Get cost breakdown by cost name for all runs associated with a brand, from runs-service",
-  security: authed,
-  request: { params: BrandIdParam },
-  responses: {
-    200: { description: "Cost breakdown by cost name" },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/v1/brands/{id}/runs",
   tags: ["Brand"],
   summary: "Get brand runs",
@@ -875,18 +859,27 @@ registry.registerPath({
   },
 });
 
+// ===================================================================
+// EMAIL-GATEWAY (delivery stats)
+// ===================================================================
+
 registry.registerPath({
   method: "get",
-  path: "/v1/brands/{id}/stats",
-  tags: ["Brand"],
-  summary: "Get brand delivery stats",
+  path: "/v1/email-gateway/stats",
+  tags: ["Email Gateway"],
+  summary: "Get email delivery stats",
   description:
-    "Get aggregated email delivery statistics for all campaigns under a brand (broadcast only, excludes transactional)",
+    "Get broadcast delivery statistics from email-gateway. Filter by brandId and/or campaignId.",
   security: authed,
-  request: { params: BrandIdParam },
+  request: {
+    query: z.object({
+      brandId: z.string().optional().describe("Filter by brand ID"),
+      campaignId: z.string().optional().describe("Filter by campaign ID"),
+    }),
+  },
   responses: {
     200: {
-      description: "Delivery statistics for the brand",
+      description: "Delivery statistics (broadcast only)",
       content: {
         "application/json": {
           schema: z
@@ -903,10 +896,38 @@ registry.registerPath({
               repliesOutOfOffice: z.number(),
               repliesUnsubscribe: z.number(),
             })
-            .openapi("BrandDeliveryStatsResponse"),
+            .openapi("EmailGatewayStatsResponse"),
         },
       },
     },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ===================================================================
+// RUNS (cost stats)
+// ===================================================================
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/runs/stats/costs",
+  tags: ["Runs"],
+  summary: "Get cost stats from runs-service",
+  description:
+    "Get cost statistics grouped by a dimension. Supports groupBy=brandId, costName, campaignId, serviceName. Filter by brandId, campaignId, taskName.",
+  security: authed,
+  request: {
+    query: z.object({
+      groupBy: z.string().describe("Grouping dimension: brandId, costName, campaignId, serviceName"),
+      brandId: z.string().optional().describe("Filter by brand ID"),
+      campaignId: z.string().optional().describe("Filter by campaign ID"),
+      taskName: z.string().optional().describe("Filter by task name (e.g. lead-serve)"),
+    }),
+  },
+  responses: {
+    200: { description: "Cost stats grouped by the requested dimension" },
+    400: { description: "Missing groupBy parameter", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },

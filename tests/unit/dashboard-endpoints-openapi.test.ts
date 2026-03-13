@@ -2,9 +2,10 @@
  * Regression test: ensures dashboard endpoints are properly
  * documented in the OpenAPI schema (schemas.ts).
  *
- * 1. GET /v1/brands/{id}/stats — must be registered
- * 2. GET /v1/campaigns/{id}/stats/replies — removed (no longer registered)
- * 3. GET /v1/campaigns status query param — must be documented
+ * 1. GET /v1/email-gateway/stats — must be registered
+ * 2. GET /v1/runs/stats/costs — must be registered
+ * 3. GET /v1/campaigns/{id}/stats/replies — removed (no longer registered)
+ * 4. GET /v1/campaigns status query param — must be documented
  */
 import { describe, it, expect } from "vitest";
 import fs from "fs";
@@ -14,8 +15,12 @@ const schemasPath = path.join(__dirname, "../../src/schemas.ts");
 const content = fs.readFileSync(schemasPath, "utf-8");
 
 describe("Dashboard endpoints OpenAPI documentation", () => {
-  it("should register GET /v1/brands/{id}/stats", () => {
-    expect(content).toContain('path: "/v1/brands/{id}/stats"');
+  it("should register GET /v1/email-gateway/stats", () => {
+    expect(content).toContain('path: "/v1/email-gateway/stats"');
+  });
+
+  it("should register GET /v1/runs/stats/costs", () => {
+    expect(content).toContain('path: "/v1/runs/stats/costs"');
   });
 
   it("should NOT register campaigns replies endpoint (removed)", () => {

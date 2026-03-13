@@ -513,7 +513,7 @@
           "url"
         ]
       },
-      "BrandDeliveryStatsResponse": {
+      "EmailGatewayStatsResponse": {
         "type": "object",
         "properties": {
           "emailsSent": {
@@ -4625,102 +4625,6 @@
         ]
       }
     },
-    "/v1/brands/{id}/stats/costs": {
-      "get": {
-        "tags": [
-          "Brand"
-        ],
-        "summary": "Get brand cost breakdown",
-        "description": "Get cost breakdown by cost name for all runs associated with a brand, from runs-service",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Brand ID"
-            },
-            "required": true,
-            "description": "Brand ID",
-            "name": "id",
-            "in": "path"
-          },
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-name",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Cost breakdown by cost name"
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/brands/{id}/runs": {
       "get": {
         "tags": [
@@ -4817,13 +4721,13 @@
         }
       }
     },
-    "/v1/brands/{id}/stats": {
+    "/v1/email-gateway/stats": {
       "get": {
         "tags": [
-          "Brand"
+          "Email Gateway"
         ],
-        "summary": "Get brand delivery stats",
-        "description": "Get aggregated email delivery statistics for all campaigns under a brand (broadcast only, excludes transactional)",
+        "summary": "Get email delivery stats",
+        "description": "Get broadcast delivery statistics from email-gateway. Filter by brandId and/or campaignId.",
         "security": [
           {
             "bearerAuth": []
@@ -4833,12 +4737,22 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand ID"
+              "description": "Filter by brand ID"
             },
-            "required": true,
-            "description": "Brand ID",
-            "name": "id",
-            "in": "path"
+            "required": false,
+            "description": "Filter by brand ID",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by campaign ID"
+            },
+            "required": false,
+            "description": "Filter by campaign ID",
+            "name": "campaignId",
+            "in": "query"
           },
           {
             "name": "x-org-id",
@@ -4888,11 +4802,147 @@
         ],
         "responses": {
           "200": {
-            "description": "Delivery statistics for the brand",
+            "description": "Delivery statistics (broadcast only)",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BrandDeliveryStatsResponse"
+                  "$ref": "#/components/schemas/EmailGatewayStatsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/runs/stats/costs": {
+      "get": {
+        "tags": [
+          "Runs"
+        ],
+        "summary": "Get cost stats from runs-service",
+        "description": "Get cost statistics grouped by a dimension. Supports groupBy=brandId, costName, campaignId, serviceName. Filter by brandId, campaignId, taskName.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Grouping dimension: brandId, costName, campaignId, serviceName"
+            },
+            "required": true,
+            "description": "Grouping dimension: brandId, costName, campaignId, serviceName",
+            "name": "groupBy",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by brand ID"
+            },
+            "required": false,
+            "description": "Filter by brand ID",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by campaign ID"
+            },
+            "required": false,
+            "description": "Filter by campaign ID",
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by task name (e.g. lead-serve)"
+            },
+            "required": false,
+            "description": "Filter by task name (e.g. lead-serve)",
+            "name": "taskName",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cost stats grouped by the requested dimension"
+          },
+          "400": {
+            "description": "Missing groupBy parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
