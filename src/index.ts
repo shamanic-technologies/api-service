@@ -120,7 +120,11 @@ const server = app.listen(Number(PORT), "::", () => {
   console.log(`API Gateway running on port ${PORT}`);
   registerPlatformKeys()
     .then(() => registerPlatformPrompts())
-    .then(() => registerPlatformChatConfig())
+    .then(() =>
+      registerPlatformChatConfig().catch((err) => {
+        console.warn("[api-service] WARNING: Platform chat config registration failed (chat-service may not be deployed yet):", err.message);
+      })
+    )
     .catch((err) => {
       console.error("[api-service] FATAL: Startup registration failed:", err.message);
       process.exit(1);
