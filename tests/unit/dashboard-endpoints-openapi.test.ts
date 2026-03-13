@@ -2,7 +2,7 @@
  * Regression test: ensures dashboard endpoints are properly
  * documented in the OpenAPI schema (schemas.ts).
  *
- * 1. GET /v1/brands/{brandId}/stats — must be registered
+ * 1. GET /v1/brands/{id}/stats — must be registered
  * 2. GET /v1/campaigns/{id}/stats/replies — removed (no longer registered)
  * 3. GET /v1/campaigns status query param — must be documented
  */
@@ -14,8 +14,8 @@ const schemasPath = path.join(__dirname, "../../src/schemas.ts");
 const content = fs.readFileSync(schemasPath, "utf-8");
 
 describe("Dashboard endpoints OpenAPI documentation", () => {
-  it("should register GET /v1/brands/{brandId}/stats", () => {
-    expect(content).toContain('path: "/v1/brands/{brandId}/stats"');
+  it("should register GET /v1/brands/{id}/stats", () => {
+    expect(content).toContain('path: "/v1/brands/{id}/stats"');
   });
 
   it("should NOT register campaigns replies endpoint (removed)", () => {

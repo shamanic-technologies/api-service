@@ -875,19 +875,15 @@ registry.registerPath({
   },
 });
 
-const BrandIdByBrandIdParam = z.object({
-  brandId: z.string().describe("Brand ID"),
-});
-
 registry.registerPath({
   method: "get",
-  path: "/v1/brands/{brandId}/stats",
+  path: "/v1/brands/{id}/stats",
   tags: ["Brand"],
   summary: "Get brand delivery stats",
   description:
     "Get aggregated email delivery statistics for all campaigns under a brand (broadcast only, excludes transactional)",
   security: authed,
-  request: { params: BrandIdByBrandIdParam },
+  request: { params: BrandIdParam },
   responses: {
     200: {
       description: "Delivery statistics for the brand",

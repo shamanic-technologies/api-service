@@ -4,6 +4,7 @@ import { callExternalService, externalServices } from "../lib/service-client.js"
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { BrandScrapeRequestSchema, BrandUpsertRequestSchema, IcpSuggestionRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
+import { fetchDeliveryStats } from "../lib/delivery-stats.js";
 
 const router = Router();
 
@@ -330,6 +331,35 @@ router.get("/brands/:id/stats/costs", authenticate, requireOrg, requireUser, asy
   } catch (error: any) {
     console.error("Get brand cost breakdown error:", error);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand cost breakdown" });
+  }
+});
+
+/**
+ * GET /v1/brands/:id/stats
+ * Get delivery stats (email-gateway) for all campaigns under a brand.
+ */
+router.get("/brands/:id/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const delivery = await fetchDeliveryStats({ brandId: id }, req);
+
+    res.json(delivery ?? {
+      emailsSent: 0,
+      emailsDelivered: 0,
+      emailsOpened: 0,
+      emailsClicked: 0,
+      emailsReplied: 0,
+      emailsBounced: 0,
+      repliesWillingToMeet: 0,
+      repliesInterested: 0,
+      repliesNotInterested: 0,
+      repliesOutOfOffice: 0,
+      repliesUnsubscribe: 0,
+    });
+  } catch (error: any) {
+    console.error("Get brand delivery stats error:", error);
+    res.status(500).json({ error: error.message || "Failed to get brand delivery stats" });
   }
 });
 

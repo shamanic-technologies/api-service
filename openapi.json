@@ -4817,7 +4817,7 @@
         }
       }
     },
-    "/v1/brands/{brandId}/stats": {
+    "/v1/brands/{id}/stats": {
       "get": {
         "tags": [
           "Brand"
@@ -4837,7 +4837,7 @@
             },
             "required": true,
             "description": "Brand ID",
-            "name": "brandId",
+            "name": "id",
             "in": "path"
           },
           {
