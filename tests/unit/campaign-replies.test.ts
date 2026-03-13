@@ -1,9 +1,13 @@
 /**
- * Tests for GET /v1/campaigns/:id/replies
- * Proxies to email-gateway /stats with groupBy: "leadEmail",
- * filters for leads with replies, returns reply type breakdown.
+ * Regression test: GET /v1/campaigns/:id/stats/replies and
+ * POST /v1/campaigns/stats/batch have been intentionally removed.
+ *
+ * - replies: the frontend should call email-gateway directly with
+ *   GET /stats?groupBy=leadEmail instead of going through api-service.
+ * - batch-stats: the frontend should call GET /v1/campaigns/:id/stats
+ *   per campaign instead of a single batch endpoint.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 const mockCallExternalService = vi.fn();
 const mockCallService = vi.fn();
@@ -23,6 +27,7 @@ vi.mock("../../src/lib/service-client.js", () => ({
     scraping: { url: "http://mock-scraping", apiKey: "k" },
     transactionalEmail: { url: "http://mock-transactional-email", apiKey: "k" },
     brand: { url: "http://mock-brand", apiKey: "k" },
+    runs: { url: "http://mock-runs", apiKey: "k" },
   },
   services: {
     client: "http://mock-client",
@@ -59,172 +64,32 @@ function createApp() {
   return app;
 }
 
-describe("GET /v1/campaigns/:id/replies", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("should return only leads with replies, filtering out non-repliers", async () => {
+describe("removed campaign stats endpoints", () => {
+  it("GET /v1/campaigns/:id/stats/replies should return 404", async () => {
     const app = createApp();
-
-    mockCallExternalService.mockImplementation((_service: any, path: string) => {
-      if (path === "/stats") {
-        return Promise.resolve({
-          groups: [
-            {
-              key: "alice@example.com",
-              broadcast: {
-                emailsReplied: 1,
-                repliesWillingToMeet: 0,
-                repliesInterested: 1,
-                repliesNotInterested: 0,
-                repliesOutOfOffice: 0,
-                repliesUnsubscribe: 0,
-              },
-            },
-            {
-              key: "bob@example.com",
-              broadcast: {
-                emailsReplied: 0,
-                repliesWillingToMeet: 0,
-                repliesInterested: 0,
-                repliesNotInterested: 0,
-                repliesOutOfOffice: 0,
-                repliesUnsubscribe: 0,
-              },
-            },
-            {
-              key: "carol@example.com",
-              broadcast: {
-                emailsReplied: 1,
-                repliesWillingToMeet: 0,
-                repliesInterested: 0,
-                repliesNotInterested: 1,
-                repliesOutOfOffice: 0,
-                repliesUnsubscribe: 0,
-              },
-            },
-          ],
-        });
-      }
-      return Promise.resolve(null);
-    });
-
-    const res = await request(app).get("/v1/campaigns/campaign-123/replies");
-
-    expect(res.status).toBe(200);
-    expect(res.body.replies).toHaveLength(2);
-    expect(res.body.replies[0].email).toBe("alice@example.com");
-    expect(res.body.replies[0].repliesInterested).toBe(1);
-    expect(res.body.replies[1].email).toBe("carol@example.com");
-    expect(res.body.replies[1].repliesNotInterested).toBe(1);
-  });
-
-  it("should return empty replies array when no leads have replied", async () => {
-    const app = createApp();
-
-    mockCallExternalService.mockResolvedValue({
-      groups: [
-        {
-          key: "alice@example.com",
-          broadcast: {
-            emailsReplied: 0,
-            repliesWillingToMeet: 0,
-            repliesInterested: 0,
-            repliesNotInterested: 0,
-            repliesOutOfOffice: 0,
-            repliesUnsubscribe: 0,
-          },
-        },
-      ],
-    });
-
-    const res = await request(app).get("/v1/campaigns/campaign-123/replies");
-
-    expect(res.status).toBe(200);
-    expect(res.body.replies).toHaveLength(0);
-  });
-
-  it("should return empty replies when groups is empty", async () => {
-    const app = createApp();
-
-    mockCallExternalService.mockResolvedValue({ groups: [] });
-
-    const res = await request(app).get("/v1/campaigns/campaign-123/replies");
-
-    expect(res.status).toBe(200);
-    expect(res.body.replies).toHaveLength(0);
-  });
-
-  it("should handle null broadcast by filtering out the lead", async () => {
-    const app = createApp();
-
-    mockCallExternalService.mockResolvedValue({
-      groups: [
-        { key: "alice@example.com", broadcast: null },
-        {
-          key: "bob@example.com",
-          broadcast: {
-            emailsReplied: 1,
-            repliesWillingToMeet: 1,
-            repliesInterested: 0,
-            repliesNotInterested: 0,
-            repliesOutOfOffice: 0,
-            repliesUnsubscribe: 0,
-          },
-        },
-      ],
-    });
-
-    const res = await request(app).get("/v1/campaigns/campaign-123/replies");
-
-    expect(res.status).toBe(200);
-    expect(res.body.replies).toHaveLength(1);
-    expect(res.body.replies[0].email).toBe("bob@example.com");
-    expect(res.body.replies[0].repliesWillingToMeet).toBe(1);
-  });
-
-  it("should call email-gateway with correct params", async () => {
-    const app = createApp();
-
-    mockCallExternalService.mockResolvedValue({ groups: [] });
-
-    await request(app).get("/v1/campaigns/my-campaign-id/replies");
-
-    expect(mockCallExternalService).toHaveBeenCalledWith(
-      expect.objectContaining({ url: "http://mock-email" }),
-      "/stats",
-      expect.objectContaining({
-        method: "POST",
-        body: { campaignId: "my-campaign-id", orgId: "org1", groupBy: "leadEmail" },
-      })
-    );
-  });
-
-  it("should return 500 when email-gateway fails", async () => {
-    const app = createApp();
-
-    mockCallExternalService.mockRejectedValue(new Error("gateway down"));
-
-    const res = await request(app).get("/v1/campaigns/campaign-123/replies");
-
-    expect(res.status).toBe(500);
-    expect(res.body.error).toBe("gateway down");
-  });
-
-  it("should forward downstream HTTP status codes", async () => {
-    const app = createApp();
-
-    const err = new Error("not found") as any;
-    err.statusCode = 404;
-    mockCallExternalService.mockRejectedValue(err);
-
-    const res = await request(app).get("/v1/campaigns/campaign-123/replies");
-
+    const res = await request(app).get("/v1/campaigns/campaign-123/stats/replies");
     expect(res.status).toBe(404);
+  });
+
+  it("GET /v1/campaigns/:id/replies (old path) should return 404", async () => {
+    const app = createApp();
+    const res = await request(app).get("/v1/campaigns/campaign-123/replies");
+    expect(res.status).toBe(404);
+  });
+
+  it("POST /v1/campaigns/stats/batch should return 404", async () => {
+    const app = createApp();
+    const res = await request(app)
+      .post("/v1/campaigns/stats/batch")
+      .send({ campaignIds: ["c1", "c2"] });
+    expect(res.status).toBe(404);
+  });
+
+  it("GET /v1/campaigns/:id/stats should still work (not removed)", async () => {
+    const app = createApp();
+    mockCallExternalService.mockResolvedValue(null);
+    const res = await request(app).get("/v1/campaigns/campaign-123/stats");
+    // Should not be 404 — the single-campaign stats endpoint is still alive
+    expect(res.status).not.toBe(404);
   });
 });

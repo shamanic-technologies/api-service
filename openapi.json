@@ -353,75 +353,6 @@
           "emailsBounced"
         ]
       },
-      "BatchStatsRequest": {
-        "type": "object",
-        "properties": {
-          "campaignIds": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "minItems": 1,
-            "description": "Array of campaign IDs to fetch stats for"
-          }
-        },
-        "required": [
-          "campaignIds"
-        ]
-      },
-      "CampaignRepliesResponse": {
-        "type": "object",
-        "properties": {
-          "replies": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "email": {
-                  "type": "string",
-                  "description": "Lead email address"
-                },
-                "emailsReplied": {
-                  "type": "number",
-                  "description": "Total replies from this lead"
-                },
-                "repliesWillingToMeet": {
-                  "type": "number",
-                  "description": "Willing to meet replies"
-                },
-                "repliesInterested": {
-                  "type": "number",
-                  "description": "Interested replies"
-                },
-                "repliesNotInterested": {
-                  "type": "number",
-                  "description": "Not interested replies"
-                },
-                "repliesOutOfOffice": {
-                  "type": "number",
-                  "description": "Out of office replies"
-                },
-                "repliesUnsubscribe": {
-                  "type": "number",
-                  "description": "Unsubscribe replies"
-                }
-              },
-              "required": [
-                "email",
-                "emailsReplied",
-                "repliesWillingToMeet",
-                "repliesInterested",
-                "repliesNotInterested",
-                "repliesOutOfOffice",
-                "repliesUnsubscribe"
-              ]
-            }
-          }
-        },
-        "required": [
-          "replies"
-        ]
-      },
       "UpsertKeyRequest": {
         "type": "object",
         "properties": {
@@ -1216,15 +1147,6 @@
           "eventType"
         ]
       },
-      "EmailStatsRequest": {
-        "type": "object",
-        "properties": {
-          "eventType": {
-            "type": "string",
-            "description": "Filter by event type"
-          }
-        }
-      },
       "DeployEmailTemplatesRequest": {
         "type": "object",
         "properties": {
@@ -1472,26 +1394,6 @@
           "successUrl",
           "cancelUrl"
         ]
-      },
-      "StripeStatsRequest": {
-        "type": "object",
-        "properties": {
-          "brandId": {
-            "type": "string",
-            "description": "Filter by brand ID"
-          },
-          "campaignId": {
-            "type": "string",
-            "description": "Filter by campaign ID"
-          },
-          "runIds": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Filter by run IDs"
-          }
-        }
       },
       "ResolveUserResponse": {
         "type": "object",
@@ -1877,10 +1779,10 @@
         }
       }
     },
-    "/performance/leaderboard": {
+    "/v1/stats/leaderboard": {
       "get": {
         "tags": [
-          "Performance"
+          "Stats"
         ],
         "summary": "Get performance leaderboard",
         "description": "Returns performance leaderboard data including brands, workflows, and hero stats. Requires authentication.",
@@ -2750,111 +2652,6 @@
         }
       }
     },
-    "/v1/campaigns/batch-stats": {
-      "post": {
-        "tags": [
-          "Campaigns"
-        ],
-        "summary": "Batch get campaign stats",
-        "description": "Get stats for multiple campaigns in a single request",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/BatchStatsRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Stats keyed by campaign ID"
-          },
-          "400": {
-            "description": "Invalid request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-name",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          }
-        ]
-      }
-    },
     "/v1/campaigns/{id}/leads": {
       "get": {
         "tags": [
@@ -3023,109 +2820,6 @@
         "responses": {
           "200": {
             "description": "Campaign emails with generation run data"
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/campaigns/{id}/replies": {
-      "get": {
-        "tags": [
-          "Campaigns"
-        ],
-        "summary": "Get campaign replies",
-        "description": "Get email replies for a campaign, grouped by lead email. Returns only leads who have at least one reply, with reply type breakdown.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Campaign ID"
-            },
-            "required": true,
-            "description": "Campaign ID",
-            "name": "id",
-            "in": "path"
-          },
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-name",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of reply records per lead",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CampaignRepliesResponse"
-                }
-              }
-            }
           },
           "401": {
             "description": "Unauthorized",
@@ -4931,7 +4625,7 @@
         ]
       }
     },
-    "/v1/brands/{id}/cost-breakdown": {
+    "/v1/brands/{id}/stats/costs": {
       "get": {
         "tags": [
           "Brand"
@@ -5123,7 +4817,7 @@
         }
       }
     },
-    "/v1/brands/{brandId}/delivery-stats": {
+    "/v1/brands/{brandId}/stats": {
       "get": {
         "tags": [
           "Brand"
@@ -7218,7 +6912,7 @@
       }
     },
     "/v1/emails/stats": {
-      "post": {
+      "get": {
         "tags": [
           "Emails"
         ],
@@ -7229,41 +6923,17 @@
             "bearerAuth": []
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/EmailStatsRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Aggregated email stats"
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by event type"
+            },
+            "required": false,
+            "description": "Filter by event type",
+            "name": "eventType",
+            "in": "query"
+          },
           {
             "name": "x-org-id",
             "in": "header",
@@ -7309,7 +6979,32 @@
             },
             "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Aggregated email stats"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/emails/templates": {
@@ -8231,62 +7926,48 @@
       }
     },
     "/v1/stripe/stats": {
-      "post": {
+      "get": {
         "tags": [
           "Stripe"
         ],
         "summary": "Get Stripe sales stats",
-        "description": "Get aggregated sales stats. Filterable by brandId, campaignId, or runIds.",
+        "description": "Get aggregated sales stats. Filterable by brandId, campaignId, or runIds via query params.",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/StripeStatsRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Aggregated sales stats"
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by brand ID"
+            },
+            "required": false,
+            "description": "Filter by brand ID",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by campaign ID"
+            },
+            "required": false,
+            "description": "Filter by campaign ID",
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated run IDs"
+            },
+            "required": false,
+            "description": "Comma-separated run IDs",
+            "name": "runIds",
+            "in": "query"
+          },
           {
             "name": "x-org-id",
             "in": "header",
@@ -8332,7 +8013,42 @@
             },
             "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Aggregated sales stats"
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/users/resolve": {

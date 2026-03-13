@@ -111,7 +111,7 @@ describe("POST /v1/emails/send", () => {
   });
 });
 
-describe("POST /v1/emails/stats", () => {
+describe("GET /v1/emails/stats", () => {
   let app: express.Express;
 
   beforeEach(() => {
@@ -129,29 +129,25 @@ describe("POST /v1/emails/stats", () => {
     app = createApp();
   });
 
-  it("should forward stats request with filters in body and identity in headers", async () => {
+  it("should forward stats request with filters as query params and identity in headers", async () => {
     const res = await request(app)
-      .post("/v1/emails/stats")
-      .send({ eventType: "webinar_welcome" });
+      .get("/v1/emails/stats?eventType=webinar_welcome");
 
     expect(res.status).toBe(200);
     expect(res.body.stats.totalEmails).toBe(42);
 
     const statsCall = fetchCalls.find((c) => c.url.includes("/stats"));
     expect(statsCall).toBeDefined();
-    expect(statsCall!.body).toMatchObject({
-      orgId: "org_test456",
-      eventType: "webinar_welcome",
-    });
-    expect(statsCall!.body.userId).toBeUndefined();
+    // Now uses GET with query params — orgId and eventType in the URL
+    expect(statsCall!.url).toContain("orgId=org_test456");
+    expect(statsCall!.url).toContain("eventType=webinar_welcome");
     expect(statsCall!.headers!["x-org-id"]).toBe("org_test456");
     expect(statsCall!.headers!["x-user-id"]).toBe("user_test123");
   });
 
-  it("should allow empty body for unfiltered stats", async () => {
+  it("should allow no query params for unfiltered stats", async () => {
     const res = await request(app)
-      .post("/v1/emails/stats")
-      .send({});
+      .get("/v1/emails/stats");
 
     expect(res.status).toBe(200);
   });

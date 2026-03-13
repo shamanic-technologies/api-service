@@ -278,7 +278,7 @@ describe("POST /v1/stripe/checkout", () => {
 // Stats
 // ---------------------------------------------------------------------------
 
-describe("POST /v1/stripe/stats", () => {
+describe("GET /v1/stripe/stats", () => {
   let app: express.Express;
 
   beforeEach(() => {
@@ -290,21 +290,18 @@ describe("POST /v1/stripe/stats", () => {
 
   it("should forward stats request with identity in headers", async () => {
     const res = await request(app)
-      .post("/v1/stripe/stats")
-      .send({ brandId: "brand_abc" });
+      .get("/v1/stripe/stats?brandId=brand_abc");
 
     expect(res.status).toBe(200);
     expect(res.body.totalRevenue).toBe(12500);
 
     const call = fetchCalls.find((c) => c.url.includes("/stats"));
-    expect(call!.body).toMatchObject({ brandId: "brand_abc" });
-    expect(call!.body.appId).toBeUndefined();
-    expect(call!.body.orgId).toBeUndefined();
+    expect(call!.url).toContain("brandId=brand_abc");
     expect(call!.headers!["x-org-id"]).toBe("org_test456");
   });
 
-  it("should allow empty body for unfiltered stats", async () => {
-    const res = await request(app).post("/v1/stripe/stats").send({});
+  it("should allow no query params for unfiltered stats", async () => {
+    const res = await request(app).get("/v1/stripe/stats");
     expect(res.status).toBe(200);
   });
 });
@@ -392,8 +389,8 @@ describe("Stripe catalog endpoints — app key without org context", () => {
     expect(res.body.error).toBe("Organization context required");
   });
 
-  it("POST /v1/stripe/stats should return 400 without org context", async () => {
-    const res = await request(appKeyApp).post("/v1/stripe/stats").send({});
+  it("GET /v1/stripe/stats should return 400 without org context", async () => {
+    const res = await request(appKeyApp).get("/v1/stripe/stats");
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("Organization context required");
   });
