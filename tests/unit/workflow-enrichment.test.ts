@@ -187,22 +187,20 @@ describe("GET /v1/workflows/:id/summary", () => {
           ok: true,
           json: () =>
             Promise.resolve({
-              workflow: {
-                id: "wf-1",
-                name: "sales-email-cold-outreach-v1",
-                dag: {
-                  nodes: [
-                    { id: "find-leads", type: "http.call", config: { service: "apollo", method: "POST", path: "/search" }, inputMapping: {} },
-                    { id: "enrich-profiles", type: "http.call", config: { service: "apollo", method: "POST", path: "/enrich" }, inputMapping: {} },
-                    { id: "generate-email", type: "http.call", config: { service: "content-generation", method: "POST", path: "/generate" }, inputMapping: {} },
-                    { id: "send-email", type: "http.call", config: { service: "instantly", method: "POST", path: "/send" }, inputMapping: {} },
-                  ],
-                  edges: [
-                    { from: "find-leads", to: "enrich-profiles" },
-                    { from: "enrich-profiles", to: "generate-email" },
-                    { from: "generate-email", to: "send-email" },
-                  ],
-                },
+              id: "wf-1",
+              name: "sales-email-cold-outreach-v1",
+              dag: {
+                nodes: [
+                  { id: "find-leads", type: "http.call", config: { service: "apollo", method: "POST", path: "/search" }, inputMapping: {} },
+                  { id: "enrich-profiles", type: "http.call", config: { service: "apollo", method: "POST", path: "/enrich" }, inputMapping: {} },
+                  { id: "generate-email", type: "http.call", config: { service: "content-generation", method: "POST", path: "/generate" }, inputMapping: {} },
+                  { id: "send-email", type: "http.call", config: { service: "instantly", method: "POST", path: "/send" }, inputMapping: {} },
+                ],
+                edges: [
+                  { from: "find-leads", to: "enrich-profiles" },
+                  { from: "enrich-profiles", to: "generate-email" },
+                  { from: "generate-email", to: "send-email" },
+                ],
               },
             }),
         };
@@ -226,6 +224,36 @@ describe("GET /v1/workflows/:id/summary", () => {
     expect(res.body.summary).toContain("4 steps");
   });
 
+  it("should not 404 when workflow-service returns workflow at top level (not nested)", async () => {
+    // Regression: workflow-service returns { id, name, dag, ... } directly,
+    // NOT { workflow: { id, name, dag } }. Previously the code did .then(r => r.workflow)
+    // which yielded undefined and caused a false 404.
+    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes("/required-providers")) {
+        return { ok: true, json: () => Promise.resolve({ providers: ["apollo"] }) };
+      }
+      return {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            id: "wf-regression",
+            name: "regression-flow",
+            dag: {
+              nodes: [{ id: "step-1", type: "http.call", config: { service: "apollo", method: "GET", path: "/test" } }],
+              edges: [],
+            },
+          }),
+      };
+    });
+    app = createApp();
+
+    const res = await request(app).get("/v1/workflows/wf-regression/summary");
+
+    expect(res.status).toBe(200);
+    expect(res.body.workflowName).toBe("regression-flow");
+    expect(res.body.steps).toHaveLength(1);
+  });
+
   it("should handle workflow with no DAG", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
       if (url.includes("/required-providers")) {
@@ -233,7 +261,7 @@ describe("GET /v1/workflows/:id/summary", () => {
       }
       return {
         ok: true,
-        json: () => Promise.resolve({ workflow: { id: "wf-1", name: "empty-flow", dag: null } }),
+        json: () => Promise.resolve({ id: "wf-1", name: "empty-flow", dag: null }),
       };
     });
     app = createApp();
