@@ -7,6 +7,10 @@ export interface AuthenticatedRequest extends Request {
   orgId?: string;
   runId?: string;
   authType?: "user_key" | "admin";
+  /** Workflow tracking headers — injected by workflow-service, optional */
+  campaignId?: string;
+  brandId?: string;
+  workflowName?: string;
 }
 
 /**
@@ -79,6 +83,14 @@ export async function authenticate(
     } else {
       return res.status(401).json({ error: "Missing authentication" });
     }
+
+    // Extract optional workflow tracking headers (injected by workflow-service)
+    const campaignId = req.headers["x-campaign-id"] as string | undefined;
+    const brandId = req.headers["x-brand-id"] as string | undefined;
+    const workflowName = req.headers["x-workflow-name"] as string | undefined;
+    if (campaignId) req.campaignId = campaignId;
+    if (brandId) req.brandId = brandId;
+    if (workflowName) req.workflowName = workflowName;
 
     // Create a request run for tracking — mandatory, fail the request if runs-service is down
     if (req.orgId) {

@@ -96,6 +96,33 @@ const identityParams = [
       "Required when using an app key (`distrib.app_*`) on endpoints that need user context. " +
       "Ignored when using a user key (`distrib.usr_*`).",
   },
+  {
+    name: "x-campaign-id",
+    in: "header" as const,
+    required: false,
+    schema: { type: "string" as const },
+    description:
+      "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. " +
+      "Optional — forwarded to downstream services for tracking.",
+  },
+  {
+    name: "x-brand-id",
+    in: "header" as const,
+    required: false,
+    schema: { type: "string" as const },
+    description:
+      "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. " +
+      "Optional — forwarded to downstream services for tracking.",
+  },
+  {
+    name: "x-workflow-name",
+    in: "header" as const,
+    required: false,
+    schema: { type: "string" as const },
+    description:
+      "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. " +
+      "Optional — forwarded to downstream services for tracking.",
+  },
 ];
 
 type HttpMethod = "get" | "post" | "put" | "patch" | "delete";
