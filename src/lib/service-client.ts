@@ -69,7 +69,7 @@ export const externalServices = {
     apiKey: process.env.STRIPE_SERVICE_API_KEY || "",
   },
   apiRegistry: {
-    url: process.env.API_REGISTRY_SERVICE_URL || "https://api-registry.distribute.you",
+    url: process.env.API_REGISTRY_SERVICE_URL || "http://localhost:3023",
     apiKey: process.env.API_REGISTRY_SERVICE_API_KEY || "",
   },
 };

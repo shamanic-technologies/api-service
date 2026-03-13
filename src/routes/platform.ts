@@ -7,7 +7,7 @@ const router = Router();
 
 /**
  * GET /v1/platform/services
- * List all registered services from api-registry.
+ * List all services from api-registry
  */
 router.get("/platform/services", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
@@ -19,13 +19,13 @@ router.get("/platform/services", authenticate, requireOrg, requireUser, async (r
     res.json(result);
   } catch (error: any) {
     console.error("List platform services error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to list platform services" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to list services" });
   }
 });
 
 /**
  * GET /v1/platform/services/:service
- * Get the OpenAPI spec for a specific service from api-registry.
+ * Get OpenAPI spec for a specific service from api-registry
  */
 router.get("/platform/services/:service", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
@@ -37,14 +37,14 @@ router.get("/platform/services/:service", authenticate, requireOrg, requireUser,
     );
     res.json(result);
   } catch (error: any) {
-    console.error(`Get service spec error (${req.params.service}):`, error.message);
+    console.error("Get platform service spec error:", error.message);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get service spec" });
   }
 });
 
 /**
  * GET /v1/platform/llm-context
- * Get LLM-friendly context: compact summary of all services and endpoints.
+ * Get LLM context from api-registry (service descriptions + endpoint summaries for chat)
  */
 router.get("/platform/llm-context", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
@@ -55,7 +55,7 @@ router.get("/platform/llm-context", authenticate, requireOrg, requireUser, async
     );
     res.json(result);
   } catch (error: any) {
-    console.error("Get LLM context error:", error.message);
+    console.error("Get platform LLM context error:", error.message);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get LLM context" });
   }
 });

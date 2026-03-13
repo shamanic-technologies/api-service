@@ -158,11 +158,11 @@ router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, asyn
 
     // Fetch workflow with DAG and required providers in parallel
     const [workflow, requiredProviders] = await Promise.all([
-      callExternalService<{ workflow: { id: string; name: string; dag?: { nodes: Array<{ id: string; type: string; config?: Record<string, unknown> }>; edges: Array<{ from: string; to: string }> } } }>(
+      callExternalService<{ id: string; name: string; dag?: { nodes: Array<{ id: string; type: string; config?: Record<string, unknown> }>; edges: Array<{ from: string; to: string }> } }>(
         externalServices.workflow,
         `/workflows/${id}`,
         { headers: buildInternalHeaders(req) },
-      ).then((r) => r.workflow),
+      ),
       fetchRequiredProviders(id, buildInternalHeaders(req)),
     ]);
 
