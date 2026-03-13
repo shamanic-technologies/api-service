@@ -1663,16 +1663,16 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: "post",
+  method: "get",
   path: "/v1/emails/stats",
   tags: ["Emails"],
   summary: "Get email stats",
   description: "Get aggregated email sending stats for the org, optionally filtered by eventType.",
   security: authed,
   request: {
-    body: {
-      content: { "application/json": { schema: EmailStatsRequestSchema } },
-    },
+    query: z.object({
+      eventType: z.string().optional().describe("Filter by event type"),
+    }),
   },
   responses: {
     200: { description: "Aggregated email stats" },
@@ -1930,16 +1930,18 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: "post",
+  method: "get",
   path: "/v1/stripe/stats",
   tags: ["Stripe"],
   summary: "Get Stripe sales stats",
-  description: "Get aggregated sales stats. Filterable by brandId, campaignId, or runIds.",
+  description: "Get aggregated sales stats. Filterable by brandId, campaignId, or runIds via query params.",
   security: authed,
   request: {
-    body: {
-      content: { "application/json": { schema: StripeStatsRequestSchema } },
-    },
+    query: z.object({
+      brandId: z.string().optional().describe("Filter by brand ID"),
+      campaignId: z.string().optional().describe("Filter by campaign ID"),
+      runIds: z.string().optional().describe("Comma-separated run IDs"),
+    }),
   },
   responses: {
     200: { description: "Aggregated sales stats" },

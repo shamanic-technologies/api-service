@@ -127,13 +127,14 @@ function toBroadcastDeliveryStats(b: BroadcastStatsResponse | undefined | null):
  *  Transactional stats are transactional/test emails — not relevant. */
 async function fetchBroadcastDeliveryStats(filters: Record<string, string>): Promise<DeliveryStats> {
   try {
+    const params = new URLSearchParams(filters);
     const result = await callExternalService<{
       transactional: BroadcastStatsResponse;
       broadcast: BroadcastStatsResponse;
     }>(
       externalServices.emailGateway,
-      "/stats/public",
-      { method: "POST", body: filters }
+      `/stats/public?${params}`,
+      {}
     );
 
     return toBroadcastDeliveryStats(result.broadcast);
@@ -150,8 +151,8 @@ async function fetchWorkflowDeliveryStats(): Promise<Map<string, { stats: Delive
       groups: Array<{ key: string; broadcast: BroadcastStatsResponse }>;
     }>(
       externalServices.emailGateway,
-      "/stats/public",
-      { method: "POST", body: { type: "broadcast", groupBy: "workflowName" } }
+      "/stats/public?type=broadcast&groupBy=workflowName",
+      {}
     );
 
     const map = new Map<string, { stats: DeliveryStats; recipients: number }>();
@@ -210,8 +211,8 @@ function applyStatsToWorkflow(wf: WorkflowEntry, stats: DeliveryStats) {
 /**
  * Enrich leaderboard with delivery stats.
  * All stats come from email-gateway (public endpoint, no identity headers):
- *   - Brands: POST /stats/public with { brandId }
- *   - Workflows: POST /stats/public with { type: "broadcast", groupBy: "workflowName" }
+ *   - Brands: GET /stats/public?brandId=X
+ *   - Workflows: GET /stats/public?type=broadcast&groupBy=workflowName
  */
 async function enrichWithDeliveryStats(data: LeaderboardData): Promise<void> {
   // Fetch per-brand stats + per-workflow stats from email-gateway in parallel
@@ -304,7 +305,7 @@ async function fetchAllBrands(headers: Record<string, string> = {}): Promise<
   return allBrands;
 }
 
-/** Response shape from runs-service /v1/stats/public/leaderboard (costs are strings). */
+/** Response shape from runs-service /v1/stats/public/costs (costs are strings). */
 interface RunsStatsGroup {
   dimensions: Record<string, string>;
   totalCostInUsdCents: string;
@@ -323,7 +324,7 @@ async function buildLeaderboardData(headers: Record<string, string> = {}): Promi
     // Workflow stats from runs-service public endpoint
     callExternalService<{ groups: RunsStatsGroup[] }>(
       externalServices.runs,
-      `/v1/stats/public/leaderboard?groupBy=workflowName`,
+      `/v1/stats/public/costs?groupBy=workflowName`,
       { headers }
     ).catch((err) => {
       console.warn("Failed to fetch workflow stats:", err);
@@ -332,7 +333,7 @@ async function buildLeaderboardData(headers: Record<string, string> = {}): Promi
     // Brand costs from runs-service public endpoint
     callExternalService<{ groups: RunsStatsGroup[] }>(
       externalServices.runs,
-      `/v1/stats/public/leaderboard?groupBy=brandId`,
+      `/v1/stats/public/costs?groupBy=brandId`,
       { headers }
     ).then((result) => {
       const costMap = new Map<string, number>();
