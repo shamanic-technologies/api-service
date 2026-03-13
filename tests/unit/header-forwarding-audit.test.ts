@@ -61,6 +61,32 @@ describe("header forwarding audit", () => {
     });
   });
 
+  describe("auth.ts — workflow tracking headers extraction", () => {
+    const src = readSrc("src/middleware/auth.ts");
+
+    it("should extract x-campaign-id from incoming request", () => {
+      expect(src).toContain('req.headers["x-campaign-id"]');
+    });
+
+    it("should extract x-brand-id from incoming request", () => {
+      expect(src).toContain('req.headers["x-brand-id"]');
+    });
+
+    it("should extract x-workflow-name from incoming request", () => {
+      expect(src).toContain('req.headers["x-workflow-name"]');
+    });
+  });
+
+  describe("internal-headers.ts — workflow tracking headers forwarding", () => {
+    const src = readSrc("src/lib/internal-headers.ts");
+
+    for (const header of ["x-campaign-id", "x-brand-id", "x-workflow-name"]) {
+      it(`should forward ${header} to downstream services`, () => {
+        expect(src).toContain(`headers["${header}"]`);
+      });
+    }
+  });
+
   describe("runs-client — public functions accept optional headers", () => {
     const src = readSrc("shared/runs-client/src/index.ts");
 
