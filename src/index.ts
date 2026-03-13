@@ -78,7 +78,7 @@ app.use(
 
 // Public routes
 app.use(healthRoutes);
-app.use(performanceRoutes);
+app.use("/v1", performanceRoutes);
 
 // Internal platform routes (API key only, no identity)
 app.use("/internal", internalEmailsRoutes);
