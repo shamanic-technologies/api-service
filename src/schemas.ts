@@ -134,8 +134,8 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/performance/leaderboard",
-  tags: ["Performance"],
+  path: "/v1/stats/leaderboard",
+  tags: ["Stats"],
   summary: "Get performance leaderboard",
   description:
     "Returns performance leaderboard data including brands, workflows, and hero stats. Requires authentication.",
@@ -371,7 +371,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/v1/campaigns/batch-stats",
+  path: "/v1/campaigns/stats/batch",
   tags: ["Campaigns"],
   summary: "Batch get campaign stats",
   description: "Get stats for multiple campaigns in a single request",
@@ -423,7 +423,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/campaigns/{id}/replies",
+  path: "/v1/campaigns/{id}/stats/replies",
   tags: ["Campaigns"],
   summary: "Get campaign replies",
   description:
@@ -911,7 +911,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/brands/{id}/cost-breakdown",
+  path: "/v1/brands/{id}/stats/costs",
   tags: ["Brand"],
   summary: "Get brand cost breakdown",
   description:
@@ -947,7 +947,7 @@ const BrandIdByBrandIdParam = z.object({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/brands/{brandId}/delivery-stats",
+  path: "/v1/brands/{brandId}/stats",
   tags: ["Brand"],
   summary: "Get brand delivery stats",
   description:
