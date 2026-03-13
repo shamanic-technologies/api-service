@@ -353,6 +353,97 @@
           "emailsBounced"
         ]
       },
+      "CampaignsBatchStatsResponse": {
+        "type": "object",
+        "properties": {
+          "campaigns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "campaignId": {
+                  "type": "string"
+                },
+                "leadsServed": {
+                  "type": "number"
+                },
+                "leadsBuffered": {
+                  "type": "number"
+                },
+                "leadsSkipped": {
+                  "type": "number"
+                },
+                "emailsGenerated": {
+                  "type": "number"
+                },
+                "emailsSent": {
+                  "type": "number"
+                },
+                "emailsDelivered": {
+                  "type": "number"
+                },
+                "emailsOpened": {
+                  "type": "number"
+                },
+                "emailsClicked": {
+                  "type": "number"
+                },
+                "emailsReplied": {
+                  "type": "number"
+                },
+                "emailsBounced": {
+                  "type": "number"
+                },
+                "repliesWillingToMeet": {
+                  "type": "number"
+                },
+                "repliesInterested": {
+                  "type": "number"
+                },
+                "repliesNotInterested": {
+                  "type": "number"
+                },
+                "repliesOutOfOffice": {
+                  "type": "number"
+                },
+                "repliesUnsubscribe": {
+                  "type": "number"
+                },
+                "totalCostInUsdCents": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "runCount": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "campaignId",
+                "leadsServed",
+                "leadsBuffered",
+                "leadsSkipped",
+                "emailsGenerated",
+                "emailsSent",
+                "emailsDelivered",
+                "emailsOpened",
+                "emailsClicked",
+                "emailsReplied",
+                "emailsBounced",
+                "repliesWillingToMeet",
+                "repliesInterested",
+                "repliesNotInterested",
+                "repliesOutOfOffice",
+                "repliesUnsubscribe",
+                "totalCostInUsdCents",
+                "runCount"
+              ]
+            }
+          }
+        },
+        "required": [
+          "campaigns"
+        ]
+      },
       "UpsertKeyRequest": {
         "type": "object",
         "properties": {
@@ -2625,6 +2716,109 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CampaignStatsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/campaigns/stats": {
+      "get": {
+        "tags": [
+          "Campaigns"
+        ],
+        "summary": "Get stats for all campaigns (grouped)",
+        "description": "Aggregates stats from email-gateway, lead-service, content-generation, and runs-service using groupBy=campaignId. Returns one entry per campaign. Replaces the old POST /v1/campaigns/stats/batch endpoint.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by brand ID"
+            },
+            "required": false,
+            "description": "Filter by brand ID",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Per-campaign aggregated statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignsBatchStatsResponse"
                 }
               }
             }

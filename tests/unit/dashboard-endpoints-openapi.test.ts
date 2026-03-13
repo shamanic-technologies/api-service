@@ -6,6 +6,7 @@
  * 2. GET /v1/runs/stats/costs — must be registered
  * 3. GET /v1/campaigns/{id}/stats/replies — removed (no longer registered)
  * 4. GET /v1/campaigns status query param — must be documented
+ * 5. GET /v1/campaigns/stats — grouped stats aggregator, must be registered
  */
 import { describe, it, expect } from "vitest";
 import fs from "fs";
@@ -32,6 +33,10 @@ describe("Dashboard endpoints OpenAPI documentation", () => {
   it("should NOT register campaigns batch-stats endpoint (removed)", () => {
     expect(content).not.toContain('path: "/v1/campaigns/stats/batch"');
     expect(content).not.toContain("BatchStatsRequest");
+  });
+
+  it("should register GET /v1/campaigns/stats (grouped aggregator)", () => {
+    expect(content).toContain('path: "/v1/campaigns/stats"');
   });
 
   it("should document status query param on GET /v1/campaigns", () => {
