@@ -141,7 +141,87 @@ registry.registerPath({
     "Returns performance leaderboard data including brands, workflows, and hero stats. Requires authentication.",
   security: authed,
   responses: {
-    200: { description: "Leaderboard data with brands, workflows, and hero stats" },
+    200: {
+      description: "Leaderboard data with brands, workflows, and hero stats",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              brands: z.array(z.object({
+                brandId: z.string().nullable(),
+                brandUrl: z.string().nullable(),
+                brandDomain: z.string().nullable(),
+                emailsSent: z.number(),
+                emailsOpened: z.number(),
+                emailsClicked: z.number(),
+                emailsReplied: z.number(),
+                totalCostUsdCents: z.number(),
+                openRate: z.number(),
+                clickRate: z.number(),
+                replyRate: z.number(),
+                costPerOpenCents: z.number().nullable(),
+                costPerClickCents: z.number().nullable(),
+                costPerReplyCents: z.number().nullable(),
+              })),
+              workflows: z.array(z.object({
+                workflowName: z.string(),
+                displayName: z.string(),
+                signatureName: z.string().nullable(),
+                category: z.string().nullable(),
+                sectionKey: z.string().nullable(),
+                runCount: z.number(),
+                emailsSent: z.number(),
+                emailsOpened: z.number(),
+                emailsClicked: z.number(),
+                emailsReplied: z.number(),
+                repliesInterested: z.number(),
+                recipients: z.number(),
+                totalCostUsdCents: z.number(),
+                openRate: z.number(),
+                clickRate: z.number(),
+                replyRate: z.number(),
+                interestedRate: z.number(),
+                costPerOpenCents: z.number().nullable(),
+                costPerClickCents: z.number().nullable(),
+                costPerReplyCents: z.number().nullable(),
+              })),
+              hero: z.object({
+                bestCostPerOpen: z.object({
+                  brandDomain: z.string().nullable(),
+                  costPerOpenCents: z.number(),
+                }).nullable(),
+                bestCostPerReply: z.object({
+                  brandDomain: z.string().nullable(),
+                  costPerReplyCents: z.number(),
+                }).nullable(),
+              }).nullable(),
+              updatedAt: z.string(),
+              availableCategories: z.array(z.string()),
+              categorySections: z.array(z.object({
+                category: z.string(),
+                sectionKey: z.string(),
+                label: z.string(),
+                stats: z.object({
+                  emailsSent: z.number(),
+                  emailsOpened: z.number(),
+                  emailsReplied: z.number(),
+                  repliesInterested: z.number(),
+                  recipients: z.number(),
+                  totalCostUsdCents: z.number(),
+                  openRate: z.number(),
+                  replyRate: z.number(),
+                  interestedRate: z.number(),
+                  costPerOpenCents: z.number().nullable(),
+                  costPerReplyCents: z.number().nullable(),
+                }),
+                workflows: z.array(z.any()),
+                brands: z.array(z.any()),
+              })),
+            })
+            .openapi("LeaderboardResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
   },
@@ -341,6 +421,7 @@ registry.registerPath({
               emailsGenerated: z.number(),
               totalCostUsd: z.number().optional(),
               emailsSent: z.number(),
+              emailsDelivered: z.number().optional(),
               emailsOpened: z.number(),
               emailsClicked: z.number(),
               emailsReplied: z.number(),
@@ -350,6 +431,14 @@ registry.registerPath({
               repliesNotInterested: z.number().optional(),
               repliesOutOfOffice: z.number().optional(),
               repliesUnsubscribe: z.number().optional(),
+              totalCostInUsdCents: z.string().nullable().optional().describe("Total cost from campaign-service budget tracking"),
+              costBreakdown: z.array(z.object({
+                costName: z.string(),
+                totalCostInUsdCents: z.string(),
+                actualCostInUsdCents: z.string(),
+                provisionedCostInUsdCents: z.string(),
+                totalQuantity: z.string(),
+              })).optional().describe("Per-cost-name breakdown from runs-service"),
             })
             .openapi("CampaignStatsResponse"),
         },
@@ -980,7 +1069,26 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "Cost stats grouped by the requested dimension" },
+    200: {
+      description: "Cost stats grouped by the requested dimension",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              groups: z.array(z.object({
+                dimensions: z.record(z.string().nullable()).describe("Dimension key-value pairs (e.g. { brandId: '...' })"),
+                totalCostInUsdCents: z.string(),
+                actualCostInUsdCents: z.string(),
+                provisionedCostInUsdCents: z.string(),
+                cancelledCostInUsdCents: z.string(),
+                runCount: z.number(),
+                totalQuantity: z.string().optional().describe("Present when groupBy includes costName"),
+              })),
+            })
+            .openapi("RunsCostStatsResponse"),
+        },
+      },
+    },
     400: { description: "Missing groupBy parameter", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -1680,7 +1788,22 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "Aggregated email stats" },
+    200: {
+      description: "Aggregated email stats",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              stats: z.object({
+                totalEmails: z.number().describe("Total email events"),
+                sent: z.number().describe("Successfully sent"),
+                failed: z.number().describe("Failed to send"),
+              }),
+            })
+            .openapi("TransactionalEmailStatsResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -1949,7 +2072,23 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "Aggregated sales stats" },
+    200: {
+      description: "Aggregated sales stats",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              totalPayments: z.number().describe("Total number of payments"),
+              totalAmountInCents: z.number().describe("Total payment amount in cents"),
+              successCount: z.number().describe("Successful payments"),
+              failureCount: z.number().describe("Failed payments"),
+              refundCount: z.number().describe("Refunded payments"),
+              disputeCount: z.number().describe("Disputed payments"),
+            })
+            .openapi("StripeStatsResponse"),
+        },
+      },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
