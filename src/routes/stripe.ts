@@ -6,7 +6,6 @@ import {
   CreateStripePriceRequestSchema,
   CreateStripeCouponRequestSchema,
   CreateStripeCheckoutRequestSchema,
-  StripeStatsRequestSchema,
 } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
@@ -198,23 +197,21 @@ router.post("/stripe/checkout", authenticate, requireOrg, async (req: Authentica
 // -----------------------------------------------------------------------
 
 /**
- * POST /v1/stripe/stats
+ * GET /v1/stripe/stats
  * Get Stripe sales stats.
  */
-router.post("/stripe/stats", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+router.get("/stripe/stats", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
-    const parsed = StripeStatsRequestSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
-    }
+    const params = new URLSearchParams();
+    if (req.query.brandId) params.set("brandId", req.query.brandId as string);
+    if (req.query.campaignId) params.set("campaignId", req.query.campaignId as string);
+    if (req.query.runIds) params.set("runIds", req.query.runIds as string);
 
     const result = await callExternalService(
       externalServices.stripe,
-      "/stats",
+      `/stats?${params}`,
       {
-        method: "POST",
         headers: buildInternalHeaders(req),
-        body: parsed.data,
       }
     );
     res.json(result);

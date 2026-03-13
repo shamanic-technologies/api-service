@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { authenticate, requireOrg, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
-import { SendEmailRequestSchema, EmailStatsRequestSchema, DeployEmailTemplatesRequestSchema } from "../schemas.js";
+import { SendEmailRequestSchema, DeployEmailTemplatesRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
@@ -38,26 +38,19 @@ router.post("/emails/send", authenticate, requireOrg, async (req: AuthenticatedR
 });
 
 /**
- * POST /v1/emails/stats
+ * GET /v1/emails/stats
  * Get email sending stats from the transactional-email service
  */
-router.post("/emails/stats", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+router.get("/emails/stats", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
-    const parsed = EmailStatsRequestSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
-    }
+    const params = new URLSearchParams({ orgId: req.orgId! });
+    if (req.query.eventType) params.set("eventType", req.query.eventType as string);
 
     const result = await callExternalService(
       externalServices.transactionalEmail,
-      "/stats",
+      `/stats?${params}`,
       {
-        method: "POST",
         headers: buildInternalHeaders(req),
-        body: {
-          orgId: req.orgId,
-          ...parsed.data,
-        },
       }
     );
     res.json(result);

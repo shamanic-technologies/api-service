@@ -306,8 +306,8 @@ router.get("/brands/:id/cost-breakdown", authenticate, requireOrg, requireUser, 
     const orgId = req.orgId!;
 
     const data = await callExternalService<{
-      costs: Array<{
-        costName: string;
+      groups: Array<{
+        key: string;
         totalCostInUsdCents: string;
         actualCostInUsdCents: string;
         provisionedCostInUsdCents: string;
@@ -315,11 +315,18 @@ router.get("/brands/:id/cost-breakdown", authenticate, requireOrg, requireUser, 
       }>;
     }>(
       externalServices.runs,
-      `/v1/stats/costs/by-cost-name?orgId=${encodeURIComponent(orgId)}&brandId=${encodeURIComponent(id)}`,
+      `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&brandId=${encodeURIComponent(id)}&groupBy=costName`,
       { headers: buildInternalHeaders(req) },
     );
 
-    res.json({ costs: data.costs || [] });
+    const costs = (data.groups || []).map((g) => ({
+      costName: g.key,
+      totalCostInUsdCents: g.totalCostInUsdCents,
+      actualCostInUsdCents: g.actualCostInUsdCents,
+      provisionedCostInUsdCents: g.provisionedCostInUsdCents,
+      totalQuantity: g.totalQuantity,
+    }));
+    res.json({ costs });
   } catch (error: any) {
     console.error("Get brand cost breakdown error:", error);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand cost breakdown" });

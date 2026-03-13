@@ -20,13 +20,14 @@ async function fetchDeliveryStats(
   req: AuthenticatedRequest,
 ): Promise<Record<string, number> | null> {
   const orgId = req.orgId!;
+  const params = new URLSearchParams({ orgId });
+  if (filters.campaignId) params.set("campaignId", filters.campaignId);
+  if (filters.brandId) params.set("brandId", filters.brandId);
   const deliveryResult = await callExternalService<{ transactional: EmailGatewayStats; broadcast: EmailGatewayStats }>(
     externalServices.emailGateway,
-    "/stats",
+    `/stats?${params}`,
     {
-      method: "POST",
       headers: buildInternalHeaders(req),
-      body: { ...filters, orgId },
     }
   ).catch((err) => {
     console.warn("[campaigns] Email-gateway stats failed:", (err as Error).message);
@@ -311,8 +312,8 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
       }),
       callExternalService(
         externalServices.emailgen,
-        "/stats",
-        { method: "POST", body: { campaignId: id }, headers: internalHeaders }
+        `/stats?campaignId=${encodeURIComponent(id)}`,
+        { headers: internalHeaders }
       ).catch((err) => {
         console.warn("[campaigns] Emailgen stats failed:", (err as Error).message);
         return null;
@@ -320,16 +321,16 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
       fetchDeliveryStats({ campaignId: id }, req),
       callExternalService<{ results: Record<string, { totalCostInUsdCents: string | null }> }>(
         externalServices.campaign,
-        "/campaigns/batch-budget-usage",
+        "/stats/batch-budget",
         { method: "POST", body: { campaignIds: [id] }, headers: internalHeaders }
       ).catch((err) => {
         console.warn("[campaigns] Budget usage failed:", (err as Error).message);
         return null;
       }),
       // Full cost breakdown by cost name from runs-service (single source of truth)
-      callExternalService<{ costs: Array<{ costName: string; totalCostInUsdCents: string; actualCostInUsdCents: string; provisionedCostInUsdCents: string; totalQuantity: string }> }>(
+      callExternalService<{ groups: Array<{ key: string; totalCostInUsdCents: string; actualCostInUsdCents: string; provisionedCostInUsdCents: string; totalQuantity: string }> }>(
         externalServices.runs,
-        `/v1/stats/costs/by-cost-name?orgId=${encodeURIComponent(orgId)}&campaignId=${encodeURIComponent(id)}`,
+        `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&campaignId=${encodeURIComponent(id)}&groupBy=costName`,
         { headers: internalHeaders }
       ).catch((err) => {
         console.warn("[campaigns] Cost breakdown failed:", (err as Error).message);
@@ -393,8 +394,14 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
     }
 
     // Cost breakdown by cost name from runs-service
-    if (costBreakdown?.costs) {
-      stats.costBreakdown = costBreakdown.costs;
+    if (costBreakdown?.groups) {
+      stats.costBreakdown = costBreakdown.groups.map((g) => ({
+        costName: g.key,
+        totalCostInUsdCents: g.totalCostInUsdCents,
+        actualCostInUsdCents: g.actualCostInUsdCents,
+        provisionedCostInUsdCents: g.provisionedCostInUsdCents,
+        totalQuantity: g.totalQuantity,
+      }));
     }
 
     res.json(stats);
@@ -422,7 +429,7 @@ router.post("/campaigns/batch-stats", authenticate, requireOrg, requireUser, asy
     // Fetch budget usage and lead-serve run counts in bulk (one call each)
     const budgetUsagePromise = callExternalService<{
       results: Record<string, { totalCostInUsdCents: string | null }>;
-    }>(externalServices.campaign, "/campaigns/batch-budget-usage", {
+    }>(externalServices.campaign, "/stats/batch-budget", {
       method: "POST",
       body: { campaignIds },
       headers: internalHeaders,
@@ -455,8 +462,8 @@ router.post("/campaigns/batch-stats", authenticate, requireOrg, requireUser, asy
             ).catch(() => null),
             callExternalService(
               externalServices.emailgen,
-              "/stats",
-              { method: "POST", body: { campaignId: id }, headers: internalHeaders }
+              `/stats?campaignId=${encodeURIComponent(id)}`,
+              { headers: internalHeaders }
             ).catch(() => null),
             fetchDeliveryStats({ campaignId: id }, req),
           ]);
@@ -692,6 +699,11 @@ router.get("/campaigns/:id/replies", authenticate, requireOrg, requireUser, asyn
   try {
     const { id } = req.params;
 
+    const statsParams = new URLSearchParams({
+      campaignId: id,
+      orgId: req.orgId!,
+      groupBy: "leadEmail",
+    });
     const result = await callExternalService<{
       groups: Array<{
         key: string;
@@ -706,11 +718,9 @@ router.get("/campaigns/:id/replies", authenticate, requireOrg, requireUser, asyn
       }>;
     }>(
       externalServices.emailGateway,
-      "/stats",
+      `/stats?${statsParams}`,
       {
-        method: "POST",
         headers: buildInternalHeaders(req),
-        body: { campaignId: id, orgId: req.orgId, groupBy: "leadEmail" },
       }
     );
 
@@ -820,8 +830,8 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
         ).catch(() => null),
         callExternalService<{ stats?: { emailsGenerated?: number } }>(
           externalServices.emailgen,
-          "/stats",
-          { method: "POST", body: { campaignId: id }, headers: internalHeaders }
+          `/stats?campaignId=${encodeURIComponent(id)}`,
+          { headers: internalHeaders }
         ).catch(() => null),
         fetchDeliveryStats({ campaignId: id }, req),
       ]);
