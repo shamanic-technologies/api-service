@@ -68,6 +68,10 @@ export const externalServices = {
     url: process.env.STRIPE_SERVICE_URL || "http://localhost:3022",
     apiKey: process.env.STRIPE_SERVICE_API_KEY || "",
   },
+  apiRegistry: {
+    url: process.env.API_REGISTRY_SERVICE_URL || "https://api-registry.distribute.you",
+    apiKey: process.env.API_REGISTRY_SERVICE_API_KEY || "",
+  },
 };
 
 interface ServiceCallOptions {

@@ -72,9 +72,8 @@ describe("OpenAPI spec — tag structure", () => {
     expect(schemasContent).toContain('tags: ["Authentication"]');
   });
 
-  it("should not have Platform tag", () => {
-    expect(generatorContent).not.toContain('"Platform"');
-    expect(schemasContent).not.toContain('tags: ["Platform"]');
+  it("should have Platform tag for api-registry proxy endpoints", () => {
+    expect(schemasContent).toContain('tags: ["Platform"]');
   });
 
   it("should define Authentication tag before Keys tag", () => {

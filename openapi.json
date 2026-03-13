@@ -908,6 +908,24 @@
           "description"
         ]
       },
+      "ProviderInfo": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Provider name (e.g. 'anthropic', 'apollo')"
+          },
+          "domain": {
+            "type": "string",
+            "nullable": true,
+            "description": "Provider domain for logo display (e.g. 'anthropic.com'), null for internal services"
+          }
+        },
+        "required": [
+          "name",
+          "domain"
+        ]
+      },
       "WorkflowSummaryResponse": {
         "type": "object",
         "properties": {
@@ -922,9 +940,9 @@
           "requiredProviders": {
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/ProviderInfo"
             },
-            "description": "List of external provider names required by this workflow"
+            "description": "External providers required by this workflow, with domains for logo display"
           },
           "steps": {
             "type": "array",
@@ -1599,6 +1617,157 @@
           "total",
           "limit",
           "offset"
+        ]
+      },
+      "PlatformService": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Service name (e.g. 'lead', 'campaign')"
+          },
+          "baseUrl": {
+            "type": "string",
+            "description": "Service base URL"
+          },
+          "openapiUrl": {
+            "type": "string",
+            "description": "URL to the service's OpenAPI spec"
+          }
+        },
+        "required": [
+          "name",
+          "baseUrl",
+          "openapiUrl"
+        ]
+      },
+      "PlatformServicesResponse": {
+        "type": "object",
+        "properties": {
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlatformService"
+            },
+            "description": "List of registered platform services"
+          }
+        },
+        "required": [
+          "services"
+        ]
+      },
+      "OpenApiSpec": {
+        "type": "object",
+        "properties": {}
+      },
+      "LlmEndpointSummary": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string",
+            "description": "HTTP method"
+          },
+          "path": {
+            "type": "string",
+            "description": "Endpoint path"
+          },
+          "summary": {
+            "type": "string",
+            "description": "Endpoint summary"
+          },
+          "params": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "in": {
+                  "type": "string"
+                },
+                "required": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "name",
+                "in",
+                "required"
+              ]
+            },
+            "description": "Endpoint parameters"
+          },
+          "bodyFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Request body field names"
+          }
+        },
+        "required": [
+          "method",
+          "path",
+          "summary"
+        ]
+      },
+      "LlmServiceSummary": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string",
+            "description": "Service name"
+          },
+          "baseUrl": {
+            "type": "string",
+            "description": "Service base URL"
+          },
+          "title": {
+            "type": "string",
+            "description": "Service title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Service description"
+          },
+          "endpoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LlmEndpointSummary"
+            },
+            "description": "Available endpoints"
+          }
+        },
+        "required": [
+          "service",
+          "baseUrl",
+          "endpoints"
+        ]
+      },
+      "LlmContextResponse": {
+        "type": "object",
+        "properties": {
+          "_description": {
+            "type": "string",
+            "description": "Description of this context payload"
+          },
+          "_usage": {
+            "type": "string",
+            "description": "Usage instructions for LLMs"
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LlmServiceSummary"
+            },
+            "description": "All platform services with their endpoints"
+          }
+        },
+        "required": [
+          "_description",
+          "_usage",
+          "services"
         ]
       }
     },
@@ -6523,6 +6692,224 @@
             }
           }
         }
+      }
+    },
+    "/v1/platform/services": {
+      "get": {
+        "tags": [
+          "Platform"
+        ],
+        "summary": "List all platform services",
+        "description": "Returns the list of all registered services on the platform. Proxied from api-registry. Useful for service discovery.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of platform services",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformServicesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          }
+        ]
+      }
+    },
+    "/v1/platform/services/{service}": {
+      "get": {
+        "tags": [
+          "Platform"
+        ],
+        "summary": "Get OpenAPI spec for a service",
+        "description": "Returns the full OpenAPI specification for a specific platform service. Proxied from api-registry. Use this to discover available endpoints, request/response schemas, and more.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Service name (e.g. 'lead', 'campaign', 'workflow')"
+            },
+            "required": true,
+            "description": "Service name (e.g. 'lead', 'campaign', 'workflow')",
+            "name": "service",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OpenAPI specification",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenApiSpec"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Service not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/platform/llm-context": {
+      "get": {
+        "tags": [
+          "Platform"
+        ],
+        "summary": "Get LLM-friendly platform context",
+        "description": "Returns a compact summary of all platform services and their endpoints, optimized for LLM consumption. Proxied from api-registry. Ideal for giving an LLM full platform awareness to answer questions like 'what services exist?' or 'can the platform do X?'.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "LLM context with all services and endpoints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LlmContextResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          }
+        ]
       }
     }
   }

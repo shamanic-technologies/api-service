@@ -1199,11 +1199,18 @@ const WorkflowIdParam = z.object({
   id: z.string().describe("Workflow ID"),
 });
 
+const ProviderInfoSchema = z
+  .object({
+    name: z.string().describe("Provider name (e.g. 'anthropic', 'apollo')"),
+    domain: z.string().nullable().describe("Provider domain for logo display (e.g. 'anthropic.com'), null for internal services"),
+  })
+  .openapi("ProviderInfo");
+
 export const WorkflowSummaryResponseSchema = z
   .object({
     workflowName: z.string().describe("Workflow name"),
     summary: z.string().describe("Natural-language summary of the workflow"),
-    requiredProviders: z.array(z.string()).describe("List of external provider names required by this workflow"),
+    requiredProviders: z.array(ProviderInfoSchema).describe("External providers required by this workflow, with domains for logo display"),
     steps: z.array(z.string()).describe("Ordered list of workflow steps in human-readable format"),
   })
   .openapi("WorkflowSummaryResponse");
@@ -2005,6 +2012,122 @@ registry.registerPath({
     200: {
       description: "Paginated user list",
       content: { "application/json": { schema: ListUsersResponseSchema } },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ===================================================================
+// PLATFORM (api-registry proxies)
+// ===================================================================
+
+const PlatformServiceSchema = z
+  .object({
+    name: z.string().describe("Service name (e.g. 'lead', 'campaign')"),
+    baseUrl: z.string().describe("Service base URL"),
+    openapiUrl: z.string().describe("URL to the service's OpenAPI spec"),
+  })
+  .openapi("PlatformService");
+
+const PlatformServicesResponseSchema = z
+  .object({
+    services: z.array(PlatformServiceSchema).describe("List of registered platform services"),
+  })
+  .openapi("PlatformServicesResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/platform/services",
+  tags: ["Platform"],
+  summary: "List all platform services",
+  description:
+    "Returns the list of all registered services on the platform. " +
+    "Proxied from api-registry. Useful for service discovery.",
+  security: authed,
+  responses: {
+    200: {
+      description: "List of platform services",
+      content: { "application/json": { schema: PlatformServicesResponseSchema } },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+const ServiceNameParam = z.object({
+  service: z.string().describe("Service name (e.g. 'lead', 'campaign', 'workflow')"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/platform/services/{service}",
+  tags: ["Platform"],
+  summary: "Get OpenAPI spec for a service",
+  description:
+    "Returns the full OpenAPI specification for a specific platform service. " +
+    "Proxied from api-registry. Use this to discover available endpoints, request/response schemas, and more.",
+  security: authed,
+  request: {
+    params: ServiceNameParam,
+  },
+  responses: {
+    200: {
+      description: "OpenAPI specification",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("OpenApiSpec") } },
+    },
+    404: { description: "Service not found", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+const LlmEndpointSummarySchema = z
+  .object({
+    method: z.string().describe("HTTP method"),
+    path: z.string().describe("Endpoint path"),
+    summary: z.string().describe("Endpoint summary"),
+    params: z.array(z.object({
+      name: z.string(),
+      in: z.string(),
+      required: z.boolean(),
+    })).optional().describe("Endpoint parameters"),
+    bodyFields: z.array(z.string()).optional().describe("Request body field names"),
+  })
+  .openapi("LlmEndpointSummary");
+
+const LlmServiceSummarySchema = z
+  .object({
+    service: z.string().describe("Service name"),
+    baseUrl: z.string().describe("Service base URL"),
+    title: z.string().optional().describe("Service title"),
+    description: z.string().optional().describe("Service description"),
+    endpoints: z.array(LlmEndpointSummarySchema).describe("Available endpoints"),
+  })
+  .openapi("LlmServiceSummary");
+
+const LlmContextResponseSchema = z
+  .object({
+    _description: z.string().describe("Description of this context payload"),
+    _usage: z.string().describe("Usage instructions for LLMs"),
+    services: z.array(LlmServiceSummarySchema).describe("All platform services with their endpoints"),
+  })
+  .openapi("LlmContextResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/platform/llm-context",
+  tags: ["Platform"],
+  summary: "Get LLM-friendly platform context",
+  description:
+    "Returns a compact summary of all platform services and their endpoints, optimized for LLM consumption. " +
+    "Proxied from api-registry. Ideal for giving an LLM full platform awareness to answer questions " +
+    "like 'what services exist?' or 'can the platform do X?'.",
+  security: authed,
+  responses: {
+    200: {
+      description: "LLM context with all services and endpoints",
+      content: { "application/json": { schema: LlmContextResponseSchema } },
     },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
