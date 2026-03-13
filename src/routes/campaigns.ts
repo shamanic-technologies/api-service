@@ -152,6 +152,143 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
 });
 
 /**
+ * GET /v1/campaigns/stats
+ * Get aggregated stats for all campaigns, grouped by campaignId.
+ * Calls 4 services in parallel with groupBy=campaignId:
+ *   email-gateway, lead-service, content-generation, runs-service.
+ *
+ * Query params:
+ * - brandId: optional, scope to a brand
+ */
+router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const orgId = req.orgId!;
+    const brandId = req.query.brandId as string | undefined;
+    const internalHeaders = buildInternalHeaders(req);
+
+    // Build shared query params
+    const baseParams = new URLSearchParams({ orgId });
+    if (brandId) baseParams.set("brandId", brandId);
+
+    const deliveryParams = new URLSearchParams(baseParams);
+    deliveryParams.set("groupBy", "campaignId");
+
+    const leadParams = new URLSearchParams();
+    if (brandId) leadParams.set("brandId", brandId);
+    leadParams.set("groupBy", "campaignId");
+
+    const emailgenParams = new URLSearchParams();
+    if (brandId) emailgenParams.set("brandId", brandId);
+    emailgenParams.set("groupBy", "campaignId");
+
+    const runsParams = new URLSearchParams({ orgId, groupBy: "campaignId" });
+    if (brandId) runsParams.set("brandId", brandId);
+
+    // 4 parallel calls
+    const [deliveryGroups, leadGroups, emailgenGroups, costGroups] = await Promise.all([
+      callExternalService<{ groups: Array<{ key: string; broadcast: Record<string, number> | null; transactional: Record<string, number> | null }> }>(
+        externalServices.emailGateway,
+        `/stats?${deliveryParams}`,
+        { headers: internalHeaders },
+      ).catch((err) => {
+        console.warn("[campaigns/stats] email-gateway groupBy failed:", (err as Error).message);
+        return null;
+      }),
+      callExternalService<{ groups: Array<{ key: string; served: number; buffered: number; skipped: number }> }>(
+        externalServices.lead,
+        `/stats?${leadParams}`,
+        { headers: internalHeaders },
+      ).catch((err) => {
+        console.warn("[campaigns/stats] lead-service groupBy failed:", (err as Error).message);
+        return null;
+      }),
+      callExternalService<{ groups: Array<{ key: string; stats: { emailsGenerated: number } }> }>(
+        externalServices.emailgen,
+        `/stats?${emailgenParams}`,
+        { headers: internalHeaders },
+      ).catch((err) => {
+        console.warn("[campaigns/stats] content-generation groupBy failed:", (err as Error).message);
+        return null;
+      }),
+      callExternalService<{ groups: Array<{ key: string; totalCostInUsdCents: string; runCount: number }> }>(
+        externalServices.runs,
+        `/v1/stats/costs?${runsParams}`,
+        { headers: internalHeaders },
+      ).catch((err) => {
+        console.warn("[campaigns/stats] runs-service groupBy failed:", (err as Error).message);
+        return null;
+      }),
+    ]);
+
+    // Merge all groups by campaignId
+    const merged = new Map<string, Record<string, unknown>>();
+    const ensure = (id: string) => {
+      if (!merged.has(id)) merged.set(id, { campaignId: id });
+      return merged.get(id)!;
+    };
+
+    // Delivery stats (broadcast only)
+    for (const g of deliveryGroups?.groups ?? []) {
+      const s = ensure(g.key);
+      const b = g.broadcast;
+      s.emailsSent = b?.emailsSent ?? 0;
+      s.emailsDelivered = b?.emailsDelivered ?? 0;
+      s.emailsOpened = b?.emailsOpened ?? 0;
+      s.emailsClicked = b?.emailsClicked ?? 0;
+      s.emailsReplied = b?.emailsReplied ?? 0;
+      s.emailsBounced = b?.emailsBounced ?? 0;
+      s.repliesWillingToMeet = b?.repliesWillingToMeet ?? 0;
+      s.repliesInterested = b?.repliesInterested ?? 0;
+      s.repliesNotInterested = b?.repliesNotInterested ?? 0;
+      s.repliesOutOfOffice = b?.repliesOutOfOffice ?? 0;
+      s.repliesUnsubscribe = b?.repliesUnsubscribe ?? 0;
+    }
+
+    // Lead stats
+    for (const g of leadGroups?.groups ?? []) {
+      const s = ensure(g.key);
+      s.leadsServed = g.served;
+      s.leadsBuffered = g.buffered;
+      s.leadsSkipped = g.skipped;
+    }
+
+    // Emailgen stats
+    for (const g of emailgenGroups?.groups ?? []) {
+      const s = ensure(g.key);
+      s.emailsGenerated = g.stats.emailsGenerated;
+    }
+
+    // Cost stats from runs-service
+    for (const g of costGroups?.groups ?? []) {
+      const s = ensure(g.key);
+      s.totalCostInUsdCents = g.totalCostInUsdCents;
+      s.runCount = g.runCount;
+    }
+
+    // Fill defaults for any missing fields
+    const defaults = {
+      leadsServed: 0, leadsBuffered: 0, leadsSkipped: 0,
+      emailsGenerated: 0,
+      emailsSent: 0, emailsDelivered: 0, emailsOpened: 0, emailsClicked: 0,
+      emailsReplied: 0, emailsBounced: 0,
+      repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0,
+      repliesOutOfOffice: 0, repliesUnsubscribe: 0,
+      totalCostInUsdCents: null, runCount: 0,
+    };
+    for (const stats of merged.values()) {
+      for (const [k, v] of Object.entries(defaults)) {
+        if (stats[k] === undefined) stats[k] = v;
+      }
+    }
+
+    res.json({ campaigns: Array.from(merged.values()) });
+  } catch (error: any) {
+    console.error("Get campaigns stats error:", error);
+    res.status(500).json({ error: error.message || "Failed to get campaigns stats" });
+  }
+});
+
+/**
  * GET /v1/campaigns/:id
  * Get a specific campaign
  */

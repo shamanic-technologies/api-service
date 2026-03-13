@@ -362,6 +362,60 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/campaigns/stats",
+  tags: ["Campaigns"],
+  summary: "Get stats for all campaigns (grouped)",
+  description:
+    "Aggregates stats from email-gateway, lead-service, content-generation, and runs-service " +
+    "using groupBy=campaignId. Returns one entry per campaign. " +
+    "Replaces the old POST /v1/campaigns/stats/batch endpoint.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().optional().describe("Filter by brand ID"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Per-campaign aggregated statistics",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              campaigns: z.array(
+                z.object({
+                  campaignId: z.string(),
+                  leadsServed: z.number(),
+                  leadsBuffered: z.number(),
+                  leadsSkipped: z.number(),
+                  emailsGenerated: z.number(),
+                  emailsSent: z.number(),
+                  emailsDelivered: z.number(),
+                  emailsOpened: z.number(),
+                  emailsClicked: z.number(),
+                  emailsReplied: z.number(),
+                  emailsBounced: z.number(),
+                  repliesWillingToMeet: z.number(),
+                  repliesInterested: z.number(),
+                  repliesNotInterested: z.number(),
+                  repliesOutOfOffice: z.number(),
+                  repliesUnsubscribe: z.number(),
+                  totalCostInUsdCents: z.string().nullable(),
+                  runCount: z.number(),
+                }),
+              ),
+            })
+            .openapi("CampaignsBatchStatsResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/campaigns/{id}/leads",
   tags: ["Campaigns"],
   summary: "Get campaign leads",
