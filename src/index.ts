@@ -78,6 +78,73 @@ app.use(
   }),
 );
 
+// ── Public OpenAPI spec (client-facing endpoints only) ───────────────────────
+const INTERNAL_TAGS = new Set(["Internal", "Platform", "Health", "Email Gateway", "Runs"]);
+
+function buildPublicSpec(): Record<string, unknown> | null {
+  if (!existsSync(openapiPath)) return null;
+  const spec = JSON.parse(readFileSync(openapiPath, "utf-8"));
+
+  // Filter tags
+  if (spec.tags) {
+    spec.tags = spec.tags.filter((t: { name: string }) => !INTERNAL_TAGS.has(t.name));
+  }
+
+  // Filter paths — remove any path where ALL operations belong to internal tags
+  if (spec.paths) {
+    const methods = ["get", "post", "put", "patch", "delete"];
+    const filteredPaths: Record<string, unknown> = {};
+
+    for (const [path, pathItem] of Object.entries(spec.paths)) {
+      const filtered: Record<string, unknown> = {};
+      for (const method of methods) {
+        const op = (pathItem as Record<string, unknown>)[method] as
+          | { tags?: string[] }
+          | undefined;
+        if (!op) continue;
+        const isInternal = op.tags?.some((t) => INTERNAL_TAGS.has(t)) ?? false;
+        if (!isInternal) {
+          filtered[method] = op;
+        }
+      }
+      if (Object.keys(filtered).length > 0) {
+        filteredPaths[path] = { ...pathItem as Record<string, unknown>, ...filtered };
+        // Clean out removed methods
+        for (const method of methods) {
+          if (!(method in filtered)) {
+            delete (filteredPaths[path] as Record<string, unknown>)[method];
+          }
+        }
+      }
+    }
+    spec.paths = filteredPaths;
+  }
+
+  // Remove apiKeyAuth security scheme (clients only use bearerAuth)
+  if (spec.components?.securitySchemes?.apiKeyAuth) {
+    delete spec.components.securitySchemes.apiKeyAuth;
+  }
+
+  return spec;
+}
+
+app.get("/public/openapi.json", (_req, res) => {
+  const spec = buildPublicSpec();
+  if (spec) {
+    res.json(spec);
+  } else {
+    res.status(404).json({ error: "OpenAPI spec not generated yet. Run: pnpm generate:openapi" });
+  }
+});
+
+app.use(
+  "/public/docs",
+  apiReference({
+    url: "/public/openapi.json",
+    theme: "kepler",
+  }),
+);
+
 // Public routes
 app.use(healthRoutes);
 app.use("/v1", performanceRoutes);
