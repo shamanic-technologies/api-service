@@ -102,8 +102,8 @@ describe("GET /v1/campaigns/stats", () => {
       if (service.url === "http://mock-runs") {
         return Promise.resolve({
           groups: [
-            { key: "c1", totalCostInUsdCents: "500", runCount: 15 },
-            { key: "c2", totalCostInUsdCents: "1200", runCount: 30 },
+            { dimensions: { campaignId: "c1" }, totalCostInUsdCents: "500", runCount: 15 },
+            { dimensions: { campaignId: "c2" }, totalCostInUsdCents: "1200", runCount: 30 },
           ],
         });
       }

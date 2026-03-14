@@ -210,7 +210,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
         console.warn("[campaigns/stats] content-generation groupBy failed:", (err as Error).message);
         return null;
       }),
-      callExternalService<{ groups: Array<{ key: string; totalCostInUsdCents: string; runCount: number }> }>(
+      callExternalService<{ groups: Array<{ dimensions: Record<string, string | null>; totalCostInUsdCents: string; runCount: number }> }>(
         externalServices.runs,
         `/v1/stats/costs?${runsParams}`,
         { headers: internalHeaders },
@@ -260,7 +260,9 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
 
     // Cost stats from runs-service
     for (const g of costGroups?.groups ?? []) {
-      const s = ensure(g.key);
+      const campaignId = g.dimensions.campaignId;
+      if (!campaignId) continue;
+      const s = ensure(campaignId);
       s.totalCostInUsdCents = g.totalCostInUsdCents;
       s.runCount = g.runCount;
     }
@@ -419,7 +421,7 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
         return null;
       }),
       // Full cost breakdown by cost name from runs-service (single source of truth)
-      callExternalService<{ groups: Array<{ key: string; totalCostInUsdCents: string; actualCostInUsdCents: string; provisionedCostInUsdCents: string; totalQuantity: string }> }>(
+      callExternalService<{ groups: Array<{ dimensions: Record<string, string | null>; totalCostInUsdCents: string; actualCostInUsdCents: string; provisionedCostInUsdCents: string; totalQuantity: string }> }>(
         externalServices.runs,
         `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&campaignId=${encodeURIComponent(id)}&groupBy=costName`,
         { headers: internalHeaders }
@@ -486,13 +488,15 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
 
     // Cost breakdown by cost name from runs-service
     if (costBreakdown?.groups) {
-      stats.costBreakdown = costBreakdown.groups.map((g) => ({
-        costName: g.key,
-        totalCostInUsdCents: g.totalCostInUsdCents,
-        actualCostInUsdCents: g.actualCostInUsdCents,
-        provisionedCostInUsdCents: g.provisionedCostInUsdCents,
-        totalQuantity: g.totalQuantity,
-      }));
+      stats.costBreakdown = costBreakdown.groups
+        .filter((g) => g.dimensions.costName != null)
+        .map((g) => ({
+          costName: g.dimensions.costName!,
+          totalCostInUsdCents: g.totalCostInUsdCents,
+          actualCostInUsdCents: g.actualCostInUsdCents,
+          provisionedCostInUsdCents: g.provisionedCostInUsdCents,
+          totalQuantity: g.totalQuantity,
+        }));
     }
 
     res.json(stats);
