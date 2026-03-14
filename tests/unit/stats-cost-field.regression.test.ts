@@ -5,7 +5,7 @@
  * After PR #116/#117:
  * - The batch stats endpoint (POST /v1/campaigns/stats/batch) was removed
  * - Single campaign stats still includes totalCostInUsdCents from campaign-service /stats/batch-budget
- * - Cost breakdown uses runs-service /v1/stats/costs?groupBy=costName with { groups: [{ key, ... }] } format
+ * - Cost breakdown uses runs-service /v1/stats/costs?groupBy=costName with { groups: [{ dimensions: { costName }, ... }] } format
  */
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
@@ -33,8 +33,8 @@ describe("Campaign stats endpoints include totalCostInUsdCents", () => {
   it("should use runs-service /v1/stats/costs with groupBy=costName for cost breakdown", () => {
     expect(content).toContain("groupBy=costName");
     expect(content).toContain("externalServices.runs");
-    // Response uses .groups with .key field
+    // Response uses .groups with .dimensions.costName field
     expect(content).toContain("costBreakdown.groups");
-    expect(content).toContain("g.key");
+    expect(content).toContain("g.dimensions.costName");
   });
 });
