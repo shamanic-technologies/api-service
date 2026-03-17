@@ -160,7 +160,7 @@ export async function registerPlatformPrompts(): Promise<void> {
   );
 
   await callExternalService(externalServices.emailgen, "/platform-prompts", {
-    method: "PUT",
+    method: "POST",
     body: {
       type: "cold-email",
       prompt,
