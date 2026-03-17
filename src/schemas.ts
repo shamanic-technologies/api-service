@@ -1488,6 +1488,213 @@ export const MissingKeysErrorSchema = z
   .openapi("MissingKeysError");
 
 // ===================================================================
+// WORKFLOW VALIDATE & UPDATE
+// ===================================================================
+
+const TemplateRefSchema = z
+  .object({
+    nodeId: z.string().describe("DAG node ID"),
+    templateType: z.string().describe("Prompt template type used by this node"),
+    variablesProvided: z.array(z.string()).describe("Variable names the workflow provides to this node"),
+  })
+  .openapi("TemplateRef");
+
+const TemplateContractIssueSchema = z
+  .object({
+    nodeId: z.string().describe("DAG node ID that calls content-generation"),
+    templateType: z.string().describe("Prompt template type (e.g. 'cold-email')"),
+    field: z.string().describe("Variable name or template type"),
+    severity: z.enum(["error", "warning"]).describe("'error' = missing required variable, 'warning' = extra/unknown variable"),
+    reason: z.string().describe("Human-readable explanation of the issue"),
+  })
+  .openapi("TemplateContractIssue");
+
+export const ValidationResultSchema = z
+  .object({
+    valid: z.boolean().describe("Whether the workflow DAG is valid"),
+    errors: z
+      .array(
+        z.object({
+          field: z.string().describe("Field that caused the error"),
+          message: z.string().describe("Error description"),
+        })
+      )
+      .optional()
+      .describe("Structural validation errors"),
+    templateContract: z
+      .object({
+        valid: z.boolean().describe("Whether all template contracts are satisfied"),
+        templateRefs: z.array(TemplateRefSchema).describe("Content-generation template references found in the DAG"),
+        issues: z.array(TemplateContractIssueSchema).describe("Variable mismatches between workflow and prompt templates"),
+      })
+      .optional()
+      .describe("Template contract validation result. Present when content-generation service is reachable."),
+  })
+  .openapi("ValidationResult");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/workflows/{id}/validate",
+  tags: ["Workflows"],
+  summary: "Validate a workflow DAG",
+  description:
+    "Validates the workflow's DAG structure and checks template contracts — " +
+    "whether the variables provided by the workflow match those expected by prompt templates. " +
+    "Use after every modification to verify consistency.",
+  security: authed,
+  request: {
+    params: WorkflowIdParam,
+  },
+  responses: {
+    200: {
+      description: "Validation result",
+      content: { "application/json": { schema: ValidationResultSchema } },
+    },
+    404: { description: "Workflow not found", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+const DAGNodeSchema = z
+  .object({
+    id: z.string().describe("Unique node identifier within the DAG"),
+    type: z.string().describe("Node type (e.g. 'http.call', 'condition', 'wait', 'for-each', 'script')"),
+    config: z.record(z.unknown()).optional().describe("Node-specific configuration"),
+    inputMapping: z.record(z.unknown()).optional().describe("Maps input variables to this node"),
+  })
+  .openapi("DAGNode");
+
+const DAGEdgeSchema = z
+  .object({
+    from: z.string().describe("Source node ID"),
+    to: z.string().describe("Target node ID"),
+  })
+  .openapi("DAGEdge");
+
+const DAGSchema = z
+  .object({
+    nodes: z.array(DAGNodeSchema).min(1).describe("The steps of the workflow. Must contain at least one node."),
+    edges: z.array(DAGEdgeSchema).describe("Execution order between nodes. Empty array for single-node workflows."),
+    onError: z.string().optional().describe("Node ID of an error handler that runs when any node fails"),
+  })
+  .openapi("DAG");
+
+export const UpdateWorkflowRequestSchema = z
+  .object({
+    name: z.string().min(1).optional().describe("Workflow name"),
+    description: z.string().optional().describe("Workflow description"),
+    tags: z.array(z.string()).optional().describe("Tags for filtering/grouping"),
+    dag: DAGSchema.optional().describe("Updated DAG definition"),
+  })
+  .openapi("UpdateWorkflowRequest");
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/workflows/{id}",
+  tags: ["Workflows"],
+  summary: "Update a workflow",
+  description:
+    "Update a workflow's name, description, tags, or DAG. " +
+    "Send only the fields you want to change. " +
+    "After updating the DAG, call POST /v1/workflows/{id}/validate to verify consistency.",
+  security: authed,
+  request: {
+    params: WorkflowIdParam,
+    body: {
+      content: {
+        "application/json": { schema: UpdateWorkflowRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Updated workflow" },
+    400: { description: "Invalid request", content: errorContent },
+    404: { description: "Workflow not found", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ===================================================================
+// PROMPTS (proxy to content-generation service)
+// ===================================================================
+
+export const PromptResponseSchema = z
+  .object({
+    id: z.string().describe("Prompt ID"),
+    type: z.string().describe("Prompt type identifier (e.g. 'cold-email', 'cold-email-v2')"),
+    prompt: z.string().describe("Prompt template text with {{variable}} placeholders"),
+    variables: z.array(z.string()).describe("List of expected variable names used in the prompt"),
+    createdAt: z.string().describe("ISO 8601 creation timestamp"),
+    updatedAt: z.string().describe("ISO 8601 last-updated timestamp"),
+  })
+  .openapi("PromptResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/prompts",
+  tags: ["Prompts"],
+  summary: "Get a prompt template",
+  description:
+    "Returns a prompt template by type from the content-generation service. " +
+    "Includes the template text and its declared variables.",
+  security: authed,
+  request: {
+    query: z.object({
+      type: z.string().describe("Prompt type to look up (e.g. 'cold-email')"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Prompt template found",
+      content: { "application/json": { schema: PromptResponseSchema } },
+    },
+    400: { description: "Missing type query parameter", content: errorContent },
+    404: { description: "Prompt not found", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+export const VersionPromptRequestSchema = z
+  .object({
+    sourceType: z.string().min(1).describe("The type of the prompt to create a new version from (e.g. 'cold-email')"),
+    prompt: z.string().min(1).describe("New prompt template text with {{variable}} placeholders. Must NOT contain company-specific data."),
+    variables: z.array(z.string()).min(1).describe("List of expected variable names used in the prompt"),
+  })
+  .openapi("VersionPromptRequest");
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/prompts",
+  tags: ["Prompts"],
+  summary: "Create a new prompt version",
+  description:
+    "Creates a new version of a prompt template with an auto-incremented type name. " +
+    "For example, sourceType 'cold-email' creates 'cold-email-v2'. " +
+    "The source prompt is never modified.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: VersionPromptRequestSchema },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: "New versioned prompt created",
+      content: { "application/json": { schema: PromptResponseSchema } },
+    },
+    400: { description: "Invalid request", content: errorContent },
+    404: { description: "Source prompt not found", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ===================================================================
 // CAMPAIGNS SSE STREAM
 // ===================================================================
 

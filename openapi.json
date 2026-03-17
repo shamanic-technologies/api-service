@@ -1765,6 +1765,298 @@
           "missing"
         ]
       },
+      "TemplateRef": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "DAG node ID"
+          },
+          "templateType": {
+            "type": "string",
+            "description": "Prompt template type used by this node"
+          },
+          "variablesProvided": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Variable names the workflow provides to this node"
+          }
+        },
+        "required": [
+          "nodeId",
+          "templateType",
+          "variablesProvided"
+        ]
+      },
+      "TemplateContractIssue": {
+        "type": "object",
+        "properties": {
+          "nodeId": {
+            "type": "string",
+            "description": "DAG node ID that calls content-generation"
+          },
+          "templateType": {
+            "type": "string",
+            "description": "Prompt template type (e.g. 'cold-email')"
+          },
+          "field": {
+            "type": "string",
+            "description": "Variable name or template type"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "error",
+              "warning"
+            ],
+            "description": "'error' = missing required variable, 'warning' = extra/unknown variable"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Human-readable explanation of the issue"
+          }
+        },
+        "required": [
+          "nodeId",
+          "templateType",
+          "field",
+          "severity",
+          "reason"
+        ]
+      },
+      "ValidationResult": {
+        "type": "object",
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "description": "Whether the workflow DAG is valid"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": {
+                  "type": "string",
+                  "description": "Field that caused the error"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Error description"
+                }
+              },
+              "required": [
+                "field",
+                "message"
+              ]
+            },
+            "description": "Structural validation errors"
+          },
+          "templateContract": {
+            "type": "object",
+            "properties": {
+              "valid": {
+                "type": "boolean",
+                "description": "Whether all template contracts are satisfied"
+              },
+              "templateRefs": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TemplateRef"
+                },
+                "description": "Content-generation template references found in the DAG"
+              },
+              "issues": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TemplateContractIssue"
+                },
+                "description": "Variable mismatches between workflow and prompt templates"
+              }
+            },
+            "required": [
+              "valid",
+              "templateRefs",
+              "issues"
+            ],
+            "description": "Template contract validation result. Present when content-generation service is reachable."
+          }
+        },
+        "required": [
+          "valid"
+        ]
+      },
+      "DAGNode": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Unique node identifier within the DAG"
+          },
+          "type": {
+            "type": "string",
+            "description": "Node type (e.g. 'http.call', 'condition', 'wait', 'for-each', 'script')"
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            },
+            "description": "Node-specific configuration"
+          },
+          "inputMapping": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            },
+            "description": "Maps input variables to this node"
+          }
+        },
+        "required": [
+          "id",
+          "type"
+        ]
+      },
+      "DAGEdge": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "description": "Source node ID"
+          },
+          "to": {
+            "type": "string",
+            "description": "Target node ID"
+          }
+        },
+        "required": [
+          "from",
+          "to"
+        ]
+      },
+      "DAG": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DAGNode"
+            },
+            "minItems": 1,
+            "description": "The steps of the workflow. Must contain at least one node."
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DAGEdge"
+            },
+            "description": "Execution order between nodes. Empty array for single-node workflows."
+          },
+          "onError": {
+            "type": "string",
+            "description": "Node ID of an error handler that runs when any node fails"
+          }
+        },
+        "required": [
+          "nodes",
+          "edges"
+        ],
+        "description": "Updated DAG definition"
+      },
+      "UpdateWorkflowRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Workflow name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Workflow description"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Tags for filtering/grouping"
+          },
+          "dag": {
+            "$ref": "#/components/schemas/DAG"
+          }
+        }
+      },
+      "PromptResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Prompt ID"
+          },
+          "type": {
+            "type": "string",
+            "description": "Prompt type identifier (e.g. 'cold-email', 'cold-email-v2')"
+          },
+          "prompt": {
+            "type": "string",
+            "description": "Prompt template text with {{variable}} placeholders"
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of expected variable names used in the prompt"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO 8601 creation timestamp"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO 8601 last-updated timestamp"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "prompt",
+          "variables",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "VersionPromptRequest": {
+        "type": "object",
+        "properties": {
+          "sourceType": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The type of the prompt to create a new version from (e.g. 'cold-email')"
+          },
+          "prompt": {
+            "type": "string",
+            "minLength": 1,
+            "description": "New prompt template text with {{variable}} placeholders. Must NOT contain company-specific data."
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "List of expected variable names used in the prompt"
+          }
+        },
+        "required": [
+          "sourceType",
+          "prompt",
+          "variables"
+        ]
+      },
       "ActivityResponse": {
         "type": "object",
         "properties": {
@@ -6294,6 +6586,129 @@
             }
           }
         }
+      },
+      "put": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Update a workflow",
+        "description": "Update a workflow's name, description, tags, or DAG. Send only the fields you want to change. After updating the DAG, call POST /v1/workflows/{id}/validate to verify consistency.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow ID"
+            },
+            "required": true,
+            "description": "Workflow ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWorkflowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated workflow"
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workflow not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/workflows/best": {
@@ -6765,6 +7180,362 @@
             }
           }
         }
+      }
+    },
+    "/v1/workflows/{id}/validate": {
+      "post": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Validate a workflow DAG",
+        "description": "Validates the workflow's DAG structure and checks template contracts — whether the variables provided by the workflow match those expected by prompt templates. Use after every modification to verify consistency.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow ID"
+            },
+            "required": true,
+            "description": "Workflow ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Validation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workflow not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/prompts": {
+      "get": {
+        "tags": [
+          "Prompts"
+        ],
+        "summary": "Get a prompt template",
+        "description": "Returns a prompt template by type from the content-generation service. Includes the template text and its declared variables.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Prompt type to look up (e.g. 'cold-email')"
+            },
+            "required": true,
+            "description": "Prompt type to look up (e.g. 'cold-email')",
+            "name": "type",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Prompt template found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing type query parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Prompt not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Prompts"
+        ],
+        "summary": "Create a new prompt version",
+        "description": "Creates a new version of a prompt template with an auto-incremented type name. For example, sourceType 'cold-email' creates 'cold-email-v2'. The source prompt is never modified.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionPromptRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "New versioned prompt created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PromptResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Source prompt not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ]
       }
     },
     "/v1/campaigns/{id}/stream": {
