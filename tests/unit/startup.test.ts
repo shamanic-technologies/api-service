@@ -152,12 +152,12 @@ describe("registerPlatformPrompts", () => {
     });
   });
 
-  it("should call PUT /platform-prompts on content-generation-service", async () => {
+  it("should call POST /platform-prompts on content-generation-service", async () => {
     await registerPlatformPrompts();
 
     const promptCalls = fetchCalls.filter((c) => c.url.includes("/platform-prompts"));
     expect(promptCalls).toHaveLength(1);
-    expect(promptCalls[0].method).toBe("PUT");
+    expect(promptCalls[0].method).toBe("POST");
   });
 
   it("should send cold-email type with all 6 template variables", async () => {
