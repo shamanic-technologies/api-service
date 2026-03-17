@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
-import { GenerateWorkflowRequestSchema } from "../schemas.js";
+import { GenerateWorkflowRequestSchema, UpdateWorkflowRequestSchema } from "../schemas.js";
 
 const router = Router();
 
@@ -301,6 +301,65 @@ router.get("/workflows/:id/key-status", authenticate, requireOrg, requireUser, a
   } catch (error: any) {
     console.error("Workflow key-status error:", error.message);
     res.status(500).json({ error: error.message || "Failed to get workflow key status" });
+  }
+});
+
+/**
+ * POST /v1/workflows/:id/validate
+ * Validate a workflow DAG (structure + template contract check)
+ */
+router.post("/workflows/:id/validate", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await callExternalService(
+      externalServices.workflow,
+      `/workflows/${id}/validate`,
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+      },
+    );
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("Validate workflow error:", error.message);
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message || "Failed to validate workflow" });
+  }
+});
+
+/**
+ * PUT /v1/workflows/:id
+ * Update a workflow (name, description, tags, dag)
+ */
+router.put("/workflows/:id", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const parsed = UpdateWorkflowRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Invalid request",
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const result = await callExternalService(
+      externalServices.workflow,
+      `/workflows/${id}`,
+      {
+        method: "PUT",
+        headers: buildInternalHeaders(req),
+        body: parsed.data,
+      },
+    );
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("Update workflow error:", error.message);
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message || "Failed to update workflow" });
   }
 });
 
