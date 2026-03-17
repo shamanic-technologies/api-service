@@ -811,6 +811,286 @@
           "campaigns"
         ]
       },
+      "RunCostData": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Run status (e.g. completed, failed)"
+          },
+          "startedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO timestamp when the run started"
+          },
+          "completedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO timestamp when the run completed"
+          },
+          "totalCostInUsdCents": {
+            "type": "string",
+            "nullable": true,
+            "description": "Total cost in USD cents"
+          },
+          "costs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "costName": {
+                  "type": "string"
+                },
+                "totalCostInUsdCents": {
+                  "type": "string"
+                },
+                "actualCostInUsdCents": {
+                  "type": "string"
+                },
+                "provisionedCostInUsdCents": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "costName",
+                "totalCostInUsdCents",
+                "actualCostInUsdCents",
+                "provisionedCostInUsdCents",
+                "quantity"
+              ]
+            },
+            "description": "Per-cost-name breakdown"
+          },
+          "serviceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "taskName": {
+            "type": "string",
+            "nullable": true
+          },
+          "descendantRuns": {
+            "type": "array",
+            "items": {
+              "nullable": true
+            },
+            "description": "Child runs"
+          }
+        },
+        "required": [
+          "status",
+          "startedAt",
+          "completedAt",
+          "totalCostInUsdCents",
+          "costs",
+          "serviceName",
+          "taskName",
+          "descendantRuns"
+        ],
+        "description": "Enrichment run cost data, null if no run"
+      },
+      "CampaignLeadsResponse": {
+        "type": "object",
+        "properties": {
+          "leads": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "externalId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "firstName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "lastName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "emailStatus": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "title": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "organizationName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "organizationDomain": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "organizationIndustry": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "organizationSize": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "linkedinUrl": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "status": {
+                  "type": "string",
+                  "description": "Always 'contacted'"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "ISO timestamp (from lead-service servedAt)"
+                },
+                "enrichmentRunId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "enrichmentRun": {
+                  "$ref": "#/components/schemas/RunCostData"
+                }
+              },
+              "required": [
+                "id",
+                "email",
+                "externalId",
+                "firstName",
+                "lastName",
+                "emailStatus",
+                "title",
+                "organizationName",
+                "organizationDomain",
+                "organizationIndustry",
+                "organizationSize",
+                "linkedinUrl",
+                "status",
+                "createdAt",
+                "enrichmentRunId",
+                "enrichmentRun"
+              ]
+            }
+          }
+        },
+        "required": [
+          "leads"
+        ]
+      },
+      "CampaignEmailsResponse": {
+        "type": "object",
+        "properties": {
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Generation ID"
+                },
+                "campaignId": {
+                  "type": "string"
+                },
+                "subject": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Email subject line"
+                },
+                "bodyHtml": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Email body as HTML"
+                },
+                "bodyText": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Email body as plain text"
+                },
+                "sequence": {
+                  "type": "number",
+                  "nullable": true,
+                  "description": "Sequence number in the campaign"
+                },
+                "leadFirstName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "leadLastName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "leadCompany": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "leadTitle": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "leadIndustry": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "clientCompanyName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "generationRunId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO timestamp"
+                },
+                "generationRun": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/RunCostData"
+                    },
+                    {
+                      "description": "Generation run cost data, null if no run"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "campaignId",
+                "subject",
+                "bodyHtml",
+                "bodyText",
+                "sequence",
+                "leadFirstName",
+                "leadLastName",
+                "leadCompany",
+                "leadTitle",
+                "leadIndustry",
+                "clientCompanyName",
+                "generationRunId",
+                "createdAt",
+                "generationRun"
+              ]
+            }
+          }
+        },
+        "required": [
+          "emails"
+        ]
+      },
       "UpsertKeyRequest": {
         "type": "object",
         "properties": {
@@ -3409,7 +3689,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Campaign leads with enrichment run data"
+            "description": "Campaign leads with enrichment run data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignLeadsResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -3505,7 +3792,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Campaign emails with generation run data"
+            "description": "Campaign emails with generation run data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignEmailsResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
