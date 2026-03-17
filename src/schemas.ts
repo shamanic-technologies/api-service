@@ -503,6 +503,29 @@ registry.registerPath({
   },
 });
 
+const RunCostDataSchema = z
+  .object({
+    status: z.string().describe("Run status (e.g. completed, failed)"),
+    startedAt: z.string().nullable().describe("ISO timestamp when the run started"),
+    completedAt: z.string().nullable().describe("ISO timestamp when the run completed"),
+    totalCostInUsdCents: z.string().nullable().describe("Total cost in USD cents"),
+    costs: z
+      .array(
+        z.object({
+          costName: z.string(),
+          totalCostInUsdCents: z.string(),
+          actualCostInUsdCents: z.string(),
+          provisionedCostInUsdCents: z.string(),
+          quantity: z.number(),
+        }),
+      )
+      .describe("Per-cost-name breakdown"),
+    serviceName: z.string().nullable(),
+    taskName: z.string().nullable(),
+    descendantRuns: z.array(z.unknown()).describe("Child runs"),
+  })
+  .openapi("RunCostData");
+
 registry.registerPath({
   method: "get",
   path: "/v1/campaigns/{id}/leads",
@@ -513,7 +536,37 @@ registry.registerPath({
   security: authed,
   request: { params: CampaignIdParam },
   responses: {
-    200: { description: "Campaign leads with enrichment run data" },
+    200: {
+      description: "Campaign leads with enrichment run data",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              leads: z.array(
+                z.object({
+                  id: z.string(),
+                  email: z.string(),
+                  externalId: z.string().nullable(),
+                  firstName: z.string().nullable(),
+                  lastName: z.string().nullable(),
+                  emailStatus: z.string().nullable(),
+                  title: z.string().nullable(),
+                  organizationName: z.string().nullable(),
+                  organizationDomain: z.string().nullable(),
+                  organizationIndustry: z.string().nullable(),
+                  organizationSize: z.string().nullable(),
+                  linkedinUrl: z.string().nullable(),
+                  status: z.string().describe("Always 'contacted'"),
+                  createdAt: z.string().nullable().describe("ISO timestamp (from lead-service servedAt)"),
+                  enrichmentRunId: z.string().nullable(),
+                  enrichmentRun: RunCostDataSchema.nullable().describe("Enrichment run cost data, null if no run"),
+                }),
+              ),
+            })
+            .openapi("CampaignLeadsResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -529,7 +582,36 @@ registry.registerPath({
   security: authed,
   request: { params: CampaignIdParam },
   responses: {
-    200: { description: "Campaign emails with generation run data" },
+    200: {
+      description: "Campaign emails with generation run data",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              emails: z.array(
+                z.object({
+                  id: z.string().describe("Generation ID"),
+                  campaignId: z.string(),
+                  subject: z.string().nullable().describe("Email subject line"),
+                  bodyHtml: z.string().nullable().describe("Email body as HTML"),
+                  bodyText: z.string().nullable().describe("Email body as plain text"),
+                  sequence: z.number().nullable().describe("Sequence number in the campaign"),
+                  leadFirstName: z.string().nullable(),
+                  leadLastName: z.string().nullable(),
+                  leadCompany: z.string().nullable(),
+                  leadTitle: z.string().nullable(),
+                  leadIndustry: z.string().nullable(),
+                  clientCompanyName: z.string().nullable(),
+                  generationRunId: z.string().nullable(),
+                  createdAt: z.string().describe("ISO timestamp"),
+                  generationRun: RunCostDataSchema.nullable().describe("Generation run cost data, null if no run"),
+                }),
+              ),
+            })
+            .openapi("CampaignEmailsResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
