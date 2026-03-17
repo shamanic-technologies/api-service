@@ -23,6 +23,7 @@ import stripeRoutes from "./routes/stripe.js";
 import usersRoutes from "./routes/users.js";
 import platformRoutes from "./routes/platform.js";
 import platformChatRoutes from "./routes/platform-chat.js";
+import mcpToolsRoutes from "./routes/mcp-tools.js";
 import emailGatewayRoutes from "./routes/email-gateway.js";
 import runsRoutes from "./routes/runs.js";
 import { apiReference } from "@scalar/express-api-reference";
@@ -153,6 +154,7 @@ app.use("/v1", performanceRoutes);
 // Internal platform routes (API key only, no identity)
 app.use("/internal", internalEmailsRoutes);
 app.use("/platform-chat", platformChatRoutes);
+app.use("/internal", mcpToolsRoutes);
 
 // Authenticated routes
 app.use("/v1", meRoutes);
