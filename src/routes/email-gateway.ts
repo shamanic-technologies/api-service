@@ -17,6 +17,7 @@ router.get("/email-gateway/stats", authenticate, requireOrg, requireUser, async 
     const delivery = await fetchDeliveryStats({ brandId, campaignId }, req);
 
     res.json(delivery ?? {
+      emailsContacted: 0,
       emailsSent: 0,
       emailsDelivered: 0,
       emailsOpened: 0,
