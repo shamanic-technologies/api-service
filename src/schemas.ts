@@ -1818,6 +1818,75 @@ registry.registerPath({
 });
 
 // ===================================================================
+// PLATFORM KEYS
+// ===================================================================
+
+export const PlatformKeyRequestSchema = z
+  .object({
+    provider: z.string().min(1).describe("Provider name (e.g. 'anthropic', 'stripe')"),
+    apiKey: z.string().min(1).describe("The API key value"),
+  })
+  .openapi("PlatformKeyRequest");
+
+registry.registerPath({
+  method: "post",
+  path: "/platform-keys",
+  tags: ["Platform"],
+  summary: "Register a platform key",
+  description:
+    "Register or update a platform-level API key for a provider. " +
+    "Platform-level — no org/user identity required. " +
+    "Used by the dashboard at cold start. Idempotent (safe to call on every boot).",
+  security: platformAuth,
+  request: {
+    body: {
+      content: { "application/json": { schema: PlatformKeyRequestSchema } },
+    },
+  },
+  responses: {
+    200: { description: "Key registered" },
+    400: { description: "Invalid request", content: errorContent },
+    401: { description: "Invalid or missing platform API key", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ===================================================================
+// PLATFORM PROMPTS
+// ===================================================================
+
+export const PlatformPromptRequestSchema = z
+  .object({
+    type: z.string().min(1).describe("Prompt type (e.g. 'cold-email')"),
+    prompt: z.string().min(1).describe("The prompt template text"),
+    variables: z.array(z.string()).describe("Template variable names (e.g. ['leadFirstName', 'leadLastName'])"),
+  })
+  .openapi("PlatformPromptRequest");
+
+registry.registerPath({
+  method: "put",
+  path: "/platform-prompts",
+  tags: ["Platform"],
+  summary: "Deploy a platform prompt",
+  description:
+    "Register or update a platform-level prompt template. " +
+    "Platform-level — no org/user identity required. " +
+    "Used by the dashboard at cold start. Idempotent (safe to call on every boot).",
+  security: platformAuth,
+  request: {
+    body: {
+      content: { "application/json": { schema: PlatformPromptRequestSchema } },
+    },
+  },
+  responses: {
+    200: { description: "Prompt deployed" },
+    400: { description: "Invalid request", content: errorContent },
+    401: { description: "Invalid or missing platform API key", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ===================================================================
 // PLATFORM CHAT CONFIG
 // ===================================================================
 
