@@ -3,10 +3,10 @@ import { callExternalService, externalServices } from "./service-client.js";
 import { buildInternalHeaders } from "./internal-headers.js";
 
 interface EmailGatewayStats {
-  emailsSent: number; emailsDelivered: number; emailsOpened: number; emailsClicked: number;
-  emailsReplied: number; emailsBounced: number; repliesWillingToMeet: number;
-  repliesInterested: number; repliesNotInterested: number; repliesOutOfOffice: number;
-  repliesUnsubscribe: number; recipients: number;
+  emailsContacted: number; emailsSent: number; emailsDelivered: number; emailsOpened: number;
+  emailsClicked: number; emailsReplied: number; emailsBounced: number;
+  repliesWillingToMeet: number; repliesInterested: number; repliesNotInterested: number;
+  repliesOutOfOffice: number; repliesUnsubscribe: number; recipients: number;
 }
 
 /** Fetch delivery stats from email-gateway (aggregates transactional + broadcast). */
@@ -35,6 +35,7 @@ export async function fetchDeliveryStats(
   if (!b) return null;
 
   return {
+    emailsContacted: b.emailsContacted || 0,
     emailsSent: b.emailsSent || 0,
     emailsDelivered: b.emailsDelivered || 0,
     emailsOpened: b.emailsOpened || 0,

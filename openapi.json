@@ -637,11 +637,17 @@
           "totalCostUsd": {
             "type": "number"
           },
+          "emailsContacted": {
+            "type": "number",
+            "description": "Leads successfully submitted to email provider (immediate)"
+          },
           "emailsSent": {
-            "type": "number"
+            "type": "number",
+            "description": "Emails confirmed sent by provider (from webhook)"
           },
           "emailsDelivered": {
-            "type": "number"
+            "type": "number",
+            "description": "Emails confirmed delivered (from webhook)"
           },
           "emailsOpened": {
             "type": "number"
@@ -713,6 +719,7 @@
           "leadsBuffered",
           "leadsSkipped",
           "emailsGenerated",
+          "emailsContacted",
           "emailsSent",
           "emailsOpened",
           "emailsClicked",
@@ -743,11 +750,17 @@
                 "emailsGenerated": {
                   "type": "number"
                 },
+                "emailsContacted": {
+                  "type": "number",
+                  "description": "Leads successfully submitted to email provider (immediate)"
+                },
                 "emailsSent": {
-                  "type": "number"
+                  "type": "number",
+                  "description": "Emails confirmed sent by provider (from webhook)"
                 },
                 "emailsDelivered": {
-                  "type": "number"
+                  "type": "number",
+                  "description": "Emails confirmed delivered (from webhook)"
                 },
                 "emailsOpened": {
                   "type": "number"
@@ -790,6 +803,7 @@
                 "leadsBuffered",
                 "leadsSkipped",
                 "emailsGenerated",
+                "emailsContacted",
                 "emailsSent",
                 "emailsDelivered",
                 "emailsOpened",
@@ -1254,11 +1268,17 @@
       "EmailGatewayStatsResponse": {
         "type": "object",
         "properties": {
+          "emailsContacted": {
+            "type": "number",
+            "description": "Leads successfully submitted to email provider (immediate)"
+          },
           "emailsSent": {
-            "type": "number"
+            "type": "number",
+            "description": "Emails confirmed sent by provider (from webhook)"
           },
           "emailsDelivered": {
-            "type": "number"
+            "type": "number",
+            "description": "Emails confirmed delivered (from webhook)"
           },
           "emailsOpened": {
             "type": "number"
@@ -1289,6 +1309,7 @@
           }
         },
         "required": [
+          "emailsContacted",
           "emailsSent",
           "emailsDelivered",
           "emailsOpened",
