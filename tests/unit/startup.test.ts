@@ -27,6 +27,7 @@ function setAllEnvVars() {
   process.env.POSTMARK_FROM_ADDRESS = "growth@distribute.you";
   process.env.STRIPE_SECRET_KEY = "sk_test_stripe";
   process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
+  process.env.ADMIN_DISTRIBUTE_API_KEY = "admin-test-key";
 }
 
 function deleteAllEnvVars() {
@@ -42,6 +43,7 @@ function deleteAllEnvVars() {
   delete process.env.POSTMARK_FROM_ADDRESS;
   delete process.env.STRIPE_SECRET_KEY;
   delete process.env.STRIPE_WEBHOOK_SECRET;
+  delete process.env.ADMIN_DISTRIBUTE_API_KEY;
 }
 
 describe("registerPlatformKeys", () => {
@@ -77,7 +79,7 @@ describe("registerPlatformKeys", () => {
     await registerPlatformKeys();
 
     const platformKeyCalls = fetchCalls.filter((c) => c.url.includes("/platform-keys"));
-    expect(platformKeyCalls).toHaveLength(12);
+    expect(platformKeyCalls).toHaveLength(13);
 
     const providers = platformKeyCalls.map((c) => c.body?.provider);
     expect(providers).toContain("anthropic");
@@ -92,6 +94,7 @@ describe("registerPlatformKeys", () => {
     expect(providers).toContain("postmark-from-address");
     expect(providers).toContain("stripe");
     expect(providers).toContain("stripe-webhook");
+    expect(providers).toContain("api-service-mcp");
 
     for (const call of platformKeyCalls) {
       expect(call.body).not.toHaveProperty("keySource");
