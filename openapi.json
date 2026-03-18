@@ -2559,30 +2559,6 @@
         }
       }
     },
-    "/v1/public/workflows": {
-      "get": {
-        "tags": [
-          "Workflows"
-        ],
-        "summary": "List workflows (public)",
-        "description": "Public list of workflows without DAGs. No authentication required.",
-        "responses": {
-          "200": {
-            "description": "List of workflows (no DAGs)"
-          },
-          "502": {
-            "description": "Upstream service error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/public/workflows/ranked": {
       "get": {
         "tags": [

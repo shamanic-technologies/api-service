@@ -160,22 +160,3 @@ describe("GET /v1/public/workflows/best", () => {
   });
 });
 
-describe("GET /v1/public/workflows", () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it("proxies to workflow-service /public/workflows", async () => {
-    const app = createApp();
-    const mockWorkflows = { workflows: [{ id: "wf-1", name: "test" }] };
-    mockCallExternalService.mockImplementation((service: any, path: string) => {
-      if (service.url === "http://mock-workflow" && path.startsWith("/public/workflows")) {
-        return Promise.resolve(mockWorkflows);
-      }
-      return Promise.resolve({});
-    });
-
-    const res = await request(app).get("/v1/public/workflows?category=sales");
-
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual(mockWorkflows);
-  });
-});
