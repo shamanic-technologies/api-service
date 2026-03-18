@@ -1861,6 +1861,17 @@ export const SSEButtonsEventSchema = z
   })
   .openapi("SSEButtonsEvent");
 
+export const SSEErrorEventSchema = z
+  .object({
+    type: z.literal("error"),
+    message: z
+      .string()
+      .describe(
+        "Human-readable error message to display to the user (e.g. empty model response, context overflow, safety filter)",
+      ),
+  })
+  .openapi("SSEErrorEvent");
+
 registry.registerPath({
   method: "put",
   path: "/v1/chat/config",
@@ -1904,7 +1915,9 @@ registry.registerPath({
     "then more thinking/tokens as the AI continues\n" +
     "5. **Input request** *(optional)* — `input_request` when the AI needs structured user input\n" +
     '6. **Buttons** *(optional)* — `{"type":"buttons","buttons":[...]}` with quick-reply options\n' +
-    '7. **Done** — `"[DONE]"` (always last)\n\n' +
+    '7. **Error** *(optional)* — `{"type":"error","message":"..."}` when the model returns an empty response ' +
+    "(e.g. context overflow, safety filter). Always followed by `[DONE]`.\n" +
+    '8. **Done** — `"[DONE]"` (always last)\n\n' +
     "See the SSE event schemas (SSESessionEvent, SSETokenEvent, SSEToolCallEvent, etc.) for exact payload shapes.",
   security: authed,
   request: {
@@ -1917,7 +1930,7 @@ registry.registerPath({
       description:
         "SSE stream of chat events. Each `data:` line is a JSON object matching one of the SSE event schemas " +
         "(SSESessionEvent, SSETokenEvent, SSEThinkingStartEvent, SSEThinkingDeltaEvent, SSEThinkingStopEvent, " +
-        'SSEToolCallEvent, SSEToolResultEvent, SSEInputRequestEvent, SSEButtonsEvent), except the final `data: "[DONE]"` which is a plain string.',
+        'SSEToolCallEvent, SSEToolResultEvent, SSEInputRequestEvent, SSEButtonsEvent, SSEErrorEvent), except the final `data: "[DONE]"` which is a plain string.',
       content: {
         "text/event-stream": {
           schema: z.string().describe("Server-Sent Events stream"),
