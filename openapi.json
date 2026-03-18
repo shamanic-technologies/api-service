@@ -133,6 +133,303 @@
           "error"
         ]
       },
+      "WorkflowMetadata": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Workflow ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Workflow name"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Stable display name for the workflow family"
+          },
+          "createdForBrandId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Brand ID that created this workflow"
+          },
+          "category": {
+            "type": "string",
+            "description": "Workflow category (e.g. 'sales', 'pr')"
+          },
+          "channel": {
+            "type": "string",
+            "description": "Communication channel (e.g. 'email')"
+          },
+          "audienceType": {
+            "type": "string",
+            "description": "Audience type (e.g. 'cold-outreach')"
+          },
+          "signature": {
+            "type": "string",
+            "description": "SHA-256 hash of the canonical DAG"
+          },
+          "signatureName": {
+            "type": "string",
+            "description": "Human-readable name for this DAG variant"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "displayName",
+          "createdForBrandId",
+          "category",
+          "channel",
+          "audienceType",
+          "signature",
+          "signatureName"
+        ]
+      },
+      "WorkflowEmailStats": {
+        "type": "object",
+        "properties": {
+          "sent": {
+            "type": "number",
+            "description": "Total emails sent"
+          },
+          "delivered": {
+            "type": "number",
+            "description": "Total emails delivered"
+          },
+          "opened": {
+            "type": "number",
+            "description": "Total emails opened"
+          },
+          "clicked": {
+            "type": "number",
+            "description": "Total link clicks"
+          },
+          "replied": {
+            "type": "number",
+            "description": "Total replies received"
+          },
+          "bounced": {
+            "type": "number",
+            "description": "Total emails bounced"
+          },
+          "unsubscribed": {
+            "type": "number",
+            "description": "Total unsubscribes"
+          },
+          "recipients": {
+            "type": "number",
+            "description": "Total unique recipients"
+          }
+        },
+        "required": [
+          "sent",
+          "delivered",
+          "opened",
+          "clicked",
+          "replied",
+          "bounced",
+          "unsubscribed",
+          "recipients"
+        ],
+        "description": "Aggregated transactional email stats"
+      },
+      "WorkflowStats": {
+        "type": "object",
+        "properties": {
+          "totalCostInUsdCents": {
+            "type": "number",
+            "description": "Total cost across all completed runs"
+          },
+          "totalOutcomes": {
+            "type": "number",
+            "description": "Total replies or clicks (depending on objective)"
+          },
+          "costPerOutcome": {
+            "type": "number",
+            "nullable": true,
+            "description": "Cost per reply or click in USD cents, null if no outcomes"
+          },
+          "completedRuns": {
+            "type": "number",
+            "description": "Number of completed runs"
+          },
+          "email": {
+            "type": "object",
+            "properties": {
+              "transactional": {
+                "$ref": "#/components/schemas/WorkflowEmailStats"
+              },
+              "broadcast": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/WorkflowEmailStats"
+                  },
+                  {
+                    "description": "Aggregated broadcast email stats"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "transactional",
+              "broadcast"
+            ],
+            "description": "Email engagement stats aggregated across runs"
+          }
+        },
+        "required": [
+          "totalCostInUsdCents",
+          "totalOutcomes",
+          "costPerOutcome",
+          "completedRuns",
+          "email"
+        ]
+      },
+      "PublicRankedWorkflowItem": {
+        "type": "object",
+        "properties": {
+          "workflow": {
+            "$ref": "#/components/schemas/WorkflowMetadata"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/WorkflowStats"
+          }
+        },
+        "required": [
+          "workflow",
+          "stats"
+        ]
+      },
+      "PublicRankedWorkflowResponse": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicRankedWorkflowItem"
+            },
+            "description": "Workflows ranked by performance, best first"
+          }
+        },
+        "required": [
+          "results"
+        ]
+      },
+      "BestWorkflowRecord": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "workflowId": {
+            "type": "string",
+            "description": "ID of the workflow holding the record"
+          },
+          "workflowName": {
+            "type": "string",
+            "description": "Name of the workflow"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Stable display name of the workflow family"
+          },
+          "createdForBrandId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Brand ID that created this workflow"
+          },
+          "value": {
+            "type": "number",
+            "description": "The record value in USD cents"
+          }
+        },
+        "required": [
+          "workflowId",
+          "workflowName",
+          "displayName",
+          "createdForBrandId",
+          "value"
+        ],
+        "description": "Workflow with the lowest cost per email open"
+      },
+      "BestWorkflowResponse": {
+        "type": "object",
+        "properties": {
+          "bestCostPerOpen": {
+            "$ref": "#/components/schemas/BestWorkflowRecord"
+          },
+          "bestCostPerReply": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/BestWorkflowRecord"
+              },
+              {
+                "description": "Workflow with the lowest cost per reply"
+              }
+            ]
+          }
+        },
+        "required": [
+          "bestCostPerOpen",
+          "bestCostPerReply"
+        ]
+      },
+      "RankedWorkflowItem": {
+        "type": "object",
+        "properties": {
+          "workflow": {
+            "$ref": "#/components/schemas/WorkflowMetadata"
+          },
+          "dag": {
+            "type": "object",
+            "properties": {
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "nullable": true
+                },
+                "description": "DAG nodes"
+              },
+              "edges": {
+                "type": "array",
+                "items": {
+                  "nullable": true
+                },
+                "description": "DAG edges"
+              }
+            },
+            "required": [
+              "nodes",
+              "edges"
+            ],
+            "description": "The DAG definition"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/WorkflowStats"
+          }
+        },
+        "required": [
+          "workflow",
+          "dag",
+          "stats"
+        ]
+      },
+      "RankedWorkflowResponse": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RankedWorkflowItem"
+            },
+            "description": "Workflows ranked by performance, best first"
+          }
+        },
+        "required": [
+          "results"
+        ]
+      },
       "MeResponse": {
         "type": "object",
         "properties": {
@@ -150,6 +447,175 @@
             ]
           }
         }
+      },
+      "Campaign": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Campaign ID"
+          },
+          "orgId": {
+            "type": "string",
+            "description": "Organization ID"
+          },
+          "createdByUserId": {
+            "type": "string",
+            "nullable": true,
+            "description": "User who created the campaign"
+          },
+          "name": {
+            "type": "string",
+            "description": "Campaign name"
+          },
+          "workflowName": {
+            "type": "string",
+            "description": "Workflow name used for execution"
+          },
+          "brandUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Brand website URL"
+          },
+          "brandId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Brand ID"
+          },
+          "targetAudience": {
+            "type": "string",
+            "nullable": true,
+            "description": "Target audience description"
+          },
+          "targetOutcome": {
+            "type": "string",
+            "nullable": true,
+            "description": "Desired outcome"
+          },
+          "valueForTarget": {
+            "type": "string",
+            "nullable": true,
+            "description": "Value proposition for the target"
+          },
+          "maxBudgetDailyUsd": {
+            "type": "string",
+            "nullable": true,
+            "description": "Max daily budget in USD"
+          },
+          "maxBudgetWeeklyUsd": {
+            "type": "string",
+            "nullable": true,
+            "description": "Max weekly budget in USD"
+          },
+          "maxBudgetMonthlyUsd": {
+            "type": "string",
+            "nullable": true,
+            "description": "Max monthly budget in USD"
+          },
+          "maxBudgetTotalUsd": {
+            "type": "string",
+            "nullable": true,
+            "description": "Max total budget in USD"
+          },
+          "maxLeads": {
+            "type": "number",
+            "nullable": true,
+            "description": "Maximum number of leads"
+          },
+          "startDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Campaign start date"
+          },
+          "endDate": {
+            "type": "string",
+            "nullable": true,
+            "description": "Campaign end date"
+          },
+          "status": {
+            "type": "string",
+            "description": "Campaign status (e.g. 'active', 'stopped')"
+          },
+          "toResumeAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "Scheduled resume time"
+          },
+          "notifyFrequency": {
+            "type": "string",
+            "nullable": true,
+            "description": "Notification frequency"
+          },
+          "notifyChannel": {
+            "type": "string",
+            "nullable": true,
+            "description": "Notification channel"
+          },
+          "notifyDestination": {
+            "type": "string",
+            "nullable": true,
+            "description": "Notification destination"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO timestamp"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO timestamp"
+          }
+        },
+        "required": [
+          "id",
+          "orgId",
+          "createdByUserId",
+          "name",
+          "workflowName",
+          "brandUrl",
+          "brandId",
+          "targetAudience",
+          "targetOutcome",
+          "valueForTarget",
+          "maxBudgetDailyUsd",
+          "maxBudgetWeeklyUsd",
+          "maxBudgetMonthlyUsd",
+          "maxBudgetTotalUsd",
+          "maxLeads",
+          "startDate",
+          "endDate",
+          "status",
+          "toResumeAt",
+          "notifyFrequency",
+          "notifyChannel",
+          "notifyDestination",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CampaignListResponse": {
+        "type": "object",
+        "properties": {
+          "campaigns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Campaign"
+            }
+          }
+        },
+        "required": [
+          "campaigns"
+        ]
+      },
+      "CreateCampaignResponse": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "$ref": "#/components/schemas/Campaign"
+          }
+        },
+        "required": [
+          "campaign"
+        ]
       },
       "CreateCampaignRequest": {
         "type": "object",
@@ -267,6 +733,133 @@
           "scarcity",
           "riskReversal",
           "socialProof"
+        ]
+      },
+      "GetCampaignResponse": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "$ref": "#/components/schemas/Campaign"
+          }
+        },
+        "required": [
+          "campaign"
+        ]
+      },
+      "UpdateCampaignResponse": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "$ref": "#/components/schemas/Campaign"
+          }
+        },
+        "required": [
+          "campaign"
+        ]
+      },
+      "StopCampaignResponse": {
+        "type": "object",
+        "properties": {
+          "campaign": {
+            "$ref": "#/components/schemas/Campaign"
+          }
+        },
+        "required": [
+          "campaign"
+        ]
+      },
+      "RunCostData": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Run status (e.g. completed, failed)"
+          },
+          "startedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO timestamp when the run started"
+          },
+          "completedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO timestamp when the run completed"
+          },
+          "totalCostInUsdCents": {
+            "type": "string",
+            "nullable": true,
+            "description": "Total cost in USD cents"
+          },
+          "costs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "costName": {
+                  "type": "string"
+                },
+                "totalCostInUsdCents": {
+                  "type": "string"
+                },
+                "actualCostInUsdCents": {
+                  "type": "string"
+                },
+                "provisionedCostInUsdCents": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "costName",
+                "totalCostInUsdCents",
+                "actualCostInUsdCents",
+                "provisionedCostInUsdCents",
+                "quantity"
+              ]
+            },
+            "description": "Per-cost-name breakdown"
+          },
+          "serviceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "taskName": {
+            "type": "string",
+            "nullable": true
+          },
+          "descendantRuns": {
+            "type": "array",
+            "items": {
+              "nullable": true
+            },
+            "description": "Child runs"
+          }
+        },
+        "required": [
+          "status",
+          "startedAt",
+          "completedAt",
+          "totalCostInUsdCents",
+          "costs",
+          "serviceName",
+          "taskName",
+          "descendantRuns"
+        ]
+      },
+      "CampaignRunsResponse": {
+        "type": "object",
+        "properties": {
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunCostData"
+            }
+          }
+        },
+        "required": [
+          "runs"
         ]
       },
       "CampaignStatsResponse": {
@@ -511,88 +1104,6 @@
           "campaigns"
         ]
       },
-      "RunCostData": {
-        "type": "object",
-        "nullable": true,
-        "properties": {
-          "status": {
-            "type": "string",
-            "description": "Run status (e.g. completed, failed)"
-          },
-          "startedAt": {
-            "type": "string",
-            "nullable": true,
-            "description": "ISO timestamp when the run started"
-          },
-          "completedAt": {
-            "type": "string",
-            "nullable": true,
-            "description": "ISO timestamp when the run completed"
-          },
-          "totalCostInUsdCents": {
-            "type": "string",
-            "nullable": true,
-            "description": "Total cost in USD cents"
-          },
-          "costs": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "costName": {
-                  "type": "string"
-                },
-                "totalCostInUsdCents": {
-                  "type": "string"
-                },
-                "actualCostInUsdCents": {
-                  "type": "string"
-                },
-                "provisionedCostInUsdCents": {
-                  "type": "string"
-                },
-                "quantity": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "costName",
-                "totalCostInUsdCents",
-                "actualCostInUsdCents",
-                "provisionedCostInUsdCents",
-                "quantity"
-              ]
-            },
-            "description": "Per-cost-name breakdown"
-          },
-          "serviceName": {
-            "type": "string",
-            "nullable": true
-          },
-          "taskName": {
-            "type": "string",
-            "nullable": true
-          },
-          "descendantRuns": {
-            "type": "array",
-            "items": {
-              "nullable": true
-            },
-            "description": "Child runs"
-          }
-        },
-        "required": [
-          "status",
-          "startedAt",
-          "completedAt",
-          "totalCostInUsdCents",
-          "costs",
-          "serviceName",
-          "taskName",
-          "descendantRuns"
-        ],
-        "description": "Enrichment run cost data, null if no run"
-      },
       "CampaignLeadsResponse": {
         "type": "object",
         "properties": {
@@ -661,7 +1172,15 @@
                   "nullable": true
                 },
                 "enrichmentRun": {
-                  "$ref": "#/components/schemas/RunCostData"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/RunCostData"
+                    },
+                    {
+                      "nullable": true,
+                      "description": "Enrichment run cost data, null if no run"
+                    }
+                  ]
                 }
               },
               "required": [
@@ -762,6 +1281,7 @@
                       "$ref": "#/components/schemas/RunCostData"
                     },
                     {
+                      "nullable": true,
                       "description": "Generation run cost data, null if no run"
                     }
                   ]
@@ -791,6 +1311,71 @@
           "emails"
         ]
       },
+      "OrgKeyItem": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "description": "Provider name (e.g. openai, anthropic)"
+          },
+          "maskedKey": {
+            "type": "string",
+            "description": "Masked API key value (e.g. sk-...abc)"
+          },
+          "createdAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO timestamp"
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO timestamp"
+          }
+        },
+        "required": [
+          "provider",
+          "maskedKey",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ListKeysResponse": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgKeyItem"
+            }
+          }
+        },
+        "required": [
+          "keys"
+        ]
+      },
+      "UpsertKeyResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "description": "Provider name"
+          },
+          "maskedKey": {
+            "type": "string",
+            "description": "Masked key value"
+          },
+          "message": {
+            "type": "string",
+            "description": "Confirmation message"
+          }
+        },
+        "required": [
+          "provider",
+          "maskedKey",
+          "message"
+        ]
+      },
       "UpsertKeyRequest": {
         "type": "object",
         "properties": {
@@ -808,6 +1393,125 @@
           "apiKey"
         ]
       },
+      "DeleteKeyResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Confirmation message"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "ApiKeyItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "API key ID"
+          },
+          "keyPrefix": {
+            "type": "string",
+            "description": "Key prefix for identification (e.g. distrib.usr_abc...)"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "description": "Human-readable name"
+          },
+          "orgId": {
+            "type": "string",
+            "description": "Organization ID"
+          },
+          "userId": {
+            "type": "string",
+            "description": "User ID"
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "Who created the key"
+          },
+          "createdAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO timestamp"
+          },
+          "lastUsedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO timestamp of last usage"
+          }
+        },
+        "required": [
+          "id",
+          "keyPrefix",
+          "name",
+          "orgId",
+          "userId",
+          "createdBy",
+          "createdAt",
+          "lastUsedAt"
+        ]
+      },
+      "ListApiKeysResponse": {
+        "type": "object",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ApiKeyItem"
+            }
+          }
+        },
+        "required": [
+          "keys"
+        ]
+      },
+      "CreateApiKeyResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "API key ID"
+          },
+          "key": {
+            "type": "string",
+            "description": "Full API key value (only returned at creation)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Key name"
+          },
+          "orgId": {
+            "type": "string",
+            "description": "Organization ID"
+          },
+          "userId": {
+            "type": "string",
+            "description": "User ID"
+          },
+          "createdBy": {
+            "type": "string",
+            "description": "Who created the key"
+          },
+          "createdAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO timestamp"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "name",
+          "orgId",
+          "userId",
+          "createdBy",
+          "createdAt"
+        ]
+      },
       "CreateApiKeyRequest": {
         "type": "object",
         "properties": {
@@ -816,6 +1520,155 @@
             "description": "Human-readable name for the API key"
           }
         }
+      },
+      "RevokeApiKeyResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Confirmation message"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
+      "SessionApiKeyResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Key ID"
+          },
+          "key": {
+            "type": "string",
+            "description": "Full API key value"
+          },
+          "keyPrefix": {
+            "type": "string",
+            "description": "Key prefix for display"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "description": "Key name"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "keyPrefix",
+          "name"
+        ]
+      },
+      "LeadSearchResponse": {
+        "type": "object",
+        "properties": {
+          "people": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Person ID"
+                },
+                "first_name": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "First name"
+                },
+                "last_name": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Last name"
+                },
+                "email": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Email address"
+                },
+                "title": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Job title"
+                },
+                "linkedin_url": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "LinkedIn URL"
+                },
+                "organization": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "website_url": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "industry": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "estimated_num_employees": {
+                      "type": "number",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "website_url",
+                    "industry",
+                    "estimated_num_employees"
+                  ],
+                  "description": "Company info"
+                }
+              },
+              "required": [
+                "id",
+                "first_name",
+                "last_name",
+                "email",
+                "title",
+                "linkedin_url",
+                "organization"
+              ]
+            },
+            "description": "Matching people"
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "number"
+              },
+              "per_page": {
+                "type": "number"
+              },
+              "total_entries": {
+                "type": "number"
+              },
+              "total_pages": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "page",
+              "per_page",
+              "total_entries",
+              "total_pages"
+            ],
+            "description": "Pagination info"
+          }
+        },
+        "required": [
+          "people",
+          "pagination"
+        ]
       },
       "LeadSearchRequest": {
         "type": "object",
@@ -858,6 +1711,26 @@
         },
         "required": [
           "person_titles"
+        ]
+      },
+      "QualifyResponse": {
+        "type": "object",
+        "properties": {
+          "qualification": {
+            "type": "string",
+            "description": "Classification (e.g. 'interested', 'not_interested', 'out_of_office', 'unsubscribe')"
+          },
+          "confidence": {
+            "type": "number",
+            "description": "Confidence score 0-1"
+          },
+          "reasoning": {
+            "type": "string",
+            "description": "AI reasoning for the classification"
+          }
+        },
+        "required": [
+          "qualification"
         ]
       },
       "QualifyRequest": {
@@ -908,6 +1781,109 @@
           "toEmail"
         ]
       },
+      "BrandSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Brand ID"
+          },
+          "domain": {
+            "type": "string",
+            "nullable": true,
+            "description": "Brand domain"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "description": "Brand name"
+          },
+          "brandUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Brand website URL"
+          },
+          "createdAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO timestamp"
+          },
+          "updatedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO timestamp"
+          },
+          "logoUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Logo URL"
+          },
+          "elevatorPitch": {
+            "type": "string",
+            "nullable": true,
+            "description": "Short brand description"
+          }
+        },
+        "required": [
+          "id",
+          "domain",
+          "name",
+          "brandUrl",
+          "createdAt",
+          "updatedAt",
+          "logoUrl",
+          "elevatorPitch"
+        ]
+      },
+      "BrandDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/BrandSummary"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "bio": {
+                "type": "string",
+                "nullable": true,
+                "description": "Brand biography"
+              },
+              "mission": {
+                "type": "string",
+                "nullable": true,
+                "description": "Brand mission statement"
+              },
+              "location": {
+                "type": "string",
+                "nullable": true,
+                "description": "Brand location"
+              },
+              "categories": {
+                "type": "string",
+                "nullable": true,
+                "description": "Brand categories"
+              }
+            },
+            "required": [
+              "bio",
+              "mission",
+              "location",
+              "categories"
+            ]
+          }
+        ]
+      },
+      "BrandScrapeResponse": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "$ref": "#/components/schemas/BrandDetail"
+          }
+        },
+        "required": [
+          "brand"
+        ]
+      },
       "BrandScrapeRequest": {
         "type": "object",
         "properties": {
@@ -925,6 +1901,191 @@
           "url"
         ]
       },
+      "BrandByUrlResponse": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "$ref": "#/components/schemas/BrandDetail"
+          }
+        },
+        "required": [
+          "brand"
+        ]
+      },
+      "ListBrandsResponse": {
+        "type": "object",
+        "properties": {
+          "brands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandSummary"
+            }
+          }
+        },
+        "required": [
+          "brands"
+        ]
+      },
+      "GetBrandResponse": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "$ref": "#/components/schemas/BrandDetail"
+          }
+        },
+        "required": [
+          "brand"
+        ]
+      },
+      "SalesProfile": {
+        "type": "object",
+        "properties": {
+          "valueProposition": {
+            "type": "string",
+            "nullable": true,
+            "description": "Core value proposition"
+          },
+          "customerPainPoints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Target pain points"
+          },
+          "callToAction": {
+            "type": "string",
+            "nullable": true,
+            "description": "Primary CTA"
+          },
+          "companyOverview": {
+            "type": "string",
+            "nullable": true,
+            "description": "Company overview"
+          },
+          "competitors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Known competitors"
+          },
+          "productDifferentiators": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Key differentiators"
+          },
+          "targetAudience": {
+            "type": "string",
+            "nullable": true,
+            "description": "Target audience description"
+          },
+          "keyFeatures": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Key product features"
+          },
+          "extractionModel": {
+            "type": "string",
+            "nullable": true,
+            "description": "AI model used for extraction"
+          },
+          "extractedAt": {
+            "type": "string",
+            "description": "ISO timestamp of extraction"
+          },
+          "expiresAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO timestamp when profile expires"
+          }
+        },
+        "required": [
+          "valueProposition",
+          "customerPainPoints",
+          "callToAction",
+          "companyOverview",
+          "competitors",
+          "productDifferentiators",
+          "targetAudience",
+          "keyFeatures",
+          "extractionModel",
+          "extractedAt",
+          "expiresAt"
+        ]
+      },
+      "GetSalesProfileResponse": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/SalesProfile"
+          }
+        },
+        "required": [
+          "profile"
+        ]
+      },
+      "CreateSalesProfileResponse": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/SalesProfile"
+          }
+        },
+        "required": [
+          "profile"
+        ]
+      },
+      "RefreshSalesProfileResponse": {
+        "type": "object",
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/SalesProfile"
+          }
+        },
+        "required": [
+          "profile"
+        ]
+      },
+      "IcpSuggestionResponse": {
+        "type": "object",
+        "properties": {
+          "person_titles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Suggested job titles"
+          },
+          "organization_locations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Suggested locations"
+          },
+          "organization_industries": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Suggested industries"
+          },
+          "organization_num_employees_ranges": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Suggested company sizes"
+          }
+        },
+        "required": [
+          "person_titles"
+        ]
+      },
       "IcpSuggestionRequest": {
         "type": "object",
         "properties": {
@@ -938,6 +2099,35 @@
           "brandUrl"
         ]
       },
+      "UpsertBrandResponse": {
+        "type": "object",
+        "properties": {
+          "brandId": {
+            "type": "string",
+            "description": "Brand ID"
+          },
+          "domain": {
+            "type": "string",
+            "nullable": true,
+            "description": "Extracted domain"
+          },
+          "name": {
+            "type": "string",
+            "nullable": true,
+            "description": "Brand name"
+          },
+          "created": {
+            "type": "boolean",
+            "description": "True if newly created, false if already existed"
+          }
+        },
+        "required": [
+          "brandId",
+          "domain",
+          "name",
+          "created"
+        ]
+      },
       "BrandUpsertRequest": {
         "type": "object",
         "properties": {
@@ -949,6 +2139,20 @@
         },
         "required": [
           "url"
+        ]
+      },
+      "BrandRunsResponse": {
+        "type": "object",
+        "properties": {
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunCostData"
+            }
+          }
+        },
+        "required": [
+          "runs"
         ]
       },
       "EmailGatewayStatsResponse": {
@@ -1058,6 +2262,123 @@
         },
         "required": [
           "groups"
+        ]
+      },
+      "BrandScrapeResultResponse": {
+        "type": "object",
+        "properties": {
+          "brand": {
+            "$ref": "#/components/schemas/BrandDetail"
+          }
+        },
+        "required": [
+          "brand"
+        ]
+      },
+      "ListWorkflowsResponse": {
+        "type": "object",
+        "properties": {
+          "workflows": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/WorkflowMetadata"
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "requiredProviders": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "description": "Provider name"
+                          },
+                          "domain": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Provider domain"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "domain"
+                        ]
+                      },
+                      "description": "External providers required by this workflow"
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "workflows"
+        ]
+      },
+      "GetWorkflowResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WorkflowMetadata"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "dag": {
+                "type": "object",
+                "properties": {
+                  "nodes": {
+                    "type": "array",
+                    "items": {
+                      "nullable": true
+                    },
+                    "description": "DAG nodes"
+                  },
+                  "edges": {
+                    "type": "array",
+                    "items": {
+                      "nullable": true
+                    },
+                    "description": "DAG edges"
+                  }
+                },
+                "required": [
+                  "nodes",
+                  "edges"
+                ],
+                "description": "The DAG definition"
+              },
+              "requiredProviders": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Provider name"
+                    },
+                    "domain": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Provider domain"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "domain"
+                  ]
+                },
+                "description": "External providers required by this workflow"
+              }
+            },
+            "required": [
+              "dag"
+            ]
+          }
         ]
       },
       "GenerateWorkflowResponse": {
@@ -1473,6 +2794,39 @@
           "valid"
         ]
       },
+      "UpdateWorkflowResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WorkflowMetadata"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "dag": {
+                "type": "object",
+                "properties": {
+                  "nodes": {
+                    "type": "array",
+                    "items": {
+                      "nullable": true
+                    }
+                  },
+                  "edges": {
+                    "type": "array",
+                    "items": {
+                      "nullable": true
+                    }
+                  }
+                },
+                "required": [
+                  "nodes",
+                  "edges"
+                ]
+              }
+            }
+          }
+        ]
+      },
       "DAGNode": {
         "type": "object",
         "properties": {
@@ -1653,6 +3007,17 @@
           "ok"
         ]
       },
+      "ChatConfigResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
       "ChatConfigRequest": {
         "type": "object",
         "properties": {
@@ -1691,6 +3056,17 @@
           "message"
         ]
       },
+      "PlatformKeyResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
       "PlatformKeyRequest": {
         "type": "object",
         "properties": {
@@ -1708,6 +3084,17 @@
         "required": [
           "provider",
           "apiKey"
+        ]
+      },
+      "PlatformPromptResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
         ]
       },
       "PlatformPromptRequest": {
@@ -1737,6 +3124,17 @@
           "variables"
         ]
       },
+      "PlatformChatConfigResponse": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ]
+      },
       "PlatformChatConfigRequest": {
         "type": "object",
         "properties": {
@@ -1748,6 +3146,138 @@
         },
         "required": [
           "systemPrompt"
+        ]
+      },
+      "BillingAccountResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Account ID"
+          },
+          "orgId": {
+            "type": "string",
+            "description": "Organization ID"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "byok",
+              "payg"
+            ],
+            "description": "Current billing mode"
+          },
+          "balanceCents": {
+            "type": "number",
+            "description": "Current balance in cents"
+          },
+          "reloadAmountCents": {
+            "type": "number",
+            "nullable": true,
+            "description": "Auto-reload amount in cents"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO timestamp"
+          }
+        },
+        "required": [
+          "id",
+          "orgId",
+          "mode",
+          "balanceCents",
+          "reloadAmountCents",
+          "createdAt"
+        ]
+      },
+      "BalanceResponse": {
+        "type": "object",
+        "properties": {
+          "balanceCents": {
+            "type": "number",
+            "description": "Current balance in cents"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "byok",
+              "payg"
+            ],
+            "description": "Current billing mode"
+          },
+          "depleted": {
+            "type": "boolean",
+            "description": "True if balance is zero or negative"
+          }
+        },
+        "required": [
+          "balanceCents",
+          "mode",
+          "depleted"
+        ]
+      },
+      "TransactionListResponse": {
+        "type": "object",
+        "properties": {
+          "transactions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Transaction ID"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Transaction type (e.g. 'credit', 'debit')"
+                },
+                "amountCents": {
+                  "type": "number",
+                  "description": "Amount in cents"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Transaction description"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "description": "ISO timestamp"
+                }
+              },
+              "required": [
+                "id",
+                "type",
+                "amountCents",
+                "description",
+                "createdAt"
+              ]
+            }
+          }
+        },
+        "required": [
+          "transactions"
+        ]
+      },
+      "SwitchModeResponse": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "byok",
+              "payg"
+            ],
+            "description": "New billing mode"
+          },
+          "message": {
+            "type": "string",
+            "description": "Confirmation message"
+          }
+        },
+        "required": [
+          "mode",
+          "message"
         ]
       },
       "SwitchBillingModeRequest": {
@@ -1770,6 +3300,23 @@
         },
         "required": [
           "mode"
+        ]
+      },
+      "DeductCreditsResponse": {
+        "type": "object",
+        "properties": {
+          "newBalanceCents": {
+            "type": "number",
+            "description": "Balance after deduction"
+          },
+          "message": {
+            "type": "string",
+            "description": "Confirmation message"
+          }
+        },
+        "required": [
+          "newBalanceCents",
+          "message"
         ]
       },
       "DeductCreditsRequest": {
@@ -1797,6 +3344,23 @@
           "description"
         ]
       },
+      "BillingCheckoutResponse": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Stripe Checkout URL to redirect the user to"
+          },
+          "sessionId": {
+            "type": "string",
+            "description": "Stripe Checkout session ID"
+          }
+        },
+        "required": [
+          "url",
+          "sessionId"
+        ]
+      },
       "CreateCheckoutSessionRequest": {
         "type": "object",
         "properties": {
@@ -1821,6 +3385,37 @@
           "success_url",
           "cancel_url",
           "reload_amount_cents"
+        ]
+      },
+      "WebhookResponse": {
+        "type": "object",
+        "properties": {
+          "received": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "received"
+        ]
+      },
+      "SendEmailResponse": {
+        "type": "object",
+        "properties": {
+          "sent": {
+            "type": "boolean",
+            "description": "Whether the email was sent"
+          },
+          "messageId": {
+            "type": "string",
+            "description": "Postmark message ID"
+          },
+          "deduplicated": {
+            "type": "boolean",
+            "description": "True if skipped due to dedup rules"
+          }
+        },
+        "required": [
+          "sent"
         ]
       },
       "SendEmailRequest": {
@@ -1890,6 +3485,23 @@
           "stats"
         ]
       },
+      "DeployTemplatesResponse": {
+        "type": "object",
+        "properties": {
+          "deployed": {
+            "type": "number",
+            "description": "Number of templates deployed"
+          },
+          "message": {
+            "type": "string",
+            "description": "Confirmation message"
+          }
+        },
+        "required": [
+          "deployed",
+          "message"
+        ]
+      },
       "DeployEmailTemplatesRequest": {
         "type": "object",
         "properties": {
@@ -1940,6 +3552,79 @@
           "templates"
         ]
       },
+      "InternalDeployTemplatesResponse": {
+        "type": "object",
+        "properties": {
+          "deployed": {
+            "type": "number"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "deployed",
+          "message"
+        ]
+      },
+      "StripeProductResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stripe product ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Product name"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true,
+            "description": "Product description"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the product is active"
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Product metadata"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "active",
+          "metadata"
+        ]
+      },
+      "CreateStripeProductResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stripe product ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Product name"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the product is active"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "active"
+        ]
+      },
       "CreateStripeProductRequest": {
         "type": "object",
         "properties": {
@@ -1962,6 +3647,81 @@
         },
         "required": [
           "name"
+        ]
+      },
+      "ListPricesResponse": {
+        "type": "object",
+        "properties": {
+          "prices": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Stripe price ID"
+                },
+                "unitAmount": {
+                  "type": "number",
+                  "description": "Price in smallest currency unit (cents)"
+                },
+                "currency": {
+                  "type": "string",
+                  "description": "ISO 4217 currency code"
+                },
+                "recurring": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "interval": {
+                      "type": "string",
+                      "description": "Billing interval"
+                    }
+                  },
+                  "required": [
+                    "interval"
+                  ],
+                  "description": "Null for one-time prices"
+                },
+                "active": {
+                  "type": "boolean",
+                  "description": "Whether the price is active"
+                }
+              },
+              "required": [
+                "id",
+                "unitAmount",
+                "currency",
+                "recurring",
+                "active"
+              ]
+            }
+          }
+        },
+        "required": [
+          "prices"
+        ]
+      },
+      "CreateStripePriceResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stripe price ID"
+          },
+          "unitAmount": {
+            "type": "number",
+            "description": "Price in cents"
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency code"
+          }
+        },
+        "required": [
+          "id",
+          "unitAmount",
+          "currency"
         ]
       },
       "CreateStripePriceRequest": {
@@ -2009,6 +3769,72 @@
           "unitAmountCents"
         ]
       },
+      "StripeCouponResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Coupon ID"
+          },
+          "percentOff": {
+            "type": "number",
+            "nullable": true,
+            "description": "Percent discount"
+          },
+          "amountOff": {
+            "type": "number",
+            "nullable": true,
+            "description": "Fixed discount in smallest currency unit"
+          },
+          "currency": {
+            "type": "string",
+            "nullable": true,
+            "description": "Currency for amountOff"
+          },
+          "duration": {
+            "type": "string",
+            "description": "Duration type"
+          },
+          "valid": {
+            "type": "boolean",
+            "description": "Whether the coupon is still valid"
+          }
+        },
+        "required": [
+          "id",
+          "percentOff",
+          "amountOff",
+          "currency",
+          "duration",
+          "valid"
+        ]
+      },
+      "CreateStripeCouponResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Coupon ID"
+          },
+          "percentOff": {
+            "type": "number",
+            "nullable": true
+          },
+          "amountOff": {
+            "type": "number",
+            "nullable": true
+          },
+          "duration": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "percentOff",
+          "amountOff",
+          "duration"
+        ]
+      },
       "CreateStripeCouponRequest": {
         "type": "object",
         "properties": {
@@ -2050,6 +3876,23 @@
         },
         "required": [
           "duration"
+        ]
+      },
+      "StripeCheckoutResponse": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Stripe Checkout URL to redirect the customer to"
+          },
+          "sessionId": {
+            "type": "string",
+            "description": "Stripe Checkout session ID"
+          }
+        },
+        "required": [
+          "url",
+          "sessionId"
         ]
       },
       "CreateStripeCheckoutRequest": {
@@ -2640,7 +4483,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Ranked workflows with stats (proxied from workflow-service)"
+            "description": "Ranked workflows with stats (no DAG)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicRankedWorkflowResponse"
+                }
+              }
+            }
           },
           "502": {
             "description": "Upstream service error",
@@ -2676,7 +4526,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Hero records — best cost-per-open and cost-per-reply (proxied from workflow-service)"
+            "description": "Hero records — best cost-per-open and cost-per-reply",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BestWorkflowResponse"
+                }
+              }
+            }
           },
           "502": {
             "description": "Upstream service error",
@@ -2822,7 +4679,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Ranked workflows with stats (proxied from workflow-service)"
+            "description": "Ranked workflows with stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RankedWorkflowResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -2918,7 +4782,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Hero records — best cost-per-open and cost-per-reply (proxied from workflow-service)"
+            "description": "Hero records — best cost-per-open and cost-per-reply",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BestWorkflowResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -3117,7 +4988,14 @@
         ],
         "responses": {
           "200": {
-            "description": "List of campaigns"
+            "description": "List of campaigns",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignListResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -3163,7 +5041,14 @@
         },
         "responses": {
           "200": {
-            "description": "Created campaign"
+            "description": "Created campaign",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateCampaignResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation error.",
@@ -3316,7 +5201,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Campaign data"
+            "description": "Campaign data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetCampaignResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -3410,7 +5302,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Updated campaign"
+            "description": "Updated campaign",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateCampaignResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -3506,7 +5405,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Stopped campaign"
+            "description": "Stopped campaign",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StopCampaignResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -3602,7 +5508,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Campaign runs list"
+            "description": "Campaign runs list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignRunsResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -4053,7 +5966,14 @@
         ],
         "responses": {
           "200": {
-            "description": "List of provider keys (masked)"
+            "description": "List of provider keys (masked)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListKeysResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -4146,7 +6066,14 @@
         },
         "responses": {
           "200": {
-            "description": "Key stored"
+            "description": "Key stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpsertKeyResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid request",
@@ -4299,7 +6226,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Key deleted"
+            "description": "Key deleted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteKeyResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -4338,7 +6272,14 @@
         ],
         "responses": {
           "200": {
-            "description": "List of API keys"
+            "description": "List of API keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListApiKeysResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -4431,7 +6372,14 @@
         },
         "responses": {
           "200": {
-            "description": "Created API key"
+            "description": "Created API key (includes the full key — only shown once)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateApiKeyResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -4574,7 +6522,14 @@
         ],
         "responses": {
           "200": {
-            "description": "API key revoked"
+            "description": "API key revoked",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevokeApiKeyResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -4613,7 +6568,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Session API key"
+            "description": "Session API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionApiKeyResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -4708,7 +6670,14 @@
         },
         "responses": {
           "200": {
-            "description": "Lead search results"
+            "description": "Lead search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadSearchResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid request",
@@ -4813,7 +6782,14 @@
         },
         "responses": {
           "200": {
-            "description": "Qualification result"
+            "description": "Qualification result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualifyResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid request",
@@ -4918,7 +6894,14 @@
         },
         "responses": {
           "200": {
-            "description": "Scraped brand information"
+            "description": "Scraped brand information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandScrapeResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid request",
@@ -5071,7 +7054,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Cached brand information"
+            "description": "Cached brand information",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandByUrlResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Missing url param",
@@ -5120,7 +7110,14 @@
         ],
         "responses": {
           "200": {
-            "description": "List of brands"
+            "description": "List of brands",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListBrandsResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -5213,7 +7210,14 @@
         },
         "responses": {
           "200": {
-            "description": "Brand upserted, returns brandId"
+            "description": "Brand upserted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpsertBrandResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid request",
@@ -5366,7 +7370,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Brand data"
+            "description": "Brand data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetBrandResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -5462,7 +7473,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Brand sales profile"
+            "description": "Brand sales profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetSalesProfileResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -5566,7 +7584,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Sales profile created"
+            "description": "Sales profile created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateSalesProfileResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Anthropic API key not configured",
@@ -5680,7 +7705,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Sales profile refreshed"
+            "description": "Sales profile refreshed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshSalesProfileResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Anthropic API key not configured",
@@ -5738,7 +7770,14 @@
         },
         "responses": {
           "200": {
-            "description": "ICP suggestion (Apollo-compatible search params)"
+            "description": "ICP suggestion (Apollo-compatible search params)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IcpSuggestionResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid request",
@@ -5891,7 +7930,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Brand extraction runs with cost data"
+            "description": "Brand extraction runs with cost data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandRunsResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -6243,7 +8289,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Brand scrape result"
+            "description": "Brand scrape result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandScrapeResultResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -6369,7 +8422,14 @@
         ],
         "responses": {
           "200": {
-            "description": "List of workflows"
+            "description": "List of workflows",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListWorkflowsResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -6465,7 +8525,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Workflow with DAG"
+            "description": "Workflow with DAG",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetWorkflowResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -6568,7 +8635,14 @@
         },
         "responses": {
           "200": {
-            "description": "Updated workflow"
+            "description": "Updated workflow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateWorkflowResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid request",
@@ -7527,7 +9601,14 @@
         },
         "responses": {
           "200": {
-            "description": "Config registered"
+            "description": "Config registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatConfigResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -7745,7 +9826,14 @@
         },
         "responses": {
           "200": {
-            "description": "Key registered"
+            "description": "Key registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformKeyResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid request",
@@ -7850,7 +9938,14 @@
         },
         "responses": {
           "200": {
-            "description": "Prompt deployed"
+            "description": "Prompt deployed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformPromptResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid request",
@@ -7955,7 +10050,14 @@
         },
         "responses": {
           "200": {
-            "description": "Config registered"
+            "description": "Config registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlatformChatConfigResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid request",
@@ -8051,7 +10153,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Billing account data"
+            "description": "Billing account data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingAccountResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -8137,7 +10246,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Balance info"
+            "description": "Balance info",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BalanceResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -8223,7 +10339,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Transaction list"
+            "description": "Transaction list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionListResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -8318,7 +10441,14 @@
         },
         "responses": {
           "200": {
-            "description": "Mode switched"
+            "description": "Mode switched",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwitchModeResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid transition",
@@ -8423,7 +10553,14 @@
         },
         "responses": {
           "200": {
-            "description": "Credits deducted"
+            "description": "Credits deducted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeductCreditsResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -8518,7 +10655,14 @@
         },
         "responses": {
           "200": {
-            "description": "Checkout session created with URL"
+            "description": "Checkout session created with URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingCheckoutResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -8599,7 +10743,14 @@
         "description": "Stripe webhook endpoint. No authentication — Stripe validates via signature header.",
         "responses": {
           "200": {
-            "description": "Webhook processed"
+            "description": "Webhook processed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Invalid signature",
@@ -8647,7 +10798,14 @@
         },
         "responses": {
           "200": {
-            "description": "Email send results"
+            "description": "Email send results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendEmailResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation error",
@@ -8855,7 +11013,14 @@
         },
         "responses": {
           "200": {
-            "description": "Templates deployed"
+            "description": "Templates deployed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeployTemplatesResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation error",
@@ -8960,7 +11125,14 @@
         },
         "responses": {
           "200": {
-            "description": "Templates deployed"
+            "description": "Templates deployed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InternalDeployTemplatesResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation error",
@@ -9113,7 +11285,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Stripe product"
+            "description": "Stripe product",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StripeProductResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -9161,7 +11340,14 @@
         },
         "responses": {
           "200": {
-            "description": "Created/existing product"
+            "description": "Created/existing product",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateStripeProductResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation error",
@@ -9314,7 +11500,14 @@
         ],
         "responses": {
           "200": {
-            "description": "List of active prices"
+            "description": "List of active prices",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListPricesResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -9362,7 +11555,14 @@
         },
         "responses": {
           "200": {
-            "description": "Created price"
+            "description": "Created price",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateStripePriceResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation error",
@@ -9515,7 +11715,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Stripe coupon"
+            "description": "Stripe coupon",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StripeCouponResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
@@ -9563,7 +11770,14 @@
         },
         "responses": {
           "200": {
-            "description": "Created coupon"
+            "description": "Created coupon",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateStripeCouponResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation error",
@@ -9668,7 +11882,14 @@
         },
         "responses": {
           "200": {
-            "description": "Checkout session with URL"
+            "description": "Checkout session with URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StripeCheckoutResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation error",
