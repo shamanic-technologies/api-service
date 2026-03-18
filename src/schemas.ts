@@ -146,13 +146,116 @@ const bestQueryParams = z.object({
   by: z.string().optional().describe("'workflow' (default) or 'brand' — hero records by workflow or by brand"),
 });
 
+// -- Workflow response schemas (mirroring workflow-service) --
+
+const WorkflowEmailStatsSchema = z
+  .object({
+    sent: z.number().describe("Total emails sent"),
+    delivered: z.number().describe("Total emails delivered"),
+    opened: z.number().describe("Total emails opened"),
+    clicked: z.number().describe("Total link clicks"),
+    replied: z.number().describe("Total replies received"),
+    bounced: z.number().describe("Total emails bounced"),
+    unsubscribed: z.number().describe("Total unsubscribes"),
+    recipients: z.number().describe("Total unique recipients"),
+  })
+  .openapi("WorkflowEmailStats");
+
+const WorkflowMetadataSchema = z
+  .object({
+    id: z.string().describe("Workflow ID"),
+    name: z.string().describe("Workflow name"),
+    displayName: z.string().nullable().describe("Stable display name for the workflow family"),
+    createdForBrandId: z.string().nullable().describe("Brand ID that created this workflow"),
+    category: z.string().describe("Workflow category (e.g. 'sales', 'pr')"),
+    channel: z.string().describe("Communication channel (e.g. 'email')"),
+    audienceType: z.string().describe("Audience type (e.g. 'cold-outreach')"),
+    signature: z.string().describe("SHA-256 hash of the canonical DAG"),
+    signatureName: z.string().describe("Human-readable name for this DAG variant"),
+  })
+  .openapi("WorkflowMetadata");
+
+const WorkflowStatsSchema = z
+  .object({
+    totalCostInUsdCents: z.number().describe("Total cost across all completed runs"),
+    totalOutcomes: z.number().describe("Total replies or clicks (depending on objective)"),
+    costPerOutcome: z.number().nullable().describe("Cost per reply or click in USD cents, null if no outcomes"),
+    completedRuns: z.number().describe("Number of completed runs"),
+    email: z.object({
+      transactional: WorkflowEmailStatsSchema.describe("Aggregated transactional email stats"),
+      broadcast: WorkflowEmailStatsSchema.describe("Aggregated broadcast email stats"),
+    }).describe("Email engagement stats aggregated across runs"),
+  })
+  .openapi("WorkflowStats");
+
+const RankedWorkflowItemSchema = z
+  .object({
+    workflow: WorkflowMetadataSchema,
+    dag: z.object({
+      nodes: z.array(z.any()).describe("DAG nodes"),
+      edges: z.array(z.any()).describe("DAG edges"),
+    }).describe("The DAG definition"),
+    stats: WorkflowStatsSchema,
+  })
+  .openapi("RankedWorkflowItem");
+
+const PublicRankedWorkflowItemSchema = z
+  .object({
+    workflow: WorkflowMetadataSchema,
+    stats: WorkflowStatsSchema,
+  })
+  .openapi("PublicRankedWorkflowItem");
+
+const BestWorkflowRecordSchema = z
+  .object({
+    workflowId: z.string().describe("ID of the workflow holding the record"),
+    workflowName: z.string().describe("Name of the workflow"),
+    displayName: z.string().nullable().describe("Stable display name of the workflow family"),
+    createdForBrandId: z.string().nullable().describe("Brand ID that created this workflow"),
+    value: z.number().describe("The record value in USD cents"),
+  })
+  .openapi("BestWorkflowRecord");
+
 const rankedResponse = {
-  200: { description: "Ranked workflows with stats (proxied from workflow-service)" },
+  200: {
+    description: "Ranked workflows with stats",
+    content: {
+      "application/json": {
+        schema: z.object({
+          results: z.array(RankedWorkflowItemSchema).describe("Workflows ranked by performance, best first"),
+        }).openapi("RankedWorkflowResponse"),
+      },
+    },
+  },
+  502: { description: "Upstream service error", content: errorContent },
+};
+
+const publicRankedResponse = {
+  200: {
+    description: "Ranked workflows with stats (no DAG)",
+    content: {
+      "application/json": {
+        schema: z.object({
+          results: z.array(PublicRankedWorkflowItemSchema).describe("Workflows ranked by performance, best first"),
+        }).openapi("PublicRankedWorkflowResponse"),
+      },
+    },
+  },
   502: { description: "Upstream service error", content: errorContent },
 };
 
 const bestResponse = {
-  200: { description: "Hero records — best cost-per-open and cost-per-reply (proxied from workflow-service)" },
+  200: {
+    description: "Hero records — best cost-per-open and cost-per-reply",
+    content: {
+      "application/json": {
+        schema: z.object({
+          bestCostPerOpen: BestWorkflowRecordSchema.nullable().describe("Workflow with the lowest cost per email open"),
+          bestCostPerReply: BestWorkflowRecordSchema.nullable().describe("Workflow with the lowest cost per reply"),
+        }).openapi("BestWorkflowResponse"),
+      },
+    },
+  },
   502: { description: "Upstream service error", content: errorContent },
 };
 
@@ -164,7 +267,7 @@ registry.registerPath({
   summary: "Ranked workflows (public)",
   description: "Public ranked workflows by performance. Supports groupBy=section and groupBy=brand. No authentication required.",
   request: { query: rankedQueryParams },
-  responses: rankedResponse,
+  responses: publicRankedResponse,
 });
 
 registry.registerPath({
@@ -258,6 +361,62 @@ export const CreateCampaignRequestSchema = z
   })
   .openapi("CreateCampaignRequest");
 
+// -- Common schemas --
+
+const RunCostDataSchema = z
+  .object({
+    status: z.string().describe("Run status (e.g. completed, failed)"),
+    startedAt: z.string().nullable().describe("ISO timestamp when the run started"),
+    completedAt: z.string().nullable().describe("ISO timestamp when the run completed"),
+    totalCostInUsdCents: z.string().nullable().describe("Total cost in USD cents"),
+    costs: z
+      .array(
+        z.object({
+          costName: z.string(),
+          totalCostInUsdCents: z.string(),
+          actualCostInUsdCents: z.string(),
+          provisionedCostInUsdCents: z.string(),
+          quantity: z.number(),
+        }),
+      )
+      .describe("Per-cost-name breakdown"),
+    serviceName: z.string().nullable(),
+    taskName: z.string().nullable(),
+    descendantRuns: z.array(z.unknown()).describe("Child runs"),
+  })
+  .openapi("RunCostData");
+
+// -- Response schemas --
+
+const CampaignSchema = z
+  .object({
+    id: z.string().describe("Campaign ID"),
+    orgId: z.string().describe("Organization ID"),
+    createdByUserId: z.string().nullable().describe("User who created the campaign"),
+    name: z.string().describe("Campaign name"),
+    workflowName: z.string().describe("Workflow name used for execution"),
+    brandUrl: z.string().nullable().describe("Brand website URL"),
+    brandId: z.string().nullable().describe("Brand ID"),
+    targetAudience: z.string().nullable().describe("Target audience description"),
+    targetOutcome: z.string().nullable().describe("Desired outcome"),
+    valueForTarget: z.string().nullable().describe("Value proposition for the target"),
+    maxBudgetDailyUsd: z.string().nullable().describe("Max daily budget in USD"),
+    maxBudgetWeeklyUsd: z.string().nullable().describe("Max weekly budget in USD"),
+    maxBudgetMonthlyUsd: z.string().nullable().describe("Max monthly budget in USD"),
+    maxBudgetTotalUsd: z.string().nullable().describe("Max total budget in USD"),
+    maxLeads: z.number().nullable().describe("Maximum number of leads"),
+    startDate: z.string().nullable().describe("Campaign start date"),
+    endDate: z.string().nullable().describe("Campaign end date"),
+    status: z.string().describe("Campaign status (e.g. 'active', 'stopped')"),
+    toResumeAt: z.string().nullable().describe("Scheduled resume time"),
+    notifyFrequency: z.string().nullable().describe("Notification frequency"),
+    notifyChannel: z.string().nullable().describe("Notification channel"),
+    notifyDestination: z.string().nullable().describe("Notification destination"),
+    createdAt: z.string().describe("ISO timestamp"),
+    updatedAt: z.string().describe("ISO timestamp"),
+  })
+  .openapi("Campaign");
+
 // -- Paths --
 
 registry.registerPath({
@@ -275,7 +434,16 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "List of campaigns" },
+    200: {
+      description: "List of campaigns",
+      content: {
+        "application/json": {
+          schema: z.object({
+            campaigns: z.array(CampaignSchema),
+          }).openapi("CampaignListResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -295,7 +463,14 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Created campaign" },
+    200: {
+      description: "Created campaign",
+      content: {
+        "application/json": {
+          schema: z.object({ campaign: CampaignSchema }).openapi("CreateCampaignResponse"),
+        },
+      },
+    },
     400: {
       description: "Validation error.",
       content: errorContent,
@@ -314,7 +489,14 @@ registry.registerPath({
   security: authed,
   request: { params: CampaignIdParam },
   responses: {
-    200: { description: "Campaign data" },
+    200: {
+      description: "Campaign data",
+      content: {
+        "application/json": {
+          schema: z.object({ campaign: CampaignSchema }).openapi("GetCampaignResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -329,7 +511,14 @@ registry.registerPath({
   security: authed,
   request: { params: CampaignIdParam },
   responses: {
-    200: { description: "Updated campaign" },
+    200: {
+      description: "Updated campaign",
+      content: {
+        "application/json": {
+          schema: z.object({ campaign: CampaignSchema }).openapi("UpdateCampaignResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -344,7 +533,14 @@ registry.registerPath({
   security: authed,
   request: { params: CampaignIdParam },
   responses: {
-    200: { description: "Stopped campaign" },
+    200: {
+      description: "Stopped campaign",
+      content: {
+        "application/json": {
+          schema: z.object({ campaign: CampaignSchema }).openapi("StopCampaignResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -359,7 +555,16 @@ registry.registerPath({
   security: authed,
   request: { params: CampaignIdParam },
   responses: {
-    200: { description: "Campaign runs list" },
+    200: {
+      description: "Campaign runs list",
+      content: {
+        "application/json": {
+          schema: z.object({
+            runs: z.array(RunCostDataSchema),
+          }).openapi("CampaignRunsResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -480,28 +685,7 @@ registry.registerPath({
   },
 });
 
-const RunCostDataSchema = z
-  .object({
-    status: z.string().describe("Run status (e.g. completed, failed)"),
-    startedAt: z.string().nullable().describe("ISO timestamp when the run started"),
-    completedAt: z.string().nullable().describe("ISO timestamp when the run completed"),
-    totalCostInUsdCents: z.string().nullable().describe("Total cost in USD cents"),
-    costs: z
-      .array(
-        z.object({
-          costName: z.string(),
-          totalCostInUsdCents: z.string(),
-          actualCostInUsdCents: z.string(),
-          provisionedCostInUsdCents: z.string(),
-          quantity: z.number(),
-        }),
-      )
-      .describe("Per-cost-name breakdown"),
-    serviceName: z.string().nullable(),
-    taskName: z.string().nullable(),
-    descendantRuns: z.array(z.unknown()).describe("Child runs"),
-  })
-  .openapi("RunCostData");
+// RunCostDataSchema is defined above (before campaigns section)
 
 registry.registerPath({
   method: "get",
@@ -607,6 +791,15 @@ export const UpsertKeyRequestSchema = z
   })
   .openapi("UpsertKeyRequest");
 
+const OrgKeyItemSchema = z
+  .object({
+    provider: z.string().describe("Provider name (e.g. openai, anthropic)"),
+    maskedKey: z.string().describe("Masked API key value (e.g. sk-...abc)"),
+    createdAt: z.string().nullable().describe("ISO timestamp"),
+    updatedAt: z.string().nullable().describe("ISO timestamp"),
+  })
+  .openapi("OrgKeyItem");
+
 registry.registerPath({
   method: "get",
   path: "/v1/keys",
@@ -616,7 +809,16 @@ registry.registerPath({
     "List provider keys for the organization.",
   security: authed,
   responses: {
-    200: { description: "List of provider keys (masked)" },
+    200: {
+      description: "List of provider keys (masked)",
+      content: {
+        "application/json": {
+          schema: z.object({
+            keys: z.array(OrgKeyItemSchema),
+          }).openapi("ListKeysResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -636,7 +838,18 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Key stored" },
+    200: {
+      description: "Key stored",
+      content: {
+        "application/json": {
+          schema: z.object({
+            provider: z.string().describe("Provider name"),
+            maskedKey: z.string().describe("Masked key value"),
+            message: z.string().describe("Confirmation message"),
+          }).openapi("UpsertKeyResponse"),
+        },
+      },
+    },
     400: { description: "Invalid request", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -656,7 +869,16 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "Key deleted" },
+    200: {
+      description: "Key deleted",
+      content: {
+        "application/json": {
+          schema: z.object({
+            message: z.string().describe("Confirmation message"),
+          }).openapi("DeleteKeyResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -675,6 +897,19 @@ export const CreateApiKeyRequestSchema = z
   })
   .openapi("CreateApiKeyRequest");
 
+const ApiKeyItemSchema = z
+  .object({
+    id: z.string().describe("API key ID"),
+    keyPrefix: z.string().describe("Key prefix for identification (e.g. distrib.usr_abc...)"),
+    name: z.string().nullable().describe("Human-readable name"),
+    orgId: z.string().describe("Organization ID"),
+    userId: z.string().describe("User ID"),
+    createdBy: z.string().describe("Who created the key"),
+    createdAt: z.string().nullable().describe("ISO timestamp"),
+    lastUsedAt: z.string().nullable().describe("ISO timestamp of last usage"),
+  })
+  .openapi("ApiKeyItem");
+
 registry.registerPath({
   method: "get",
   path: "/v1/api-keys",
@@ -683,7 +918,16 @@ registry.registerPath({
   description: "List all API keys for the organization",
   security: authed,
   responses: {
-    200: { description: "List of API keys" },
+    200: {
+      description: "List of API keys",
+      content: {
+        "application/json": {
+          schema: z.object({
+            keys: z.array(ApiKeyItemSchema),
+          }).openapi("ListApiKeysResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -704,7 +948,22 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Created API key" },
+    200: {
+      description: "Created API key (includes the full key — only shown once)",
+      content: {
+        "application/json": {
+          schema: z.object({
+            id: z.string().describe("API key ID"),
+            key: z.string().describe("Full API key value (only returned at creation)"),
+            name: z.string().describe("Key name"),
+            orgId: z.string().describe("Organization ID"),
+            userId: z.string().describe("User ID"),
+            createdBy: z.string().describe("Who created the key"),
+            createdAt: z.string().nullable().describe("ISO timestamp"),
+          }).openapi("CreateApiKeyResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -721,7 +980,16 @@ registry.registerPath({
     params: z.object({ id: z.string().describe("API key ID") }),
   },
   responses: {
-    200: { description: "API key revoked" },
+    200: {
+      description: "API key revoked",
+      content: {
+        "application/json": {
+          schema: z.object({
+            message: z.string().describe("Confirmation message"),
+          }).openapi("RevokeApiKeyResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -736,7 +1004,19 @@ registry.registerPath({
     "Get or create a short-lived session API key for Foxy chat integration",
   security: authed,
   responses: {
-    200: { description: "Session API key" },
+    200: {
+      description: "Session API key",
+      content: {
+        "application/json": {
+          schema: z.object({
+            id: z.string().describe("Key ID"),
+            key: z.string().describe("Full API key value"),
+            keyPrefix: z.string().describe("Key prefix for display"),
+            name: z.string().nullable().describe("Key name"),
+          }).openapi("SessionApiKeyResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -788,7 +1068,35 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Lead search results" },
+    200: {
+      description: "Lead search results",
+      content: {
+        "application/json": {
+          schema: z.object({
+            people: z.array(z.object({
+              id: z.string().describe("Person ID"),
+              first_name: z.string().nullable().describe("First name"),
+              last_name: z.string().nullable().describe("Last name"),
+              email: z.string().nullable().describe("Email address"),
+              title: z.string().nullable().describe("Job title"),
+              linkedin_url: z.string().nullable().describe("LinkedIn URL"),
+              organization: z.object({
+                name: z.string().nullable(),
+                website_url: z.string().nullable(),
+                industry: z.string().nullable(),
+                estimated_num_employees: z.number().nullable(),
+              }).nullable().describe("Company info"),
+            })).describe("Matching people"),
+            pagination: z.object({
+              page: z.number(),
+              per_page: z.number(),
+              total_entries: z.number(),
+              total_pages: z.number(),
+            }).describe("Pagination info"),
+          }).openapi("LeadSearchResponse"),
+        },
+      },
+    },
     400: { description: "Invalid request", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -844,7 +1152,18 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Qualification result" },
+    200: {
+      description: "Qualification result",
+      content: {
+        "application/json": {
+          schema: z.object({
+            qualification: z.string().describe("Classification (e.g. 'interested', 'not_interested', 'out_of_office', 'unsubscribe')"),
+            confidence: z.number().optional().describe("Confidence score 0-1"),
+            reasoning: z.string().optional().describe("AI reasoning for the classification"),
+          }).openapi("QualifyResponse"),
+        },
+      },
+    },
     400: { description: "Invalid request", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -877,6 +1196,42 @@ export const IcpSuggestionRequestSchema = z
   })
   .openapi("IcpSuggestionRequest");
 
+const BrandSummarySchema = z
+  .object({
+    id: z.string().describe("Brand ID"),
+    domain: z.string().nullable().describe("Brand domain"),
+    name: z.string().nullable().describe("Brand name"),
+    brandUrl: z.string().nullable().describe("Brand website URL"),
+    createdAt: z.string().nullable().describe("ISO timestamp"),
+    updatedAt: z.string().nullable().describe("ISO timestamp"),
+    logoUrl: z.string().nullable().describe("Logo URL"),
+    elevatorPitch: z.string().nullable().describe("Short brand description"),
+  })
+  .openapi("BrandSummary");
+
+const BrandDetailSchema = BrandSummarySchema.extend({
+  bio: z.string().nullable().describe("Brand biography"),
+  mission: z.string().nullable().describe("Brand mission statement"),
+  location: z.string().nullable().describe("Brand location"),
+  categories: z.string().nullable().describe("Brand categories"),
+}).openapi("BrandDetail");
+
+const SalesProfileSchema = z
+  .object({
+    valueProposition: z.string().nullable().describe("Core value proposition"),
+    customerPainPoints: z.array(z.string()).describe("Target pain points"),
+    callToAction: z.string().nullable().describe("Primary CTA"),
+    companyOverview: z.string().nullable().describe("Company overview"),
+    competitors: z.array(z.string()).describe("Known competitors"),
+    productDifferentiators: z.array(z.string()).describe("Key differentiators"),
+    targetAudience: z.string().nullable().describe("Target audience description"),
+    keyFeatures: z.array(z.string()).describe("Key product features"),
+    extractionModel: z.string().nullable().describe("AI model used for extraction"),
+    extractedAt: z.string().describe("ISO timestamp of extraction"),
+    expiresAt: z.string().nullable().describe("ISO timestamp when profile expires"),
+  })
+  .openapi("SalesProfile");
+
 registry.registerPath({
   method: "post",
   path: "/v1/brand/scrape",
@@ -891,7 +1246,14 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Scraped brand information" },
+    200: {
+      description: "Scraped brand information",
+      content: {
+        "application/json": {
+          schema: z.object({ brand: BrandDetailSchema }).openapi("BrandScrapeResponse"),
+        },
+      },
+    },
     400: { description: "Invalid request", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -911,7 +1273,14 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "Cached brand information" },
+    200: {
+      description: "Cached brand information",
+      content: {
+        "application/json": {
+          schema: z.object({ brand: BrandDetailSchema }).openapi("BrandByUrlResponse"),
+        },
+      },
+    },
     400: { description: "Missing url param", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -926,7 +1295,16 @@ registry.registerPath({
   description: "Get all brands for the organization",
   security: authed,
   responses: {
-    200: { description: "List of brands" },
+    200: {
+      description: "List of brands",
+      content: {
+        "application/json": {
+          schema: z.object({
+            brands: z.array(BrandSummarySchema),
+          }).openapi("ListBrandsResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -941,7 +1319,14 @@ registry.registerPath({
   security: authed,
   request: { params: BrandIdParam },
   responses: {
-    200: { description: "Brand data" },
+    200: {
+      description: "Brand data",
+      content: {
+        "application/json": {
+          schema: z.object({ brand: BrandDetailSchema }).openapi("GetBrandResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -957,7 +1342,14 @@ registry.registerPath({
   security: authed,
   request: { params: BrandIdParam },
   responses: {
-    200: { description: "Brand sales profile" },
+    200: {
+      description: "Brand sales profile",
+      content: {
+        "application/json": {
+          schema: z.object({ profile: SalesProfileSchema }).openapi("GetSalesProfileResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Sales profile not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -974,7 +1366,14 @@ registry.registerPath({
   security: authed,
   request: { params: BrandIdParam },
   responses: {
-    200: { description: "Sales profile created" },
+    200: {
+      description: "Sales profile created",
+      content: {
+        "application/json": {
+          schema: z.object({ profile: SalesProfileSchema }).openapi("CreateSalesProfileResponse"),
+        },
+      },
+    },
     400: { description: "Anthropic API key not configured", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     409: { description: "Sales profile already exists", content: errorContent },
@@ -992,7 +1391,14 @@ registry.registerPath({
   security: authed,
   request: { params: BrandIdParam },
   responses: {
-    200: { description: "Sales profile refreshed" },
+    200: {
+      description: "Sales profile refreshed",
+      content: {
+        "application/json": {
+          schema: z.object({ profile: SalesProfileSchema }).openapi("RefreshSalesProfileResponse"),
+        },
+      },
+    },
     400: { description: "Anthropic API key not configured", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -1015,7 +1421,19 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "ICP suggestion (Apollo-compatible search params)" },
+    200: {
+      description: "ICP suggestion (Apollo-compatible search params)",
+      content: {
+        "application/json": {
+          schema: z.object({
+            person_titles: z.array(z.string()).describe("Suggested job titles"),
+            organization_locations: z.array(z.string()).optional().describe("Suggested locations"),
+            organization_industries: z.array(z.string()).optional().describe("Suggested industries"),
+            organization_num_employees_ranges: z.array(z.string()).optional().describe("Suggested company sizes"),
+          }).openapi("IcpSuggestionResponse"),
+        },
+      },
+    },
     400: { description: "Invalid request", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -1038,7 +1456,19 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Brand upserted, returns brandId" },
+    200: {
+      description: "Brand upserted",
+      content: {
+        "application/json": {
+          schema: z.object({
+            brandId: z.string().describe("Brand ID"),
+            domain: z.string().nullable().describe("Extracted domain"),
+            name: z.string().nullable().describe("Brand name"),
+            created: z.boolean().describe("True if newly created, false if already existed"),
+          }).openapi("UpsertBrandResponse"),
+        },
+      },
+    },
     400: { description: "Invalid request", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -1055,7 +1485,16 @@ registry.registerPath({
   security: authed,
   request: { params: BrandIdParam },
   responses: {
-    200: { description: "Brand extraction runs with cost data" },
+    200: {
+      description: "Brand extraction runs with cost data",
+      content: {
+        "application/json": {
+          schema: z.object({
+            runs: z.array(RunCostDataSchema),
+          }).openapi("BrandRunsResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -1166,7 +1605,14 @@ registry.registerPath({
     params: z.object({ id: z.string().describe("Scrape ID") }),
   },
   responses: {
-    200: { description: "Brand scrape result" },
+    200: {
+      description: "Brand scrape result",
+      content: {
+        "application/json": {
+          schema: z.object({ brand: BrandDetailSchema }).openapi("BrandScrapeResultResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -1193,7 +1639,21 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "List of workflows" },
+    200: {
+      description: "List of workflows",
+      content: {
+        "application/json": {
+          schema: z.object({
+            workflows: z.array(WorkflowMetadataSchema.extend({
+              requiredProviders: z.array(z.object({
+                name: z.string().describe("Provider name"),
+                domain: z.string().nullable().describe("Provider domain"),
+              })).optional().describe("External providers required by this workflow"),
+            })),
+          }).openapi("ListWorkflowsResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -1210,7 +1670,23 @@ registry.registerPath({
     params: z.object({ id: z.string().describe("Workflow ID") }),
   },
   responses: {
-    200: { description: "Workflow with DAG" },
+    200: {
+      description: "Workflow with DAG",
+      content: {
+        "application/json": {
+          schema: WorkflowMetadataSchema.extend({
+            dag: z.object({
+              nodes: z.array(z.any()).describe("DAG nodes"),
+              edges: z.array(z.any()).describe("DAG edges"),
+            }).describe("The DAG definition"),
+            requiredProviders: z.array(z.object({
+              name: z.string().describe("Provider name"),
+              domain: z.string().nullable().describe("Provider domain"),
+            })).optional().describe("External providers required by this workflow"),
+          }).openapi("GetWorkflowResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -1529,7 +2005,19 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Updated workflow" },
+    200: {
+      description: "Updated workflow",
+      content: {
+        "application/json": {
+          schema: WorkflowMetadataSchema.extend({
+            dag: z.object({
+              nodes: z.array(z.any()),
+              edges: z.array(z.any()),
+            }).optional(),
+          }).openapi("UpdateWorkflowResponse"),
+        },
+      },
+    },
     400: { description: "Invalid request", content: errorContent },
     404: { description: "Workflow not found", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
@@ -1805,7 +2293,14 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Config registered" },
+    200: {
+      description: "Config registered",
+      content: {
+        "application/json": {
+          schema: z.object({ message: z.string() }).openapi("ChatConfigResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "App key required", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -1894,7 +2389,14 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Key registered" },
+    200: {
+      description: "Key registered",
+      content: {
+        "application/json": {
+          schema: z.object({ message: z.string() }).openapi("PlatformKeyResponse"),
+        },
+      },
+    },
     400: { description: "Invalid request", content: errorContent },
     401: { description: "Invalid or missing platform API key", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -1929,7 +2431,14 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Prompt deployed" },
+    200: {
+      description: "Prompt deployed",
+      content: {
+        "application/json": {
+          schema: z.object({ message: z.string() }).openapi("PlatformPromptResponse"),
+        },
+      },
+    },
     400: { description: "Invalid request", content: errorContent },
     401: { description: "Invalid or missing platform API key", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -1962,7 +2471,14 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Config registered" },
+    200: {
+      description: "Config registered",
+      content: {
+        "application/json": {
+          schema: z.object({ message: z.string() }).openapi("PlatformChatConfigResponse"),
+        },
+      },
+    },
     400: { description: "Invalid request", content: errorContent },
     401: { description: "Invalid or missing platform API key", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -2013,7 +2529,21 @@ registry.registerPath({
   description: "Get or create the billing account for the organization",
   security: authed,
   responses: {
-    200: { description: "Billing account data" },
+    200: {
+      description: "Billing account data",
+      content: {
+        "application/json": {
+          schema: z.object({
+            id: z.string().describe("Account ID"),
+            orgId: z.string().describe("Organization ID"),
+            mode: z.enum(["byok", "payg"]).describe("Current billing mode"),
+            balanceCents: z.number().describe("Current balance in cents"),
+            reloadAmountCents: z.number().nullable().describe("Auto-reload amount in cents"),
+            createdAt: z.string().describe("ISO timestamp"),
+          }).openapi("BillingAccountResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -2028,7 +2558,18 @@ registry.registerPath({
     "Quick check of current balance, billing mode, and depletion status",
   security: authed,
   responses: {
-    200: { description: "Balance info" },
+    200: {
+      description: "Balance info",
+      content: {
+        "application/json": {
+          schema: z.object({
+            balanceCents: z.number().describe("Current balance in cents"),
+            mode: z.enum(["byok", "payg"]).describe("Current billing mode"),
+            depleted: z.boolean().describe("True if balance is zero or negative"),
+          }).openapi("BalanceResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -2042,7 +2583,22 @@ registry.registerPath({
   description: "List billing transactions for the organization",
   security: authed,
   responses: {
-    200: { description: "Transaction list" },
+    200: {
+      description: "Transaction list",
+      content: {
+        "application/json": {
+          schema: z.object({
+            transactions: z.array(z.object({
+              id: z.string().describe("Transaction ID"),
+              type: z.string().describe("Transaction type (e.g. 'credit', 'debit')"),
+              amountCents: z.number().describe("Amount in cents"),
+              description: z.string().describe("Transaction description"),
+              createdAt: z.string().describe("ISO timestamp"),
+            })),
+          }).openapi("TransactionListResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -2063,7 +2619,17 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Mode switched" },
+    200: {
+      description: "Mode switched",
+      content: {
+        "application/json": {
+          schema: z.object({
+            mode: z.enum(["byok", "payg"]).describe("New billing mode"),
+            message: z.string().describe("Confirmation message"),
+          }).openapi("SwitchModeResponse"),
+        },
+      },
+    },
     400: { description: "Invalid transition", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -2085,7 +2651,17 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Credits deducted" },
+    200: {
+      description: "Credits deducted",
+      content: {
+        "application/json": {
+          schema: z.object({
+            newBalanceCents: z.number().describe("Balance after deduction"),
+            message: z.string().describe("Confirmation message"),
+          }).openapi("DeductCreditsResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -2106,7 +2682,17 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Checkout session created with URL" },
+    200: {
+      description: "Checkout session created with URL",
+      content: {
+        "application/json": {
+          schema: z.object({
+            url: z.string().describe("Stripe Checkout URL to redirect the user to"),
+            sessionId: z.string().describe("Stripe Checkout session ID"),
+          }).openapi("BillingCheckoutResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -2120,7 +2706,14 @@ registry.registerPath({
   description:
     "Stripe webhook endpoint. No authentication — Stripe validates via signature header.",
   responses: {
-    200: { description: "Webhook processed" },
+    200: {
+      description: "Webhook processed",
+      content: {
+        "application/json": {
+          schema: z.object({ received: z.boolean() }).openapi("WebhookResponse"),
+        },
+      },
+    },
     400: { description: "Invalid signature", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -2177,7 +2770,18 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Email send results" },
+    200: {
+      description: "Email send results",
+      content: {
+        "application/json": {
+          schema: z.object({
+            sent: z.boolean().describe("Whether the email was sent"),
+            messageId: z.string().optional().describe("Postmark message ID"),
+            deduplicated: z.boolean().optional().describe("True if skipped due to dedup rules"),
+          }).openapi("SendEmailResponse"),
+        },
+      },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -2233,7 +2837,17 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Templates deployed" },
+    200: {
+      description: "Templates deployed",
+      content: {
+        "application/json": {
+          schema: z.object({
+            deployed: z.number().describe("Number of templates deployed"),
+            message: z.string().describe("Confirmation message"),
+          }).openapi("DeployTemplatesResponse"),
+        },
+      },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -2258,7 +2872,17 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Templates deployed" },
+    200: {
+      description: "Templates deployed",
+      content: {
+        "application/json": {
+          schema: z.object({
+            deployed: z.number(),
+            message: z.string(),
+          }).openapi("InternalDeployTemplatesResponse"),
+        },
+      },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -2345,7 +2969,20 @@ registry.registerPath({
     params: z.object({ productId: z.string().describe("Stripe product ID") }),
   },
   responses: {
-    200: { description: "Stripe product" },
+    200: {
+      description: "Stripe product",
+      content: {
+        "application/json": {
+          schema: z.object({
+            id: z.string().describe("Stripe product ID"),
+            name: z.string().describe("Product name"),
+            description: z.string().nullable().describe("Product description"),
+            active: z.boolean().describe("Whether the product is active"),
+            metadata: z.record(z.string()).describe("Product metadata"),
+          }).openapi("StripeProductResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -2364,7 +3001,18 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Created/existing product" },
+    200: {
+      description: "Created/existing product",
+      content: {
+        "application/json": {
+          schema: z.object({
+            id: z.string().describe("Stripe product ID"),
+            name: z.string().describe("Product name"),
+            active: z.boolean().describe("Whether the product is active"),
+          }).openapi("CreateStripeProductResponse"),
+        },
+      },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -2382,7 +3030,24 @@ registry.registerPath({
     params: z.object({ productId: z.string().describe("Stripe product ID") }),
   },
   responses: {
-    200: { description: "List of active prices" },
+    200: {
+      description: "List of active prices",
+      content: {
+        "application/json": {
+          schema: z.object({
+            prices: z.array(z.object({
+              id: z.string().describe("Stripe price ID"),
+              unitAmount: z.number().describe("Price in smallest currency unit (cents)"),
+              currency: z.string().describe("ISO 4217 currency code"),
+              recurring: z.object({
+                interval: z.string().describe("Billing interval"),
+              }).nullable().describe("Null for one-time prices"),
+              active: z.boolean().describe("Whether the price is active"),
+            })),
+          }).openapi("ListPricesResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -2401,7 +3066,18 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Created price" },
+    200: {
+      description: "Created price",
+      content: {
+        "application/json": {
+          schema: z.object({
+            id: z.string().describe("Stripe price ID"),
+            unitAmount: z.number().describe("Price in cents"),
+            currency: z.string().describe("Currency code"),
+          }).openapi("CreateStripePriceResponse"),
+        },
+      },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -2419,7 +3095,21 @@ registry.registerPath({
     params: z.object({ couponId: z.string().describe("Stripe coupon ID") }),
   },
   responses: {
-    200: { description: "Stripe coupon" },
+    200: {
+      description: "Stripe coupon",
+      content: {
+        "application/json": {
+          schema: z.object({
+            id: z.string().describe("Coupon ID"),
+            percentOff: z.number().nullable().describe("Percent discount"),
+            amountOff: z.number().nullable().describe("Fixed discount in smallest currency unit"),
+            currency: z.string().nullable().describe("Currency for amountOff"),
+            duration: z.string().describe("Duration type"),
+            valid: z.boolean().describe("Whether the coupon is still valid"),
+          }).openapi("StripeCouponResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -2438,7 +3128,19 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Created coupon" },
+    200: {
+      description: "Created coupon",
+      content: {
+        "application/json": {
+          schema: z.object({
+            id: z.string().describe("Coupon ID"),
+            percentOff: z.number().nullable(),
+            amountOff: z.number().nullable(),
+            duration: z.string(),
+          }).openapi("CreateStripeCouponResponse"),
+        },
+      },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -2459,7 +3161,17 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Checkout session with URL" },
+    200: {
+      description: "Checkout session with URL",
+      content: {
+        "application/json": {
+          schema: z.object({
+            url: z.string().describe("Stripe Checkout URL to redirect the customer to"),
+            sessionId: z.string().describe("Stripe Checkout session ID"),
+          }).openapi("StripeCheckoutResponse"),
+        },
+      },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
