@@ -249,6 +249,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
     for (const g of leadGroups?.groups ?? []) {
       const s = ensure(g.key);
       s.leadsServed = g.served;
+      s.leadsContacted = g.contacted ?? 0;
       s.leadsBuffered = g.buffered;
       s.leadsSkipped = g.skipped;
     }
@@ -270,7 +271,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
 
     // Fill defaults for any missing fields
     const defaults = {
-      leadsServed: 0, leadsBuffered: 0, leadsSkipped: 0,
+      leadsServed: 0, leadsContacted: 0, leadsBuffered: 0, leadsSkipped: 0,
       emailsGenerated: 0,
       emailsContacted: 0, emailsSent: 0, emailsDelivered: 0, emailsOpened: 0, emailsClicked: 0,
       emailsReplied: 0, emailsBounced: 0,
@@ -443,15 +444,17 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
 
     const stats: Record<string, any> = { campaignId: id };
 
-    // Lead stats from lead-service: { served, buffered, skipped, apollo }
+    // Lead stats from lead-service: { served, contacted, buffered, skipped, apollo }
     if (leadStats) {
-      const ls = leadStats as { served: number; buffered: number; skipped: number; apollo?: { enrichedLeadsCount: number; searchCount: number; fetchedPeopleCount: number; totalMatchingPeople: number } };
+      const ls = leadStats as { served: number; contacted: number; buffered: number; skipped: number; apollo?: { enrichedLeadsCount: number; searchCount: number; fetchedPeopleCount: number; totalMatchingPeople: number } };
       stats.leadsServed = ls.served;
+      stats.leadsContacted = ls.contacted ?? 0;
       stats.leadsBuffered = ls.buffered;
       stats.leadsSkipped = ls.skipped;
       if (ls.apollo) stats.apollo = ls.apollo;
     } else {
       stats.leadsServed = 0;
+      stats.leadsContacted = 0;
       stats.leadsBuffered = 0;
       stats.leadsSkipped = 0;
     }
