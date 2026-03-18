@@ -2075,16 +2075,6 @@
             "type": "string",
             "minLength": 1,
             "description": "System prompt for the AI assistant"
-          },
-          "mcpServerUrl": {
-            "type": "string",
-            "format": "uri",
-            "description": "MCP server URL for tool calling"
-          },
-          "mcpKeyName": {
-            "type": "string",
-            "minLength": 1,
-            "description": "MCP key name for auth resolution"
           }
         },
         "required": [
@@ -2169,16 +2159,6 @@
             "type": "string",
             "minLength": 1,
             "description": "System prompt for the AI assistant"
-          },
-          "mcpServerUrl": {
-            "type": "string",
-            "format": "uri",
-            "description": "MCP server URL for tool calling"
-          },
-          "mcpKeyName": {
-            "type": "string",
-            "minLength": 1,
-            "description": "MCP key name for auth resolution"
           }
         },
         "required": [
@@ -7787,7 +7767,7 @@
           "Chat"
         ],
         "summary": "Register chat app config",
-        "description": "Register or update app configuration for chat (system prompt, MCP server). Requires app key authentication.",
+        "description": "Register or update app configuration for chat (system prompt). Requires app key authentication.",
         "security": [
           {
             "bearerAuth": []
@@ -8215,7 +8195,7 @@
           "Chat"
         ],
         "summary": "Deploy platform-level chat config",
-        "description": "Register or update the global chat configuration (system prompt, MCP server). Platform-level — no org/user identity required. Used by the dashboard at cold start. Idempotent (safe to call on every boot).",
+        "description": "Register or update the global chat configuration (system prompt). Platform-level — no org/user identity required. Used by the dashboard at cold start. Idempotent (safe to call on every boot).",
         "security": [
           {
             "apiKeyAuth": []

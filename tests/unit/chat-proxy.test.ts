@@ -94,8 +94,8 @@ describe("Chat OpenAPI schemas", () => {
   it("should define ChatConfigRequestSchema", () => {
     expect(schemaContent).toContain("ChatConfigRequestSchema");
     expect(schemaContent).toContain("systemPrompt");
-    expect(schemaContent).toContain("mcpServerUrl");
-    expect(schemaContent).toContain("mcpKeyName");
+    expect(schemaContent).not.toContain("mcpServerUrl");
+    expect(schemaContent).not.toContain("mcpKeyName");
   });
 
   it("should define ChatMessageRequestSchema with session lifecycle docs", () => {

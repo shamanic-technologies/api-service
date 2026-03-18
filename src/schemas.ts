@@ -1756,8 +1756,6 @@ registry.registerPath({
 export const ChatConfigRequestSchema = z
   .object({
     systemPrompt: z.string().min(1).describe("System prompt for the AI assistant"),
-    mcpServerUrl: z.string().url().optional().describe("MCP server URL for tool calling"),
-    mcpKeyName: z.string().min(1).optional().describe("MCP key name for auth resolution"),
   })
   .openapi("ChatConfigRequest");
 
@@ -1878,7 +1876,7 @@ registry.registerPath({
   tags: ["Chat"],
   summary: "Register chat app config",
   description:
-    "Register or update app configuration for chat (system prompt, MCP server). Requires app key authentication.",
+    "Register or update app configuration for chat (system prompt). Requires app key authentication.",
   security: authed,
   request: {
     body: {
@@ -2024,8 +2022,6 @@ registry.registerPath({
 export const PlatformChatConfigRequestSchema = z
   .object({
     systemPrompt: z.string().min(1).describe("System prompt for the AI assistant"),
-    mcpServerUrl: z.string().url().optional().describe("MCP server URL for tool calling"),
-    mcpKeyName: z.string().min(1).optional().describe("MCP key name for auth resolution"),
   })
   .openapi("PlatformChatConfigRequest");
 
@@ -2035,7 +2031,7 @@ registry.registerPath({
   tags: ["Chat"],
   summary: "Deploy platform-level chat config",
   description:
-    "Register or update the global chat configuration (system prompt, MCP server). " +
+    "Register or update the global chat configuration (system prompt). " +
     "Platform-level — no org/user identity required. " +
     "Used by the dashboard at cold start. Idempotent (safe to call on every boot).",
   security: platformAuth,
