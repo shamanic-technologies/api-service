@@ -81,7 +81,7 @@ describe("PUT /platform-chat/config", () => {
     expect(call!.headers!["x-run-id"]).toBeUndefined();
   });
 
-  it("should forward optional mcpServerUrl and mcpKeyName", async () => {
+  it("should strip removed mcpServerUrl and mcpKeyName fields", async () => {
     const res = await request(app)
       .put("/platform-chat/config")
       .set("X-API-Key", VALID_API_KEY)
@@ -96,9 +96,9 @@ describe("PUT /platform-chat/config", () => {
     const call = fetchCalls.find((c) => c.url.includes("/platform-config"));
     expect(call!.body).toMatchObject({
       systemPrompt: "You are a helpful assistant.",
-      mcpServerUrl: "https://mcp.example.com",
-      mcpKeyName: "dashboard-mcp",
     });
+    expect(call!.body).not.toHaveProperty("mcpServerUrl");
+    expect(call!.body).not.toHaveProperty("mcpKeyName");
   });
 
   it("should return 401 without API key", async () => {
