@@ -1764,8 +1764,18 @@ export const ChatConfigRequestSchema = z
 export const ChatMessageRequestSchema = z
   .object({
     message: z.string().min(1).describe("User message text"),
-    sessionId: z.string().uuid().optional().describe("Session ID for conversation continuity"),
-    context: z.record(z.unknown()).optional().describe("Additional context for the AI"),
+    sessionId: z
+      .string()
+      .uuid()
+      .optional()
+      .describe(
+        "Session ID returned by a previous chat response. " +
+        "Omit on the FIRST message of a new conversation — the server creates a session " +
+        "and returns its ID in the first SSE event ({\"sessionId\": \"uuid\"}). " +
+        "Include that ID in all subsequent messages to continue the conversation. " +
+        "Do NOT generate a client-side UUID — only use IDs returned by the server.",
+      ),
+    context: z.record(z.unknown()).optional().describe("Additional context for the AI (e.g. { workflowId })"),
   })
   .openapi("ChatMessageRequest");
 
@@ -1796,7 +1806,14 @@ registry.registerPath({
   tags: ["Chat"],
   summary: "Stream chat response (SSE)",
   description:
-    "Send a message and receive a streamed AI response via Server-Sent Events.",
+    "Send a message and receive a streamed AI response via Server-Sent Events.\n\n" +
+    "**Session lifecycle:**\n" +
+    "1. **First message** — omit `sessionId`. The server creates a new session and returns " +
+    'its ID in the first SSE event: `data: {"sessionId":"<uuid>"}`.\n' +
+    "2. **Subsequent messages** — include the `sessionId` from step 1 to continue the conversation.\n" +
+    "3. Sending an unknown or client-generated `sessionId` returns **404 Session not found**.\n\n" +
+    "**SSE event types:** `token`, `thinking_start`, `thinking_delta`, `thinking_stop`, " +
+    "`tool_call`, `tool_result`, `input_request`, `buttons`, `[DONE]`.",
   security: authed,
   request: {
     body: {
@@ -1805,7 +1822,9 @@ registry.registerPath({
   },
   responses: {
     200: {
-      description: "SSE stream of chat events (tokens, tool calls, buttons)",
+      description:
+        "SSE stream. First event contains {sessionId} for new sessions. " +
+        "Subsequent events: token (text chunks), tool_call/tool_result (MCP tools), buttons (quick replies), [DONE].",
       content: {
         "text/event-stream": {
           schema: z.string().describe("Server-Sent Events stream"),
@@ -1813,6 +1832,7 @@ registry.registerPath({
       },
     },
     401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Session not found (invalid sessionId) or chat config not registered", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });

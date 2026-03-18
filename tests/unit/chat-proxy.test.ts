@@ -98,9 +98,18 @@ describe("Chat OpenAPI schemas", () => {
     expect(schemaContent).toContain("mcpKeyName");
   });
 
-  it("should define ChatMessageRequestSchema", () => {
+  it("should define ChatMessageRequestSchema with session lifecycle docs", () => {
     expect(schemaContent).toContain("ChatMessageRequestSchema");
     expect(schemaContent).toContain("sessionId");
+    // sessionId field must document the server-created session contract
+    expect(schemaContent).toContain("Omit on the FIRST message");
+    expect(schemaContent).toContain("Do NOT generate a client-side UUID");
+  });
+
+  it("should document session lifecycle in endpoint description", () => {
+    expect(schemaContent).toContain("Session lifecycle");
+    expect(schemaContent).toContain("Session not found");
+    expect(schemaContent).toContain("404");
   });
 
   it("should describe SSE response content type", () => {
