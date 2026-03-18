@@ -133,330 +133,6 @@
           "error"
         ]
       },
-      "LeaderboardResponse": {
-        "type": "object",
-        "properties": {
-          "brands": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "brandId": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "brandUrl": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "brandDomain": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "emailsSent": {
-                  "type": "number"
-                },
-                "emailsOpened": {
-                  "type": "number"
-                },
-                "emailsClicked": {
-                  "type": "number"
-                },
-                "emailsReplied": {
-                  "type": "number"
-                },
-                "totalCostUsdCents": {
-                  "type": "number"
-                },
-                "openRate": {
-                  "type": "number"
-                },
-                "clickRate": {
-                  "type": "number"
-                },
-                "replyRate": {
-                  "type": "number"
-                },
-                "costPerOpenCents": {
-                  "type": "number",
-                  "nullable": true
-                },
-                "costPerClickCents": {
-                  "type": "number",
-                  "nullable": true
-                },
-                "costPerReplyCents": {
-                  "type": "number",
-                  "nullable": true
-                }
-              },
-              "required": [
-                "brandId",
-                "brandUrl",
-                "brandDomain",
-                "emailsSent",
-                "emailsOpened",
-                "emailsClicked",
-                "emailsReplied",
-                "totalCostUsdCents",
-                "openRate",
-                "clickRate",
-                "replyRate",
-                "costPerOpenCents",
-                "costPerClickCents",
-                "costPerReplyCents"
-              ]
-            }
-          },
-          "workflows": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "workflowName": {
-                  "type": "string"
-                },
-                "displayName": {
-                  "type": "string"
-                },
-                "signatureName": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "category": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "sectionKey": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "runCount": {
-                  "type": "number"
-                },
-                "emailsSent": {
-                  "type": "number"
-                },
-                "emailsOpened": {
-                  "type": "number"
-                },
-                "emailsClicked": {
-                  "type": "number"
-                },
-                "emailsReplied": {
-                  "type": "number"
-                },
-                "repliesInterested": {
-                  "type": "number"
-                },
-                "recipients": {
-                  "type": "number"
-                },
-                "totalCostUsdCents": {
-                  "type": "number"
-                },
-                "openRate": {
-                  "type": "number"
-                },
-                "clickRate": {
-                  "type": "number"
-                },
-                "replyRate": {
-                  "type": "number"
-                },
-                "interestedRate": {
-                  "type": "number"
-                },
-                "costPerOpenCents": {
-                  "type": "number",
-                  "nullable": true
-                },
-                "costPerClickCents": {
-                  "type": "number",
-                  "nullable": true
-                },
-                "costPerReplyCents": {
-                  "type": "number",
-                  "nullable": true
-                }
-              },
-              "required": [
-                "workflowName",
-                "displayName",
-                "signatureName",
-                "category",
-                "sectionKey",
-                "runCount",
-                "emailsSent",
-                "emailsOpened",
-                "emailsClicked",
-                "emailsReplied",
-                "repliesInterested",
-                "recipients",
-                "totalCostUsdCents",
-                "openRate",
-                "clickRate",
-                "replyRate",
-                "interestedRate",
-                "costPerOpenCents",
-                "costPerClickCents",
-                "costPerReplyCents"
-              ]
-            }
-          },
-          "hero": {
-            "type": "object",
-            "nullable": true,
-            "properties": {
-              "bestCostPerOpen": {
-                "type": "object",
-                "nullable": true,
-                "properties": {
-                  "brandDomain": {
-                    "type": "string",
-                    "nullable": true
-                  },
-                  "costPerOpenCents": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "brandDomain",
-                  "costPerOpenCents"
-                ]
-              },
-              "bestCostPerReply": {
-                "type": "object",
-                "nullable": true,
-                "properties": {
-                  "brandDomain": {
-                    "type": "string",
-                    "nullable": true
-                  },
-                  "costPerReplyCents": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "brandDomain",
-                  "costPerReplyCents"
-                ]
-              }
-            },
-            "required": [
-              "bestCostPerOpen",
-              "bestCostPerReply"
-            ]
-          },
-          "updatedAt": {
-            "type": "string"
-          },
-          "availableCategories": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "categorySections": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "category": {
-                  "type": "string"
-                },
-                "sectionKey": {
-                  "type": "string"
-                },
-                "label": {
-                  "type": "string"
-                },
-                "stats": {
-                  "type": "object",
-                  "properties": {
-                    "emailsSent": {
-                      "type": "number"
-                    },
-                    "emailsOpened": {
-                      "type": "number"
-                    },
-                    "emailsReplied": {
-                      "type": "number"
-                    },
-                    "repliesInterested": {
-                      "type": "number"
-                    },
-                    "recipients": {
-                      "type": "number"
-                    },
-                    "totalCostUsdCents": {
-                      "type": "number"
-                    },
-                    "openRate": {
-                      "type": "number"
-                    },
-                    "replyRate": {
-                      "type": "number"
-                    },
-                    "interestedRate": {
-                      "type": "number"
-                    },
-                    "costPerOpenCents": {
-                      "type": "number",
-                      "nullable": true
-                    },
-                    "costPerReplyCents": {
-                      "type": "number",
-                      "nullable": true
-                    }
-                  },
-                  "required": [
-                    "emailsSent",
-                    "emailsOpened",
-                    "emailsReplied",
-                    "repliesInterested",
-                    "recipients",
-                    "totalCostUsdCents",
-                    "openRate",
-                    "replyRate",
-                    "interestedRate",
-                    "costPerOpenCents",
-                    "costPerReplyCents"
-                  ]
-                },
-                "workflows": {
-                  "type": "array",
-                  "items": {
-                    "nullable": true
-                  }
-                },
-                "brands": {
-                  "type": "array",
-                  "items": {
-                    "nullable": true
-                  }
-                }
-              },
-              "required": [
-                "category",
-                "sectionKey",
-                "label",
-                "stats",
-                "workflows",
-                "brands"
-              ]
-            }
-          }
-        },
-        "required": [
-          "brands",
-          "workflows",
-          "hero",
-          "updatedAt",
-          "availableCategories",
-          "categorySections"
-        ]
-      },
       "MeResponse": {
         "type": "object",
         "properties": {
@@ -1372,107 +1048,6 @@
         },
         "required": [
           "groups"
-        ]
-      },
-      "BestWorkflowResponse": {
-        "type": "object",
-        "properties": {
-          "workflow": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              },
-              "category": {
-                "type": "string"
-              },
-              "channel": {
-                "type": "string"
-              },
-              "audienceType": {
-                "type": "string"
-              },
-              "signature": {
-                "type": "string"
-              },
-              "signatureName": {
-                "type": "string"
-              },
-              "humanId": {
-                "type": "string",
-                "nullable": true,
-                "description": "Human ID if styled after an expert"
-              },
-              "styleName": {
-                "type": "string",
-                "nullable": true,
-                "description": "Base style name for versioning (e.g. 'hormozi')"
-              }
-            },
-            "required": [
-              "id",
-              "name",
-              "category",
-              "channel",
-              "audienceType",
-              "signature",
-              "signatureName",
-              "humanId",
-              "styleName"
-            ]
-          },
-          "dag": {
-            "type": "object",
-            "properties": {
-              "nodes": {
-                "type": "array",
-                "items": {
-                  "nullable": true
-                }
-              },
-              "edges": {
-                "type": "array",
-                "items": {
-                  "nullable": true
-                }
-              }
-            },
-            "required": [
-              "nodes",
-              "edges"
-            ]
-          },
-          "stats": {
-            "type": "object",
-            "properties": {
-              "totalCostInUsdCents": {
-                "type": "number"
-              },
-              "totalOutcomes": {
-                "type": "number"
-              },
-              "costPerOutcome": {
-                "type": "number"
-              },
-              "completedRuns": {
-                "type": "number"
-              }
-            },
-            "required": [
-              "totalCostInUsdCents",
-              "totalOutcomes",
-              "costPerOutcome",
-              "completedRuns"
-            ]
-          }
-        },
-        "required": [
-          "workflow",
-          "dag",
-          "stats"
         ]
       },
       "GenerateWorkflowResponse": {
@@ -2974,38 +2549,16 @@
         }
       }
     },
-    "/v1/stats/leaderboard": {
+    "/v1/public/workflows": {
       "get": {
         "tags": [
-          "Stats"
+          "Workflows"
         ],
-        "summary": "Get performance leaderboard",
-        "description": "Returns performance leaderboard data including brands, workflows, and hero stats. Requires authentication.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
+        "summary": "List workflows (public)",
+        "description": "Public list of workflows without DAGs. No authentication required.",
         "responses": {
           "200": {
-            "description": "Leaderboard data with brands, workflows, and hero stats",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/LeaderboardResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
+            "description": "List of workflows (no DAGs)"
           },
           "502": {
             "description": "Upstream service error",
@@ -3017,8 +2570,224 @@
               }
             }
           }
-        },
+        }
+      }
+    },
+    "/v1/public/workflows/ranked": {
+      "get": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Ranked workflows (public)",
+        "description": "Public ranked workflows by performance. Supports groupBy=section and groupBy=brand. No authentication required.",
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by category (e.g. 'sales', 'pr')"
+            },
+            "required": false,
+            "description": "Filter by category (e.g. 'sales', 'pr')",
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by channel (e.g. 'email')"
+            },
+            "required": false,
+            "description": "Filter by channel (e.g. 'email')",
+            "name": "channel",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by audience type (e.g. 'cold-outreach')"
+            },
+            "required": false,
+            "description": "Filter by audience type (e.g. 'cold-outreach')",
+            "name": "audienceType",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optimization objective ('replies' or 'clicks')"
+            },
+            "required": false,
+            "description": "Optimization objective ('replies' or 'clicks')",
+            "name": "objective",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Max results (default 10, max 100)"
+            },
+            "required": false,
+            "description": "Max results (default 10, max 100)",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "'section' to group by category-channel-audienceType, 'brand' to group by brand"
+            },
+            "required": false,
+            "description": "'section' to group by category-channel-audienceType, 'brand' to group by brand",
+            "name": "groupBy",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by brand ID"
+            },
+            "required": false,
+            "description": "Filter by brand ID",
+            "name": "brandId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ranked workflows with stats (proxied from workflow-service)"
+          },
+          "502": {
+            "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/public/workflows/best": {
+      "get": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Hero records (public)",
+        "description": "Public hero records — best cost-per-open/reply. Use ?by=brand for brand-level heroes. No authentication required.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "'workflow' (default) or 'brand' — hero records by workflow or by brand"
+            },
+            "required": false,
+            "description": "'workflow' (default) or 'brand' — hero records by workflow or by brand",
+            "name": "by",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hero records — best cost-per-open and cost-per-reply (proxied from workflow-service)"
+          },
+          "502": {
+            "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/ranked": {
+      "get": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Ranked workflows",
+        "description": "Workflows ranked by performance, scoped to the authenticated org. Supports groupBy=section and groupBy=brand.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by category (e.g. 'sales', 'pr')"
+            },
+            "required": false,
+            "description": "Filter by category (e.g. 'sales', 'pr')",
+            "name": "category",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by channel (e.g. 'email')"
+            },
+            "required": false,
+            "description": "Filter by channel (e.g. 'email')",
+            "name": "channel",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by audience type (e.g. 'cold-outreach')"
+            },
+            "required": false,
+            "description": "Filter by audience type (e.g. 'cold-outreach')",
+            "name": "audienceType",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optimization objective ('replies' or 'clicks')"
+            },
+            "required": false,
+            "description": "Optimization objective ('replies' or 'clicks')",
+            "name": "objective",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Max results (default 10, max 100)"
+            },
+            "required": false,
+            "description": "Max results (default 10, max 100)",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "'section' to group by category-channel-audienceType, 'brand' to group by brand"
+            },
+            "required": false,
+            "description": "'section' to group by category-channel-audienceType, 'brand' to group by brand",
+            "name": "groupBy",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by brand ID"
+            },
+            "required": false,
+            "description": "Filter by brand ID",
+            "name": "brandId",
+            "in": "query"
+          },
           {
             "name": "x-org-id",
             "in": "header",
@@ -3064,7 +2833,128 @@
             },
             "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Ranked workflows with stats (proxied from workflow-service)"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/workflows/best": {
+      "get": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Hero records",
+        "description": "Best cost-per-open and cost-per-reply records, scoped to the authenticated org. Use ?by=brand for brand-level heroes.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "'workflow' (default) or 'brand' — hero records by workflow or by brand"
+            },
+            "required": false,
+            "description": "'workflow' (default) or 'brand' — hero records by workflow or by brand",
+            "name": "by",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Hero records — best cost-per-open and cost-per-reply (proxied from workflow-service)"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/me": {
@@ -6716,139 +6606,6 @@
           },
           "404": {
             "description": "Workflow not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/v1/workflows/best": {
-      "get": {
-        "tags": [
-          "Workflows"
-        ],
-        "summary": "Get best-performing workflow",
-        "description": "Returns the workflow with the lowest cost per outcome, filtered by category, channel, audience type, and objective",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by category (e.g. 'sales')"
-            },
-            "required": false,
-            "description": "Filter by category (e.g. 'sales')",
-            "name": "category",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by channel (e.g. 'email')"
-            },
-            "required": false,
-            "description": "Filter by channel (e.g. 'email')",
-            "name": "channel",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by audience type (e.g. 'cold-outreach')"
-            },
-            "required": false,
-            "description": "Filter by audience type (e.g. 'cold-outreach')",
-            "name": "audienceType",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Optimization objective ('replies' or 'clicks')"
-            },
-            "required": false,
-            "description": "Optimization objective ('replies' or 'clicks')",
-            "name": "objective",
-            "in": "query"
-          },
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-name",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Best-performing workflow with DAG and stats",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/BestWorkflowResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {

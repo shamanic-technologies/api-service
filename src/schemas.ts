@@ -129,102 +129,87 @@ registry.registerPath({
 });
 
 // ===================================================================
-// PERFORMANCE
+// WORKFLOW RANKED & BEST (public + authenticated)
 // ===================================================================
+
+const rankedQueryParams = z.object({
+  category: z.string().optional().describe("Filter by category (e.g. 'sales', 'pr')"),
+  channel: z.string().optional().describe("Filter by channel (e.g. 'email')"),
+  audienceType: z.string().optional().describe("Filter by audience type (e.g. 'cold-outreach')"),
+  objective: z.string().optional().describe("Optimization objective ('replies' or 'clicks')"),
+  limit: z.string().optional().describe("Max results (default 10, max 100)"),
+  groupBy: z.string().optional().describe("'section' to group by category-channel-audienceType, 'brand' to group by brand"),
+  brandId: z.string().optional().describe("Filter by brand ID"),
+});
+
+const bestQueryParams = z.object({
+  by: z.string().optional().describe("'workflow' (default) or 'brand' — hero records by workflow or by brand"),
+});
+
+const rankedResponse = {
+  200: { description: "Ranked workflows with stats (proxied from workflow-service)" },
+  502: { description: "Upstream service error", content: errorContent },
+};
+
+const bestResponse = {
+  200: { description: "Hero records — best cost-per-open and cost-per-reply (proxied from workflow-service)" },
+  502: { description: "Upstream service error", content: errorContent },
+};
+
+// Public endpoints (no auth)
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/workflows",
+  tags: ["Workflows"],
+  summary: "List workflows (public)",
+  description: "Public list of workflows without DAGs. No authentication required.",
+  responses: {
+    200: { description: "List of workflows (no DAGs)" },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
 
 registry.registerPath({
   method: "get",
-  path: "/v1/stats/leaderboard",
-  tags: ["Stats"],
-  summary: "Get performance leaderboard",
-  description:
-    "Returns performance leaderboard data including brands, workflows, and hero stats. Requires authentication.",
+  path: "/v1/public/workflows/ranked",
+  tags: ["Workflows"],
+  summary: "Ranked workflows (public)",
+  description: "Public ranked workflows by performance. Supports groupBy=section and groupBy=brand. No authentication required.",
+  request: { query: rankedQueryParams },
+  responses: rankedResponse,
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/workflows/best",
+  tags: ["Workflows"],
+  summary: "Hero records (public)",
+  description: "Public hero records — best cost-per-open/reply. Use ?by=brand for brand-level heroes. No authentication required.",
+  request: { query: bestQueryParams },
+  responses: bestResponse,
+});
+
+// Authenticated endpoints
+registry.registerPath({
+  method: "get",
+  path: "/v1/workflows/ranked",
+  tags: ["Workflows"],
+  summary: "Ranked workflows",
+  description: "Workflows ranked by performance, scoped to the authenticated org. Supports groupBy=section and groupBy=brand.",
   security: authed,
-  responses: {
-    200: {
-      description: "Leaderboard data with brands, workflows, and hero stats",
-      content: {
-        "application/json": {
-          schema: z
-            .object({
-              brands: z.array(z.object({
-                brandId: z.string().nullable(),
-                brandUrl: z.string().nullable(),
-                brandDomain: z.string().nullable(),
-                emailsSent: z.number(),
-                emailsOpened: z.number(),
-                emailsClicked: z.number(),
-                emailsReplied: z.number(),
-                totalCostUsdCents: z.number(),
-                openRate: z.number(),
-                clickRate: z.number(),
-                replyRate: z.number(),
-                costPerOpenCents: z.number().nullable(),
-                costPerClickCents: z.number().nullable(),
-                costPerReplyCents: z.number().nullable(),
-              })),
-              workflows: z.array(z.object({
-                workflowName: z.string(),
-                displayName: z.string(),
-                signatureName: z.string().nullable(),
-                category: z.string().nullable(),
-                sectionKey: z.string().nullable(),
-                runCount: z.number(),
-                emailsSent: z.number(),
-                emailsOpened: z.number(),
-                emailsClicked: z.number(),
-                emailsReplied: z.number(),
-                repliesInterested: z.number(),
-                recipients: z.number(),
-                totalCostUsdCents: z.number(),
-                openRate: z.number(),
-                clickRate: z.number(),
-                replyRate: z.number(),
-                interestedRate: z.number(),
-                costPerOpenCents: z.number().nullable(),
-                costPerClickCents: z.number().nullable(),
-                costPerReplyCents: z.number().nullable(),
-              })),
-              hero: z.object({
-                bestCostPerOpen: z.object({
-                  brandDomain: z.string().nullable(),
-                  costPerOpenCents: z.number(),
-                }).nullable(),
-                bestCostPerReply: z.object({
-                  brandDomain: z.string().nullable(),
-                  costPerReplyCents: z.number(),
-                }).nullable(),
-              }).nullable(),
-              updatedAt: z.string(),
-              availableCategories: z.array(z.string()),
-              categorySections: z.array(z.object({
-                category: z.string(),
-                sectionKey: z.string(),
-                label: z.string(),
-                stats: z.object({
-                  emailsSent: z.number(),
-                  emailsOpened: z.number(),
-                  emailsReplied: z.number(),
-                  repliesInterested: z.number(),
-                  recipients: z.number(),
-                  totalCostUsdCents: z.number(),
-                  openRate: z.number(),
-                  replyRate: z.number(),
-                  interestedRate: z.number(),
-                  costPerOpenCents: z.number().nullable(),
-                  costPerReplyCents: z.number().nullable(),
-                }),
-                workflows: z.array(z.any()),
-                brands: z.array(z.any()),
-              })),
-            })
-            .openapi("LeaderboardResponse"),
-        },
-      },
-    },
-    401: { description: "Unauthorized", content: errorContent },
-    502: { description: "Upstream service error", content: errorContent },
-  },
+  request: { query: rankedQueryParams },
+  responses: { ...rankedResponse, 401: { description: "Unauthorized", content: errorContent } },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/workflows/best",
+  tags: ["Workflows"],
+  summary: "Hero records",
+  description: "Best cost-per-open and cost-per-reply records, scoped to the authenticated org. Use ?by=brand for brand-level heroes.",
+  security: authed,
+  request: { query: bestQueryParams },
+  responses: { ...bestResponse, 401: { description: "Unauthorized", content: errorContent } },
 });
 
 // ===================================================================
@@ -1236,60 +1221,6 @@ registry.registerPath({
   },
   responses: {
     200: { description: "Workflow with DAG" },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/workflows/best",
-  tags: ["Workflows"],
-  summary: "Get best-performing workflow",
-  description:
-    "Returns the workflow with the lowest cost per outcome, filtered by category, channel, audience type, and objective",
-  security: authed,
-  request: {
-    query: z.object({
-      category: z.string().optional().describe("Filter by category (e.g. 'sales')"),
-      channel: z.string().optional().describe("Filter by channel (e.g. 'email')"),
-      audienceType: z.string().optional().describe("Filter by audience type (e.g. 'cold-outreach')"),
-      objective: z.string().optional().describe("Optimization objective ('replies' or 'clicks')"),
-    }),
-  },
-  responses: {
-    200: {
-      description: "Best-performing workflow with DAG and stats",
-      content: {
-        "application/json": {
-          schema: z
-            .object({
-              workflow: z.object({
-                id: z.string(),
-                name: z.string(),
-                category: z.string(),
-                channel: z.string(),
-                audienceType: z.string(),
-                signature: z.string(),
-                signatureName: z.string(),
-                humanId: z.string().nullable().describe("Human ID if styled after an expert"),
-                styleName: z.string().nullable().describe("Base style name for versioning (e.g. 'hormozi')"),
-              }),
-              dag: z.object({
-                nodes: z.array(z.any()),
-                edges: z.array(z.any()),
-              }),
-              stats: z.object({
-                totalCostInUsdCents: z.number(),
-                totalOutcomes: z.number(),
-                costPerOutcome: z.number(),
-                completedRuns: z.number(),
-              }),
-            })
-            .openapi("BestWorkflowResponse"),
-        },
-      },
-    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },

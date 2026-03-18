@@ -62,18 +62,26 @@ describe("all brand-service calls include internal headers", () => {
     }
   });
 
-  it("performance.ts: leaderboard passes buildInternalHeaders(req) to brand-service calls", () => {
+  it("workflows.ts: all brand-service calls pass headers", () => {
     const src = fs.readFileSync(
-      path.join(__dirname, "../../src/routes/performance.ts"),
+      path.join(__dirname, "../../src/routes/workflows.ts"),
       "utf-8"
     );
 
-    // The route handler builds headers from the request and threads them through
-    // buildLeaderboardData → fetchAllBrands → callExternalService(brand, …, { headers }).
-    // Stats calls use public endpoints (no identity headers).
-    expect(src).toContain("buildInternalHeaders(req)");
-    expect(src).toContain("buildLeaderboardData(headers)");
-    expect(src).toContain("enrichWithDeliveryStats(data)");
+    // workflows.ts no longer calls brand-service directly (brand stats
+    // moved to workflow-service). Verify no unheadered brand calls exist.
+    const regex = /callExternalService[^(]*\(\s*externalServices\.brand\b/g;
+    const matches: number[] = [];
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(src)) !== null) {
+      matches.push(match.index);
+    }
+
+    // If brand calls are reintroduced, they must use buildInternalHeaders
+    for (const idx of matches) {
+      const callBlock = src.slice(Math.max(0, idx - 200), idx + 400);
+      expect(callBlock).toContain("buildInternalHeaders");
+    }
   });
 });
 

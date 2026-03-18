@@ -13,7 +13,6 @@ import leadsRoutes from "./routes/leads.js";
 import activityRoutes from "./routes/activity.js";
 import workflowsRoutes from "./routes/workflows.js";
 import promptsRoutes from "./routes/prompts.js";
-import performanceRoutes from "./routes/performance.js";
 import chatRoutes from "./routes/chat.js";
 import billingRoutes from "./routes/billing.js";
 import { stripeWebhookHandler } from "./routes/billing.js";
@@ -150,7 +149,6 @@ app.use(
 
 // Public routes
 app.use(healthRoutes);
-app.use("/v1", performanceRoutes);
 
 // Internal platform routes (API key only, no identity)
 app.use("/internal", internalEmailsRoutes);
