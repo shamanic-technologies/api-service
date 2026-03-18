@@ -47,6 +47,5 @@ export async function fetchDeliveryStats(
     repliesNotInterested: b.repliesNotInterested || 0,
     repliesOutOfOffice: b.repliesOutOfOffice || 0,
     repliesUnsubscribe: b.repliesUnsubscribe || 0,
-    leadsContacted: b.recipients || 0,
   };
 }
