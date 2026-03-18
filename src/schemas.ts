@@ -1763,21 +1763,103 @@ export const ChatConfigRequestSchema = z
 
 export const ChatMessageRequestSchema = z
   .object({
-    message: z.string().min(1).describe("User message text"),
+    message: z.string().min(1).describe("The user's chat message"),
     sessionId: z
       .string()
       .uuid()
       .optional()
       .describe(
-        "Session ID returned by a previous chat response. " +
-        "Omit on the FIRST message of a new conversation — the server creates a session " +
-        "and returns its ID in the first SSE event ({\"sessionId\": \"uuid\"}). " +
-        "Include that ID in all subsequent messages to continue the conversation. " +
-        "Do NOT generate a client-side UUID — only use IDs returned by the server.",
+        "UUID of an existing session to continue. " +
+        "Omit to create a new session. When omitted, the service creates a new session and returns " +
+        'its ID in the first SSE event ({"sessionId":"<uuid>"}). Use that ID in subsequent requests ' +
+        "to continue the conversation. If a sessionId is provided but does not exist or belongs to " +
+        'a different org, the stream returns a "Session not found." error and closes.',
       ),
-    context: z.record(z.unknown()).optional().describe("Additional context for the AI (e.g. { workflowId })"),
+    context: z
+      .record(z.unknown())
+      .optional()
+      .describe(
+        "Free-form JSON injected into the system prompt for this request only (not stored). " +
+        "Use this to pass dynamic data like workflow IDs, brand URLs, campaign objectives, etc.",
+      ),
   })
   .openapi("ChatMessageRequest");
+
+// ── SSE event schemas (mirrored from chat-service for client documentation) ─
+
+export const SSESessionEventSchema = z
+  .object({
+    sessionId: z.string().uuid().describe("The session UUID — store this for subsequent requests"),
+  })
+  .openapi("SSESessionEvent");
+
+export const SSETokenEventSchema = z
+  .object({
+    type: z.literal("token"),
+    content: z.string().describe("Incremental text fragment of the AI response"),
+  })
+  .openapi("SSETokenEvent");
+
+export const SSEThinkingStartEventSchema = z
+  .object({
+    type: z.literal("thinking_start"),
+  })
+  .openapi("SSEThinkingStartEvent");
+
+export const SSEThinkingDeltaEventSchema = z
+  .object({
+    type: z.literal("thinking_delta"),
+    thinking: z.string().describe("Incremental fragment of the model's internal reasoning"),
+  })
+  .openapi("SSEThinkingDeltaEvent");
+
+export const SSEThinkingStopEventSchema = z
+  .object({
+    type: z.literal("thinking_stop"),
+  })
+  .openapi("SSEThinkingStopEvent");
+
+export const SSEToolCallEventSchema = z
+  .object({
+    type: z.literal("tool_call"),
+    id: z.string().describe("Unique identifier (format: tc_<uuid>) — use this to match with the corresponding tool_result"),
+    name: z.string().describe("The MCP tool name being invoked"),
+    args: z.record(z.unknown()).describe("Input arguments passed to the tool, as a JSON object"),
+  })
+  .openapi("SSEToolCallEvent");
+
+export const SSEToolResultEventSchema = z
+  .object({
+    type: z.literal("tool_result"),
+    id: z.string().describe("Matches the id from the corresponding tool_call event"),
+    name: z.string().describe("The MCP tool name that produced this result"),
+    result: z.unknown().optional().describe("The tool output — can be a string or a JSON object"),
+  })
+  .openapi("SSEToolResultEvent");
+
+export const SSEInputRequestEventSchema = z
+  .object({
+    type: z.literal("input_request"),
+    input_type: z.enum(["url", "text", "email"]).describe("The type of input widget the frontend should render"),
+    label: z.string().describe("Human-readable label/question for the input"),
+    placeholder: z.string().optional().describe("Placeholder text for the input field"),
+    field: z.string().describe("Identifier for what the input represents"),
+  })
+  .openapi("SSEInputRequestEvent");
+
+export const SSEButtonsEventSchema = z
+  .object({
+    type: z.literal("buttons"),
+    buttons: z
+      .array(
+        z.object({
+          label: z.string().describe("Button display text"),
+          value: z.string().describe("Text to send as the next user message when the button is clicked"),
+        }),
+      )
+      .describe("Quick-reply buttons extracted from the AI response"),
+  })
+  .openapi("SSEButtonsEvent");
 
 registry.registerPath({
   method: "put",
@@ -1806,14 +1888,24 @@ registry.registerPath({
   tags: ["Chat"],
   summary: "Stream chat response (SSE)",
   description:
-    "Send a message and receive a streamed AI response via Server-Sent Events.\n\n" +
+    "Send a message and receive a streamed AI response via Server-Sent Events (SSE).\n\n" +
     "**Session lifecycle:**\n" +
-    "1. **First message** — omit `sessionId`. The server creates a new session and returns " +
-    'its ID in the first SSE event: `data: {"sessionId":"<uuid>"}`.\n' +
-    "2. **Subsequent messages** — include the `sessionId` from step 1 to continue the conversation.\n" +
-    "3. Sending an unknown or client-generated `sessionId` returns **404 Session not found**.\n\n" +
-    "**SSE event types:** `token`, `thinking_start`, `thinking_delta`, `thinking_stop`, " +
-    "`tool_call`, `tool_result`, `input_request`, `buttons`, `[DONE]`.",
+    "- To start a new conversation, **omit `sessionId`**. The first SSE event will be " +
+    '`data: {"sessionId":"<uuid>"}` — store this ID.\n' +
+    "- To continue a conversation, pass that `sessionId` in subsequent requests.\n" +
+    "- If a provided `sessionId` does not exist or belongs to a different org, " +
+    "the stream returns an error and closes.\n\n" +
+    "**SSE event order:**\n" +
+    "Each `data:` line contains a JSON object. Events arrive in this order:\n\n" +
+    '1. **Session** — `{"sessionId":"<uuid>"}` (always first)\n' +
+    "2. **Thinking** *(optional)* — `thinking_start` → one or more `thinking_delta` → `thinking_stop`\n" +
+    '3. **Tokens** — `{"type":"token","content":"..."}` streamed incrementally\n' +
+    "4. **Tool calls** *(optional, repeatable)* — `tool_call` followed by `tool_result`, " +
+    "then more thinking/tokens as the AI continues\n" +
+    "5. **Input request** *(optional)* — `input_request` when the AI needs structured user input\n" +
+    '6. **Buttons** *(optional)* — `{"type":"buttons","buttons":[...]}` with quick-reply options\n' +
+    '7. **Done** — `"[DONE]"` (always last)\n\n' +
+    "See the SSE event schemas (SSESessionEvent, SSETokenEvent, SSEToolCallEvent, etc.) for exact payload shapes.",
   security: authed,
   request: {
     body: {
@@ -1823,8 +1915,9 @@ registry.registerPath({
   responses: {
     200: {
       description:
-        "SSE stream. First event contains {sessionId} for new sessions. " +
-        "Subsequent events: token (text chunks), tool_call/tool_result (MCP tools), buttons (quick replies), [DONE].",
+        "SSE stream of chat events. Each `data:` line is a JSON object matching one of the SSE event schemas " +
+        "(SSESessionEvent, SSETokenEvent, SSEThinkingStartEvent, SSEThinkingDeltaEvent, SSEThinkingStopEvent, " +
+        'SSEToolCallEvent, SSEToolResultEvent, SSEInputRequestEvent, SSEButtonsEvent), except the final `data: "[DONE]"` which is a plain string.',
       content: {
         "text/event-stream": {
           schema: z.string().describe("Server-Sent Events stream"),
@@ -1832,7 +1925,12 @@ registry.registerPath({
       },
     },
     401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Session not found (invalid sessionId) or chat config not registered", content: errorContent },
+    404: {
+      description:
+        "Session not found (invalid or expired sessionId), or chat config not registered " +
+        "(register via PUT /v1/chat/config or ensure platform config exists)",
+      content: errorContent,
+    },
     500: { description: "Internal error", content: errorContent },
   },
 });
