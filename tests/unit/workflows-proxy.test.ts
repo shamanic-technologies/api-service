@@ -38,30 +38,28 @@ describe("Workflow proxy routes", () => {
     expect(content).toContain("req.params");
   });
 
-  it("should proxy GET /workflows/best", () => {
+  it("should proxy GET /workflows/ranked and /workflows/best", () => {
+    expect(content).toContain('"/workflows/ranked"');
     expect(content).toContain('"/workflows/best"');
+    expect(content).toContain("/workflows/ranked?");
     expect(content).toContain("/workflows/best?");
   });
 
-  it("should define /workflows/best before /workflows/:id to avoid param capture", () => {
+  it("should define /workflows/ranked and /workflows/best before /workflows/:id to avoid param capture", () => {
+    const rankedIndex = content.indexOf('"/workflows/ranked"');
     const bestIndex = content.indexOf('"/workflows/best"');
     // Find the standalone /:id route (not /:id/summary or /:id/key-status)
     const idMatch = content.match(/router\.\w+\("\/workflows\/:id"[^/]/);
     expect(idMatch).not.toBeNull();
     const idIndex = idMatch!.index!;
+    expect(rankedIndex).toBeLessThan(idIndex);
     expect(bestIndex).toBeLessThan(idIndex);
   });
 
-  it("should forward query params on /workflows/best", () => {
-    // Extract the best workflow handler block
-    const bestStart = content.indexOf('"/workflows/best"');
-    const bestEnd = content.indexOf('"/workflows/:id/summary"');
-    const bestBlock = content.slice(bestStart, bestEnd);
-
-    expect(bestBlock).toContain("category");
-    expect(bestBlock).toContain("channel");
-    expect(bestBlock).toContain("audienceType");
-    expect(bestBlock).toContain("objective");
+  it("should define public workflow routes", () => {
+    expect(content).toContain('"/public/workflows"');
+    expect(content).toContain('"/public/workflows/ranked"');
+    expect(content).toContain('"/public/workflows/best"');
   });
 
   it("should not expose appId as a query param", () => {
@@ -137,14 +135,19 @@ describe("Workflow schemas — summary and key-status endpoints", () => {
   });
 });
 
-describe("Workflow response schemas include style fields", () => {
+describe("Workflow schemas — ranked and best endpoints", () => {
   const schemaPath = path.join(__dirname, "../../src/schemas.ts");
   const content = fs.readFileSync(schemaPath, "utf-8");
 
-  it("should include humanId and styleName in BestWorkflowResponse", () => {
-    const bestSection = content.slice(content.indexOf('"BestWorkflowResponse"'));
-    expect(bestSection).toContain("humanId");
-    expect(bestSection).toContain("styleName");
+  it("should register /v1/workflows/ranked and /v1/workflows/best paths", () => {
+    expect(content).toContain('path: "/v1/workflows/ranked"');
+    expect(content).toContain('path: "/v1/workflows/best"');
+  });
+
+  it("should register public /v1/public/workflows/* paths", () => {
+    expect(content).toContain('path: "/v1/public/workflows"');
+    expect(content).toContain('path: "/v1/public/workflows/ranked"');
+    expect(content).toContain('path: "/v1/public/workflows/best"');
   });
 
   it("should include humanId query param on GET /v1/workflows", () => {
