@@ -84,8 +84,8 @@ describe("GET /v1/campaigns/stats", () => {
       if (service.url === "http://mock-lead") {
         return Promise.resolve({
           groups: [
-            { key: "c1", served: 15, buffered: 3, skipped: 1 },
-            { key: "c2", served: 30, buffered: 5, skipped: 2 },
+            { key: "c1", served: 15, contacted: 10, buffered: 3, skipped: 1 },
+            { key: "c2", served: 30, contacted: 18, buffered: 5, skipped: 2 },
           ],
         });
       }
@@ -120,6 +120,7 @@ describe("GET /v1/campaigns/stats", () => {
 
     // Verify c1
     expect(c1.leadsServed).toBe(15);
+    expect(c1.leadsContacted).toBe(10);
     expect(c1.emailsGenerated).toBe(12);
     expect(c1.emailsContacted).toBe(15);
     expect(c1.emailsSent).toBe(10);
@@ -130,6 +131,7 @@ describe("GET /v1/campaigns/stats", () => {
 
     // Verify c2
     expect(c2.leadsServed).toBe(30);
+    expect(c2.leadsContacted).toBe(18);
     expect(c2.emailsGenerated).toBe(25);
     expect(c2.emailsContacted).toBe(25);
     expect(c2.emailsSent).toBe(20);
@@ -179,7 +181,7 @@ describe("GET /v1/campaigns/stats", () => {
       // Only lead-service responds
       if (service.url === "http://mock-lead") {
         return Promise.resolve({
-          groups: [{ key: "c1", served: 5, buffered: 1, skipped: 0 }],
+          groups: [{ key: "c1", served: 5, contacted: 3, buffered: 1, skipped: 0 }],
         });
       }
       return Promise.reject(new Error("service down"));
@@ -193,6 +195,7 @@ describe("GET /v1/campaigns/stats", () => {
     const c1 = res.body.campaigns[0];
     expect(c1.campaignId).toBe("c1");
     expect(c1.leadsServed).toBe(5);
+    expect(c1.leadsContacted).toBe(3);
     // Defaults for missing services
     expect(c1.emailsContacted).toBe(0);
     expect(c1.emailsSent).toBe(0);
