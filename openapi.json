@@ -637,6 +637,10 @@
           "totalCostUsd": {
             "type": "number"
           },
+          "leadsContacted": {
+            "type": "number",
+            "description": "Count of unique leads that received at least one email"
+          },
           "emailsContacted": {
             "type": "number",
             "description": "Leads successfully submitted to email provider (immediate)"
@@ -719,6 +723,7 @@
           "leadsBuffered",
           "leadsSkipped",
           "emailsGenerated",
+          "leadsContacted",
           "emailsContacted",
           "emailsSent",
           "emailsOpened",
@@ -749,6 +754,10 @@
                 },
                 "emailsGenerated": {
                   "type": "number"
+                },
+                "leadsContacted": {
+                  "type": "number",
+                  "description": "Count of unique leads that received at least one email"
                 },
                 "emailsContacted": {
                   "type": "number",
@@ -803,6 +812,7 @@
                 "leadsBuffered",
                 "leadsSkipped",
                 "emailsGenerated",
+                "leadsContacted",
                 "emailsContacted",
                 "emailsSent",
                 "emailsDelivered",
