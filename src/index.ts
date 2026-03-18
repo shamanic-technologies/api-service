@@ -29,7 +29,6 @@ import platformPromptsRoutes from "./routes/platform-prompts.js";
 import emailGatewayRoutes from "./routes/email-gateway.js";
 import runsRoutes from "./routes/runs.js";
 import { apiReference } from "@scalar/express-api-reference";
-import { registerPlatformKeys, registerPlatformPrompts, registerPlatformChatConfig } from "./startup.js";
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -197,17 +196,6 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
 // Listen on :: for Railway private networking (IPv4 & IPv6 support)
 const server = app.listen(Number(PORT), "::", () => {
   console.log(`API Gateway running on port ${PORT}`);
-  registerPlatformKeys()
-    .then(() => registerPlatformPrompts())
-    .then(() =>
-      registerPlatformChatConfig().catch((err) => {
-        console.warn("[api-service] WARNING: Platform chat config registration failed (chat-service may not be deployed yet):", err.message);
-      })
-    )
-    .catch((err) => {
-      console.error("[api-service] FATAL: Startup registration failed:", err.message);
-      process.exit(1);
-    });
 });
 
 // ── Graceful shutdown ─────────────────────────────────────────────────────────

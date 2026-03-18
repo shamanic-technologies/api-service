@@ -354,29 +354,7 @@ describe("POST /internal/mcp-tools — MCP JSON-RPC", () => {
   });
 });
 
-describe("MCP tools — startup integration", () => {
-  it("startup.ts should reference mcpServerUrl and mcpKeyName", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-    const startupPath = path.join(__dirname, "../../src/startup.ts");
-    const content = fs.readFileSync(startupPath, "utf-8");
-
-    expect(content).toContain("mcpServerUrl");
-    expect(content).toContain("mcpKeyName");
-    expect(content).toContain("api-service-mcp");
-    expect(content).toContain("/internal/mcp-tools");
-  });
-
-  it("startup.ts should register api-service-mcp platform key", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-    const startupPath = path.join(__dirname, "../../src/startup.ts");
-    const content = fs.readFileSync(startupPath, "utf-8");
-
-    expect(content).toContain('provider: "api-service-mcp"');
-    expect(content).toContain('envVar: "ADMIN_DISTRIBUTE_API_KEY"');
-  });
-
+describe("MCP tools — integration", () => {
   it("index.ts should mount mcp-tools routes at /internal", async () => {
     const fs = await import("fs");
     const path = await import("path");
@@ -386,48 +364,5 @@ describe("MCP tools — startup integration", () => {
     expect(content).toContain("mcpToolsRoutes");
     expect(content).toContain("./routes/mcp-tools");
     expect(content).toContain('"/internal", mcpToolsRoutes');
-  });
-});
-
-describe("System prompt content", () => {
-  it("should include DAG node types reference", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-    const startupPath = path.join(__dirname, "../../src/startup.ts");
-    const content = fs.readFileSync(startupPath, "utf-8");
-
-    expect(content).toContain("http.call");
-    expect(content).toContain("condition");
-    expect(content).toContain("wait");
-    expect(content).toContain("for-each");
-    expect(content).toContain("script");
-    expect(content).toContain("inputMapping");
-    expect(content).toContain("$ref:");
-    expect(content).toContain("onError");
-  });
-
-  it("should include validation rule", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-    const startupPath = path.join(__dirname, "../../src/startup.ts");
-    const content = fs.readFileSync(startupPath, "utf-8");
-
-    expect(content).toContain("MUST");
-    expect(content).toContain("validateWorkflow");
-    expect(content).toContain("updateWorkflow");
-  });
-
-  it("should include available services for http.call", async () => {
-    const fs = await import("fs");
-    const path = await import("path");
-    const startupPath = path.join(__dirname, "../../src/startup.ts");
-    const content = fs.readFileSync(startupPath, "utf-8");
-
-    expect(content).toContain("apollo");
-    expect(content).toContain("content-generation");
-    expect(content).toContain("lead");
-    expect(content).toContain("campaign");
-    expect(content).toContain("instantly");
-    expect(content).toContain("stripe");
   });
 });
