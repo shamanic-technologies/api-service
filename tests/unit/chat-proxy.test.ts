@@ -102,14 +102,29 @@ describe("Chat OpenAPI schemas", () => {
     expect(schemaContent).toContain("ChatMessageRequestSchema");
     expect(schemaContent).toContain("sessionId");
     // sessionId field must document the server-created session contract
-    expect(schemaContent).toContain("Omit on the FIRST message");
-    expect(schemaContent).toContain("Do NOT generate a client-side UUID");
+    expect(schemaContent).toContain("Omit to create a new session");
+    expect(schemaContent).toContain("Session not found");
   });
 
-  it("should document session lifecycle in endpoint description", () => {
+  it("should document session lifecycle and SSE event order in endpoint description", () => {
     expect(schemaContent).toContain("Session lifecycle");
-    expect(schemaContent).toContain("Session not found");
+    expect(schemaContent).toContain("SSE event order");
+    expect(schemaContent).toContain("thinking_start");
+    expect(schemaContent).toContain("tool_call");
+    expect(schemaContent).toContain("[DONE]");
     expect(schemaContent).toContain("404");
+  });
+
+  it("should define SSE event schemas for client documentation", () => {
+    expect(schemaContent).toContain("SSESessionEventSchema");
+    expect(schemaContent).toContain("SSETokenEventSchema");
+    expect(schemaContent).toContain("SSEThinkingStartEventSchema");
+    expect(schemaContent).toContain("SSEThinkingDeltaEventSchema");
+    expect(schemaContent).toContain("SSEThinkingStopEventSchema");
+    expect(schemaContent).toContain("SSEToolCallEventSchema");
+    expect(schemaContent).toContain("SSEToolResultEventSchema");
+    expect(schemaContent).toContain("SSEInputRequestEventSchema");
+    expect(schemaContent).toContain("SSEButtonsEventSchema");
   });
 
   it("should describe SSE response content type", () => {
