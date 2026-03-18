@@ -194,7 +194,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
         console.warn("[campaigns/stats] email-gateway groupBy failed:", (err as Error).message);
         return null;
       }),
-      callExternalService<{ groups: Array<{ key: string; served: number; buffered: number; skipped: number }> }>(
+      callExternalService<{ groups: Array<{ key: string; served: number; contacted?: number; buffered: number; skipped: number }> }>(
         externalServices.lead,
         `/stats?${leadParams}`,
         { headers: internalHeaders },
