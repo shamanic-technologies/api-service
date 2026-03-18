@@ -69,12 +69,12 @@ describe("GET /v1/campaigns/stats", () => {
           groups: [
             {
               key: "c1",
-              broadcast: { emailsContacted: 15, emailsSent: 10, emailsDelivered: 9, emailsOpened: 5, emailsClicked: 2, emailsReplied: 1, emailsBounced: 1, repliesWillingToMeet: 0, repliesInterested: 1, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0, recipients: 12 },
+              broadcast: { emailsContacted: 15, emailsSent: 10, emailsDelivered: 9, emailsOpened: 5, emailsClicked: 2, emailsReplied: 1, emailsBounced: 1, repliesWillingToMeet: 0, repliesInterested: 1, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0 },
               transactional: null,
             },
             {
               key: "c2",
-              broadcast: { emailsContacted: 25, emailsSent: 20, emailsDelivered: 18, emailsOpened: 12, emailsClicked: 3, emailsReplied: 2, emailsBounced: 2, repliesWillingToMeet: 1, repliesInterested: 0, repliesNotInterested: 1, repliesOutOfOffice: 0, repliesUnsubscribe: 0, recipients: 20 },
+              broadcast: { emailsContacted: 25, emailsSent: 20, emailsDelivered: 18, emailsOpened: 12, emailsClicked: 3, emailsReplied: 2, emailsBounced: 2, repliesWillingToMeet: 1, repliesInterested: 0, repliesNotInterested: 1, repliesOutOfOffice: 0, repliesUnsubscribe: 0 },
               transactional: null,
             },
           ],
@@ -121,7 +121,6 @@ describe("GET /v1/campaigns/stats", () => {
     // Verify c1
     expect(c1.leadsServed).toBe(15);
     expect(c1.emailsGenerated).toBe(12);
-    expect(c1.leadsContacted).toBe(12);
     expect(c1.emailsContacted).toBe(15);
     expect(c1.emailsSent).toBe(10);
     expect(c1.emailsOpened).toBe(5);
@@ -132,7 +131,6 @@ describe("GET /v1/campaigns/stats", () => {
     // Verify c2
     expect(c2.leadsServed).toBe(30);
     expect(c2.emailsGenerated).toBe(25);
-    expect(c2.leadsContacted).toBe(20);
     expect(c2.emailsContacted).toBe(25);
     expect(c2.emailsSent).toBe(20);
     expect(c2.totalCostInUsdCents).toBe("1200");
@@ -196,7 +194,6 @@ describe("GET /v1/campaigns/stats", () => {
     expect(c1.campaignId).toBe("c1");
     expect(c1.leadsServed).toBe(5);
     // Defaults for missing services
-    expect(c1.leadsContacted).toBe(0);
     expect(c1.emailsContacted).toBe(0);
     expect(c1.emailsSent).toBe(0);
     expect(c1.emailsGenerated).toBe(0);
@@ -223,8 +220,8 @@ describe("GET /v1/campaigns/stats", () => {
         return Promise.resolve({
           groups: [{
             key: "c1",
-            broadcast: { emailsContacted: 8, emailsSent: 5, emailsDelivered: 5, emailsOpened: 3, emailsClicked: 0, emailsReplied: 1, emailsBounced: 0, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0, recipients: 7 },
-            transactional: { emailsContacted: 200, emailsSent: 100, emailsDelivered: 95, emailsOpened: 60, emailsClicked: 10, emailsReplied: 20, emailsBounced: 5, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0, recipients: 150 },
+            broadcast: { emailsContacted: 8, emailsSent: 5, emailsDelivered: 5, emailsOpened: 3, emailsClicked: 0, emailsReplied: 1, emailsBounced: 0, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0 },
+            transactional: { emailsContacted: 200, emailsSent: 100, emailsDelivered: 95, emailsOpened: 60, emailsClicked: 10, emailsReplied: 20, emailsBounced: 5, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0 },
           }],
         });
       }
@@ -235,7 +232,6 @@ describe("GET /v1/campaigns/stats", () => {
 
     const c1 = res.body.campaigns.find((c: any) => c.campaignId === "c1");
     // Must be broadcast only, NOT transactional or sum
-    expect(c1.leadsContacted).toBe(7);
     expect(c1.emailsContacted).toBe(8);
     expect(c1.emailsSent).toBe(5);
     expect(c1.emailsOpened).toBe(3);
