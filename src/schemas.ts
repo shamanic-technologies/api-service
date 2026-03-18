@@ -159,18 +159,6 @@ const bestResponse = {
 // Public endpoints (no auth)
 registry.registerPath({
   method: "get",
-  path: "/v1/public/workflows",
-  tags: ["Workflows"],
-  summary: "List workflows (public)",
-  description: "Public list of workflows without DAGs. No authentication required.",
-  responses: {
-    200: { description: "List of workflows (no DAGs)" },
-    502: { description: "Upstream service error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/v1/public/workflows/ranked",
   tags: ["Workflows"],
   summary: "Ranked workflows (public)",

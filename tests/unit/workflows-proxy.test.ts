@@ -57,7 +57,6 @@ describe("Workflow proxy routes", () => {
   });
 
   it("should define public workflow routes", () => {
-    expect(content).toContain('"/public/workflows"');
     expect(content).toContain('"/public/workflows/ranked"');
     expect(content).toContain('"/public/workflows/best"');
   });
@@ -145,7 +144,6 @@ describe("Workflow schemas — ranked and best endpoints", () => {
   });
 
   it("should register public /v1/public/workflows/* paths", () => {
-    expect(content).toContain('path: "/v1/public/workflows"');
     expect(content).toContain('path: "/v1/public/workflows/ranked"');
     expect(content).toContain('path: "/v1/public/workflows/best"');
   });

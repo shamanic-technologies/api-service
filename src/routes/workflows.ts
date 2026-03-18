@@ -100,25 +100,6 @@ const BEST_PARAMS = ["by", "orgId"];
 // ---------------------------------------------------------------------------
 
 /**
- * GET /v1/public/workflows
- * Public list of workflows (no DAG, no auth).
- */
-router.get("/public/workflows", async (_req, res) => {
-  try {
-    const params = buildWorkflowParams(_req.query as Record<string, unknown>, ["category", "channel", "audienceType"]);
-    const result = await callExternalService(
-      externalServices.workflow,
-      `/public/workflows?${params}`,
-      {},
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("Public list workflows error:", error.message);
-    res.status(502).json({ error: error.message || "Failed to list public workflows" });
-  }
-});
-
-/**
  * GET /v1/public/workflows/ranked
  * Public ranked workflows by performance (no DAG, no auth).
  */
