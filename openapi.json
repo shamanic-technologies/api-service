@@ -602,6 +602,10 @@
           "leadsServed": {
             "type": "number"
           },
+          "leadsContacted": {
+            "type": "number",
+            "description": "Count of unique leads that received at least one email"
+          },
           "leadsBuffered": {
             "type": "number"
           },
@@ -716,6 +720,7 @@
         "required": [
           "campaignId",
           "leadsServed",
+          "leadsContacted",
           "leadsBuffered",
           "leadsSkipped",
           "emailsGenerated",
@@ -740,6 +745,10 @@
                 },
                 "leadsServed": {
                   "type": "number"
+                },
+                "leadsContacted": {
+                  "type": "number",
+                  "description": "Count of unique leads that received at least one email"
                 },
                 "leadsBuffered": {
                   "type": "number"
@@ -800,6 +809,7 @@
               "required": [
                 "campaignId",
                 "leadsServed",
+                "leadsContacted",
                 "leadsBuffered",
                 "leadsSkipped",
                 "emailsGenerated",

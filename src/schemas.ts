@@ -410,6 +410,7 @@ registry.registerPath({
             .object({
               campaignId: z.string(),
               leadsServed: z.number(),
+              leadsContacted: z.number().describe("Count of unique leads that received at least one email"),
               leadsBuffered: z.number(),
               leadsSkipped: z.number(),
               apollo: z.object({
@@ -476,6 +477,7 @@ registry.registerPath({
                 z.object({
                   campaignId: z.string(),
                   leadsServed: z.number(),
+                  leadsContacted: z.number().describe("Count of unique leads that received at least one email"),
                   leadsBuffered: z.number(),
                   leadsSkipped: z.number(),
                   emailsGenerated: z.number(),
