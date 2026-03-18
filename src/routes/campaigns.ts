@@ -231,6 +231,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
     for (const g of deliveryGroups?.groups ?? []) {
       const s = ensure(g.key);
       const b = g.broadcast;
+      s.leadsContacted = b?.recipients ?? 0;
       s.emailsContacted = b?.emailsContacted ?? 0;
       s.emailsSent = b?.emailsSent ?? 0;
       s.emailsDelivered = b?.emailsDelivered ?? 0;
@@ -272,6 +273,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
     const defaults = {
       leadsServed: 0, leadsBuffered: 0, leadsSkipped: 0,
       emailsGenerated: 0,
+      leadsContacted: 0,
       emailsContacted: 0, emailsSent: 0, emailsDelivered: 0, emailsOpened: 0, emailsClicked: 0,
       emailsReplied: 0, emailsBounced: 0,
       repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0,
@@ -475,6 +477,7 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
     if (delivery) {
       Object.assign(stats, delivery);
     } else {
+      stats.leadsContacted = 0;
       stats.emailsContacted = 0;
       stats.emailsSent = 0;
       stats.emailsOpened = 0;
