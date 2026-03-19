@@ -131,6 +131,34 @@ describe("Chat OpenAPI schemas", () => {
     // The chat endpoint should document text/event-stream
     expect(schemaContent).toContain("text/event-stream");
   });
+
+  it("should include value field on SSEInputRequestEvent (pre-filled input support)", () => {
+    // chat-service sends a value field for pre-filled inputs
+    expect(schemaContent).toContain('value: z.string().optional()');
+  });
+
+  it("should return full config object from PUT /v1/chat/config (not just message)", () => {
+    // chat-service returns { orgId, systemPrompt, createdAt, updatedAt }
+    const configResponseBlock = schemaContent.slice(
+      schemaContent.indexOf('.openapi("ChatConfigResponse")') - 300,
+      schemaContent.indexOf('.openapi("ChatConfigResponse")'),
+    );
+    expect(configResponseBlock).toContain("orgId");
+    expect(configResponseBlock).toContain("systemPrompt");
+    expect(configResponseBlock).toContain("createdAt");
+    expect(configResponseBlock).toContain("updatedAt");
+  });
+
+  it("should return full config object from PUT /platform-chat/config (not just message)", () => {
+    // chat-service returns { systemPrompt, createdAt, updatedAt }
+    const configResponseBlock = schemaContent.slice(
+      schemaContent.indexOf('.openapi("PlatformChatConfigResponse")') - 300,
+      schemaContent.indexOf('.openapi("PlatformChatConfigResponse")'),
+    );
+    expect(configResponseBlock).toContain("systemPrompt");
+    expect(configResponseBlock).toContain("createdAt");
+    expect(configResponseBlock).toContain("updatedAt");
+  });
 });
 
 describe("Chat routes are mounted in index.ts", () => {

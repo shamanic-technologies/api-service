@@ -3010,12 +3010,28 @@
       "ChatConfigResponse": {
         "type": "object",
         "properties": {
-          "message": {
-            "type": "string"
+          "orgId": {
+            "type": "string",
+            "description": "Organization ID"
+          },
+          "systemPrompt": {
+            "type": "string",
+            "description": "The registered system prompt"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO timestamp of creation"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO timestamp of last update"
           }
         },
         "required": [
-          "message"
+          "orgId",
+          "systemPrompt",
+          "createdAt",
+          "updatedAt"
         ]
       },
       "ChatConfigRequest": {
@@ -3127,12 +3143,23 @@
       "PlatformChatConfigResponse": {
         "type": "object",
         "properties": {
-          "message": {
-            "type": "string"
+          "systemPrompt": {
+            "type": "string",
+            "description": "The registered system prompt"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO timestamp of creation"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO timestamp of last update"
           }
         },
         "required": [
-          "message"
+          "systemPrompt",
+          "createdAt",
+          "updatedAt"
         ]
       },
       "PlatformChatConfigRequest": {

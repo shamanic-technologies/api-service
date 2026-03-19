@@ -2251,6 +2251,10 @@ export const SSEInputRequestEventSchema = z
     label: z.string().describe("Human-readable label/question for the input"),
     placeholder: z.string().optional().describe("Placeholder text for the input field"),
     field: z.string().describe("Identifier for what the input represents"),
+    value: z.string().optional().describe(
+      "Pre-filled value for the input field. When present, the frontend renders the field already populated " +
+      "so the user can confirm with a single click. When absent, the field is empty.",
+    ),
   })
   .openapi("SSEInputRequestEvent");
 
@@ -2297,7 +2301,12 @@ registry.registerPath({
       description: "Config registered",
       content: {
         "application/json": {
-          schema: z.object({ message: z.string() }).openapi("ChatConfigResponse"),
+          schema: z.object({
+            orgId: z.string().describe("Organization ID"),
+            systemPrompt: z.string().describe("The registered system prompt"),
+            createdAt: z.string().describe("ISO timestamp of creation"),
+            updatedAt: z.string().describe("ISO timestamp of last update"),
+          }).openapi("ChatConfigResponse"),
         },
       },
     },
@@ -2475,7 +2484,11 @@ registry.registerPath({
       description: "Config registered",
       content: {
         "application/json": {
-          schema: z.object({ message: z.string() }).openapi("PlatformChatConfigResponse"),
+          schema: z.object({
+            systemPrompt: z.string().describe("The registered system prompt"),
+            createdAt: z.string().describe("ISO timestamp of creation"),
+            updatedAt: z.string().describe("ISO timestamp of last update"),
+          }).openapi("PlatformChatConfigResponse"),
         },
       },
     },
