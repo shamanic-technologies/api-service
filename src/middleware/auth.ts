@@ -95,12 +95,17 @@ export async function authenticate(
     // Create a request run for tracking — mandatory, fail the request if runs-service is down
     if (req.orgId) {
       try {
+        const runHeaders: Record<string, string> = {};
+        if (req.brandId) runHeaders["x-brand-id"] = req.brandId;
+        if (req.campaignId) runHeaders["x-campaign-id"] = req.campaignId;
+        if (req.workflowName) runHeaders["x-workflow-name"] = req.workflowName;
+
         const run = await createRun({
           orgId: req.orgId,
           userId: req.userId,
           serviceName: "api-service",
           taskName: `${req.method} ${req.baseUrl}${req.path}`,
-        });
+        }, runHeaders);
         req.runId = run.id;
 
         // Auto-close the run when the response finishes

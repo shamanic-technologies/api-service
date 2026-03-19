@@ -335,6 +335,63 @@ describe("Auth middleware — run creation is mandatory", () => {
     expect(res.body.error).toBe("Run tracking unavailable");
   });
 
+  it("should forward x-brand-id, x-campaign-id, x-workflow-name headers to createRun", async () => {
+    const { createRun } = await import("@distribute/runs-client");
+    const mockCreateRun = vi.mocked(createRun);
+    mockCreateRun.mockResolvedValueOnce({ id: "run-with-context" } as never);
+
+    mockCall.mockResolvedValueOnce({
+      orgId: "org-uuid-123",
+      userId: "user-uuid-456",
+    });
+
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("X-API-Key", ADMIN_KEY)
+      .set("x-external-org-id", "ext_org_123")
+      .set("x-external-user-id", "ext_user_456")
+      .set("x-brand-id", "brand-abc")
+      .set("x-campaign-id", "campaign-xyz")
+      .set("x-workflow-name", "my-workflow");
+
+    expect(res.status).toBe(200);
+    expect(mockCreateRun).toHaveBeenCalledWith(
+      {
+        orgId: "org-uuid-123",
+        userId: "user-uuid-456",
+        serviceName: "api-service",
+        taskName: "GET /v1/workflows",
+      },
+      {
+        "x-brand-id": "brand-abc",
+        "x-campaign-id": "campaign-xyz",
+        "x-workflow-name": "my-workflow",
+      },
+    );
+  });
+
+  it("should not include tracking headers when none are provided", async () => {
+    const { createRun } = await import("@distribute/runs-client");
+    const mockCreateRun = vi.mocked(createRun);
+    mockCreateRun.mockResolvedValueOnce({ id: "run-no-context" } as never);
+
+    mockCall.mockResolvedValueOnce({
+      valid: true,
+      orgId: "org-uuid-direct",
+      userId: "user-uuid-direct",
+    });
+
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("Authorization", "Bearer mcpf_usr_test123");
+
+    expect(res.status).toBe(200);
+    expect(mockCreateRun).toHaveBeenCalledWith(
+      expect.objectContaining({ orgId: "org-uuid-direct" }),
+      {},
+    );
+  });
+
   it("should return 502 when createRun fails for admin auth too", async () => {
     const { createRun } = await import("@distribute/runs-client");
     vi.mocked(createRun).mockRejectedValueOnce(new Error("Connection refused"));
