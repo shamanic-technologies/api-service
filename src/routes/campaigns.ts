@@ -173,11 +173,11 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
     const deliveryParams = new URLSearchParams(baseParams);
     deliveryParams.set("groupBy", "campaignId");
 
-    const leadParams = new URLSearchParams();
+    const leadParams = new URLSearchParams({ orgId });
     if (brandId) leadParams.set("brandId", brandId);
     leadParams.set("groupBy", "campaignId");
 
-    const emailgenParams = new URLSearchParams();
+    const emailgenParams = new URLSearchParams({ orgId });
     if (brandId) emailgenParams.set("brandId", brandId);
     emailgenParams.set("groupBy", "campaignId");
 
