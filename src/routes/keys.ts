@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
-import { UpsertKeyRequestSchema, CreateApiKeyRequestSchema, SetKeySourceRequestSchema } from "../schemas.js";
+import { UpsertKeyRequestSchema, CreateApiKeyRequestSchema } from "../schemas.js";
 
 const router = Router();
 
@@ -69,76 +69,6 @@ router.delete("/keys/:provider", authenticate, async (req: AuthenticatedRequest,
   } catch (error: any) {
     console.error("Delete key error:", error);
     res.status(500).json({ error: error.message || "Failed to delete key" });
-  }
-});
-
-// -----------------------------------------------------------------------
-// Key source preferences — org vs platform (BYOK) management
-// -----------------------------------------------------------------------
-
-/**
- * GET /v1/keys/sources
- * List all key source preferences for the organization.
- */
-router.get("/keys/sources", authenticate, async (req: AuthenticatedRequest, res) => {
-  try {
-    if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
-    const result = await callExternalService(externalServices.key, "/keys/sources", {
-      headers: buildInternalHeaders(req),
-    });
-    res.json(result);
-  } catch (error: any) {
-    console.error("List key sources error:", error);
-    res.status(500).json({ error: error.message || "Failed to list key sources" });
-  }
-});
-
-/**
- * GET /v1/keys/:provider/source
- * Get key source preference for a specific provider.
- */
-router.get("/keys/:provider/source", authenticate, async (req: AuthenticatedRequest, res) => {
-  try {
-    if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
-    const { provider } = req.params;
-    const result = await callExternalService(
-      externalServices.key,
-      `/keys/${encodeURIComponent(provider)}/source`,
-      { headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("Get key source error:", error);
-    res.status(500).json({ error: error.message || "Failed to get key source" });
-  }
-});
-
-/**
- * PUT /v1/keys/:provider/source
- * Set key source preference for a specific provider.
- */
-router.put("/keys/:provider/source", authenticate, async (req: AuthenticatedRequest, res) => {
-  try {
-    const parsed = SetKeySourceRequestSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
-    }
-    if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
-
-    const { provider } = req.params;
-    const result = await callExternalService(
-      externalServices.key,
-      `/keys/${encodeURIComponent(provider)}/source`,
-      {
-        method: "PUT",
-        body: parsed.data,
-        headers: buildInternalHeaders(req),
-      }
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("Set key source error:", error);
-    res.status(500).json({ error: error.message || "Failed to set key source" });
   }
 });
 
