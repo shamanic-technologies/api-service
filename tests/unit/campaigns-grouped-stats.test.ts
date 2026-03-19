@@ -215,6 +215,19 @@ describe("GET /v1/campaigns/stats", () => {
     expect(res.body.campaigns).toEqual([]);
   });
 
+  it("should pass orgId to lead-service and content-generation even without brandId", async () => {
+    const app = createApp();
+
+    mockCallExternalService.mockResolvedValue({ groups: [] });
+
+    await request(app).get("/v1/campaigns/stats");
+
+    for (const call of mockCallExternalService.mock.calls) {
+      const path = call[1] as string;
+      expect(path).toContain("orgId=org1");
+    }
+  });
+
   it("should use only broadcast stats from email-gateway, not transactional", async () => {
     const app = createApp();
 
