@@ -108,7 +108,28 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     );
     console.log("[api-service] POST /v1/campaigns \u2014 step 1 done: brand upserted", { brandId: brandResult.brandId });
 
-    // 2. Forward to campaign-service (run tracking via x-run-id header)
+    // 2. Send user-provided marketing fields to brand-service sales profile
+    const { urgency, scarcity, riskReversal, socialProof } = parsed.data;
+    if (urgency || scarcity || riskReversal || socialProof) {
+      console.log("[api-service] POST /v1/campaigns — step 2: updating sales profile", { brandId: brandResult.brandId });
+      await callExternalService(
+        externalServices.brand,
+        `/brands/${brandResult.brandId}/sales-profile`,
+        {
+          method: "POST",
+          headers: buildInternalHeaders(req),
+          body: {
+            ...(urgency && { urgency }),
+            ...(scarcity && { scarcity }),
+            ...(riskReversal && { riskReversal }),
+            ...(socialProof && { socialProof }),
+          },
+        }
+      );
+      console.log("[api-service] POST /v1/campaigns — step 2 done: sales profile updated");
+    }
+
+    // 3. Forward to campaign-service (run tracking via x-run-id header)
     // Derive `type` from workflowName for campaign-service backward compat
     const { workflowName, ...restData } = parsed.data;
     const body: Record<string, unknown> = {
@@ -124,7 +145,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       if (body[key] != null) body[key] = String(body[key]);
     }
 
-    console.log("[api-service] POST /v1/campaigns — step 2: forwarding to campaign-service", {
+    console.log("[api-service] POST /v1/campaigns — step 3: forwarding to campaign-service", {
       brandId: body.brandId,
       workflowName: body.workflowName,
       targetOutcome: body.targetOutcome,
@@ -139,7 +160,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
         body,
       }
     );
-    console.log("[api-service] POST /v1/campaigns \u2014 step 3 done: campaign created", {
+    console.log("[api-service] POST /v1/campaigns \u2014 step 4 done: campaign created", {
       campaignId: (result as any).campaign?.id,
       status: (result as any).campaign?.status,
     });
