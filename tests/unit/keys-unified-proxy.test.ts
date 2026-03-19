@@ -153,6 +153,106 @@ describe("DELETE /v1/keys/:provider — org keys only", () => {
 });
 
 // -----------------------------------------------------------------------
+// GET /v1/keys/sources
+// -----------------------------------------------------------------------
+
+describe("GET /v1/keys/sources — key source preferences", () => {
+  it("should proxy to key-service /keys/sources", async () => {
+    (global.fetch as any).mockImplementation(async () => ({
+      ok: true,
+      json: () => Promise.resolve({ sources: [{ provider: "anthropic", keySource: "org" }] }),
+    }));
+    const app = createApp();
+    const res = await request(app).get("/v1/keys/sources");
+
+    expect(res.status).toBe(200);
+    expect(res.body.sources).toEqual([{ provider: "anthropic", keySource: "org" }]);
+  });
+
+  it("should reject when no org context", async () => {
+    mockAuth.orgId = "";
+    const app = createApp();
+    const res = await request(app).get("/v1/keys/sources");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("Organization context required");
+  });
+});
+
+// -----------------------------------------------------------------------
+// GET /v1/keys/:provider/source
+// -----------------------------------------------------------------------
+
+describe("GET /v1/keys/:provider/source — get key source", () => {
+  it("should proxy to key-service /keys/:provider/source", async () => {
+    (global.fetch as any).mockImplementation(async () => ({
+      ok: true,
+      json: () => Promise.resolve({ provider: "anthropic", orgId: "org_test456", keySource: "org", isDefault: false }),
+    }));
+    const app = createApp();
+    const res = await request(app).get("/v1/keys/anthropic/source");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ provider: "anthropic", orgId: "org_test456", keySource: "org", isDefault: false });
+  });
+
+  it("should reject when no org context", async () => {
+    mockAuth.orgId = "";
+    const app = createApp();
+    const res = await request(app).get("/v1/keys/anthropic/source");
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("Organization context required");
+  });
+});
+
+// -----------------------------------------------------------------------
+// PUT /v1/keys/:provider/source
+// -----------------------------------------------------------------------
+
+describe("PUT /v1/keys/:provider/source — set key source", () => {
+  it("should proxy to key-service with validated body", async () => {
+    (global.fetch as any).mockImplementation(async (_url: string, init?: RequestInit) => {
+      fetchCalls.push({ url: _url, method: init?.method, body: init?.body ? JSON.parse(init.body as string) : undefined });
+      return {
+        ok: true,
+        json: () => Promise.resolve({ provider: "anthropic", orgId: "org_test456", keySource: "org", message: "updated" }),
+      };
+    });
+    const app = createApp();
+    const res = await request(app)
+      .put("/v1/keys/anthropic/source")
+      .send({ keySource: "org" });
+
+    expect(res.status).toBe(200);
+    const call = fetchCalls.find((c) => c.method === "PUT");
+    expect(call!.url).toContain("/keys/anthropic/source");
+    expect(call!.body).toEqual({ keySource: "org" });
+  });
+
+  it("should reject invalid keySource value", async () => {
+    const app = createApp();
+    const res = await request(app)
+      .put("/v1/keys/anthropic/source")
+      .send({ keySource: "invalid" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Invalid request");
+  });
+
+  it("should reject when no org context", async () => {
+    mockAuth.orgId = "";
+    const app = createApp();
+    const res = await request(app)
+      .put("/v1/keys/anthropic/source")
+      .send({ keySource: "org" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("Organization context required");
+  });
+});
+
+// -----------------------------------------------------------------------
 // Decrypt proxy removal
 // -----------------------------------------------------------------------
 

@@ -874,11 +874,127 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z.object({
+            provider: z.string().describe("Provider name"),
             message: z.string().describe("Confirmation message"),
           }).openapi("DeleteKeyResponse"),
         },
       },
     },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ===================================================================
+// KEY SOURCE PREFERENCES
+// ===================================================================
+
+const KeySourceEnum = z.enum(["org", "platform"]);
+
+export const SetKeySourceRequestSchema = z
+  .object({
+    keySource: KeySourceEnum.describe("Key source preference: 'org' (BYOK) or 'platform' (distribute-managed)"),
+  })
+  .openapi("SetKeySourceRequest");
+
+const KeySourceItemSchema = z
+  .object({
+    provider: z.string().describe("Provider name (e.g. 'anthropic', 'openai')"),
+    keySource: KeySourceEnum.describe("Active key source for this provider"),
+  })
+  .openapi("KeySourceItem");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/keys/sources",
+  tags: ["Keys"],
+  summary: "List key source preferences",
+  description:
+    "List all key source preferences for the organization. " +
+    "Each entry indicates whether the org uses its own key (BYOK) or the platform key for a given provider. " +
+    "Providers not listed default to 'platform'.",
+  security: authed,
+  responses: {
+    200: {
+      description: "Key source preferences",
+      content: {
+        "application/json": {
+          schema: z.object({
+            sources: z.array(KeySourceItemSchema),
+          }).openapi("ListKeySourcesResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/keys/{provider}/source",
+  tags: ["Keys"],
+  summary: "Get key source preference",
+  description:
+    "Get the key source preference for a specific provider. " +
+    "Returns whether the org uses its own key or the platform key.",
+  security: authed,
+  request: {
+    params: z.object({
+      provider: z.string().describe("Provider name"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Key source preference",
+      content: {
+        "application/json": {
+          schema: z.object({
+            provider: z.string().describe("Provider name"),
+            orgId: z.string().describe("Organization ID"),
+            keySource: KeySourceEnum.describe("Active key source"),
+            isDefault: z.boolean().describe("Whether this is the default (no explicit preference set)"),
+          }).openapi("GetKeySourceResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/keys/{provider}/source",
+  tags: ["Keys"],
+  summary: "Set key source preference",
+  description:
+    "Set the key source preference for a provider. " +
+    "Choose 'org' to use your own BYOK key, or 'platform' to use the distribute-managed key.",
+  security: authed,
+  request: {
+    params: z.object({
+      provider: z.string().describe("Provider name"),
+    }),
+    body: {
+      content: { "application/json": { schema: SetKeySourceRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Key source preference updated",
+      content: {
+        "application/json": {
+          schema: z.object({
+            provider: z.string().describe("Provider name"),
+            orgId: z.string().describe("Organization ID"),
+            keySource: KeySourceEnum.describe("Updated key source"),
+            message: z.string().describe("Confirmation message"),
+          }).openapi("SetKeySourceResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid request", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
