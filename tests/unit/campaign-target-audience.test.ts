@@ -54,6 +54,14 @@ describe("POST /v1/campaigns with targetAudience", () => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
       fetchCalls.push({ url, body });
 
+      // Sales profile update
+      if (url.includes("/sales-profile") && init?.method === "POST") {
+        return {
+          ok: true,
+          json: () => Promise.resolve({ cached: false, brandId: "brand-uuid-123", profile: {} }),
+        };
+      }
+
       // Brand upsert
       if (url.includes("/brands") && init?.method === "POST") {
         return {
@@ -107,6 +115,15 @@ describe("POST /v1/campaigns with targetAudience", () => {
     expect(brandCall).toBeDefined();
     expect(brandCall!.body!.url).toBe("https://example.com");
     expect(brandCall!.body!.orgId).toBe("org_test456");
+
+    // Verify sales-profile was called with the 4 marketing fields
+    const salesProfileCall = fetchCalls.find((c) => c.url.includes("/sales-profile"));
+    expect(salesProfileCall).toBeDefined();
+    expect(salesProfileCall!.url).toContain("/brands/brand-uuid-123/sales-profile");
+    expect(salesProfileCall!.body!.urgency).toBe("Recruitment closes in 30 days");
+    expect(salesProfileCall!.body!.scarcity).toBe("Only 10 spots available worldwide");
+    expect(salesProfileCall!.body!.riskReversal).toBe("Free trial for 2 weeks, no commitment");
+    expect(salesProfileCall!.body!.socialProof).toBe("Backed by 60 sponsors including Acme, Globex");
 
     // Verify campaign-service received all fields including workflowName and derived type
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
