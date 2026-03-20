@@ -55,7 +55,7 @@ describe("POST /v1/campaigns with targetAudience", () => {
       fetchCalls.push({ url, body });
 
       // Sales profile update
-      if (url.includes("/sales-profile") && init?.method === "POST") {
+      if (url.includes("/sales-profile") && init?.method === "PUT") {
         return {
           ok: true,
           json: () => Promise.resolve({ cached: false, brandId: "brand-uuid-123", profile: {} }),
