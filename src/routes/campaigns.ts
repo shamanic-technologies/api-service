@@ -116,7 +116,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
         externalServices.brand,
         `/brands/${brandResult.brandId}/sales-profile`,
         {
-          method: "POST",
+          method: "PUT",
           headers: buildInternalHeaders(req),
           body: {
             ...(urgency && { urgency }),
