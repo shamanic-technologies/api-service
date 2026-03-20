@@ -4235,6 +4235,57 @@
         "type": "object",
         "properties": {}
       },
+      "ContentComposeResponse": {
+        "type": "object",
+        "properties": {
+          "composedVideoUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL of the composed video"
+          }
+        },
+        "required": [
+          "composedVideoUrl"
+        ]
+      },
+      "ContentComposeRequest": {
+        "type": "object",
+        "properties": {
+          "videoUrl": {
+            "type": "string",
+            "format": "uri",
+            "description": "Source video URL"
+          },
+          "name": {
+            "type": "string",
+            "description": "Name to overlay"
+          },
+          "age": {
+            "type": "number",
+            "description": "Age to overlay"
+          },
+          "theme": {
+            "type": "string",
+            "description": "Theme text"
+          },
+          "text": {
+            "type": "string",
+            "description": "Quote text to overlay"
+          },
+          "outputBlobToken": {
+            "type": "string",
+            "description": "Vercel Blob write token for the output"
+          }
+        },
+        "required": [
+          "videoUrl",
+          "name",
+          "age",
+          "theme",
+          "text",
+          "outputBlobToken"
+        ]
+      },
       "LlmEndpointSummary": {
         "type": "object",
         "properties": {
@@ -12577,6 +12628,118 @@
             }
           }
         }
+      }
+    },
+    "/v1/content/compose": {
+      "post": {
+        "tags": [
+          "Content"
+        ],
+        "summary": "Compose a personalized video",
+        "description": "Proxy to content-generation-service POST /compose. Composes a personalized video with overlaid text using FFmpeg + sharp, then uploads the result to Vercel Blob.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContentComposeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Composed video URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentComposeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ]
       }
     },
     "/v1/platform/llm-context": {

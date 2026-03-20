@@ -27,6 +27,7 @@ import platformKeysRoutes from "./routes/platform-keys.js";
 import platformPromptsRoutes from "./routes/platform-prompts.js";
 import emailGatewayRoutes from "./routes/email-gateway.js";
 import runsRoutes from "./routes/runs.js";
+import contentRoutes from "./routes/content.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
@@ -176,6 +177,7 @@ app.use("/v1", usersRoutes);
 app.use("/v1", platformRoutes);
 app.use("/v1", emailGatewayRoutes);
 app.use("/v1", runsRoutes);
+app.use("/v1", contentRoutes);
 
 // 404 handler
 app.use((req, res) => {
