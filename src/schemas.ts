@@ -3429,6 +3429,52 @@ const LlmContextResponseSchema = z
   })
   .openapi("LlmContextResponse");
 
+// ---------------------------------------------------------------------------
+// Content – Compose (proxy to content-generation-service)
+// ---------------------------------------------------------------------------
+export const ContentComposeRequestSchema = z
+  .object({
+    videoUrl: z.string().url().describe("Source video URL"),
+    name: z.string().describe("Name to overlay"),
+    age: z.number().describe("Age to overlay"),
+    theme: z.string().describe("Theme text"),
+    text: z.string().describe("Quote text to overlay"),
+    outputBlobToken: z.string().describe("Vercel Blob write token for the output"),
+  })
+  .openapi("ContentComposeRequest");
+
+export const ContentComposeResponseSchema = z
+  .object({
+    composedVideoUrl: z.string().url().describe("URL of the composed video"),
+  })
+  .openapi("ContentComposeResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/content/compose",
+  tags: ["Content"],
+  summary: "Compose a personalized video",
+  description:
+    "Proxy to content-generation-service POST /compose. " +
+    "Composes a personalized video with overlaid text using FFmpeg + sharp, " +
+    "then uploads the result to Vercel Blob.",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: ContentComposeRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Composed video URL",
+      content: { "application/json": { schema: ContentComposeResponseSchema } },
+    },
+    400: { description: "Invalid request", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/platform/llm-context",
