@@ -27,6 +27,7 @@ import platformPromptsRoutes from "./routes/platform-prompts.js";
 import emailGatewayRoutes from "./routes/email-gateway.js";
 import runsRoutes from "./routes/runs.js";
 import contentRoutes from "./routes/content.js";
+import pressKitsRoutes from "./routes/press-kits.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
@@ -142,6 +143,7 @@ app.use(
 
 // Public routes
 app.use(healthRoutes);
+app.use(pressKitsRoutes); // public press-kit endpoints (no auth)
 
 // Internal platform routes (API key only, no identity)
 app.use("/internal", internalEmailsRoutes);
@@ -170,6 +172,7 @@ app.use("/v1", platformRoutes);
 app.use("/v1", emailGatewayRoutes);
 app.use("/v1", runsRoutes);
 app.use("/v1", contentRoutes);
+app.use("/v1", pressKitsRoutes); // authenticated press-kit endpoints
 
 // 404 handler
 app.use((req, res) => {

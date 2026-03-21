@@ -3501,6 +3501,306 @@ const LlmContextResponseSchema = z
   .openapi("LlmContextResponse");
 
 // ---------------------------------------------------------------------------
+// ===================================================================
+// PRESS KITS (proxy to press-kits-service)
+// ===================================================================
+
+const PressKitMediaKitStatusEnum = z
+  .enum(["drafted", "generating", "validated", "denied", "archived"])
+  .openapi("PressKitMediaKitStatus");
+
+// ── Public endpoints (no auth) ──────────────────────────────────────────────
+
+registry.registerPath({
+  method: "get",
+  path: "/press-kits/public/{token}",
+  tags: ["Press Kits"],
+  summary: "Get public press kit by share token",
+  description: "Returns the public-facing press kit for journalists. No authentication required.",
+  responses: {
+    200: { description: "Public press kit data", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicPressKitResponse") } } },
+    404: { description: "Not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/press-kits/public-media-kit/{token}",
+  tags: ["Press Kits"],
+  summary: "Get public media kit (legacy)",
+  description: "Legacy endpoint for public media kit access by share token. No authentication required.",
+  responses: {
+    200: { description: "Public media kit data", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicMediaKitLegacyResponse") } } },
+    404: { description: "Not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/press-kits/email-data/press-kit/{orgId}",
+  tags: ["Press Kits"],
+  summary: "Get press kit data for email templates",
+  description: "Returns press kit data formatted for use in email templates. No authentication required.",
+  responses: {
+    200: { description: "Email template data", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitEmailDataResponse") } } },
+  },
+});
+
+// ── Authenticated endpoints ─────────────────────────────────────────────────
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/press-kits/organizations",
+  tags: ["Press Kits"],
+  summary: "Upsert press kit organization",
+  description: "Create or update an organization in the press-kits service.",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: z.object({ orgId: z.string(), name: z.string().optional() }).openapi("PressKitUpsertOrgRequest") } } },
+  },
+  responses: {
+    200: { description: "Organization upserted", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitOrganizationResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/press-kits/organizations/share-token/{orgId}",
+  tags: ["Press Kits"],
+  summary: "Get organization share token",
+  security: authed,
+  responses: {
+    200: { description: "Share token", content: { "application/json": { schema: z.object({ shareToken: z.string().uuid() }).openapi("PressKitShareTokenResponse") } } },
+    404: { description: "Not found", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/press-kits/organizations/exists",
+  tags: ["Press Kits"],
+  summary: "Batch check organization existence",
+  security: authed,
+  responses: {
+    200: { description: "Existence check results", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitOrgExistsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/press-kits/media-kit",
+  tags: ["Press Kits"],
+  summary: "List media kits",
+  description: "List media kits, optionally filtered by org_id, organization_id, or title.",
+  security: authed,
+  responses: {
+    200: { description: "Media kits list", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitMediaKitListResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/press-kits/media-kit/{id}",
+  tags: ["Press Kits"],
+  summary: "Get media kit by ID",
+  security: authed,
+  responses: {
+    200: { description: "Media kit", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitMediaKitDetailResponse") } } },
+    404: { description: "Not found", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/press-kits/edit-media-kit",
+  tags: ["Press Kits"],
+  summary: "Initiate media kit generation",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: z.object({ mediaKitId: z.string().uuid(), instruction: z.string(), organizationUrl: z.string().optional() }).openapi("PressKitEditRequest") } } },
+  },
+  responses: {
+    200: { description: "Generation initiated", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitEditResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/press-kits/update-mdx",
+  tags: ["Press Kits"],
+  summary: "Update MDX content",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: z.object({ mediaKitId: z.string().uuid(), mdxContent: z.string() }).openapi("PressKitUpdateMdxRequest") } } },
+  },
+  responses: {
+    200: { description: "Updated", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitUpdateMdxResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/press-kits/update-status",
+  tags: ["Press Kits"],
+  summary: "Update media kit status",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: z.object({ mediaKitId: z.string().uuid(), status: PressKitMediaKitStatusEnum, denialReason: z.string().optional() }).openapi("PressKitUpdateStatusRequest") } } },
+  },
+  responses: {
+    200: { description: "Updated", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitUpdateStatusResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/press-kits/validate",
+  tags: ["Press Kits"],
+  summary: "Validate media kit",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: z.object({ mediaKitId: z.string().uuid() }).openapi("PressKitValidateRequest") } } },
+  },
+  responses: {
+    200: { description: "Validated", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitValidateResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/press-kits/cancel-draft",
+  tags: ["Press Kits"],
+  summary: "Cancel draft media kit",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: z.object({ mediaKitId: z.string().uuid() }).openapi("PressKitCancelDraftRequest") } } },
+  },
+  responses: {
+    200: { description: "Draft cancelled", content: { "application/json": { schema: z.object({ success: z.boolean() }).openapi("PressKitCancelDraftResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ── Admin endpoints ─────────────────────────────────────────────────────────
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/press-kits/admin/organizations",
+  tags: ["Press Kits"],
+  summary: "List organizations with kit counts (admin)",
+  security: authed,
+  responses: {
+    200: { description: "Admin org list", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitAdminOrgListResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/press-kits/admin/organizations/{id}",
+  tags: ["Press Kits"],
+  summary: "Delete organization (admin)",
+  security: authed,
+  responses: {
+    200: { description: "Deleted", content: { "application/json": { schema: z.object({ success: z.boolean() }).openapi("PressKitAdminDeleteResponse") } } },
+    400: { description: "Bad request", content: errorContent },
+    404: { description: "Not found", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+// ── Internal endpoints ──────────────────────────────────────────────────────
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/press-kits/internal/media-kit/by-org/{orgId}",
+  tags: ["Internal"],
+  summary: "Get latest media kit by org (internal)",
+  security: authed,
+  responses: {
+    200: { description: "Media kit", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitInternalByOrgResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/press-kits/internal/generation-data",
+  tags: ["Internal"],
+  summary: "Get generation workflow data (internal)",
+  security: authed,
+  responses: {
+    200: { description: "Generation data", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitGenerationDataResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/press-kits/internal/upsert-generation-result",
+  tags: ["Internal"],
+  summary: "Upsert generation result (internal)",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: z.object({ orgId: z.string(), mdxContent: z.string(), title: z.string().optional(), iconUrl: z.string().optional() }).openapi("PressKitUpsertGenerationRequest") } } },
+  },
+  responses: {
+    200: { description: "Upserted", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitUpsertGenerationResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/press-kits/clients-media-kits-need-update",
+  tags: ["Internal"],
+  summary: "Get orgs with stale press kits (internal)",
+  security: authed,
+  responses: {
+    200: { description: "Stale kits list", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitStaleKitsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/press-kits/media-kit-setup",
+  tags: ["Internal"],
+  summary: "Get media kit setup status (internal)",
+  security: authed,
+  responses: {
+    200: { description: "Setup status", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitSetupStatusResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/press-kits/health/bulk",
+  tags: ["Internal"],
+  summary: "Bulk health check per org (internal)",
+  security: authed,
+  responses: {
+    200: { description: "Bulk health", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitHealthBulkResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
 // Content – Compose (proxy to content-generation-service)
 // ---------------------------------------------------------------------------
 export const ContentComposeRequestSchema = z
