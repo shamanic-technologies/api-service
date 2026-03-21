@@ -51,17 +51,32 @@ router.get("/billing/accounts/transactions", authenticate, requireOrg, async (re
   }
 });
 
-// PATCH /v1/billing/accounts/mode — switch billing mode
-router.patch("/billing/accounts/mode", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// PATCH /v1/billing/accounts/auto-reload — configure auto-reload
+router.patch("/billing/accounts/auto-reload", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.billing,
-      "/v1/accounts/mode",
+      "/v1/accounts/auto-reload",
       { method: "PATCH", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message || "Failed to switch billing mode" });
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message || "Failed to configure auto-reload" });
+  }
+});
+
+// DELETE /v1/billing/accounts/auto-reload — disable auto-reload
+router.delete("/billing/accounts/auto-reload", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/auto-reload",
+      { method: "DELETE", headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message || "Failed to disable auto-reload" });
   }
 });
 

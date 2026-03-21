@@ -2502,23 +2502,21 @@ registry.registerPath({
 // BILLING
 // ===================================================================
 
-export const SwitchBillingModeRequestSchema = z
+export const ConfigureAutoReloadRequestSchema = z
   .object({
-    mode: z.enum(["byok", "payg"]).describe("Billing mode to switch to"),
     reload_amount_cents: z
       .number()
       .int()
       .positive()
-      .optional()
-      .describe("Auto-reload amount in cents (for payg mode)"),
+      .describe("Auto-reload amount in cents"),
     reload_threshold_cents: z
       .number()
       .int()
       .min(0)
       .optional()
-      .describe("Balance threshold in cents that triggers auto-reload (for payg mode)"),
+      .describe("Balance threshold in cents that triggers auto-reload"),
   })
-  .openapi("SwitchBillingModeRequest");
+  .openapi("ConfigureAutoReloadRequest");
 
 export const DeductCreditsRequestSchema = z
   .object({
@@ -2561,8 +2559,8 @@ registry.registerPath({
           schema: z.object({
             id: z.string().describe("Account ID"),
             orgId: z.string().describe("Organization ID"),
-            mode: z.enum(["byok", "payg"]).describe("Current billing mode"),
             balanceCents: z.number().describe("Current balance in cents"),
+            hasAutoReload: z.boolean().describe("Whether auto-reload is enabled"),
             reloadAmountCents: z.number().nullable().describe("Auto-reload amount in cents"),
             createdAt: z.string().describe("ISO timestamp"),
           }).openapi("BillingAccountResponse"),
@@ -2580,7 +2578,7 @@ registry.registerPath({
   tags: ["Billing"],
   summary: "Get account balance",
   description:
-    "Quick check of current balance, billing mode, and depletion status",
+    "Quick check of current balance and depletion status",
   security: authed,
   responses: {
     200: {
@@ -2588,8 +2586,7 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z.object({
-            balanceCents: z.number().describe("Current balance in cents"),
-            mode: z.enum(["byok", "payg"]).describe("Current billing mode"),
+            balance_cents: z.number().describe("Current balance in cents"),
             depleted: z.boolean().describe("True if balance is zero or negative"),
           }).openapi("BalanceResponse"),
         },
@@ -2631,31 +2628,63 @@ registry.registerPath({
 
 registry.registerPath({
   method: "patch",
-  path: "/v1/billing/accounts/mode",
+  path: "/v1/billing/accounts/auto-reload",
   tags: ["Billing"],
-  summary: "Switch billing mode",
-  description: "Switch between billing modes (byok, payg)",
+  summary: "Configure auto-reload",
+  description: "Enable or update auto-reload settings for the billing account. Requires a payment method on file.",
   security: authed,
   request: {
     body: {
       content: {
-        "application/json": { schema: SwitchBillingModeRequestSchema },
+        "application/json": { schema: ConfigureAutoReloadRequestSchema },
       },
     },
   },
   responses: {
     200: {
-      description: "Mode switched",
+      description: "Auto-reload configured",
       content: {
         "application/json": {
           schema: z.object({
-            mode: z.enum(["byok", "payg"]).describe("New billing mode"),
-            message: z.string().describe("Confirmation message"),
-          }).openapi("SwitchModeResponse"),
+            id: z.string().describe("Account ID"),
+            orgId: z.string().describe("Organization ID"),
+            balanceCents: z.number().describe("Current balance in cents"),
+            hasAutoReload: z.boolean().describe("Whether auto-reload is enabled"),
+            reloadAmountCents: z.number().nullable().describe("Auto-reload amount in cents"),
+            createdAt: z.string().describe("ISO timestamp"),
+          }).openapi("ConfigureAutoReloadResponse"),
         },
       },
     },
-    400: { description: "Invalid transition", content: errorContent },
+    400: { description: "No payment method on file", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/billing/accounts/auto-reload",
+  tags: ["Billing"],
+  summary: "Disable auto-reload",
+  description: "Disable auto-reload for the billing account",
+  security: authed,
+  responses: {
+    200: {
+      description: "Auto-reload disabled",
+      content: {
+        "application/json": {
+          schema: z.object({
+            id: z.string().describe("Account ID"),
+            orgId: z.string().describe("Organization ID"),
+            balanceCents: z.number().describe("Current balance in cents"),
+            hasAutoReload: z.boolean().describe("Whether auto-reload is enabled"),
+            reloadAmountCents: z.number().nullable().describe("Auto-reload amount in cents"),
+            createdAt: z.string().describe("ISO timestamp"),
+          }).openapi("DisableAutoReloadResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -2681,8 +2710,9 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z.object({
-            newBalanceCents: z.number().describe("Balance after deduction"),
-            message: z.string().describe("Confirmation message"),
+            success: z.boolean().describe("Whether the deduction succeeded"),
+            balance_cents: z.number().describe("Balance after deduction"),
+            depleted: z.boolean().describe("True if balance is zero or negative after deduction"),
           }).openapi("DeductCreditsResponse"),
         },
       },
