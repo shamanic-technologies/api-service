@@ -93,4 +93,19 @@ router.post("/billing/checkout-sessions", authenticate, requireOrg, async (req: 
   }
 });
 
+// POST /v1/billing/portal-sessions — create Stripe billing portal session
+router.post("/billing/portal-sessions", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/portal-sessions",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message || "Failed to create portal session" });
+  }
+});
+
 export default router;
