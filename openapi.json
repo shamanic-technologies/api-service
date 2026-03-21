@@ -768,6 +768,29 @@
           "campaign"
         ]
       },
+      "ErrorSummary": {
+        "type": "object",
+        "properties": {
+          "failedStep": {
+            "type": "string",
+            "description": "Which DAG step failed (e.g. 'fetch_lead', 'generate_email')"
+          },
+          "message": {
+            "type": "string",
+            "description": "Cleaned error message without stack traces"
+          },
+          "rootCause": {
+            "type": "string",
+            "description": "User-friendly root cause (e.g. 'billing-service unavailable')"
+          }
+        },
+        "required": [
+          "failedStep",
+          "message",
+          "rootCause"
+        ],
+        "description": "Structured error summary for failed runs. Contains a user-friendly rootCause, the failedStep, and a cleaned message. Only present when status is 'failed'."
+      },
       "RunCostData": {
         "type": "object",
         "properties": {
@@ -828,6 +851,13 @@
           "taskName": {
             "type": "string",
             "nullable": true
+          },
+          "error": {
+            "type": "string",
+            "description": "Raw error message (for debugging). Only present on failed runs."
+          },
+          "errorSummary": {
+            "$ref": "#/components/schemas/ErrorSummary"
           },
           "descendantRuns": {
             "type": "array",
