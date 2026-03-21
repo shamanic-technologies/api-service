@@ -3186,17 +3186,13 @@
             "type": "string",
             "description": "Organization ID"
           },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "byok",
-              "payg"
-            ],
-            "description": "Current billing mode"
-          },
           "balanceCents": {
             "type": "number",
             "description": "Current balance in cents"
+          },
+          "hasAutoReload": {
+            "type": "boolean",
+            "description": "Whether auto-reload is enabled"
           },
           "reloadAmountCents": {
             "type": "number",
@@ -3211,8 +3207,8 @@
         "required": [
           "id",
           "orgId",
-          "mode",
           "balanceCents",
+          "hasAutoReload",
           "reloadAmountCents",
           "createdAt"
         ]
@@ -3220,17 +3216,9 @@
       "BalanceResponse": {
         "type": "object",
         "properties": {
-          "balanceCents": {
+          "balance_cents": {
             "type": "number",
             "description": "Current balance in cents"
-          },
-          "mode": {
-            "type": "string",
-            "enum": [
-              "byok",
-              "payg"
-            ],
-            "description": "Current billing mode"
           },
           "depleted": {
             "type": "boolean",
@@ -3238,8 +3226,7 @@
           }
         },
         "required": [
-          "balanceCents",
-          "mode",
+          "balance_cents",
           "depleted"
         ]
       },
@@ -3286,69 +3273,121 @@
           "transactions"
         ]
       },
-      "SwitchModeResponse": {
+      "ConfigureAutoReloadResponse": {
         "type": "object",
         "properties": {
-          "mode": {
+          "id": {
             "type": "string",
-            "enum": [
-              "byok",
-              "payg"
-            ],
-            "description": "New billing mode"
+            "description": "Account ID"
           },
-          "message": {
+          "orgId": {
             "type": "string",
-            "description": "Confirmation message"
+            "description": "Organization ID"
+          },
+          "balanceCents": {
+            "type": "number",
+            "description": "Current balance in cents"
+          },
+          "hasAutoReload": {
+            "type": "boolean",
+            "description": "Whether auto-reload is enabled"
+          },
+          "reloadAmountCents": {
+            "type": "number",
+            "nullable": true,
+            "description": "Auto-reload amount in cents"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO timestamp"
           }
         },
         "required": [
-          "mode",
-          "message"
+          "id",
+          "orgId",
+          "balanceCents",
+          "hasAutoReload",
+          "reloadAmountCents",
+          "createdAt"
         ]
       },
-      "SwitchBillingModeRequest": {
+      "ConfigureAutoReloadRequest": {
         "type": "object",
         "properties": {
-          "mode": {
-            "type": "string",
-            "enum": [
-              "byok",
-              "payg"
-            ],
-            "description": "Billing mode to switch to"
-          },
           "reload_amount_cents": {
             "type": "integer",
             "minimum": 0,
             "exclusiveMinimum": true,
-            "description": "Auto-reload amount in cents (for payg mode)"
+            "description": "Auto-reload amount in cents"
           },
           "reload_threshold_cents": {
             "type": "integer",
             "minimum": 0,
-            "description": "Balance threshold in cents that triggers auto-reload (for payg mode)"
+            "description": "Balance threshold in cents that triggers auto-reload"
           }
         },
         "required": [
-          "mode"
+          "reload_amount_cents"
+        ]
+      },
+      "DisableAutoReloadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Account ID"
+          },
+          "orgId": {
+            "type": "string",
+            "description": "Organization ID"
+          },
+          "balanceCents": {
+            "type": "number",
+            "description": "Current balance in cents"
+          },
+          "hasAutoReload": {
+            "type": "boolean",
+            "description": "Whether auto-reload is enabled"
+          },
+          "reloadAmountCents": {
+            "type": "number",
+            "nullable": true,
+            "description": "Auto-reload amount in cents"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO timestamp"
+          }
+        },
+        "required": [
+          "id",
+          "orgId",
+          "balanceCents",
+          "hasAutoReload",
+          "reloadAmountCents",
+          "createdAt"
         ]
       },
       "DeductCreditsResponse": {
         "type": "object",
         "properties": {
-          "newBalanceCents": {
+          "success": {
+            "type": "boolean",
+            "description": "Whether the deduction succeeded"
+          },
+          "balance_cents": {
             "type": "number",
             "description": "Balance after deduction"
           },
-          "message": {
-            "type": "string",
-            "description": "Confirmation message"
+          "depleted": {
+            "type": "boolean",
+            "description": "True if balance is zero or negative after deduction"
           }
         },
         "required": [
-          "newBalanceCents",
-          "message"
+          "success",
+          "balance_cents",
+          "depleted"
         ]
       },
       "DeductCreditsRequest": {
@@ -10335,7 +10374,7 @@
           "Billing"
         ],
         "summary": "Get account balance",
-        "description": "Quick check of current balance, billing mode, and depletion status",
+        "description": "Quick check of current balance and depletion status",
         "security": [
           {
             "bearerAuth": []
@@ -10515,13 +10554,13 @@
         ]
       }
     },
-    "/v1/billing/accounts/mode": {
+    "/v1/billing/accounts/auto-reload": {
       "patch": {
         "tags": [
           "Billing"
         ],
-        "summary": "Switch billing mode",
-        "description": "Switch between billing modes (byok, payg)",
+        "summary": "Configure auto-reload",
+        "description": "Enable or update auto-reload settings for the billing account. Requires a payment method on file.",
         "security": [
           {
             "bearerAuth": []
@@ -10531,28 +10570,119 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SwitchBillingModeRequest"
+                "$ref": "#/components/schemas/ConfigureAutoReloadRequest"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Mode switched",
+            "description": "Auto-reload configured",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SwitchModeResponse"
+                  "$ref": "#/components/schemas/ConfigureAutoReloadResponse"
                 }
               }
             }
           },
           "400": {
-            "description": "Invalid transition",
+            "description": "No payment method on file",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Disable auto-reload",
+        "description": "Disable auto-reload for the billing account",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Auto-reload disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisableAutoReloadResponse"
                 }
               }
             }

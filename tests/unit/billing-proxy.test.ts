@@ -25,9 +25,19 @@ describe("Billing proxy routes", () => {
     expect(content).toContain('"/billing/accounts/transactions"');
   });
 
-  it("should have PATCH /billing/accounts/mode endpoint", () => {
-    expect(content).toContain('"/billing/accounts/mode"');
+  it("should have PATCH /billing/accounts/auto-reload endpoint", () => {
+    expect(content).toContain('"/billing/accounts/auto-reload"');
     expect(content).toContain("router.patch");
+  });
+
+  it("should have DELETE /billing/accounts/auto-reload endpoint", () => {
+    expect(content).toContain('"/billing/accounts/auto-reload"');
+    expect(content).toContain("router.delete");
+  });
+
+  it("should NOT have PATCH /billing/accounts/mode endpoint", () => {
+    expect(content).not.toContain('"/billing/accounts/mode"');
+    expect(content).not.toContain('"/v1/accounts/mode"');
   });
 
   it("should have POST /billing/credits/deduct endpoint", () => {
@@ -40,11 +50,10 @@ describe("Billing proxy routes", () => {
   });
 
   it("should use authenticate and requireOrg on all authenticated endpoints", () => {
-    // Count route definitions using authenticate, requireOrg (6 endpoints, excluding webhook)
-    // Also matches the import line, so total is 7
+    // 9 routes + 1 import = 10
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    expect(authMatches!.length).toBe(8); // 7 routes + 1 import
+    expect(authMatches!.length).toBe(9); // 8 routes + 1 import
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints (no x-key-source)", () => {
@@ -52,7 +61,7 @@ describe("Billing proxy routes", () => {
     expect(content).not.toContain('"x-key-source"');
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(7);
+    expect(headerMatches!.length).toBe(8);
   });
 
   it("should proxy to externalServices.billing", () => {
@@ -63,7 +72,7 @@ describe("Billing proxy routes", () => {
     expect(content).toContain('"/v1/accounts"');
     expect(content).toContain('"/v1/accounts/balance"');
     expect(content).toContain('"/v1/accounts/transactions"');
-    expect(content).toContain('"/v1/accounts/mode"');
+    expect(content).toContain('"/v1/accounts/auto-reload"');
     expect(content).toContain('"/v1/credits/deduct"');
     expect(content).toContain('"/v1/checkout-sessions"');
   });
@@ -89,9 +98,13 @@ describe("Billing OpenAPI schemas", () => {
     expect(schemaContent).toContain('path: "/v1/billing/accounts"');
     expect(schemaContent).toContain('path: "/v1/billing/accounts/balance"');
     expect(schemaContent).toContain('path: "/v1/billing/accounts/transactions"');
-    expect(schemaContent).toContain('path: "/v1/billing/accounts/mode"');
+    expect(schemaContent).toContain('path: "/v1/billing/accounts/auto-reload"');
     expect(schemaContent).toContain('path: "/v1/billing/credits/deduct"');
     expect(schemaContent).toContain('path: "/v1/billing/checkout-sessions"');
+  });
+
+  it("should NOT have accounts/mode path", () => {
+    expect(schemaContent).not.toContain('path: "/v1/billing/accounts/mode"');
   });
 
   it("should use Billing tag", () => {
@@ -99,9 +112,19 @@ describe("Billing OpenAPI schemas", () => {
   });
 
   it("should define request schemas", () => {
-    expect(schemaContent).toContain("SwitchBillingModeRequestSchema");
+    expect(schemaContent).toContain("ConfigureAutoReloadRequestSchema");
+    expect(schemaContent).not.toContain("SwitchBillingModeRequestSchema");
     expect(schemaContent).toContain("DeductCreditsRequestSchema");
     expect(schemaContent).toContain("CreateCheckoutSessionRequestSchema");
+  });
+
+  it("should not have billing_mode in response schemas", () => {
+    // billing_mode / mode enum should not appear in billing response schemas
+    expect(schemaContent).not.toContain('"byok", "payg"');
+  });
+
+  it("should have hasAutoReload in BillingAccountResponse", () => {
+    expect(schemaContent).toContain("hasAutoReload");
   });
 });
 
