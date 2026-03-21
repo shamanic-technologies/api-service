@@ -44,7 +44,7 @@ describe("Billing proxy routes", () => {
     // Also matches the import line, so total is 7
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    expect(authMatches!.length).toBe(7); // 6 routes + 1 import
+    expect(authMatches!.length).toBe(8); // 7 routes + 1 import
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints (no x-key-source)", () => {
@@ -52,7 +52,7 @@ describe("Billing proxy routes", () => {
     expect(content).not.toContain('"x-key-source"');
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(6);
+    expect(headerMatches!.length).toBe(7);
   });
 
   it("should proxy to externalServices.billing", () => {
