@@ -3186,18 +3186,27 @@
             "type": "string",
             "description": "Organization ID"
           },
-          "balanceCents": {
+          "creditBalanceCents": {
             "type": "number",
-            "description": "Current balance in cents"
+            "description": "Current credit balance in cents"
           },
           "hasAutoReload": {
             "type": "boolean",
-            "description": "Whether auto-reload is enabled"
+            "description": "Whether auto-reload is enabled (true when payment method + reload config are both set)"
+          },
+          "hasPaymentMethod": {
+            "type": "boolean",
+            "description": "Whether a payment method is on file"
           },
           "reloadAmountCents": {
             "type": "number",
             "nullable": true,
-            "description": "Auto-reload amount in cents"
+            "description": "Auto-reload amount in cents (null if not configured)"
+          },
+          "reloadThresholdCents": {
+            "type": "number",
+            "nullable": true,
+            "description": "Balance threshold in cents that triggers auto-reload (null if not configured)"
           },
           "createdAt": {
             "type": "string",
@@ -3207,9 +3216,11 @@
         "required": [
           "id",
           "orgId",
-          "balanceCents",
+          "creditBalanceCents",
           "hasAutoReload",
+          "hasPaymentMethod",
           "reloadAmountCents",
+          "reloadThresholdCents",
           "createdAt"
         ]
       },
@@ -3284,18 +3295,27 @@
             "type": "string",
             "description": "Organization ID"
           },
-          "balanceCents": {
+          "creditBalanceCents": {
             "type": "number",
-            "description": "Current balance in cents"
+            "description": "Current credit balance in cents"
           },
           "hasAutoReload": {
             "type": "boolean",
             "description": "Whether auto-reload is enabled"
           },
+          "hasPaymentMethod": {
+            "type": "boolean",
+            "description": "Whether a payment method is on file"
+          },
           "reloadAmountCents": {
             "type": "number",
             "nullable": true,
             "description": "Auto-reload amount in cents"
+          },
+          "reloadThresholdCents": {
+            "type": "number",
+            "nullable": true,
+            "description": "Balance threshold in cents that triggers auto-reload"
           },
           "createdAt": {
             "type": "string",
@@ -3305,9 +3325,11 @@
         "required": [
           "id",
           "orgId",
-          "balanceCents",
+          "creditBalanceCents",
           "hasAutoReload",
+          "hasPaymentMethod",
           "reloadAmountCents",
+          "reloadThresholdCents",
           "createdAt"
         ]
       },
@@ -3341,18 +3363,27 @@
             "type": "string",
             "description": "Organization ID"
           },
-          "balanceCents": {
+          "creditBalanceCents": {
             "type": "number",
-            "description": "Current balance in cents"
+            "description": "Current credit balance in cents"
           },
           "hasAutoReload": {
             "type": "boolean",
             "description": "Whether auto-reload is enabled"
           },
+          "hasPaymentMethod": {
+            "type": "boolean",
+            "description": "Whether a payment method is on file"
+          },
           "reloadAmountCents": {
             "type": "number",
             "nullable": true,
             "description": "Auto-reload amount in cents"
+          },
+          "reloadThresholdCents": {
+            "type": "number",
+            "nullable": true,
+            "description": "Balance threshold in cents that triggers auto-reload"
           },
           "createdAt": {
             "type": "string",
@@ -3362,9 +3393,11 @@
         "required": [
           "id",
           "orgId",
-          "balanceCents",
+          "creditBalanceCents",
           "hasAutoReload",
+          "hasPaymentMethod",
           "reloadAmountCents",
+          "reloadThresholdCents",
           "createdAt"
         ]
       },
@@ -10281,7 +10314,7 @@
           "Billing"
         ],
         "summary": "Get billing account",
-        "description": "Get or create the billing account for the organization",
+        "description": "Get or create the billing account for the organization. If no account exists, one is auto-created with a Stripe customer and $2 trial credit.",
         "security": [
           {
             "bearerAuth": []
@@ -10374,7 +10407,7 @@
           "Billing"
         ],
         "summary": "Get account balance",
-        "description": "Quick check of current balance and depletion status",
+        "description": "Quick check of current balance and depletion status. Auto-creates billing account if none exists.",
         "security": [
           {
             "bearerAuth": []
@@ -10763,7 +10796,7 @@
           "Billing"
         ],
         "summary": "Deduct credits",
-        "description": "Deduct credits from the organization's billing account",
+        "description": "Deduct credits from the organization's billing account. Accepts negative balances — if insufficient and auto-reload fails, the deduction still goes through. Auto-creates billing account if none exists.",
         "security": [
           {
             "bearerAuth": []
