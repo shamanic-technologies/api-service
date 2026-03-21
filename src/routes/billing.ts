@@ -1,4 +1,4 @@
-import { Router, raw, Request, Response } from "express";
+import { Router } from "express";
 import { authenticate, requireOrg, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
@@ -92,37 +92,5 @@ router.post("/billing/checkout-sessions", authenticate, requireOrg, async (req: 
     res.status(500).json({ error: error.message || "Failed to create checkout session" });
   }
 });
-
-/**
- * Stripe webhook handler — exported separately for mounting before express.json().
- * No auth middleware (Stripe validates via signature header).
- * Must receive raw body for signature verification.
- */
-export async function stripeWebhookHandler(req: Request, res: Response) {
-  try {
-    const response = await fetch(
-      `${externalServices.billing.url}/v1/webhooks/stripe`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-API-Key": externalServices.billing.apiKey,
-          "Stripe-Signature": (req.headers["stripe-signature"] as string) || "",
-        },
-        body: req.body, // raw Buffer from express.raw()
-      }
-    );
-
-    const text = await response.text();
-    try {
-      res.status(response.status).json(JSON.parse(text));
-    } catch {
-      res.status(response.status).send(text);
-    }
-  } catch (error: any) {
-    console.error("Stripe webhook proxy error:", error);
-    res.status(500).json({ error: error.message || "Failed to proxy Stripe webhook" });
-  }
-}
 
 export default router;

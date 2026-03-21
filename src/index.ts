@@ -15,7 +15,6 @@ import workflowsRoutes from "./routes/workflows.js";
 import promptsRoutes from "./routes/prompts.js";
 import chatRoutes from "./routes/chat.js";
 import billingRoutes from "./routes/billing.js";
-import { stripeWebhookHandler } from "./routes/billing.js";
 import emailsRoutes from "./routes/emails.js";
 import internalEmailsRoutes from "./routes/internal-emails.js";
 import stripeRoutes from "./routes/stripe.js";
@@ -51,13 +50,6 @@ app.use(cors({
   ],
   credentials: true,
 }));
-
-// Stripe webhook must be mounted BEFORE express.json() — needs raw body for signature verification
-app.post(
-  "/v1/billing/webhooks/stripe",
-  express.raw({ type: "application/json" }),
-  stripeWebhookHandler,
-);
 
 app.use(express.json());
 

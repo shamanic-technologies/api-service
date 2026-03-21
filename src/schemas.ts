@@ -2711,26 +2711,6 @@ registry.registerPath({
   },
 });
 
-registry.registerPath({
-  method: "post",
-  path: "/v1/billing/webhooks/stripe",
-  tags: ["Billing"],
-  summary: "Stripe webhook",
-  description:
-    "Stripe webhook endpoint. No authentication — Stripe validates via signature header.",
-  responses: {
-    200: {
-      description: "Webhook processed",
-      content: {
-        "application/json": {
-          schema: z.object({ received: z.boolean() }).openapi("WebhookResponse"),
-        },
-      },
-    },
-    400: { description: "Invalid signature", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
 
 // ===================================================================
 // TRANSACTIONAL EMAILS
