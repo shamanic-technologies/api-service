@@ -2549,7 +2549,7 @@ registry.registerPath({
   path: "/v1/billing/accounts",
   tags: ["Billing"],
   summary: "Get billing account",
-  description: "Get or create the billing account for the organization",
+  description: "Get or create the billing account for the organization. If no account exists, one is auto-created with a Stripe customer and $2 trial credit.",
   security: authed,
   responses: {
     200: {
@@ -2559,9 +2559,11 @@ registry.registerPath({
           schema: z.object({
             id: z.string().describe("Account ID"),
             orgId: z.string().describe("Organization ID"),
-            balanceCents: z.number().describe("Current balance in cents"),
-            hasAutoReload: z.boolean().describe("Whether auto-reload is enabled"),
-            reloadAmountCents: z.number().nullable().describe("Auto-reload amount in cents"),
+            creditBalanceCents: z.number().describe("Current credit balance in cents"),
+            hasAutoReload: z.boolean().describe("Whether auto-reload is enabled (true when payment method + reload config are both set)"),
+            hasPaymentMethod: z.boolean().describe("Whether a payment method is on file"),
+            reloadAmountCents: z.number().nullable().describe("Auto-reload amount in cents (null if not configured)"),
+            reloadThresholdCents: z.number().nullable().describe("Balance threshold in cents that triggers auto-reload (null if not configured)"),
             createdAt: z.string().describe("ISO timestamp"),
           }).openapi("BillingAccountResponse"),
         },
@@ -2578,7 +2580,7 @@ registry.registerPath({
   tags: ["Billing"],
   summary: "Get account balance",
   description:
-    "Quick check of current balance and depletion status",
+    "Quick check of current balance and depletion status. Auto-creates billing account if none exists.",
   security: authed,
   responses: {
     200: {
@@ -2648,9 +2650,11 @@ registry.registerPath({
           schema: z.object({
             id: z.string().describe("Account ID"),
             orgId: z.string().describe("Organization ID"),
-            balanceCents: z.number().describe("Current balance in cents"),
+            creditBalanceCents: z.number().describe("Current credit balance in cents"),
             hasAutoReload: z.boolean().describe("Whether auto-reload is enabled"),
+            hasPaymentMethod: z.boolean().describe("Whether a payment method is on file"),
             reloadAmountCents: z.number().nullable().describe("Auto-reload amount in cents"),
+            reloadThresholdCents: z.number().nullable().describe("Balance threshold in cents that triggers auto-reload"),
             createdAt: z.string().describe("ISO timestamp"),
           }).openapi("ConfigureAutoReloadResponse"),
         },
@@ -2677,9 +2681,11 @@ registry.registerPath({
           schema: z.object({
             id: z.string().describe("Account ID"),
             orgId: z.string().describe("Organization ID"),
-            balanceCents: z.number().describe("Current balance in cents"),
+            creditBalanceCents: z.number().describe("Current credit balance in cents"),
             hasAutoReload: z.boolean().describe("Whether auto-reload is enabled"),
+            hasPaymentMethod: z.boolean().describe("Whether a payment method is on file"),
             reloadAmountCents: z.number().nullable().describe("Auto-reload amount in cents"),
+            reloadThresholdCents: z.number().nullable().describe("Balance threshold in cents that triggers auto-reload"),
             createdAt: z.string().describe("ISO timestamp"),
           }).openapi("DisableAutoReloadResponse"),
         },
@@ -2695,7 +2701,7 @@ registry.registerPath({
   path: "/v1/billing/credits/deduct",
   tags: ["Billing"],
   summary: "Deduct credits",
-  description: "Deduct credits from the organization's billing account",
+  description: "Deduct credits from the organization's billing account. Accepts negative balances — if insufficient and auto-reload fails, the deduction still goes through. Auto-creates billing account if none exists.",
   security: authed,
   request: {
     body: {
