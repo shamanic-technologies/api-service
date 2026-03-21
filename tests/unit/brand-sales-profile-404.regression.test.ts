@@ -137,7 +137,7 @@ describe("PUT /v1/brands/:id/sales-profile – refresh", () => {
     app = buildApp();
   });
 
-  it("should return 200 on successful refresh", async () => {
+  it("should return 200 on successful refresh and pass ?force=true to brand-service", async () => {
     const profile = { cached: false, brandId: "b-1", profile: { valueProposition: "Refreshed" } };
     global.fetch = vi.fn().mockImplementation(async () => ({
       ok: true,
@@ -148,6 +148,11 @@ describe("PUT /v1/brands/:id/sales-profile – refresh", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(profile);
+
+    // Verify ?force=true is sent to brand-service
+    const fetchCall = (global.fetch as any).mock.calls[0];
+    const url = typeof fetchCall[0] === "string" ? fetchCall[0] : fetchCall[0].url;
+    expect(url).toContain("/brands/some-brand-id/sales-profile?force=true");
   });
 
   it("should return 400 when Anthropic key is missing", async () => {
