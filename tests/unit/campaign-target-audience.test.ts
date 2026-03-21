@@ -120,6 +120,7 @@ describe("POST /v1/campaigns with targetAudience", () => {
     const salesProfileCall = fetchCalls.find((c) => c.url.includes("/sales-profile"));
     expect(salesProfileCall).toBeDefined();
     expect(salesProfileCall!.url).toContain("/brands/brand-uuid-123/sales-profile");
+    expect(salesProfileCall!.url).not.toContain("force=true"); // campaign creation uses cache, not force re-extraction
     expect(salesProfileCall!.body!.urgency).toBe("Recruitment closes in 30 days");
     expect(salesProfileCall!.body!.scarcity).toBe("Only 10 spots available worldwide");
     expect(salesProfileCall!.body!.riskReversal).toBe("Free trial for 2 weeks, no commitment");

@@ -200,7 +200,7 @@ router.put("/brands/:id/sales-profile", authenticate, requireOrg, requireUser, a
   try {
     const result = await callExternalService(
       externalServices.brand,
-      `/brands/${req.params.id}/sales-profile`,
+      `/brands/${req.params.id}/sales-profile?force=true`,
       {
         method: "PUT",
         headers: buildInternalHeaders(req),
