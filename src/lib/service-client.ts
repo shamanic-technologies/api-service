@@ -72,6 +72,10 @@ export const externalServices = {
     url: process.env.API_REGISTRY_SERVICE_URL || "http://localhost:3023",
     apiKey: process.env.API_REGISTRY_SERVICE_API_KEY || "",
   },
+  pressKits: {
+    url: process.env.PRESS_KITS_SERVICE_URL || "https://press-kits.mcpfactory.org",
+    apiKey: process.env.PRESS_KITS_SERVICE_API_KEY || "",
+  },
 };
 
 interface ServiceCallOptions {
