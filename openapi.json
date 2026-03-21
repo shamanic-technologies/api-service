@@ -3414,17 +3414,6 @@
           "reload_amount_cents"
         ]
       },
-      "WebhookResponse": {
-        "type": "object",
-        "properties": {
-          "received": {
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "received"
-        ]
-      },
       "SendEmailResponse": {
         "type": "object",
         "properties": {
@@ -10810,47 +10799,6 @@
             "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           }
         ]
-      }
-    },
-    "/v1/billing/webhooks/stripe": {
-      "post": {
-        "tags": [
-          "Billing"
-        ],
-        "summary": "Stripe webhook",
-        "description": "Stripe webhook endpoint. No authentication — Stripe validates via signature header.",
-        "responses": {
-          "200": {
-            "description": "Webhook processed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WebhookResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid signature",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/v1/emails/send": {

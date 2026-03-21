@@ -69,46 +69,18 @@ describe("Billing proxy routes", () => {
   });
 });
 
-describe("Stripe webhook proxy", () => {
-  it("should export stripeWebhookHandler separately", () => {
-    expect(content).toContain("export async function stripeWebhookHandler");
+describe("Stripe webhook proxy removed", () => {
+  it("should NOT export stripeWebhookHandler", () => {
+    expect(content).not.toContain("export async function stripeWebhookHandler");
   });
 
-  it("should NOT use authenticate middleware", () => {
-    // The handler is exported as a standalone function, not routed through authenticate
-    const handlerSection = content.slice(
-      content.indexOf("stripeWebhookHandler"),
-    );
-    // stripeWebhookHandler should not reference authenticate
-    expect(handlerSection).not.toContain("authenticate,");
+  it("should NOT reference stripe webhook in index.ts", () => {
+    expect(indexContent).not.toContain("stripeWebhookHandler");
+    expect(indexContent).not.toContain("express.raw");
   });
 
-  it("should forward Stripe-Signature header", () => {
-    expect(content).toContain("stripe-signature");
-    expect(content).toContain("Stripe-Signature");
-  });
-
-  it("should use raw body (not JSON parsed)", () => {
-    expect(content).toContain("req.body"); // raw Buffer
-  });
-
-  it("should proxy to billing-service /v1/webhooks/stripe (no appId)", () => {
-    expect(content).toContain("/v1/webhooks/stripe");
-    expect(content).not.toContain("DEFAULT_APP_ID");
-  });
-});
-
-describe("Stripe webhook is mounted before express.json()", () => {
-  it("should mount stripe webhook before express.json() in index.ts", () => {
-    const webhookIndex = indexContent.indexOf("stripeWebhookHandler");
-    const jsonIndex = indexContent.indexOf("express.json()");
-    expect(webhookIndex).toBeGreaterThan(-1);
-    expect(jsonIndex).toBeGreaterThan(-1);
-    expect(webhookIndex).toBeLessThan(jsonIndex);
-  });
-
-  it("should use express.raw for the stripe webhook route", () => {
-    expect(indexContent).toContain("express.raw");
+  it("should NOT have stripe webhook path in schemas", () => {
+    expect(schemaContent).not.toContain('path: "/v1/billing/webhooks/stripe"');
   });
 });
 
@@ -120,7 +92,6 @@ describe("Billing OpenAPI schemas", () => {
     expect(schemaContent).toContain('path: "/v1/billing/accounts/mode"');
     expect(schemaContent).toContain('path: "/v1/billing/credits/deduct"');
     expect(schemaContent).toContain('path: "/v1/billing/checkout-sessions"');
-    expect(schemaContent).toContain('path: "/v1/billing/webhooks/stripe"');
   });
 
   it("should use Billing tag", () => {
@@ -131,14 +102,6 @@ describe("Billing OpenAPI schemas", () => {
     expect(schemaContent).toContain("SwitchBillingModeRequestSchema");
     expect(schemaContent).toContain("DeductCreditsRequestSchema");
     expect(schemaContent).toContain("CreateCheckoutSessionRequestSchema");
-  });
-
-  it("should not require auth on stripe webhook path", () => {
-    const webhookSection = schemaContent.slice(
-      schemaContent.indexOf('path: "/v1/billing/webhooks/stripe"'),
-      schemaContent.indexOf('path: "/v1/billing/webhooks/stripe"') + 500,
-    );
-    expect(webhookSection).not.toContain("security: authed");
   });
 });
 

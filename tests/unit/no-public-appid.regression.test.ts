@@ -80,7 +80,7 @@ describe("No public appId regression", () => {
     expect(deductBlock).not.toContain("app_id");
   });
 
-  it("should not have {appId} path param in stripe webhook path", () => {
-    expect(schemas).not.toContain('"/v1/billing/webhooks/stripe/{appId}"');
+  it("should not have stripe webhook path at all (removed)", () => {
+    expect(schemas).not.toContain('"/v1/billing/webhooks/stripe"');
   });
 });
