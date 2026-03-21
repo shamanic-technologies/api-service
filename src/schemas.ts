@@ -363,6 +363,14 @@ export const CreateCampaignRequestSchema = z
 
 // -- Common schemas --
 
+const ErrorSummarySchema = z
+  .object({
+    failedStep: z.string().describe("Which DAG step failed (e.g. 'fetch_lead', 'generate_email')"),
+    message: z.string().describe("Cleaned error message without stack traces"),
+    rootCause: z.string().describe("User-friendly root cause (e.g. 'billing-service unavailable')"),
+  })
+  .openapi("ErrorSummary");
+
 const RunCostDataSchema = z
   .object({
     status: z.string().describe("Run status (e.g. completed, failed)"),
@@ -382,6 +390,10 @@ const RunCostDataSchema = z
       .describe("Per-cost-name breakdown"),
     serviceName: z.string().nullable(),
     taskName: z.string().nullable(),
+    error: z.string().optional().describe("Raw error message (for debugging). Only present on failed runs."),
+    errorSummary: ErrorSummarySchema.optional().describe(
+      "Structured error summary for failed runs. Contains a user-friendly rootCause, the failedStep, and a cleaned message. Only present when status is 'failed'."
+    ),
     descendantRuns: z.array(z.unknown()).describe("Child runs"),
   })
   .openapi("RunCostData");
