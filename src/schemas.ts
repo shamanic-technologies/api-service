@@ -2511,6 +2511,12 @@ export const SwitchBillingModeRequestSchema = z
       .positive()
       .optional()
       .describe("Auto-reload amount in cents (for payg mode)"),
+    reload_threshold_cents: z
+      .number()
+      .int()
+      .min(0)
+      .optional()
+      .describe("Balance threshold in cents that triggers auto-reload (for payg mode)"),
   })
   .openapi("SwitchBillingModeRequest");
 
@@ -2533,6 +2539,12 @@ export const CreateCheckoutSessionRequestSchema = z
       .describe("Amount to reload in cents"),
   })
   .openapi("CreateCheckoutSessionRequest");
+
+export const CreatePortalSessionRequestSchema = z
+  .object({
+    return_url: z.string().url().describe("URL to redirect after the portal session ends"),
+  })
+  .openapi("CreatePortalSessionRequest");
 
 registry.registerPath({
   method: "get",
@@ -2706,6 +2718,37 @@ registry.registerPath({
         },
       },
     },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/billing/portal-sessions",
+  tags: ["Billing"],
+  summary: "Create Stripe portal session",
+  description: "Create a Stripe billing portal session for managing payment methods and subscriptions",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: CreatePortalSessionRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Portal session created with URL",
+      content: {
+        "application/json": {
+          schema: z.object({
+            url: z.string().describe("Stripe portal URL to redirect the user to"),
+          }).openapi("BillingPortalSessionResponse"),
+        },
+      },
+    },
+    400: { description: "No Stripe customer found", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
