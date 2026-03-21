@@ -1399,7 +1399,7 @@ registry.registerPath({
   tags: ["Brand"],
   summary: "Refresh brand sales profile",
   description:
-    "Force re-extraction of the sales profile for the brand.",
+    "Force re-extraction of the sales profile for the brand. Always bypasses the 30-day cache and triggers a fresh scraping + AI extraction. Use this when the brand's website has changed and the profile needs updating.",
   security: authed,
   request: { params: BrandIdParam },
   responses: {
