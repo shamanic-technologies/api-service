@@ -829,6 +829,79 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/campaigns/{id}/outlets",
+  tags: ["Campaigns"],
+  summary: "Get campaign outlets",
+  description:
+    "Get discovered outlets for a campaign (proxied from outlet-service)",
+  security: authed,
+  request: { params: CampaignIdParam },
+  responses: {
+    200: {
+      description: "List of outlets discovered for the campaign",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              outlets: z.array(
+                z.object({
+                  id: z.string().optional(),
+                  outletName: z.string().nullable(),
+                  outletUrl: z.string().nullable(),
+                  outletDomain: z.string().nullable(),
+                  relevanceScore: z.number().nullable(),
+                  whyRelevant: z.string().nullable(),
+                  status: z.string().nullable(),
+                }),
+              ),
+            })
+            .openapi("CampaignOutletsResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/campaigns/{id}/journalists",
+  tags: ["Campaigns"],
+  summary: "Get campaign journalists",
+  description:
+    "Get discovered journalists for a campaign (proxied from journalist-service)",
+  security: authed,
+  request: { params: CampaignIdParam },
+  responses: {
+    200: {
+      description: "List of journalists discovered for the campaign",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              journalists: z.array(
+                z.object({
+                  id: z.string().optional(),
+                  journalistName: z.string().nullable(),
+                  firstName: z.string().nullable(),
+                  lastName: z.string().nullable(),
+                  entityType: z.string().nullable(),
+                  outletName: z.string().nullable(),
+                }),
+              ),
+            })
+            .openapi("CampaignJournalistsResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // PROVIDER KEYS
 // ===================================================================

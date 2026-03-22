@@ -805,4 +805,48 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
   });
 });
 
+/**
+ * GET /v1/campaigns/:id/outlets
+ * Get discovered outlets for a campaign (proxy to outlet-service)
+ */
+router.get("/campaigns/:id/outlets", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await callExternalService(
+      externalServices.outlet,
+      `/outlets?campaignId=${encodeURIComponent(id)}`,
+      {
+        headers: buildInternalHeaders(req),
+      }
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Get campaign outlets error:", error);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get campaign outlets" });
+  }
+});
+
+/**
+ * GET /v1/campaigns/:id/journalists
+ * Get discovered journalists for a campaign (proxy to journalist-service)
+ */
+router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await callExternalService(
+      externalServices.journalist,
+      `/campaign-outlet-journalists?campaignId=${encodeURIComponent(id)}`,
+      {
+        headers: buildInternalHeaders(req),
+      }
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Get campaign journalists error:", error);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get campaign journalists" });
+  }
+});
+
 export default router;

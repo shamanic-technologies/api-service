@@ -1341,6 +1341,103 @@
           "emails"
         ]
       },
+      "CampaignOutletsResponse": {
+        "type": "object",
+        "properties": {
+          "outlets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "outletName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "outletUrl": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "outletDomain": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "relevanceScore": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "whyRelevant": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "status": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "outletName",
+                "outletUrl",
+                "outletDomain",
+                "relevanceScore",
+                "whyRelevant",
+                "status"
+              ]
+            }
+          }
+        },
+        "required": [
+          "outlets"
+        ]
+      },
+      "CampaignJournalistsResponse": {
+        "type": "object",
+        "properties": {
+          "journalists": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "journalistName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "firstName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "lastName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "entityType": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "outletName": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "journalistName",
+                "firstName",
+                "lastName",
+                "entityType",
+                "outletName"
+              ]
+            }
+          }
+        },
+        "required": [
+          "journalists"
+        ]
+      },
       "OrgKeyItem": {
         "type": "object",
         "properties": {
@@ -6313,6 +6410,212 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CampaignEmailsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/campaigns/{id}/outlets": {
+      "get": {
+        "tags": [
+          "Campaigns"
+        ],
+        "summary": "Get campaign outlets",
+        "description": "Get discovered outlets for a campaign (proxied from outlet-service)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign ID"
+            },
+            "required": true,
+            "description": "Campaign ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of outlets discovered for the campaign",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignOutletsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/campaigns/{id}/journalists": {
+      "get": {
+        "tags": [
+          "Campaigns"
+        ],
+        "summary": "Get campaign journalists",
+        "description": "Get discovered journalists for a campaign (proxied from journalist-service)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign ID"
+            },
+            "required": true,
+            "description": "Campaign ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of journalists discovered for the campaign",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignJournalistsResponse"
                 }
               }
             }
