@@ -3935,6 +3935,7 @@ export const ContentComposeRequestSchema = z
     theme: z.string().describe("Theme text"),
     text: z.string().describe("Quote text to overlay"),
     outputBlobToken: z.string().describe("Vercel Blob write token for the output"),
+    layout: z.enum(["quote-top", "webcam-top"]).default("quote-top").optional().describe("Video layout variant"),
   })
   .openapi("ContentComposeRequest");
 

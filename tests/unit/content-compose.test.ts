@@ -140,6 +140,32 @@ describe("POST /v1/content/compose", () => {
     expect(res.body.error).toContain("Service unavailable");
   });
 
+  it("should forward layout field to downstream service", async () => {
+    await request(app)
+      .post("/v1/content/compose")
+      .send({ ...validBody, layout: "webcam-top" });
+
+    const body = JSON.parse(capturedInit?.body as string);
+    expect(body.layout).toBe("webcam-top");
+  });
+
+  it("should accept request without layout (optional field)", async () => {
+    const res = await request(app)
+      .post("/v1/content/compose")
+      .send(validBody);
+
+    expect(res.status).toBe(200);
+  });
+
+  it("should return 400 when layout has invalid value", async () => {
+    const res = await request(app)
+      .post("/v1/content/compose")
+      .send({ ...validBody, layout: "invalid-layout" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Invalid request");
+  });
+
   it("should return 500 when upstream returns unexpected error", async () => {
     global.fetch = vi.fn().mockImplementation(async () => ({
       ok: false,
