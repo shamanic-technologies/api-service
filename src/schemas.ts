@@ -3611,8 +3611,16 @@ registry.registerPath({
   path: "/v1/press-kits/media-kits",
   tags: ["Press Kits"],
   summary: "List media kits",
-  description: "List media kits, optionally filtered by org_id, organization_id, title, or campaign_id.",
+  description: "List media kits, optionally filtered by org_id, organization_id, campaign_id, or title.",
   security: authed,
+  request: {
+    query: z.object({
+      org_id: z.string().optional().describe("Filter by org ID"),
+      organization_id: z.string().optional().describe("Filter by organization ID (alias for org_id)"),
+      campaign_id: z.string().optional().describe("Filter by campaign ID — returns media kit(s) linked to this campaign"),
+      title: z.string().optional().describe("Filter by title"),
+    }),
+  },
   responses: {
     200: { description: "Media kits list", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitMediaKitListResponse") } } },
     401: { description: "Unauthorized", content: errorContent },

@@ -205,6 +205,10 @@ describe("Press Kits OpenAPI schemas", () => {
     expect(schemaContent).toContain('path: "/v1/press-kits/media-kits/{id}/cancel"');
   });
 
+  it("should document campaign_id query param on GET /media-kits", () => {
+    expect(schemaContent).toContain("campaign_id");
+  });
+
   it("should use PATCH for mdx and status updates", () => {
     // Find the mdx path registration and verify it uses patch
     const mdxMatch = schemaContent.match(/method: "patch",\s*\n\s*path: "\/v1\/press-kits\/media-kits\/{id}\/mdx"/);
