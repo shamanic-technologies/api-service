@@ -1,10 +1,16 @@
 import { Router } from "express";
+import { z } from "zod";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { fetchDeliveryStats } from "../lib/delivery-stats.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
-import { CreateCampaignRequestSchema } from "../schemas.js";
+import {
+  CreateCampaignRequestSchema,
+  CreateDiscoveryCampaignRequestSchema,
+  isDiscoveryWorkflow,
+  deriveCampaignType,
+} from "../schemas.js";
 
 const router = Router();
 
@@ -51,16 +57,21 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       body: { ...req.body, brandUrl: req.body.brandUrl },
     });
 
-    const parsed = CreateCampaignRequestSchema.safeParse(req.body);
+    // Detect discovery vs outreach based on workflowName
+    const rawWorkflowName = (req.body.workflowName as string) || "";
+    const discovery = isDiscoveryWorkflow(rawWorkflowName);
+
+    const schema = discovery ? CreateDiscoveryCampaignRequestSchema : CreateCampaignRequestSchema;
+    const parsed = schema.safeParse(req.body);
     if (!parsed.success) {
       const flat = parsed.error.flatten();
       const missingFields = Object.keys(flat.fieldErrors);
       console.warn("[api-service] POST /v1/campaigns \u2014 validation failed", flat);
 
       const fieldGuide: Record<string, { description: string; example: string }> = {
-        name: { description: "A name for your campaign", example: "Q1 SaaS Outreach" },
+        name: { description: "A name for your campaign", example: discovery ? "Q1 Media Discovery" : "Q1 SaaS Outreach" },
         brandUrl: { description: "The URL of the product or service you are promoting", example: "https://acme.com" },
-        targetAudience: { description: "Plain text description of who you want to reach", example: "CTOs at SaaS startups with 10-50 employees in the US" },
+        targetAudience: { description: discovery ? "What kind of outlets or journalists to discover" : "Plain text description of who you want to reach", example: discovery ? "Tech publications covering SaaS and AI" : "CTOs at SaaS startups with 10-50 employees in the US" },
         targetOutcome: { description: "The concrete result you want from this campaign", example: "Book sales demos" },
         valueForTarget: { description: "What your target audience gains by responding to your email", example: "Access to enterprise analytics at startup pricing" },
         urgency: { description: "A time-based constraint that motivates the prospect to act now rather than later", example: "Early-adopter pricing ends March 31st" },
@@ -76,7 +87,9 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       return res.status(400).json({
         error: `Missing or invalid required fields: ${missingFields.join(", ")}.`,
         missingFields: missingFieldDetails,
-        hint: "Every campaign requires all of these fields. Even if you're unsure, provide your best answer — it helps the AI generate better emails.",
+        hint: discovery
+          ? "Discovery campaigns require: name, workflowName, brandUrl, and targetAudience."
+          : "Every campaign requires all of these fields. Even if you're unsure, provide your best answer — it helps the AI generate better emails.",
       });
     }
 
@@ -86,9 +99,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       workflowName: parsed.data.workflowName,
       brandUrl,
       targetAudience: parsed.data.targetAudience?.slice(0, 80) + "...",
-      targetOutcome: parsed.data.targetOutcome,
-      valueForTarget: parsed.data.valueForTarget?.slice(0, 80) + "...",
-      maxLeads: parsed.data.maxLeads,
+      discovery,
     });
 
     // 1. Upsert brand to get brandId
@@ -109,33 +120,38 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     console.log("[api-service] POST /v1/campaigns \u2014 step 1 done: brand upserted", { brandId: brandResult.brandId });
 
     // 2. Send user-provided marketing fields to brand-service sales profile
-    const { urgency, scarcity, riskReversal, socialProof } = parsed.data;
-    if (urgency || scarcity || riskReversal || socialProof) {
-      console.log("[api-service] POST /v1/campaigns — step 2: updating sales profile", { brandId: brandResult.brandId });
-      await callExternalService(
-        externalServices.brand,
-        `/brands/${brandResult.brandId}/sales-profile`,
-        {
-          method: "PUT",
-          headers: buildInternalHeaders(req),
-          body: {
-            ...(urgency && { urgency }),
-            ...(scarcity && { scarcity }),
-            ...(riskReversal && { riskReversal }),
-            ...(socialProof && { socialProof }),
-          },
-        }
-      );
-      console.log("[api-service] POST /v1/campaigns — step 2 done: sales profile updated");
+    //    (only for outreach campaigns — discovery campaigns don't have these fields)
+    if (!discovery) {
+      const outreachData = parsed.data as z.infer<typeof CreateCampaignRequestSchema>;
+      const { urgency, scarcity, riskReversal, socialProof } = outreachData;
+      if (urgency || scarcity || riskReversal || socialProof) {
+        console.log("[api-service] POST /v1/campaigns — step 2: updating sales profile", { brandId: brandResult.brandId });
+        await callExternalService(
+          externalServices.brand,
+          `/brands/${brandResult.brandId}/sales-profile`,
+          {
+            method: "PUT",
+            headers: buildInternalHeaders(req),
+            body: {
+              ...(urgency && { urgency }),
+              ...(scarcity && { scarcity }),
+              ...(riskReversal && { riskReversal }),
+              ...(socialProof && { socialProof }),
+            },
+          }
+        );
+        console.log("[api-service] POST /v1/campaigns — step 2 done: sales profile updated");
+      }
     }
 
     // 3. Forward to campaign-service (run tracking via x-run-id header)
-    // Derive `type` from workflowName for campaign-service backward compat
+    // Derive `type` from workflowName
     const { workflowName, ...restData } = parsed.data;
+    const campaignType = deriveCampaignType(workflowName);
     const body: Record<string, unknown> = {
       ...restData,
       workflowName,
-      type: "cold-email-outreach",
+      type: campaignType,
       orgId: req.orgId,
       brandId: brandResult.brandId,
     };
@@ -148,8 +164,8 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     console.log("[api-service] POST /v1/campaigns — step 3: forwarding to campaign-service", {
       brandId: body.brandId,
       workflowName: body.workflowName,
-      targetOutcome: body.targetOutcome,
-      maxLeads: body.maxLeads,
+      type: body.type,
+      discovery,
     });
     const result = await callExternalService(
       externalServices.campaign,
@@ -787,6 +803,46 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
     closed = true;
     clearTimeout(timer);
   });
+});
+
+/**
+ * GET /v1/campaigns/:id/discovered-outlets
+ * Get media outlets discovered by an outlets-database-discovery campaign.
+ * Proxies to campaign-service.
+ */
+router.get("/campaigns/:id/discovered-outlets", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const result = await callExternalService(
+      externalServices.campaign,
+      `/campaigns/${id}/discovered-outlets`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Get discovered outlets error:", error);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get discovered outlets" });
+  }
+});
+
+/**
+ * GET /v1/campaigns/:id/discovered-journalists
+ * Get journalists discovered by a journalists-database-discovery campaign.
+ * Proxies to campaign-service.
+ */
+router.get("/campaigns/:id/discovered-journalists", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const result = await callExternalService(
+      externalServices.campaign,
+      `/campaigns/${id}/discovered-journalists`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Get discovered journalists error:", error);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get discovered journalists" });
+  }
 });
 
 export default router;
