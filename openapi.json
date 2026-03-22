@@ -4765,6 +4765,15 @@
           "outputBlobToken": {
             "type": "string",
             "description": "Vercel Blob write token for the output"
+          },
+          "layout": {
+            "type": "string",
+            "enum": [
+              "quote-top",
+              "webcam-top"
+            ],
+            "default": "quote-top",
+            "description": "Video layout variant"
           }
         },
         "required": [
