@@ -805,44 +805,4 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
   });
 });
 
-/**
- * GET /v1/campaigns/:id/discovered-outlets
- * Get media outlets discovered by an outlets-database-discovery campaign.
- * Proxies to campaign-service.
- */
-router.get("/campaigns/:id/discovered-outlets", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { id } = req.params;
-    const result = await callExternalService(
-      externalServices.campaign,
-      `/campaigns/${id}/discovered-outlets`,
-      { headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("Get discovered outlets error:", error);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get discovered outlets" });
-  }
-});
-
-/**
- * GET /v1/campaigns/:id/discovered-journalists
- * Get journalists discovered by a journalists-database-discovery campaign.
- * Proxies to campaign-service.
- */
-router.get("/campaigns/:id/discovered-journalists", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { id } = req.params;
-    const result = await callExternalService(
-      externalServices.campaign,
-      `/campaigns/${id}/discovered-journalists`,
-      { headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("Get discovered journalists error:", error);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get discovered journalists" });
-  }
-});
-
 export default router;
