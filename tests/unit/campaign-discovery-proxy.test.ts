@@ -96,8 +96,8 @@ describe("Campaign discovery proxy: journalists", () => {
 
 describe("Service client: outlet and journalist services", () => {
   it("should define outlet service config", () => {
-    expect(serviceClientContent).toContain("OUTLET_SERVICE_URL");
-    expect(serviceClientContent).toContain("OUTLET_SERVICE_API_KEY");
+    expect(serviceClientContent).toContain("OUTLETS_SERVICE_URL");
+    expect(serviceClientContent).toContain("OUTLETS_SERVICE_API_KEY");
   });
 
   it("should define journalist service config", () => {

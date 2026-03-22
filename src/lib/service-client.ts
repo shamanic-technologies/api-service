@@ -77,8 +77,8 @@ export const externalServices = {
     apiKey: process.env.PRESS_KITS_SERVICE_API_KEY || "",
   },
   outlet: {
-    url: process.env.OUTLET_SERVICE_URL || "http://localhost:3030",
-    apiKey: process.env.OUTLET_SERVICE_API_KEY || "",
+    url: process.env.OUTLETS_SERVICE_URL || "http://localhost:3030",
+    apiKey: process.env.OUTLETS_SERVICE_API_KEY || "",
   },
   journalist: {
     url: process.env.JOURNALIST_SERVICE_URL || "http://localhost:3031",
