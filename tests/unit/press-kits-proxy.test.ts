@@ -19,21 +19,20 @@ describe("Press Kits proxy routes", () => {
 
   it("should have public GET /press-kits/public/:token without auth", () => {
     expect(content).toContain('"/press-kits/public/:token"');
-    // Public route should NOT have authenticate middleware on this line
     const publicLine = content.split("\n").find((l) => l.includes('"/press-kits/public/:token"'));
     expect(publicLine).not.toContain("authenticate");
   });
 
-  it("should have public GET /press-kits/public-media-kit/:token without auth", () => {
-    expect(content).toContain('"/press-kits/public-media-kit/:token"');
-    const publicLine = content.split("\n").find((l) => l.includes('"/press-kits/public-media-kit/:token"'));
-    expect(publicLine).not.toContain("authenticate");
+  it("should NOT have legacy /press-kits/public-media-kit route (removed upstream)", () => {
+    expect(content).not.toContain("/press-kits/public-media-kit");
   });
 
-  it("should have public GET /press-kits/email-data/press-kit/:orgId without auth", () => {
-    expect(content).toContain('"/press-kits/email-data/press-kit/:orgId"');
-    const publicLine = content.split("\n").find((l) => l.includes('"/press-kits/email-data/press-kit/:orgId"'));
-    expect(publicLine).not.toContain("authenticate");
+  it("should NOT have public /press-kits/email-data route (moved to internal)", () => {
+    // email-data is now internal, not public
+    const publicEmailLine = content.split("\n").find((l) =>
+      l.includes('"/press-kits/email-data/') && !l.includes("internal")
+    );
+    expect(publicEmailLine).toBeUndefined();
   });
 
   // ── Authenticated endpoints ─────────────────────────────────────────────
@@ -43,40 +42,44 @@ describe("Press Kits proxy routes", () => {
     expect(content).toContain("router.post");
   });
 
-  it("should have GET /press-kits/organizations/share-token/:orgId with auth", () => {
-    expect(content).toContain('"/press-kits/organizations/share-token/:orgId"');
+  it("should have GET /press-kits/organizations/:orgId/share-token with auth", () => {
+    expect(content).toContain('"/press-kits/organizations/:orgId/share-token"');
   });
 
   it("should have GET /press-kits/organizations/exists with auth", () => {
     expect(content).toContain('"/press-kits/organizations/exists"');
   });
 
-  it("should have GET /press-kits/media-kit with auth", () => {
-    expect(content).toContain('"/press-kits/media-kit"');
+  it("should have GET /press-kits/media-kits (plural) with auth", () => {
+    expect(content).toContain('"/press-kits/media-kits"');
   });
 
-  it("should have GET /press-kits/media-kit/:id with auth", () => {
-    expect(content).toContain('"/press-kits/media-kit/:id"');
+  it("should have GET /press-kits/media-kits/:id with auth", () => {
+    expect(content).toContain('"/press-kits/media-kits/:id"');
   });
 
-  it("should have POST /press-kits/edit-media-kit with auth", () => {
-    expect(content).toContain('"/press-kits/edit-media-kit"');
+  it("should have POST /press-kits/media-kits (create-or-edit) with auth", () => {
+    const postLine = content.split("\n").find((l) =>
+      l.includes("router.post") && l.includes('"/press-kits/media-kits"')
+    );
+    expect(postLine).toBeDefined();
   });
 
-  it("should have POST /press-kits/update-mdx with auth", () => {
-    expect(content).toContain('"/press-kits/update-mdx"');
+  it("should have PATCH /press-kits/media-kits/:id/mdx with auth", () => {
+    expect(content).toContain('"/press-kits/media-kits/:id/mdx"');
+    expect(content).toContain("router.patch");
   });
 
-  it("should have POST /press-kits/update-status with auth", () => {
-    expect(content).toContain('"/press-kits/update-status"');
+  it("should have PATCH /press-kits/media-kits/:id/status with auth", () => {
+    expect(content).toContain('"/press-kits/media-kits/:id/status"');
   });
 
-  it("should have POST /press-kits/validate with auth", () => {
-    expect(content).toContain('"/press-kits/validate"');
+  it("should have POST /press-kits/media-kits/:id/validate with auth", () => {
+    expect(content).toContain('"/press-kits/media-kits/:id/validate"');
   });
 
-  it("should have POST /press-kits/cancel-draft with auth", () => {
-    expect(content).toContain('"/press-kits/cancel-draft"');
+  it("should have POST /press-kits/media-kits/:id/cancel with auth", () => {
+    expect(content).toContain('"/press-kits/media-kits/:id/cancel"');
   });
 
   // ── Admin endpoints ───────────────────────────────────────────────────
@@ -90,30 +93,34 @@ describe("Press Kits proxy routes", () => {
     expect(content).toContain("router.delete");
   });
 
-  // ── Internal endpoints ────────────────────────────────────────────────
+  // ── Internal endpoints (new REST paths) ───────────────────────────────
 
-  it("should have GET /press-kits/internal/media-kit/by-org/:orgId with auth", () => {
-    expect(content).toContain('"/press-kits/internal/media-kit/by-org/:orgId"');
+  it("should have GET /press-kits/internal/media-kits/current with auth", () => {
+    expect(content).toContain('"/press-kits/internal/media-kits/current"');
   });
 
-  it("should have GET /press-kits/internal/generation-data with auth", () => {
-    expect(content).toContain('"/press-kits/internal/generation-data"');
+  it("should have GET /press-kits/internal/media-kits/generation-data with auth", () => {
+    expect(content).toContain('"/press-kits/internal/media-kits/generation-data"');
   });
 
-  it("should have POST /press-kits/internal/upsert-generation-result with auth", () => {
-    expect(content).toContain('"/press-kits/internal/upsert-generation-result"');
+  it("should have POST /press-kits/internal/media-kits/generation-result with auth", () => {
+    expect(content).toContain('"/press-kits/internal/media-kits/generation-result"');
   });
 
-  it("should have GET /press-kits/clients-media-kits-need-update with auth", () => {
-    expect(content).toContain('"/press-kits/clients-media-kits-need-update"');
+  it("should have GET /press-kits/internal/media-kits/stale with auth", () => {
+    expect(content).toContain('"/press-kits/internal/media-kits/stale"');
   });
 
-  it("should have GET /press-kits/media-kit-setup with auth", () => {
-    expect(content).toContain('"/press-kits/media-kit-setup"');
+  it("should have GET /press-kits/internal/media-kits/setup with auth", () => {
+    expect(content).toContain('"/press-kits/internal/media-kits/setup"');
   });
 
-  it("should have GET /press-kits/health/bulk with auth", () => {
-    expect(content).toContain('"/press-kits/health/bulk"');
+  it("should have GET /press-kits/internal/health/bulk with auth", () => {
+    expect(content).toContain('"/press-kits/internal/health/bulk"');
+  });
+
+  it("should have GET /press-kits/internal/email-data/:orgId with auth", () => {
+    expect(content).toContain('"/press-kits/internal/email-data/:orgId"');
   });
 
   // ── Auth & middleware checks ──────────────────────────────────────────
@@ -121,19 +128,46 @@ describe("Press Kits proxy routes", () => {
   it("should use authenticate and requireOrg on all authenticated endpoints", () => {
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    // 18 authenticated routes + 1 import = 19
-    expect(authMatches!.length).toBe(19);
+    // 19 authenticated routes + 1 import = 20
+    expect(authMatches!.length).toBe(20);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(18);
+    expect(headerMatches!.length).toBe(19);
   });
 
   it("should proxy to externalServices.pressKits", () => {
     expect(content).toContain("externalServices.pressKits");
+  });
+
+  // ── Old endpoints removed ─────────────────────────────────────────────
+
+  it("should NOT have old singular /media-kit path (now /media-kits)", () => {
+    // Only /media-kits (plural) should exist, not /media-kit (singular) standalone
+    expect(content).not.toContain('"/press-kits/media-kit"');
+  });
+
+  it("should NOT have old /edit-media-kit path", () => {
+    expect(content).not.toContain("/edit-media-kit");
+  });
+
+  it("should NOT have old /update-mdx path", () => {
+    expect(content).not.toContain('"/press-kits/update-mdx"');
+  });
+
+  it("should NOT have old /update-status path", () => {
+    expect(content).not.toContain('"/press-kits/update-status"');
+  });
+
+  it("should NOT have old /validate standalone path", () => {
+    expect(content).not.toContain('"/press-kits/validate"');
+  });
+
+  it("should NOT have old /cancel-draft standalone path", () => {
+    expect(content).not.toContain('"/press-kits/cancel-draft"');
   });
 });
 
@@ -146,23 +180,33 @@ describe("Press Kits service client", () => {
 });
 
 describe("Press Kits OpenAPI schemas", () => {
-  it("should register public paths", () => {
+  it("should register public path", () => {
     expect(schemaContent).toContain('path: "/press-kits/public/{token}"');
-    expect(schemaContent).toContain('path: "/press-kits/public-media-kit/{token}"');
-    expect(schemaContent).toContain('path: "/press-kits/email-data/press-kit/{orgId}"');
   });
 
-  it("should register authenticated paths", () => {
+  it("should NOT register removed legacy public paths", () => {
+    expect(schemaContent).not.toContain('path: "/press-kits/public-media-kit/{token}"');
+    expect(schemaContent).not.toContain('path: "/press-kits/email-data/press-kit/{orgId}"');
+  });
+
+  it("should register REST authenticated paths", () => {
     expect(schemaContent).toContain('path: "/v1/press-kits/organizations"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/organizations/share-token/{orgId}"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/organizations/{orgId}/share-token"');
     expect(schemaContent).toContain('path: "/v1/press-kits/organizations/exists"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/media-kit"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/media-kit/{id}"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/edit-media-kit"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/update-mdx"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/update-status"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/validate"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/cancel-draft"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/media-kits"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/media-kits/{id}"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/media-kits/{id}/mdx"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/media-kits/{id}/status"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/media-kits/{id}/validate"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/media-kits/{id}/cancel"');
+  });
+
+  it("should use PATCH for mdx and status updates", () => {
+    // Find the mdx path registration and verify it uses patch
+    const mdxMatch = schemaContent.match(/method: "patch",\s*\n\s*path: "\/v1\/press-kits\/media-kits\/{id}\/mdx"/);
+    expect(mdxMatch).not.toBeNull();
+    const statusMatch = schemaContent.match(/method: "patch",\s*\n\s*path: "\/v1\/press-kits\/media-kits\/{id}\/status"/);
+    expect(statusMatch).not.toBeNull();
   });
 
   it("should register admin paths", () => {
@@ -170,32 +214,27 @@ describe("Press Kits OpenAPI schemas", () => {
     expect(schemaContent).toContain('path: "/v1/press-kits/admin/organizations/{id}"');
   });
 
-  it("should register internal paths", () => {
-    expect(schemaContent).toContain('path: "/v1/press-kits/internal/media-kit/by-org/{orgId}"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/internal/generation-data"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/internal/upsert-generation-result"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/clients-media-kits-need-update"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/media-kit-setup"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/health/bulk"');
+  it("should register new internal paths", () => {
+    expect(schemaContent).toContain('path: "/v1/press-kits/internal/media-kits/current"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/internal/media-kits/generation-data"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/internal/media-kits/generation-result"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/internal/media-kits/stale"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/internal/media-kits/setup"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/internal/health/bulk"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/internal/email-data/{orgId}"');
+  });
+
+  it("should NOT have old internal paths", () => {
+    expect(schemaContent).not.toContain('path: "/v1/press-kits/internal/media-kit/by-org/{orgId}"');
+    expect(schemaContent).not.toContain('path: "/v1/press-kits/internal/generation-data"');
+    expect(schemaContent).not.toContain('path: "/v1/press-kits/internal/upsert-generation-result"');
+    expect(schemaContent).not.toContain('path: "/v1/press-kits/clients-media-kits-need-update"');
+    expect(schemaContent).not.toContain('path: "/v1/press-kits/media-kit-setup"');
+    expect(schemaContent).not.toContain('path: "/v1/press-kits/health/bulk"');
   });
 
   it("should use Press Kits tag for non-internal endpoints", () => {
     expect(schemaContent).toContain('tags: ["Press Kits"]');
-  });
-
-  it("should use Internal tag for internal endpoints", () => {
-    // Internal press-kit endpoints should use Internal tag
-    const internalPaths = [
-      "/v1/press-kits/internal/media-kit/by-org/{orgId}",
-      "/v1/press-kits/internal/generation-data",
-      "/v1/press-kits/internal/upsert-generation-result",
-      "/v1/press-kits/clients-media-kits-need-update",
-      "/v1/press-kits/media-kit-setup",
-      "/v1/press-kits/health/bulk",
-    ];
-    for (const p of internalPaths) {
-      expect(schemaContent).toContain(`path: "${p}"`);
-    }
   });
 });
 

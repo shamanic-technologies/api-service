@@ -4549,14 +4549,6 @@
         "type": "object",
         "properties": {}
       },
-      "PublicMediaKitLegacyResponse": {
-        "type": "object",
-        "properties": {}
-      },
-      "PressKitEmailDataResponse": {
-        "type": "object",
-        "properties": {}
-      },
       "PressKitOrganizationResponse": {
         "type": "object",
         "properties": {}
@@ -4599,22 +4591,13 @@
         "type": "object",
         "properties": {}
       },
-      "PressKitEditResponse": {
+      "PressKitCreateEditResponse": {
         "type": "object",
         "properties": {}
       },
-      "PressKitEditRequest": {
+      "PressKitCreateEditRequest": {
         "type": "object",
         "properties": {
-          "mediaKitId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "ID of an existing media kit to edit (optional if orgId is provided)"
-          },
-          "orgId": {
-            "type": "string",
-            "description": "Organization ID — auto-finds latest active kit or creates a new one (optional if mediaKitId is provided)"
-          },
           "instruction": {
             "type": "string",
             "description": "Instructions for the generation"
@@ -4635,16 +4618,11 @@
       "PressKitUpdateMdxRequest": {
         "type": "object",
         "properties": {
-          "mediaKitId": {
-            "type": "string",
-            "format": "uuid"
-          },
           "mdxContent": {
             "type": "string"
           }
         },
         "required": [
-          "mediaKitId",
           "mdxContent"
         ]
       },
@@ -4665,10 +4643,6 @@
       "PressKitUpdateStatusRequest": {
         "type": "object",
         "properties": {
-          "mediaKitId": {
-            "type": "string",
-            "format": "uuid"
-          },
           "status": {
             "$ref": "#/components/schemas/PressKitMediaKitStatus"
           },
@@ -4677,25 +4651,12 @@
           }
         },
         "required": [
-          "mediaKitId",
           "status"
         ]
       },
       "PressKitValidateResponse": {
         "type": "object",
         "properties": {}
-      },
-      "PressKitValidateRequest": {
-        "type": "object",
-        "properties": {
-          "mediaKitId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "mediaKitId"
-        ]
       },
       "PressKitCancelDraftResponse": {
         "type": "object",
@@ -4706,18 +4667,6 @@
         },
         "required": [
           "success"
-        ]
-      },
-      "PressKitCancelDraftRequest": {
-        "type": "object",
-        "properties": {
-          "mediaKitId": {
-            "type": "string",
-            "format": "uuid"
-          }
-        },
-        "required": [
-          "mediaKitId"
         ]
       },
       "PressKitAdminOrgListResponse": {
@@ -4735,7 +4684,7 @@
           "success"
         ]
       },
-      "PressKitInternalByOrgResponse": {
+      "PressKitInternalCurrentResponse": {
         "type": "object",
         "properties": {}
       },
@@ -4750,9 +4699,6 @@
       "PressKitUpsertGenerationRequest": {
         "type": "object",
         "properties": {
-          "orgId": {
-            "type": "string"
-          },
           "mdxContent": {
             "type": "string"
           },
@@ -4764,7 +4710,6 @@
           }
         },
         "required": [
-          "orgId",
           "mdxContent"
         ]
       },
@@ -4777,6 +4722,10 @@
         "properties": {}
       },
       "PressKitHealthBulkResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "PressKitEmailDataResponse": {
         "type": "object",
         "properties": {}
       },
@@ -13574,58 +13523,6 @@
         }
       }
     },
-    "/press-kits/public-media-kit/{token}": {
-      "get": {
-        "tags": [
-          "Press Kits"
-        ],
-        "summary": "Get public media kit (legacy)",
-        "description": "Legacy endpoint for public media kit access by share token. No authentication required.",
-        "responses": {
-          "200": {
-            "description": "Public media kit data",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicMediaKitLegacyResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/press-kits/email-data/press-kit/{orgId}": {
-      "get": {
-        "tags": [
-          "Press Kits"
-        ],
-        "summary": "Get press kit data for email templates",
-        "description": "Returns press kit data formatted for use in email templates. No authentication required.",
-        "responses": {
-          "200": {
-            "description": "Email template data",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PressKitEmailDataResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/press-kits/organizations": {
       "post": {
         "tags": [
@@ -13728,7 +13625,7 @@
         ]
       }
     },
-    "/v1/press-kits/organizations/share-token/{orgId}": {
+    "/v1/press-kits/organizations/{orgId}/share-token": {
       "get": {
         "tags": [
           "Press Kits"
@@ -13902,7 +13799,7 @@
         ]
       }
     },
-    "/v1/press-kits/media-kit": {
+    "/v1/press-kits/media-kits": {
       "get": {
         "tags": [
           "Press Kits"
@@ -13983,9 +13880,109 @@
             "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           }
         ]
+      },
+      "post": {
+        "tags": [
+          "Press Kits"
+        ],
+        "summary": "Create or edit media kit",
+        "description": "Idempotent create-or-edit. The org is identified via the `x-org-id` header. The service auto-finds the latest active kit or creates a new one.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PressKitCreateEditRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generation initiated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PressKitCreateEditResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ]
       }
     },
-    "/v1/press-kits/media-kit/{id}": {
+    "/v1/press-kits/media-kits/{id}": {
       "get": {
         "tags": [
           "Press Kits"
@@ -14077,124 +14074,13 @@
         ]
       }
     },
-    "/v1/press-kits/edit-media-kit": {
-      "post": {
-        "tags": [
-          "Press Kits"
-        ],
-        "summary": "Initiate media kit generation",
-        "description": "Create or edit a media kit. Pass `orgId` to auto-find the latest active kit (or create one from scratch), or pass `mediaKitId` for a targeted edit. At least one of `mediaKitId` or `orgId` is required.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PressKitEditRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Generation initiated",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PressKitEditResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad request — at least one of mediaKitId or orgId is required",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-name",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          }
-        ]
-      }
-    },
-    "/v1/press-kits/update-mdx": {
-      "post": {
+    "/v1/press-kits/media-kits/{id}/mdx": {
+      "patch": {
         "tags": [
           "Press Kits"
         ],
         "summary": "Update MDX content",
+        "description": "Update the MDX content of a specific media kit. Kit ID is in the URL.",
         "security": [
           {
             "bearerAuth": []
@@ -14230,6 +14116,16 @@
               }
             }
           },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Internal error",
             "content": {
@@ -14290,12 +14186,13 @@
         ]
       }
     },
-    "/v1/press-kits/update-status": {
-      "post": {
+    "/v1/press-kits/media-kits/{id}/status": {
+      "patch": {
         "tags": [
           "Press Kits"
         ],
         "summary": "Update media kit status",
+        "description": "Change the status of a specific media kit. Kit ID is in the URL.",
         "security": [
           {
             "bearerAuth": []
@@ -14331,6 +14228,16 @@
               }
             }
           },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Internal error",
             "content": {
@@ -14391,26 +14298,18 @@
         ]
       }
     },
-    "/v1/press-kits/validate": {
+    "/v1/press-kits/media-kits/{id}/validate": {
       "post": {
         "tags": [
           "Press Kits"
         ],
         "summary": "Validate media kit",
+        "description": "Validate a specific media kit. Kit ID is in the URL, no body required.",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PressKitValidateRequest"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Validated",
@@ -14432,6 +14331,16 @@
               }
             }
           },
+          "404": {
+            "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Internal error",
             "content": {
@@ -14492,26 +14401,18 @@
         ]
       }
     },
-    "/v1/press-kits/cancel-draft": {
+    "/v1/press-kits/media-kits/{id}/cancel": {
       "post": {
         "tags": [
           "Press Kits"
         ],
         "summary": "Cancel draft media kit",
+        "description": "Cancel a draft media kit. Kit ID is in the URL, no body required.",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PressKitCancelDraftRequest"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Draft cancelled",
@@ -14525,6 +14426,16 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -14777,12 +14688,13 @@
         ]
       }
     },
-    "/v1/press-kits/internal/media-kit/by-org/{orgId}": {
+    "/v1/press-kits/internal/media-kits/current": {
       "get": {
         "tags": [
           "Internal"
         ],
-        "summary": "Get latest media kit by org (internal)",
+        "summary": "Get latest media kit for org (internal)",
+        "description": "Uses x-org-id header to identify the org. No path param needed.",
         "security": [
           {
             "bearerAuth": []
@@ -14794,7 +14706,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PressKitInternalByOrgResponse"
+                  "$ref": "#/components/schemas/PressKitInternalCurrentResponse"
                 }
               }
             }
@@ -14859,12 +14771,13 @@
         ]
       }
     },
-    "/v1/press-kits/internal/generation-data": {
+    "/v1/press-kits/internal/media-kits/generation-data": {
       "get": {
         "tags": [
           "Internal"
         ],
         "summary": "Get generation workflow data (internal)",
+        "description": "Uses x-org-id header to identify the org.",
         "security": [
           {
             "bearerAuth": []
@@ -14941,7 +14854,7 @@
         ]
       }
     },
-    "/v1/press-kits/internal/upsert-generation-result": {
+    "/v1/press-kits/internal/media-kits/generation-result": {
       "post": {
         "tags": [
           "Internal"
@@ -15032,7 +14945,7 @@
         ]
       }
     },
-    "/v1/press-kits/clients-media-kits-need-update": {
+    "/v1/press-kits/internal/media-kits/stale": {
       "get": {
         "tags": [
           "Internal"
@@ -15114,7 +15027,7 @@
         ]
       }
     },
-    "/v1/press-kits/media-kit-setup": {
+    "/v1/press-kits/internal/media-kits/setup": {
       "get": {
         "tags": [
           "Internal"
@@ -15196,7 +15109,7 @@
         ]
       }
     },
-    "/v1/press-kits/health/bulk": {
+    "/v1/press-kits/internal/health/bulk": {
       "get": {
         "tags": [
           "Internal"
@@ -15214,6 +15127,88 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PressKitHealthBulkResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ]
+      }
+    },
+    "/v1/press-kits/internal/email-data/{orgId}": {
+      "get": {
+        "tags": [
+          "Internal"
+        ],
+        "summary": "Get press kit data for email templates (internal)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Email template data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PressKitEmailDataResponse"
                 }
               }
             }

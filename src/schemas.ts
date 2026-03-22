@@ -3651,29 +3651,6 @@ registry.registerPath({
   },
 });
 
-registry.registerPath({
-  method: "get",
-  path: "/press-kits/public-media-kit/{token}",
-  tags: ["Press Kits"],
-  summary: "Get public media kit (legacy)",
-  description: "Legacy endpoint for public media kit access by share token. No authentication required.",
-  responses: {
-    200: { description: "Public media kit data", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicMediaKitLegacyResponse") } } },
-    404: { description: "Not found", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/press-kits/email-data/press-kit/{orgId}",
-  tags: ["Press Kits"],
-  summary: "Get press kit data for email templates",
-  description: "Returns press kit data formatted for use in email templates. No authentication required.",
-  responses: {
-    200: { description: "Email template data", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitEmailDataResponse") } } },
-  },
-});
-
 // ── Authenticated endpoints ─────────────────────────────────────────────────
 
 registry.registerPath({
@@ -3695,7 +3672,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/press-kits/organizations/share-token/{orgId}",
+  path: "/v1/press-kits/organizations/{orgId}/share-token",
   tags: ["Press Kits"],
   summary: "Get organization share token",
   security: authed,
@@ -3720,7 +3697,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/press-kits/media-kit",
+  path: "/v1/press-kits/media-kits",
   tags: ["Press Kits"],
   summary: "List media kits",
   description: "List media kits, optionally filtered by org_id, organization_id, or title.",
@@ -3733,7 +3710,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/press-kits/media-kit/{id}",
+  path: "/v1/press-kits/media-kits/{id}",
   tags: ["Press Kits"],
   summary: "Get media kit by ID",
   security: authed,
@@ -3746,51 +3723,54 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/v1/press-kits/edit-media-kit",
+  path: "/v1/press-kits/media-kits",
   tags: ["Press Kits"],
-  summary: "Initiate media kit generation",
+  summary: "Create or edit media kit",
   description:
-    "Create or edit a media kit. Pass `orgId` to auto-find the latest active kit (or create one from scratch), " +
-    "or pass `mediaKitId` for a targeted edit. At least one of `mediaKitId` or `orgId` is required.",
+    "Idempotent create-or-edit. The org is identified via the `x-org-id` header. " +
+    "The service auto-finds the latest active kit or creates a new one.",
   security: authed,
   request: {
-    body: { content: { "application/json": { schema: z.object({ mediaKitId: z.string().uuid().optional().describe("ID of an existing media kit to edit (optional if orgId is provided)"), orgId: z.string().optional().describe("Organization ID — auto-finds latest active kit or creates a new one (optional if mediaKitId is provided)"), instruction: z.string().describe("Instructions for the generation"), organizationUrl: z.string().optional().describe("Organization website URL for context") }).openapi("PressKitEditRequest") } } },
+    body: { content: { "application/json": { schema: z.object({ instruction: z.string().describe("Instructions for the generation"), organizationUrl: z.string().optional().describe("Organization website URL for context") }).openapi("PressKitCreateEditRequest") } } },
   },
   responses: {
-    200: { description: "Generation initiated", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitEditResponse") } } },
-    400: { description: "Bad request — at least one of mediaKitId or orgId is required", content: errorContent },
+    200: { description: "Generation initiated", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitCreateEditResponse") } } },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
 
 registry.registerPath({
-  method: "post",
-  path: "/v1/press-kits/update-mdx",
+  method: "patch",
+  path: "/v1/press-kits/media-kits/{id}/mdx",
   tags: ["Press Kits"],
   summary: "Update MDX content",
+  description: "Update the MDX content of a specific media kit. Kit ID is in the URL.",
   security: authed,
   request: {
-    body: { content: { "application/json": { schema: z.object({ mediaKitId: z.string().uuid(), mdxContent: z.string() }).openapi("PressKitUpdateMdxRequest") } } },
+    body: { content: { "application/json": { schema: z.object({ mdxContent: z.string() }).openapi("PressKitUpdateMdxRequest") } } },
   },
   responses: {
     200: { description: "Updated", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitUpdateMdxResponse") } } },
+    404: { description: "Not found", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
 
 registry.registerPath({
-  method: "post",
-  path: "/v1/press-kits/update-status",
+  method: "patch",
+  path: "/v1/press-kits/media-kits/{id}/status",
   tags: ["Press Kits"],
   summary: "Update media kit status",
+  description: "Change the status of a specific media kit. Kit ID is in the URL.",
   security: authed,
   request: {
-    body: { content: { "application/json": { schema: z.object({ mediaKitId: z.string().uuid(), status: PressKitMediaKitStatusEnum, denialReason: z.string().optional() }).openapi("PressKitUpdateStatusRequest") } } },
+    body: { content: { "application/json": { schema: z.object({ status: PressKitMediaKitStatusEnum, denialReason: z.string().optional() }).openapi("PressKitUpdateStatusRequest") } } },
   },
   responses: {
     200: { description: "Updated", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitUpdateStatusResponse") } } },
+    404: { description: "Not found", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -3798,15 +3778,14 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/v1/press-kits/validate",
+  path: "/v1/press-kits/media-kits/{id}/validate",
   tags: ["Press Kits"],
   summary: "Validate media kit",
+  description: "Validate a specific media kit. Kit ID is in the URL, no body required.",
   security: authed,
-  request: {
-    body: { content: { "application/json": { schema: z.object({ mediaKitId: z.string().uuid() }).openapi("PressKitValidateRequest") } } },
-  },
   responses: {
     200: { description: "Validated", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitValidateResponse") } } },
+    404: { description: "Not found", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -3814,15 +3793,14 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/v1/press-kits/cancel-draft",
+  path: "/v1/press-kits/media-kits/{id}/cancel",
   tags: ["Press Kits"],
   summary: "Cancel draft media kit",
+  description: "Cancel a draft media kit. Kit ID is in the URL, no body required.",
   security: authed,
-  request: {
-    body: { content: { "application/json": { schema: z.object({ mediaKitId: z.string().uuid() }).openapi("PressKitCancelDraftRequest") } } },
-  },
   responses: {
     200: { description: "Draft cancelled", content: { "application/json": { schema: z.object({ success: z.boolean() }).openapi("PressKitCancelDraftResponse") } } },
+    404: { description: "Not found", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -3860,21 +3838,23 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/press-kits/internal/media-kit/by-org/{orgId}",
+  path: "/v1/press-kits/internal/media-kits/current",
   tags: ["Internal"],
-  summary: "Get latest media kit by org (internal)",
+  summary: "Get latest media kit for org (internal)",
+  description: "Uses x-org-id header to identify the org. No path param needed.",
   security: authed,
   responses: {
-    200: { description: "Media kit", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitInternalByOrgResponse") } } },
+    200: { description: "Media kit", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitInternalCurrentResponse") } } },
     401: { description: "Unauthorized", content: errorContent },
   },
 });
 
 registry.registerPath({
   method: "get",
-  path: "/v1/press-kits/internal/generation-data",
+  path: "/v1/press-kits/internal/media-kits/generation-data",
   tags: ["Internal"],
   summary: "Get generation workflow data (internal)",
+  description: "Uses x-org-id header to identify the org.",
   security: authed,
   responses: {
     200: { description: "Generation data", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitGenerationDataResponse") } } },
@@ -3884,12 +3864,12 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/v1/press-kits/internal/upsert-generation-result",
+  path: "/v1/press-kits/internal/media-kits/generation-result",
   tags: ["Internal"],
   summary: "Upsert generation result (internal)",
   security: authed,
   request: {
-    body: { content: { "application/json": { schema: z.object({ orgId: z.string(), mdxContent: z.string(), title: z.string().optional(), iconUrl: z.string().optional() }).openapi("PressKitUpsertGenerationRequest") } } },
+    body: { content: { "application/json": { schema: z.object({ mdxContent: z.string(), title: z.string().optional(), iconUrl: z.string().optional() }).openapi("PressKitUpsertGenerationRequest") } } },
   },
   responses: {
     200: { description: "Upserted", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitUpsertGenerationResponse") } } },
@@ -3899,7 +3879,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/press-kits/clients-media-kits-need-update",
+  path: "/v1/press-kits/internal/media-kits/stale",
   tags: ["Internal"],
   summary: "Get orgs with stale press kits (internal)",
   security: authed,
@@ -3911,7 +3891,7 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/press-kits/media-kit-setup",
+  path: "/v1/press-kits/internal/media-kits/setup",
   tags: ["Internal"],
   summary: "Get media kit setup status (internal)",
   security: authed,
@@ -3923,12 +3903,24 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/press-kits/health/bulk",
+  path: "/v1/press-kits/internal/health/bulk",
   tags: ["Internal"],
   summary: "Bulk health check per org (internal)",
   security: authed,
   responses: {
     200: { description: "Bulk health", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitHealthBulkResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/press-kits/internal/email-data/{orgId}",
+  tags: ["Internal"],
+  summary: "Get press kit data for email templates (internal)",
+  security: authed,
+  responses: {
+    200: { description: "Email template data", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitEmailDataResponse") } } },
     401: { description: "Unauthorized", content: errorContent },
   },
 });
