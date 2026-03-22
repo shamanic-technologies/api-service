@@ -853,7 +853,7 @@ registry.registerPath({
                   outletDomain: z.string().nullable(),
                   relevanceScore: z.number().nullable(),
                   whyRelevant: z.string().nullable(),
-                  status: z.string().nullable(),
+                  outletStatus: z.string().nullable().describe("Campaign-level status: open, ended, or denied"),
                 }),
               ),
             })
