@@ -1341,6 +1341,195 @@
           "emails"
         ]
       },
+      "DiscoveredOutlet": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Outlet record ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Publication / outlet name"
+          },
+          "type": {
+            "type": "string",
+            "nullable": true,
+            "description": "Outlet type (e.g. 'magazine', 'blog', 'newspaper', 'podcast')"
+          },
+          "url": {
+            "type": "string",
+            "nullable": true,
+            "description": "Outlet website URL"
+          },
+          "domainRating": {
+            "type": "number",
+            "nullable": true,
+            "description": "Ahrefs-style domain rating (0-100)"
+          },
+          "monthlyTraffic": {
+            "type": "number",
+            "nullable": true,
+            "description": "Estimated monthly organic traffic"
+          },
+          "topics": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Topics / beats covered by this outlet"
+          },
+          "country": {
+            "type": "string",
+            "nullable": true,
+            "description": "Primary country"
+          },
+          "language": {
+            "type": "string",
+            "nullable": true,
+            "description": "Primary language"
+          },
+          "contactEmail": {
+            "type": "string",
+            "nullable": true,
+            "description": "General contact email"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true,
+            "description": "AI-generated notes on relevance to the brand"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO timestamp"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "type",
+          "url",
+          "domainRating",
+          "monthlyTraffic",
+          "topics",
+          "country",
+          "language",
+          "contactEmail",
+          "notes",
+          "createdAt"
+        ]
+      },
+      "DiscoveredOutletsResponse": {
+        "type": "object",
+        "properties": {
+          "outlets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscoveredOutlet"
+            }
+          }
+        },
+        "required": [
+          "outlets"
+        ]
+      },
+      "DiscoveredJournalist": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Journalist record ID"
+          },
+          "firstName": {
+            "type": "string",
+            "nullable": true,
+            "description": "First name"
+          },
+          "lastName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Last name"
+          },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "description": "Email address"
+          },
+          "outletName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Media outlet they write for"
+          },
+          "title": {
+            "type": "string",
+            "nullable": true,
+            "description": "Job title (e.g. 'Senior Reporter')"
+          },
+          "beat": {
+            "type": "string",
+            "nullable": true,
+            "description": "Beat / topic they cover (e.g. 'fintech', 'AI')"
+          },
+          "linkedinUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "LinkedIn profile URL"
+          },
+          "twitterHandle": {
+            "type": "string",
+            "nullable": true,
+            "description": "Twitter / X handle"
+          },
+          "location": {
+            "type": "string",
+            "nullable": true,
+            "description": "City / country"
+          },
+          "domainRating": {
+            "type": "number",
+            "nullable": true,
+            "description": "Outlet domain rating"
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true,
+            "description": "AI-generated notes on relevance to the brand"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO timestamp"
+          }
+        },
+        "required": [
+          "id",
+          "firstName",
+          "lastName",
+          "email",
+          "outletName",
+          "title",
+          "beat",
+          "linkedinUrl",
+          "twitterHandle",
+          "location",
+          "domainRating",
+          "notes",
+          "createdAt"
+        ]
+      },
+      "DiscoveredJournalistsResponse": {
+        "type": "object",
+        "properties": {
+          "journalists": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiscoveredJournalist"
+            }
+          }
+        },
+        "required": [
+          "journalists"
+        ]
+      },
       "OrgKeyItem": {
         "type": "object",
         "properties": {
@@ -5458,7 +5647,7 @@
           "Campaigns"
         ],
         "summary": "Create a campaign",
-        "description": "Create a new outreach campaign. The `workflowName` field determines which execution pipeline campaign-service uses.",
+        "description": "Create a new campaign. The `workflowName` field determines which execution pipeline campaign-service uses.\n\n**Outreach campaigns** (`sales-email-cold-outreach-*`): require all persuasion fields (urgency, scarcity, riskReversal, socialProof).\n\n**Discovery campaigns** (`outlets-database-discovery-*`, `journalists-database-discovery-*`): only require name, workflowName, brandUrl, and targetAudience. These produce a list of contacts (media outlets or journalists) without sending emails.",
         "security": [
           {
             "bearerAuth": []
@@ -6359,6 +6548,212 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CampaignEmailsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/campaigns/{id}/discovered-outlets": {
+      "get": {
+        "tags": [
+          "Campaigns"
+        ],
+        "summary": "Get discovered outlets",
+        "description": "Get media outlets discovered by an outlets-database-discovery campaign. Returns an empty array if the campaign is still running or is not an outlet-discovery type.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign ID"
+            },
+            "required": true,
+            "description": "Campaign ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of discovered media outlets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoveredOutletsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/campaigns/{id}/discovered-journalists": {
+      "get": {
+        "tags": [
+          "Campaigns"
+        ],
+        "summary": "Get discovered journalists",
+        "description": "Get journalists discovered by a journalists-database-discovery campaign. Returns an empty array if the campaign is still running or is not a journalist-discovery type.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Campaign ID"
+            },
+            "required": true,
+            "description": "Campaign ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of discovered journalists",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoveredJournalistsResponse"
                 }
               }
             }

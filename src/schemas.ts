@@ -361,6 +361,42 @@ export const CreateCampaignRequestSchema = z
   })
   .openapi("CreateCampaignRequest");
 
+/**
+ * Discovery campaign request — used for outlets-database-discovery and
+ * journalists-database-discovery workflows.  These campaigns produce a
+ * list of contacts (outlets or journalists) rather than sending emails,
+ * so the persuasion fields (urgency, scarcity, etc.) are not required.
+ */
+export const CreateDiscoveryCampaignRequestSchema = z
+  .object({
+    name: z.string().describe("Campaign name"),
+    workflowName: z.string().min(1).describe("Workflow name (e.g. 'outlets-database-discovery-cedar'). Determines which execution pipeline to use."),
+    brandUrl: z.string().min(1).describe("Brand website URL"),
+    targetAudience: z.string().min(1).describe("Plain text description of what kind of outlets or journalists to discover"),
+    maxResults: z.number().int().optional().describe("Maximum number of results to return"),
+    maxBudgetDailyUsd: z.union([z.string(), z.number()]).optional().describe("Max daily budget in USD"),
+    maxBudgetWeeklyUsd: z.union([z.string(), z.number()]).optional().describe("Max weekly budget in USD"),
+    maxBudgetMonthlyUsd: z.union([z.string(), z.number()]).optional().describe("Max monthly budget in USD"),
+    maxBudgetTotalUsd: z.union([z.string(), z.number()]).optional().describe("Max total budget in USD"),
+    endDate: z.string().optional().describe("Campaign end date"),
+  })
+  .openapi("CreateDiscoveryCampaignRequest");
+
+/** Known discovery workflow prefixes and their campaign types. */
+export const DISCOVERY_PREFIXES: Array<{ prefix: string; type: string }> = [
+  { prefix: "outlets-database-discovery-", type: "outlets-database-discovery" },
+  { prefix: "journalists-database-discovery-", type: "journalists-database-discovery" },
+];
+
+export function isDiscoveryWorkflow(workflowName: string): boolean {
+  return DISCOVERY_PREFIXES.some((d) => workflowName.startsWith(d.prefix));
+}
+
+export function deriveCampaignType(workflowName: string): string {
+  const match = DISCOVERY_PREFIXES.find((d) => workflowName.startsWith(d.prefix));
+  return match ? match.type : "cold-email-outreach";
+}
+
 // -- Common schemas --
 
 const ErrorSummarySchema = z
@@ -467,7 +503,10 @@ registry.registerPath({
   tags: ["Campaigns"],
   summary: "Create a campaign",
   description:
-    "Create a new outreach campaign. The `workflowName` field determines which execution pipeline campaign-service uses.",
+    "Create a new campaign. The `workflowName` field determines which execution pipeline campaign-service uses.\n\n" +
+    "**Outreach campaigns** (`sales-email-cold-outreach-*`): require all persuasion fields (urgency, scarcity, riskReversal, socialProof).\n\n" +
+    "**Discovery campaigns** (`outlets-database-discovery-*`, `journalists-database-discovery-*`): only require name, workflowName, brandUrl, and targetAudience. " +
+    "These produce a list of contacts (media outlets or journalists) without sending emails.",
   security: authed,
   request: {
     body: {
@@ -782,6 +821,95 @@ registry.registerPath({
               ),
             })
             .openapi("CampaignEmailsResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// -- Discovery result schemas --
+
+const DiscoveredOutletSchema = z
+  .object({
+    id: z.string().describe("Outlet record ID"),
+    name: z.string().describe("Publication / outlet name"),
+    type: z.string().nullable().describe("Outlet type (e.g. 'magazine', 'blog', 'newspaper', 'podcast')"),
+    url: z.string().nullable().describe("Outlet website URL"),
+    domainRating: z.number().nullable().describe("Ahrefs-style domain rating (0-100)"),
+    monthlyTraffic: z.number().nullable().describe("Estimated monthly organic traffic"),
+    topics: z.array(z.string()).describe("Topics / beats covered by this outlet"),
+    country: z.string().nullable().describe("Primary country"),
+    language: z.string().nullable().describe("Primary language"),
+    contactEmail: z.string().nullable().describe("General contact email"),
+    notes: z.string().nullable().describe("AI-generated notes on relevance to the brand"),
+    createdAt: z.string().describe("ISO timestamp"),
+  })
+  .openapi("DiscoveredOutlet");
+
+const DiscoveredJournalistSchema = z
+  .object({
+    id: z.string().describe("Journalist record ID"),
+    firstName: z.string().nullable().describe("First name"),
+    lastName: z.string().nullable().describe("Last name"),
+    email: z.string().nullable().describe("Email address"),
+    outletName: z.string().nullable().describe("Media outlet they write for"),
+    title: z.string().nullable().describe("Job title (e.g. 'Senior Reporter')"),
+    beat: z.string().nullable().describe("Beat / topic they cover (e.g. 'fintech', 'AI')"),
+    linkedinUrl: z.string().nullable().describe("LinkedIn profile URL"),
+    twitterHandle: z.string().nullable().describe("Twitter / X handle"),
+    location: z.string().nullable().describe("City / country"),
+    domainRating: z.number().nullable().describe("Outlet domain rating"),
+    notes: z.string().nullable().describe("AI-generated notes on relevance to the brand"),
+    createdAt: z.string().describe("ISO timestamp"),
+  })
+  .openapi("DiscoveredJournalist");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/campaigns/{id}/discovered-outlets",
+  tags: ["Campaigns"],
+  summary: "Get discovered outlets",
+  description:
+    "Get media outlets discovered by an outlets-database-discovery campaign. " +
+    "Returns an empty array if the campaign is still running or is not an outlet-discovery type.",
+  security: authed,
+  request: { params: CampaignIdParam },
+  responses: {
+    200: {
+      description: "List of discovered media outlets",
+      content: {
+        "application/json": {
+          schema: z
+            .object({ outlets: z.array(DiscoveredOutletSchema) })
+            .openapi("DiscoveredOutletsResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/campaigns/{id}/discovered-journalists",
+  tags: ["Campaigns"],
+  summary: "Get discovered journalists",
+  description:
+    "Get journalists discovered by a journalists-database-discovery campaign. " +
+    "Returns an empty array if the campaign is still running or is not a journalist-discovery type.",
+  security: authed,
+  request: { params: CampaignIdParam },
+  responses: {
+    200: {
+      description: "List of discovered journalists",
+      content: {
+        "application/json": {
+          schema: z
+            .object({ journalists: z.array(DiscoveredJournalistSchema) })
+            .openapi("DiscoveredJournalistsResponse"),
         },
       },
     },
