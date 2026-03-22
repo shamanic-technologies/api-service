@@ -3731,7 +3731,7 @@ registry.registerPath({
     "The service auto-finds the latest active kit or creates a new one.",
   security: authed,
   request: {
-    body: { content: { "application/json": { schema: z.object({ instruction: z.string().describe("Instructions for the generation"), organizationUrl: z.string().optional().describe("Organization website URL for context") }).openapi("PressKitCreateEditRequest") } } },
+    body: { content: { "application/json": { schema: z.object({ instruction: z.string().describe("Instructions for the generation") }).openapi("PressKitCreateEditRequest") } } },
   },
   responses: {
     200: { description: "Generation initiated", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitCreateEditResponse") } } },

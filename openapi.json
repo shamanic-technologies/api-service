@@ -4601,10 +4601,6 @@
           "instruction": {
             "type": "string",
             "description": "Instructions for the generation"
-          },
-          "organizationUrl": {
-            "type": "string",
-            "description": "Organization website URL for context"
           }
         },
         "required": [
