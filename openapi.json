@@ -4419,17 +4419,23 @@
         "properties": {
           "mediaKitId": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "ID of an existing media kit to edit (optional if orgId is provided)"
+          },
+          "orgId": {
+            "type": "string",
+            "description": "Organization ID — auto-finds latest active kit or creates a new one (optional if mediaKitId is provided)"
           },
           "instruction": {
-            "type": "string"
+            "type": "string",
+            "description": "Instructions for the generation"
           },
           "organizationUrl": {
-            "type": "string"
+            "type": "string",
+            "description": "Organization website URL for context"
           }
         },
         "required": [
-          "mediaKitId",
           "instruction"
         ]
       },
@@ -13682,6 +13688,7 @@
           "Press Kits"
         ],
         "summary": "Initiate media kit generation",
+        "description": "Create or edit a media kit. Pass `orgId` to auto-find the latest active kit (or create one from scratch), or pass `mediaKitId` for a targeted edit. At least one of `mediaKitId` or `orgId` is required.",
         "security": [
           {
             "bearerAuth": []
@@ -13703,6 +13710,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PressKitEditResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request — at least one of mediaKitId or orgId is required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
