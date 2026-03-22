@@ -3621,12 +3621,16 @@ registry.registerPath({
   path: "/v1/press-kits/edit-media-kit",
   tags: ["Press Kits"],
   summary: "Initiate media kit generation",
+  description:
+    "Create or edit a media kit. Pass `orgId` to auto-find the latest active kit (or create one from scratch), " +
+    "or pass `mediaKitId` for a targeted edit. At least one of `mediaKitId` or `orgId` is required.",
   security: authed,
   request: {
-    body: { content: { "application/json": { schema: z.object({ mediaKitId: z.string().uuid(), instruction: z.string(), organizationUrl: z.string().optional() }).openapi("PressKitEditRequest") } } },
+    body: { content: { "application/json": { schema: z.object({ mediaKitId: z.string().uuid().optional().describe("ID of an existing media kit to edit (optional if orgId is provided)"), orgId: z.string().optional().describe("Organization ID — auto-finds latest active kit or creates a new one (optional if mediaKitId is provided)"), instruction: z.string().describe("Instructions for the generation"), organizationUrl: z.string().optional().describe("Organization website URL for context") }).openapi("PressKitEditRequest") } } },
   },
   responses: {
     200: { description: "Generation initiated", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitEditResponse") } } },
+    400: { description: "Bad request — at least one of mediaKitId or orgId is required", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
