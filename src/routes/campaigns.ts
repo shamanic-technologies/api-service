@@ -837,7 +837,7 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
 
     const result = await callExternalService(
       externalServices.journalist,
-      `/campaign-outlet-journalists?campaignId=${encodeURIComponent(id)}`,
+      `/campaign-outlet-journalists?campaign_id=${encodeURIComponent(id)}`,
       {
         headers: buildInternalHeaders(req),
       }

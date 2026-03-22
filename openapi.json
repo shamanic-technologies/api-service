@@ -1396,47 +1396,80 @@
       "CampaignJournalistsResponse": {
         "type": "object",
         "properties": {
-          "journalists": {
+          "campaignOutletJournalists": {
             "type": "array",
             "items": {
               "type": "object",
               "properties": {
-                "id": {
+                "campaignId": {
                   "type": "string"
+                },
+                "outletId": {
+                  "type": "string"
+                },
+                "journalistId": {
+                  "type": "string"
+                },
+                "whyRelevant": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "whyNotRelevant": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "relevanceScore": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "nullable": true
                 },
                 "journalistName": {
                   "type": "string",
-                  "nullable": true
+                  "nullable": true,
+                  "description": "From press_journalists JOIN — available once journalist-service adds the JOIN"
                 },
                 "firstName": {
                   "type": "string",
-                  "nullable": true
+                  "nullable": true,
+                  "description": "From press_journalists JOIN"
                 },
                 "lastName": {
                   "type": "string",
-                  "nullable": true
+                  "nullable": true,
+                  "description": "From press_journalists JOIN"
                 },
                 "entityType": {
                   "type": "string",
-                  "nullable": true
-                },
-                "outletName": {
-                  "type": "string",
-                  "nullable": true
+                  "nullable": true,
+                  "description": "From press_journalists JOIN"
                 }
               },
               "required": [
+                "campaignId",
+                "outletId",
+                "journalistId",
+                "whyRelevant",
+                "whyNotRelevant",
+                "relevanceScore",
+                "createdAt",
+                "updatedAt",
                 "journalistName",
                 "firstName",
                 "lastName",
-                "entityType",
-                "outletName"
+                "entityType"
               ]
             }
           }
         },
         "required": [
-          "journalists"
+          "campaignOutletJournalists"
         ]
       },
       "OrgKeyItem": {
