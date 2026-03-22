@@ -73,7 +73,7 @@ describe("Campaign discovery proxy: journalists", () => {
       content.indexOf('"/campaigns/:id/journalists"'),
     );
     expect(journalistsSection).toContain("externalServices.journalist");
-    expect(journalistsSection).toContain("/campaign-outlet-journalists?campaignId=");
+    expect(journalistsSection).toContain("/campaign-outlet-journalists?campaign_id=");
   });
 
   it("should forward internal headers", () => {
@@ -125,8 +125,11 @@ describe("OpenAPI schemas: campaign discovery endpoints", () => {
     expect(schemaContent).toContain("whyRelevant");
   });
 
-  it("should define CampaignJournalistsResponse schema", () => {
+  it("should define CampaignJournalistsResponse schema with junction table fields", () => {
     expect(schemaContent).toContain("CampaignJournalistsResponse");
+    expect(schemaContent).toContain("campaignOutletJournalists");
+    expect(schemaContent).toContain("journalistId");
+    expect(schemaContent).toContain("outletId");
     expect(schemaContent).toContain("journalistName");
     expect(schemaContent).toContain("entityType");
   });

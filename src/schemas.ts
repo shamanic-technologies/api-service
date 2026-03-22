@@ -882,14 +882,20 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              journalists: z.array(
+              campaignOutletJournalists: z.array(
                 z.object({
-                  id: z.string().optional(),
-                  journalistName: z.string().nullable(),
-                  firstName: z.string().nullable(),
-                  lastName: z.string().nullable(),
-                  entityType: z.string().nullable(),
-                  outletName: z.string().nullable(),
+                  campaignId: z.string(),
+                  outletId: z.string(),
+                  journalistId: z.string(),
+                  whyRelevant: z.string().nullable(),
+                  whyNotRelevant: z.string().nullable(),
+                  relevanceScore: z.number().nullable(),
+                  createdAt: z.string().nullable(),
+                  updatedAt: z.string().nullable(),
+                  journalistName: z.string().nullable().describe("From press_journalists JOIN — available once journalist-service adds the JOIN"),
+                  firstName: z.string().nullable().describe("From press_journalists JOIN"),
+                  lastName: z.string().nullable().describe("From press_journalists JOIN"),
+                  entityType: z.string().nullable().describe("From press_journalists JOIN"),
                 }),
               ),
             })
