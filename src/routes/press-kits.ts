@@ -20,32 +20,6 @@ router.get("/press-kits/public/:token", async (req: Request, res: Response) => {
   }
 });
 
-// GET /press-kits/public-media-kit/:token — public media kit (legacy)
-router.get("/press-kits/public-media-kit/:token", async (req: Request, res: Response) => {
-  try {
-    const result = await callExternalService(
-      externalServices.pressKits,
-      `/public-media-kit/${encodeURIComponent(req.params.token)}`
-    );
-    res.json(result);
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get public media kit" });
-  }
-});
-
-// GET /press-kits/email-data/press-kit/:orgId — email template data
-router.get("/press-kits/email-data/press-kit/:orgId", async (req: Request, res: Response) => {
-  try {
-    const result = await callExternalService(
-      externalServices.pressKits,
-      `/email-data/press-kit/${encodeURIComponent(req.params.orgId)}`
-    );
-    res.json(result);
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get email data" });
-  }
-});
-
 // ── Authenticated routes (mounted at /v1) ────────────────────────────────────
 
 // POST /v1/press-kits/organizations — upsert organization
@@ -62,12 +36,12 @@ router.post("/press-kits/organizations", authenticate, requireOrg, async (req: A
   }
 });
 
-// GET /v1/press-kits/organizations/share-token/:orgId — get share token
-router.get("/press-kits/organizations/share-token/:orgId", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// GET /v1/press-kits/organizations/:orgId/share-token — get share token
+router.get("/press-kits/organizations/:orgId/share-token", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.pressKits,
-      `/organizations/share-token/${encodeURIComponent(req.params.orgId)}`,
+      `/organizations/${encodeURIComponent(req.params.orgId)}/share-token`,
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -91,8 +65,8 @@ router.get("/press-kits/organizations/exists", authenticate, requireOrg, async (
   }
 });
 
-// GET /v1/press-kits/media-kit — list media kits
-router.get("/press-kits/media-kit", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// GET /v1/press-kits/media-kits — list media kits
+router.get("/press-kits/media-kits", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
     if (req.query.org_id) params.set("org_id", req.query.org_id as string);
@@ -101,7 +75,7 @@ router.get("/press-kits/media-kit", authenticate, requireOrg, async (req: Authen
     const qs = params.toString() ? `?${params.toString()}` : "";
     const result = await callExternalService(
       externalServices.pressKits,
-      `/media-kit${qs}`,
+      `/media-kits${qs}`,
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -110,12 +84,12 @@ router.get("/press-kits/media-kit", authenticate, requireOrg, async (req: Authen
   }
 });
 
-// GET /v1/press-kits/media-kit/:id — get media kit by ID
-router.get("/press-kits/media-kit/:id", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// GET /v1/press-kits/media-kits/:id — get media kit by ID
+router.get("/press-kits/media-kits/:id", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.pressKits,
-      `/media-kit/${encodeURIComponent(req.params.id)}`,
+      `/media-kits/${encodeURIComponent(req.params.id)}`,
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -124,27 +98,27 @@ router.get("/press-kits/media-kit/:id", authenticate, requireOrg, async (req: Au
   }
 });
 
-// POST /v1/press-kits/edit-media-kit — initiate media kit generation
-router.post("/press-kits/edit-media-kit", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// POST /v1/press-kits/media-kits — create or edit media kit (idempotent)
+router.post("/press-kits/media-kits", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.pressKits,
-      "/edit-media-kit",
+      "/media-kits",
       { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to edit media kit" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to create/edit media kit" });
   }
 });
 
-// POST /v1/press-kits/update-mdx — update MDX content
-router.post("/press-kits/update-mdx", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// PATCH /v1/press-kits/media-kits/:id/mdx — update MDX content
+router.patch("/press-kits/media-kits/:id/mdx", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.pressKits,
-      "/update-mdx",
-      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+      `/media-kits/${encodeURIComponent(req.params.id)}/mdx`,
+      { method: "PATCH", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
@@ -152,13 +126,13 @@ router.post("/press-kits/update-mdx", authenticate, requireOrg, async (req: Auth
   }
 });
 
-// POST /v1/press-kits/update-status — update media kit status
-router.post("/press-kits/update-status", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// PATCH /v1/press-kits/media-kits/:id/status — update media kit status
+router.patch("/press-kits/media-kits/:id/status", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.pressKits,
-      "/update-status",
-      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+      `/media-kits/${encodeURIComponent(req.params.id)}/status`,
+      { method: "PATCH", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
@@ -166,13 +140,13 @@ router.post("/press-kits/update-status", authenticate, requireOrg, async (req: A
   }
 });
 
-// POST /v1/press-kits/validate — validate media kit
-router.post("/press-kits/validate", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// POST /v1/press-kits/media-kits/:id/validate — validate media kit
+router.post("/press-kits/media-kits/:id/validate", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.pressKits,
-      "/validate",
-      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+      `/media-kits/${encodeURIComponent(req.params.id)}/validate`,
+      { method: "POST", headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
@@ -180,13 +154,13 @@ router.post("/press-kits/validate", authenticate, requireOrg, async (req: Authen
   }
 });
 
-// POST /v1/press-kits/cancel-draft — cancel draft media kit
-router.post("/press-kits/cancel-draft", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// POST /v1/press-kits/media-kits/:id/cancel — cancel draft media kit
+router.post("/press-kits/media-kits/:id/cancel", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.pressKits,
-      "/cancel-draft",
-      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+      `/media-kits/${encodeURIComponent(req.params.id)}/cancel`,
+      { method: "POST", headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
@@ -228,27 +202,26 @@ router.delete("/press-kits/admin/organizations/:id", authenticate, requireOrg, a
 
 // ── Internal routes (authenticated, service-to-service) ──────────────────────
 
-// GET /v1/press-kits/internal/media-kit/by-org/:orgId — latest kit by org
-router.get("/press-kits/internal/media-kit/by-org/:orgId", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// GET /v1/press-kits/internal/media-kits/current — latest kit for org (uses x-org-id header)
+router.get("/press-kits/internal/media-kits/current", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.pressKits,
-      `/internal/media-kit/by-org/${encodeURIComponent(req.params.orgId)}`,
+      "/internal/media-kits/current",
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get media kit by org" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get current media kit" });
   }
 });
 
-// GET /v1/press-kits/internal/generation-data — generation workflow data
-router.get("/press-kits/internal/generation-data", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// GET /v1/press-kits/internal/media-kits/generation-data — generation workflow data (uses x-org-id header)
+router.get("/press-kits/internal/media-kits/generation-data", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
-    const qs = req.query.orgId ? `?orgId=${encodeURIComponent(req.query.orgId as string)}` : "";
     const result = await callExternalService(
       externalServices.pressKits,
-      `/internal/generation-data${qs}`,
+      "/internal/media-kits/generation-data",
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -257,12 +230,12 @@ router.get("/press-kits/internal/generation-data", authenticate, requireOrg, asy
   }
 });
 
-// POST /v1/press-kits/internal/upsert-generation-result — workflow callback
-router.post("/press-kits/internal/upsert-generation-result", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// POST /v1/press-kits/internal/media-kits/generation-result — workflow callback
+router.post("/press-kits/internal/media-kits/generation-result", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.pressKits,
-      "/internal/upsert-generation-result",
+      "/internal/media-kits/generation-result",
       { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -271,12 +244,12 @@ router.post("/press-kits/internal/upsert-generation-result", authenticate, requi
   }
 });
 
-// GET /v1/press-kits/clients-media-kits-need-update — stale kits
-router.get("/press-kits/clients-media-kits-need-update", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// GET /v1/press-kits/internal/media-kits/stale — orgs with stale kits
+router.get("/press-kits/internal/media-kits/stale", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.pressKits,
-      "/clients-media-kits-need-update",
+      "/internal/media-kits/stale",
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -285,12 +258,12 @@ router.get("/press-kits/clients-media-kits-need-update", authenticate, requireOr
   }
 });
 
-// GET /v1/press-kits/media-kit-setup — setup status for all orgs
-router.get("/press-kits/media-kit-setup", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// GET /v1/press-kits/internal/media-kits/setup — setup status for all orgs
+router.get("/press-kits/internal/media-kits/setup", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.pressKits,
-      "/media-kit-setup",
+      "/internal/media-kits/setup",
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -299,17 +272,31 @@ router.get("/press-kits/media-kit-setup", authenticate, requireOrg, async (req: 
   }
 });
 
-// GET /v1/press-kits/health/bulk — bulk health per org
-router.get("/press-kits/health/bulk", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// GET /v1/press-kits/internal/health/bulk — bulk health per org
+router.get("/press-kits/internal/health/bulk", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.pressKits,
-      "/health/bulk",
+      "/internal/health/bulk",
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get bulk health" });
+  }
+});
+
+// GET /v1/press-kits/internal/email-data/:orgId — email template data
+router.get("/press-kits/internal/email-data/:orgId", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.pressKits,
+      `/internal/email-data/${encodeURIComponent(req.params.orgId)}`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get email data" });
   }
 });
 
