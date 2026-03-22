@@ -13415,35 +13415,53 @@
           "Press Kits"
         ],
         "summary": "List media kits",
-        "description": "List media kits, optionally filtered by org_id, organization_id, title, or campaign_id.",
+        "description": "List media kits, optionally filtered by org_id, organization_id, campaign_id, or title.",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "responses": {
-          "200": {
-            "description": "Media kits list",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PressKitMediaKitListResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by org ID"
+            },
+            "required": false,
+            "description": "Filter by org ID",
+            "name": "org_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by organization ID (alias for org_id)"
+            },
+            "required": false,
+            "description": "Filter by organization ID (alias for org_id)",
+            "name": "organization_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by campaign ID — returns media kit(s) linked to this campaign"
+            },
+            "required": false,
+            "description": "Filter by campaign ID — returns media kit(s) linked to this campaign",
+            "name": "campaign_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by title"
+            },
+            "required": false,
+            "description": "Filter by title",
+            "name": "title",
+            "in": "query"
+          },
           {
             "name": "x-org-id",
             "in": "header",
@@ -13489,7 +13507,29 @@
             },
             "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Media kits list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PressKitMediaKitListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       },
       "post": {
         "tags": [
