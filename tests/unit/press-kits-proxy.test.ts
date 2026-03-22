@@ -54,6 +54,10 @@ describe("Press Kits proxy routes", () => {
     expect(content).toContain('"/press-kits/media-kits"');
   });
 
+  it("should forward campaign_id query param on GET /media-kits", () => {
+    expect(content).toContain('params.set("campaign_id"');
+  });
+
   it("should have GET /press-kits/media-kits/:id with auth", () => {
     expect(content).toContain('"/press-kits/media-kits/:id"');
   });

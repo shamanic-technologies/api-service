@@ -13415,7 +13415,7 @@
           "Press Kits"
         ],
         "summary": "List media kits",
-        "description": "List media kits, optionally filtered by org_id, organization_id, or title.",
+        "description": "List media kits, optionally filtered by org_id, organization_id, title, or campaign_id.",
         "security": [
           {
             "bearerAuth": []

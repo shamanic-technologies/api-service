@@ -3611,7 +3611,7 @@ registry.registerPath({
   path: "/v1/press-kits/media-kits",
   tags: ["Press Kits"],
   summary: "List media kits",
-  description: "List media kits, optionally filtered by org_id, organization_id, or title.",
+  description: "List media kits, optionally filtered by org_id, organization_id, title, or campaign_id.",
   security: authed,
   responses: {
     200: { description: "Media kits list", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitMediaKitListResponse") } } },
