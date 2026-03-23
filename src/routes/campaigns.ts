@@ -156,6 +156,13 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       brandId: brandResult.brandId,
     };
 
+    // Discovery campaigns: campaign-service requires targetOutcome & valueForTarget
+    // but the discovery Zod schema strips them. Pass through from raw body or default.
+    if (discovery) {
+      if (!body.targetOutcome) body.targetOutcome = req.body.targetOutcome || "Discovery";
+      if (!body.valueForTarget) body.valueForTarget = req.body.valueForTarget || "Discovery";
+    }
+
     // Convert budget numbers to strings (campaign-service expects string type)
     for (const key of ["maxBudgetDailyUsd", "maxBudgetWeeklyUsd", "maxBudgetMonthlyUsd", "maxBudgetTotalUsd"]) {
       if (body[key] != null) body[key] = String(body[key]);
