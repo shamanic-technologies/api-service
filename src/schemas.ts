@@ -1358,7 +1358,11 @@ const ExtractFieldRequestSchema = z.object({
 
 const ExtractFieldResultSchema = z.object({
   key: z.string().describe("Field key"),
-  value: z.string().describe("Extracted value"),
+  value: z.union([
+    z.string(),
+    z.array(z.unknown()),
+    z.record(z.unknown()),
+  ]).describe("Extracted value. Can be a string, an array (e.g. targetAudience returns a list of segments), or a structured object (e.g. socialProof returns an object with metrics, ecosystemSupport, etc.) depending on the field key."),
   cached: z.boolean().describe("Whether this result was served from cache"),
   extractedAt: z.string().describe("ISO timestamp of extraction"),
   expiresAt: z.string().describe("ISO timestamp when cached result expires"),
