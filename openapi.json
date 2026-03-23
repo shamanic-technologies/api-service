@@ -2120,6 +2120,14 @@
           "expiresAt": {
             "type": "string",
             "description": "ISO timestamp when cached result expires"
+          },
+          "sourceUrls": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            },
+            "description": "URLs scraped to extract this field. Null for pre-existing extractions."
           }
         },
         "required": [
@@ -2127,7 +2135,8 @@
           "value",
           "cached",
           "extractedAt",
-          "expiresAt"
+          "expiresAt",
+          "sourceUrls"
         ]
       },
       "ExtractFieldsResponse": {
