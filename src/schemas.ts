@@ -1351,22 +1351,18 @@ const BrandDetailSchema = BrandSummarySchema.extend({
   categories: z.string().nullable().describe("Brand categories"),
 }).openapi("BrandDetail");
 
-const SalesProfileSchema = z
-  .object({
-    valueProposition: z.string().nullable().describe("Core value proposition"),
-    customerPainPoints: z.array(z.string()).describe("Target pain points"),
-    callToAction: z.string().nullable().describe("Primary CTA"),
-    companyOverview: z.string().nullable().describe("Company overview"),
-    competitors: z.array(z.string()).describe("Known competitors"),
-    productDifferentiators: z.array(z.string()).describe("Key differentiators"),
-    targetAudience: z.string().nullable().describe("Target audience description"),
-    keyFeatures: z.array(z.string()).describe("Key product features"),
-    extractionModel: z.string().nullable().describe("AI model used for extraction"),
-    extractedAt: z.string().describe("ISO timestamp of extraction"),
-    expiresAt: z.string().nullable().describe("ISO timestamp when profile expires"),
-    scrapedUrls: z.array(z.string()).describe("URLs that were scraped and analyzed during extraction"),
-  })
-  .openapi("SalesProfile");
+const ExtractFieldRequestSchema = z.object({
+  key: z.string().describe("Field key (e.g. 'industry', 'valueProposition')"),
+  description: z.string().describe("Description of what to extract"),
+}).openapi("ExtractFieldRequest");
+
+const ExtractFieldResultSchema = z.object({
+  key: z.string().describe("Field key"),
+  value: z.string().describe("Extracted value"),
+  cached: z.boolean().describe("Whether this result was served from cache"),
+  extractedAt: z.string().describe("ISO timestamp of extraction"),
+  expiresAt: z.string().describe("ISO timestamp when cached result expires"),
+}).openapi("ExtractFieldResult");
 
 registry.registerPath({
   method: "post",
@@ -1469,69 +1465,34 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: "get",
-  path: "/v1/brands/{id}/sales-profile",
-  tags: ["Brand"],
-  summary: "Get brand sales profile",
-  description:
-    "Get the sales profile for a brand. Returns 404 if none exists.",
-  security: authed,
-  request: { params: BrandIdParam },
-  responses: {
-    200: {
-      description: "Brand sales profile",
-      content: {
-        "application/json": {
-          schema: z.object({ profile: SalesProfileSchema }).openapi("GetSalesProfileResponse"),
-        },
-      },
-    },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Sales profile not found", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
   method: "post",
-  path: "/v1/brands/{id}/sales-profile",
+  path: "/v1/brands/{id}/extract-fields",
   tags: ["Brand"],
-  summary: "Create brand sales profile",
+  summary: "Extract fields from brand",
   description:
-    "Trigger AI extraction to create a sales profile for the brand. Returns 409 if a profile already exists.",
+    "Generic field extraction: send fields you want with a key and description, and brand-service extracts them via AI. Results are cached 30 days per field. To reproduce the old sales-profile, send the same fields as items in the fields array. For discovery campaigns, send industry, suggestedAngles, suggestedGeo.",
   security: authed,
-  request: { params: BrandIdParam },
-  responses: {
-    200: {
-      description: "Sales profile created",
+  request: {
+    params: BrandIdParam,
+    body: {
       content: {
         "application/json": {
-          schema: z.object({ profile: SalesProfileSchema }).openapi("CreateSalesProfileResponse"),
+          schema: z.object({
+            fields: z.array(ExtractFieldRequestSchema).describe("Fields to extract"),
+          }).openapi("ExtractFieldsRequest"),
         },
       },
     },
-    400: { description: "Anthropic API key not configured", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    409: { description: "Sales profile already exists", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
   },
-});
-
-registry.registerPath({
-  method: "put",
-  path: "/v1/brands/{id}/sales-profile",
-  tags: ["Brand"],
-  summary: "Refresh brand sales profile",
-  description:
-    "Force re-extraction of the sales profile for the brand. Always bypasses the 30-day cache and triggers a fresh scraping + AI extraction. Use this when the brand's website has changed and the profile needs updating.",
-  security: authed,
-  request: { params: BrandIdParam },
   responses: {
     200: {
-      description: "Sales profile refreshed",
+      description: "Extracted field results",
       content: {
         "application/json": {
-          schema: z.object({ profile: SalesProfileSchema }).openapi("RefreshSalesProfileResponse"),
+          schema: z.object({
+            brandId: z.string().describe("Brand ID"),
+            results: z.array(ExtractFieldResultSchema).describe("Extraction results"),
+          }).openapi("ExtractFieldsResponse"),
         },
       },
     },
@@ -1617,7 +1578,7 @@ registry.registerPath({
   tags: ["Brand"],
   summary: "Get brand runs",
   description:
-    "Get extraction runs for a brand (sales-profile, icp-extraction) enriched with cost data",
+    "Get extraction runs for a brand (extract-fields, icp-extraction) enriched with cost data",
   security: authed,
   request: { params: BrandIdParam },
   responses: {

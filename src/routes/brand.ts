@@ -140,76 +140,25 @@ router.get("/brands/:id", authenticate, async (req: AuthenticatedRequest, res) =
 });
 
 /**
- * GET /v1/brands/:id/sales-profile
- * Read-only: returns the sales profile for a brand, or 404 if none exists.
+ * POST /v1/brands/:id/extract-fields
+ * Generic field extraction: send fields you want with key + description,
+ * brand-service extracts them via AI. Results cached 30 days per field.
  */
-router.get("/brands/:id/sales-profile", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.post("/brands/:id/extract-fields", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.brand,
-      `/brands/${req.params.id}/sales-profile`,
-      { headers: buildInternalHeaders(req) },
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("Get brand sales profile error:", error);
-    const statusCode = error.statusCode || 500;
-    if (statusCode === 404) {
-      return res.status(404).json({ error: "Sales profile not found" });
-    }
-    res.status(statusCode).json({ error: error.message || "Failed to get sales profile" });
-  }
-});
-
-/**
- * POST /v1/brands/:id/sales-profile
- * Create: triggers AI extraction for the brand. Returns 409 if a profile already exists.
- */
-router.post("/brands/:id/sales-profile", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.brand,
-      `/brands/${req.params.id}/sales-profile`,
+      `/brands/${req.params.id}/extract-fields`,
       {
         method: "POST",
         headers: buildInternalHeaders(req),
+        body: req.body,
       },
     );
     res.json(result);
   } catch (error: any) {
-    console.error("Create brand sales profile error:", error);
-    const msg = error.message || "Failed to create sales profile";
-    if (msg.includes("No Anthropic API key found")) {
-      return res.status(400).json({
-        error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
-      });
-    }
-    const statusCode = error.statusCode || 500;
-    if (statusCode === 409) {
-      return res.status(409).json({ error: "Sales profile already exists. Use PUT to refresh." });
-    }
-    res.status(statusCode).json({ error: msg });
-  }
-});
-
-/**
- * PUT /v1/brands/:id/sales-profile
- * Refresh: forces re-extraction of the sales profile.
- */
-router.put("/brands/:id/sales-profile", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.brand,
-      `/brands/${req.params.id}/sales-profile?force=true`,
-      {
-        method: "PUT",
-        headers: buildInternalHeaders(req),
-      },
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("Refresh brand sales profile error:", error);
-    const msg = error.message || "Failed to refresh sales profile";
+    console.error("Extract fields error:", error);
+    const msg = error.message || "Failed to extract fields";
     if (msg.includes("No Anthropic API key found")) {
       return res.status(400).json({
         error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
