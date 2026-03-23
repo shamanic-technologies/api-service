@@ -1362,6 +1362,7 @@ const ExtractFieldResultSchema = z.object({
   cached: z.boolean().describe("Whether this result was served from cache"),
   extractedAt: z.string().describe("ISO timestamp of extraction"),
   expiresAt: z.string().describe("ISO timestamp when cached result expires"),
+  sourceUrls: z.array(z.string()).nullable().describe("URLs scraped to extract this field. Null for pre-existing extractions."),
 }).openapi("ExtractFieldResult");
 
 registry.registerPath({
