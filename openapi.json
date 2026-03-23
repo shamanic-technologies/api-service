@@ -2213,6 +2213,84 @@
           "fields"
         ]
       },
+      "CachedField": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Field key"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "nullable": true
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "nullable": true
+                }
+              },
+              {
+                "nullable": true
+              },
+              {
+                "nullable": true
+              }
+            ],
+            "description": "Extracted value. Type depends on the field key: string, array, object, or null when not found."
+          },
+          "sourceUrls": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            },
+            "description": "URLs scraped to extract this field. Null for pre-existing extractions."
+          },
+          "extractedAt": {
+            "type": "string",
+            "description": "ISO timestamp of extraction"
+          },
+          "expiresAt": {
+            "type": "string",
+            "description": "ISO timestamp when cached result expires"
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "sourceUrls",
+          "extractedAt",
+          "expiresAt"
+        ]
+      },
+      "ExtractedFieldsResponse": {
+        "type": "object",
+        "properties": {
+          "brandId": {
+            "type": "string",
+            "description": "Brand ID"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CachedField"
+            },
+            "description": "Previously extracted and cached fields"
+          }
+        },
+        "required": [
+          "brandId",
+          "fields"
+        ]
+      },
       "IcpSuggestionResponse": {
         "type": "object",
         "properties": {
@@ -8230,6 +8308,119 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/brands/{id}/extracted-fields": {
+      "get": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "List extracted fields for a brand",
+        "description": "Lists all previously extracted and cached fields for a brand.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID"
+            },
+            "required": true,
+            "description": "Brand ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cached extracted fields",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtractedFieldsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Brand not found",
             "content": {
               "application/json": {
                 "schema": {

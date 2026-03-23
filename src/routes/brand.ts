@@ -169,6 +169,24 @@ router.post("/brands/:id/extract-fields", authenticate, requireOrg, requireUser,
 });
 
 /**
+ * GET /v1/brands/:id/extracted-fields
+ * List all previously extracted and cached fields for a brand.
+ */
+router.get("/brands/:id/extracted-fields", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.brand,
+      `/brands/${req.params.id}/extracted-fields`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Get extracted fields error:", error);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get extracted fields" });
+  }
+});
+
+/**
  * POST /v1/brand/icp-suggestion
  * Get ICP suggestion (Apollo-compatible search params) for a brand URL
  */
