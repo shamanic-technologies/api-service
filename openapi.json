@@ -2098,61 +2098,20 @@
           "brand"
         ]
       },
-      "SalesProfile": {
+      "ExtractFieldResult": {
         "type": "object",
         "properties": {
-          "valueProposition": {
+          "key": {
             "type": "string",
-            "nullable": true,
-            "description": "Core value proposition"
+            "description": "Field key"
           },
-          "customerPainPoints": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Target pain points"
-          },
-          "callToAction": {
+          "value": {
             "type": "string",
-            "nullable": true,
-            "description": "Primary CTA"
+            "description": "Extracted value"
           },
-          "companyOverview": {
-            "type": "string",
-            "nullable": true,
-            "description": "Company overview"
-          },
-          "competitors": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Known competitors"
-          },
-          "productDifferentiators": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Key differentiators"
-          },
-          "targetAudience": {
-            "type": "string",
-            "nullable": true,
-            "description": "Target audience description"
-          },
-          "keyFeatures": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Key product features"
-          },
-          "extractionModel": {
-            "type": "string",
-            "nullable": true,
-            "description": "AI model used for extraction"
+          "cached": {
+            "type": "boolean",
+            "description": "Whether this result was served from cache"
           },
           "extractedAt": {
             "type": "string",
@@ -2160,63 +2119,67 @@
           },
           "expiresAt": {
             "type": "string",
-            "nullable": true,
-            "description": "ISO timestamp when profile expires"
+            "description": "ISO timestamp when cached result expires"
+          }
+        },
+        "required": [
+          "key",
+          "value",
+          "cached",
+          "extractedAt",
+          "expiresAt"
+        ]
+      },
+      "ExtractFieldsResponse": {
+        "type": "object",
+        "properties": {
+          "brandId": {
+            "type": "string",
+            "description": "Brand ID"
           },
-          "scrapedUrls": {
+          "results": {
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/ExtractFieldResult"
             },
-            "description": "URLs that were scraped and analyzed during extraction"
+            "description": "Extraction results"
           }
         },
         "required": [
-          "valueProposition",
-          "customerPainPoints",
-          "callToAction",
-          "companyOverview",
-          "competitors",
-          "productDifferentiators",
-          "targetAudience",
-          "keyFeatures",
-          "extractionModel",
-          "extractedAt",
-          "expiresAt",
-          "scrapedUrls"
+          "brandId",
+          "results"
         ]
       },
-      "GetSalesProfileResponse": {
+      "ExtractFieldRequest": {
         "type": "object",
         "properties": {
-          "profile": {
-            "$ref": "#/components/schemas/SalesProfile"
+          "key": {
+            "type": "string",
+            "description": "Field key (e.g. 'industry', 'valueProposition')"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of what to extract"
           }
         },
         "required": [
-          "profile"
+          "key",
+          "description"
         ]
       },
-      "CreateSalesProfileResponse": {
+      "ExtractFieldsRequest": {
         "type": "object",
         "properties": {
-          "profile": {
-            "$ref": "#/components/schemas/SalesProfile"
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExtractFieldRequest"
+            },
+            "description": "Fields to extract"
           }
         },
         "required": [
-          "profile"
-        ]
-      },
-      "RefreshSalesProfileResponse": {
-        "type": "object",
-        "properties": {
-          "profile": {
-            "$ref": "#/components/schemas/SalesProfile"
-          }
-        },
-        "required": [
-          "profile"
+          "fields"
         ]
       },
       "IcpSuggestionResponse": {
@@ -8135,124 +8098,13 @@
         }
       }
     },
-    "/v1/brands/{id}/sales-profile": {
-      "get": {
-        "tags": [
-          "Brand"
-        ],
-        "summary": "Get brand sales profile",
-        "description": "Get the sales profile for a brand. Returns 404 if none exists.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Brand ID"
-            },
-            "required": true,
-            "description": "Brand ID",
-            "name": "id",
-            "in": "path"
-          },
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-name",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Brand sales profile",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GetSalesProfileResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Sales profile not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
+    "/v1/brands/{id}/extract-fields": {
       "post": {
         "tags": [
           "Brand"
         ],
-        "summary": "Create brand sales profile",
-        "description": "Trigger AI extraction to create a sales profile for the brand. Returns 409 if a profile already exists.",
+        "summary": "Extract fields from brand",
+        "description": "Generic field extraction: send fields you want with a key and description, and brand-service extracts them via AI. Results are cached 30 days per field. To reproduce the old sales-profile, send the same fields as items in the fields array. For discovery campaigns, send industry, suggestedAngles, suggestedGeo.",
         "security": [
           {
             "bearerAuth": []
@@ -8315,134 +8167,22 @@
             "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtractFieldsRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
-            "description": "Sales profile created",
+            "description": "Extracted field results",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateSalesProfileResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Anthropic API key not configured",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Sales profile already exists",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "tags": [
-          "Brand"
-        ],
-        "summary": "Refresh brand sales profile",
-        "description": "Force re-extraction of the sales profile for the brand. Always bypasses the 30-day cache and triggers a fresh scraping + AI extraction. Use this when the brand's website has changed and the profile needs updating.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Brand ID"
-            },
-            "required": true,
-            "description": "Brand ID",
-            "name": "id",
-            "in": "path"
-          },
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-name",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Sales profile refreshed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/RefreshSalesProfileResponse"
+                  "$ref": "#/components/schemas/ExtractFieldsResponse"
                 }
               }
             }
@@ -8598,7 +8338,7 @@
           "Brand"
         ],
         "summary": "Get brand runs",
-        "description": "Get extraction runs for a brand (sales-profile, icp-extraction) enriched with cost data",
+        "description": "Get extraction runs for a brand (extract-fields, icp-extraction) enriched with cost data",
         "security": [
           {
             "bearerAuth": []

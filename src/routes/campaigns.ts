@@ -1,5 +1,4 @@
 import { Router } from "express";
-import { z } from "zod";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
@@ -119,33 +118,8 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     );
     console.log("[api-service] POST /v1/campaigns \u2014 step 1 done: brand upserted", { brandId: brandResult.brandId });
 
-    // 2. Send user-provided marketing fields to brand-service sales profile
-    //    (only for outreach campaigns — discovery campaigns don't have these fields)
-    if (!discovery) {
-      const outreachData = parsed.data as z.infer<typeof CreateCampaignRequestSchema>;
-      const { urgency, scarcity, riskReversal, socialProof } = outreachData;
-      if (urgency || scarcity || riskReversal || socialProof) {
-        console.log("[api-service] POST /v1/campaigns — step 2: updating sales profile", { brandId: brandResult.brandId });
-        await callExternalService(
-          externalServices.brand,
-          `/brands/${brandResult.brandId}/sales-profile`,
-          {
-            method: "PUT",
-            headers: buildInternalHeaders(req),
-            body: {
-              ...(urgency && { urgency }),
-              ...(scarcity && { scarcity }),
-              ...(riskReversal && { riskReversal }),
-              ...(socialProof && { socialProof }),
-            },
-          }
-        );
-        console.log("[api-service] POST /v1/campaigns — step 2 done: sales profile updated");
-      }
-    }
-
-    // 3. Forward to campaign-service (run tracking via x-run-id header)
-    // Derive `type` from workflowName
+    // 2. Forward to campaign-service (run tracking via x-run-id header)
+    //    Derive `type` from workflowName
     const { workflowName, ...restData } = parsed.data;
     const campaignType = deriveCampaignType(workflowName);
     const body: Record<string, unknown> = {
@@ -168,7 +142,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       if (body[key] != null) body[key] = String(body[key]);
     }
 
-    console.log("[api-service] POST /v1/campaigns — step 3: forwarding to campaign-service", {
+    console.log("[api-service] POST /v1/campaigns — step 2: forwarding to campaign-service", {
       brandId: body.brandId,
       workflowName: body.workflowName,
       type: body.type,
@@ -183,7 +157,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
         body,
       }
     );
-    console.log("[api-service] POST /v1/campaigns \u2014 step 4 done: campaign created", {
+    console.log("[api-service] POST /v1/campaigns \u2014 step 2 done: campaign created", {
       campaignId: (result as any).campaign?.id,
       status: (result as any).campaign?.status,
     });

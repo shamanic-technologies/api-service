@@ -54,7 +54,7 @@ describe("callExternalService – malformed JSON response handling", () => {
       json: () => Promise.reject(new SyntaxError("Unexpected end of JSON input")),
     }));
 
-    const res = await request(app).get("/v1/brands/test-brand/sales-profile");
+    const res = await request(app).get("/v1/brands/test-brand");
 
     expect(res.status).toBe(500);
     // The fix ensures callExternalService logs the error before re-throwing
@@ -70,7 +70,7 @@ describe("callExternalService – malformed JSON response handling", () => {
       json: () => Promise.reject(new SyntaxError("Unexpected token '<'")),
     }));
 
-    const res = await request(app).get("/v1/brands/test-brand/sales-profile");
+    const res = await request(app).get("/v1/brands/test-brand");
 
     expect(res.status).toBe(500);
     expect(consoleErrorSpy).toHaveBeenCalledWith(

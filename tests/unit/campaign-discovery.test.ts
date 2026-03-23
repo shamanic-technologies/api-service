@@ -93,9 +93,9 @@ describe("Discovery campaign creation", () => {
     expect(brandCall).toBeDefined();
     expect(brandCall!.body!.url).toBe("https://acme.com");
 
-    // Verify NO sales-profile update was made (discovery campaigns skip this)
-    const salesProfileCall = fetchCalls.find((c) => c.url.includes("/sales-profile"));
-    expect(salesProfileCall).toBeUndefined();
+    // Verify NO extract-fields or sales-profile call was made
+    const extractCall = fetchCalls.find((c) => c.url.includes("/extract-fields") || c.url.includes("/sales-profile"));
+    expect(extractCall).toBeUndefined();
 
     // Verify campaign-service received the correct type
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
