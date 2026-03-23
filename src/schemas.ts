@@ -2491,6 +2491,12 @@ registry.registerPath({
       },
     },
     401: { description: "Unauthorized", content: errorContent },
+    402: {
+      description:
+        "Insufficient credits. The organization's credit balance is too low to process this request. " +
+        "Response includes `balance_cents` (current balance) and `required_cents` (minimum needed).",
+      content: errorContent,
+    },
     404: {
       description:
         "Session not found (invalid or expired sessionId), or chat config not registered " +

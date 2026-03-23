@@ -10458,6 +10458,16 @@
               }
             }
           },
+          "402": {
+            "description": "Insufficient credits. The organization's credit balance is too low to process this request. Response includes `balance_cents` (current balance) and `required_cents` (minimum needed).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "404": {
             "description": "Session not found (invalid or expired sessionId), or chat config not registered (register via PUT /v1/chat/config or ensure platform config exists)",
             "content": {
