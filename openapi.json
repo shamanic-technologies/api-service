@@ -2121,9 +2121,15 @@
                 "additionalProperties": {
                   "nullable": true
                 }
+              },
+              {
+                "nullable": true
+              },
+              {
+                "nullable": true
               }
             ],
-            "description": "Extracted value. Can be a string, an array (e.g. targetAudience returns a list of segments), or a structured object (e.g. socialProof returns an object with metrics, ecosystemSupport, etc.) depending on the field key."
+            "description": "Extracted value. Type depends on the field key: string (companyOverview, valueProposition, callToAction), array (targetAudience, keyFeatures, customerPainPoints, productDifferentiators), object (socialProof, funding, additionalContext, riskReversal, scarcity, urgency), or null when the field was not found on the site (e.g. competitors, leadership)."
           },
           "cached": {
             "type": "boolean",
