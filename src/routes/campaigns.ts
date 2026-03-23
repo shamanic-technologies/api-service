@@ -71,7 +71,8 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       const fieldGuide: Record<string, { description: string; example: string }> = {
         name: { description: "A name for your campaign", example: discovery ? "Q1 Media Discovery" : "Q1 SaaS Outreach" },
         brandUrl: { description: "The URL of the product or service you are promoting", example: "https://acme.com" },
-        targetAudience: { description: discovery ? "What kind of outlets or journalists to discover" : "Plain text description of who you want to reach", example: discovery ? "Tech publications covering SaaS and AI" : "CTOs at SaaS startups with 10-50 employees in the US" },
+        targetAudience: { description: discovery ? "Composed description of discovery target" : "Plain text description of who you want to reach", example: discovery ? "Industry: SaaS. Angles: fundraising. Geo: US" : "CTOs at SaaS startups with 10-50 employees in the US" },
+        industry: { description: "Industry or sector to discover outlets in", example: "SaaS, AI, Fintech, Healthcare" },
         targetOutcome: { description: "The concrete result you want from this campaign", example: "Book sales demos" },
         valueForTarget: { description: "What your target audience gains by responding to your email", example: "Access to enterprise analytics at startup pricing" },
         urgency: { description: "A time-based constraint that motivates the prospect to act now rather than later", example: "Early-adopter pricing ends March 31st" },
@@ -88,7 +89,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
         error: `Missing or invalid required fields: ${missingFields.join(", ")}.`,
         missingFields: missingFieldDetails,
         hint: discovery
-          ? "Discovery campaigns require: name, workflowName, brandUrl, and targetAudience."
+          ? "Discovery campaigns require: name, workflowName, brandUrl, targetAudience, and industry."
           : "Every campaign requires all of these fields. Even if you're unsure, provide your best answer — it helps the AI generate better emails.",
       });
     }
@@ -148,19 +149,27 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     // Derive `type` from workflowName
     const { workflowName, ...restData } = parsed.data;
     const campaignType = deriveCampaignType(workflowName);
+
+    // Separate discovery-specific fields from the base campaign fields
+    // so they go into searchParams (not top-level columns)
+    const { industry, angles, targetGeo, ...baseData } = restData as Record<string, unknown>;
+
     const body: Record<string, unknown> = {
-      ...restData,
+      ...baseData,
       workflowName,
       type: campaignType,
       orgId: req.orgId,
       brandId: brandResult.brandId,
     };
 
-    // Discovery campaigns: campaign-service requires targetOutcome & valueForTarget
-    // but the discovery Zod schema strips them. Pass through from raw body or default.
+    // Discovery campaigns: pack type-specific fields into searchParams
+    // so campaign-service stores them and start-run returns them to workflows
     if (discovery) {
-      if (!body.targetOutcome) body.targetOutcome = req.body.targetOutcome || "Discovery";
-      if (!body.valueForTarget) body.valueForTarget = req.body.valueForTarget || "Discovery";
+      body.searchParams = {
+        ...(industry && { industry }),
+        ...(angles && { angles }),
+        ...(targetGeo && { targetGeo }),
+      };
     }
 
     // Convert budget numbers to strings (campaign-service expects string type)

@@ -74,7 +74,7 @@ describe("Discovery campaign creation", () => {
     });
   });
 
-  it("should create an outlets-database-discovery campaign without email fields", async () => {
+  it("should create an outlets-database-discovery campaign with industry", async () => {
     const app = createApp();
     const res = await request(app)
       .post("/v1/campaigns")
@@ -82,7 +82,8 @@ describe("Discovery campaign creation", () => {
         name: "Tech Media Discovery",
         workflowName: "outlets-database-discovery-cedar",
         brandUrl: "https://acme.com",
-        targetAudience: "Tech publications covering SaaS and AI",
+        targetAudience: "Industry: SaaS. Geo: US",
+        industry: "SaaS",
       });
 
     expect(res.status).toBe(200);
@@ -102,16 +103,19 @@ describe("Discovery campaign creation", () => {
     expect(campaignCall).toBeDefined();
     expect(campaignCall!.body!.type).toBe("outlets-database-discovery");
     expect(campaignCall!.body!.workflowName).toBe("outlets-database-discovery-cedar");
-    expect(campaignCall!.body!.targetAudience).toBe("Tech publications covering SaaS and AI");
+    expect(campaignCall!.body!.targetAudience).toBe("Industry: SaaS. Geo: US");
 
     // Verify email-specific fields are NOT present
     expect(campaignCall!.body!.urgency).toBeUndefined();
     expect(campaignCall!.body!.scarcity).toBeUndefined();
     expect(campaignCall!.body!.riskReversal).toBeUndefined();
     expect(campaignCall!.body!.socialProof).toBeUndefined();
+
+    // Verify searchParams contains discovery-specific fields
+    expect(campaignCall!.body!.searchParams).toEqual({ industry: "SaaS" });
   });
 
-  it("should create a journalists-database-discovery campaign without email fields", async () => {
+  it("should create a journalists-database-discovery campaign", async () => {
     const app = createApp();
     const res = await request(app)
       .post("/v1/campaigns")
@@ -119,7 +123,9 @@ describe("Discovery campaign creation", () => {
         name: "Journalist Discovery",
         workflowName: "journalists-database-discovery-birch",
         brandUrl: "https://acme.com",
-        targetAudience: "Journalists covering fintech in the US",
+        targetAudience: "Industry: Fintech. Geo: US",
+        industry: "Fintech",
+        targetGeo: "US",
       });
 
     expect(res.status).toBe(200);
@@ -127,6 +133,23 @@ describe("Discovery campaign creation", () => {
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
     expect(campaignCall!.body!.type).toBe("journalists-database-discovery");
     expect(campaignCall!.body!.workflowName).toBe("journalists-database-discovery-birch");
+    expect(campaignCall!.body!.searchParams).toEqual({ industry: "Fintech", targetGeo: "US" });
+  });
+
+  it("should reject discovery campaign when industry is missing", async () => {
+    const app = createApp();
+    const res = await request(app)
+      .post("/v1/campaigns")
+      .send({
+        name: "Missing Industry",
+        workflowName: "outlets-database-discovery-cedar",
+        brandUrl: "https://acme.com",
+        targetAudience: "Tech publications",
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("industry");
+    expect(res.body.hint).toContain("Discovery campaigns");
   });
 
   it("should reject discovery campaign when targetAudience is missing", async () => {
@@ -137,6 +160,7 @@ describe("Discovery campaign creation", () => {
         name: "Missing Audience",
         workflowName: "outlets-database-discovery-cedar",
         brandUrl: "https://acme.com",
+        industry: "SaaS",
       });
 
     expect(res.status).toBe(400);
@@ -152,6 +176,7 @@ describe("Discovery campaign creation", () => {
         name: "Missing URL",
         workflowName: "outlets-database-discovery-cedar",
         targetAudience: "Tech publications",
+        industry: "SaaS",
       });
 
     expect(res.status).toBe(400);
@@ -184,6 +209,7 @@ describe("Discovery campaign creation", () => {
         workflowName: "outlets-database-discovery-cedar",
         brandUrl: "https://acme.com",
         targetAudience: "Tech publications",
+        industry: "SaaS",
         maxBudgetDailyUsd: 25,
       });
 
@@ -191,46 +217,57 @@ describe("Discovery campaign creation", () => {
     expect(campaignCall!.body!.maxBudgetDailyUsd).toBe("25");
   });
 
-  it("should send targetOutcome and valueForTarget defaults to campaign-service for discovery campaigns", async () => {
+  it("should pass all discovery fields into searchParams", async () => {
     const app = createApp();
     const res = await request(app)
       .post("/v1/campaigns")
       .send({
-        name: "Defaults Discovery",
-        workflowName: "outlets-database-discovery-cedar",
-        brandUrl: "https://acme.com",
-        targetAudience: "Tech publications covering SaaS",
-      });
-
-    expect(res.status).toBe(200);
-
-    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
-    expect(campaignCall).toBeDefined();
-    // campaign-service requires these fields — api-service must provide defaults for discovery
-    expect(campaignCall!.body!.targetOutcome).toBe("Discovery");
-    expect(campaignCall!.body!.valueForTarget).toBe("Discovery");
-  });
-
-  it("should pass through client-provided targetOutcome and valueForTarget for discovery campaigns", async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/campaigns")
-      .send({
-        name: "Dusk Discovery",
+        name: "Full Discovery",
         workflowName: "outlets-database-discovery-dusk",
         brandUrl: "https://distribute.you",
-        targetAudience: "Builders and SaaS founders",
-        targetOutcome: "Get Started Free",
-        valueForTarget: "Automates your distribution stack",
+        targetAudience: "Industry: SaaS. Angles: fundraising, product launch. Geo: US",
+        industry: "SaaS",
+        angles: ["fundraising", "product launch"],
+        targetGeo: "US",
       });
 
     expect(res.status).toBe(200);
 
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
     expect(campaignCall).toBeDefined();
-    // Client-provided values should be passed through, not replaced with defaults
-    expect(campaignCall!.body!.targetOutcome).toBe("Get Started Free");
-    expect(campaignCall!.body!.valueForTarget).toBe("Automates your distribution stack");
+    expect(campaignCall!.body!.searchParams).toEqual({
+      industry: "SaaS",
+      angles: ["fundraising", "product launch"],
+      targetGeo: "US",
+    });
+    // Discovery-specific fields should NOT be at the top level
+    expect(campaignCall!.body!.industry).toBeUndefined();
+    expect(campaignCall!.body!.angles).toBeUndefined();
+    expect(campaignCall!.body!.targetGeo).toBeUndefined();
+  });
+
+  it("should not include searchParams for outreach campaigns", async () => {
+    const app = createApp();
+    const res = await request(app)
+      .post("/v1/campaigns")
+      .send({
+        name: "Outreach Campaign",
+        workflowName: "sales-email-cold-outreach-sienna",
+        brandUrl: "https://example.com",
+        targetAudience: "CTOs at SaaS startups",
+        targetOutcome: "Book demos",
+        valueForTarget: "Enterprise analytics at startup pricing",
+        urgency: "Pricing ends March 31st",
+        scarcity: "Only 10 spots",
+        riskReversal: "14-day free trial",
+        socialProof: "500+ companies onboarded",
+      });
+
+    expect(res.status).toBe(200);
+
+    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
+    expect(campaignCall!.body!.searchParams).toBeUndefined();
+    expect(campaignCall!.body!.targetOutcome).toBe("Book demos");
   });
 
   it("should accept optional maxResults for discovery campaigns", async () => {
@@ -242,6 +279,7 @@ describe("Discovery campaign creation", () => {
         workflowName: "outlets-database-discovery-cedar",
         brandUrl: "https://acme.com",
         targetAudience: "Tech publications",
+        industry: "SaaS",
         maxResults: 50,
       });
 
@@ -251,4 +289,3 @@ describe("Discovery campaign creation", () => {
     expect(campaignCall!.body!.maxResults).toBe(50);
   });
 });
-
