@@ -43,7 +43,14 @@ describe("GET /v1/brands/:id/sales-profile – read only", () => {
   });
 
   it("should return 200 with profile when it exists", async () => {
-    const profile = { cached: true, brandId: "b-1", profile: { valueProposition: "Test" } };
+    const profile = {
+      cached: true,
+      brandId: "b-1",
+      profile: {
+        valueProposition: "Test",
+        scrapedUrls: ["https://example.com", "https://example.com/about"],
+      },
+    };
     global.fetch = vi.fn().mockImplementation(async () => ({
       ok: true,
       json: () => Promise.resolve(profile),
@@ -53,6 +60,7 @@ describe("GET /v1/brands/:id/sales-profile – read only", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(profile);
+    expect(res.body.profile.scrapedUrls).toEqual(["https://example.com", "https://example.com/about"]);
   });
 
   it("should return 404 when no profile exists", async () => {
