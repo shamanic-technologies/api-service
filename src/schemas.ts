@@ -1370,6 +1370,19 @@ const ExtractFieldResultSchema = z.object({
   sourceUrls: z.array(z.string()).nullable().describe("URLs scraped to extract this field. Null for pre-existing extractions."),
 }).openapi("ExtractFieldResult");
 
+const CachedFieldSchema = z.object({
+  key: z.string().describe("Field key"),
+  value: z.union([
+    z.string(),
+    z.array(z.unknown()),
+    z.record(z.unknown()),
+    z.null(),
+  ]).describe("Extracted value. Type depends on the field key: string, array, object, or null when not found."),
+  sourceUrls: z.array(z.string()).nullable().describe("URLs scraped to extract this field. Null for pre-existing extractions."),
+  extractedAt: z.string().describe("ISO timestamp of extraction"),
+  expiresAt: z.string().describe("ISO timestamp when cached result expires"),
+}).openapi("CachedField");
+
 registry.registerPath({
   method: "post",
   path: "/v1/brand/scrape",
@@ -1504,6 +1517,35 @@ registry.registerPath({
     },
     400: { description: "Anthropic API key not configured", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/extracted-fields",
+  tags: ["Brand"],
+  summary: "List extracted fields for a brand",
+  description:
+    "Lists all previously extracted and cached fields for a brand.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+  },
+  responses: {
+    200: {
+      description: "Cached extracted fields",
+      content: {
+        "application/json": {
+          schema: z.object({
+            brandId: z.string().describe("Brand ID"),
+            fields: z.array(CachedFieldSchema).describe("Previously extracted and cached fields"),
+          }).openapi("ExtractedFieldsResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
