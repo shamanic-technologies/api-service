@@ -158,6 +158,7 @@ export async function streamExternalService(
 
   if (!response.ok) {
     const errorText = await response.text();
+    console.warn(`[streamExternalService] ${method} ${path} upstream error: ${response.status}`, errorText);
     expressRes.status(response.status).json({ error: errorText || `Upstream error: ${response.status}` });
     return;
   }
