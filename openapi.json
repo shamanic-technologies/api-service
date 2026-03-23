@@ -2106,8 +2106,24 @@
             "description": "Field key"
           },
           "value": {
-            "type": "string",
-            "description": "Extracted value"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "nullable": true
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": {
+                  "nullable": true
+                }
+              }
+            ],
+            "description": "Extracted value. Can be a string, an array (e.g. targetAudience returns a list of segments), or a structured object (e.g. socialProof returns an object with metrics, ecosystemSupport, etc.) depending on the field key."
           },
           "cached": {
             "type": "boolean",
