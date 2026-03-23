@@ -1364,6 +1364,7 @@ const SalesProfileSchema = z
     extractionModel: z.string().nullable().describe("AI model used for extraction"),
     extractedAt: z.string().describe("ISO timestamp of extraction"),
     expiresAt: z.string().nullable().describe("ISO timestamp when profile expires"),
+    scrapedUrls: z.array(z.string()).describe("URLs that were scraped and analyzed during extraction"),
   })
   .openapi("SalesProfile");
 

@@ -2162,6 +2162,13 @@
             "type": "string",
             "nullable": true,
             "description": "ISO timestamp when profile expires"
+          },
+          "scrapedUrls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "URLs that were scraped and analyzed during extraction"
           }
         },
         "required": [
@@ -2175,7 +2182,8 @@
           "keyFeatures",
           "extractionModel",
           "extractedAt",
-          "expiresAt"
+          "expiresAt",
+          "scrapedUrls"
         ]
       },
       "GetSalesProfileResponse": {
