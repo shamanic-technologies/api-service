@@ -379,6 +379,11 @@ export const CreateDiscoveryCampaignRequestSchema = z
     maxBudgetMonthlyUsd: z.union([z.string(), z.number()]).optional().describe("Max monthly budget in USD"),
     maxBudgetTotalUsd: z.union([z.string(), z.number()]).optional().describe("Max total budget in USD"),
     endDate: z.string().optional().describe("Campaign end date"),
+    targetOutcome: z.string().optional().describe("Discovery goal (auto-set for discovery campaigns)"),
+    valueForTarget: z.string().optional().describe("Value proposition (auto-set for discovery campaigns)"),
+    industry: z.string().optional().describe("Industry or sector for outlet discovery"),
+    targetGeo: z.string().optional().describe("Geographic focus for outlet discovery"),
+    angles: z.array(z.string()).optional().describe("PR angles or story hooks (e.g. fundraising, thought leadership)"),
   })
   .openapi("CreateDiscoveryCampaignRequest");
 
