@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { callExternalService } from "../../src/lib/service-client.js";
+import { callExternalService, streamExternalService } from "../../src/lib/service-client.js";
 
 const service = { url: "http://localhost:9999", apiKey: "test-key" };
 
@@ -55,5 +55,45 @@ describe("callExternalService error handling", () => {
     await expect(callExternalService(service, "/resource")).rejects.toThrow(
       "Service call failed: 403",
     );
+  });
+});
+
+describe("streamExternalService error logging", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("should log upstream errors with console.warn when response is not ok", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const errorBody = JSON.stringify({ error: "Insufficient credits", balance_cents: 200, required_cents: 500 });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 402,
+        text: () => Promise.resolve(errorBody),
+      }),
+    );
+
+    const expressRes = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn(),
+    } as any;
+
+    await streamExternalService(service, "/chat", {
+      method: "POST",
+      body: { message: "hello" },
+      headers: { "x-org-id": "test-org" },
+      expressRes,
+    });
+
+    expect(warnSpy).toHaveBeenCalledOnce();
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("POST /chat upstream error: 402"),
+      expect.stringContaining("Insufficient credits"),
+    );
+    expect(expressRes.status).toHaveBeenCalledWith(402);
+    expect(expressRes.json).toHaveBeenCalledWith({ error: errorBody });
   });
 });
