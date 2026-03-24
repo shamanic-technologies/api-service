@@ -3,10 +3,9 @@ import request from "supertest";
 import express from "express";
 
 /**
- * Tests for discovery campaign creation and result endpoints.
- * Discovery campaigns (outlets-database-discovery, journalists-database-discovery)
- * don't require email-specific fields (urgency, scarcity, etc.) and derive their
- * campaign type from the workflowName prefix.
+ * Tests for discovery campaign creation.
+ * Discovery campaigns use the same schema as outreach — featureSlug + featureInputs.
+ * The campaign type is derived from workflowName prefix.
  */
 
 // Mock auth middleware
@@ -52,12 +51,19 @@ describe("Discovery campaign creation", () => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
       fetchCalls.push({ url, method: init?.method, body });
 
-      // Brand upsert
-      if (url.includes("/brands") && init?.method === "POST") {
+      // Features-service: discovery features only require targetAudience
+      if (url.includes("/features/") && url.includes("/inputs")) {
         return {
           ok: true,
-          json: () => Promise.resolve({ brandId: "brand-uuid-123" }),
+          json: () => Promise.resolve({
+            inputs: [{ key: "targetAudience", required: true }],
+          }),
         };
+      }
+
+      // Brand upsert
+      if (url.includes("/brands") && init?.method === "POST") {
+        return { ok: true, json: () => Promise.resolve({ brandId: "brand-uuid-123" }) };
       }
 
       // Campaign creation
@@ -74,7 +80,7 @@ describe("Discovery campaign creation", () => {
     });
   });
 
-  it("should create an outlets-database-discovery campaign without email fields", async () => {
+  it("should create an outlets-database-discovery campaign with featureInputs", async () => {
     const app = createApp();
     const res = await request(app)
       .post("/v1/campaigns")
@@ -82,36 +88,25 @@ describe("Discovery campaign creation", () => {
         name: "Tech Media Discovery",
         workflowName: "outlets-database-discovery-cedar",
         brandUrl: "https://acme.com",
-        targetAudience: "Tech publications covering SaaS and AI",
+        featureSlug: "outlet-discovery",
+        featureInputs: { targetAudience: "Tech publications covering SaaS and AI" },
       });
 
     expect(res.status).toBe(200);
     expect(res.body.campaign.id).toBe("campaign-disc-1");
 
-    // Verify brand was upserted
-    const brandCall = fetchCalls.find((c) => c.url.includes("/brands") && c.method === "POST");
-    expect(brandCall).toBeDefined();
-    expect(brandCall!.body!.url).toBe("https://acme.com");
-
-    // Verify NO extract-fields or sales-profile call was made
-    const extractCall = fetchCalls.find((c) => c.url.includes("/extract-fields") || c.url.includes("/sales-profile"));
-    expect(extractCall).toBeUndefined();
-
-    // Verify campaign-service received the correct type
+    // Verify campaign-service received the correct type derived from workflowName
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
     expect(campaignCall).toBeDefined();
     expect(campaignCall!.body!.type).toBe("outlets-database-discovery");
     expect(campaignCall!.body!.workflowName).toBe("outlets-database-discovery-cedar");
-    expect(campaignCall!.body!.targetAudience).toBe("Tech publications covering SaaS and AI");
+    expect(campaignCall!.body!.featureInputs).toEqual({ targetAudience: "Tech publications covering SaaS and AI" });
 
-    // Verify email-specific fields are NOT present
-    expect(campaignCall!.body!.urgency).toBeUndefined();
-    expect(campaignCall!.body!.scarcity).toBeUndefined();
-    expect(campaignCall!.body!.riskReversal).toBeUndefined();
-    expect(campaignCall!.body!.socialProof).toBeUndefined();
+    // No legacy top-level targetAudience
+    expect(campaignCall!.body!.targetAudience).toBeUndefined();
   });
 
-  it("should create a journalists-database-discovery campaign without email fields", async () => {
+  it("should create a journalists-database-discovery campaign", async () => {
     const app = createApp();
     const res = await request(app)
       .post("/v1/campaigns")
@@ -119,60 +114,46 @@ describe("Discovery campaign creation", () => {
         name: "Journalist Discovery",
         workflowName: "journalists-database-discovery-birch",
         brandUrl: "https://acme.com",
-        targetAudience: "Journalists covering fintech in the US",
+        featureSlug: "journalist-discovery",
+        featureInputs: { targetAudience: "Journalists covering fintech in the US" },
       });
 
     expect(res.status).toBe(200);
 
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
     expect(campaignCall!.body!.type).toBe("journalists-database-discovery");
-    expect(campaignCall!.body!.workflowName).toBe("journalists-database-discovery-birch");
   });
 
-  it("should reject discovery campaign when targetAudience is missing", async () => {
+  it("should reject when featureSlug is missing for discovery campaigns", async () => {
     const app = createApp();
     const res = await request(app)
       .post("/v1/campaigns")
       .send({
-        name: "Missing Audience",
+        name: "Missing Slug",
         workflowName: "outlets-database-discovery-cedar",
         brandUrl: "https://acme.com",
+        featureInputs: { targetAudience: "Tech publications" },
       });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain("targetAudience");
-    expect(res.body.hint).toContain("Discovery campaigns");
+    expect(res.body.error).toContain("featureSlug");
   });
 
-  it("should reject discovery campaign when brandUrl is missing", async () => {
+  it("should reject when required feature input is missing", async () => {
     const app = createApp();
     const res = await request(app)
       .post("/v1/campaigns")
       .send({
-        name: "Missing URL",
+        name: "Missing Input",
         workflowName: "outlets-database-discovery-cedar",
-        targetAudience: "Tech publications",
+        brandUrl: "https://acme.com",
+        featureSlug: "outlet-discovery",
+        featureInputs: {}, // Missing targetAudience
       });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain("brandUrl");
-  });
-
-  it("should still require email fields for non-discovery campaigns", async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/campaigns")
-      .send({
-        name: "Test Campaign",
-        workflowName: "sales-email-cold-outreach-sienna",
-        brandUrl: "https://example.com",
-        targetAudience: "CTOs at SaaS",
-        // Missing: urgency, scarcity, riskReversal, socialProof
-      });
-
-    expect(res.status).toBe(400);
-    expect(res.body.error).toContain("urgency");
-    expect(res.body.hint).toContain("AI generate better emails");
+    expect(res.body.error).toContain("Missing required feature inputs");
+    expect(res.body.missingKeys).toContain("targetAudience");
   });
 
   it("should convert budget numbers to strings for discovery campaigns", async () => {
@@ -183,30 +164,12 @@ describe("Discovery campaign creation", () => {
         name: "Budget Discovery",
         workflowName: "outlets-database-discovery-cedar",
         brandUrl: "https://acme.com",
-        targetAudience: "Tech publications",
+        featureSlug: "outlet-discovery",
+        featureInputs: { targetAudience: "Tech publications" },
         maxBudgetDailyUsd: 25,
       });
 
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
     expect(campaignCall!.body!.maxBudgetDailyUsd).toBe("25");
   });
-
-  it("should accept optional maxResults for discovery campaigns", async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/campaigns")
-      .send({
-        name: "Limited Discovery",
-        workflowName: "outlets-database-discovery-cedar",
-        brandUrl: "https://acme.com",
-        targetAudience: "Tech publications",
-        maxResults: 50,
-      });
-
-    expect(res.status).toBe(200);
-
-    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
-    expect(campaignCall!.body!.maxResults).toBe(50);
-  });
 });
-

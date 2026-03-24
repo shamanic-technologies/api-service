@@ -3,11 +3,12 @@ import request from "supertest";
 import express from "express";
 
 /**
- * Tests for campaign creation with targetAudience field.
- * The api-service:
- * 1. Upserts brand via brand-service to get brandId
- * 2. Forwards targetAudience + brandId + budget to campaign-service
- * No ICP resolution — that's campaign-service's job.
+ * Tests for campaign creation with featureSlug + featureInputs.
+ * Api-service:
+ * 1. Validates structure (featureSlug, featureInputs required)
+ * 2. Validates feature inputs via features-service (key-presence only)
+ * 3. Upserts brand via brand-service
+ * 4. Forwards featureInputs as-is to campaign-service (never inspects values)
  */
 
 // Mock auth middleware
@@ -29,7 +30,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
   AuthenticatedRequest: {},
 }));
 
-// Mock runs-client (campaigns.ts only uses getRunsBatch now — run creation is in auth middleware)
+// Mock runs-client
 vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
 }));
@@ -43,7 +44,22 @@ function createApp() {
   return app;
 }
 
-describe("POST /v1/campaigns with targetAudience", () => {
+const validBody = {
+  name: "Test Campaign",
+  workflowName: "sales-email-cold-outreach-sienna",
+  brandUrl: "https://example.com",
+  featureSlug: "cold-outreach-v2",
+  featureInputs: {
+    targetAudience: "CTOs at SaaS startups with 10-50 employees in the US",
+    urgency: "Recruitment closes in 30 days",
+    scarcity: "Only 10 spots available worldwide",
+    riskReversal: "Free trial for 2 weeks, no commitment",
+    socialProof: "Backed by 60 sponsors including Acme, Globex",
+  },
+  maxBudgetDailyUsd: 10,
+};
+
+describe("POST /v1/campaigns with featureInputs", () => {
   let fetchCalls: Array<{ url: string; body?: Record<string, unknown> }>;
 
   beforeEach(() => {
@@ -53,6 +69,22 @@ describe("POST /v1/campaigns with targetAudience", () => {
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
       fetchCalls.push({ url, body });
+
+      // Features-service: return input definitions
+      if (url.includes("/features/") && url.includes("/inputs")) {
+        return {
+          ok: true,
+          json: () => Promise.resolve({
+            inputs: [
+              { key: "targetAudience", required: true },
+              { key: "urgency", required: true },
+              { key: "scarcity", required: true },
+              { key: "riskReversal", required: true },
+              { key: "socialProof", required: true },
+            ],
+          }),
+        };
+      }
 
       // Brand upsert
       if (url.includes("/brands") && init?.method === "POST") {
@@ -72,195 +104,117 @@ describe("POST /v1/campaigns with targetAudience", () => {
         };
       }
 
-      // Lifecycle email (fire-and-forget)
-      if (url.includes("/send")) {
-        return { ok: true, json: () => Promise.resolve({}) };
-      }
-
       return { ok: true, json: () => Promise.resolve({}) };
     });
   });
 
-  it("should upsert brand and forward targetAudience to campaign-service", async () => {
+  it("should validate inputs via features-service and forward featureInputs to campaign-service", async () => {
     const app = createApp();
-    const res = await request(app)
-      .post("/v1/campaigns")
-      .send({
-        name: "Test Campaign",
-        workflowName: "sales-email-cold-outreach-sienna",
-        brandUrl: "https://example.com",
-        targetAudience: "CTOs at SaaS startups with 10-50 employees in the US",
-        urgency: "Recruitment closes in 30 days",
-        scarcity: "Only 10 spots available worldwide",
-        riskReversal: "Free trial for 2 weeks, no commitment",
-        socialProof: "Backed by 60 sponsors including Acme, Globex",
-        maxBudgetDailyUsd: 10,
-      });
+    const res = await request(app).post("/v1/campaigns").send(validBody);
 
     expect(res.status).toBe(200);
     expect(res.body.campaign.id).toBe("campaign-123");
+
+    // Verify features-service was called for input validation
+    const featuresCall = fetchCalls.find((c) => c.url.includes("/features/cold-outreach-v2/inputs"));
+    expect(featuresCall).toBeDefined();
 
     // Verify brand upsert was called
     const brandCall = fetchCalls.find((c) => c.url.includes("/brands") && c.body?.orgId === "org_test456");
     expect(brandCall).toBeDefined();
     expect(brandCall!.body!.url).toBe("https://example.com");
-    expect(brandCall!.body!.orgId).toBe("org_test456");
 
-    // sales-profile is no longer called — marketing fields go directly to campaign-service
-    const salesProfileCall = fetchCalls.find((c) => c.url.includes("/sales-profile") || c.url.includes("/extract-fields"));
-    expect(salesProfileCall).toBeUndefined();
-
-    // Verify campaign-service received all fields including workflowName and derived type
+    // Verify campaign-service received featureInputs as-is
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
     expect(campaignCall).toBeDefined();
     expect(campaignCall!.body!.workflowName).toBe("sales-email-cold-outreach-sienna");
     expect(campaignCall!.body!.type).toBe("cold-email-outreach");
-    expect(campaignCall!.body!.targetAudience).toBe("CTOs at SaaS startups with 10-50 employees in the US");
-    expect(campaignCall!.body!.urgency).toBe("Recruitment closes in 30 days");
-    expect(campaignCall!.body!.scarcity).toBe("Only 10 spots available worldwide");
-    expect(campaignCall!.body!.riskReversal).toBe("Free trial for 2 weeks, no commitment");
-    expect(campaignCall!.body!.socialProof).toBe("Backed by 60 sponsors including Acme, Globex");
+    expect(campaignCall!.body!.featureSlug).toBe("cold-outreach-v2");
+    expect(campaignCall!.body!.featureInputs).toEqual(validBody.featureInputs);
     expect(campaignCall!.body!.brandId).toBe("brand-uuid-123");
-    expect(campaignCall!.body!.orgId).toBe("org_test456");
 
-    // Verify NO Apollo fields were sent
-    expect(campaignCall!.body!.personTitles).toBeUndefined();
-    expect(campaignCall!.body!.qOrganizationKeywordTags).toBeUndefined();
-    expect(campaignCall!.body!.organizationLocations).toBeUndefined();
-
-    // Verify scraping is NOT called (handled by campaign-service DAG)
-    const scrapeCall = fetchCalls.find((c) => c.url.includes("/scrape"));
-    expect(scrapeCall).toBeUndefined();
+    // Verify legacy top-level fields are NOT present
+    expect(campaignCall!.body!.targetAudience).toBeUndefined();
+    expect(campaignCall!.body!.urgency).toBeUndefined();
+    expect(campaignCall!.body!.scarcity).toBeUndefined();
   });
 
-  it("should reject when targetAudience is missing with didactic error", async () => {
+  it("should reject when featureSlug is missing", async () => {
+    const app = createApp();
+    const { featureSlug, ...noSlug } = validBody;
+    const res = await request(app).post("/v1/campaigns").send(noSlug);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("featureSlug");
+  });
+
+  it("should reject when featureInputs is missing", async () => {
+    const app = createApp();
+    const { featureInputs, ...noInputs } = validBody;
+    const res = await request(app).post("/v1/campaigns").send(noInputs);
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("featureInputs");
+  });
+
+  it("should reject when a required feature input key is missing", async () => {
     const app = createApp();
     const res = await request(app)
       .post("/v1/campaigns")
       .send({
-        name: "Test Campaign",
+        ...validBody,
+        featureInputs: {
+          targetAudience: "CTOs",
+          // Missing: urgency, scarcity, riskReversal, socialProof
+        },
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain("Missing required feature inputs");
+    expect(res.body.missingKeys).toContain("urgency");
+    expect(res.body.missingKeys).toContain("scarcity");
+    expect(res.body.missingKeys).toContain("riskReversal");
+    expect(res.body.missingKeys).toContain("socialProof");
+  });
+
+  it("should accept any keys in featureInputs — api-service is agnostic of content", async () => {
+    // Features-service says only "query" is required for this feature
+    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      const body = init?.body ? JSON.parse(init.body as string) : undefined;
+      if (url.includes("/features/") && url.includes("/inputs")) {
+        return {
+          ok: true,
+          json: () => Promise.resolve({ inputs: [{ key: "query", required: true }] }),
+        };
+      }
+      if (url.includes("/brands") && init?.method === "POST") {
+        return { ok: true, json: () => Promise.resolve({ brandId: "brand-123" }) };
+      }
+      if (url.includes("/campaigns") && init?.method === "POST") {
+        return { ok: true, json: () => Promise.resolve({ campaign: { id: "c-1", status: "ongoing" } }) };
+      }
+      return { ok: true, json: () => Promise.resolve({}) };
+    });
+
+    const app = createApp();
+    const res = await request(app)
+      .post("/v1/campaigns")
+      .send({
+        name: "Custom Feature",
+        workflowName: "custom-workflow-v1",
         brandUrl: "https://example.com",
-        urgency: "Ends soon",
-        scarcity: "Limited spots",
-        riskReversal: "Free trial",
-        socialProof: "500+ customers",
-        maxBudgetDailyUsd: 10,
+        featureSlug: "custom-search",
+        featureInputs: { query: "AI startups", customField: 42, nested: { a: 1 } },
       });
 
-    expect(res.status).toBe(400);
-    expect(res.body.error).toContain("targetAudience");
-    expect(res.body.hint).toBeDefined();
-    const field = res.body.missingFields.find((f: { field: string }) => f.field === "targetAudience");
-    expect(field).toBeDefined();
-    expect(field.description).toContain("who you want to reach");
-    expect(field.example).toBeDefined();
-  });
-
-  it("should reject when brandUrl is missing with didactic error", async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/campaigns")
-      .send({
-        name: "Test Campaign",
-        targetAudience: "CTOs at SaaS companies",
-        urgency: "Ends soon",
-        scarcity: "Limited spots",
-        riskReversal: "Free trial",
-        socialProof: "500+ customers",
-        maxBudgetDailyUsd: 10,
-      });
-
-    expect(res.status).toBe(400);
-    expect(res.body.error).toContain("brandUrl");
-    const field = res.body.missingFields.find((f: { field: string }) => f.field === "brandUrl");
-    expect(field).toBeDefined();
-    expect(field.description).toContain("URL");
-    expect(field.example).toBeDefined();
-  });
-
-  it("should reject when targetAudience is empty string with didactic error", async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/campaigns")
-      .send({
-        name: "Test Campaign",
-        brandUrl: "https://example.com",
-        targetAudience: "",
-        urgency: "Ends soon",
-        scarcity: "Limited spots",
-        riskReversal: "Free trial",
-        socialProof: "500+ customers",
-        maxBudgetDailyUsd: 10,
-      });
-
-    expect(res.status).toBe(400);
-    expect(res.body.error).toContain("targetAudience");
-    const field = res.body.missingFields.find((f: { field: string }) => f.field === "targetAudience");
-    expect(field).toBeDefined();
-    expect(field.description).toBeDefined();
-  });
-
-  it("should reject when urgency is missing with didactic error including description and example", async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/campaigns")
-      .send({
-        name: "Test Campaign",
-        brandUrl: "https://example.com",
-        targetAudience: "CTOs at SaaS companies",
-        targetOutcome: "Book demos",
-        valueForTarget: "Better analytics",
-        scarcity: "Limited spots",
-        riskReversal: "Free trial",
-        socialProof: "500+ customers",
-      });
-
-    expect(res.status).toBe(400);
-    expect(res.body.error).toContain("urgency");
-    const field = res.body.missingFields.find((f: { field: string }) => f.field === "urgency");
-    expect(field).toBeDefined();
-    expect(field.description).toContain("time-based");
-    expect(field.example).toContain("March");
-  });
-
-  it("should reject when socialProof is empty string with didactic error including description and example", async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/campaigns")
-      .send({
-        name: "Test Campaign",
-        brandUrl: "https://example.com",
-        targetAudience: "CTOs",
-        urgency: "Ends soon",
-        scarcity: "Limited spots",
-        riskReversal: "Free trial",
-        socialProof: "",
-      });
-
-    expect(res.status).toBe(400);
-    expect(res.body.error).toContain("socialProof");
-    const field = res.body.missingFields.find((f: { field: string }) => f.field === "socialProof");
-    expect(field).toBeDefined();
-    expect(field.description).toContain("credibility");
-    expect(field.example).toBeDefined();
+    expect(res.status).toBe(200);
   });
 
   it("should convert budget numbers to strings for campaign-service", async () => {
     const app = createApp();
     await request(app)
       .post("/v1/campaigns")
-      .send({
-        name: "Budget Test",
-        workflowName: "sales-email-cold-outreach-sienna",
-        brandUrl: "https://example.com",
-        targetAudience: "CEOs at fintech",
-        urgency: "Q1 pricing ends March 31",
-        scarcity: "3 slots left this quarter",
-        riskReversal: "Money-back guarantee",
-        socialProof: "Used by 200+ fintech companies",
-        maxBudgetDailyUsd: 25,
-        maxBudgetWeeklyUsd: 100,
-      });
+      .send({ ...validBody, maxBudgetDailyUsd: 25, maxBudgetWeeklyUsd: 100 });
 
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
     expect(campaignCall!.body!.maxBudgetDailyUsd).toBe("25");
@@ -269,31 +223,32 @@ describe("POST /v1/campaigns with targetAudience", () => {
 
   it("should fail when brand upsert fails", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes("/features/") && url.includes("/inputs")) {
+        return { ok: true, json: () => Promise.resolve({ inputs: [] }) };
+      }
       if (url.includes("/brands") && init?.method === "POST") {
-        return {
-          ok: false,
-          status: 500,
-          text: () => Promise.resolve(JSON.stringify({ error: "DB down" })),
-        };
+        return { ok: false, status: 500, text: () => Promise.resolve(JSON.stringify({ error: "DB down" })) };
       }
       return { ok: true, json: () => Promise.resolve({}) };
     });
 
     const app = createApp();
-    const res = await request(app)
-      .post("/v1/campaigns")
-      .send({
-        name: "Test",
-        workflowName: "sales-email-cold-outreach-sienna",
-        brandUrl: "https://example.com",
-        targetAudience: "CTOs at SaaS",
-        urgency: "Ends soon",
-        scarcity: "Limited spots",
-        riskReversal: "Free trial",
-        socialProof: "500+ customers",
-        maxBudgetDailyUsd: 10,
-      });
-
+    const res = await request(app).post("/v1/campaigns").send(validBody);
     expect(res.status).toBe(500);
+  });
+
+  it("should fail when features-service returns an error", async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes("/features/") && url.includes("/inputs")) {
+        return { ok: false, status: 404, text: () => Promise.resolve(JSON.stringify({ error: "Feature not found" })) };
+      }
+      return { ok: true, json: () => Promise.resolve({}) };
+    });
+
+    const app = createApp();
+    const res = await request(app).post("/v1/campaigns").send(validBody);
+    // features-service 404 is forwarded — unknown feature slug
+    expect(res.status).toBe(404);
+    expect(res.body.error).toContain("Feature not found");
   });
 });

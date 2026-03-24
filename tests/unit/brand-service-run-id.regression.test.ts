@@ -131,6 +131,10 @@ describe("campaign brand upsert sends internal headers", () => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
       fetchCalls.push({ url: url as string, method: init?.method || "GET", headers, body });
 
+      // Features-service: input definitions
+      if (typeof url === "string" && url.includes("/features/") && url.includes("/inputs")) {
+        return { ok: true, json: () => Promise.resolve({ inputs: [] }) };
+      }
       // Brand upsert response
       if (typeof url === "string" && url.includes("/brands") && init?.method === "POST") {
         return { ok: true, json: () => Promise.resolve({ brandId: "brand_abc" }) };
@@ -163,11 +167,14 @@ describe("campaign brand upsert sends internal headers", () => {
         name: "Test Campaign",
         workflowName: "sales-email-cold-outreach-sienna",
         brandUrl: "https://example.com",
-        targetAudience: "CTOs at SaaS startups with 10-50 employees in the US",
-        urgency: "Recruitment closes in 30 days",
-        scarcity: "Only 10 spots available worldwide",
-        riskReversal: "Free trial for 2 weeks, no commitment",
-        socialProof: "Backed by 60 sponsors including Acme, Globex",
+        featureSlug: "cold-outreach-v2",
+        featureInputs: {
+          targetAudience: "CTOs at SaaS startups with 10-50 employees in the US",
+          urgency: "Recruitment closes in 30 days",
+          scarcity: "Only 10 spots available worldwide",
+          riskReversal: "Free trial for 2 weeks, no commitment",
+          socialProof: "Backed by 60 sponsors including Acme, Globex",
+        },
       });
 
     // Find the brand upsert call (POST to brand-service /brands, not campaign-service)

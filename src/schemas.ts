@@ -345,47 +345,16 @@ export const CreateCampaignRequestSchema = z
     name: z.string().describe("Campaign name"),
     workflowName: z.string().min(1).describe("Workflow name (e.g. 'sales-email-cold-outreach-sienna'). Determines which execution pipeline to use."),
     brandUrl: z.string().min(1).describe("Brand website URL"),
-    targetAudience: z.string().min(1).describe("Plain text description of who to target (e.g. 'CTOs at SaaS startups with 10-50 employees in the US')"),
-    urgency: z.string().min(1).describe("Time-based constraint that motivates action now (e.g. 'Recruitment closes in 30 days', 'Price doubles after March 1st')"),
-    scarcity: z.string().min(1).describe("Supply-based constraint on availability (e.g. 'Only 10 spots available worldwide', 'Limited to 50 participants')"),
-    riskReversal: z.string().min(1).describe("Guarantee or safety net that removes risk for the prospect (e.g. 'Free trial for 2 weeks, no commitment', 'Phone screening call before any obligation')"),
-    socialProof: z.string().min(1).describe("Evidence of credibility and traction (e.g. 'Backed by 60 sponsors including X, Y, Z', '500+ companies already onboarded')"),
+    featureSlug: z.string().min(1).describe("Feature slug — used to validate inputs against features-service"),
+    featureInputs: z.record(z.unknown()).describe("Opaque feature inputs. Validated by key-presence against features-service, never inspected by api-service."),
     maxBudgetDailyUsd: z.union([z.string(), z.number()]).optional().describe("Max daily budget in USD"),
     maxBudgetWeeklyUsd: z.union([z.string(), z.number()]).optional().describe("Max weekly budget in USD"),
     maxBudgetMonthlyUsd: z.union([z.string(), z.number()]).optional().describe("Max monthly budget in USD"),
     maxBudgetTotalUsd: z.union([z.string(), z.number()]).optional().describe("Max total budget in USD"),
     maxLeads: z.number().int().optional().describe("Maximum number of leads to contact"),
     endDate: z.string().optional().describe("Campaign end date"),
-    featureSlug: z.string().optional().describe("Feature slug for tracking (e.g. 'cold-outreach-v2')"),
-    featureInputs: z.record(z.unknown()).optional().describe("Free-form JSONB inputs for the feature"),
   })
   .openapi("CreateCampaignRequest");
-
-/**
- * Discovery campaign request — used for outlets-database-discovery and
- * journalists-database-discovery workflows.  These campaigns produce a
- * list of contacts (outlets or journalists) rather than sending emails,
- * so the persuasion fields (urgency, scarcity, etc.) are not required.
- */
-export const CreateDiscoveryCampaignRequestSchema = z
-  .object({
-    name: z.string().describe("Campaign name"),
-    workflowName: z.string().min(1).describe("Workflow name (e.g. 'outlets-database-discovery-cedar'). Determines which execution pipeline to use."),
-    brandUrl: z.string().min(1).describe("Brand website URL"),
-    targetAudience: z.string().min(1).describe("Plain text description of what kind of outlets or journalists to discover"),
-    maxResults: z.number().int().optional().describe("Maximum number of results to return"),
-    maxBudgetDailyUsd: z.union([z.string(), z.number()]).optional().describe("Max daily budget in USD"),
-    maxBudgetWeeklyUsd: z.union([z.string(), z.number()]).optional().describe("Max weekly budget in USD"),
-    maxBudgetMonthlyUsd: z.union([z.string(), z.number()]).optional().describe("Max monthly budget in USD"),
-    maxBudgetTotalUsd: z.union([z.string(), z.number()]).optional().describe("Max total budget in USD"),
-    endDate: z.string().optional().describe("Campaign end date"),
-    featureSlug: z.string().optional().describe("Feature slug for tracking"),
-    featureInputs: z.record(z.unknown()).optional().describe("Free-form JSONB inputs for the feature"),
-    industry: z.string().optional().describe("Industry or sector for outlet discovery"),
-    targetGeo: z.string().optional().describe("Geographic focus for outlet discovery"),
-    angles: z.array(z.string()).optional().describe("PR angles or story hooks (e.g. fundraising, thought leadership)"),
-  })
-  .openapi("CreateDiscoveryCampaignRequest");
 
 /** Known discovery workflow prefixes and their campaign types. */
 export const DISCOVERY_PREFIXES: Array<{ prefix: string; type: string }> = [
@@ -450,7 +419,6 @@ const CampaignSchema = z
     workflowName: z.string().describe("Workflow name used for execution"),
     brandUrl: z.string().nullable().describe("Brand website URL"),
     brandId: z.string().nullable().describe("Brand ID"),
-    targetAudience: z.string().nullable().describe("Target audience description"),
     featureSlug: z.string().nullable().describe("Feature slug for tracking"),
     featureInputs: z.record(z.unknown()).nullable().describe("Free-form JSONB inputs for the feature"),
     maxBudgetDailyUsd: z.string().nullable().describe("Max daily budget in USD"),
@@ -508,10 +476,9 @@ registry.registerPath({
   tags: ["Campaigns"],
   summary: "Create a campaign",
   description:
-    "Create a new campaign. The `workflowName` field determines which execution pipeline campaign-service uses.\n\n" +
-    "**Outreach campaigns** (`sales-email-cold-outreach-*`): require all persuasion fields (urgency, scarcity, riskReversal, socialProof).\n\n" +
-    "**Discovery campaigns** (`outlets-database-discovery-*`, `journalists-database-discovery-*`): only require name, workflowName, brandUrl, and targetAudience. " +
-    "These produce a list of contacts (media outlets or journalists) without sending emails.",
+    "Create a new campaign. Requires `featureSlug` and `featureInputs`.\n\n" +
+    "Feature inputs are validated by key-presence against features-service (api-service never inspects values). " +
+    "The `workflowName` determines which execution pipeline campaign-service uses.",
   security: authed,
   request: {
     body: {

@@ -6,8 +6,6 @@ import { fetchDeliveryStats } from "../lib/delivery-stats.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import {
   CreateCampaignRequestSchema,
-  CreateDiscoveryCampaignRequestSchema,
-  isDiscoveryWorkflow,
   deriveCampaignType,
 } from "../schemas.js";
 
@@ -50,57 +48,53 @@ router.get("/campaigns", authenticate, requireOrg, requireUser, async (req: Auth
  */
 router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    console.log("[api-service] POST /v1/campaigns \u2014 incoming request", {
+    console.log("[api-service] POST /v1/campaigns — incoming request", {
       orgId: req.orgId,
       userId: req.userId,
-      body: { ...req.body, brandUrl: req.body.brandUrl },
+      featureSlug: req.body.featureSlug,
     });
 
-    // Detect discovery vs outreach based on workflowName
-    const rawWorkflowName = (req.body.workflowName as string) || "";
-    const discovery = isDiscoveryWorkflow(rawWorkflowName);
-
-    const schema = discovery ? CreateDiscoveryCampaignRequestSchema : CreateCampaignRequestSchema;
-    const parsed = schema.safeParse(req.body);
+    // 1. Validate structure (featureInputs is opaque — we only check it's present)
+    const parsed = CreateCampaignRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       const flat = parsed.error.flatten();
       const missingFields = Object.keys(flat.fieldErrors);
-      console.warn("[api-service] POST /v1/campaigns \u2014 validation failed", flat);
-
-      const fieldGuide: Record<string, { description: string; example: string }> = {
-        name: { description: "A name for your campaign", example: discovery ? "Q1 Media Discovery" : "Q1 SaaS Outreach" },
-        brandUrl: { description: "The URL of the product or service you are promoting", example: "https://acme.com" },
-        targetAudience: { description: discovery ? "What kind of outlets or journalists to discover" : "Plain text description of who you want to reach", example: discovery ? "Tech publications covering SaaS and AI" : "CTOs at SaaS startups with 10-50 employees in the US" },
-        urgency: { description: "A time-based constraint that motivates the prospect to act now rather than later", example: "Early-adopter pricing ends March 31st" },
-        scarcity: { description: "A supply-based constraint showing limited availability", example: "Only 10 spots available worldwide" },
-        riskReversal: { description: "A guarantee or safety net that removes risk for the prospect — what makes saying yes feel safe", example: "14-day free trial, cancel anytime, no commitment" },
-        socialProof: { description: "Evidence of credibility: testimonials, numbers, notable clients, press, awards", example: "Backed by 60 sponsors including Sequoia and a]6z" },
-      };
-
-      const missingFieldDetails = missingFields
-        .filter((f) => fieldGuide[f])
-        .map((f) => ({ field: f, ...fieldGuide[f], errors: flat.fieldErrors[f as keyof typeof flat.fieldErrors] }));
-
+      console.warn("[api-service] POST /v1/campaigns — validation failed", flat);
       return res.status(400).json({
         error: `Missing or invalid required fields: ${missingFields.join(", ")}.`,
-        missingFields: missingFieldDetails,
-        hint: discovery
-          ? "Discovery campaigns require: name, workflowName, brandUrl, and targetAudience."
-          : "Every campaign requires all of these fields. Even if you're unsure, provide your best answer — it helps the AI generate better emails.",
+        missingFields,
+        hint: "Campaign creation requires: name, workflowName, brandUrl, featureSlug, and featureInputs.",
       });
     }
 
-    const { brandUrl } = parsed.data;
-    console.log("[api-service] POST /v1/campaigns \u2014 parsed OK", {
-      name: parsed.data.name,
-      workflowName: parsed.data.workflowName,
-      brandUrl,
-      targetAudience: parsed.data.targetAudience?.slice(0, 80) + "...",
-      discovery,
+    const { featureSlug, featureInputs, brandUrl } = parsed.data;
+
+    // 2. Validate feature inputs against features-service (key-presence only)
+    console.log("[api-service] POST /v1/campaigns — validating featureInputs against features-service", { featureSlug });
+    const featureDefinition = await callExternalService<{ inputs: Array<{ key: string; required?: boolean }> }>(
+      externalServices.features,
+      `/features/${encodeURIComponent(featureSlug)}/inputs`,
+      { headers: buildInternalHeaders(req) },
+    );
+    const requiredKeys = (featureDefinition.inputs ?? [])
+      .filter((i) => i.required)
+      .map((i) => i.key);
+    const missingKeys = requiredKeys.filter((k) => !(k in featureInputs));
+    if (missingKeys.length > 0) {
+      console.warn("[api-service] POST /v1/campaigns — missing feature inputs", { featureSlug, missingKeys });
+      return res.status(400).json({
+        error: `Missing required feature inputs for "${featureSlug}": ${missingKeys.join(", ")}.`,
+        missingKeys,
+        hint: "Check the feature definition for required inputs via GET /v1/features/:slug/inputs.",
+      });
+    }
+    console.log("[api-service] POST /v1/campaigns — featureInputs validated OK", {
+      featureSlug,
+      inputCount: Object.keys(featureInputs).length,
     });
 
-    // 1. Upsert brand to get brandId
-    console.log("[api-service] POST /v1/campaigns \u2014 step 1: upserting brand", { brandUrl, orgId: req.orgId });
+    // 3. Upsert brand to get brandId
+    console.log("[api-service] POST /v1/campaigns — upserting brand", { brandUrl, orgId: req.orgId });
     const brandResult = await callExternalService<{ brandId: string }>(
       externalServices.brand,
       "/brands",
@@ -114,10 +108,9 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
         },
       }
     );
-    console.log("[api-service] POST /v1/campaigns \u2014 step 1 done: brand upserted", { brandId: brandResult.brandId });
+    console.log("[api-service] POST /v1/campaigns — brand upserted", { brandId: brandResult.brandId });
 
-    // 2. Forward to campaign-service (run tracking via x-run-id header)
-    //    Derive `type` from workflowName
+    // 4. Forward to campaign-service (featureInputs forwarded as-is, never inspected)
     const { workflowName, ...restData } = parsed.data;
     const campaignType = deriveCampaignType(workflowName);
     const body: Record<string, unknown> = {
@@ -133,11 +126,11 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       if (body[key] != null) body[key] = String(body[key]);
     }
 
-    console.log("[api-service] POST /v1/campaigns — step 2: forwarding to campaign-service", {
+    console.log("[api-service] POST /v1/campaigns — forwarding to campaign-service", {
       brandId: body.brandId,
       workflowName: body.workflowName,
       type: body.type,
-      discovery,
+      featureSlug: body.featureSlug,
     });
     const result = await callExternalService(
       externalServices.campaign,
@@ -148,14 +141,14 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
         body,
       }
     );
-    console.log("[api-service] POST /v1/campaigns \u2014 step 2 done: campaign created", {
+    console.log("[api-service] POST /v1/campaigns — campaign created", {
       campaignId: (result as any).campaign?.id,
       status: (result as any).campaign?.status,
     });
 
     res.json(result);
   } catch (error: any) {
-    console.error("[api-service] POST /v1/campaigns \u2014 FAILED:", error.message, error.stack);
+    console.error("[api-service] POST /v1/campaigns — FAILED:", error.message, error.stack);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to create campaign" });
   }
 });

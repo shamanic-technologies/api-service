@@ -482,11 +482,6 @@
             "nullable": true,
             "description": "Brand ID"
           },
-          "targetAudience": {
-            "type": "string",
-            "nullable": true,
-            "description": "Target audience description"
-          },
           "featureSlug": {
             "type": "string",
             "nullable": true,
@@ -576,7 +571,6 @@
           "workflowName",
           "brandUrl",
           "brandId",
-          "targetAudience",
           "featureSlug",
           "featureInputs",
           "maxBudgetDailyUsd",
@@ -637,30 +631,17 @@
             "minLength": 1,
             "description": "Brand website URL"
           },
-          "targetAudience": {
+          "featureSlug": {
             "type": "string",
             "minLength": 1,
-            "description": "Plain text description of who to target (e.g. 'CTOs at SaaS startups with 10-50 employees in the US')"
+            "description": "Feature slug — used to validate inputs against features-service"
           },
-          "urgency": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Time-based constraint that motivates action now (e.g. 'Recruitment closes in 30 days', 'Price doubles after March 1st')"
-          },
-          "scarcity": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Supply-based constraint on availability (e.g. 'Only 10 spots available worldwide', 'Limited to 50 participants')"
-          },
-          "riskReversal": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Guarantee or safety net that removes risk for the prospect (e.g. 'Free trial for 2 weeks, no commitment', 'Phone screening call before any obligation')"
-          },
-          "socialProof": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Evidence of credibility and traction (e.g. 'Backed by 60 sponsors including X, Y, Z', '500+ companies already onboarded')"
+          "featureInputs": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            },
+            "description": "Opaque feature inputs. Validated by key-presence against features-service, never inspected by api-service."
           },
           "maxBudgetDailyUsd": {
             "anyOf": [
@@ -713,28 +694,14 @@
           "endDate": {
             "type": "string",
             "description": "Campaign end date"
-          },
-          "featureSlug": {
-            "type": "string",
-            "description": "Feature slug for tracking (e.g. 'cold-outreach-v2')"
-          },
-          "featureInputs": {
-            "type": "object",
-            "additionalProperties": {
-              "nullable": true
-            },
-            "description": "Free-form JSONB inputs for the feature"
           }
         },
         "required": [
           "name",
           "workflowName",
           "brandUrl",
-          "targetAudience",
-          "urgency",
-          "scarcity",
-          "riskReversal",
-          "socialProof"
+          "featureSlug",
+          "featureInputs"
         ]
       },
       "GetCampaignResponse": {
@@ -5759,7 +5726,7 @@
           "Campaigns"
         ],
         "summary": "Create a campaign",
-        "description": "Create a new campaign. The `workflowName` field determines which execution pipeline campaign-service uses.\n\n**Outreach campaigns** (`sales-email-cold-outreach-*`): require all persuasion fields (urgency, scarcity, riskReversal, socialProof).\n\n**Discovery campaigns** (`outlets-database-discovery-*`, `journalists-database-discovery-*`): only require name, workflowName, brandUrl, and targetAudience. These produce a list of contacts (media outlets or journalists) without sending emails.",
+        "description": "Create a new campaign. Requires `featureSlug` and `featureInputs`.\n\nFeature inputs are validated by key-presence against features-service (api-service never inspects values). The `workflowName` determines which execution pipeline campaign-service uses.",
         "security": [
           {
             "bearerAuth": []
