@@ -70,9 +70,11 @@ router.get("/features/:slug/inputs", authenticate, async (req: AuthenticatedRequ
  */
 router.post("/features/:slug/prefill", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
+    const format = req.query.format;
+    const qs = format ? `?format=${encodeURIComponent(format as string)}` : "";
     const result = await callExternalService(
       externalServices.features,
-      `/features/${encodeURIComponent(req.params.slug)}/prefill`,
+      `/features/${encodeURIComponent(req.params.slug)}/prefill${qs}`,
       {
         method: "POST",
         headers: buildInternalHeaders(req),

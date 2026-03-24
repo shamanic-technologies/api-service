@@ -4088,10 +4088,17 @@ registry.registerPath({
   summary: "Prefill feature form from brand",
   description:
     "Prefill the 'New Campaign' form for a feature using brand data. " +
-    "Features-service calls brand-service internally to extract values. Proxied from features-service.",
+    "Features-service calls brand-service internally to extract values. Proxied from features-service. " +
+    "Use format=text for flat string values, format=full (default) for rich objects with cache/source metadata.",
   security: authed,
   request: {
     params: z.object({ slug: z.string().describe("Feature slug") }),
+    query: z.object({
+      format: z
+        .enum(["text", "full"])
+        .optional()
+        .describe("Response format. 'full' (default) returns objects with value/cached/sourceUrls. 'text' returns flat string values."),
+    }),
     body: { content: { "application/json": { schema: FeaturePrefillRequestSchema } } },
   },
   responses: {

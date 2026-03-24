@@ -44,6 +44,11 @@ describe("Features proxy routes", () => {
     expect(prefillLine).toContain("requireUser");
   });
 
+  it("should forward format query param on POST /features/:slug/prefill", () => {
+    expect(content).toContain("req.query.format");
+    expect(content).toContain("?format=");
+  });
+
   it("should have PUT /features for batch upsert with auth", () => {
     expect(content).toContain("router.put");
     const putLine = content.split("\n").find((l) =>
@@ -88,6 +93,11 @@ describe("Features OpenAPI schemas", () => {
 
   it("should register POST /v1/features/{slug}/prefill", () => {
     expect(schemaContent).toContain('path: "/v1/features/{slug}/prefill"');
+  });
+
+  it("should document format query param on prefill endpoint", () => {
+    expect(schemaContent).toContain('"text", "full"');
+    expect(schemaContent).toContain("format:");
   });
 
   it("should register PUT /v1/features for batch upsert", () => {
