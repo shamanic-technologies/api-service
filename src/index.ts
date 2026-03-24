@@ -28,6 +28,7 @@ import emailGatewayRoutes from "./routes/email-gateway.js";
 import runsRoutes from "./routes/runs.js";
 import contentRoutes from "./routes/content.js";
 import pressKitsRoutes from "./routes/press-kits.js";
+import featuresRoutes from "./routes/features.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
@@ -173,6 +174,7 @@ app.use("/v1", emailGatewayRoutes);
 app.use("/v1", runsRoutes);
 app.use("/v1", contentRoutes);
 app.use("/v1", pressKitsRoutes); // authenticated press-kit endpoints
+app.use("/v1", featuresRoutes);
 
 // 404 handler
 app.use((req, res) => {

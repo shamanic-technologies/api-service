@@ -4009,3 +4009,112 @@ registry.registerPath({
     500: { description: "Internal error", content: errorContent },
   },
 });
+
+// ===================================================================
+// FEATURES (proxy to features-service)
+// ===================================================================
+
+const FeaturePrefillRequestSchema = z
+  .object({
+    brandId: z.string().describe("Brand UUID to prefill from"),
+  })
+  .openapi("FeaturePrefillRequest");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features",
+  tags: ["Features"],
+  summary: "List features",
+  description:
+    "List available features with optional filters. " +
+    "Proxied from features-service.",
+  security: authed,
+  request: {
+    query: z.object({
+      status: z.string().optional().describe("Filter by status"),
+      category: z.string().optional().describe("Filter by category"),
+      channel: z.string().optional().describe("Filter by channel"),
+      audienceType: z.string().optional().describe("Filter by audience type"),
+      implemented: z.string().optional().describe("Filter by implementation status ('true' or 'false')"),
+    }),
+  },
+  responses: {
+    200: { description: "List of features", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeaturesListResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/{slug}",
+  tags: ["Features"],
+  summary: "Get feature by slug",
+  description: "Get a single feature definition by its slug. Proxied from features-service.",
+  security: authed,
+  request: {
+    params: z.object({ slug: z.string().describe("Feature slug") }),
+  },
+  responses: {
+    200: { description: "Feature details", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/{slug}/inputs",
+  tags: ["Features"],
+  summary: "Get feature input schema",
+  description: "Get the input schema (required and optional fields) for a feature. Proxied from features-service.",
+  security: authed,
+  request: {
+    params: z.object({ slug: z.string().describe("Feature slug") }),
+  },
+  responses: {
+    200: { description: "Feature input schema", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureInputsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/features/{slug}/prefill",
+  tags: ["Features"],
+  summary: "Prefill feature form from brand",
+  description:
+    "Prefill the 'New Campaign' form for a feature using brand data. " +
+    "Features-service calls brand-service internally to extract values. Proxied from features-service.",
+  security: authed,
+  request: {
+    params: z.object({ slug: z.string().describe("Feature slug") }),
+    body: { content: { "application/json": { schema: FeaturePrefillRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Prefilled feature inputs", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeaturePrefillResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/features",
+  tags: ["Features"],
+  summary: "Batch upsert features",
+  description: "Idempotent batch upsert of feature definitions. Used for cold-start registration. Proxied from features-service.",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("FeaturesBatchUpsertRequest") } } },
+  },
+  responses: {
+    200: { description: "Upsert result", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeaturesBatchUpsertResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
