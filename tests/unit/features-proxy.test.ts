@@ -1,0 +1,117 @@
+import { describe, it, expect } from "vitest";
+import * as fs from "fs";
+import * as path from "path";
+
+const routePath = path.join(__dirname, "../../src/routes/features.ts");
+const content = fs.readFileSync(routePath, "utf-8");
+
+const schemaPath = path.join(__dirname, "../../src/schemas.ts");
+const schemaContent = fs.readFileSync(schemaPath, "utf-8");
+
+const indexPath = path.join(__dirname, "../../src/index.ts");
+const indexContent = fs.readFileSync(indexPath, "utf-8");
+
+const serviceClientPath = path.join(__dirname, "../../src/lib/service-client.ts");
+const serviceClientContent = fs.readFileSync(serviceClientPath, "utf-8");
+
+describe("Features proxy routes", () => {
+  it("should have GET /features with auth", () => {
+    expect(content).toContain('"/features"');
+    expect(content).toContain("router.get");
+  });
+
+  it("should forward query params on GET /features", () => {
+    for (const param of ["status", "category", "channel", "audienceType", "implemented"]) {
+      expect(content).toContain(`"${param}"`);
+    }
+  });
+
+  it("should have GET /features/:slug with auth", () => {
+    expect(content).toContain('"/features/:slug"');
+  });
+
+  it("should have GET /features/:slug/inputs with auth", () => {
+    expect(content).toContain('"/features/:slug/inputs"');
+  });
+
+  it("should have POST /features/:slug/prefill with auth + requireOrg + requireUser", () => {
+    expect(content).toContain('"/features/:slug/prefill"');
+    const prefillLine = content.split("\n").find((l) =>
+      l.includes('"/features/:slug/prefill"')
+    );
+    expect(prefillLine).toContain("authenticate");
+    expect(prefillLine).toContain("requireOrg");
+    expect(prefillLine).toContain("requireUser");
+  });
+
+  it("should have PUT /features for batch upsert with auth", () => {
+    expect(content).toContain("router.put");
+    const putLine = content.split("\n").find((l) =>
+      l.includes("router.put") && l.includes('"/features"')
+    );
+    expect(putLine).toBeDefined();
+    expect(putLine).toContain("authenticate");
+  });
+
+  it("should use buildInternalHeaders for all endpoints", () => {
+    expect(content).toContain("buildInternalHeaders");
+    const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
+    expect(headerMatches).not.toBeNull();
+    expect(headerMatches!.length).toBe(5);
+  });
+
+  it("should proxy to externalServices.features", () => {
+    expect(content).toContain("externalServices.features");
+  });
+});
+
+describe("Features service client", () => {
+  it("should have features in externalServices", () => {
+    expect(serviceClientContent).toContain("features:");
+    expect(serviceClientContent).toContain("FEATURES_SERVICE_URL");
+    expect(serviceClientContent).toContain("FEATURES_SERVICE_API_KEY");
+  });
+});
+
+describe("Features OpenAPI schemas", () => {
+  it("should register GET /v1/features", () => {
+    expect(schemaContent).toContain('path: "/v1/features"');
+  });
+
+  it("should register GET /v1/features/{slug}", () => {
+    expect(schemaContent).toContain('path: "/v1/features/{slug}"');
+  });
+
+  it("should register GET /v1/features/{slug}/inputs", () => {
+    expect(schemaContent).toContain('path: "/v1/features/{slug}/inputs"');
+  });
+
+  it("should register POST /v1/features/{slug}/prefill", () => {
+    expect(schemaContent).toContain('path: "/v1/features/{slug}/prefill"');
+  });
+
+  it("should register PUT /v1/features for batch upsert", () => {
+    const putMatch = schemaContent.match(/method: "put",\s*\n\s*path: "\/v1\/features"/);
+    expect(putMatch).not.toBeNull();
+  });
+
+  it("should use Features tag", () => {
+    expect(schemaContent).toContain('tags: ["Features"]');
+  });
+
+  it("should define FeaturePrefillRequest schema with brandId", () => {
+    expect(schemaContent).toContain("FeaturePrefillRequest");
+    expect(schemaContent).toContain("brandId");
+  });
+});
+
+describe("Features routes are mounted in index.ts", () => {
+  it("should import and mount features routes", () => {
+    expect(indexContent).toContain("featuresRoutes");
+    expect(indexContent).toContain("./routes/features");
+  });
+
+  it("should mount at /v1", () => {
+    expect(indexContent).toContain('app.use("/v1", featuresRoutes)');
+  });
+});

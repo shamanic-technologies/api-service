@@ -84,6 +84,10 @@ export const externalServices = {
     url: process.env.JOURNALIST_SERVICE_URL || "http://localhost:3031",
     apiKey: process.env.JOURNALIST_SERVICE_API_KEY || "",
   },
+  features: {
+    url: process.env.FEATURES_SERVICE_URL || "http://localhost:3032",
+    apiKey: process.env.FEATURES_SERVICE_API_KEY || "",
+  },
 };
 
 interface ServiceCallOptions {
