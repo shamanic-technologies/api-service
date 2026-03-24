@@ -4020,6 +4020,30 @@ const FeaturePrefillRequestSchema = z
   })
   .openapi("FeaturePrefillRequest");
 
+const FeaturePrefillFullValueSchema = z
+  .object({
+    value: z.any().describe("The prefilled value (string, object, or null)"),
+    cached: z.boolean().describe("Whether this value was served from cache"),
+    sourceUrls: z.array(z.string()).nullable().describe("URLs used to extract this value, or null"),
+  })
+  .openapi("FeaturePrefillFullValue");
+
+const FeaturePrefillFullResponseSchema = z
+  .object({
+    prefilled: z
+      .record(z.string(), FeaturePrefillFullValueSchema)
+      .describe("Map of field name to rich prefill object with value, cached flag, and source URLs"),
+  })
+  .openapi("FeaturePrefillFullResponse");
+
+const FeaturePrefillTextResponseSchema = z
+  .object({
+    prefilled: z
+      .record(z.string(), z.string().nullable())
+      .describe("Map of field name to flat string value (or null)"),
+  })
+  .openapi("FeaturePrefillTextResponse");
+
 registry.registerPath({
   method: "get",
   path: "/v1/features",
@@ -4102,7 +4126,14 @@ registry.registerPath({
     body: { content: { "application/json": { schema: FeaturePrefillRequestSchema } } },
   },
   responses: {
-    200: { description: "Prefilled feature inputs", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeaturePrefillResponse") } } },
+    200: {
+      description: "Prefilled feature inputs. Shape depends on `format` query param.",
+      content: {
+        "application/json": {
+          schema: z.union([FeaturePrefillFullResponseSchema, FeaturePrefillTextResponseSchema]).openapi("FeaturePrefillResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },

@@ -4931,9 +4931,71 @@
         "type": "object",
         "properties": {}
       },
-      "FeaturePrefillResponse": {
+      "FeaturePrefillFullValue": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "value": {
+            "nullable": true,
+            "description": "The prefilled value (string, object, or null)"
+          },
+          "cached": {
+            "type": "boolean",
+            "description": "Whether this value was served from cache"
+          },
+          "sourceUrls": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            },
+            "description": "URLs used to extract this value, or null"
+          }
+        },
+        "required": [
+          "cached",
+          "sourceUrls"
+        ]
+      },
+      "FeaturePrefillFullResponse": {
+        "type": "object",
+        "properties": {
+          "prefilled": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FeaturePrefillFullValue"
+            },
+            "description": "Map of field name to rich prefill object with value, cached flag, and source URLs"
+          }
+        },
+        "required": [
+          "prefilled"
+        ]
+      },
+      "FeaturePrefillTextResponse": {
+        "type": "object",
+        "properties": {
+          "prefilled": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string",
+              "nullable": true
+            },
+            "description": "Map of field name to flat string value (or null)"
+          }
+        },
+        "required": [
+          "prefilled"
+        ]
+      },
+      "FeaturePrefillResponse": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/FeaturePrefillFullResponse"
+          },
+          {
+            "$ref": "#/components/schemas/FeaturePrefillTextResponse"
+          }
+        ]
       },
       "FeaturePrefillRequest": {
         "type": "object",
@@ -16964,7 +17026,7 @@
         },
         "responses": {
           "200": {
-            "description": "Prefilled feature inputs",
+            "description": "Prefilled feature inputs. Shape depends on `format` query param.",
             "content": {
               "application/json": {
                 "schema": {
