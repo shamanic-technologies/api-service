@@ -22,7 +22,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
   AuthenticatedRequest: {},
 }));
 
-// Mock runs-client (campaigns.ts only uses getRunsBatch now)
+// Mock runs-client
 vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
 }));
@@ -40,11 +40,14 @@ const validCampaignBody = {
   name: "Test Campaign",
   workflowName: "sales-email-cold-outreach-v1",
   brandUrl: "https://example.com",
-  targetAudience: "CTOs at SaaS startups",
-  urgency: "Limited time offer",
-  scarcity: "10 spots only",
-  riskReversal: "14-day free trial",
-  socialProof: "Used by 100+ companies",
+  featureSlug: "cold-outreach-v2",
+  featureInputs: {
+    targetAudience: "CTOs at SaaS startups",
+    urgency: "Limited time offer",
+    scarcity: "10 spots only",
+    riskReversal: "14-day free trial",
+    socialProof: "Used by 100+ companies",
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -60,6 +63,9 @@ describe("POST /v1/campaigns — no gateway-level key validation", () => {
 
   it("should forward campaign creation without calling required-providers or org keys", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes("/features/") && url.includes("/inputs")) {
+        return { ok: true, json: () => Promise.resolve({ inputs: [] }) };
+      }
       if (url.includes("/brands")) return { ok: true, json: () => Promise.resolve({ brandId: "brand-123" }) };
       if (url.includes("/campaigns") && !url.includes("/workflows")) {
         return { ok: true, json: () => Promise.resolve({ campaign: { id: "camp-1", status: "ongoing" } }) };
@@ -81,6 +87,9 @@ describe("POST /v1/campaigns — no gateway-level key validation", () => {
 
   it("should not include keySource in campaign-service request body", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.includes("/features/") && url.includes("/inputs")) {
+        return { ok: true, json: () => Promise.resolve({ inputs: [] }) };
+      }
       if (url.includes("/brands")) return { ok: true, json: () => Promise.resolve({ brandId: "brand-123" }) };
       if (url.includes("/campaigns") && !url.includes("/workflows")) {
         return { ok: true, json: () => Promise.resolve({ campaign: { id: "camp-1", status: "ongoing" } }) };

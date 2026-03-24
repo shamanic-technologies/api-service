@@ -40,11 +40,14 @@ const validCampaignBody = {
   name: "Test Campaign",
   workflowName: "sales-email-cold-outreach-v1",
   brandUrl: "https://example.com",
-  targetAudience: "CTOs at SaaS startups",
-  urgency: "Limited time offer",
-  scarcity: "10 spots only",
-  riskReversal: "14-day free trial",
-  socialProof: "Used by 100+ companies",
+  featureSlug: "cold-outreach-v2",
+  featureInputs: {
+    targetAudience: "CTOs at SaaS startups",
+    urgency: "Limited time offer",
+    scarcity: "10 spots only",
+    riskReversal: "14-day free trial",
+    socialProof: "Used by 100+ companies",
+  },
 };
 
 describe("Campaign duplicate name handling (409 Conflict)", () => {
@@ -54,6 +57,9 @@ describe("Campaign duplicate name handling (409 Conflict)", () => {
 
   it("POST /v1/campaigns should return 409 when campaign name already exists", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes("/features/") && url.includes("/inputs")) {
+        return { ok: true, json: () => Promise.resolve({ inputs: [] }) };
+      }
       if (url.includes("/brands")) {
         return { ok: true, json: () => Promise.resolve({ brandId: "brand-123" }) };
       }
