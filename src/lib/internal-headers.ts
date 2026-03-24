@@ -9,6 +9,7 @@ import { AuthenticatedRequest } from "../middleware/auth.js";
  * - x-campaign-id: Campaign ID from workflow-service (when available)
  * - x-brand-id: Brand ID from workflow-service (when available)
  * - x-workflow-name: Workflow name from workflow-service (when available)
+ * - x-feature-slug: Feature slug for tracking (when available)
  */
 export function buildInternalHeaders(req: AuthenticatedRequest): Record<string, string> {
   const headers: Record<string, string> = {};
@@ -18,5 +19,6 @@ export function buildInternalHeaders(req: AuthenticatedRequest): Record<string, 
   if (req.campaignId) headers["x-campaign-id"] = req.campaignId;
   if (req.brandId) headers["x-brand-id"] = req.brandId;
   if (req.workflowName) headers["x-workflow-name"] = req.workflowName;
+  if (req.featureSlug) headers["x-feature-slug"] = req.featureSlug;
   return headers;
 }
