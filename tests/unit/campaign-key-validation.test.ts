@@ -41,8 +41,6 @@ const validCampaignBody = {
   workflowName: "sales-email-cold-outreach-v1",
   brandUrl: "https://example.com",
   targetAudience: "CTOs at SaaS startups",
-  targetOutcome: "Book demos",
-  valueForTarget: "Enterprise analytics at startup pricing",
   urgency: "Limited time offer",
   scarcity: "10 spots only",
   riskReversal: "14-day free trial",

@@ -487,15 +487,18 @@
             "nullable": true,
             "description": "Target audience description"
           },
-          "targetOutcome": {
+          "featureSlug": {
             "type": "string",
             "nullable": true,
-            "description": "Desired outcome"
+            "description": "Feature slug for tracking"
           },
-          "valueForTarget": {
-            "type": "string",
+          "featureInputs": {
+            "type": "object",
             "nullable": true,
-            "description": "Value proposition for the target"
+            "additionalProperties": {
+              "nullable": true
+            },
+            "description": "Free-form JSONB inputs for the feature"
           },
           "maxBudgetDailyUsd": {
             "type": "string",
@@ -574,8 +577,8 @@
           "brandUrl",
           "brandId",
           "targetAudience",
-          "targetOutcome",
-          "valueForTarget",
+          "featureSlug",
+          "featureInputs",
           "maxBudgetDailyUsd",
           "maxBudgetWeeklyUsd",
           "maxBudgetMonthlyUsd",
@@ -638,16 +641,6 @@
             "type": "string",
             "minLength": 1,
             "description": "Plain text description of who to target (e.g. 'CTOs at SaaS startups with 10-50 employees in the US')"
-          },
-          "targetOutcome": {
-            "type": "string",
-            "minLength": 1,
-            "description": "What you want to achieve (e.g. 'Book sales demos', 'Recruit community ambassadors')"
-          },
-          "valueForTarget": {
-            "type": "string",
-            "minLength": 1,
-            "description": "What the target audience gains from responding"
           },
           "urgency": {
             "type": "string",
@@ -720,6 +713,17 @@
           "endDate": {
             "type": "string",
             "description": "Campaign end date"
+          },
+          "featureSlug": {
+            "type": "string",
+            "description": "Feature slug for tracking (e.g. 'cold-outreach-v2')"
+          },
+          "featureInputs": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            },
+            "description": "Free-form JSONB inputs for the feature"
           }
         },
         "required": [
@@ -727,8 +731,6 @@
           "workflowName",
           "brandUrl",
           "targetAudience",
-          "targetOutcome",
-          "valueForTarget",
           "urgency",
           "scarcity",
           "riskReversal",

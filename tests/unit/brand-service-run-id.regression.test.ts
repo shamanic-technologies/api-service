@@ -164,8 +164,6 @@ describe("campaign brand upsert sends internal headers", () => {
         workflowName: "sales-email-cold-outreach-sienna",
         brandUrl: "https://example.com",
         targetAudience: "CTOs at SaaS startups with 10-50 employees in the US",
-        targetOutcome: "Book sales demos",
-        valueForTarget: "Access to enterprise analytics at startup pricing",
         urgency: "Recruitment closes in 30 days",
         scarcity: "Only 10 spots available worldwide",
         riskReversal: "Free trial for 2 weeks, no commitment",
