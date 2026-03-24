@@ -16867,7 +16867,7 @@
           "Features"
         ],
         "summary": "Prefill feature form from brand",
-        "description": "Prefill the 'New Campaign' form for a feature using brand data. Features-service calls brand-service internally to extract values. Proxied from features-service.",
+        "description": "Prefill the 'New Campaign' form for a feature using brand data. Features-service calls brand-service internally to extract values. Proxied from features-service. Use format=text for flat string values, format=full (default) for rich objects with cache/source metadata.",
         "security": [
           {
             "bearerAuth": []
@@ -16883,6 +16883,20 @@
             "description": "Feature slug",
             "name": "slug",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "text",
+                "full"
+              ],
+              "description": "Response format. 'full' (default) returns objects with value/cached/sourceUrls. 'text' returns flat string values."
+            },
+            "required": false,
+            "description": "Response format. 'full' (default) returns objects with value/cached/sourceUrls. 'text' returns flat string values.",
+            "name": "format",
+            "in": "query"
           },
           {
             "name": "x-org-id",
