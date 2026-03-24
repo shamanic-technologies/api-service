@@ -100,6 +100,15 @@ describe("Features OpenAPI schemas", () => {
     expect(schemaContent).toContain("format:");
   });
 
+  it("should define typed response schemas for both prefill formats", () => {
+    expect(schemaContent).toContain("FeaturePrefillFullResponse");
+    expect(schemaContent).toContain("FeaturePrefillTextResponse");
+    expect(schemaContent).toContain("FeaturePrefillFullValue");
+    // full format fields
+    expect(schemaContent).toContain("cached");
+    expect(schemaContent).toContain("sourceUrls");
+  });
+
   it("should register PUT /v1/features for batch upsert", () => {
     const putMatch = schemaContent.match(/method: "put",\s*\n\s*path: "\/v1\/features"/);
     expect(putMatch).not.toBeNull();
