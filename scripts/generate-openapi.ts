@@ -124,6 +124,14 @@ const identityParams = [
       "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. " +
       "Optional — forwarded to downstream services for tracking.",
   },
+  {
+    name: "x-feature-slug",
+    in: "header" as const,
+    required: false,
+    schema: { type: "string" as const },
+    description:
+      "Feature slug. Optional — forwarded to downstream services and runs for tracking.",
+  },
 ];
 
 type HttpMethod = "get" | "post" | "put" | "patch" | "delete";
