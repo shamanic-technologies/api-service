@@ -71,8 +71,6 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
         name: { description: "A name for your campaign", example: discovery ? "Q1 Media Discovery" : "Q1 SaaS Outreach" },
         brandUrl: { description: "The URL of the product or service you are promoting", example: "https://acme.com" },
         targetAudience: { description: discovery ? "What kind of outlets or journalists to discover" : "Plain text description of who you want to reach", example: discovery ? "Tech publications covering SaaS and AI" : "CTOs at SaaS startups with 10-50 employees in the US" },
-        targetOutcome: { description: "The concrete result you want from this campaign", example: "Book sales demos" },
-        valueForTarget: { description: "What your target audience gains by responding to your email", example: "Access to enterprise analytics at startup pricing" },
         urgency: { description: "A time-based constraint that motivates the prospect to act now rather than later", example: "Early-adopter pricing ends March 31st" },
         scarcity: { description: "A supply-based constraint showing limited availability", example: "Only 10 spots available worldwide" },
         riskReversal: { description: "A guarantee or safety net that removes risk for the prospect — what makes saying yes feel safe", example: "14-day free trial, cancel anytime, no commitment" },
@@ -129,13 +127,6 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       orgId: req.orgId,
       brandId: brandResult.brandId,
     };
-
-    // Discovery campaigns: campaign-service requires targetOutcome & valueForTarget
-    // but the discovery Zod schema strips them. Pass through from raw body or default.
-    if (discovery) {
-      if (!body.targetOutcome) body.targetOutcome = req.body.targetOutcome || "Discovery";
-      if (!body.valueForTarget) body.valueForTarget = req.body.valueForTarget || "Discovery";
-    }
 
     // Convert budget numbers to strings (campaign-service expects string type)
     for (const key of ["maxBudgetDailyUsd", "maxBudgetWeeklyUsd", "maxBudgetMonthlyUsd", "maxBudgetTotalUsd"]) {

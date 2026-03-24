@@ -167,11 +167,11 @@ describe("Discovery campaign creation", () => {
         workflowName: "sales-email-cold-outreach-sienna",
         brandUrl: "https://example.com",
         targetAudience: "CTOs at SaaS",
-        // Missing: targetOutcome, valueForTarget, urgency, scarcity, riskReversal, socialProof
+        // Missing: urgency, scarcity, riskReversal, socialProof
       });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain("targetOutcome");
+    expect(res.body.error).toContain("urgency");
     expect(res.body.hint).toContain("AI generate better emails");
   });
 
@@ -189,48 +189,6 @@ describe("Discovery campaign creation", () => {
 
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
     expect(campaignCall!.body!.maxBudgetDailyUsd).toBe("25");
-  });
-
-  it("should send targetOutcome and valueForTarget defaults to campaign-service for discovery campaigns", async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/campaigns")
-      .send({
-        name: "Defaults Discovery",
-        workflowName: "outlets-database-discovery-cedar",
-        brandUrl: "https://acme.com",
-        targetAudience: "Tech publications covering SaaS",
-      });
-
-    expect(res.status).toBe(200);
-
-    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
-    expect(campaignCall).toBeDefined();
-    // campaign-service requires these fields — api-service must provide defaults for discovery
-    expect(campaignCall!.body!.targetOutcome).toBe("Discovery");
-    expect(campaignCall!.body!.valueForTarget).toBe("Discovery");
-  });
-
-  it("should pass through client-provided targetOutcome and valueForTarget for discovery campaigns", async () => {
-    const app = createApp();
-    const res = await request(app)
-      .post("/v1/campaigns")
-      .send({
-        name: "Dusk Discovery",
-        workflowName: "outlets-database-discovery-dusk",
-        brandUrl: "https://distribute.you",
-        targetAudience: "Builders and SaaS founders",
-        targetOutcome: "Get Started Free",
-        valueForTarget: "Automates your distribution stack",
-      });
-
-    expect(res.status).toBe(200);
-
-    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
-    expect(campaignCall).toBeDefined();
-    // Client-provided values should be passed through, not replaced with defaults
-    expect(campaignCall!.body!.targetOutcome).toBe("Get Started Free");
-    expect(campaignCall!.body!.valueForTarget).toBe("Automates your distribution stack");
   });
 
   it("should accept optional maxResults for discovery campaigns", async () => {
