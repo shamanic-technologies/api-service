@@ -42,6 +42,24 @@ describe("callExternalService error handling", () => {
     );
   });
 
+  it("should log fetch cause when fetch itself fails (e.g. DNS/network)", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const networkError = new TypeError("fetch failed");
+    (networkError as any).cause = { code: "ENOTFOUND", message: "getaddrinfo ENOTFOUND badhost" };
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(networkError));
+
+    await expect(callExternalService(service, "/resolve", { method: "POST" })).rejects.toThrow("fetch failed");
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("(cause: ENOTFOUND)"),
+    );
+    // Should log the full URL, not just the path
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("http://localhost:9999/resolve"),
+    );
+  });
+
   it("should use status code when JSON has no error field", async () => {
     vi.stubGlobal(
       "fetch",

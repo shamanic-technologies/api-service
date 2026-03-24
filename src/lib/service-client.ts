@@ -133,7 +133,8 @@ export async function callExternalService<T>(
 
     return await response.json();
   } catch (error: any) {
-    console.error(`[callExternalService] ${method} ${path} failed:`, error.message);
+    const cause = error.cause ? ` (cause: ${error.cause?.code || error.cause?.message || error.cause})` : "";
+    console.error(`[callExternalService] ${method} ${url} failed: ${error.message}${cause}`);
     throw error;
   }
 }
