@@ -4109,6 +4109,66 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/v1/features/stats/registry",
+  tags: ["Features"],
+  summary: "Stats key registry",
+  description: "Public dictionary of stats keys with label and type per key. Proxied from features-service.",
+  security: authed,
+  responses: {
+    200: { description: "Stats key registry", content: { "application/json": { schema: z.object({}).passthrough().openapi("StatsRegistryResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/stats",
+  tags: ["Features"],
+  summary: "Global stats cross-features",
+  description:
+    "Aggregated stats across all features. Supports groupBy (featureSlug, workflowName, brandId, campaignId — comma-separated combos allowed) and optional brandId filter. Requires x-org-id. Proxied from features-service.",
+  security: authed,
+  request: {
+    query: z.object({
+      groupBy: z.string().optional().describe("Group dimension(s), comma-separated: featureSlug, workflowName, brandId, campaignId"),
+      brandId: z.string().optional().describe("Filter by brand UUID"),
+    }),
+  },
+  responses: {
+    200: { description: "Global stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("GlobalStatsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/{featureSlug}/stats",
+  tags: ["Features"],
+  summary: "Feature stats",
+  description:
+    "Stats for a specific feature, groupable by workflowName, brandId, or campaignId. Supports optional brandId, campaignId, and workflowName filters. Requires x-org-id. Proxied from features-service.",
+  security: authed,
+  request: {
+    params: z.object({ featureSlug: z.string().describe("Feature slug") }),
+    query: z.object({
+      groupBy: z.string().optional().describe("Group dimension: workflowName | brandId | campaignId"),
+      brandId: z.string().optional().describe("Filter by brand UUID"),
+      campaignId: z.string().optional().describe("Filter by campaign UUID"),
+      workflowName: z.string().optional().describe("Filter by workflow name"),
+    }),
+  },
+  responses: {
+    200: { description: "Feature stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureStatsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "put",
   path: "/v1/features",
   tags: ["Features"],
