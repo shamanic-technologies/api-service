@@ -61,6 +61,10 @@ describe("Workflow proxy routes", () => {
     expect(content).toContain('"/public/workflows/best"');
   });
 
+  it("should forward featureSlug query param on ranked endpoints", () => {
+    expect(content).toContain('"featureSlug"');
+  });
+
   it("should not expose appId as a query param", () => {
     // appId is no longer a public-facing query param — it's resolved from auth
     const listStart = content.indexOf('"/workflows"');

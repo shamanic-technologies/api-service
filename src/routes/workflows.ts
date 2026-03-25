@@ -92,7 +92,7 @@ function buildWorkflowParams(query: Record<string, unknown>, keys: string[]): UR
   return params;
 }
 
-const RANKED_PARAMS = ["category", "channel", "audienceType", "objective", "limit", "groupBy", "brandId"];
+const RANKED_PARAMS = ["category", "channel", "audienceType", "objective", "limit", "groupBy", "brandId", "featureSlug"];
 const BEST_PARAMS = ["by", "orgId"];
 
 // ---------------------------------------------------------------------------

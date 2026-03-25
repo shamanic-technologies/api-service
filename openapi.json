@@ -5145,6 +5145,16 @@
             "description": "Filter by brand ID",
             "name": "brandId",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature slug (e.g. 'pr-cold-email-outreach')"
+            },
+            "required": false,
+            "description": "Filter by feature slug (e.g. 'pr-cold-email-outreach')",
+            "name": "featureSlug",
+            "in": "query"
           }
         ],
         "responses": {
@@ -5295,6 +5305,16 @@
             "required": false,
             "description": "Filter by brand ID",
             "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature slug (e.g. 'pr-cold-email-outreach')"
+            },
+            "required": false,
+            "description": "Filter by feature slug (e.g. 'pr-cold-email-outreach')",
+            "name": "featureSlug",
             "in": "query"
           },
           {
