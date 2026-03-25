@@ -21,7 +21,6 @@ import stripeRoutes from "./routes/stripe.js";
 import usersRoutes from "./routes/users.js";
 import platformRoutes from "./routes/platform.js";
 import platformChatRoutes from "./routes/platform-chat.js";
-import mcpToolsRoutes from "./routes/mcp-tools.js";
 import platformKeysRoutes from "./routes/platform-keys.js";
 import platformPromptsRoutes from "./routes/platform-prompts.js";
 import emailGatewayRoutes from "./routes/email-gateway.js";
@@ -149,7 +148,6 @@ app.use(pressKitsRoutes); // public press-kit endpoints (no auth)
 // Internal platform routes (API key only, no identity)
 app.use("/internal", internalEmailsRoutes);
 app.use("/platform-chat", platformChatRoutes);
-app.use("/internal", mcpToolsRoutes);
 app.use("/platform-keys", platformKeysRoutes);
 app.use("/platform-prompts", platformPromptsRoutes);
 
