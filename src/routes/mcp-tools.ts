@@ -100,6 +100,102 @@ const MCP_TOOLS = [
     },
   },
   {
+    name: "createFeature",
+    description:
+      "Create a new feature definition. A feature defines what a campaign type can do: its inputs (form fields), " +
+      "outputs (metrics from the stats registry), charts (funnel-bar or breakdown-bar visualizations), " +
+      "and entities (detail tabs like leads, companies, emails). " +
+      "Charts must have at least 1 item. Entities must have at least 1 item. " +
+      "Use GET /stats/registry to discover valid stats keys for outputs and chart steps/segments.",
+    inputSchema: {
+      type: "object" as const,
+      properties: {
+        name: { type: "string", description: "Display name (e.g. 'Cold Email Outreach')" },
+        description: { type: "string", description: "What this feature does" },
+        icon: { type: "string", description: "Lucide icon name (e.g. 'envelope', 'globe', 'megaphone')" },
+        category: { type: "string", description: "Feature category (e.g. 'sales', 'pr', 'discovery')" },
+        channel: { type: "string", description: "Communication channel (e.g. 'email', 'phone', 'linkedin', 'database')" },
+        audienceType: { type: "string", description: "Form layout type (e.g. 'cold-outreach', 'discovery')" },
+        implemented: { type: "boolean", description: "Whether the feature is implemented (default true)" },
+        displayOrder: { type: "integer", description: "Sort order in the UI (default 0)" },
+        status: { type: "string", enum: ["active", "draft", "deprecated"], description: "Feature status (default 'active')" },
+        inputs: {
+          type: "array",
+          description: "Input fields for the campaign creation form (min 1)",
+          items: {
+            type: "object",
+            properties: {
+              key: { type: "string", description: "Unique input key" },
+              label: { type: "string", description: "Display label" },
+              type: { type: "string", enum: ["text", "textarea", "number", "select"], description: "Input type" },
+              placeholder: { type: "string", description: "Placeholder text" },
+              description: { type: "string", description: "Help text for the input" },
+              extractKey: { type: "string", description: "Key used for data extraction" },
+              options: { type: "array", items: { type: "string" }, description: "Options for select type" },
+            },
+            required: ["key", "label", "type", "placeholder", "description", "extractKey"],
+          },
+        },
+        outputs: {
+          type: "array",
+          description: "Output metrics — stats keys from the registry with display config (min 1)",
+          items: {
+            type: "object",
+            properties: {
+              key: { type: "string", description: "Stats registry key" },
+              displayOrder: { type: "integer", description: "Sort order" },
+              defaultSort: { type: "boolean", description: "Whether this is the default sort column" },
+              sortDirection: { type: "string", enum: ["asc", "desc"], description: "Default sort direction" },
+            },
+            required: ["key", "displayOrder"],
+          },
+        },
+        charts: {
+          type: "array",
+          description: "Chart visualizations (min 1). Two types: funnel-bar (steps, min 2) and breakdown-bar (segments, min 2)",
+          items: {
+            type: "object",
+            properties: {
+              key: { type: "string", description: "Unique chart key" },
+              type: { type: "string", enum: ["funnel-bar", "breakdown-bar"], description: "Chart type" },
+              title: { type: "string", description: "Chart title" },
+              displayOrder: { type: "integer", description: "Sort order" },
+              steps: {
+                type: "array",
+                description: "For funnel-bar: ordered steps (min 2). Each step references a stats registry key.",
+                items: {
+                  type: "object",
+                  properties: { key: { type: "string", description: "Stats registry key" } },
+                  required: ["key"],
+                },
+              },
+              segments: {
+                type: "array",
+                description: "For breakdown-bar: segments (min 2). Each segment has a stats key, color, and sentiment.",
+                items: {
+                  type: "object",
+                  properties: {
+                    key: { type: "string", description: "Stats registry key" },
+                    color: { type: "string", enum: ["green", "blue", "red", "gray", "orange"], description: "Segment color" },
+                    sentiment: { type: "string", enum: ["positive", "neutral", "negative"], description: "Segment sentiment" },
+                  },
+                  required: ["key", "color", "sentiment"],
+                },
+              },
+            },
+            required: ["key", "type", "title", "displayOrder"],
+          },
+        },
+        entities: {
+          type: "array",
+          description: "Entity types shown in campaign detail sidebar (e.g. ['leads', 'companies', 'emails']). Min 1.",
+          items: { type: "string" },
+        },
+      },
+      required: ["name", "description", "icon", "category", "channel", "audienceType", "inputs", "outputs", "charts", "entities"],
+    },
+  },
+  {
     name: "versionPrompt",
     description:
       "Create a new version of a prompt template. The new version gets an auto-incremented type name " +
@@ -163,6 +259,14 @@ async function executeUpdateWorkflow(args: ToolArgs, headers: Record<string, str
   });
 }
 
+async function executeCreateFeature(args: ToolArgs, headers: Record<string, string>): Promise<unknown> {
+  return callExternalService(externalServices.features, "/features", {
+    method: "POST",
+    headers,
+    body: args,
+  });
+}
+
 async function executeVersionPrompt(args: ToolArgs, headers: Record<string, string>): Promise<unknown> {
   const { sourceType, prompt, variables } = args as { sourceType: string; prompt: string; variables: string[] };
   return callExternalService(externalServices.emailgen, "/prompts", {
@@ -177,6 +281,7 @@ const TOOL_EXECUTORS: Record<string, (args: ToolArgs, headers: Record<string, st
   getPrompt: executeGetPrompt,
   validateWorkflow: executeValidateWorkflow,
   updateWorkflow: executeUpdateWorkflow,
+  createFeature: executeCreateFeature,
   versionPrompt: executeVersionPrompt,
 };
 

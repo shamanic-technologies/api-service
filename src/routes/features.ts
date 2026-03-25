@@ -153,6 +153,28 @@ router.post("/features/:slug/prefill", authenticate, requireOrg, requireUser, as
 });
 
 /**
+ * POST /v1/features
+ * Create a single feature
+ */
+router.post("/features", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      "/features",
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+      },
+    );
+    res.status(201).json(result);
+  } catch (error: any) {
+    console.error("Create feature error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to create feature" });
+  }
+});
+
+/**
  * PUT /v1/features
  * Batch upsert features (cold-start registration)
  */

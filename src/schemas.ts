@@ -4169,6 +4169,25 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/features",
+  tags: ["Features"],
+  summary: "Create a single feature",
+  description: "Create a new feature definition with inputs, outputs, charts, and entities. Proxied from features-service.",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureCreateRequest") } } },
+  },
+  responses: {
+    201: { description: "Created feature", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureCreateResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: { description: "Conflict — feature with this name already exists", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "put",
   path: "/v1/features",
   tags: ["Features"],
