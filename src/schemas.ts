@@ -3981,6 +3981,94 @@ registry.registerPath({
 // FEATURES (proxy to features-service)
 // ===================================================================
 
+// --- Shared sub-schemas for features ---
+
+const FeatureInputSchema = z.object({
+  key: z.string().describe("Input field key"),
+  label: z.string().describe("Human-readable label"),
+  type: z.enum(["text", "textarea", "number", "select"]).describe("Input field type"),
+  placeholder: z.string().describe("Placeholder text"),
+  description: z.string().describe("Help text for the field"),
+  extractKey: z.string().describe("Brand extraction key used by prefill"),
+  options: z.array(z.string()).optional().describe("Options for select-type inputs"),
+}).openapi("FeatureInput");
+
+const FeatureOutputSchema = z.object({
+  key: z.string().describe("Output metric key"),
+  label: z.string().describe("Human-readable label"),
+  type: z.enum(["count", "rate", "currency", "percentage"]).describe("Output metric type"),
+  displayOrder: z.number().int().describe("Display order in UI"),
+  showInCampaignRow: z.boolean().describe("Show in campaign row summary"),
+  showInFunnel: z.boolean().describe("Show in funnel chart"),
+  funnelOrder: z.number().int().optional().describe("Order in funnel visualization"),
+  numeratorKey: z.string().optional().describe("Key for rate numerator"),
+  denominatorKey: z.string().optional().describe("Key for rate denominator"),
+}).openapi("FeatureOutput");
+
+const WorkflowColumnSchema = z.object({
+  key: z.string().describe("Column key"),
+  label: z.string().describe("Column label"),
+  type: z.enum(["rate", "currency", "count"]).describe("Column data type"),
+  numeratorKey: z.string().optional().describe("Key for rate numerator"),
+  denominatorKey: z.string().optional().describe("Key for rate denominator"),
+  sortDirection: z.enum(["asc", "desc"]).describe("Default sort direction"),
+  displayOrder: z.number().int().describe("Display order"),
+  defaultSort: z.boolean().optional().describe("Whether this column is the default sort"),
+}).openapi("WorkflowColumn");
+
+const FunnelBarStepSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  statsField: z.string(),
+  rateBasedOn: z.string().nullable(),
+});
+
+const BreakdownBarSegmentSchema = z.object({
+  key: z.string(),
+  label: z.string(),
+  statsField: z.string(),
+  color: z.enum(["green", "blue", "red", "gray", "orange"]),
+  sentiment: z.enum(["positive", "neutral", "negative"]),
+});
+
+const FeatureChartSchema = z.union([
+  z.object({
+    key: z.string(),
+    type: z.literal("funnel-bar"),
+    title: z.string(),
+    displayOrder: z.number().int(),
+    steps: z.array(FunnelBarStepSchema).min(1),
+  }),
+  z.object({
+    key: z.string(),
+    type: z.literal("breakdown-bar"),
+    title: z.string(),
+    displayOrder: z.number().int(),
+    segments: z.array(BreakdownBarSegmentSchema).min(1),
+  }),
+]).openapi("FeatureChart");
+
+const FeatureObjectSchema = z.object({
+  slug: z.string().describe("Unique feature slug"),
+  name: z.string().describe("Feature name"),
+  description: z.string().describe("Feature description"),
+  icon: z.string().describe("Icon identifier"),
+  category: z.string().describe("Feature category"),
+  channel: z.string().describe("Communication channel"),
+  audienceType: z.string().describe("Target audience type"),
+  implemented: z.boolean().describe("Whether the feature is implemented"),
+  displayOrder: z.number().int().describe("Display order"),
+  status: z.enum(["active", "draft", "deprecated"]).describe("Feature status"),
+  inputs: z.array(FeatureInputSchema).describe("Input field definitions"),
+  outputs: z.array(FeatureOutputSchema).describe("Output metric definitions"),
+  workflowColumns: z.array(WorkflowColumnSchema).optional().describe("Workflow table columns"),
+  charts: z.array(FeatureChartSchema).optional().describe("Chart configurations"),
+  resultComponent: z.string().nullable().optional().describe("Custom result component name"),
+  defaultWorkflowName: z.string().nullable().optional().describe("Default workflow name"),
+  createdAt: z.string().optional().describe("ISO timestamp"),
+  updatedAt: z.string().optional().describe("ISO timestamp"),
+}).openapi("Feature");
+
 const FeaturePrefillRequestSchema = z
   .object({
     brandId: z.string().describe("Brand UUID to prefill from"),
@@ -4030,7 +4118,7 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "List of features", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeaturesListResponse") } } },
+    200: { description: "List of features", content: { "application/json": { schema: z.object({ features: z.array(FeatureObjectSchema).describe("Array of feature definitions") }).openapi("FeaturesListResponse") } } },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -4047,7 +4135,7 @@ registry.registerPath({
     params: z.object({ slug: z.string().describe("Feature slug") }),
   },
   responses: {
-    200: { description: "Feature details", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureResponse") } } },
+    200: { description: "Feature details", content: { "application/json": { schema: z.object({ feature: FeatureObjectSchema.describe("Feature definition") }).openapi("FeatureResponse") } } },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -4065,7 +4153,7 @@ registry.registerPath({
     params: z.object({ slug: z.string().describe("Feature slug") }),
   },
   responses: {
-    200: { description: "Feature input schema", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureInputsResponse") } } },
+    200: { description: "Feature input schema", content: { "application/json": { schema: z.object({ slug: z.string().describe("Feature slug"), name: z.string().describe("Feature name"), inputs: z.array(FeatureInputSchema).describe("Input field definitions") }).openapi("FeatureInputsResponse") } } },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -4115,10 +4203,10 @@ registry.registerPath({
   description: "Idempotent batch upsert of feature definitions. Used for cold-start registration. Proxied from features-service.",
   security: authed,
   request: {
-    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("FeaturesBatchUpsertRequest") } } },
+    body: { content: { "application/json": { schema: z.object({ features: z.array(FeatureObjectSchema.omit({ slug: true, createdAt: true, updatedAt: true }).extend({ slug: z.string().optional().describe("Feature slug (auto-generated from name if omitted)") })).min(1).describe("Array of features to upsert") }).openapi("FeaturesBatchUpsertRequest") } } },
   },
   responses: {
-    200: { description: "Upsert result", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeaturesBatchUpsertResponse") } } },
+    200: { description: "Upsert result", content: { "application/json": { schema: z.object({ features: z.array(FeatureObjectSchema.nullable()).describe("Upserted features (null entries indicate failures)") }).openapi("FeaturesBatchUpsertResponse") } } },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
