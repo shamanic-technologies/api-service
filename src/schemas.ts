@@ -173,6 +173,7 @@ const WorkflowMetadataSchema = z
     audienceType: z.string().describe("Audience type (e.g. 'cold-outreach')"),
     signature: z.string().describe("SHA-256 hash of the canonical DAG"),
     signatureName: z.string().describe("Human-readable name for this DAG variant"),
+    featureSlug: z.string().nullable().optional().describe("Feature slug this workflow belongs to"),
   })
   .openapi("WorkflowMetadata");
 
@@ -1749,6 +1750,7 @@ registry.registerPath({
       channel: z.string().optional().describe("Filter by channel (e.g. 'email')"),
       audienceType: z.string().optional().describe("Filter by audience type (e.g. 'cold-outreach')"),
       humanId: z.string().optional().describe("Filter workflows by human expert ID"),
+      featureSlug: z.string().optional().describe("Filter by feature slug"),
     }),
   },
   responses: {

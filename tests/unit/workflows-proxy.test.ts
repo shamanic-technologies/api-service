@@ -81,6 +81,15 @@ describe("Workflow proxy routes", () => {
 
     expect(listBlock).toContain("humanId");
   });
+
+  it("should forward featureSlug query param on GET /workflows", () => {
+    const listStart = content.indexOf('router.get("/workflows"');
+    const rankedStart = content.indexOf('router.get("/workflows/ranked"');
+    const listBlock = content.slice(listStart, rankedStart);
+
+    expect(listBlock).toContain('req.query.featureSlug');
+    expect(listBlock).toContain('params.set("featureSlug"');
+  });
 });
 
 describe("Workflow proxy routes — new endpoints", () => {
@@ -158,6 +167,22 @@ describe("Workflow schemas — ranked and best endpoints", () => {
       content.indexOf('path: "/v1/workflows/{id}"')
     );
     expect(listSection).toContain("humanId");
+  });
+
+  it("should include featureSlug query param on GET /v1/workflows", () => {
+    const listSection = content.slice(
+      content.indexOf('path: "/v1/workflows"'),
+      content.indexOf('path: "/v1/workflows/{id}"')
+    );
+    expect(listSection).toContain("featureSlug");
+  });
+
+  it("should include featureSlug in WorkflowMetadata schema", () => {
+    const metaSection = content.slice(
+      content.indexOf("WorkflowMetadataSchema"),
+      content.indexOf(".openapi(\"WorkflowMetadata\")")
+    );
+    expect(metaSection).toContain("featureSlug");
   });
 });
 

@@ -173,6 +173,11 @@
           "signatureName": {
             "type": "string",
             "description": "Human-readable name for this DAG variant"
+          },
+          "featureSlug": {
+            "type": "string",
+            "nullable": true,
+            "description": "Feature slug this workflow belongs to"
           }
         },
         "required": [
@@ -9498,6 +9503,16 @@
             "required": false,
             "description": "Filter workflows by human expert ID",
             "name": "humanId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature slug"
+            },
+            "required": false,
+            "description": "Filter by feature slug",
+            "name": "featureSlug",
             "in": "query"
           },
           {
