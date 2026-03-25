@@ -66,6 +66,10 @@
     {
       "name": "Platform",
       "description": "Service discovery and platform configuration"
+    },
+    {
+      "name": "Features",
+      "description": "Feature definitions — inputs, outputs, charts, and metadata"
     }
   ],
   "components": {
@@ -4886,17 +4890,460 @@
           "services"
         ]
       },
+      "FeatureInput": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Input field key"
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable label"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "text",
+              "textarea",
+              "number",
+              "select"
+            ],
+            "description": "Input field type"
+          },
+          "placeholder": {
+            "type": "string",
+            "description": "Placeholder text"
+          },
+          "description": {
+            "type": "string",
+            "description": "Help text for the field"
+          },
+          "extractKey": {
+            "type": "string",
+            "description": "Brand extraction key used by prefill"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Options for select-type inputs"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "type",
+          "placeholder",
+          "description",
+          "extractKey"
+        ]
+      },
+      "FeatureOutput": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Output metric key"
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable label"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "count",
+              "rate",
+              "currency",
+              "percentage"
+            ],
+            "description": "Output metric type"
+          },
+          "displayOrder": {
+            "type": "integer",
+            "description": "Display order in UI"
+          },
+          "showInCampaignRow": {
+            "type": "boolean",
+            "description": "Show in campaign row summary"
+          },
+          "showInFunnel": {
+            "type": "boolean",
+            "description": "Show in funnel chart"
+          },
+          "funnelOrder": {
+            "type": "integer",
+            "description": "Order in funnel visualization"
+          },
+          "numeratorKey": {
+            "type": "string",
+            "description": "Key for rate numerator"
+          },
+          "denominatorKey": {
+            "type": "string",
+            "description": "Key for rate denominator"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "type",
+          "displayOrder",
+          "showInCampaignRow",
+          "showInFunnel"
+        ]
+      },
+      "WorkflowColumn": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Column key"
+          },
+          "label": {
+            "type": "string",
+            "description": "Column label"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "rate",
+              "currency",
+              "count"
+            ],
+            "description": "Column data type"
+          },
+          "numeratorKey": {
+            "type": "string",
+            "description": "Key for rate numerator"
+          },
+          "denominatorKey": {
+            "type": "string",
+            "description": "Key for rate denominator"
+          },
+          "sortDirection": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Default sort direction"
+          },
+          "displayOrder": {
+            "type": "integer",
+            "description": "Display order"
+          },
+          "defaultSort": {
+            "type": "boolean",
+            "description": "Whether this column is the default sort"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "type",
+          "sortDirection",
+          "displayOrder"
+        ]
+      },
+      "FeatureChart": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "funnel-bar"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "displayOrder": {
+                "type": "integer"
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "statsField": {
+                      "type": "string"
+                    },
+                    "rateBasedOn": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "statsField",
+                    "rateBasedOn"
+                  ]
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "key",
+              "type",
+              "title",
+              "displayOrder",
+              "steps"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "breakdown-bar"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "displayOrder": {
+                "type": "integer"
+              },
+              "segments": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "key": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    },
+                    "statsField": {
+                      "type": "string"
+                    },
+                    "color": {
+                      "type": "string",
+                      "enum": [
+                        "green",
+                        "blue",
+                        "red",
+                        "gray",
+                        "orange"
+                      ]
+                    },
+                    "sentiment": {
+                      "type": "string",
+                      "enum": [
+                        "positive",
+                        "neutral",
+                        "negative"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "key",
+                    "label",
+                    "statsField",
+                    "color",
+                    "sentiment"
+                  ]
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "key",
+              "type",
+              "title",
+              "displayOrder",
+              "segments"
+            ]
+          }
+        ]
+      },
+      "Feature": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "description": "Unique feature slug"
+          },
+          "name": {
+            "type": "string",
+            "description": "Feature name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Feature description"
+          },
+          "icon": {
+            "type": "string",
+            "description": "Icon identifier"
+          },
+          "category": {
+            "type": "string",
+            "description": "Feature category"
+          },
+          "channel": {
+            "type": "string",
+            "description": "Communication channel"
+          },
+          "audienceType": {
+            "type": "string",
+            "description": "Target audience type"
+          },
+          "implemented": {
+            "type": "boolean",
+            "description": "Whether the feature is implemented"
+          },
+          "displayOrder": {
+            "type": "integer",
+            "description": "Display order"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "draft",
+              "deprecated"
+            ],
+            "description": "Feature status"
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeatureInput"
+            },
+            "description": "Input field definitions"
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeatureOutput"
+            },
+            "description": "Output metric definitions"
+          },
+          "workflowColumns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WorkflowColumn"
+            },
+            "description": "Workflow table columns"
+          },
+          "charts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeatureChart"
+            },
+            "description": "Chart configurations"
+          },
+          "resultComponent": {
+            "type": "string",
+            "nullable": true,
+            "description": "Custom result component name"
+          },
+          "defaultWorkflowName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Default workflow name"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO timestamp"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO timestamp"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "description",
+          "icon",
+          "category",
+          "channel",
+          "audienceType",
+          "implemented",
+          "displayOrder",
+          "status",
+          "inputs",
+          "outputs"
+        ]
+      },
       "FeaturesListResponse": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Feature"
+            },
+            "description": "Array of feature definitions"
+          }
+        },
+        "required": [
+          "features"
+        ]
       },
       "FeatureResponse": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "feature": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Feature"
+              },
+              {
+                "description": "Feature definition"
+              }
+            ]
+          }
+        },
+        "required": [
+          "feature"
+        ]
       },
       "FeatureInputsResponse": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "slug": {
+            "type": "string",
+            "description": "Feature slug"
+          },
+          "name": {
+            "type": "string",
+            "description": "Feature name"
+          },
+          "inputs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeatureInput"
+            },
+            "description": "Input field definitions"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "inputs"
+        ]
       },
       "FeaturePrefillFullValue": {
         "type": "object",
@@ -4978,11 +5425,139 @@
       },
       "FeaturesBatchUpsertResponse": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "features": {
+            "type": "array",
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/components/schemas/Feature"
+                },
+                {
+                  "nullable": true
+                }
+              ]
+            },
+            "description": "Upserted features (null entries indicate failures)"
+          }
+        },
+        "required": [
+          "features"
+        ]
       },
       "FeaturesBatchUpsertRequest": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "features": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Feature name"
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Feature description"
+                },
+                "icon": {
+                  "type": "string",
+                  "description": "Icon identifier"
+                },
+                "category": {
+                  "type": "string",
+                  "description": "Feature category"
+                },
+                "channel": {
+                  "type": "string",
+                  "description": "Communication channel"
+                },
+                "audienceType": {
+                  "type": "string",
+                  "description": "Target audience type"
+                },
+                "implemented": {
+                  "type": "boolean",
+                  "description": "Whether the feature is implemented"
+                },
+                "displayOrder": {
+                  "type": "integer",
+                  "description": "Display order"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "draft",
+                    "deprecated"
+                  ],
+                  "description": "Feature status"
+                },
+                "inputs": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeatureInput"
+                  },
+                  "description": "Input field definitions"
+                },
+                "outputs": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeatureOutput"
+                  },
+                  "description": "Output metric definitions"
+                },
+                "workflowColumns": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WorkflowColumn"
+                  },
+                  "description": "Workflow table columns"
+                },
+                "charts": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeatureChart"
+                  },
+                  "description": "Chart configurations"
+                },
+                "resultComponent": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Custom result component name"
+                },
+                "defaultWorkflowName": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Default workflow name"
+                },
+                "slug": {
+                  "type": "string",
+                  "description": "Feature slug (auto-generated from name if omitted)"
+                }
+              },
+              "required": [
+                "name",
+                "description",
+                "icon",
+                "category",
+                "channel",
+                "audienceType",
+                "implemented",
+                "displayOrder",
+                "status",
+                "inputs",
+                "outputs"
+              ]
+            },
+            "minItems": 1,
+            "description": "Array of features to upsert"
+          }
+        },
+        "required": [
+          "features"
+        ]
       }
     },
     "parameters": {}
