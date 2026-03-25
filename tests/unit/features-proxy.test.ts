@@ -62,11 +62,55 @@ describe("Features proxy routes", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(5);
+    expect(headerMatches!.length).toBe(8);
   });
 
   it("should proxy to externalServices.features", () => {
     expect(content).toContain("externalServices.features");
+  });
+
+  it("should have GET /features/stats/registry with auth", () => {
+    expect(content).toContain('"/features/stats/registry"');
+    const line = content.split("\n").find((l) =>
+      l.includes('"/features/stats/registry"')
+    );
+    expect(line).toContain("authenticate");
+  });
+
+  it("should have GET /features/stats with auth + requireOrg", () => {
+    expect(content).toContain('"/features/stats"');
+    const line = content.split("\n").find((l) =>
+      l.includes('router.get') && l.includes('"/features/stats"')
+    );
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+  });
+
+  it("should forward groupBy and brandId on GET /features/stats", () => {
+    expect(content).toContain('"groupBy"');
+    expect(content).toContain('"brandId"');
+  });
+
+  it("should have GET /features/:slug/stats with auth + requireOrg", () => {
+    expect(content).toContain('"/features/:slug/stats"');
+    const line = content.split("\n").find((l) =>
+      l.includes('"/features/:slug/stats"')
+    );
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+  });
+
+  it("should forward groupBy, brandId, campaignId, workflowName on GET /features/:slug/stats", () => {
+    expect(content).toContain('"campaignId"');
+    expect(content).toContain('"workflowName"');
+  });
+
+  it("should register static routes before parameterized :slug route", () => {
+    const registryIdx = content.indexOf('"/features/stats/registry"');
+    const globalStatsIdx = content.indexOf('"/features/stats"');
+    const slugIdx = content.indexOf('"/features/:slug"');
+    expect(registryIdx).toBeLessThan(slugIdx);
+    expect(globalStatsIdx).toBeLessThan(slugIdx);
   });
 });
 
@@ -121,6 +165,22 @@ describe("Features OpenAPI schemas", () => {
   it("should define FeaturePrefillRequest schema with brandId", () => {
     expect(schemaContent).toContain("FeaturePrefillRequest");
     expect(schemaContent).toContain("brandId");
+  });
+
+  it("should register GET /v1/features/stats/registry", () => {
+    expect(schemaContent).toContain('path: "/v1/features/stats/registry"');
+  });
+
+  it("should register GET /v1/features/stats", () => {
+    expect(schemaContent).toContain('path: "/v1/features/stats"');
+  });
+
+  it("should register GET /v1/features/{featureSlug}/stats", () => {
+    expect(schemaContent).toContain('path: "/v1/features/{featureSlug}/stats"');
+  });
+
+  it("should document groupBy query param on stats endpoints", () => {
+    expect(schemaContent).toContain("groupBy:");
   });
 });
 

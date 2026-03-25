@@ -29,6 +29,47 @@ router.get("/features", authenticate, async (req: AuthenticatedRequest, res) => 
 });
 
 /**
+ * GET /v1/features/stats/registry
+ * Public dictionary of stats keys (label + type per key)
+ */
+router.get("/features/stats/registry", authenticate, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      "/stats/registry",
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Stats registry error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get stats registry" });
+  }
+});
+
+/**
+ * GET /v1/features/stats
+ * Global stats cross-features, groupable by featureSlug/workflowName/brandId/campaignId
+ */
+router.get("/features/stats", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["groupBy", "brandId"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.features,
+      `/stats${qs}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Global stats error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get global stats" });
+  }
+});
+
+/**
  * GET /v1/features/:slug
  * Get a single feature by slug
  */
@@ -61,6 +102,29 @@ router.get("/features/:slug/inputs", authenticate, async (req: AuthenticatedRequ
   } catch (error: any) {
     console.error("Get feature inputs error:", error.message);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get feature inputs" });
+  }
+});
+
+/**
+ * GET /v1/features/:slug/stats
+ * Stats for a specific feature, groupable by workflowName/brandId/campaignId
+ */
+router.get("/features/:slug/stats", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["groupBy", "brandId", "campaignId", "workflowName"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.features,
+      `/features/${encodeURIComponent(req.params.slug)}/stats${qs}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Feature stats error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get feature stats" });
   }
 });
 
