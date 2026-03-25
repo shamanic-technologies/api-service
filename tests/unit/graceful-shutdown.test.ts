@@ -36,4 +36,23 @@ describe("graceful shutdown", () => {
   it("should export the server instance for testability", () => {
     expect(indexSrc).toContain("export { server }");
   });
+
+  it("should disable requestTimeout for long-lived SSE streams", () => {
+    expect(indexSrc).toContain("server.requestTimeout = 0");
+  });
+
+  it("should set headersTimeout to guard against slowloris", () => {
+    const match = indexSrc.match(/server\.headersTimeout\s*=\s*(\d[\d_]*)/);
+    expect(match).not.toBeNull();
+    const ms = Number(match![1].replace(/_/g, ""));
+    expect(ms).toBeGreaterThanOrEqual(30_000);
+    expect(ms).toBeLessThanOrEqual(120_000);
+  });
+
+  it("should set keepAliveTimeout above typical LB idle timeout", () => {
+    const match = indexSrc.match(/server\.keepAliveTimeout\s*=\s*(\d[\d_]*)/);
+    expect(match).not.toBeNull();
+    const ms = Number(match![1].replace(/_/g, ""));
+    expect(ms).toBeGreaterThan(60_000);
+  });
 });

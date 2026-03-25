@@ -195,6 +195,14 @@ const server = app.listen(Number(PORT), "::", () => {
   console.log(`API Gateway running on port ${PORT}`);
 });
 
+// ── HTTP timeouts ────────────────────────────────────────────────────────────
+// Node 20 defaults requestTimeout to 5 min (300 000 ms), which kills long-lived
+// SSE streams (e.g. chat sessions with LLM tool-calling that can run 30-60 min).
+// Disable it so streaming endpoints are not prematurely terminated.
+server.requestTimeout = 0;       // no limit on how long a request can take
+server.headersTimeout = 60_000;  // 60 s to receive headers (guard against slowloris)
+server.keepAliveTimeout = 72_000; // slightly above typical LB idle timeout (60 s)
+
 // ── Graceful shutdown ─────────────────────────────────────────────────────────
 // Railway sends SIGTERM before stopping a container. Without this handler,
 // the process dies immediately — killing in-flight requests and causing 500s.
