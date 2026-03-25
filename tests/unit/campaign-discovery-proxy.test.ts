@@ -101,8 +101,8 @@ describe("Service client: outlet and journalist services", () => {
   });
 
   it("should define journalist service config", () => {
-    expect(serviceClientContent).toContain("JOURNALIST_SERVICE_URL");
-    expect(serviceClientContent).toContain("JOURNALIST_SERVICE_API_KEY");
+    expect(serviceClientContent).toContain("JOURNALISTS_SERVICE_URL");
+    expect(serviceClientContent).toContain("JOURNALISTS_SERVICE_API_KEY");
   });
 });
 

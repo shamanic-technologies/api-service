@@ -81,8 +81,8 @@ export const externalServices = {
     apiKey: process.env.OUTLETS_SERVICE_API_KEY || "",
   },
   journalist: {
-    url: process.env.JOURNALIST_SERVICE_URL || "http://localhost:3031",
-    apiKey: process.env.JOURNALIST_SERVICE_API_KEY || "",
+    url: process.env.JOURNALISTS_SERVICE_URL || "http://localhost:3031",
+    apiKey: process.env.JOURNALISTS_SERVICE_API_KEY || "",
   },
   features: {
     url: process.env.FEATURES_SERVICE_URL || "http://localhost:3032",
