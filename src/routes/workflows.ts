@@ -155,6 +155,7 @@ router.get("/workflows", authenticate, requireOrg, requireUser, async (req: Auth
     if (req.query.channel) params.set("channel", req.query.channel as string);
     if (req.query.audienceType) params.set("audienceType", req.query.audienceType as string);
     if (req.query.humanId) params.set("humanId", req.query.humanId as string);
+    if (req.query.featureSlug) params.set("featureSlug", req.query.featureSlug as string);
 
     const result = await callExternalService<{ workflows: Array<{ id: string; [key: string]: unknown }> }>(
       externalServices.workflow,
