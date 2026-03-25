@@ -102,7 +102,7 @@ describe("POST /internal/mcp-tools — MCP JSON-RPC", () => {
 
   // ── tools/list ────────────────────────────────────────────────────────────
 
-  it("should list all 5 tools", async () => {
+  it("should list all 6 tools", async () => {
     const res = await request(app)
       .post("/internal/mcp-tools")
       .set("X-API-Key", VALID_API_KEY)
@@ -110,13 +110,14 @@ describe("POST /internal/mcp-tools — MCP JSON-RPC", () => {
 
     expect(res.status).toBe(200);
     const tools = res.body.result.tools;
-    expect(tools).toHaveLength(5);
+    expect(tools).toHaveLength(6);
 
     const names = tools.map((t: { name: string }) => t.name);
     expect(names).toContain("getWorkflowDetails");
     expect(names).toContain("getPrompt");
     expect(names).toContain("validateWorkflow");
     expect(names).toContain("updateWorkflow");
+    expect(names).toContain("createFeature");
     expect(names).toContain("versionPrompt");
   });
 
@@ -296,6 +297,93 @@ describe("POST /internal/mcp-tools — MCP JSON-RPC", () => {
     expect(call!.body.sourceType).toBe("cold-email");
     expect(call!.body.prompt).toBe("Hi {{firstName}}");
     expect(call!.body.variables).toEqual(["firstName"]);
+  });
+
+  // ── tools/call — createFeature ─────────────────────────────────────────────
+
+  it("should execute createFeature with POST to features-service", async () => {
+    const createdFeature = {
+      feature: {
+        id: "feat-uuid",
+        slug: "cold-email-outreach",
+        name: "Cold Email Outreach",
+        charts: [
+          { key: "email-funnel", type: "funnel-bar", title: "Email Funnel", displayOrder: 0, steps: [{ key: "emails_sent" }, { key: "emails_opened" }] },
+        ],
+        entities: ["leads", "emails"],
+      },
+    };
+    mockFetch({ "/features": createdFeature });
+
+    const res = await request(app)
+      .post("/internal/mcp-tools")
+      .set("X-API-Key", VALID_API_KEY)
+      .set("x-org-id", "org-abc")
+      .set("x-user-id", "user-def")
+      .set("x-run-id", "run-ghi")
+      .send({
+        jsonrpc: "2.0",
+        id: 15,
+        method: "tools/call",
+        params: {
+          name: "createFeature",
+          arguments: {
+            name: "Cold Email Outreach",
+            description: "Send cold emails to prospects",
+            icon: "envelope",
+            category: "sales",
+            channel: "email",
+            audienceType: "cold-outreach",
+            inputs: [{ key: "targetAudience", label: "Target Audience", type: "textarea", placeholder: "Describe your audience", description: "Who to target", extractKey: "target_audience" }],
+            outputs: [{ key: "emails_sent", displayOrder: 0 }],
+            charts: [
+              { key: "email-funnel", type: "funnel-bar", title: "Email Funnel", displayOrder: 0, steps: [{ key: "emails_sent" }, { key: "emails_opened" }] },
+            ],
+            entities: ["leads", "emails"],
+          },
+        },
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.result.isError).toBeUndefined();
+
+    const parsed = JSON.parse(res.body.result.content[0].text);
+    expect(parsed.feature.slug).toBe("cold-email-outreach");
+    expect(parsed.feature.charts).toHaveLength(1);
+    expect(parsed.feature.entities).toEqual(["leads", "emails"]);
+
+    // Verify downstream call
+    const call = fetchCalls.find((c) => c.url.includes("/features") && c.method === "POST");
+    expect(call).toBeDefined();
+    expect(call!.body.name).toBe("Cold Email Outreach");
+    expect(call!.body.charts).toHaveLength(1);
+    expect(call!.body.entities).toEqual(["leads", "emails"]);
+    expect(call!.headers!["x-org-id"]).toBe("org-abc");
+    expect(call!.headers!["x-user-id"]).toBe("user-def");
+    expect(call!.headers!["x-run-id"]).toBe("run-ghi");
+  });
+
+  it("createFeature tool schema should include charts and entities as required", async () => {
+    const res = await request(app)
+      .post("/internal/mcp-tools")
+      .set("X-API-Key", VALID_API_KEY)
+      .send({ jsonrpc: "2.0", id: 16, method: "tools/list" });
+
+    const tool = res.body.result.tools.find((t: { name: string }) => t.name === "createFeature");
+    expect(tool).toBeDefined();
+    expect(tool.inputSchema.required).toContain("charts");
+    expect(tool.inputSchema.required).toContain("entities");
+    expect(tool.inputSchema.properties.charts).toBeDefined();
+    expect(tool.inputSchema.properties.entities).toBeDefined();
+
+    // Verify chart types are documented
+    const chartItems = tool.inputSchema.properties.charts.items;
+    expect(chartItems.properties.type.enum).toEqual(["funnel-bar", "breakdown-bar"]);
+
+    // Verify segment colors and sentiments are documented
+    const segments = chartItems.properties.segments.items;
+    expect(segments.properties.color.enum).toContain("green");
+    expect(segments.properties.sentiment.enum).toContain("positive");
   });
 
   // ── Error handling ────────────────────────────────────────────────────────

@@ -49,6 +49,20 @@ describe("Features proxy routes", () => {
     expect(content).toContain("?format=");
   });
 
+  it("should have POST /features with auth + requireOrg + requireUser", () => {
+    const postLine = content.split("\n").find((l) =>
+      l.includes("router.post") && l.includes('"/features"')
+    );
+    expect(postLine).toBeDefined();
+    expect(postLine).toContain("authenticate");
+    expect(postLine).toContain("requireOrg");
+    expect(postLine).toContain("requireUser");
+  });
+
+  it("should return 201 on POST /features", () => {
+    expect(content).toContain("res.status(201)");
+  });
+
   it("should have PUT /features for batch upsert with auth", () => {
     expect(content).toContain("router.put");
     const putLine = content.split("\n").find((l) =>
@@ -62,7 +76,7 @@ describe("Features proxy routes", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(8);
+    expect(headerMatches!.length).toBe(9);
   });
 
   it("should proxy to externalServices.features", () => {
