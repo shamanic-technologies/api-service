@@ -140,6 +140,7 @@ const rankedQueryParams = z.object({
   limit: z.string().optional().describe("Max results (default 10, max 100)"),
   groupBy: z.string().optional().describe("'section' to group by category-channel-audienceType, 'brand' to group by brand"),
   brandId: z.string().optional().describe("Filter by brand ID"),
+  featureSlug: z.string().optional().describe("Filter by feature slug (e.g. 'pr-cold-email-outreach')"),
 });
 
 const bestQueryParams = z.object({
