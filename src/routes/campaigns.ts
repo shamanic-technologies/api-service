@@ -398,7 +398,7 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
     const internalHeaders = buildInternalHeaders(req);
 
     // Fetch stats from all services in parallel using campaignId filter
-    const [leadStats, emailgenStats, delivery, budgetUsage, costBreakdown, leadsFromRuns] = await Promise.all([
+    const [leadStats, emailgenStats, delivery, budgetUsage, costBreakdown] = await Promise.all([
       callExternalService(
         externalServices.lead,
         `/stats?campaignId=${id}`,
@@ -433,15 +433,6 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
         console.warn("[campaigns] Cost breakdown failed:", (err as Error).message);
         return null;
       }),
-      // Lead-serve run count from runs-service (source of truth for leadsServed)
-      callExternalService<{ groups: Array<{ dimensions: Record<string, string | null>; runCount: number }> }>(
-        externalServices.runs,
-        `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&campaignId=${encodeURIComponent(id)}&taskName=lead-serve&groupBy=serviceName`,
-        { headers: internalHeaders }
-      ).catch((err) => {
-        console.warn("[campaigns] Lead-serve runs stats failed:", (err as Error).message);
-        return null;
-      }),
     ]);
 
     const stats: Record<string, any> = { campaignId: id };
@@ -461,11 +452,9 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
       stats.leadsSkipped = 0;
     }
 
-    // Override leadsServed from runs-service (source of truth — lead-service
-    // tracking can lag behind the actual number of completed lead-serve runs)
-    if (leadsFromRuns?.groups?.length) {
-      stats.leadsServed = leadsFromRuns.groups[0].runCount;
-    }
+    // Lead-service served_leads table is the source of truth for leadsServed.
+    // Do NOT override with runs-service runCount — that counts all lead-serve
+    // runs including ones where no lead was found (e.g. empty buffer).
 
     // Emailgen stats
     if (emailgenStats) {
