@@ -40,34 +40,44 @@ export async function authenticate(
       }
       req.authType = "admin";
 
-      const externalOrgId = req.headers["x-external-org-id"] as string | undefined;
-      const externalUserId = req.headers["x-external-user-id"] as string | undefined;
+      // Internal service-to-service calls pass internal UUIDs directly
+      const directOrgId = req.headers["x-org-id"] as string | undefined;
+      const directUserId = req.headers["x-user-id"] as string | undefined;
 
-      if (!externalOrgId || !externalUserId) {
-        return res.status(400).json({ error: "Admin auth requires both x-external-org-id and x-external-user-id" });
+      if (directOrgId && directUserId) {
+        req.orgId = directOrgId;
+        req.userId = directUserId;
+      } else {
+        // Dashboard calls pass external IDs that need resolution via client-service
+        const externalOrgId = req.headers["x-external-org-id"] as string | undefined;
+        const externalUserId = req.headers["x-external-user-id"] as string | undefined;
+
+        if (!externalOrgId || !externalUserId) {
+          return res.status(400).json({ error: "Admin auth requires identity headers: x-org-id/x-user-id or x-external-org-id/x-external-user-id" });
+        }
+
+        const resolved = await resolveExternalIds(externalOrgId, externalUserId, req);
+
+        if (!resolved) {
+          console.error("[auth] Admin identity resolution returned null", {
+            externalOrgId,
+            externalUserId,
+          });
+          return res.status(502).json({ error: "Identity resolution failed" });
+        }
+
+        if (!resolved.orgId || !resolved.userId) {
+          console.error("[auth] Admin identity resolution returned empty IDs", {
+            resolved,
+            externalOrgId,
+            externalUserId,
+          });
+          return res.status(502).json({ error: "Identity resolution returned incomplete data" });
+        }
+
+        req.orgId = resolved.orgId;
+        req.userId = resolved.userId;
       }
-
-      const resolved = await resolveExternalIds(externalOrgId, externalUserId, req);
-
-      if (!resolved) {
-        console.error("[auth] Admin identity resolution returned null", {
-          externalOrgId,
-          externalUserId,
-        });
-        return res.status(502).json({ error: "Identity resolution failed" });
-      }
-
-      if (!resolved.orgId || !resolved.userId) {
-        console.error("[auth] Admin identity resolution returned empty IDs", {
-          resolved,
-          externalOrgId,
-          externalUserId,
-        });
-        return res.status(502).json({ error: "Identity resolution returned incomplete data" });
-      }
-
-      req.orgId = resolved.orgId;
-      req.userId = resolved.userId;
 
     } else if (authHeader?.startsWith("Bearer ")) {
       // ── Path 2: User key auth via Bearer ──

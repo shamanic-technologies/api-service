@@ -152,35 +152,52 @@ describe("Auth middleware — admin key via X-API-Key", () => {
     );
   });
 
-  it("should return 400 when x-external-org-id is missing", async () => {
+  it("should accept direct x-org-id and x-user-id without calling client-service", async () => {
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("X-API-Key", ADMIN_KEY)
+      .set("x-org-id", "org-uuid-direct")
+      .set("x-user-id", "user-uuid-direct");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      orgId: "org-uuid-direct",
+      userId: "user-uuid-direct",
+      authType: "admin",
+    });
+    // No client-service call needed — IDs passed directly
+    expect(mockCall).not.toHaveBeenCalled();
+  });
+
+  it("should return 400 when x-external-org-id is missing and no direct IDs", async () => {
     const res = await request(app)
       .get("/v1/workflows")
       .set("X-API-Key", ADMIN_KEY)
       .set("x-external-user-id", "ext_user_456");
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Admin auth requires both x-external-org-id and x-external-user-id");
+    expect(res.body.error).toBe("Admin auth requires identity headers: x-org-id/x-user-id or x-external-org-id/x-external-user-id");
     expect(mockCall).not.toHaveBeenCalled();
   });
 
-  it("should return 400 when x-external-user-id is missing", async () => {
+  it("should return 400 when x-external-user-id is missing and no direct IDs", async () => {
     const res = await request(app)
       .get("/v1/workflows")
       .set("X-API-Key", ADMIN_KEY)
       .set("x-external-org-id", "ext_org_123");
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Admin auth requires both x-external-org-id and x-external-user-id");
+    expect(res.body.error).toBe("Admin auth requires identity headers: x-org-id/x-user-id or x-external-org-id/x-external-user-id");
     expect(mockCall).not.toHaveBeenCalled();
   });
 
-  it("should return 400 when both external ID headers are missing", async () => {
+  it("should return 400 when no identity headers are provided", async () => {
     const res = await request(app)
       .get("/v1/me")
       .set("X-API-Key", ADMIN_KEY);
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toBe("Admin auth requires both x-external-org-id and x-external-user-id");
+    expect(res.body.error).toBe("Admin auth requires identity headers: x-org-id/x-user-id or x-external-org-id/x-external-user-id");
   });
 
   it("should return 401 when X-API-Key does not match admin key", async () => {
