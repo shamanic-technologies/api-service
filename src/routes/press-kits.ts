@@ -22,20 +22,6 @@ router.get("/press-kits/public/:token", async (req: Request, res: Response) => {
 
 // ── Authenticated routes (mounted at /v1) ────────────────────────────────────
 
-// GET /v1/press-kits/organizations/:orgId/share-token — get share token
-router.get("/press-kits/organizations/:orgId/share-token", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.pressKits,
-      `/organizations/${encodeURIComponent(req.params.orgId)}/share-token`,
-      { headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get share token" });
-  }
-});
-
 // GET /v1/press-kits/organizations/exists — batch check existence
 router.get("/press-kits/organizations/exists", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
