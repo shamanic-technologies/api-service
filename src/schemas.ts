@@ -1316,6 +1316,399 @@ registry.registerPath({
 });
 
 // ===================================================================
+// ARTICLES (airtik)
+// ===================================================================
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/articles",
+  tags: ["Articles"],
+  summary: "List articles with pagination",
+  security: authed,
+  request: {
+    query: z.object({
+      limit: z.coerce.number().int().optional(),
+      offset: z.coerce.number().int().optional(),
+    }),
+  },
+  responses: {
+    200: { description: "List of articles" },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/articles",
+  tags: ["Articles"],
+  summary: "Create or upsert an article by URL",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              articleUrl: z.string().url(),
+              snippet: z.string().optional(),
+              ogDescription: z.string().optional(),
+              twitterCreator: z.string().optional(),
+              newsKeywords: z.string().optional(),
+              articlePublished: z.string().optional(),
+              articleChannel: z.string().optional(),
+              twitterTitle: z.string().optional(),
+              articleSection: z.string().optional(),
+              author: z.string().optional(),
+              ogTitle: z.string().optional(),
+              articleAuthor: z.string().optional(),
+              twitterDescription: z.string().optional(),
+              articleModified: z.string().optional(),
+            })
+            .openapi("CreateArticleRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Article created or updated" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/articles/authors",
+  tags: ["Articles"],
+  summary: "Articles with computed authors",
+  security: authed,
+  request: {
+    query: z.object({
+      limit: z.coerce.number().int().optional(),
+      offset: z.coerce.number().int().optional(),
+    }),
+  },
+  responses: {
+    200: { description: "Articles with computed authors view" },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/articles/{id}",
+  tags: ["Articles"],
+  summary: "Get a single article by ID",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().uuid().openapi({ description: "Article ID" }),
+    }),
+  },
+  responses: {
+    200: { description: "Article found" },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Article not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/articles/bulk",
+  tags: ["Articles"],
+  summary: "Bulk upsert articles",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              articles: z.array(
+                z.object({
+                  articleUrl: z.string().url(),
+                  snippet: z.string().optional(),
+                  ogDescription: z.string().optional(),
+                  twitterCreator: z.string().optional(),
+                  newsKeywords: z.string().optional(),
+                  articlePublished: z.string().optional(),
+                  articleChannel: z.string().optional(),
+                  twitterTitle: z.string().optional(),
+                  articleSection: z.string().optional(),
+                  author: z.string().optional(),
+                  ogTitle: z.string().optional(),
+                  articleAuthor: z.string().optional(),
+                  twitterDescription: z.string().optional(),
+                  articleModified: z.string().optional(),
+                }),
+              ),
+            })
+            .openapi("BulkCreateArticlesRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Articles upserted" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/articles/search",
+  tags: ["Articles"],
+  summary: "Full-text search across article fields",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              query: z.string().min(1),
+              limit: z.number().int().optional(),
+              offset: z.number().int().optional(),
+            })
+            .openapi("SearchArticlesRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Search results" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+// ── Topics ──────────────────────────────────────────────────────────────────
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/topics",
+  tags: ["Articles"],
+  summary: "List all topics",
+  security: authed,
+  responses: {
+    200: { description: "List of topics" },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/topics",
+  tags: ["Articles"],
+  summary: "Create or upsert a topic by name",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              topicName: z.string().min(1),
+            })
+            .openapi("CreateTopicRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Topic created or updated" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/topics/bulk",
+  tags: ["Articles"],
+  summary: "Bulk upsert topics",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              topics: z.array(
+                z.object({
+                  topicName: z.string().min(1),
+                }),
+              ),
+            })
+            .openapi("BulkCreateTopicsRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Topics upserted" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+// ── Discoveries ─────────────────────────────────────────────────────────────
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/discoveries",
+  tags: ["Articles"],
+  summary: "List article discoveries with filters",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().optional(),
+      campaignId: z.string().uuid().optional(),
+      outletId: z.string().uuid().optional(),
+      journalistId: z.string().uuid().optional(),
+      topicId: z.string().uuid().optional(),
+      limit: z.coerce.number().int().optional(),
+      offset: z.coerce.number().int().optional(),
+    }),
+  },
+  responses: {
+    200: { description: "List of discoveries" },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/discoveries",
+  tags: ["Articles"],
+  summary: "Link an article to a campaign context",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              articleId: z.string().uuid(),
+              brandId: z.string().uuid(),
+              campaignId: z.string().uuid(),
+              outletId: z.string().uuid().optional(),
+              journalistId: z.string().uuid().optional(),
+              topicId: z.string().uuid().optional(),
+            })
+            .openapi("CreateDiscoveryRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Discovery created" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/discoveries/bulk",
+  tags: ["Articles"],
+  summary: "Bulk link articles to campaign contexts",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              discoveries: z.array(
+                z.object({
+                  articleId: z.string().uuid(),
+                  brandId: z.string().uuid(),
+                  campaignId: z.string().uuid(),
+                  outletId: z.string().uuid().optional(),
+                  journalistId: z.string().uuid().optional(),
+                  topicId: z.string().uuid().optional(),
+                }),
+              ),
+            })
+            .openapi("BulkCreateDiscoveriesRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Discoveries created" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+// ── Discovery workflows ─────────────────────────────────────────────────────
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/discover/outlet-articles",
+  tags: ["Articles"],
+  summary: "Discover recent articles from an outlet via Google News + scraping",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              outletDomain: z.string().min(1),
+              brandId: z.string().uuid(),
+              campaignId: z.string().uuid(),
+              maxArticles: z.number().int().optional(),
+            })
+            .openapi("DiscoverOutletArticlesRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Discovered articles" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/discover/journalist-publications",
+  tags: ["Articles"],
+  summary: "Discover recent publications by a journalist",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              journalistFirstName: z.string().min(1),
+              journalistLastName: z.string().min(1),
+              journalistId: z.string().uuid(),
+              brandId: z.string().uuid(),
+              campaignId: z.string().uuid(),
+              maxResults: z.number().int().optional(),
+            })
+            .openapi("DiscoverJournalistPublicationsRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Discovered publications" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+// ===================================================================
 // PROVIDER KEYS
 // ===================================================================
 
