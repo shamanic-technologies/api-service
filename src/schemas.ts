@@ -2329,31 +2329,6 @@ registry.registerPath({
 });
 
 registry.registerPath({
-  method: "delete",
-  path: "/v1/workflows/{id}",
-  tags: ["Workflows"],
-  summary: "Delete a workflow",
-  description: "Delete a workflow by ID.",
-  security: authed,
-  request: { params: WorkflowIdParam },
-  responses: {
-    200: {
-      description: "Workflow deleted",
-      content: {
-        "application/json": {
-          schema: z.object({
-            message: z.string().describe("Confirmation message"),
-          }).openapi("DeleteWorkflowResponse"),
-        },
-      },
-    },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Workflow not found", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
   method: "post",
   path: "/v1/workflows/{id}/execute",
   tags: ["Workflows"],
@@ -2431,26 +2406,6 @@ registry.registerPath({
     200: {
       description: "Workflow run details",
       content: { "application/json": { schema: z.object({}).passthrough().openapi("GetWorkflowRunResponse") } },
-    },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Run not found", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/workflow-runs/{id}/debug",
-  tags: ["Workflow Runs"],
-  summary: "Debug a workflow run",
-  description:
-    "Returns per-step execution details including resolved inputs and outputs for each module. Use this to diagnose runtime issues.",
-  security: authed,
-  request: { params: WorkflowRunIdParam },
-  responses: {
-    200: {
-      description: "Debug details",
-      content: { "application/json": { schema: z.object({}).passthrough().openapi("DebugWorkflowRunResponse") } },
     },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Run not found", content: errorContent },
