@@ -1036,7 +1036,8 @@ registry.registerPath({
   path: "/v1/outlets/discover",
   tags: ["Outlets"],
   summary: "Discover relevant outlets via Google search + LLM scoring",
-  description: "Generates search queries via LLM, searches Google, scores results, and bulk upserts discovered outlets. Brand context (industry, audience, etc.) is resolved from brand-service by the downstream service.",
+  description: "Generates search queries via LLM, searches Google, scores results, and bulk upserts discovered outlets. " +
+    "Brand and campaign context are resolved via x-brand-id and x-campaign-id headers.",
   security: authed,
   request: {
     body: {
@@ -1044,8 +1045,6 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              campaignId: z.string().uuid(),
-              brandId: z.string().uuid(),
               workflowName: z.string().optional(),
             })
             .openapi("DiscoverOutletsRequest"),
@@ -1158,8 +1157,6 @@ registry.registerPath({
           schema: z
             .object({
               outletId: z.string().uuid(),
-              brandId: z.string().uuid(),
-              campaignId: z.string().uuid(),
               maxArticles: z.number().int().min(1).max(30).optional().default(15),
             })
             .openapi("DiscoverJournalistsRequest"),
