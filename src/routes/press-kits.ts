@@ -202,48 +202,6 @@ router.post("/press-kits/internal/media-kits/generation-result", authenticate, r
   }
 });
 
-// GET /v1/press-kits/internal/media-kits/stale — orgs with stale kits
-router.get("/press-kits/internal/media-kits/stale", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.pressKits,
-      "/internal/media-kits/stale",
-      { headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get stale kits" });
-  }
-});
-
-// GET /v1/press-kits/internal/media-kits/setup — setup status for all orgs
-router.get("/press-kits/internal/media-kits/setup", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.pressKits,
-      "/internal/media-kits/setup",
-      { headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get setup status" });
-  }
-});
-
-// GET /v1/press-kits/internal/health/bulk — bulk health per org
-router.get("/press-kits/internal/health/bulk", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.pressKits,
-      "/internal/health/bulk",
-      { headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get bulk health" });
-  }
-});
-
 // GET /v1/press-kits/internal/email-data/:orgId — email template data
 router.get("/press-kits/internal/email-data/:orgId", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
