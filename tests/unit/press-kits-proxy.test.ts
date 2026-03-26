@@ -37,9 +37,11 @@ describe("Press Kits proxy routes", () => {
 
   // ── Authenticated endpoints ─────────────────────────────────────────────
 
-  it("should have POST /press-kits/organizations with auth", () => {
-    expect(content).toContain('"/press-kits/organizations"');
-    expect(content).toContain("router.post");
+  it("should NOT have POST /press-kits/organizations (removed upstream, auto-created by POST /media-kits)", () => {
+    const postOrgLine = content.split("\n").find((l) =>
+      l.includes("router.post") && l.includes('"/press-kits/organizations"')
+    );
+    expect(postOrgLine).toBeUndefined();
   });
 
   it("should have GET /press-kits/organizations/:orgId/share-token with auth", () => {
@@ -132,15 +134,15 @@ describe("Press Kits proxy routes", () => {
   it("should use authenticate and requireOrg on all authenticated endpoints", () => {
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    // 19 authenticated routes + 1 import = 20
-    expect(authMatches!.length).toBe(20);
+    // 18 authenticated routes + 1 import = 19
+    expect(authMatches!.length).toBe(19);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(19);
+    expect(headerMatches!.length).toBe(18);
   });
 
   it("should proxy to externalServices.pressKits", () => {
@@ -194,7 +196,7 @@ describe("Press Kits OpenAPI schemas", () => {
   });
 
   it("should register REST authenticated paths", () => {
-    expect(schemaContent).toContain('path: "/v1/press-kits/organizations"');
+    expect(schemaContent).not.toContain('path: "/v1/press-kits/organizations"');
     expect(schemaContent).toContain('path: "/v1/press-kits/organizations/{orgId}/share-token"');
     expect(schemaContent).toContain('path: "/v1/press-kits/organizations/exists"');
     expect(schemaContent).toContain('path: "/v1/press-kits/media-kits"');
