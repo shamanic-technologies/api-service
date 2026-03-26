@@ -1605,40 +1605,13 @@
             "type": "string",
             "format": "uuid"
           },
-          "brandName": {
-            "type": "string",
-            "minLength": 1
-          },
-          "brandDescription": {
-            "type": "string",
-            "minLength": 1
-          },
-          "industry": {
-            "type": "string",
-            "minLength": 1
-          },
-          "targetGeo": {
-            "type": "string"
-          },
-          "targetAudience": {
-            "type": "string"
-          },
-          "angles": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
           "workflowName": {
             "type": "string"
           }
         },
         "required": [
           "campaignId",
-          "brandId",
-          "brandName",
-          "brandDescription",
-          "industry"
+          "brandId"
         ]
       },
       "UpdateOutletRequest": {
@@ -1788,13 +1761,6 @@
           "campaignId": {
             "type": "string",
             "format": "uuid"
-          },
-          "featureInputs": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            },
-            "default": {}
           },
           "maxArticles": {
             "type": "integer",
@@ -8544,7 +8510,7 @@
           "Outlets"
         ],
         "summary": "Discover relevant outlets via Google search + LLM scoring",
-        "description": "Takes a brand brief, generates search queries via LLM, searches Google, scores results, and bulk upserts discovered outlets.",
+        "description": "Generates search queries via LLM, searches Google, scores results, and bulk upserts discovered outlets. Brand context (industry, audience, etc.) is resolved from brand-service by the downstream service.",
         "security": [
           {
             "bearerAuth": []
