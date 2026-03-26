@@ -1597,22 +1597,10 @@
       "DiscoverOutletsRequest": {
         "type": "object",
         "properties": {
-          "campaignId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "brandId": {
-            "type": "string",
-            "format": "uuid"
-          },
           "workflowName": {
             "type": "string"
           }
-        },
-        "required": [
-          "campaignId",
-          "brandId"
-        ]
+        }
       },
       "UpdateOutletRequest": {
         "type": "object",
@@ -1754,14 +1742,6 @@
             "type": "string",
             "format": "uuid"
           },
-          "brandId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "campaignId": {
-            "type": "string",
-            "format": "uuid"
-          },
           "maxArticles": {
             "type": "integer",
             "minimum": 1,
@@ -1770,9 +1750,7 @@
           }
         },
         "required": [
-          "outletId",
-          "brandId",
-          "campaignId"
+          "outletId"
         ]
       },
       "DiscoverEmailsResponse": {
@@ -8510,7 +8488,7 @@
           "Outlets"
         ],
         "summary": "Discover relevant outlets via Google search + LLM scoring",
-        "description": "Generates search queries via LLM, searches Google, scores results, and bulk upserts discovered outlets. Brand context (industry, audience, etc.) is resolved from brand-service by the downstream service.",
+        "description": "Generates search queries via LLM, searches Google, scores results, and bulk upserts discovered outlets. Brand and campaign context are resolved via x-brand-id and x-campaign-id headers.",
         "security": [
           {
             "bearerAuth": []
