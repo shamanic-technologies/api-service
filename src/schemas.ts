@@ -3066,6 +3066,7 @@ const DAGNodeSchema = z
     type: z.string().describe("Node type (e.g. 'http.call', 'condition', 'wait', 'for-each', 'script')"),
     config: z.record(z.unknown()).optional().describe("Node-specific configuration"),
     inputMapping: z.record(z.unknown()).optional().describe("Maps input variables to this node"),
+    retries: z.number().int().min(0).optional().describe("Number of retry attempts on failure. Defaults to 3 if omitted. Set to 0 for non-idempotent operations."),
   })
   .openapi("DAGNode");
 
@@ -3073,6 +3074,7 @@ const DAGEdgeSchema = z
   .object({
     from: z.string().describe("Source node ID"),
     to: z.string().describe("Target node ID"),
+    condition: z.string().optional().describe("JavaScript expression for conditional branching. Only used when source node is type 'condition'. Edges WITH condition: target node only executes when the condition is true. Edges WITHOUT condition from a condition node: target always executes after the branch."),
   })
   .openapi("DAGEdge");
 

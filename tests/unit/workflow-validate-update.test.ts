@@ -118,4 +118,65 @@ describe("Workflow validate & update schemas", () => {
   it("should export UpdateWorkflowRequestSchema", () => {
     expect(content).toContain("export const UpdateWorkflowRequestSchema");
   });
+
+  it("should include condition field in DAGEdge schema", () => {
+    expect(content).toContain('"DAGEdge"');
+    // Find the DAGEdge schema block and verify it has condition
+    const edgeStart = content.indexOf("const DAGEdgeSchema");
+    const edgeEnd = content.indexOf(".openapi(", edgeStart);
+    const block = content.slice(edgeStart, edgeEnd);
+    expect(block).toContain("condition");
+  });
+
+  it("should include retries field in DAGNode schema", () => {
+    const nodeStart = content.indexOf("const DAGNodeSchema");
+    const nodeEnd = content.indexOf(".openapi(", nodeStart);
+    const block = content.slice(nodeStart, nodeEnd);
+    expect(block).toContain("retries");
+  });
+});
+
+describe("UpdateWorkflowRequestSchema preserves edge conditions and node retries", () => {
+  it("should not strip condition from edges during parse", async () => {
+    const { UpdateWorkflowRequestSchema } = await import("../../src/schemas.js");
+    const input = {
+      name: "test-workflow",
+      dag: {
+        nodes: [
+          { id: "step-1", type: "condition" },
+          { id: "step-2", type: "http.call" },
+          { id: "step-3", type: "http.call" },
+        ],
+        edges: [
+          { from: "step-1", to: "step-2", condition: 'results.step_1.found == true' },
+          { from: "step-1", to: "step-3" },
+        ],
+      },
+    };
+    const result = UpdateWorkflowRequestSchema.safeParse(input);
+    expect(result.success).toBe(true);
+    const edges = result.data!.dag!.edges;
+    expect(edges[0].condition).toBe('results.step_1.found == true');
+    expect(edges[1].condition).toBeUndefined();
+  });
+
+  it("should not strip retries from nodes during parse", async () => {
+    const { UpdateWorkflowRequestSchema } = await import("../../src/schemas.js");
+    const input = {
+      dag: {
+        nodes: [
+          { id: "send-email", type: "http.call", retries: 0 },
+          { id: "fetch-data", type: "http.call", retries: 5 },
+          { id: "default-retries", type: "http.call" },
+        ],
+        edges: [{ from: "send-email", to: "fetch-data" }],
+      },
+    };
+    const result = UpdateWorkflowRequestSchema.safeParse(input);
+    expect(result.success).toBe(true);
+    const nodes = result.data!.dag!.nodes;
+    expect(nodes[0].retries).toBe(0);
+    expect(nodes[1].retries).toBe(5);
+    expect(nodes[2].retries).toBeUndefined();
+  });
 });
