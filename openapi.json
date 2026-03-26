@@ -166,6 +166,10 @@
             "type": "string",
             "description": "Audience type (e.g. 'cold-outreach')"
           },
+          "featureSlug": {
+            "type": "string",
+            "description": "Feature slug this workflow belongs to (e.g. 'pr-cold-email-outreach')"
+          },
           "signature": {
             "type": "string",
             "description": "SHA-256 hash of the canonical DAG"
@@ -173,11 +177,6 @@
           "signatureName": {
             "type": "string",
             "description": "Human-readable name for this DAG variant"
-          },
-          "featureSlug": {
-            "type": "string",
-            "nullable": true,
-            "description": "Feature slug this workflow belongs to"
           }
         },
         "required": [
@@ -185,9 +184,7 @@
           "name",
           "displayName",
           "createdForBrandId",
-          "category",
-          "channel",
-          "audienceType",
+          "featureSlug",
           "signature",
           "signatureName"
         ]
@@ -2610,17 +2607,9 @@
                 "type": "string",
                 "description": "Auto-generated workflow name"
               },
-              "category": {
+              "featureSlug": {
                 "type": "string",
-                "description": "Workflow category"
-              },
-              "channel": {
-                "type": "string",
-                "description": "Communication channel"
-              },
-              "audienceType": {
-                "type": "string",
-                "description": "Audience type"
+                "description": "Feature slug this workflow belongs to"
               },
               "signature": {
                 "type": "string",
@@ -2652,9 +2641,7 @@
             "required": [
               "id",
               "name",
-              "category",
-              "channel",
-              "audienceType",
+              "featureSlug",
               "signature",
               "signatureName",
               "action",
@@ -5099,7 +5086,7 @@
           "Workflows"
         ],
         "summary": "Ranked workflows (public)",
-        "description": "Public ranked workflows by performance. Supports groupBy=section and groupBy=brand. No authentication required.",
+        "description": "Public ranked workflows by performance. Supports groupBy=feature and groupBy=brand. No authentication required.",
         "parameters": [
           {
             "schema": {
@@ -5154,10 +5141,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "'section' to group by category-channel-audienceType, 'brand' to group by brand"
+              "description": "'feature' to group by featureSlug, 'brand' to group by brand"
             },
             "required": false,
-            "description": "'section' to group by category-channel-audienceType, 'brand' to group by brand",
+            "description": "'feature' to group by featureSlug, 'brand' to group by brand",
             "name": "groupBy",
             "in": "query"
           },
@@ -5255,7 +5242,7 @@
           "Workflows"
         ],
         "summary": "Ranked workflows",
-        "description": "Workflows ranked by performance, scoped to the authenticated org. Supports groupBy=section and groupBy=brand.",
+        "description": "Workflows ranked by performance, scoped to the authenticated org. Supports groupBy=feature and groupBy=brand.",
         "security": [
           {
             "bearerAuth": []
@@ -5315,10 +5302,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "'section' to group by category-channel-audienceType, 'brand' to group by brand"
+              "description": "'feature' to group by featureSlug, 'brand' to group by brand"
             },
             "required": false,
-            "description": "'section' to group by category-channel-audienceType, 'brand' to group by brand",
+            "description": "'feature' to group by featureSlug, 'brand' to group by brand",
             "name": "groupBy",
             "in": "query"
           },

@@ -138,7 +138,7 @@ const rankedQueryParams = z.object({
   audienceType: z.string().optional().describe("Filter by audience type (e.g. 'cold-outreach')"),
   objective: z.string().optional().describe("Optimization objective ('replies' or 'clicks')"),
   limit: z.string().optional().describe("Max results (default 10, max 100)"),
-  groupBy: z.string().optional().describe("'section' to group by category-channel-audienceType, 'brand' to group by brand"),
+  groupBy: z.string().optional().describe("'feature' to group by featureSlug, 'brand' to group by brand"),
   brandId: z.string().optional().describe("Filter by brand ID"),
   featureSlug: z.string().optional().describe("Filter by feature slug (e.g. 'pr-cold-email-outreach')"),
 });
@@ -168,12 +168,12 @@ const WorkflowMetadataSchema = z
     name: z.string().describe("Workflow name"),
     displayName: z.string().nullable().describe("Stable display name for the workflow family"),
     createdForBrandId: z.string().nullable().describe("Brand ID that created this workflow"),
-    category: z.string().describe("Workflow category (e.g. 'sales', 'pr')"),
-    channel: z.string().describe("Communication channel (e.g. 'email')"),
-    audienceType: z.string().describe("Audience type (e.g. 'cold-outreach')"),
+    category: z.string().optional().describe("Workflow category (e.g. 'sales', 'pr')"),
+    channel: z.string().optional().describe("Communication channel (e.g. 'email')"),
+    audienceType: z.string().optional().describe("Audience type (e.g. 'cold-outreach')"),
+    featureSlug: z.string().describe("Feature slug this workflow belongs to (e.g. 'pr-cold-email-outreach')"),
     signature: z.string().describe("SHA-256 hash of the canonical DAG"),
     signatureName: z.string().describe("Human-readable name for this DAG variant"),
-    featureSlug: z.string().nullable().optional().describe("Feature slug this workflow belongs to"),
   })
   .openapi("WorkflowMetadata");
 
@@ -267,7 +267,7 @@ registry.registerPath({
   path: "/v1/public/workflows/ranked",
   tags: ["Workflows"],
   summary: "Ranked workflows (public)",
-  description: "Public ranked workflows by performance. Supports groupBy=section and groupBy=brand. No authentication required.",
+  description: "Public ranked workflows by performance. Supports groupBy=feature and groupBy=brand. No authentication required.",
   request: { query: rankedQueryParams },
   responses: publicRankedResponse,
 });
@@ -288,7 +288,7 @@ registry.registerPath({
   path: "/v1/workflows/ranked",
   tags: ["Workflows"],
   summary: "Ranked workflows",
-  description: "Workflows ranked by performance, scoped to the authenticated org. Supports groupBy=section and groupBy=brand.",
+  description: "Workflows ranked by performance, scoped to the authenticated org. Supports groupBy=feature and groupBy=brand.",
   security: authed,
   request: { query: rankedQueryParams },
   responses: { ...rankedResponse, 401: { description: "Unauthorized", content: errorContent } },
@@ -1872,9 +1872,7 @@ registry.registerPath({
               workflow: z.object({
                 id: z.string().describe("Workflow ID"),
                 name: z.string().describe("Auto-generated workflow name"),
-                category: z.string().describe("Workflow category"),
-                channel: z.string().describe("Communication channel"),
-                audienceType: z.string().describe("Audience type"),
+                featureSlug: z.string().describe("Feature slug this workflow belongs to"),
                 signature: z.string().describe("SHA-256 hash of the canonical DAG"),
                 signatureName: z.string().describe("Human-readable name for this DAG variant"),
                 action: z.enum(["created", "updated"]).describe("Whether the workflow was created or updated"),
