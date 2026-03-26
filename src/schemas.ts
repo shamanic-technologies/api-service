@@ -2320,7 +2320,6 @@ const ExtractFieldRequestSchema = z.object({
 }).openapi("ExtractFieldRequest");
 
 const ExtractFieldResultSchema = z.object({
-  key: z.string().describe("Field key"),
   value: z.union([
     z.string(),
     z.array(z.unknown()),
@@ -2473,7 +2472,7 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             brandId: z.string().describe("Brand ID"),
-            results: z.array(ExtractFieldResultSchema).describe("Extraction results"),
+            results: z.record(z.string(), ExtractFieldResultSchema).describe("Extraction results keyed by field name (e.g. results.biography.value)"),
           }).openapi("ExtractFieldsResponse"),
         },
       },
