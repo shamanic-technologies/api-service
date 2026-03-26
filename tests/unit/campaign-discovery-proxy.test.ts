@@ -68,12 +68,18 @@ describe("Campaign discovery proxy: journalists", () => {
     expect(journalistsSection).toContain("requireUser");
   });
 
-  it("should proxy to journalist-service with campaignId query param", () => {
+  it("should NOT proxy to stale /campaign-outlet-journalists endpoint (removed upstream)", () => {
+    expect(content).not.toContain("/campaign-outlet-journalists");
+  });
+
+  it("should fetch outlets from outlet-service then resolve journalists", () => {
     const journalistsSection = content.slice(
       content.indexOf('"/campaigns/:id/journalists"'),
     );
+    expect(journalistsSection).toContain("externalServices.outlet");
+    expect(journalistsSection).toContain("/internal/outlets/by-campaign/");
     expect(journalistsSection).toContain("externalServices.journalist");
-    expect(journalistsSection).toContain("/campaign-outlet-journalists?campaign_id=");
+    expect(journalistsSection).toContain("/journalists/resolve");
   });
 
   it("should forward internal headers", () => {
@@ -81,16 +87,6 @@ describe("Campaign discovery proxy: journalists", () => {
       content.indexOf('"/campaigns/:id/journalists"'),
     );
     expect(journalistsSection).toContain("buildInternalHeaders(req)");
-  });
-
-  it("should be a read-only GET (no method override)", () => {
-    const journalistsSection = content.slice(
-      content.indexOf('"/campaigns/:id/journalists"'),
-    );
-    expect(journalistsSection).not.toContain('method: "POST"');
-    expect(journalistsSection).not.toContain('method: "PUT"');
-    expect(journalistsSection).not.toContain('method: "PATCH"');
-    expect(journalistsSection).not.toContain('method: "DELETE"');
   });
 });
 
@@ -125,12 +121,11 @@ describe("OpenAPI schemas: campaign discovery endpoints", () => {
     expect(schemaContent).toContain("whyRelevant");
   });
 
-  it("should define CampaignJournalistsResponse schema with junction table fields", () => {
+  it("should define CampaignJournalistsResponse schema with resolved journalist fields", () => {
     expect(schemaContent).toContain("CampaignJournalistsResponse");
-    expect(schemaContent).toContain("campaignOutletJournalists");
-    expect(schemaContent).toContain("journalistId");
-    expect(schemaContent).toContain("outletId");
     expect(schemaContent).toContain("journalistName");
     expect(schemaContent).toContain("entityType");
+    expect(schemaContent).toContain("relevanceScore");
+    expect(schemaContent).toContain("articleUrls");
   });
 });

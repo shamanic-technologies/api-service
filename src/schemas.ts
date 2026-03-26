@@ -843,7 +843,7 @@ registry.registerPath({
   tags: ["Campaigns"],
   summary: "Get campaign journalists",
   description:
-    "Get discovered journalists for a campaign (proxied from journalist-service)",
+    "Get discovered journalists for a campaign. Resolves journalists for each outlet via journalist-service.",
   security: authed,
   request: { params: CampaignIdParam },
   responses: {
@@ -853,20 +853,18 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              campaignOutletJournalists: z.array(
+              journalists: z.array(
                 z.object({
-                  campaignId: z.string(),
-                  outletId: z.string(),
-                  journalistId: z.string(),
-                  whyRelevant: z.string().nullable(),
-                  whyNotRelevant: z.string().nullable(),
-                  relevanceScore: z.number().nullable(),
-                  createdAt: z.string().nullable(),
-                  updatedAt: z.string().nullable(),
-                  journalistName: z.string().nullable().describe("From press_journalists JOIN — available once journalist-service adds the JOIN"),
-                  firstName: z.string().nullable().describe("From press_journalists JOIN"),
-                  lastName: z.string().nullable().describe("From press_journalists JOIN"),
-                  entityType: z.string().nullable().describe("From press_journalists JOIN"),
+                  id: z.string().uuid(),
+                  outletId: z.string().uuid(),
+                  journalistName: z.string(),
+                  firstName: z.string(),
+                  lastName: z.string(),
+                  entityType: z.enum(["individual", "organization"]),
+                  relevanceScore: z.number().min(0).max(100),
+                  whyRelevant: z.string(),
+                  whyNotRelevant: z.string(),
+                  articleUrls: z.array(z.string()),
                 }),
               ),
             })
@@ -876,6 +874,444 @@ registry.registerPath({
     },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ===================================================================
+// OUTLETS
+// ===================================================================
+
+const OutletIdParam = z.object({
+  id: z.string().uuid().openapi({ description: "Outlet ID" }),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/outlets",
+  tags: ["Outlets"],
+  summary: "List outlets with filters",
+  security: authed,
+  request: {
+    query: z.object({
+      campaignId: z.string().uuid().optional(),
+      brandId: z.string().uuid().optional(),
+      status: z.enum(["open", "ended", "denied"]).optional(),
+      limit: z.coerce.number().int().optional().default(100),
+      offset: z.coerce.number().int().optional().default(0),
+    }),
+  },
+  responses: {
+    200: { description: "List of outlets" },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/outlets",
+  tags: ["Outlets"],
+  summary: "Create outlet (upsert by outlet_url)",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              outletName: z.string().min(1),
+              outletUrl: z.string().url(),
+              outletDomain: z.string().min(1),
+              campaignId: z.string().uuid(),
+              brandId: z.string().uuid(),
+              whyRelevant: z.string(),
+              whyNotRelevant: z.string(),
+              relevanceScore: z.number().min(0).max(100),
+              overallRelevance: z.string().optional(),
+              relevanceRationale: z.string().optional(),
+              status: z.enum(["open", "ended", "denied"]).optional().default("open"),
+              workflowName: z.string().optional(),
+            })
+            .openapi("CreateOutletRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    201: { description: "Outlet created" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/outlets/stats",
+  tags: ["Outlets"],
+  summary: "Aggregated outlet discovery metrics",
+  description: "Returns outlet discovery stats. Supports filtering by brandId, campaignId, workflowName and optional groupBy.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().optional(),
+      campaignId: z.string().uuid().optional(),
+      workflowName: z.string().optional(),
+      groupBy: z.enum(["workflowName", "brandId", "campaignId"]).optional(),
+    }),
+  },
+  responses: {
+    200: { description: "Stats (flat or grouped)" },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/outlets/bulk",
+  tags: ["Outlets"],
+  summary: "Bulk upsert outlets",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              outlets: z.array(
+                z.object({
+                  outletName: z.string().min(1),
+                  outletUrl: z.string().url(),
+                  outletDomain: z.string().min(1),
+                  campaignId: z.string().uuid(),
+                  brandId: z.string().uuid(),
+                  whyRelevant: z.string(),
+                  whyNotRelevant: z.string(),
+                  relevanceScore: z.number().min(0).max(100),
+                  overallRelevance: z.string().optional(),
+                  relevanceRationale: z.string().optional(),
+                  status: z.enum(["open", "ended", "denied"]).optional().default("open"),
+                  workflowName: z.string().optional(),
+                }),
+              ),
+            })
+            .openapi("BulkCreateOutletsRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    201: { description: "Outlets created" },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/outlets/search",
+  tags: ["Outlets"],
+  summary: "Search outlets by name/url",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              query: z.string().min(1),
+              campaignId: z.string().uuid().optional(),
+              limit: z.number().int().min(0).max(100).optional().default(20),
+            })
+            .openapi("SearchOutletsRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Search results" },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/outlets/discover",
+  tags: ["Outlets"],
+  summary: "Discover relevant outlets via Google search + LLM scoring",
+  description: "Takes a brand brief, generates search queries via LLM, searches Google, scores results, and bulk upserts discovered outlets.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              campaignId: z.string().uuid(),
+              brandId: z.string().uuid(),
+              brandName: z.string().min(1),
+              brandDescription: z.string().min(1),
+              industry: z.string().min(1),
+              targetGeo: z.string().optional(),
+              targetAudience: z.string().optional(),
+              angles: z.array(z.string()).optional(),
+              workflowName: z.string().optional(),
+            })
+            .openapi("DiscoverOutletsRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    201: { description: "Outlets discovered and saved" },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/outlets/{id}",
+  tags: ["Outlets"],
+  summary: "Get outlet by ID",
+  security: authed,
+  request: { params: OutletIdParam },
+  responses: {
+    200: { description: "Outlet found" },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Outlet not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/outlets/{id}",
+  tags: ["Outlets"],
+  summary: "Update outlet",
+  security: authed,
+  request: {
+    params: OutletIdParam,
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              outletName: z.string().min(1).optional(),
+              outletUrl: z.string().url().optional(),
+              outletDomain: z.string().min(1).optional(),
+              whyRelevant: z.string().optional(),
+              whyNotRelevant: z.string().optional(),
+              relevanceScore: z.number().min(0).max(100).optional(),
+              overallRelevance: z.string().optional(),
+              relevanceRationale: z.string().optional(),
+            })
+            .openapi("UpdateOutletRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Outlet updated" },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Outlet not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/outlets/{id}/status",
+  tags: ["Outlets"],
+  summary: "Update outlet status",
+  security: authed,
+  request: {
+    params: OutletIdParam,
+    query: z.object({
+      campaignId: z.string().uuid().describe("Campaign ID (required)"),
+    }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              status: z.enum(["open", "ended", "denied"]),
+              reason: z.string().optional(),
+            })
+            .openapi("UpdateOutletStatusRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Status updated" },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Not found", content: errorContent },
+  },
+});
+
+// ===================================================================
+// JOURNALISTS
+// ===================================================================
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/journalists/discover",
+  tags: ["Journalists"],
+  summary: "Discover relevant journalists for a brand on an outlet",
+  description: "Searches outlet articles, extracts journalist names via LLM, scores them for relevance, and stores results.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              outletId: z.string().uuid(),
+              brandId: z.string().uuid(),
+              campaignId: z.string().uuid(),
+              featureInputs: z.record(z.string()).optional().default({}),
+              maxArticles: z.number().int().min(1).max(30).optional().default(15),
+            })
+            .openapi("DiscoverJournalistsRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Discovered journalists with relevance scores",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              journalists: z.array(
+                z.object({
+                  id: z.string().uuid(),
+                  journalistName: z.string(),
+                  firstName: z.string(),
+                  lastName: z.string(),
+                  entityType: z.enum(["individual", "organization"]),
+                  relevanceScore: z.number().min(0).max(100),
+                  whyRelevant: z.string(),
+                  whyNotRelevant: z.string(),
+                  articleUrls: z.array(z.string()),
+                  isNew: z.boolean(),
+                }),
+              ),
+              totalArticlesSearched: z.number(),
+              totalNamesExtracted: z.number(),
+              totalJournalistsStored: z.number(),
+            })
+            .openapi("DiscoverJournalistsResponse"),
+        },
+      },
+    },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/journalists/discover-emails",
+  tags: ["Journalists"],
+  summary: "Discover journalist emails via Apollo person match",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              outletId: z.string().uuid(),
+              organizationDomain: z.string().min(1),
+              journalistIds: z.array(z.string().uuid()).optional(),
+              brandId: z.string().uuid(),
+              campaignId: z.string().uuid(),
+            })
+            .openapi("DiscoverEmailsRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Discovery results",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              discovered: z.number(),
+              total: z.number(),
+              skipped: z.number(),
+              results: z.array(
+                z.object({
+                  journalistId: z.string().uuid(),
+                  email: z.string().nullable(),
+                  emailStatus: z.string().nullable(),
+                  cached: z.boolean(),
+                  enrichmentId: z.string(),
+                }),
+              ),
+            })
+            .openapi("DiscoverEmailsResponse"),
+        },
+      },
+    },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/journalists/resolve",
+  tags: ["Journalists"],
+  summary: "Resolve journalists for a campaign+outlet",
+  description: "Discovers journalists if needed, scores them, and returns results sorted by relevance.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              outletId: z.string().uuid(),
+              featureInputs: z.record(z.string()).optional().default({}),
+              maxArticles: z.number().int().min(1).max(30).optional().default(15),
+            })
+            .openapi("ResolveJournalistsRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Resolved journalists sorted by relevance score",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              journalists: z.array(
+                z.object({
+                  id: z.string().uuid(),
+                  journalistName: z.string(),
+                  firstName: z.string(),
+                  lastName: z.string(),
+                  entityType: z.enum(["individual", "organization"]),
+                  relevanceScore: z.number().min(0).max(100),
+                  whyRelevant: z.string(),
+                  whyNotRelevant: z.string(),
+                  articleUrls: z.array(z.string()),
+                }),
+              ),
+              cached: z.boolean(),
+            })
+            .openapi("ResolveJournalistsResponse"),
+        },
+      },
+    },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
   },
 });
 

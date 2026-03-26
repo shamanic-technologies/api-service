@@ -784,19 +784,46 @@ router.get("/campaigns/:id/outlets", authenticate, requireOrg, requireUser, asyn
 /**
  * GET /v1/campaigns/:id/journalists
  * Get discovered journalists for a campaign (proxy to journalist-service)
+ * Uses POST /journalists/resolve with the campaign's outlet data.
  */
 router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
 
-    const result = await callExternalService(
-      externalServices.journalist,
-      `/campaign-outlet-journalists?campaign_id=${encodeURIComponent(id)}`,
-      {
-        headers: buildInternalHeaders(req),
-      }
+    // First get the campaign's outlets, then resolve journalists for each
+    const outletsResult = await callExternalService<{ outlets: Array<{ id: string }> }>(
+      externalServices.outlet,
+      `/internal/outlets/by-campaign/${encodeURIComponent(id)}`,
+      { headers: buildInternalHeaders(req) }
     );
-    res.json(result);
+
+    const outlets = outletsResult.outlets || [];
+    if (outlets.length === 0) {
+      return res.json({ journalists: [] });
+    }
+
+    // Batch lookup journalists by outlet IDs via internal endpoint
+    const outletIds = outlets.map((o) => o.id);
+    const journalistResults = await Promise.all(
+      outletIds.map((outletId) =>
+        callExternalService<{ journalists: Array<Record<string, unknown>>; cached: boolean }>(
+          externalServices.journalist,
+          "/journalists/resolve",
+          {
+            method: "POST",
+            body: { outletId },
+            headers: buildInternalHeaders(req),
+          }
+        ).catch(() => ({ journalists: [], cached: false }))
+      )
+    );
+
+    // Flatten all journalists with their outlet context
+    const allJournalists = journalistResults.flatMap((r, idx) =>
+      r.journalists.map((j) => ({ ...j, outletId: outletIds[idx] }))
+    );
+
+    res.json({ journalists: allJournalists });
   } catch (error: any) {
     console.error("Get campaign journalists error:", error);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get campaign journalists" });
