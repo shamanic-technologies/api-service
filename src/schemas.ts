@@ -3928,19 +3928,6 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/press-kits/organizations/{orgId}/share-token",
-  tags: ["Press Kits"],
-  summary: "Get organization share token",
-  security: authed,
-  responses: {
-    200: { description: "Share token", content: { "application/json": { schema: z.object({ shareToken: z.string().uuid() }).openapi("PressKitShareTokenResponse") } } },
-    404: { description: "Not found", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/v1/press-kits/organizations/exists",
   tags: ["Press Kits"],
   summary: "Batch check organization existence",

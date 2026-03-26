@@ -44,8 +44,8 @@ describe("Press Kits proxy routes", () => {
     expect(postOrgLine).toBeUndefined();
   });
 
-  it("should have GET /press-kits/organizations/:orgId/share-token with auth", () => {
-    expect(content).toContain('"/press-kits/organizations/:orgId/share-token"');
+  it("should NOT have GET /press-kits/organizations/:orgId/share-token (removed upstream)", () => {
+    expect(content).not.toContain('"/press-kits/organizations/:orgId/share-token"');
   });
 
   it("should have GET /press-kits/organizations/exists with auth", () => {
@@ -134,15 +134,15 @@ describe("Press Kits proxy routes", () => {
   it("should use authenticate and requireOrg on all authenticated endpoints", () => {
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    // 18 authenticated routes + 1 import = 19
-    expect(authMatches!.length).toBe(19);
+    // 17 authenticated routes + 1 import = 18
+    expect(authMatches!.length).toBe(18);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(18);
+    expect(headerMatches!.length).toBe(17);
   });
 
   it("should proxy to externalServices.pressKits", () => {
@@ -197,7 +197,7 @@ describe("Press Kits OpenAPI schemas", () => {
 
   it("should register REST authenticated paths", () => {
     expect(schemaContent).not.toContain('path: "/v1/press-kits/organizations"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/organizations/{orgId}/share-token"');
+    expect(schemaContent).not.toContain('path: "/v1/press-kits/organizations/{orgId}/share-token"');
     expect(schemaContent).toContain('path: "/v1/press-kits/organizations/exists"');
     expect(schemaContent).toContain('path: "/v1/press-kits/media-kits"');
     expect(schemaContent).toContain('path: "/v1/press-kits/media-kits/{id}"');
