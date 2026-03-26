@@ -4118,42 +4118,6 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/press-kits/internal/media-kits/stale",
-  tags: ["Internal"],
-  summary: "Get orgs with stale press kits (internal)",
-  security: authed,
-  responses: {
-    200: { description: "Stale kits list", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitStaleKitsResponse") } } },
-    401: { description: "Unauthorized", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/press-kits/internal/media-kits/setup",
-  tags: ["Internal"],
-  summary: "Get media kit setup status (internal)",
-  security: authed,
-  responses: {
-    200: { description: "Setup status", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitSetupStatusResponse") } } },
-    401: { description: "Unauthorized", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/press-kits/internal/health/bulk",
-  tags: ["Internal"],
-  summary: "Bulk health check per org (internal)",
-  security: authed,
-  responses: {
-    200: { description: "Bulk health", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitHealthBulkResponse") } } },
-    401: { description: "Unauthorized", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/v1/press-kits/internal/email-data/{orgId}",
   tags: ["Internal"],
   summary: "Get press kit data for email templates (internal)",

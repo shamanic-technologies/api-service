@@ -118,16 +118,16 @@ describe("Press Kits proxy routes", () => {
     expect(content).toContain('"/press-kits/internal/media-kits/generation-result"');
   });
 
-  it("should have GET /press-kits/internal/media-kits/stale with auth", () => {
-    expect(content).toContain('"/press-kits/internal/media-kits/stale"');
+  it("should NOT have GET /press-kits/internal/media-kits/stale (removed upstream)", () => {
+    expect(content).not.toContain('"/press-kits/internal/media-kits/stale"');
   });
 
-  it("should have GET /press-kits/internal/media-kits/setup with auth", () => {
-    expect(content).toContain('"/press-kits/internal/media-kits/setup"');
+  it("should NOT have GET /press-kits/internal/media-kits/setup (removed upstream)", () => {
+    expect(content).not.toContain('"/press-kits/internal/media-kits/setup"');
   });
 
-  it("should have GET /press-kits/internal/health/bulk with auth", () => {
-    expect(content).toContain('"/press-kits/internal/health/bulk"');
+  it("should NOT have GET /press-kits/internal/health/bulk (removed upstream)", () => {
+    expect(content).not.toContain('"/press-kits/internal/health/bulk"');
   });
 
   it("should have GET /press-kits/internal/email-data/:orgId with auth", () => {
@@ -139,15 +139,15 @@ describe("Press Kits proxy routes", () => {
   it("should use authenticate and requireOrg on all authenticated endpoints", () => {
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    // 16 authenticated routes + 1 import = 17
-    expect(authMatches!.length).toBe(17);
+    // 13 authenticated routes + 1 import = 14
+    expect(authMatches!.length).toBe(14);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(16);
+    expect(headerMatches!.length).toBe(13);
   });
 
   it("should proxy to externalServices.pressKits", () => {
@@ -235,9 +235,9 @@ describe("Press Kits OpenAPI schemas", () => {
     expect(schemaContent).toContain('path: "/v1/press-kits/internal/media-kits/current"');
     expect(schemaContent).toContain('path: "/v1/press-kits/internal/media-kits/generation-data"');
     expect(schemaContent).toContain('path: "/v1/press-kits/internal/media-kits/generation-result"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/internal/media-kits/stale"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/internal/media-kits/setup"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/internal/health/bulk"');
+    expect(schemaContent).not.toContain('path: "/v1/press-kits/internal/media-kits/stale"');
+    expect(schemaContent).not.toContain('path: "/v1/press-kits/internal/media-kits/setup"');
+    expect(schemaContent).not.toContain('path: "/v1/press-kits/internal/health/bulk"');
     expect(schemaContent).toContain('path: "/v1/press-kits/internal/email-data/{orgId}"');
   });
 
