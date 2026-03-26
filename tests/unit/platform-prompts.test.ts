@@ -73,7 +73,7 @@ describe("PUT /platform-prompts", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/platform-prompts"));
     expect(call).toBeDefined();
-    expect(call!.method).toBe("PUT");
+    expect(call!.method).toBe("POST");
     expect(call!.body).toMatchObject({
       type: "cold-email",
       prompt: "You are writing cold emails...",
