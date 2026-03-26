@@ -22,7 +22,7 @@ router.put("/", authenticatePlatform, async (req: AuthenticatedRequest, res) => 
       externalServices.emailgen,
       "/platform-prompts",
       {
-        method: "PUT",
+        method: "POST",
         body: parsed.data,
       }
     );
