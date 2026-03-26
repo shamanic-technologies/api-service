@@ -4772,10 +4772,6 @@
         "type": "object",
         "properties": {}
       },
-      "PressKitOrgExistsResponse": {
-        "type": "object",
-        "properties": {}
-      },
       "PressKitMediaKitListResponse": {
         "type": "object",
         "properties": {}
@@ -15485,97 +15481,6 @@
         }
       }
     },
-    "/v1/press-kits/organizations/exists": {
-      "get": {
-        "tags": [
-          "Press Kits"
-        ],
-        "summary": "Batch check organization existence",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Existence check results",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PressKitOrgExistsResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-name",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-feature-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
-          }
-        ]
-      }
-    },
     "/v1/press-kits/media-kits": {
       "get": {
         "tags": [
@@ -16384,12 +16289,12 @@
         ]
       }
     },
-    "/v1/press-kits/admin/organizations": {
+    "/v1/press-kits/admin/media-kits": {
       "get": {
         "tags": [
           "Press Kits"
         ],
-        "summary": "List organizations with kit counts (admin)",
+        "summary": "List media kits (admin)",
         "security": [
           {
             "bearerAuth": []
@@ -16475,12 +16380,12 @@
         ]
       }
     },
-    "/v1/press-kits/admin/organizations/{id}": {
+    "/v1/press-kits/admin/media-kits/{id}": {
       "delete": {
         "tags": [
           "Press Kits"
         ],
-        "summary": "Delete organization (admin)",
+        "summary": "Delete media kit (admin)",
         "security": [
           {
             "bearerAuth": []
