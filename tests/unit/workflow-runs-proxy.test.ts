@@ -78,19 +78,14 @@ describe("POST /v1/workflows", () => {
 });
 
 // -----------------------------------------------------------------------
-// DELETE /v1/workflows/:id
+// DELETE /v1/workflows/:id — intentionally NOT exposed (no ownership check)
 // -----------------------------------------------------------------------
 
 describe("DELETE /v1/workflows/:id", () => {
-  it("should proxy to workflow-service DELETE /workflows/:id", async () => {
-    mockFetchWith({ message: "deleted" });
+  it("should NOT be exposed — returns 404", async () => {
     const app = createApp();
     const res = await request(app).delete("/v1/workflows/wf-123");
-
-    expect(res.status).toBe(200);
-    const call = fetchCalls.find((c) => c.method === "DELETE");
-    expect(call).toBeDefined();
-    expect(call!.url).toContain("/workflows/wf-123");
+    expect(res.status).toBe(404);
   });
 });
 
@@ -158,18 +153,14 @@ describe("GET /v1/workflow-runs/:id", () => {
 });
 
 // -----------------------------------------------------------------------
-// GET /v1/workflow-runs/:id/debug
+// GET /v1/workflow-runs/:id/debug — intentionally NOT exposed (leaks PII/secrets)
 // -----------------------------------------------------------------------
 
 describe("GET /v1/workflow-runs/:id/debug", () => {
-  it("should proxy to workflow-service GET /workflow-runs/:id/debug", async () => {
-    mockFetchWith({ runId: "run-456", windmillJobId: "wm-789", status: "completed" });
+  it("should NOT be exposed — returns 404", async () => {
     const app = createApp();
     const res = await request(app).get("/v1/workflow-runs/run-456/debug");
-
-    expect(res.status).toBe(200);
-    expect(res.body.runId).toBe("run-456");
-    expect(fetchCalls[0].url).toContain("/workflow-runs/run-456/debug");
+    expect(res.status).toBe(404);
   });
 });
 

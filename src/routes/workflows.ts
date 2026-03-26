@@ -485,28 +485,6 @@ router.get("/workflows/:id", authenticate, requireOrg, requireUser, async (req: 
 });
 
 /**
- * DELETE /v1/workflows/:id
- * Delete a workflow
- */
-router.delete("/workflows/:id", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { id } = req.params;
-    const result = await callExternalService(
-      externalServices.workflow,
-      `/workflows/${id}`,
-      {
-        method: "DELETE",
-        headers: buildInternalHeaders(req),
-      },
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("Delete workflow error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to delete workflow" });
-  }
-});
-
-/**
  * POST /v1/workflows/:id/execute
  * Execute a workflow by ID
  */
@@ -572,25 +550,6 @@ router.get("/workflow-runs/:id", authenticate, requireOrg, requireUser, async (r
   } catch (error: any) {
     console.error("Get workflow run error:", error.message);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get workflow run" });
-  }
-});
-
-/**
- * GET /v1/workflow-runs/:id/debug
- * Debug a workflow run — per-step execution details
- */
-router.get("/workflow-runs/:id/debug", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { id } = req.params;
-    const result = await callExternalService(
-      externalServices.workflow,
-      `/workflow-runs/${id}/debug`,
-      { headers: buildInternalHeaders(req) },
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("Debug workflow run error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to debug workflow run" });
   }
 });
 
