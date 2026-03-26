@@ -986,6 +986,174 @@ registry.registerPath({
 });
 
 // ===================================================================
+// KEY SOURCE PREFERENCES
+// ===================================================================
+
+export const SetKeySourceRequestSchema = z
+  .object({
+    keySource: z
+      .enum(["org", "platform"])
+      .describe("Whether to use the org's own key or the platform key"),
+  })
+  .openapi("SetKeySourceRequest");
+
+const KeySourcePreferenceSchema = z
+  .object({
+    provider: z.string().describe("Provider name"),
+    keySource: z.enum(["org", "platform"]).describe("Key source preference"),
+  })
+  .openapi("KeySourcePreference");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/keys/sources",
+  tags: ["Keys"],
+  summary: "List key source preferences",
+  description:
+    "List all explicit key source preferences for the organization. Providers not listed default to 'platform'.",
+  security: authed,
+  responses: {
+    200: {
+      description: "Key source preferences",
+      content: {
+        "application/json": {
+          schema: z.object({
+            sources: z.array(KeySourcePreferenceSchema),
+          }).openapi("ListKeySourcesResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/keys/{provider}/source",
+  tags: ["Keys"],
+  summary: "Get key source preference",
+  description:
+    "Get the current key source preference for a provider. Returns 'platform' with isDefault=true if no explicit preference is set.",
+  security: authed,
+  request: {
+    params: z.object({
+      provider: z.string().describe("Provider name"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Key source preference",
+      content: {
+        "application/json": {
+          schema: z.object({
+            provider: z.string().describe("Provider name"),
+            orgId: z.string().describe("Organization ID"),
+            keySource: z.enum(["org", "platform"]).describe("Key source preference"),
+            isDefault: z.boolean().describe("Whether this is the default (no explicit preference set)"),
+          }).openapi("GetKeySourceResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/keys/{provider}/source",
+  tags: ["Keys"],
+  summary: "Set key source preference",
+  description:
+    "Set whether the org uses its own key or the platform key for a given provider. If switching to 'org', an org key must already be stored.",
+  security: authed,
+  request: {
+    params: z.object({
+      provider: z.string().describe("Provider name"),
+    }),
+    body: {
+      content: { "application/json": { schema: SetKeySourceRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Key source preference saved",
+      content: {
+        "application/json": {
+          schema: z.object({
+            provider: z.string().describe("Provider name"),
+            orgId: z.string().describe("Organization ID"),
+            keySource: z.enum(["org", "platform"]).describe("Key source preference"),
+            message: z.string().describe("Confirmation message"),
+          }).openapi("SetKeySourceResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid request or no org key stored", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ===================================================================
+// PROVIDER REQUIREMENTS
+// ===================================================================
+
+export const ProviderRequirementsRequestSchema = z
+  .object({
+    endpoints: z
+      .array(
+        z.object({
+          service: z.string().min(1).describe("Service name"),
+          method: z.string().min(1).describe("HTTP method"),
+          path: z.string().min(1).describe("Endpoint path"),
+        })
+      )
+      .min(1)
+      .describe("List of service endpoints to check"),
+  })
+  .openapi("ProviderRequirementsRequest");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/keys/provider-requirements",
+  tags: ["Keys"],
+  summary: "Query provider requirements",
+  description:
+    "Given a list of service endpoints, returns which third-party providers each endpoint needs. Used to determine which keys are required before execution.",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: ProviderRequirementsRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Provider requirements for the given endpoints",
+      content: {
+        "application/json": {
+          schema: z.object({
+            requirements: z.array(
+              z.object({
+                service: z.string().describe("Service name"),
+                method: z.string().describe("HTTP method"),
+                path: z.string().describe("Endpoint path"),
+                provider: z.string().describe("Required provider"),
+              })
+            ).describe("Per-endpoint provider requirements"),
+            providers: z.array(z.string()).describe("Unique list of all required providers"),
+          }).openapi("ProviderRequirementsResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid request", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ===================================================================
 // API KEYS
 // ===================================================================
 

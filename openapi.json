@@ -1537,6 +1537,204 @@
           "message"
         ]
       },
+      "KeySourcePreference": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "description": "Provider name"
+          },
+          "keySource": {
+            "type": "string",
+            "enum": [
+              "org",
+              "platform"
+            ],
+            "description": "Key source preference"
+          }
+        },
+        "required": [
+          "provider",
+          "keySource"
+        ]
+      },
+      "ListKeySourcesResponse": {
+        "type": "object",
+        "properties": {
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/KeySourcePreference"
+            }
+          }
+        },
+        "required": [
+          "sources"
+        ]
+      },
+      "GetKeySourceResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "description": "Provider name"
+          },
+          "orgId": {
+            "type": "string",
+            "description": "Organization ID"
+          },
+          "keySource": {
+            "type": "string",
+            "enum": [
+              "org",
+              "platform"
+            ],
+            "description": "Key source preference"
+          },
+          "isDefault": {
+            "type": "boolean",
+            "description": "Whether this is the default (no explicit preference set)"
+          }
+        },
+        "required": [
+          "provider",
+          "orgId",
+          "keySource",
+          "isDefault"
+        ]
+      },
+      "SetKeySourceResponse": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "description": "Provider name"
+          },
+          "orgId": {
+            "type": "string",
+            "description": "Organization ID"
+          },
+          "keySource": {
+            "type": "string",
+            "enum": [
+              "org",
+              "platform"
+            ],
+            "description": "Key source preference"
+          },
+          "message": {
+            "type": "string",
+            "description": "Confirmation message"
+          }
+        },
+        "required": [
+          "provider",
+          "orgId",
+          "keySource",
+          "message"
+        ]
+      },
+      "SetKeySourceRequest": {
+        "type": "object",
+        "properties": {
+          "keySource": {
+            "type": "string",
+            "enum": [
+              "org",
+              "platform"
+            ],
+            "description": "Whether to use the org's own key or the platform key"
+          }
+        },
+        "required": [
+          "keySource"
+        ]
+      },
+      "ProviderRequirementsResponse": {
+        "type": "object",
+        "properties": {
+          "requirements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "service": {
+                  "type": "string",
+                  "description": "Service name"
+                },
+                "method": {
+                  "type": "string",
+                  "description": "HTTP method"
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Endpoint path"
+                },
+                "provider": {
+                  "type": "string",
+                  "description": "Required provider"
+                }
+              },
+              "required": [
+                "service",
+                "method",
+                "path",
+                "provider"
+              ]
+            },
+            "description": "Per-endpoint provider requirements"
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Unique list of all required providers"
+          }
+        },
+        "required": [
+          "requirements",
+          "providers"
+        ]
+      },
+      "ProviderRequirementsRequest": {
+        "type": "object",
+        "properties": {
+          "endpoints": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "service": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Service name"
+                },
+                "method": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "HTTP method"
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Endpoint path"
+                }
+              },
+              "required": [
+                "service",
+                "method",
+                "path"
+              ]
+            },
+            "minItems": 1,
+            "description": "List of service endpoints to check"
+          }
+        },
+        "required": [
+          "endpoints"
+        ]
+      },
       "ApiKeyItem": {
         "type": "object",
         "properties": {
@@ -7268,6 +7466,470 @@
             }
           }
         }
+      }
+    },
+    "/v1/keys/sources": {
+      "get": {
+        "tags": [
+          "Keys"
+        ],
+        "summary": "List key source preferences",
+        "description": "List all explicit key source preferences for the organization. Providers not listed default to 'platform'.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key source preferences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListKeySourcesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
+      }
+    },
+    "/v1/keys/{provider}/source": {
+      "get": {
+        "tags": [
+          "Keys"
+        ],
+        "summary": "Get key source preference",
+        "description": "Get the current key source preference for a provider. Returns 'platform' with isDefault=true if no explicit preference is set.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Provider name"
+            },
+            "required": true,
+            "description": "Provider name",
+            "name": "provider",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Key source preference",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetKeySourceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Keys"
+        ],
+        "summary": "Set key source preference",
+        "description": "Set whether the org uses its own key or the platform key for a given provider. If switching to 'org', an org key must already be stored.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Provider name"
+            },
+            "required": true,
+            "description": "Provider name",
+            "name": "provider",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetKeySourceRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Key source preference saved",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetKeySourceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or no org key stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/keys/provider-requirements": {
+      "post": {
+        "tags": [
+          "Keys"
+        ],
+        "summary": "Query provider requirements",
+        "description": "Given a list of service endpoints, returns which third-party providers each endpoint needs. Used to determine which keys are required before execution.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderRequirementsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Provider requirements for the given endpoints",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProviderRequirementsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-name",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
       }
     },
     "/v1/api-keys": {
