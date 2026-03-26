@@ -219,6 +219,28 @@ router.get("/workflows/best", authenticate, requireOrg, requireUser, async (req:
 });
 
 /**
+ * POST /v1/workflows
+ * Create a new workflow
+ */
+router.post("/workflows", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.workflow,
+      "/workflows",
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+      },
+    );
+    res.status(201).json(result);
+  } catch (error: any) {
+    console.error("Create workflow error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to create workflow" });
+  }
+});
+
+/**
  * GET /v1/workflows/:id/summary
  * Returns an AI-generated summary of a workflow's DAG in natural language.
  */
@@ -459,6 +481,138 @@ router.get("/workflows/:id", authenticate, requireOrg, requireUser, async (req: 
   } catch (error: any) {
     console.error("Get workflow error:", error.message);
     res.status(500).json({ error: error.message || "Failed to get workflow" });
+  }
+});
+
+/**
+ * DELETE /v1/workflows/:id
+ * Delete a workflow
+ */
+router.delete("/workflows/:id", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const result = await callExternalService(
+      externalServices.workflow,
+      `/workflows/${id}`,
+      {
+        method: "DELETE",
+        headers: buildInternalHeaders(req),
+      },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Delete workflow error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to delete workflow" });
+  }
+});
+
+/**
+ * POST /v1/workflows/:id/execute
+ * Execute a workflow by ID
+ */
+router.post("/workflows/:id/execute", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const result = await callExternalService(
+      externalServices.workflow,
+      `/workflows/${id}/execute`,
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+      },
+    );
+    res.status(201).json(result);
+  } catch (error: any) {
+    console.error("Execute workflow error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to execute workflow" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Workflow runs
+// ---------------------------------------------------------------------------
+
+/**
+ * GET /v1/workflow-runs
+ * List workflow runs with optional filters
+ */
+router.get("/workflow-runs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["workflowId", "campaignId", "featureSlug", "status"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.workflow,
+      `/workflow-runs${qs}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("List workflow runs error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to list workflow runs" });
+  }
+});
+
+/**
+ * GET /v1/workflow-runs/:id
+ * Get a single workflow run by ID
+ */
+router.get("/workflow-runs/:id", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const result = await callExternalService(
+      externalServices.workflow,
+      `/workflow-runs/${id}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Get workflow run error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get workflow run" });
+  }
+});
+
+/**
+ * GET /v1/workflow-runs/:id/debug
+ * Debug a workflow run — per-step execution details
+ */
+router.get("/workflow-runs/:id/debug", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const result = await callExternalService(
+      externalServices.workflow,
+      `/workflow-runs/${id}/debug`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Debug workflow run error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to debug workflow run" });
+  }
+});
+
+/**
+ * POST /v1/workflow-runs/:id/cancel
+ * Cancel a running workflow
+ */
+router.post("/workflow-runs/:id/cancel", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const result = await callExternalService(
+      externalServices.workflow,
+      `/workflow-runs/${id}/cancel`,
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+      },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Cancel workflow run error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to cancel workflow run" });
   }
 });
 

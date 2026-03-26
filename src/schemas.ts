@@ -2304,6 +2304,179 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "post",
+  path: "/v1/workflows",
+  tags: ["Workflows"],
+  summary: "Create a workflow",
+  description:
+    "Create a new workflow with a DAG definition. The workflow is deployed to the execution engine and can then be executed via POST /v1/workflows/{id}/execute.",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("CreateWorkflowRequest") } },
+    },
+  },
+  responses: {
+    201: {
+      description: "Workflow created",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("CreateWorkflowResponse") } },
+    },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/workflows/{id}",
+  tags: ["Workflows"],
+  summary: "Delete a workflow",
+  description: "Delete a workflow by ID.",
+  security: authed,
+  request: { params: WorkflowIdParam },
+  responses: {
+    200: {
+      description: "Workflow deleted",
+      content: {
+        "application/json": {
+          schema: z.object({
+            message: z.string().describe("Confirmation message"),
+          }).openapi("DeleteWorkflowResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Workflow not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/workflows/{id}/execute",
+  tags: ["Workflows"],
+  summary: "Execute a workflow",
+  description:
+    "Start executing a workflow. Returns a run ID that can be polled via GET /v1/workflow-runs/{id} for status and result.",
+  security: authed,
+  request: {
+    params: WorkflowIdParam,
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            inputs: z.record(z.any()).optional().describe("Runtime inputs accessible via $ref:flow_input.fieldName"),
+          }).openapi("ExecuteWorkflowRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: "Execution started",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("WorkflowRunResponse") } },
+    },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Workflow not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ===================================================================
+// WORKFLOW RUNS
+// ===================================================================
+
+const WorkflowRunIdParam = z.object({
+  id: z.string().describe("Workflow run ID (UUID)"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/workflow-runs",
+  tags: ["Workflow Runs"],
+  summary: "List workflow runs",
+  description: "List workflow runs with optional filters. Results are scoped to the authenticated org.",
+  security: authed,
+  request: {
+    query: z.object({
+      workflowId: z.string().optional().describe("Filter by workflow ID"),
+      campaignId: z.string().optional().describe("Filter by campaign ID"),
+      featureSlug: z.string().optional().describe("Filter by feature slug"),
+      status: z.string().optional().describe("Filter by status (queued, running, completed, failed, cancelled)"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "List of workflow runs",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("ListWorkflowRunsResponse") } },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/workflow-runs/{id}",
+  tags: ["Workflow Runs"],
+  summary: "Get a workflow run",
+  description:
+    "Get the current status and result of a workflow execution. If still running, polls the engine for the latest status before responding.",
+  security: authed,
+  request: { params: WorkflowRunIdParam },
+  responses: {
+    200: {
+      description: "Workflow run details",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("GetWorkflowRunResponse") } },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Run not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/workflow-runs/{id}/debug",
+  tags: ["Workflow Runs"],
+  summary: "Debug a workflow run",
+  description:
+    "Returns per-step execution details including resolved inputs and outputs for each module. Use this to diagnose runtime issues.",
+  security: authed,
+  request: { params: WorkflowRunIdParam },
+  responses: {
+    200: {
+      description: "Debug details",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("DebugWorkflowRunResponse") } },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Run not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/workflow-runs/{id}/cancel",
+  tags: ["Workflow Runs"],
+  summary: "Cancel a workflow run",
+  description: "Cancel a running or queued workflow execution.",
+  security: authed,
+  request: { params: WorkflowRunIdParam },
+  responses: {
+    200: {
+      description: "Run cancelled",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("CancelWorkflowRunResponse") } },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Run not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // PROMPTS (proxy to content-generation service)
 // ===================================================================
