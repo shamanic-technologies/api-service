@@ -34,15 +34,15 @@ describe("Auth middleware — admin auth requires both external ID headers", () 
     expect(content).toContain('"x-external-user-id"');
   });
 
-  it("should NOT read from legacy x-org-id / x-user-id for admin identity", () => {
-    // x-org-id and x-user-id should only appear in requireOrg logging, not in admin identity resolution
+  it("should read direct x-org-id / x-user-id for service-to-service admin calls", () => {
+    // Admin path supports direct internal UUIDs via x-org-id / x-user-id for service-to-service calls
     const adminSection = content.split("Path 2")[0]; // everything before user key path
-    expect(adminSection).not.toContain('"x-org-id"');
-    expect(adminSection).not.toContain('"x-user-id"');
+    expect(adminSection).toContain('"x-org-id"');
+    expect(adminSection).toContain('"x-user-id"');
   });
 
-  it("should return 400 when either external ID header is missing", () => {
-    expect(content).toContain("Admin auth requires both x-external-org-id and x-external-user-id");
+  it("should return 400 when identity headers are missing", () => {
+    expect(content).toContain("Admin auth requires identity headers: x-org-id/x-user-id or x-external-org-id/x-external-user-id");
   });
 
   it("should NOT have single-ID resolution functions", () => {

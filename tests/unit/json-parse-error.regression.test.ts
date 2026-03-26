@@ -60,6 +60,8 @@ describe("callExternalService – malformed JSON response handling", () => {
     // The fix ensures callExternalService logs the error before re-throwing
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining("[callExternalService]"),
+    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining("Unexpected end of JSON input"),
     );
   });
@@ -75,6 +77,8 @@ describe("callExternalService – malformed JSON response handling", () => {
     expect(res.status).toBe(500);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining("[callExternalService]"),
+    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining("Unexpected token"),
     );
   });
@@ -90,6 +94,8 @@ describe("callExternalService – malformed JSON response handling", () => {
     expect(res.status).toBe(500);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining("[callExternalService]"),
+    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining("Unexpected end of JSON input"),
     );
   });
@@ -107,6 +113,8 @@ describe("callExternalService – malformed JSON response handling", () => {
     expect(res.status).toBe(500);
     expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining("[callExternalService]"),
+    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
       expect.stringContaining("Unexpected end of JSON input"),
     );
   });
