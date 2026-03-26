@@ -133,9 +133,6 @@ registry.registerPath({
 // ===================================================================
 
 const rankedQueryParams = z.object({
-  category: z.string().optional().describe("Filter by category (e.g. 'sales', 'pr')"),
-  channel: z.string().optional().describe("Filter by channel (e.g. 'email')"),
-  audienceType: z.string().optional().describe("Filter by audience type (e.g. 'cold-outreach')"),
   objective: z.string().optional().describe("Optimization objective ('replies' or 'clicks')"),
   limit: z.string().optional().describe("Max results (default 10, max 100)"),
   groupBy: z.string().optional().describe("'feature' to group by featureSlug, 'brand' to group by brand"),
@@ -1742,15 +1739,12 @@ registry.registerPath({
   tags: ["Workflows"],
   summary: "List workflows",
   description:
-    "List available workflows from the workflow-service, optionally filtered by category, channel, or audience type",
+    "List available workflows from the workflow-service, optionally filtered by featureSlug or humanId",
   security: authed,
   request: {
     query: z.object({
-      category: z.string().optional().describe("Filter by category (e.g. 'sales', 'pr')"),
-      channel: z.string().optional().describe("Filter by channel (e.g. 'email')"),
-      audienceType: z.string().optional().describe("Filter by audience type (e.g. 'cold-outreach')"),
       humanId: z.string().optional().describe("Filter workflows by human expert ID"),
-      featureSlug: z.string().optional().describe("Filter by feature slug"),
+      featureSlug: z.string().optional().describe("Filter by feature slug (e.g. 'pr-cold-email-outreach')"),
     }),
   },
   responses: {
@@ -1824,6 +1818,10 @@ export const WorkflowStyleSchema = z
 
 export const GenerateWorkflowRequestSchema = z
   .object({
+    featureSlug: z
+      .string()
+      .min(1)
+      .describe("Feature slug for the generated workflow (e.g. 'pr-cold-email-outreach')"),
     description: z
       .string()
       .min(10)
