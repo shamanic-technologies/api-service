@@ -2717,6 +2717,11 @@
       "GenerateWorkflowRequest": {
         "type": "object",
         "properties": {
+          "featureSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Feature slug for the generated workflow (e.g. 'pr-cold-email-outreach')"
+          },
           "description": {
             "type": "string",
             "minLength": 10,
@@ -2754,6 +2759,7 @@
           }
         },
         "required": [
+          "featureSlug",
           "description"
         ]
       },
@@ -5091,36 +5097,6 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by category (e.g. 'sales', 'pr')"
-            },
-            "required": false,
-            "description": "Filter by category (e.g. 'sales', 'pr')",
-            "name": "category",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by channel (e.g. 'email')"
-            },
-            "required": false,
-            "description": "Filter by channel (e.g. 'email')",
-            "name": "channel",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by audience type (e.g. 'cold-outreach')"
-            },
-            "required": false,
-            "description": "Filter by audience type (e.g. 'cold-outreach')",
-            "name": "audienceType",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
               "description": "Optimization objective ('replies' or 'clicks')"
             },
             "required": false,
@@ -5249,36 +5225,6 @@
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by category (e.g. 'sales', 'pr')"
-            },
-            "required": false,
-            "description": "Filter by category (e.g. 'sales', 'pr')",
-            "name": "category",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by channel (e.g. 'email')"
-            },
-            "required": false,
-            "description": "Filter by channel (e.g. 'email')",
-            "name": "channel",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by audience type (e.g. 'cold-outreach')"
-            },
-            "required": false,
-            "description": "Filter by audience type (e.g. 'cold-outreach')",
-            "name": "audienceType",
-            "in": "query"
-          },
           {
             "schema": {
               "type": "string",
@@ -9445,43 +9391,13 @@
           "Workflows"
         ],
         "summary": "List workflows",
-        "description": "List available workflows from the workflow-service, optionally filtered by category, channel, or audience type",
+        "description": "List available workflows from the workflow-service, optionally filtered by featureSlug or humanId",
         "security": [
           {
             "bearerAuth": []
           }
         ],
         "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by category (e.g. 'sales', 'pr')"
-            },
-            "required": false,
-            "description": "Filter by category (e.g. 'sales', 'pr')",
-            "name": "category",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by channel (e.g. 'email')"
-            },
-            "required": false,
-            "description": "Filter by channel (e.g. 'email')",
-            "name": "channel",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by audience type (e.g. 'cold-outreach')"
-            },
-            "required": false,
-            "description": "Filter by audience type (e.g. 'cold-outreach')",
-            "name": "audienceType",
-            "in": "query"
-          },
           {
             "schema": {
               "type": "string",
@@ -9495,10 +9411,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by feature slug"
+              "description": "Filter by feature slug (e.g. 'pr-cold-email-outreach')"
             },
             "required": false,
-            "description": "Filter by feature slug",
+            "description": "Filter by feature slug (e.g. 'pr-cold-email-outreach')",
             "name": "featureSlug",
             "in": "query"
           },

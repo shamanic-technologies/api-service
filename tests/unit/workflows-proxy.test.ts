@@ -90,6 +90,32 @@ describe("Workflow proxy routes", () => {
     expect(listBlock).toContain('req.query.featureSlug');
     expect(listBlock).toContain('params.set("featureSlug"');
   });
+
+  it("should not forward category/channel/audienceType on GET /workflows", () => {
+    const listStart = content.indexOf('router.get("/workflows"');
+    const rankedStart = content.indexOf('router.get("/workflows/ranked"');
+    const listBlock = content.slice(listStart, rankedStart);
+
+    expect(listBlock).not.toContain('req.query.category');
+    expect(listBlock).not.toContain('req.query.channel');
+    expect(listBlock).not.toContain('req.query.audienceType');
+  });
+
+  it("should not include category/channel/audienceType in RANKED_PARAMS", () => {
+    const rankedLine = content.slice(
+      content.indexOf("RANKED_PARAMS"),
+      content.indexOf("];", content.indexOf("RANKED_PARAMS")) + 2
+    );
+    expect(rankedLine).not.toContain('"category"');
+    expect(rankedLine).not.toContain('"channel"');
+    expect(rankedLine).not.toContain('"audienceType"');
+  });
+
+  it("should forward featureSlug in POST /workflows/generate body", () => {
+    const genStart = content.indexOf('"/workflows/generate"');
+    const genBlock = content.slice(genStart, genStart + 500);
+    expect(genBlock).toContain("featureSlug");
+  });
 });
 
 describe("Workflow proxy routes — new endpoints", () => {
@@ -205,6 +231,33 @@ describe("Workflow schemas — ranked and best endpoints", () => {
     const rankedSection = content.slice(start, end);
     expect(rankedSection).toContain("feature");
     expect(rankedSection).not.toContain("'section'");
+  });
+
+  it("should not include category/channel/audienceType in rankedQueryParams", () => {
+    const start = content.indexOf("const rankedQueryParams");
+    const end = content.indexOf("});", start) + 3;
+    const rankedSection = content.slice(start, end);
+    expect(rankedSection).not.toContain("category");
+    expect(rankedSection).not.toContain("channel");
+    expect(rankedSection).not.toContain("audienceType");
+  });
+
+  it("should not include category/channel/audienceType in GET /v1/workflows query params", () => {
+    const listSection = content.slice(
+      content.indexOf('path: "/v1/workflows"'),
+      content.indexOf('path: "/v1/workflows/{id}"')
+    );
+    expect(listSection).not.toContain("category");
+    expect(listSection).not.toContain("channel");
+    expect(listSection).not.toContain("audienceType");
+  });
+
+  it("should require featureSlug in GenerateWorkflowRequestSchema", () => {
+    const start = content.indexOf("GenerateWorkflowRequestSchema");
+    const end = content.indexOf(".openapi(\"GenerateWorkflowRequest\")", start);
+    const genSchema = content.slice(start, end);
+    expect(genSchema).toContain("featureSlug");
+    expect(genSchema).toContain(".min(1)");
   });
 
   it("should include featureSlug in GenerateWorkflowResponse instead of category/channel/audienceType", () => {

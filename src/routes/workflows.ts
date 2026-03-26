@@ -92,7 +92,7 @@ function buildWorkflowParams(query: Record<string, unknown>, keys: string[]): UR
   return params;
 }
 
-const RANKED_PARAMS = ["category", "channel", "audienceType", "objective", "limit", "groupBy", "brandId", "featureSlug"];
+const RANKED_PARAMS = ["objective", "limit", "groupBy", "brandId", "featureSlug"];
 const BEST_PARAMS = ["by", "orgId"];
 
 // ---------------------------------------------------------------------------
@@ -151,9 +151,6 @@ router.get("/workflows", authenticate, requireOrg, requireUser, async (req: Auth
     const params = new URLSearchParams();
 
     if (req.query.orgId) params.set("orgId", req.query.orgId as string);
-    if (req.query.category) params.set("category", req.query.category as string);
-    if (req.query.channel) params.set("channel", req.query.channel as string);
-    if (req.query.audienceType) params.set("audienceType", req.query.audienceType as string);
     if (req.query.humanId) params.set("humanId", req.query.humanId as string);
     if (req.query.featureSlug) params.set("featureSlug", req.query.featureSlug as string);
 
@@ -479,7 +476,7 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
       });
     }
 
-    const { description, hints, style } = parsed.data;
+    const { featureSlug, description, hints, style } = parsed.data;
 
     const result = await callExternalService(
       externalServices.workflow,
@@ -490,6 +487,7 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
         body: {
           orgId: req.orgId,
           userId: req.userId,
+          featureSlug,
           description,
           hints,
           ...(style && { style }),
