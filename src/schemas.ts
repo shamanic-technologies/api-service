@@ -3928,18 +3928,6 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/press-kits/organizations/exists",
-  tags: ["Press Kits"],
-  summary: "Batch check organization existence",
-  security: authed,
-  responses: {
-    200: { description: "Existence check results", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitOrgExistsResponse") } } },
-    401: { description: "Unauthorized", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/v1/press-kits/media-kits",
   tags: ["Press Kits"],
   summary: "List media kits",
@@ -4061,9 +4049,9 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/press-kits/admin/organizations",
+  path: "/v1/press-kits/admin/media-kits",
   tags: ["Press Kits"],
-  summary: "List organizations with kit counts (admin)",
+  summary: "List media kits (admin)",
   security: authed,
   responses: {
     200: { description: "Admin org list", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitAdminOrgListResponse") } } },
@@ -4073,9 +4061,9 @@ registry.registerPath({
 
 registry.registerPath({
   method: "delete",
-  path: "/v1/press-kits/admin/organizations/{id}",
+  path: "/v1/press-kits/admin/media-kits/{id}",
   tags: ["Press Kits"],
-  summary: "Delete organization (admin)",
+  summary: "Delete media kit (admin)",
   security: authed,
   responses: {
     200: { description: "Deleted", content: { "application/json": { schema: z.object({ success: z.boolean() }).openapi("PressKitAdminDeleteResponse") } } },

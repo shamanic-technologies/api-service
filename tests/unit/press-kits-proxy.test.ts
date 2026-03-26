@@ -48,8 +48,8 @@ describe("Press Kits proxy routes", () => {
     expect(content).not.toContain('"/press-kits/organizations/:orgId/share-token"');
   });
 
-  it("should have GET /press-kits/organizations/exists with auth", () => {
-    expect(content).toContain('"/press-kits/organizations/exists"');
+  it("should NOT have GET /press-kits/organizations/exists (removed upstream)", () => {
+    expect(content).not.toContain('"/press-kits/organizations/exists"');
   });
 
   it("should have GET /press-kits/media-kits (plural) with auth", () => {
@@ -90,13 +90,18 @@ describe("Press Kits proxy routes", () => {
 
   // ── Admin endpoints ───────────────────────────────────────────────────
 
-  it("should have GET /press-kits/admin/organizations with auth", () => {
-    expect(content).toContain('"/press-kits/admin/organizations"');
+  it("should have GET /press-kits/admin/media-kits with auth", () => {
+    expect(content).toContain('"/press-kits/admin/media-kits"');
   });
 
-  it("should have DELETE /press-kits/admin/organizations/:id with auth", () => {
-    expect(content).toContain('"/press-kits/admin/organizations/:id"');
+  it("should have DELETE /press-kits/admin/media-kits/:id with auth", () => {
+    expect(content).toContain('"/press-kits/admin/media-kits/:id"');
     expect(content).toContain("router.delete");
+  });
+
+  it("should NOT have old /admin/organizations routes (moved to /admin/media-kits)", () => {
+    expect(content).not.toContain('"/press-kits/admin/organizations"');
+    expect(content).not.toContain('"/press-kits/admin/organizations/:id"');
   });
 
   // ── Internal endpoints (new REST paths) ───────────────────────────────
@@ -134,15 +139,15 @@ describe("Press Kits proxy routes", () => {
   it("should use authenticate and requireOrg on all authenticated endpoints", () => {
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    // 17 authenticated routes + 1 import = 18
-    expect(authMatches!.length).toBe(18);
+    // 16 authenticated routes + 1 import = 17
+    expect(authMatches!.length).toBe(17);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(17);
+    expect(headerMatches!.length).toBe(16);
   });
 
   it("should proxy to externalServices.pressKits", () => {
@@ -198,7 +203,7 @@ describe("Press Kits OpenAPI schemas", () => {
   it("should register REST authenticated paths", () => {
     expect(schemaContent).not.toContain('path: "/v1/press-kits/organizations"');
     expect(schemaContent).not.toContain('path: "/v1/press-kits/organizations/{orgId}/share-token"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/organizations/exists"');
+    expect(schemaContent).not.toContain('path: "/v1/press-kits/organizations/exists"');
     expect(schemaContent).toContain('path: "/v1/press-kits/media-kits"');
     expect(schemaContent).toContain('path: "/v1/press-kits/media-kits/{id}"');
     expect(schemaContent).toContain('path: "/v1/press-kits/media-kits/{id}/mdx"');
@@ -220,8 +225,10 @@ describe("Press Kits OpenAPI schemas", () => {
   });
 
   it("should register admin paths", () => {
-    expect(schemaContent).toContain('path: "/v1/press-kits/admin/organizations"');
-    expect(schemaContent).toContain('path: "/v1/press-kits/admin/organizations/{id}"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/admin/media-kits"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/admin/media-kits/{id}"');
+    expect(schemaContent).not.toContain('path: "/v1/press-kits/admin/organizations"');
+    expect(schemaContent).not.toContain('path: "/v1/press-kits/admin/organizations/{id}"');
   });
 
   it("should register new internal paths", () => {

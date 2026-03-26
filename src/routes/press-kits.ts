@@ -22,21 +22,6 @@ router.get("/press-kits/public/:token", async (req: Request, res: Response) => {
 
 // ── Authenticated routes (mounted at /v1) ────────────────────────────────────
 
-// GET /v1/press-kits/organizations/exists — batch check existence
-router.get("/press-kits/organizations/exists", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    const qs = req.query.orgIds ? `?orgIds=${encodeURIComponent(req.query.orgIds as string)}` : "";
-    const result = await callExternalService(
-      externalServices.pressKits,
-      `/organizations/exists${qs}`,
-      { headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to check organizations" });
-  }
-});
-
 // GET /v1/press-kits/media-kits — list media kits
 router.get("/press-kits/media-kits", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
@@ -143,33 +128,33 @@ router.post("/press-kits/media-kits/:id/cancel", authenticate, requireOrg, async
 
 // ── Admin routes (authenticated) ─────────────────────────────────────────────
 
-// GET /v1/press-kits/admin/organizations — list orgs with kit counts
-router.get("/press-kits/admin/organizations", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// GET /v1/press-kits/admin/media-kits — list media kits (admin)
+router.get("/press-kits/admin/media-kits", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const qs = req.query.search ? `?search=${encodeURIComponent(req.query.search as string)}` : "";
     const result = await callExternalService(
       externalServices.pressKits,
-      `/admin/organizations${qs}`,
+      `/admin/media-kits${qs}`,
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to list admin organizations" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to list admin media kits" });
   }
 });
 
-// DELETE /v1/press-kits/admin/organizations/:id — delete organization
-router.delete("/press-kits/admin/organizations/:id", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// DELETE /v1/press-kits/admin/media-kits/:id — delete media kit (admin)
+router.delete("/press-kits/admin/media-kits/:id", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const qs = req.query.confirmName ? `?confirmName=${encodeURIComponent(req.query.confirmName as string)}` : "";
     const result = await callExternalService(
       externalServices.pressKits,
-      `/admin/organizations/${encodeURIComponent(req.params.id)}${qs}`,
+      `/admin/media-kits/${encodeURIComponent(req.params.id)}${qs}`,
       { method: "DELETE", headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to delete organization" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to delete media kit" });
   }
 });
 
