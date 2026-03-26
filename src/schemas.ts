@@ -4222,6 +4222,29 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "put",
+  path: "/v1/features/{slug}",
+  tags: ["Features"],
+  summary: "Update feature by slug",
+  description: "Update a single feature definition by its slug. All fields are optional — only provided fields are updated. Proxied from features-service.",
+  security: authed,
+  request: {
+    params: z.object({ slug: z.string().describe("Feature slug") }),
+    body: {
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("UpdateFeatureRequest") } },
+    },
+  },
+  responses: {
+    200: { description: "Updated feature", content: { "application/json": { schema: z.object({}).passthrough().openapi("UpdateFeatureResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    409: { description: "Conflict (e.g. slug collision)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "get",
   path: "/v1/features/{slug}/inputs",
   tags: ["Features"],

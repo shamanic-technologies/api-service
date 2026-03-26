@@ -66,17 +66,27 @@ describe("Features proxy routes", () => {
   it("should have PUT /features for batch upsert with auth", () => {
     expect(content).toContain("router.put");
     const putLine = content.split("\n").find((l) =>
-      l.includes("router.put") && l.includes('"/features"')
+      l.includes("router.put") && l.includes('"/features"') && !l.includes(":slug")
     );
     expect(putLine).toBeDefined();
     expect(putLine).toContain("authenticate");
+  });
+
+  it("should have PUT /features/:slug with auth + requireOrg + requireUser", () => {
+    const putSlugLine = content.split("\n").find((l) =>
+      l.includes("router.put") && l.includes('"/features/:slug"')
+    );
+    expect(putSlugLine).toBeDefined();
+    expect(putSlugLine).toContain("authenticate");
+    expect(putSlugLine).toContain("requireOrg");
+    expect(putSlugLine).toContain("requireUser");
   });
 
   it("should use buildInternalHeaders for all endpoints", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(9);
+    expect(headerMatches!.length).toBe(10);
   });
 
   it("should proxy to externalServices.features", () => {
@@ -170,6 +180,11 @@ describe("Features OpenAPI schemas", () => {
   it("should register PUT /v1/features for batch upsert", () => {
     const putMatch = schemaContent.match(/method: "put",\s*\n\s*path: "\/v1\/features"/);
     expect(putMatch).not.toBeNull();
+  });
+
+  it("should register PUT /v1/features/{slug} for single update", () => {
+    const putSlugMatch = schemaContent.match(/method: "put",\s*\n\s*path: "\/v1\/features\/\{slug\}"/);
+    expect(putSlugMatch).not.toBeNull();
   });
 
   it("should use Features tag", () => {
