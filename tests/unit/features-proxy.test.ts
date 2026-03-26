@@ -15,9 +15,14 @@ const serviceClientPath = path.join(__dirname, "../../src/lib/service-client.ts"
 const serviceClientContent = fs.readFileSync(serviceClientPath, "utf-8");
 
 describe("Features proxy routes", () => {
-  it("should have GET /features with auth", () => {
-    expect(content).toContain('"/features"');
-    expect(content).toContain("router.get");
+  it("should have GET /features with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/features"') && !l.includes("/:slug") && !l.includes("/stats")
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
   });
 
   it("should forward query params on GET /features", () => {
@@ -26,12 +31,24 @@ describe("Features proxy routes", () => {
     }
   });
 
-  it("should have GET /features/:slug with auth", () => {
-    expect(content).toContain('"/features/:slug"');
+  it("should have GET /features/:slug with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/features/:slug"') && !l.includes("/inputs") && !l.includes("/stats")
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
   });
 
-  it("should have GET /features/:slug/inputs with auth", () => {
-    expect(content).toContain('"/features/:slug/inputs"');
+  it("should have GET /features/:slug/inputs with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/features/:slug/inputs"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
   });
 
   it("should have POST /features/:slug/prefill with auth + requireOrg + requireUser", () => {
@@ -63,13 +80,15 @@ describe("Features proxy routes", () => {
     expect(content).toContain("res.status(201)");
   });
 
-  it("should have PUT /features for batch upsert with auth", () => {
+  it("should have PUT /features for batch upsert with auth + requireOrg + requireUser", () => {
     expect(content).toContain("router.put");
     const putLine = content.split("\n").find((l) =>
       l.includes("router.put") && l.includes('"/features"') && !l.includes(":slug")
     );
     expect(putLine).toBeDefined();
     expect(putLine).toContain("authenticate");
+    expect(putLine).toContain("requireOrg");
+    expect(putLine).toContain("requireUser");
   });
 
   it("should have PUT /features/:slug with auth + requireOrg + requireUser", () => {
@@ -99,21 +118,24 @@ describe("Features proxy routes", () => {
     expect(content).toContain("externalServices.features");
   });
 
-  it("should have GET /features/stats/registry with auth", () => {
+  it("should have GET /features/stats/registry with auth + requireOrg + requireUser", () => {
     expect(content).toContain('"/features/stats/registry"');
     const line = content.split("\n").find((l) =>
       l.includes('"/features/stats/registry"')
     );
     expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
   });
 
-  it("should have GET /features/stats with auth + requireOrg", () => {
+  it("should have GET /features/stats with auth + requireOrg + requireUser", () => {
     expect(content).toContain('"/features/stats"');
     const line = content.split("\n").find((l) =>
       l.includes('router.get') && l.includes('"/features/stats"')
     );
     expect(line).toContain("authenticate");
     expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
   });
 
   it("should forward groupBy and brandId on GET /features/stats", () => {
@@ -121,18 +143,32 @@ describe("Features proxy routes", () => {
     expect(content).toContain('"brandId"');
   });
 
-  it("should have GET /features/:slug/stats with auth + requireOrg", () => {
+  it("should have GET /features/:slug/stats with auth + requireOrg + requireUser", () => {
     expect(content).toContain('"/features/:slug/stats"');
     const line = content.split("\n").find((l) =>
       l.includes('"/features/:slug/stats"')
     );
     expect(line).toContain("authenticate");
     expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
   });
 
   it("should forward groupBy, brandId, campaignId, workflowName on GET /features/:slug/stats", () => {
     expect(content).toContain('"campaignId"');
     expect(content).toContain('"workflowName"');
+  });
+
+  it("should enforce requireOrg + requireUser on ALL feature routes", () => {
+    // Every router.get / router.post / router.put line must include both guards
+    const routeLines = content.split("\n").filter((l) =>
+      /router\.(get|post|put)\(/.test(l) && l.includes('"/')
+    );
+    expect(routeLines.length).toBeGreaterThan(0);
+    for (const line of routeLines) {
+      expect(line).toContain("authenticate");
+      expect(line).toContain("requireOrg");
+      expect(line).toContain("requireUser");
+    }
   });
 
   it("should register static routes before parameterized :slug route", () => {
