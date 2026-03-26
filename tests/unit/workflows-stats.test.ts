@@ -72,7 +72,7 @@ describe("GET /v1/workflows/ranked", () => {
       return Promise.resolve({});
     });
 
-    const res = await request(app).get("/v1/workflows/ranked?category=sales&groupBy=section&limit=20&brandId=b-1");
+    const res = await request(app).get("/v1/workflows/ranked?objective=sales&groupBy=section&limit=20&brandId=b-1");
 
     expect(res.status).toBe(200);
     expect(res.body.results).toEqual(MOCK_RANKED.results);
@@ -82,7 +82,7 @@ describe("GET /v1/workflows/ranked", () => {
     );
     expect(call).toBeDefined();
     const url = call![1] as string;
-    expect(url).toContain("category=sales");
+    expect(url).toContain("objective=sales");
     expect(url).toContain("groupBy=section");
     expect(url).toContain("limit=20");
     expect(url).toContain("brandId=b-1");
@@ -126,7 +126,7 @@ describe("GET /v1/public/workflows/ranked", () => {
       return Promise.resolve({});
     });
 
-    const res = await request(app).get("/v1/public/workflows/ranked?category=sales&groupBy=brand");
+    const res = await request(app).get("/v1/public/workflows/ranked?objective=sales&groupBy=brand");
 
     expect(res.status).toBe(200);
     expect(res.body.results).toEqual(MOCK_RANKED.results);
@@ -136,7 +136,7 @@ describe("GET /v1/public/workflows/ranked", () => {
     );
     expect(call).toBeDefined();
     const url = call![1] as string;
-    expect(url).toContain("category=sales");
+    expect(url).toContain("objective=sales");
     expect(url).toContain("groupBy=brand");
   });
 });
