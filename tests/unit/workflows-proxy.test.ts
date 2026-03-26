@@ -184,6 +184,38 @@ describe("Workflow schemas — ranked and best endpoints", () => {
     );
     expect(metaSection).toContain("featureSlug");
   });
+
+  it("should have category/channel/audienceType as optional in WorkflowMetadata", () => {
+    const metaSection = content.slice(
+      content.indexOf("WorkflowMetadataSchema"),
+      content.indexOf(".openapi(\"WorkflowMetadata\")")
+    );
+    // Each of these fields should have .optional()
+    const categoryLine = metaSection.slice(metaSection.indexOf("category:"), metaSection.indexOf("channel:"));
+    expect(categoryLine).toContain(".optional()");
+    const channelLine = metaSection.slice(metaSection.indexOf("channel:"), metaSection.indexOf("audienceType:"));
+    expect(channelLine).toContain(".optional()");
+    const audienceLine = metaSection.slice(metaSection.indexOf("audienceType:"), metaSection.indexOf("featureSlug:"));
+    expect(audienceLine).toContain(".optional()");
+  });
+
+  it("should use groupBy=feature instead of groupBy=section in ranked query params", () => {
+    const start = content.indexOf("const rankedQueryParams");
+    const end = content.indexOf("});", start) + 3;
+    const rankedSection = content.slice(start, end);
+    expect(rankedSection).toContain("feature");
+    expect(rankedSection).not.toContain("'section'");
+  });
+
+  it("should include featureSlug in GenerateWorkflowResponse instead of category/channel/audienceType", () => {
+    const genSection = content.slice(
+      content.indexOf("GenerateWorkflowResponse"),
+      content.indexOf("GenerateWorkflowResponse") + 500
+    );
+    expect(genSection).not.toContain("category");
+    expect(genSection).not.toContain("channel");
+    expect(genSection).not.toContain("audienceType");
+  });
 });
 
 describe("Workflow routes are mounted in index.ts", () => {
