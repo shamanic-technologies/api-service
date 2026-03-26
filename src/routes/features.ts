@@ -175,6 +175,28 @@ router.post("/features", authenticate, requireOrg, requireUser, async (req: Auth
 });
 
 /**
+ * PUT /v1/features/:slug
+ * Update a single feature by slug
+ */
+router.put("/features/:slug", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/features/${encodeURIComponent(req.params.slug)}`,
+      {
+        method: "PUT",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+      },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Update feature error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to update feature" });
+  }
+});
+
+/**
  * PUT /v1/features
  * Batch upsert features (cold-start registration)
  */
