@@ -22,20 +22,6 @@ router.get("/press-kits/public/:token", async (req: Request, res: Response) => {
 
 // ── Authenticated routes (mounted at /v1) ────────────────────────────────────
 
-// POST /v1/press-kits/organizations — upsert organization
-router.post("/press-kits/organizations", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.pressKits,
-      "/organizations",
-      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to upsert organization" });
-  }
-});
-
 // GET /v1/press-kits/organizations/:orgId/share-token — get share token
 router.get("/press-kits/organizations/:orgId/share-token", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {

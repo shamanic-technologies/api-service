@@ -3927,23 +3927,6 @@ registry.registerPath({
 // ── Authenticated endpoints ─────────────────────────────────────────────────
 
 registry.registerPath({
-  method: "post",
-  path: "/v1/press-kits/organizations",
-  tags: ["Press Kits"],
-  summary: "Upsert press kit organization",
-  description: "Create or update an organization in the press-kits service.",
-  security: authed,
-  request: {
-    body: { content: { "application/json": { schema: z.object({ orgId: z.string(), name: z.string().optional() }).openapi("PressKitUpsertOrgRequest") } } },
-  },
-  responses: {
-    200: { description: "Organization upserted", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitOrganizationResponse") } } },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
   method: "get",
   path: "/v1/press-kits/organizations/{orgId}/share-token",
   tags: ["Press Kits"],
