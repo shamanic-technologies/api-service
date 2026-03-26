@@ -185,6 +185,27 @@ describe("Outlets OpenAPI schemas", () => {
   it("should use Outlets tag", () => {
     expect(schemaContent).toContain('tags: ["Outlets"]');
   });
+
+  it("should NOT include brand fields in DiscoverOutletsRequest (convention: resolve from brand-service)", () => {
+    // Extract the DiscoverOutletsRequest schema block
+    const start = schemaContent.indexOf("DiscoverOutletsRequest");
+    const blockBefore = schemaContent.slice(Math.max(0, start - 500), start);
+    // brandName, brandDescription, industry, targetGeo, targetAudience, angles
+    // should NOT appear in the discover request schema
+    expect(blockBefore).not.toContain("brandName:");
+    expect(blockBefore).not.toContain("brandDescription:");
+    expect(blockBefore).not.toContain("industry:");
+    expect(blockBefore).not.toContain("targetGeo:");
+    expect(blockBefore).not.toContain("targetAudience:");
+    expect(blockBefore).not.toContain("angles:");
+  });
+
+  it("should keep brandId and campaignId in DiscoverOutletsRequest", () => {
+    const start = schemaContent.indexOf("DiscoverOutletsRequest");
+    const blockBefore = schemaContent.slice(Math.max(0, start - 300), start);
+    expect(blockBefore).toContain("brandId:");
+    expect(blockBefore).toContain("campaignId:");
+  });
 });
 
 describe("Outlets routes are mounted in index.ts", () => {

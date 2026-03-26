@@ -109,6 +109,20 @@ describe("Journalists OpenAPI schemas", () => {
     expect(schemaContent).toContain('tags: ["Journalists"]');
   });
 
+  it("should NOT include featureInputs in DiscoverJournalistsRequest (convention: resolve from campaign-service)", () => {
+    const start = schemaContent.indexOf("DiscoverJournalistsRequest");
+    const blockBefore = schemaContent.slice(Math.max(0, start - 400), start);
+    expect(blockBefore).not.toContain("featureInputs:");
+  });
+
+  it("should keep brandId, campaignId, outletId in DiscoverJournalistsRequest", () => {
+    const start = schemaContent.indexOf("DiscoverJournalistsRequest");
+    const blockBefore = schemaContent.slice(Math.max(0, start - 400), start);
+    expect(blockBefore).toContain("brandId:");
+    expect(blockBefore).toContain("campaignId:");
+    expect(blockBefore).toContain("outletId:");
+  });
+
   it("should define journalist entity type enum", () => {
     expect(schemaContent).toContain('"individual"');
     expect(schemaContent).toContain('"organization"');
