@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, externalServices } from "../lib/service-client.js";
+import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
@@ -176,11 +176,13 @@ router.post("/features", authenticate, requireOrg, requireUser, async (req: Auth
 
 /**
  * PUT /v1/features/:slug
- * Update a single feature by slug
+ * Update a single feature by slug.
+ * Returns 200 for in-place metadata updates, 201 when inputs/outputs changed
+ * and a fork was created (fork-on-write semantics from features-service).
  */
 router.put("/features/:slug", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const result = await callExternalService(
+    const { status, data } = await callExternalServiceWithStatus(
       externalServices.features,
       `/features/${encodeURIComponent(req.params.slug)}`,
       {
@@ -189,7 +191,7 @@ router.put("/features/:slug", authenticate, requireOrg, requireUser, async (req:
         body: req.body,
       },
     );
-    res.json(result);
+    res.status(status).json(data);
   } catch (error: any) {
     console.error("Update feature error:", error.message);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to update feature" });

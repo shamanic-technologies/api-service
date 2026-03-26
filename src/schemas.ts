@@ -4354,7 +4354,7 @@ registry.registerPath({
   path: "/v1/features/{slug}",
   tags: ["Features"],
   summary: "Update feature by slug",
-  description: "Update a single feature definition by its slug. All fields are optional — only provided fields are updated. Proxied from features-service.",
+  description: "Update a single feature definition by its slug. Metadata-only updates (description, icon, charts, etc.) apply in-place and return 200. If inputs or outputs change, a new feature is forked and the original is deprecated (fork-on-write) — returns 201 with forkedFrom details. Proxied from features-service.",
   security: authed,
   request: {
     params: z.object({ slug: z.string().describe("Feature slug") }),
@@ -4363,7 +4363,8 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Updated feature", content: { "application/json": { schema: z.object({}).passthrough().openapi("UpdateFeatureResponse") } } },
+    200: { description: "In-place update (metadata only)", content: { "application/json": { schema: z.object({}).passthrough().openapi("UpdateFeatureResponse") } } },
+    201: { description: "Fork created (inputs/outputs changed). Response includes `forkedFrom` with the original feature's id, slug, and status.", content: { "application/json": { schema: z.object({}).passthrough().openapi("ForkedFeatureResponse") } } },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Feature not found", content: errorContent },

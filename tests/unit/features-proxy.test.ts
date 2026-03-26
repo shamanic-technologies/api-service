@@ -82,6 +82,12 @@ describe("Features proxy routes", () => {
     expect(putSlugLine).toContain("requireUser");
   });
 
+  it("should forward upstream status code on PUT /features/:slug (fork-on-write)", () => {
+    expect(content).toContain("callExternalServiceWithStatus");
+    // The route should use res.status(status) to forward 200 or 201
+    expect(content).toContain("res.status(status).json(data)");
+  });
+
   it("should use buildInternalHeaders for all endpoints", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
@@ -144,6 +150,10 @@ describe("Features service client", () => {
     expect(serviceClientContent).toContain("FEATURES_SERVICE_URL");
     expect(serviceClientContent).toContain("FEATURES_SERVICE_API_KEY");
   });
+
+  it("should export callExternalServiceWithStatus", () => {
+    expect(serviceClientContent).toContain("export async function callExternalServiceWithStatus");
+  });
 });
 
 describe("Features OpenAPI schemas", () => {
@@ -185,6 +195,12 @@ describe("Features OpenAPI schemas", () => {
   it("should register PUT /v1/features/{slug} for single update", () => {
     const putSlugMatch = schemaContent.match(/method: "put",\s*\n\s*path: "\/v1\/features\/\{slug\}"/);
     expect(putSlugMatch).not.toBeNull();
+  });
+
+  it("should document 201 fork-on-write response on PUT /v1/features/{slug}", () => {
+    expect(schemaContent).toContain("ForkedFeatureResponse");
+    expect(schemaContent).toContain("Fork created");
+    expect(schemaContent).toContain("forkedFrom");
   });
 
   it("should use Features tag", () => {
