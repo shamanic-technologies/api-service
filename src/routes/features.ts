@@ -9,7 +9,7 @@ const router = Router();
  * GET /v1/features
  * List features with optional filters
  */
-router.get("/features", authenticate, async (req: AuthenticatedRequest, res) => {
+router.get("/features", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
     for (const key of ["status", "category", "channel", "audienceType", "implemented"]) {
@@ -32,7 +32,7 @@ router.get("/features", authenticate, async (req: AuthenticatedRequest, res) => 
  * GET /v1/features/stats/registry
  * Public dictionary of stats keys (label + type per key)
  */
-router.get("/features/stats/registry", authenticate, async (req: AuthenticatedRequest, res) => {
+router.get("/features/stats/registry", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.features,
@@ -50,7 +50,7 @@ router.get("/features/stats/registry", authenticate, async (req: AuthenticatedRe
  * GET /v1/features/stats
  * Global stats cross-features, groupable by featureSlug/workflowName/brandId/campaignId
  */
-router.get("/features/stats", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+router.get("/features/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
     for (const key of ["groupBy", "brandId"]) {
@@ -73,7 +73,7 @@ router.get("/features/stats", authenticate, requireOrg, async (req: Authenticate
  * GET /v1/features/:slug
  * Get a single feature by slug
  */
-router.get("/features/:slug", authenticate, async (req: AuthenticatedRequest, res) => {
+router.get("/features/:slug", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.features,
@@ -91,7 +91,7 @@ router.get("/features/:slug", authenticate, async (req: AuthenticatedRequest, re
  * GET /v1/features/:slug/inputs
  * Get input schema for a feature
  */
-router.get("/features/:slug/inputs", authenticate, async (req: AuthenticatedRequest, res) => {
+router.get("/features/:slug/inputs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.features,
@@ -109,7 +109,7 @@ router.get("/features/:slug/inputs", authenticate, async (req: AuthenticatedRequ
  * GET /v1/features/:slug/stats
  * Stats for a specific feature, groupable by workflowName/brandId/campaignId
  */
-router.get("/features/:slug/stats", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+router.get("/features/:slug/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
     for (const key of ["groupBy", "brandId", "campaignId", "workflowName"]) {
@@ -202,7 +202,7 @@ router.put("/features/:slug", authenticate, requireOrg, requireUser, async (req:
  * PUT /v1/features
  * Batch upsert features (cold-start registration)
  */
-router.put("/features", authenticate, async (req: AuthenticatedRequest, res) => {
+router.put("/features", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.features,
