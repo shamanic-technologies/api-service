@@ -44,10 +44,10 @@ describe("POST /v1/brands/:id/extract-fields", () => {
   it("should return 200 with extracted results", async () => {
     const response = {
       brandId: "b-1",
-      results: [
-        { key: "industry", value: "SaaS", cached: true, extractedAt: "2026-03-01T00:00:00Z", expiresAt: "2026-03-31T00:00:00Z" },
-        { key: "valueProposition", value: "All-in-one platform", cached: false, extractedAt: "2026-03-23T00:00:00Z", expiresAt: "2026-04-22T00:00:00Z" },
-      ],
+      results: {
+        industry: { value: "SaaS", cached: true, extractedAt: "2026-03-01T00:00:00Z", expiresAt: "2026-03-31T00:00:00Z" },
+        valueProposition: { value: "All-in-one platform", cached: false, extractedAt: "2026-03-23T00:00:00Z", expiresAt: "2026-04-22T00:00:00Z" },
+      },
     };
     global.fetch = vi.fn().mockImplementation(async () => ({
       ok: true,
@@ -65,15 +65,15 @@ describe("POST /v1/brands/:id/extract-fields", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.brandId).toBe("b-1");
-    expect(res.body.results).toHaveLength(2);
-    expect(res.body.results[0].key).toBe("industry");
-    expect(res.body.results[0].cached).toBe(true);
+    expect(Object.keys(res.body.results)).toHaveLength(2);
+    expect(res.body.results.industry.value).toBe("SaaS");
+    expect(res.body.results.industry.cached).toBe(true);
   });
 
   it("should forward the request body to brand-service", async () => {
     global.fetch = vi.fn().mockImplementation(async () => ({
       ok: true,
-      json: () => Promise.resolve({ brandId: "b-1", results: [] }),
+      json: () => Promise.resolve({ brandId: "b-1", results: {} }),
     }));
 
     const fields = [

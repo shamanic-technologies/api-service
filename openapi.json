@@ -3121,10 +3121,6 @@
       "ExtractFieldResult": {
         "type": "object",
         "properties": {
-          "key": {
-            "type": "string",
-            "description": "Field key"
-          },
           "value": {
             "anyOf": [
               {
@@ -3173,7 +3169,6 @@
           }
         },
         "required": [
-          "key",
           "value",
           "cached",
           "extractedAt",
@@ -3189,11 +3184,11 @@
             "description": "Brand ID"
           },
           "results": {
-            "type": "array",
-            "items": {
+            "type": "object",
+            "additionalProperties": {
               "$ref": "#/components/schemas/ExtractFieldResult"
             },
-            "description": "Extraction results"
+            "description": "Extraction results keyed by field name (e.g. results.biography.value)"
           }
         },
         "required": [
