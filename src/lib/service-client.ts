@@ -102,6 +102,16 @@ export async function callExternalService<T>(
   path: string,
   options: ServiceCallOptions = {}
 ): Promise<T> {
+  const { data } = await callExternalServiceWithStatus<T>(service, path, options);
+  return data;
+}
+
+// Like callExternalService but also returns the upstream HTTP status code
+export async function callExternalServiceWithStatus<T>(
+  service: { url: string; apiKey: string },
+  path: string,
+  options: ServiceCallOptions = {}
+): Promise<{ status: number; data: T }> {
   const { method = "GET", body, headers = {} } = options;
 
   const url = `${service.url}${path}`;
@@ -131,7 +141,8 @@ export async function callExternalService<T>(
       throw err;
     }
 
-    return await response.json();
+    const data: T = await response.json();
+    return { status: response.status, data };
   } catch (error: any) {
     const cause = error.cause ? ` (cause: ${error.cause?.code || error.cause?.message || error.cause})` : "";
     console.error(`[callExternalService] ${method} ${url} failed: ${error.message}${cause}`);

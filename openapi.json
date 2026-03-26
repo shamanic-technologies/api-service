@@ -5130,6 +5130,10 @@
         "type": "object",
         "properties": {}
       },
+      "ForkedFeatureResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "UpdateFeatureRequest": {
         "type": "object",
         "properties": {}
@@ -18211,7 +18215,7 @@
           "Features"
         ],
         "summary": "Update feature by slug",
-        "description": "Update a single feature definition by its slug. All fields are optional — only provided fields are updated. Proxied from features-service.",
+        "description": "Update a single feature definition by its slug. Metadata-only updates (description, icon, charts, etc.) apply in-place and return 200. If inputs or outputs change, a new feature is forked and the original is deprecated (fork-on-write) — returns 201 with forkedFrom details. Proxied from features-service.",
         "security": [
           {
             "bearerAuth": []
@@ -18294,11 +18298,21 @@
         },
         "responses": {
           "200": {
-            "description": "Updated feature",
+            "description": "In-place update (metadata only)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UpdateFeatureResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Fork created (inputs/outputs changed). Response includes `forkedFrom` with the original feature's id, slug, and status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForkedFeatureResponse"
                 }
               }
             }
