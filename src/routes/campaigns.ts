@@ -132,12 +132,21 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       type: body.type,
       featureSlug: body.featureSlug,
     });
+    // Enrich headers with IDs resolved during this request — the dashboard
+    // sends brandUrl/workflowName/featureSlug in the body, not as headers,
+    // so buildInternalHeaders(req) alone won't include them.
+    const campaignHeaders: Record<string, string> = {
+      ...buildInternalHeaders(req),
+      "x-brand-id": brandResult.brandId,
+      "x-feature-slug": featureSlug,
+      "x-workflow-name": workflowName,
+    };
     const result = await callExternalService(
       externalServices.campaign,
       "/campaigns",
       {
         method: "POST",
-        headers: buildInternalHeaders(req),
+        headers: campaignHeaders,
         body,
       }
     );

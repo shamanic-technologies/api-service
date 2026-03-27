@@ -41,7 +41,7 @@ function createApp() {
 }
 
 describe("Discovery campaign creation", () => {
-  let fetchCalls: Array<{ url: string; method?: string; body?: Record<string, unknown> }>;
+  let fetchCalls: Array<{ url: string; method?: string; body?: Record<string, unknown>; headers?: Record<string, string> }>;
 
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -49,7 +49,8 @@ describe("Discovery campaign creation", () => {
 
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
-      fetchCalls.push({ url, method: init?.method, body });
+      const headers = init?.headers ? Object.fromEntries(Object.entries(init.headers as Record<string, string>)) : undefined;
+      fetchCalls.push({ url, method: init?.method, body, headers });
 
       // Features-service: discovery features only require targetAudience
       if (url.includes("/features/") && url.includes("/inputs")) {
@@ -154,6 +155,27 @@ describe("Discovery campaign creation", () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toContain("Missing required feature inputs");
     expect(res.body.missingKeys).toContain("targetAudience");
+  });
+
+  it("should forward x-brand-id, x-feature-slug, x-workflow-name headers to campaign-service", async () => {
+    const app = createApp();
+    await request(app)
+      .post("/v1/campaigns")
+      .send({
+        name: "Header Test",
+        workflowName: "outlets-database-discovery-cedar",
+        brandUrl: "https://acme.com",
+        featureSlug: "outlet-discovery",
+        featureInputs: { targetAudience: "Tech publications" },
+      });
+
+    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
+    expect(campaignCall).toBeDefined();
+    // Resolved brandId from brand-service must be forwarded as header
+    expect(campaignCall!.headers!["x-brand-id"]).toBe("brand-uuid-123");
+    // featureSlug and workflowName from body must also be forwarded as headers
+    expect(campaignCall!.headers!["x-feature-slug"]).toBe("outlet-discovery");
+    expect(campaignCall!.headers!["x-workflow-name"]).toBe("outlets-database-discovery-cedar");
   });
 
   it("should convert budget numbers to strings for discovery campaigns", async () => {
