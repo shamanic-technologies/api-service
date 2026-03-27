@@ -68,18 +68,13 @@ describe("Campaign discovery proxy: journalists", () => {
     expect(journalistsSection).toContain("requireUser");
   });
 
-  it("should NOT proxy to stale /campaign-outlet-journalists endpoint (removed upstream)", () => {
-    expect(content).not.toContain("/campaign-outlet-journalists");
-  });
-
-  it("should fetch outlets from outlet-service then resolve journalists", () => {
+  it("should call GET /campaign-outlet-journalists on journalist-service", () => {
     const journalistsSection = content.slice(
       content.indexOf('"/campaigns/:id/journalists"'),
     );
-    expect(journalistsSection).toContain("externalServices.outlet");
-    expect(journalistsSection).toContain("/internal/outlets/by-campaign/");
     expect(journalistsSection).toContain("externalServices.journalist");
-    expect(journalistsSection).toContain("/journalists/resolve");
+    expect(journalistsSection).toContain("/campaign-outlet-journalists");
+    expect(journalistsSection).toContain("campaign_id");
   });
 
   it("should forward internal headers", () => {

@@ -45,10 +45,6 @@ describe("Journalists proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should NOT have stale /campaign-outlet-journalists endpoint", () => {
-    expect(content).not.toContain("/campaign-outlet-journalists");
-  });
-
   it("should use buildInternalHeaders for all endpoints", () => {
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
@@ -59,10 +55,21 @@ describe("Journalists proxy routes", () => {
     expect(content).toContain("externalServices.journalist");
   });
 
-  it("should forward request body on all POST endpoints", () => {
+  it("should forward request body on discover and discover-emails endpoints", () => {
     const bodyMatches = content.match(/body: req\.body/g);
     expect(bodyMatches).not.toBeNull();
-    expect(bodyMatches!.length).toBe(3);
+    expect(bodyMatches!.length).toBe(2);
+  });
+
+  it("should translate resolve to GET /campaign-outlet-journalists on journalist-service", () => {
+    expect(content).toContain("/campaign-outlet-journalists");
+    expect(content).toContain("campaign_id");
+    expect(content).toContain("outlet_id");
+  });
+
+  it("should require x-campaign-id header for resolve endpoint", () => {
+    expect(content).toContain("req.campaignId");
+    expect(content).toContain("Missing x-campaign-id header");
   });
 
   it("should enforce requireOrg + requireUser on ALL journalist routes", () => {
