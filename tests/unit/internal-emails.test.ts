@@ -76,7 +76,7 @@ describe("PUT /internal/emails/templates", () => {
     expect(res.status).toBe(200);
     expect(res.body.templates).toHaveLength(1);
 
-    const deployCall = fetchCalls.find((c) => c.url.includes("/templates"));
+    const deployCall = fetchCalls.find((c) => c.url.includes("/platform-templates"));
     expect(deployCall).toBeDefined();
     expect(deployCall!.method).toBe("PUT");
     expect(deployCall!.body).toMatchObject({
@@ -88,32 +88,10 @@ describe("PUT /internal/emails/templates", () => {
         },
       ],
     });
-    // No identity headers forwarded when caller doesn't send them
+    // Platform endpoint — no identity headers needed
     expect(deployCall!.headers!["x-org-id"]).toBeUndefined();
     expect(deployCall!.headers!["x-user-id"]).toBeUndefined();
     expect(deployCall!.headers!["x-run-id"]).toBeUndefined();
-  });
-
-  it("should forward identity headers to transactional-email-service when present", async () => {
-    const res = await request(app)
-      .put("/internal/emails/templates")
-      .set("X-API-Key", VALID_API_KEY)
-      .set("x-org-id", "org-uuid-123")
-      .set("x-user-id", "user-uuid-456")
-      .set("x-run-id", "run-uuid-789")
-      .send({
-        templates: [
-          { name: "campaign_created", subject: "Campaign Created", htmlBody: "<h1>Created</h1>" },
-        ],
-      });
-
-    expect(res.status).toBe(200);
-
-    const deployCall = fetchCalls.find((c) => c.url.includes("/templates"));
-    expect(deployCall).toBeDefined();
-    expect(deployCall!.headers!["x-org-id"]).toBe("org-uuid-123");
-    expect(deployCall!.headers!["x-user-id"]).toBe("user-uuid-456");
-    expect(deployCall!.headers!["x-run-id"]).toBe("run-uuid-789");
   });
 
   it("should return 401 without API key", async () => {
@@ -176,7 +154,7 @@ describe("PUT /internal/emails/templates", () => {
 
     expect(res.status).toBe(200);
 
-    const deployCall = fetchCalls.find((c) => c.url.includes("/templates"));
+    const deployCall = fetchCalls.find((c) => c.url.includes("/platform-templates"));
     expect(deployCall!.body.templates).toHaveLength(3);
   });
 });

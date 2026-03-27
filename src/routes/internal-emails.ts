@@ -18,22 +18,12 @@ router.put("/emails/templates", authenticatePlatform, async (req: AuthenticatedR
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
 
-    // Forward identity headers from the caller — transactional-email-service requires them
-    const headers: Record<string, string> = {};
-    const orgId = req.headers["x-org-id"] as string | undefined;
-    const userId = req.headers["x-user-id"] as string | undefined;
-    const runId = req.headers["x-run-id"] as string | undefined;
-    if (orgId) headers["x-org-id"] = orgId;
-    if (userId) headers["x-user-id"] = userId;
-    if (runId) headers["x-run-id"] = runId;
-
     const result = await callExternalService(
       externalServices.transactionalEmail,
-      "/templates",
+      "/platform-templates",
       {
         method: "PUT",
         body: parsed.data,
-        headers,
       }
     );
     res.json(result);
