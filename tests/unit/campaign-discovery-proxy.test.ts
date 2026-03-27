@@ -90,14 +90,38 @@ describe("Campaign discovery proxy: journalists", () => {
   });
 });
 
-describe("Campaign journalists: x-campaign-id header forwarding", () => {
+describe("Campaign journalists: header enrichment from campaign data", () => {
   it("should explicitly set x-campaign-id from path param when calling journalist-service resolve", () => {
     const journalistsSection = content.slice(
       content.indexOf('"/campaigns/:id/journalists"'),
     );
-    // The campaign ID from the URL path must be forwarded as x-campaign-id header
-    // even when the caller does not send x-campaign-id in the request headers
     expect(journalistsSection).toContain('"x-campaign-id"');
+  });
+
+  it("should fetch campaign from campaign-service to resolve brandId", () => {
+    const journalistsSection = content.slice(
+      content.indexOf('"/campaigns/:id/journalists"'),
+    );
+    expect(journalistsSection).toContain("externalServices.campaign");
+    expect(journalistsSection).toContain("/campaigns/");
+  });
+
+  it("should forward x-brand-id resolved from campaign data to journalist-service", () => {
+    const journalistsSection = content.slice(
+      content.indexOf('"/campaigns/:id/journalists"'),
+    );
+    expect(journalistsSection).toContain('"x-brand-id"');
+    expect(journalistsSection).toContain("campaign.brandId");
+  });
+
+  it("should forward x-feature-slug and x-workflow-name from campaign data", () => {
+    const journalistsSection = content.slice(
+      content.indexOf('"/campaigns/:id/journalists"'),
+    );
+    expect(journalistsSection).toContain('"x-feature-slug"');
+    expect(journalistsSection).toContain("campaign.featureSlug");
+    expect(journalistsSection).toContain('"x-workflow-name"');
+    expect(journalistsSection).toContain("campaign.workflowName");
   });
 });
 
