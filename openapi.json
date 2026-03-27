@@ -1380,6 +1380,15 @@
                   "type": "string",
                   "format": "uuid"
                 },
+                "outletName": {
+                  "type": "string",
+                  "description": "Resolved outlet name"
+                },
+                "outletDomain": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Resolved outlet domain (e.g. techcrunch.com)"
+                },
                 "journalistName": {
                   "type": "string"
                 },
@@ -1417,6 +1426,8 @@
               "required": [
                 "id",
                 "outletId",
+                "outletName",
+                "outletDomain",
                 "journalistName",
                 "firstName",
                 "lastName",

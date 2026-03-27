@@ -808,7 +808,7 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
     const campaign = campaignResult.campaign;
 
     // First get the campaign's outlets, then resolve journalists for each
-    const outletsResult = await callExternalService<{ outlets: Array<{ id: string }> }>(
+    const outletsResult = await callExternalService<{ outlets: Array<{ id: string; outletName?: string; outletDomain?: string | null }> }>(
       externalServices.outlet,
       `/internal/outlets/by-campaign/${encodeURIComponent(id)}`,
       { headers: baseHeaders }
@@ -837,10 +837,23 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
       { headers }
     );
 
-    const allJournalists = (journalistsResult.campaignJournalists || []).map((j) => ({
-      ...j,
-      // Normalize outletId from the response (already present on each record)
-    }));
+    // Build outlet lookup map for enriching journalists with outlet name/domain
+    const outletMap = new Map<string, { outletName: string; outletDomain: string | null }>();
+    for (const o of outlets) {
+      if (o.id && o.outletName) {
+        outletMap.set(o.id, { outletName: o.outletName, outletDomain: o.outletDomain ?? null });
+      }
+    }
+
+    const allJournalists = (journalistsResult.campaignJournalists || []).map((j) => {
+      const outletId = j.outletId as string | undefined;
+      const outlet = outletId ? outletMap.get(outletId) : undefined;
+      return {
+        ...j,
+        outletName: outlet?.outletName ?? (j.outletName as string | undefined) ?? "",
+        outletDomain: outlet?.outletDomain ?? (j.outletDomain as string | null | undefined) ?? null,
+      };
+    });
 
     res.json({ journalists: allJournalists });
   } catch (error: any) {

@@ -158,4 +158,39 @@ describe("OpenAPI schemas: campaign discovery endpoints", () => {
     expect(schemaContent).toContain("relevanceScore");
     expect(schemaContent).toContain("articleUrls");
   });
+
+  it("should include outletName and outletDomain in CampaignJournalistsResponse schema", () => {
+    // Find the CampaignJournalistsResponse block and check it contains outlet fields
+    const start = schemaContent.indexOf("CampaignJournalistsResponse");
+    const block = schemaContent.slice(Math.max(0, start - 800), start);
+    expect(block).toContain("outletName:");
+    expect(block).toContain("outletDomain:");
+  });
+});
+
+describe("Campaign journalists: outlet name/domain enrichment", () => {
+  it("should build an outlet lookup map from the fetched outlets", () => {
+    const journalistsSection = content.slice(
+      content.indexOf('"/campaigns/:id/journalists"'),
+    );
+    expect(journalistsSection).toContain("outletMap");
+    expect(journalistsSection).toContain("new Map");
+  });
+
+  it("should enrich each journalist with outletName and outletDomain from the outlet map", () => {
+    const journalistsSection = content.slice(
+      content.indexOf('"/campaigns/:id/journalists"'),
+    );
+    expect(journalistsSection).toContain("outletName:");
+    expect(journalistsSection).toContain("outletDomain:");
+    expect(journalistsSection).toContain("outletMap.get");
+  });
+
+  it("should type the outlets response to include outletName and outletDomain", () => {
+    const journalistsSection = content.slice(
+      content.indexOf('"/campaigns/:id/journalists"'),
+    );
+    expect(journalistsSection).toContain("outletName?:");
+    expect(journalistsSection).toContain("outletDomain?:");
+  });
 });

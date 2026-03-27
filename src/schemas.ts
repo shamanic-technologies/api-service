@@ -857,6 +857,8 @@ registry.registerPath({
                 z.object({
                   id: z.string().uuid(),
                   outletId: z.string().uuid(),
+                  outletName: z.string().describe("Resolved outlet name"),
+                  outletDomain: z.string().nullable().describe("Resolved outlet domain (e.g. techcrunch.com)"),
                   journalistName: z.string(),
                   firstName: z.string(),
                   lastName: z.string(),
