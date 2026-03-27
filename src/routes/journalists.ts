@@ -34,14 +34,46 @@ router.post("/journalists/discover-emails", authenticate, requireOrg, requireUse
 });
 
 // ── POST /v1/journalists/resolve — resolve journalists for campaign+outlet ──
+// Translates the POST body into a GET /campaign-outlet-journalists query on journalist-service
 router.post("/journalists/resolve", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const result = await callExternalService(
+    const { outletId } = req.body as { outletId?: string };
+    const campaignId = req.campaignId;
+
+    if (!campaignId) {
+      return res.status(400).json({ error: "Missing x-campaign-id header (required for journalist resolution)" });
+    }
+    if (!outletId) {
+      return res.status(400).json({ error: "Missing outletId in request body" });
+    }
+
+    const params = new URLSearchParams({
+      campaign_id: campaignId,
+      outlet_id: outletId,
+    });
+
+    const result = await callExternalService<{
+      campaignJournalists: Array<Record<string, unknown>>;
+    }>(
       externalServices.journalist,
-      "/journalists/resolve",
-      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+      `/campaign-outlet-journalists?${params}`,
+      { headers: buildInternalHeaders(req) }
     );
-    res.json(result);
+
+    // Transform response to match the ResolveJournalistsResponse schema
+    const journalists = (result.campaignJournalists || []).map((j) => ({
+      id: j.journalistId ?? j.id,
+      journalistName: j.journalistName,
+      firstName: j.firstName,
+      lastName: j.lastName,
+      entityType: j.entityType,
+      relevanceScore: typeof j.relevanceScore === "string" ? parseFloat(j.relevanceScore as string) : j.relevanceScore,
+      whyRelevant: j.whyRelevant,
+      whyNotRelevant: j.whyNotRelevant,
+      articleUrls: j.articleUrls,
+    }));
+
+    res.json({ journalists, cached: true });
   } catch (error: any) {
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to resolve journalists" });
   }

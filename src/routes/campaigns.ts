@@ -820,7 +820,6 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
     }
 
     // Enrich headers with campaign metadata so journalist-service gets x-brand-id
-    const outletIds = outlets.map((o) => o.id);
     const headers: Record<string, string> = {
       ...baseHeaders,
       "x-campaign-id": id,
@@ -828,24 +827,20 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
     if (campaign.brandId) headers["x-brand-id"] = campaign.brandId;
     if (campaign.featureSlug) headers["x-feature-slug"] = campaign.featureSlug;
     if (campaign.workflowName) headers["x-workflow-name"] = campaign.workflowName;
-    const journalistResults = await Promise.all(
-      outletIds.map((outletId) =>
-        callExternalService<{ journalists: Array<Record<string, unknown>>; cached: boolean }>(
-          externalServices.journalist,
-          "/journalists/resolve",
-          {
-            method: "POST",
-            body: { outletId },
-            headers,
-          }
-        ).catch(() => ({ journalists: [], cached: false }))
-      )
+
+    // Fetch all journalists for this campaign in one call
+    const journalistsResult = await callExternalService<{
+      campaignJournalists: Array<Record<string, unknown>>;
+    }>(
+      externalServices.journalist,
+      `/campaign-outlet-journalists?campaign_id=${encodeURIComponent(id)}`,
+      { headers }
     );
 
-    // Flatten all journalists with their outlet context
-    const allJournalists = journalistResults.flatMap((r, idx) =>
-      r.journalists.map((j) => ({ ...j, outletId: outletIds[idx] }))
-    );
+    const allJournalists = (journalistsResult.campaignJournalists || []).map((j) => ({
+      ...j,
+      // Normalize outletId from the response (already present on each record)
+    }));
 
     res.json({ journalists: allJournalists });
   } catch (error: any) {
