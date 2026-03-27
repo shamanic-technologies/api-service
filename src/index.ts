@@ -1,4 +1,16 @@
 // Sentry is loaded via --import flag in package.json start script
+
+// ── Prefix all console output with [api-service] ────────────────────────────
+// Shared Railway log streams mix output from multiple containers;
+// this makes api-service lines instantly identifiable.
+const PREFIX = "[api-service]";
+const _log = console.log.bind(console);
+const _error = console.error.bind(console);
+const _warn = console.warn.bind(console);
+console.log = (...args: unknown[]) => _log(PREFIX, ...args);
+console.error = (...args: unknown[]) => _error(PREFIX, ...args);
+console.warn = (...args: unknown[]) => _warn(PREFIX, ...args);
+
 import * as Sentry from "@sentry/node";
 import express from "express";
 import cors from "cors";
