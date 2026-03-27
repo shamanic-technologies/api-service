@@ -804,6 +804,7 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
 
     // Batch lookup journalists by outlet IDs via internal endpoint
     const outletIds = outlets.map((o) => o.id);
+    const headers = { ...buildInternalHeaders(req), "x-campaign-id": id };
     const journalistResults = await Promise.all(
       outletIds.map((outletId) =>
         callExternalService<{ journalists: Array<Record<string, unknown>>; cached: boolean }>(
@@ -812,7 +813,7 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
           {
             method: "POST",
             body: { outletId },
-            headers: buildInternalHeaders(req),
+            headers,
           }
         ).catch(() => ({ journalists: [], cached: false }))
       )

@@ -90,6 +90,17 @@ describe("Campaign discovery proxy: journalists", () => {
   });
 });
 
+describe("Campaign journalists: x-campaign-id header forwarding", () => {
+  it("should explicitly set x-campaign-id from path param when calling journalist-service resolve", () => {
+    const journalistsSection = content.slice(
+      content.indexOf('"/campaigns/:id/journalists"'),
+    );
+    // The campaign ID from the URL path must be forwarded as x-campaign-id header
+    // even when the caller does not send x-campaign-id in the request headers
+    expect(journalistsSection).toContain('"x-campaign-id"');
+  });
+});
+
 describe("Service client: outlet and journalist services", () => {
   it("should define outlet service config", () => {
     expect(serviceClientContent).toContain("OUTLETS_SERVICE_URL");
