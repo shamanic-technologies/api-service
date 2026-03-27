@@ -798,12 +798,20 @@ router.get("/campaigns/:id/outlets", authenticate, requireOrg, requireUser, asyn
 router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
+    const baseHeaders = buildInternalHeaders(req);
+
+    // Fetch campaign to get brandId/featureSlug/workflowName for downstream headers
+    const campaignResult = await callExternalService<{
+      campaign: { brandId?: string; featureSlug?: string; workflowName?: string };
+    }>(externalServices.campaign, `/campaigns/${encodeURIComponent(id)}`, { headers: baseHeaders });
+
+    const campaign = campaignResult.campaign;
 
     // First get the campaign's outlets, then resolve journalists for each
     const outletsResult = await callExternalService<{ outlets: Array<{ id: string }> }>(
       externalServices.outlet,
       `/internal/outlets/by-campaign/${encodeURIComponent(id)}`,
-      { headers: buildInternalHeaders(req) }
+      { headers: baseHeaders }
     );
 
     const outlets = outletsResult.outlets || [];
@@ -811,9 +819,15 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
       return res.json({ journalists: [] });
     }
 
-    // Batch lookup journalists by outlet IDs via internal endpoint
+    // Enrich headers with campaign metadata so journalist-service gets x-brand-id
     const outletIds = outlets.map((o) => o.id);
-    const headers = { ...buildInternalHeaders(req), "x-campaign-id": id };
+    const headers: Record<string, string> = {
+      ...baseHeaders,
+      "x-campaign-id": id,
+    };
+    if (campaign.brandId) headers["x-brand-id"] = campaign.brandId;
+    if (campaign.featureSlug) headers["x-feature-slug"] = campaign.featureSlug;
+    if (campaign.workflowName) headers["x-workflow-name"] = campaign.workflowName;
     const journalistResults = await Promise.all(
       outletIds.map((outletId) =>
         callExternalService<{ journalists: Array<Record<string, unknown>>; cached: boolean }>(
