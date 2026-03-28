@@ -70,6 +70,28 @@ router.get("/features/stats", authenticate, requireOrg, requireUser, async (req:
 });
 
 /**
+ * GET /v1/features/dynasty
+ * Resolve stable dynasty identifiers for a versioned feature slug.
+ */
+router.get("/features/dynasty", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const slug = req.query.slug as string | undefined;
+    if (!slug) {
+      return res.status(400).json({ error: "Missing required query parameter: slug" });
+    }
+    const result = await callExternalService(
+      externalServices.features,
+      `/features/dynasty?slug=${encodeURIComponent(slug)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Dynasty lookup error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to resolve dynasty" });
+  }
+});
+
+/**
  * GET /v1/features/:slug
  * Get a single feature by slug
  */

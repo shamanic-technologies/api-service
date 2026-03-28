@@ -5077,6 +5077,39 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/dynasty",
+  tags: ["Features"],
+  summary: "Resolve feature dynasty",
+  description:
+    "Returns stable, unversioned dynasty identifiers (dynasty name and slug) for a given versioned feature slug. " +
+    "Useful for composing workflow names. Proxied from features-service.",
+  security: authed,
+  request: {
+    query: z.object({
+      slug: z.string().describe("Versioned feature slug (e.g. 'pr-cold-email-outreach-v2')"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Dynasty identifiers",
+      content: {
+        "application/json": {
+          schema: z.object({
+            feature_dynasty_name: z.string().describe("Stable dynasty display name"),
+            feature_dynasty_slug: z.string().describe("Stable dynasty slug (unversioned)"),
+          }).openapi("FeatureDynastyResponse"),
+        },
+      },
+    },
+    400: { description: "Missing slug parameter", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/features/{slug}",
   tags: ["Features"],
   summary: "Get feature by slug",

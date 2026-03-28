@@ -41,6 +41,22 @@ describe("Features proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
+  it("should have GET /features/dynasty with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/features/dynasty"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should validate slug query param on GET /features/dynasty", () => {
+    const dynastySection = content.slice(content.indexOf('"/features/dynasty"'));
+    expect(dynastySection).toContain("req.query.slug");
+    expect(dynastySection).toContain("/features/dynasty?slug=");
+  });
+
   it("should have GET /features/:slug/inputs with auth + requireOrg + requireUser", () => {
     const line = content.split("\n").find((l) =>
       l.includes("router.get") && l.includes('"/features/:slug/inputs"')
@@ -111,7 +127,7 @@ describe("Features proxy routes", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(10);
+    expect(headerMatches!.length).toBe(11);
   });
 
   it("should proxy to externalServices.features", () => {
@@ -174,9 +190,11 @@ describe("Features proxy routes", () => {
   it("should register static routes before parameterized :slug route", () => {
     const registryIdx = content.indexOf('"/features/stats/registry"');
     const globalStatsIdx = content.indexOf('"/features/stats"');
+    const dynastyIdx = content.indexOf('"/features/dynasty"');
     const slugIdx = content.indexOf('"/features/:slug"');
     expect(registryIdx).toBeLessThan(slugIdx);
     expect(globalStatsIdx).toBeLessThan(slugIdx);
+    expect(dynastyIdx).toBeLessThan(slugIdx);
   });
 });
 
@@ -199,6 +217,16 @@ describe("Features OpenAPI schemas", () => {
 
   it("should register GET /v1/features/{slug}", () => {
     expect(schemaContent).toContain('path: "/v1/features/{slug}"');
+  });
+
+  it("should register GET /v1/features/dynasty", () => {
+    expect(schemaContent).toContain('path: "/v1/features/dynasty"');
+  });
+
+  it("should define FeatureDynastyResponse schema", () => {
+    expect(schemaContent).toContain("FeatureDynastyResponse");
+    expect(schemaContent).toContain("feature_dynasty_name");
+    expect(schemaContent).toContain("feature_dynasty_slug");
   });
 
   it("should register GET /v1/features/{slug}/inputs", () => {
