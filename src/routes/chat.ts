@@ -22,12 +22,17 @@ router.put("/chat/config", authenticate, requireOrg, requireUser, async (req: Au
 // POST /v1/chat — stream AI response via SSE
 router.post("/chat", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
+    // Chat-service requires sessionId to be omitted (not null) to create a new session.
+    // The dashboard sends sessionId: null after "Reset Chat", so strip it here.
+    const { sessionId, ...rest } = req.body;
+    const body = sessionId ? { ...rest, sessionId } : rest;
+
     await streamExternalService(
       externalServices.chat,
       "/chat",
       {
         method: "POST",
-        body: req.body,
+        body,
         headers: buildInternalHeaders(req),
         expressRes: res,
       }
