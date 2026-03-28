@@ -208,7 +208,7 @@ const PublicRankedWorkflowItemSchema = z
 const BestWorkflowRecordSchema = z
   .object({
     workflowId: z.string().describe("ID of the workflow holding the record"),
-    workflowName: z.string().describe("Name of the workflow"),
+    workflowSlug: z.string().describe("Slug of the workflow"),
     displayName: z.string().nullable().describe("Stable display name of the workflow family"),
     createdForBrandId: z.string().nullable().describe("Brand ID that created this workflow"),
     value: z.number().describe("The record value in USD cents"),
@@ -342,7 +342,7 @@ registry.registerPath({
 export const CreateCampaignRequestSchema = z
   .object({
     name: z.string().describe("Campaign name"),
-    workflowName: z.string().min(1).describe("Workflow name (e.g. 'sales-email-cold-outreach-sienna'). Determines which execution pipeline to use."),
+    workflowSlug: z.string().min(1).describe("Workflow slug (e.g. 'sales-email-cold-outreach-sienna'). Determines which execution pipeline to use."),
     brandUrl: z.string().min(1).describe("Brand website URL"),
     featureSlug: z.string().min(1).describe("Feature slug — used to validate inputs against features-service"),
     featureInputs: z.record(z.unknown()).describe("Opaque feature inputs. Validated by key-presence against features-service, never inspected by api-service."),
@@ -361,12 +361,12 @@ export const DISCOVERY_PREFIXES: Array<{ prefix: string; type: string }> = [
   { prefix: "journalists-database-discovery-", type: "journalists-database-discovery" },
 ];
 
-export function isDiscoveryWorkflow(workflowName: string): boolean {
-  return DISCOVERY_PREFIXES.some((d) => workflowName.startsWith(d.prefix));
+export function isDiscoveryWorkflow(workflowSlug: string): boolean {
+  return DISCOVERY_PREFIXES.some((d) => workflowSlug.startsWith(d.prefix));
 }
 
-export function deriveCampaignType(workflowName: string): string {
-  const match = DISCOVERY_PREFIXES.find((d) => workflowName.startsWith(d.prefix));
+export function deriveCampaignType(workflowSlug: string): string {
+  const match = DISCOVERY_PREFIXES.find((d) => workflowSlug.startsWith(d.prefix));
   return match ? match.type : "cold-email-outreach";
 }
 
@@ -415,7 +415,7 @@ const CampaignSchema = z
     orgId: z.string().describe("Organization ID"),
     createdByUserId: z.string().nullable().describe("User who created the campaign"),
     name: z.string().describe("Campaign name"),
-    workflowName: z.string().describe("Workflow name used for execution"),
+    workflowSlug: z.string().describe("Workflow slug used for execution"),
     brandUrl: z.string().nullable().describe("Brand website URL"),
     brandId: z.string().nullable().describe("Brand ID"),
     featureSlug: z.string().nullable().describe("Feature slug for tracking"),
@@ -477,7 +477,7 @@ registry.registerPath({
   description:
     "Create a new campaign. Requires `featureSlug` and `featureInputs`.\n\n" +
     "Feature inputs are validated by key-presence against features-service (api-service never inspects values). " +
-    "The `workflowName` determines which execution pipeline campaign-service uses.",
+    "The `workflowSlug` determines which execution pipeline campaign-service uses.",
   security: authed,
   request: {
     body: {
@@ -931,7 +931,7 @@ registry.registerPath({
               overallRelevance: z.string().optional(),
               relevanceRationale: z.string().optional(),
               status: z.enum(["open", "ended", "denied"]).optional().default("open"),
-              workflowName: z.string().optional(),
+              workflowSlug: z.string().optional(),
             })
             .openapi("CreateOutletRequest"),
         },
@@ -950,14 +950,14 @@ registry.registerPath({
   path: "/v1/outlets/stats",
   tags: ["Outlets"],
   summary: "Aggregated outlet discovery metrics",
-  description: "Returns outlet discovery stats. Supports filtering by brandId, campaignId, workflowName and optional groupBy.",
+  description: "Returns outlet discovery stats. Supports filtering by brandId, campaignId, workflowSlug and optional groupBy.",
   security: authed,
   request: {
     query: z.object({
       brandId: z.string().uuid().optional(),
       campaignId: z.string().uuid().optional(),
-      workflowName: z.string().optional(),
-      groupBy: z.enum(["workflowName", "brandId", "campaignId"]).optional(),
+      workflowSlug: z.string().optional(),
+      groupBy: z.enum(["workflowSlug", "brandId", "campaignId"]).optional(),
     }),
   },
   responses: {
@@ -991,7 +991,7 @@ registry.registerPath({
                   overallRelevance: z.string().optional(),
                   relevanceRationale: z.string().optional(),
                   status: z.enum(["open", "ended", "denied"]).optional().default("open"),
-                  workflowName: z.string().optional(),
+                  workflowSlug: z.string().optional(),
                 }),
               ),
             })
@@ -1047,7 +1047,7 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              workflowName: z.string().optional(),
+              workflowSlug: z.string().optional(),
             })
             .openapi("DiscoverOutletsRequest"),
         },
@@ -2857,7 +2857,7 @@ registry.registerPath({
             .object({
               workflow: z.object({
                 id: z.string().describe("Workflow ID"),
-                name: z.string().describe("Auto-generated workflow name"),
+                name: z.string().describe("Auto-generated workflow slug"),
                 featureSlug: z.string().describe("Feature slug this workflow belongs to"),
                 signature: z.string().describe("SHA-256 hash of the canonical DAG"),
                 signatureName: z.string().describe("Human-readable name for this DAG variant"),
@@ -2902,7 +2902,7 @@ const ProviderInfoSchema = z
 
 export const WorkflowSummaryResponseSchema = z
   .object({
-    workflowName: z.string().describe("Workflow name"),
+    workflowSlug: z.string().describe("Workflow slug"),
     summary: z.string().describe("Natural-language summary of the workflow"),
     requiredProviders: z.array(ProviderInfoSchema).describe("External providers required by this workflow, with domains for logo display"),
     steps: z.array(z.string()).describe("Ordered list of workflow steps in human-readable format"),
@@ -2943,7 +2943,7 @@ export const WorkflowKeyStatusItemSchema = z
 
 export const WorkflowKeyStatusResponseSchema = z
   .object({
-    workflowName: z.string().describe("Workflow name"),
+    workflowSlug: z.string().describe("Workflow slug"),
     ready: z.boolean().describe("True if all required provider keys are configured"),
     keys: z.array(WorkflowKeyStatusItemSchema).describe("Status of each required provider key"),
     missing: z.array(z.string()).describe("List of provider names with missing keys"),
@@ -5190,11 +5190,11 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Global stats cross-features",
   description:
-    "Aggregated stats across all features. Supports groupBy (featureSlug, workflowName, brandId, campaignId — comma-separated combos allowed) and optional brandId filter. Requires x-org-id. Proxied from features-service.",
+    "Aggregated stats across all features. Supports groupBy (featureSlug, workflowSlug, brandId, campaignId — comma-separated combos allowed) and optional brandId filter. Requires x-org-id. Proxied from features-service.",
   security: authed,
   request: {
     query: z.object({
-      groupBy: z.string().optional().describe("Group dimension(s), comma-separated: featureSlug, workflowName, brandId, campaignId"),
+      groupBy: z.string().optional().describe("Group dimension(s), comma-separated: featureSlug, workflowSlug, brandId, campaignId"),
       brandId: z.string().optional().describe("Filter by brand UUID"),
     }),
   },
@@ -5211,15 +5211,15 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Feature stats",
   description:
-    "Stats for a specific feature, groupable by workflowName, brandId, or campaignId. Supports optional brandId, campaignId, and workflowName filters. Requires x-org-id. Proxied from features-service.",
+    "Stats for a specific feature, groupable by workflowSlug, brandId, or campaignId. Supports optional brandId, campaignId, and workflowSlug filters. Requires x-org-id. Proxied from features-service.",
   security: authed,
   request: {
     params: z.object({ featureSlug: z.string().describe("Feature slug") }),
     query: z.object({
-      groupBy: z.string().optional().describe("Group dimension: workflowName | brandId | campaignId"),
+      groupBy: z.string().optional().describe("Group dimension: workflowSlug | brandId | campaignId"),
       brandId: z.string().optional().describe("Filter by brand UUID"),
       campaignId: z.string().optional().describe("Filter by campaign UUID"),
-      workflowName: z.string().optional().describe("Filter by workflow name"),
+      workflowSlug: z.string().optional().describe("Filter by workflow slug"),
     }),
   },
   responses: {

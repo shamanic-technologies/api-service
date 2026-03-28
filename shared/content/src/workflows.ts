@@ -83,12 +83,12 @@ const KNOWN_CHANNELS = new Set<string>(["email"]);
 const TWO_WORD_AUDIENCE_TYPES = new Set<string>(["cold-outreach"]);
 
 /**
- * Parse a workflow name: {category}-{channel}-{audienceType}-{signatureName}.
+ * Parse a workflow slug: {category}-{channel}-{audienceType}-{signatureName}.
  * Example: "sales-email-cold-outreach-sienna"
- * Returns null if the name doesn't match the expected format.
+ * Returns null if the slug doesn't match the expected format.
  */
-export function parseWorkflowName(name: string): ParsedWorkflowName | null {
-  const parts = name.split("-");
+export function parseWorkflowSlug(slug: string): ParsedWorkflowName | null {
+  const parts = slug.split("-");
   if (parts.length < 4) return null;
 
   if (!KNOWN_CATEGORIES.has(parts[0])) return null;
@@ -119,28 +119,28 @@ export function parseWorkflowName(name: string): ParsedWorkflowName | null {
   return null;
 }
 
-/** Get the section key for grouping. Returns null if name doesn't match expected format. */
-export function getSectionKey(workflowName: string): string | null {
-  return parseWorkflowName(workflowName)?.sectionKey ?? null;
+/** Get the section key for grouping. Returns null if slug doesn't match expected format. */
+export function getSectionKey(workflowSlug: string): string | null {
+  return parseWorkflowSlug(workflowSlug)?.sectionKey ?? null;
 }
 
-/** Extract signatureName from a workflow name. Returns null if name doesn't match expected format. */
-export function getSignatureName(workflowName: string): string | null {
-  return parseWorkflowName(workflowName)?.signatureName ?? null;
+/** Extract signatureName from a workflow slug. Returns null if slug doesn't match expected format. */
+export function getSignatureName(workflowSlug: string): string | null {
+  return parseWorkflowSlug(workflowSlug)?.signatureName ?? null;
 }
 
-/** Resolve category for a workflow name. Returns null if name doesn't match expected format. */
-export function getWorkflowCategory(workflowName: string): WorkflowCategory | null {
-  return parseWorkflowName(workflowName)?.category ?? null;
+/** Resolve category for a workflow slug. Returns null if slug doesn't match expected format. */
+export function getWorkflowCategory(workflowSlug: string): WorkflowCategory | null {
+  return parseWorkflowSlug(workflowSlug)?.category ?? null;
 }
 
-/** Resolve display name for a workflow name. Returns the capitalized signatureName if parseable, otherwise title-cases the raw name. */
-export function getWorkflowDisplayName(workflowName: string): string {
-  const parsed = parseWorkflowName(workflowName);
+/** Resolve display name for a workflow slug. Returns the capitalized signatureName if parseable, otherwise title-cases the raw slug. */
+export function getWorkflowDisplayName(workflowSlug: string): string {
+  const parsed = parseWorkflowSlug(workflowSlug);
   if (parsed) {
     return parsed.signatureName.charAt(0).toUpperCase() + parsed.signatureName.slice(1);
   }
-  return workflowName
+  return workflowSlug
     .split("-")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");

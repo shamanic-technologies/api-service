@@ -165,7 +165,7 @@ describe("campaign brand upsert sends internal headers", () => {
       .post("/v1/campaigns")
       .send({
         name: "Test Campaign",
-        workflowName: "sales-email-cold-outreach-sienna",
+        workflowSlug: "sales-email-cold-outreach-sienna",
         brandUrl: "https://example.com",
         featureSlug: "cold-outreach-v2",
         featureInputs: {

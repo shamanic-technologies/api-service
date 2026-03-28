@@ -48,7 +48,7 @@ router.get("/features/stats/registry", authenticate, requireOrg, requireUser, as
 
 /**
  * GET /v1/features/stats
- * Global stats cross-features, groupable by featureSlug/workflowName/brandId/campaignId
+ * Global stats cross-features, groupable by featureSlug/workflowSlug/brandId/campaignId
  */
 router.get("/features/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
@@ -107,12 +107,12 @@ router.get("/features/:slug/inputs", authenticate, requireOrg, requireUser, asyn
 
 /**
  * GET /v1/features/:slug/stats
- * Stats for a specific feature, groupable by workflowName/brandId/campaignId
+ * Stats for a specific feature, groupable by workflowSlug/brandId/campaignId
  */
 router.get("/features/:slug/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["groupBy", "brandId", "campaignId", "workflowName"]) {
+    for (const key of ["groupBy", "brandId", "campaignId", "workflowSlug"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";

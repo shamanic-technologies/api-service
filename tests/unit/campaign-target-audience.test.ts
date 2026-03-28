@@ -46,7 +46,7 @@ function createApp() {
 
 const validBody = {
   name: "Test Campaign",
-  workflowName: "sales-email-cold-outreach-sienna",
+  workflowSlug: "sales-email-cold-outreach-sienna",
   brandUrl: "https://example.com",
   featureSlug: "cold-outreach-v2",
   featureInputs: {
@@ -127,7 +127,7 @@ describe("POST /v1/campaigns with featureInputs", () => {
     // Verify campaign-service received featureInputs as-is
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
     expect(campaignCall).toBeDefined();
-    expect(campaignCall!.body!.workflowName).toBe("sales-email-cold-outreach-sienna");
+    expect(campaignCall!.body!.workflowSlug).toBe("sales-email-cold-outreach-sienna");
     expect(campaignCall!.body!.type).toBe("cold-email-outreach");
     expect(campaignCall!.body!.featureSlug).toBe("cold-outreach-v2");
     expect(campaignCall!.body!.featureInputs).toEqual(validBody.featureInputs);
@@ -201,7 +201,7 @@ describe("POST /v1/campaigns with featureInputs", () => {
       .post("/v1/campaigns")
       .send({
         name: "Custom Feature",
-        workflowName: "custom-workflow-v1",
+        workflowSlug: "custom-workflow-v1",
         brandUrl: "https://example.com",
         featureSlug: "custom-search",
         featureInputs: { query: "AI startups", customField: 42, nested: { a: 1 } },

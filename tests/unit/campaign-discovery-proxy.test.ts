@@ -109,14 +109,14 @@ describe("Campaign journalists: header enrichment from campaign data", () => {
     expect(journalistsSection).toContain("campaign.brandId");
   });
 
-  it("should forward x-feature-slug and x-workflow-name from campaign data", () => {
+  it("should forward x-feature-slug and x-workflow-slug from campaign data", () => {
     const journalistsSection = content.slice(
       content.indexOf('"/campaigns/:id/journalists"'),
     );
     expect(journalistsSection).toContain('"x-feature-slug"');
     expect(journalistsSection).toContain("campaign.featureSlug");
-    expect(journalistsSection).toContain('"x-workflow-name"');
-    expect(journalistsSection).toContain("campaign.workflowName");
+    expect(journalistsSection).toContain('"x-workflow-slug"');
+    expect(journalistsSection).toContain("campaign.workflowSlug");
   });
 });
 

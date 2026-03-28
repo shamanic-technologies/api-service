@@ -38,7 +38,7 @@ function createApp() {
 
 const validCampaignBody = {
   name: "Test Campaign",
-  workflowName: "sales-email-cold-outreach-v1",
+  workflowSlug: "sales-email-cold-outreach-v1",
   brandUrl: "https://example.com",
   featureSlug: "cold-outreach-v2",
   featureInputs: {

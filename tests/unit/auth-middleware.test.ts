@@ -352,7 +352,7 @@ describe("Auth middleware — run creation is mandatory", () => {
     expect(res.body.error).toBe("Run tracking unavailable");
   });
 
-  it("should forward x-brand-id, x-campaign-id, x-workflow-name, x-feature-slug headers to createRun", async () => {
+  it("should forward x-brand-id, x-campaign-id, x-workflow-slug, x-feature-slug headers to createRun", async () => {
     const { createRun } = await import("@distribute/runs-client");
     const mockCreateRun = vi.mocked(createRun);
     mockCreateRun.mockResolvedValueOnce({ id: "run-with-context" } as never);
@@ -369,7 +369,7 @@ describe("Auth middleware — run creation is mandatory", () => {
       .set("x-external-user-id", "ext_user_456")
       .set("x-brand-id", "brand-abc")
       .set("x-campaign-id", "campaign-xyz")
-      .set("x-workflow-name", "my-workflow")
+      .set("x-workflow-slug", "my-workflow")
       .set("x-feature-slug", "press-outreach");
 
     expect(res.status).toBe(200);
@@ -383,7 +383,7 @@ describe("Auth middleware — run creation is mandatory", () => {
       {
         "x-brand-id": "brand-abc",
         "x-campaign-id": "campaign-xyz",
-        "x-workflow-name": "my-workflow",
+        "x-workflow-slug": "my-workflow",
         "x-feature-slug": "press-outreach",
       },
     );

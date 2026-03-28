@@ -29,7 +29,7 @@ export {
   getWorkflowDefinitionsByTag,
   WORKFLOW_CATEGORY_LABELS,
   SECTION_LABELS,
-  parseWorkflowName,
+  parseWorkflowSlug,
   getSectionKey,
   getSignatureName,
   getWorkflowCategory,

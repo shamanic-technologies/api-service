@@ -56,7 +56,7 @@ const MOCK_RANKED = {
 };
 
 const MOCK_HERO = {
-  bestCostPerOpen: { workflowId: "wf-1", workflowName: "sales-email-cold-outreach-mintaka", displayName: "Mintaka", brandId: "b-1", value: 12 },
+  bestCostPerOpen: { workflowId: "wf-1", workflowSlug: "sales-email-cold-outreach-mintaka", displayName: "Mintaka", brandId: "b-1", value: 12 },
   bestCostPerReply: null,
 };
 

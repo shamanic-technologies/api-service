@@ -215,7 +215,7 @@ describe("GET /v1/workflows/:id/summary", () => {
     const res = await request(app).get("/v1/workflows/wf-1/summary");
 
     expect(res.status).toBe(200);
-    expect(res.body.workflowName).toBe("sales-email-cold-outreach-v1");
+    expect(res.body.workflowSlug).toBe("sales-email-cold-outreach-v1");
     expect(res.body.requiredProviders).toEqual([{ name: "apollo", domain: "apollo.io" }, { name: "anthropic", domain: "anthropic.com" }, { name: "instantly", domain: "instantly.ai" }]);
     expect(res.body.steps).toHaveLength(4);
     expect(res.body.steps[0]).toContain("1.");
@@ -250,7 +250,7 @@ describe("GET /v1/workflows/:id/summary", () => {
     const res = await request(app).get("/v1/workflows/wf-regression/summary");
 
     expect(res.status).toBe(200);
-    expect(res.body.workflowName).toBe("regression-flow");
+    expect(res.body.workflowSlug).toBe("regression-flow");
     expect(res.body.steps).toHaveLength(1);
   });
 
@@ -285,7 +285,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
     requiredProviders?: string[];
     orgKeys?: Array<{ provider: string; maskedKey: string }>;
     keySources?: Array<{ provider: string; keySource: "org" | "platform" }>;
-    workflowName?: string;
+    workflowSlug?: string;
   } = {}) {
     const {
       requiredProviders = ["apollo", "anthropic", "instantly"],
@@ -294,7 +294,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
         { provider: "anthropic", maskedKey: "sk-...abc" },
       ],
       keySources = [],
-      workflowName = "sales-email-cold-outreach-v1",
+      workflowSlug = "sales-email-cold-outreach-v1",
     } = opts;
 
     return vi.fn().mockImplementation(async (url: string) => {
@@ -310,7 +310,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
         return { ok: true, json: () => Promise.resolve({ keys: orgKeys }) };
       }
       if (url.match(/\/workflows\/wf-1$/)) {
-        return { ok: true, json: () => Promise.resolve({ workflow: { name: workflowName } }) };
+        return { ok: true, json: () => Promise.resolve({ workflow: { name: workflowSlug } }) };
       }
       return { ok: true, json: () => Promise.resolve({}) };
     });
@@ -337,7 +337,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
     const res = await request(app).get("/v1/workflows/wf-1/key-status");
 
     expect(res.status).toBe(200);
-    expect(res.body.workflowName).toBe("sales-email-cold-outreach-v1");
+    expect(res.body.workflowSlug).toBe("sales-email-cold-outreach-v1");
     expect(res.body.ready).toBe(false);
     expect(res.body.keys).toHaveLength(3);
     expect(res.body.keys).toContainEqual({ provider: "apollo", configured: true, maskedKey: "apol...123", keySource: "org" });
@@ -369,7 +369,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
       requiredProviders: ["apollo"],
       orgKeys: [{ provider: "apollo", maskedKey: "apol...123" }],
       keySources: [{ provider: "apollo", keySource: "org" }],
-      workflowName: "simple-flow",
+      workflowSlug: "simple-flow",
     });
     app = createApp();
 

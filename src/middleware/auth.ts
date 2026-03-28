@@ -10,7 +10,7 @@ export interface AuthenticatedRequest extends Request {
   /** Workflow tracking headers — injected by workflow-service, optional */
   campaignId?: string;
   brandId?: string;
-  workflowName?: string;
+  workflowSlug?: string;
   featureSlug?: string;
 }
 
@@ -98,11 +98,11 @@ export async function authenticate(
     // Extract optional workflow tracking headers (injected by workflow-service)
     const campaignId = req.headers["x-campaign-id"] as string | undefined;
     const brandId = req.headers["x-brand-id"] as string | undefined;
-    const workflowName = req.headers["x-workflow-name"] as string | undefined;
+    const workflowSlug = req.headers["x-workflow-slug"] as string | undefined;
     const featureSlug = req.headers["x-feature-slug"] as string | undefined;
     if (campaignId) req.campaignId = campaignId;
     if (brandId) req.brandId = brandId;
-    if (workflowName) req.workflowName = workflowName;
+    if (workflowSlug) req.workflowSlug = workflowSlug;
     if (featureSlug) req.featureSlug = featureSlug;
 
     // Create a request run for tracking — mandatory, fail the request if runs-service is down
@@ -111,7 +111,7 @@ export async function authenticate(
         const runHeaders: Record<string, string> = {};
         if (req.brandId) runHeaders["x-brand-id"] = req.brandId;
         if (req.campaignId) runHeaders["x-campaign-id"] = req.campaignId;
-        if (req.workflowName) runHeaders["x-workflow-name"] = req.workflowName;
+        if (req.workflowSlug) runHeaders["x-workflow-slug"] = req.workflowSlug;
         if (req.featureSlug) runHeaders["x-feature-slug"] = req.featureSlug;
 
         const run = await createRun({
