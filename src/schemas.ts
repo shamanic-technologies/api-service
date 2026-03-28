@@ -162,8 +162,12 @@ const WorkflowEmailStatsSchema = z
 const WorkflowMetadataSchema = z
   .object({
     id: z.string().describe("Workflow ID"),
+    slug: z.string().describe("Unique technical identifier. Use this to execute via /workflows/by-slug/{slug}/execute"),
     name: z.string().describe("Workflow name"),
     displayName: z.string().nullable().describe("Stable display name for the workflow family"),
+    dynastyName: z.string().describe("Stable name for the lineage. Constant across all versions of a dynasty"),
+    dynastySlug: z.string().describe("Stable slug for the lineage. Use as key for dynasty-level lookups and stats grouping"),
+    version: z.number().int().describe("Version number within the dynasty. Starts at 1"),
     createdForBrandId: z.string().nullable().describe("Brand ID that created this workflow"),
     category: z.string().optional().describe("Workflow category (e.g. 'sales', 'pr')"),
     channel: z.string().optional().describe("Communication channel (e.g. 'email')"),
