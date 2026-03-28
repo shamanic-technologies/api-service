@@ -5251,16 +5251,15 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Global stats cross-features",
   description:
-    "Aggregated stats across all features. Supports groupBy (featureSlug, workflowSlug, featureDynastySlug, workflowDynastySlug, brandId, campaignId — comma-separated combos allowed) and optional filters. Requires x-org-id. Proxied from features-service.",
+    "Aggregated stats across all features. Supports groupBy (featureSlug, workflowSlug, featureDynastySlug, brandId, campaignId — comma-separated combos allowed) and optional filters. Requires x-org-id. Proxied from features-service.",
   security: authed,
   request: {
     query: z.object({
-      groupBy: z.string().optional().describe("Group dimension(s), comma-separated: featureSlug, workflowSlug, featureDynastySlug, workflowDynastySlug, brandId, campaignId"),
+      groupBy: z.string().optional().describe("Group dimension(s), comma-separated: featureSlug, workflowSlug, featureDynastySlug, brandId, campaignId"),
       brandId: z.string().optional().describe("Filter by brand UUID"),
       featureSlug: z.string().optional().describe("Filter by exact feature slug"),
       workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
       featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
-      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
     }),
   },
   responses: {
@@ -5276,17 +5275,16 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Feature stats",
   description:
-    "Stats for a specific feature, groupable by workflowSlug, workflowDynastySlug, brandId, or campaignId. Supports optional filters including dynasty slugs. Requires x-org-id. Proxied from features-service.",
+    "Stats for a specific feature, groupable by workflowSlug, brandId, or campaignId. Supports optional filters including featureDynastySlug. Requires x-org-id. Proxied from features-service.",
   security: authed,
   request: {
     params: z.object({ featureSlug: z.string().describe("Feature slug") }),
     query: z.object({
-      groupBy: z.string().optional().describe("Group dimension: workflowSlug | workflowDynastySlug | brandId | campaignId"),
+      groupBy: z.string().optional().describe("Group dimension: workflowSlug | brandId | campaignId"),
       brandId: z.string().optional().describe("Filter by brand UUID"),
       campaignId: z.string().optional().describe("Filter by campaign UUID"),
       workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
       featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
-      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
     }),
   },
   responses: {
