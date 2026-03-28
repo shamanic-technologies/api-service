@@ -8206,7 +8206,7 @@
           "Outlets"
         ],
         "summary": "Aggregated outlet discovery metrics",
-        "description": "Returns outlet discovery stats. Supports filtering by brandId, campaignId, workflowSlug and optional groupBy.",
+        "description": "Returns outlet discovery stats. Supports filtering by brandId, campaignId, workflowSlug, featureSlug, workflowDynastySlug, featureDynastySlug and optional groupBy.",
         "security": [
           {
             "bearerAuth": []
@@ -8242,10 +8242,43 @@
           {
             "schema": {
               "type": "string",
+              "description": "Filter by exact feature slug"
+            },
+            "required": false,
+            "description": "Filter by exact feature slug",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)",
+            "name": "workflowDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
+            "name": "featureDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "enum": [
                 "workflowSlug",
+                "featureSlug",
                 "brandId",
-                "campaignId"
+                "campaignId",
+                "workflowDynastySlug",
+                "featureDynastySlug"
               ]
             },
             "required": false,
@@ -13449,7 +13482,7 @@
           "Runs"
         ],
         "summary": "Get cost stats from runs-service",
-        "description": "Get cost statistics grouped by a dimension. Supports groupBy=brandId, costName, campaignId, serviceName. Filter by brandId, campaignId, taskName.",
+        "description": "Get cost statistics grouped by a dimension. Supports groupBy=brandId, costName, campaignId, serviceName, workflowDynastySlug, featureDynastySlug. Filter by brandId, campaignId, taskName, workflowSlug, featureSlug, workflowDynastySlug, featureDynastySlug.",
         "security": [
           {
             "bearerAuth": []
@@ -13459,10 +13492,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Grouping dimension: brandId, costName, campaignId, serviceName"
+              "description": "Grouping dimension: brandId, costName, campaignId, serviceName, workflowDynastySlug, featureDynastySlug"
             },
             "required": true,
-            "description": "Grouping dimension: brandId, costName, campaignId, serviceName",
+            "description": "Grouping dimension: brandId, costName, campaignId, serviceName, workflowDynastySlug, featureDynastySlug",
             "name": "groupBy",
             "in": "query"
           },
@@ -13494,6 +13527,46 @@
             "required": false,
             "description": "Filter by task name (e.g. lead-serve)",
             "name": "taskName",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact workflow slug"
+            },
+            "required": false,
+            "description": "Filter by exact workflow slug",
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact feature slug"
+            },
+            "required": false,
+            "description": "Filter by exact feature slug",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)",
+            "name": "workflowDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
+            "name": "featureDynastySlug",
             "in": "query"
           },
           {
@@ -21913,7 +21986,7 @@
           "Features"
         ],
         "summary": "Global stats cross-features",
-        "description": "Aggregated stats across all features. Supports groupBy (featureSlug, workflowSlug, brandId, campaignId — comma-separated combos allowed) and optional brandId filter. Requires x-org-id. Proxied from features-service.",
+        "description": "Aggregated stats across all features. Supports groupBy (featureSlug, workflowSlug, featureDynastySlug, workflowDynastySlug, brandId, campaignId — comma-separated combos allowed) and optional filters. Requires x-org-id. Proxied from features-service.",
         "security": [
           {
             "bearerAuth": []
@@ -21923,10 +21996,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Group dimension(s), comma-separated: featureSlug, workflowSlug, brandId, campaignId"
+              "description": "Group dimension(s), comma-separated: featureSlug, workflowSlug, featureDynastySlug, workflowDynastySlug, brandId, campaignId"
             },
             "required": false,
-            "description": "Group dimension(s), comma-separated: featureSlug, workflowSlug, brandId, campaignId",
+            "description": "Group dimension(s), comma-separated: featureSlug, workflowSlug, featureDynastySlug, workflowDynastySlug, brandId, campaignId",
             "name": "groupBy",
             "in": "query"
           },
@@ -21938,6 +22011,46 @@
             "required": false,
             "description": "Filter by brand UUID",
             "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact feature slug"
+            },
+            "required": false,
+            "description": "Filter by exact feature slug",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact workflow slug"
+            },
+            "required": false,
+            "description": "Filter by exact workflow slug",
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
+            "name": "featureDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)",
+            "name": "workflowDynastySlug",
             "in": "query"
           },
           {
@@ -22035,7 +22148,7 @@
           "Features"
         ],
         "summary": "Feature stats",
-        "description": "Stats for a specific feature, groupable by workflowSlug, brandId, or campaignId. Supports optional brandId, campaignId, and workflowSlug filters. Requires x-org-id. Proxied from features-service.",
+        "description": "Stats for a specific feature, groupable by workflowSlug, workflowDynastySlug, brandId, or campaignId. Supports optional filters including dynasty slugs. Requires x-org-id. Proxied from features-service.",
         "security": [
           {
             "bearerAuth": []
@@ -22055,10 +22168,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Group dimension: workflowSlug | brandId | campaignId"
+              "description": "Group dimension: workflowSlug | workflowDynastySlug | brandId | campaignId"
             },
             "required": false,
-            "description": "Group dimension: workflowSlug | brandId | campaignId",
+            "description": "Group dimension: workflowSlug | workflowDynastySlug | brandId | campaignId",
             "name": "groupBy",
             "in": "query"
           },
@@ -22085,11 +22198,31 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by workflow slug"
+              "description": "Filter by exact workflow slug"
             },
             "required": false,
-            "description": "Filter by workflow slug",
+            "description": "Filter by exact workflow slug",
             "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
+            "name": "featureDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)",
+            "name": "workflowDynastySlug",
             "in": "query"
           },
           {

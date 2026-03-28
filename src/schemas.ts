@@ -950,14 +950,17 @@ registry.registerPath({
   path: "/v1/outlets/stats",
   tags: ["Outlets"],
   summary: "Aggregated outlet discovery metrics",
-  description: "Returns outlet discovery stats. Supports filtering by brandId, campaignId, workflowSlug and optional groupBy.",
+  description: "Returns outlet discovery stats. Supports filtering by brandId, campaignId, workflowSlug, featureSlug, workflowDynastySlug, featureDynastySlug and optional groupBy.",
   security: authed,
   request: {
     query: z.object({
       brandId: z.string().uuid().optional(),
       campaignId: z.string().uuid().optional(),
       workflowSlug: z.string().optional(),
-      groupBy: z.enum(["workflowSlug", "brandId", "campaignId"]).optional(),
+      featureSlug: z.string().optional().describe("Filter by exact feature slug"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
+      groupBy: z.enum(["workflowSlug", "featureSlug", "brandId", "campaignId", "workflowDynastySlug", "featureDynastySlug"]).optional(),
     }),
   },
   responses: {
@@ -2656,14 +2659,18 @@ registry.registerPath({
   tags: ["Runs"],
   summary: "Get cost stats from runs-service",
   description:
-    "Get cost statistics grouped by a dimension. Supports groupBy=brandId, costName, campaignId, serviceName. Filter by brandId, campaignId, taskName.",
+    "Get cost statistics grouped by a dimension. Supports groupBy=brandId, costName, campaignId, serviceName, workflowDynastySlug, featureDynastySlug. Filter by brandId, campaignId, taskName, workflowSlug, featureSlug, workflowDynastySlug, featureDynastySlug.",
   security: authed,
   request: {
     query: z.object({
-      groupBy: z.string().describe("Grouping dimension: brandId, costName, campaignId, serviceName"),
+      groupBy: z.string().describe("Grouping dimension: brandId, costName, campaignId, serviceName, workflowDynastySlug, featureDynastySlug"),
       brandId: z.string().optional().describe("Filter by brand ID"),
       campaignId: z.string().optional().describe("Filter by campaign ID"),
       taskName: z.string().optional().describe("Filter by task name (e.g. lead-serve)"),
+      workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
+      featureSlug: z.string().optional().describe("Filter by exact feature slug"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
     }),
   },
   responses: {
@@ -5223,12 +5230,16 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Global stats cross-features",
   description:
-    "Aggregated stats across all features. Supports groupBy (featureSlug, workflowSlug, brandId, campaignId — comma-separated combos allowed) and optional brandId filter. Requires x-org-id. Proxied from features-service.",
+    "Aggregated stats across all features. Supports groupBy (featureSlug, workflowSlug, featureDynastySlug, workflowDynastySlug, brandId, campaignId — comma-separated combos allowed) and optional filters. Requires x-org-id. Proxied from features-service.",
   security: authed,
   request: {
     query: z.object({
-      groupBy: z.string().optional().describe("Group dimension(s), comma-separated: featureSlug, workflowSlug, brandId, campaignId"),
+      groupBy: z.string().optional().describe("Group dimension(s), comma-separated: featureSlug, workflowSlug, featureDynastySlug, workflowDynastySlug, brandId, campaignId"),
       brandId: z.string().optional().describe("Filter by brand UUID"),
+      featureSlug: z.string().optional().describe("Filter by exact feature slug"),
+      workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
     }),
   },
   responses: {
@@ -5244,15 +5255,17 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Feature stats",
   description:
-    "Stats for a specific feature, groupable by workflowSlug, brandId, or campaignId. Supports optional brandId, campaignId, and workflowSlug filters. Requires x-org-id. Proxied from features-service.",
+    "Stats for a specific feature, groupable by workflowSlug, workflowDynastySlug, brandId, or campaignId. Supports optional filters including dynasty slugs. Requires x-org-id. Proxied from features-service.",
   security: authed,
   request: {
     params: z.object({ featureSlug: z.string().describe("Feature slug") }),
     query: z.object({
-      groupBy: z.string().optional().describe("Group dimension: workflowSlug | brandId | campaignId"),
+      groupBy: z.string().optional().describe("Group dimension: workflowSlug | workflowDynastySlug | brandId | campaignId"),
       brandId: z.string().optional().describe("Filter by brand UUID"),
       campaignId: z.string().optional().describe("Filter by campaign UUID"),
-      workflowSlug: z.string().optional().describe("Filter by workflow slug"),
+      workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
     }),
   },
   responses: {
