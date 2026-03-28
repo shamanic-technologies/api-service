@@ -28,9 +28,9 @@ router.get("/runs/stats/costs", authenticate, requireOrg, requireUser, async (re
       orgId,
       groupBy,
     });
-    if (req.query.brandId) params.set("brandId", req.query.brandId as string);
-    if (req.query.campaignId) params.set("campaignId", req.query.campaignId as string);
-    if (req.query.taskName) params.set("taskName", req.query.taskName as string);
+    for (const key of ["brandId", "campaignId", "taskName", "workflowSlug", "featureSlug", "workflowDynastySlug", "featureDynastySlug"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
 
     const data = await callExternalService<{
       groups: Array<Record<string, unknown>>;
