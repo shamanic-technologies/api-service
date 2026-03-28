@@ -72,8 +72,8 @@ describe("header forwarding audit", () => {
       expect(src).toContain('req.headers["x-brand-id"]');
     });
 
-    it("should extract x-workflow-name from incoming request", () => {
-      expect(src).toContain('req.headers["x-workflow-name"]');
+    it("should extract x-workflow-slug from incoming request", () => {
+      expect(src).toContain('req.headers["x-workflow-slug"]');
     });
 
     it("should extract x-feature-slug from incoming request", () => {
@@ -84,7 +84,7 @@ describe("header forwarding audit", () => {
   describe("internal-headers.ts — workflow tracking headers forwarding", () => {
     const src = readSrc("src/lib/internal-headers.ts");
 
-    for (const header of ["x-campaign-id", "x-brand-id", "x-workflow-name", "x-feature-slug"]) {
+    for (const header of ["x-campaign-id", "x-brand-id", "x-workflow-slug", "x-feature-slug"]) {
       it(`should forward ${header} to downstream services`, () => {
         expect(src).toContain(`headers["${header}"]`);
       });

@@ -33,7 +33,7 @@ router.get("/outlets/stats", authenticate, requireOrg, requireUser, async (req: 
     const params = new URLSearchParams();
     if (req.query.brandId) params.set("brandId", req.query.brandId as string);
     if (req.query.campaignId) params.set("campaignId", req.query.campaignId as string);
-    if (req.query.workflowName) params.set("workflowName", req.query.workflowName as string);
+    if (req.query.workflowSlug) params.set("workflowSlug", req.query.workflowSlug as string);
     if (req.query.groupBy) params.set("groupBy", req.query.groupBy as string);
     const qs = params.toString() ? `?${params.toString()}` : "";
 

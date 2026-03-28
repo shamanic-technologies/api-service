@@ -5,7 +5,7 @@ import express from "express";
 /**
  * Tests for discovery campaign creation.
  * Discovery campaigns use the same schema as outreach — featureSlug + featureInputs.
- * The campaign type is derived from workflowName prefix.
+ * The campaign type is derived from workflowSlug prefix.
  */
 
 // Mock auth middleware
@@ -87,7 +87,7 @@ describe("Discovery campaign creation", () => {
       .post("/v1/campaigns")
       .send({
         name: "Tech Media Discovery",
-        workflowName: "outlets-database-discovery-cedar",
+        workflowSlug: "outlets-database-discovery-cedar",
         brandUrl: "https://acme.com",
         featureSlug: "outlet-discovery",
         featureInputs: { targetAudience: "Tech publications covering SaaS and AI" },
@@ -96,11 +96,11 @@ describe("Discovery campaign creation", () => {
     expect(res.status).toBe(200);
     expect(res.body.campaign.id).toBe("campaign-disc-1");
 
-    // Verify campaign-service received the correct type derived from workflowName
+    // Verify campaign-service received the correct type derived from workflowSlug
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
     expect(campaignCall).toBeDefined();
     expect(campaignCall!.body!.type).toBe("outlets-database-discovery");
-    expect(campaignCall!.body!.workflowName).toBe("outlets-database-discovery-cedar");
+    expect(campaignCall!.body!.workflowSlug).toBe("outlets-database-discovery-cedar");
     expect(campaignCall!.body!.featureInputs).toEqual({ targetAudience: "Tech publications covering SaaS and AI" });
 
     // No legacy top-level targetAudience
@@ -113,7 +113,7 @@ describe("Discovery campaign creation", () => {
       .post("/v1/campaigns")
       .send({
         name: "Journalist Discovery",
-        workflowName: "journalists-database-discovery-birch",
+        workflowSlug: "journalists-database-discovery-birch",
         brandUrl: "https://acme.com",
         featureSlug: "journalist-discovery",
         featureInputs: { targetAudience: "Journalists covering fintech in the US" },
@@ -131,7 +131,7 @@ describe("Discovery campaign creation", () => {
       .post("/v1/campaigns")
       .send({
         name: "Missing Slug",
-        workflowName: "outlets-database-discovery-cedar",
+        workflowSlug: "outlets-database-discovery-cedar",
         brandUrl: "https://acme.com",
         featureInputs: { targetAudience: "Tech publications" },
       });
@@ -146,7 +146,7 @@ describe("Discovery campaign creation", () => {
       .post("/v1/campaigns")
       .send({
         name: "Missing Input",
-        workflowName: "outlets-database-discovery-cedar",
+        workflowSlug: "outlets-database-discovery-cedar",
         brandUrl: "https://acme.com",
         featureSlug: "outlet-discovery",
         featureInputs: {}, // Missing targetAudience
@@ -157,13 +157,13 @@ describe("Discovery campaign creation", () => {
     expect(res.body.missingKeys).toContain("targetAudience");
   });
 
-  it("should forward x-brand-id, x-feature-slug, x-workflow-name headers to campaign-service", async () => {
+  it("should forward x-brand-id, x-feature-slug, x-workflow-slug headers to campaign-service", async () => {
     const app = createApp();
     await request(app)
       .post("/v1/campaigns")
       .send({
         name: "Header Test",
-        workflowName: "outlets-database-discovery-cedar",
+        workflowSlug: "outlets-database-discovery-cedar",
         brandUrl: "https://acme.com",
         featureSlug: "outlet-discovery",
         featureInputs: { targetAudience: "Tech publications" },
@@ -173,9 +173,9 @@ describe("Discovery campaign creation", () => {
     expect(campaignCall).toBeDefined();
     // Resolved brandId from brand-service must be forwarded as header
     expect(campaignCall!.headers!["x-brand-id"]).toBe("brand-uuid-123");
-    // featureSlug and workflowName from body must also be forwarded as headers
+    // featureSlug and workflowSlug from body must also be forwarded as headers
     expect(campaignCall!.headers!["x-feature-slug"]).toBe("outlet-discovery");
-    expect(campaignCall!.headers!["x-workflow-name"]).toBe("outlets-database-discovery-cedar");
+    expect(campaignCall!.headers!["x-workflow-slug"]).toBe("outlets-database-discovery-cedar");
   });
 
   it("should convert budget numbers to strings for discovery campaigns", async () => {
@@ -184,7 +184,7 @@ describe("Discovery campaign creation", () => {
       .post("/v1/campaigns")
       .send({
         name: "Budget Discovery",
-        workflowName: "outlets-database-discovery-cedar",
+        workflowSlug: "outlets-database-discovery-cedar",
         brandUrl: "https://acme.com",
         featureSlug: "outlet-discovery",
         featureInputs: { targetAudience: "Tech publications" },

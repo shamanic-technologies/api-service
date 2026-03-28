@@ -265,7 +265,7 @@ router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, asyn
     const dag = workflow.dag;
     if (!dag || !dag.nodes?.length) {
       return res.json({
-        workflowName: workflow.name,
+        workflowSlug: workflow.name,
         summary: "This workflow has no steps defined yet.",
         requiredProviders,
         steps: [],
@@ -327,7 +327,7 @@ router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, asyn
     const summary = `This workflow has ${ordered.length} step${ordered.length === 1 ? "" : "s"}.${providerList}`;
 
     res.json({
-      workflowName: workflow.name,
+      workflowSlug: workflow.name,
       summary,
       requiredProviders,
       steps,
@@ -372,20 +372,20 @@ router.get("/workflows/:id/key-status", authenticate, requireOrg, requireUser, a
 
     const missing = keys.filter((k) => !k.configured).map((k) => k.provider);
 
-    let workflowName = id;
+    let workflowSlug = id;
     try {
       const wf = await callExternalService<{ workflow: { name: string } }>(
         externalServices.workflow,
         `/workflows/${id}`,
         { headers: buildInternalHeaders(req) },
       );
-      workflowName = wf.workflow?.name ?? id;
+      workflowSlug = wf.workflow?.name ?? id;
     } catch {
       // Fall back to id
     }
 
     res.json({
-      workflowName,
+      workflowSlug,
       ready: missing.length === 0,
       keys,
       missing,

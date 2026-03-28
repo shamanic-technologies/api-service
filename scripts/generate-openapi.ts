@@ -116,12 +116,12 @@ const identityParams = [
       "Optional — forwarded to downstream services for tracking.",
   },
   {
-    name: "x-workflow-name",
+    name: "x-workflow-slug",
     in: "header" as const,
     required: false,
     schema: { type: "string" as const },
     description:
-      "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. " +
+      "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. " +
       "Optional — forwarded to downstream services for tracking.",
   },
   {

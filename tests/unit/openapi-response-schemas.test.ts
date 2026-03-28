@@ -75,7 +75,7 @@ describe("OpenAPI spec — response schemas", () => {
     const campaign = spec.components.schemas.Campaign;
     expect(campaign.properties).toHaveProperty("id");
     expect(campaign.properties).toHaveProperty("name");
-    expect(campaign.properties).toHaveProperty("workflowName");
+    expect(campaign.properties).toHaveProperty("workflowSlug");
     expect(campaign.properties).toHaveProperty("status");
     expect(campaign.properties).toHaveProperty("brandId");
   });

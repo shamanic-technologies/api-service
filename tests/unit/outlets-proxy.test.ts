@@ -43,7 +43,7 @@ describe("Outlets proxy routes", () => {
 
   it("should forward groupBy on GET /outlets/stats", () => {
     expect(content).toContain('"groupBy"');
-    expect(content).toContain('"workflowName"');
+    expect(content).toContain('"workflowSlug"');
   });
 
   it("should have POST /outlets with auth", () => {

@@ -4,7 +4,7 @@ import {
   getWorkflowDefinition,
   getWorkflowDefinitionsByCategory,
   getWorkflowDefinitionsByTag,
-  parseWorkflowName,
+  parseWorkflowSlug,
   getSectionKey,
   getSignatureName,
   getWorkflowCategory,
@@ -65,9 +65,9 @@ describe("getWorkflowDefinitionsByCategory", () => {
   });
 });
 
-describe("parseWorkflowName", () => {
-  it("parses a valid workflow name", () => {
-    const result = parseWorkflowName("sales-email-cold-outreach-sienna");
+describe("parseWorkflowSlug", () => {
+  it("parses a valid workflow slug", () => {
+    const result = parseWorkflowSlug("sales-email-cold-outreach-sienna");
     expect(result).toEqual({
       category: "sales",
       channel: "email",
@@ -77,8 +77,8 @@ describe("parseWorkflowName", () => {
     });
   });
 
-  it("parses pr workflow name", () => {
-    const result = parseWorkflowName("pr-email-cold-outreach-sequoia");
+  it("parses pr workflow slug", () => {
+    const result = parseWorkflowSlug("pr-email-cold-outreach-sequoia");
     expect(result).toEqual({
       category: "pr",
       channel: "email",
@@ -88,51 +88,51 @@ describe("parseWorkflowName", () => {
     });
   });
 
-  it("returns null for invalid names", () => {
-    expect(parseWorkflowName("invalid")).toBeNull();
-    expect(parseWorkflowName("")).toBeNull();
-    expect(parseWorkflowName("foo-bar")).toBeNull();
-    expect(parseWorkflowName("unknown-email-cold-outreach-sienna")).toBeNull();
+  it("returns null for invalid slugs", () => {
+    expect(parseWorkflowSlug("invalid")).toBeNull();
+    expect(parseWorkflowSlug("")).toBeNull();
+    expect(parseWorkflowSlug("foo-bar")).toBeNull();
+    expect(parseWorkflowSlug("unknown-email-cold-outreach-sienna")).toBeNull();
   });
 });
 
 describe("getSectionKey", () => {
-  it("extracts section key from workflow name", () => {
+  it("extracts section key from workflow slug", () => {
     expect(getSectionKey("sales-email-cold-outreach-sienna")).toBe("sales-email-cold-outreach");
   });
 
-  it("returns null for invalid names", () => {
+  it("returns null for invalid slugs", () => {
     expect(getSectionKey("invalid")).toBeNull();
   });
 });
 
 describe("getSignatureName", () => {
-  it("extracts signature name from workflow name", () => {
+  it("extracts signature name from workflow slug", () => {
     expect(getSignatureName("sales-email-cold-outreach-sienna")).toBe("sienna");
   });
 
-  it("returns null for invalid names", () => {
+  it("returns null for invalid slugs", () => {
     expect(getSignatureName("invalid")).toBeNull();
   });
 });
 
 describe("getWorkflowCategory", () => {
-  it("returns category for valid workflow name", () => {
+  it("returns category for valid workflow slug", () => {
     expect(getWorkflowCategory("sales-email-cold-outreach-sienna")).toBe("sales");
     expect(getWorkflowCategory("pr-email-cold-outreach-sequoia")).toBe("pr");
   });
 
-  it("returns null for invalid names", () => {
+  it("returns null for invalid slugs", () => {
     expect(getWorkflowCategory("invalid")).toBeNull();
   });
 });
 
 describe("getWorkflowDisplayName", () => {
-  it("capitalizes the signature name for valid workflow names", () => {
+  it("capitalizes the signature name for valid workflow slugs", () => {
     expect(getWorkflowDisplayName("sales-email-cold-outreach-sienna")).toBe("Sienna");
   });
 
-  it("title-cases the raw name for invalid format", () => {
+  it("title-cases the raw slug for invalid format", () => {
     expect(getWorkflowDisplayName("my-custom-thing")).toBe("My Custom Thing");
   });
 });

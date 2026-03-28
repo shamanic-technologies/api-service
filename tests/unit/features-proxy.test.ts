@@ -153,9 +153,9 @@ describe("Features proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should forward groupBy, brandId, campaignId, workflowName on GET /features/:slug/stats", () => {
+  it("should forward groupBy, brandId, campaignId, workflowSlug on GET /features/:slug/stats", () => {
     expect(content).toContain('"campaignId"');
-    expect(content).toContain('"workflowName"');
+    expect(content).toContain('"workflowSlug"');
   });
 
   it("should enforce requireOrg + requireUser on ALL feature routes", () => {

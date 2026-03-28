@@ -327,9 +327,9 @@
             "type": "string",
             "description": "ID of the workflow holding the record"
           },
-          "workflowName": {
+          "workflowSlug": {
             "type": "string",
-            "description": "Name of the workflow"
+            "description": "Slug of the workflow"
           },
           "displayName": {
             "type": "string",
@@ -348,7 +348,7 @@
         },
         "required": [
           "workflowId",
-          "workflowName",
+          "workflowSlug",
           "displayName",
           "createdForBrandId",
           "value"
@@ -470,9 +470,9 @@
             "type": "string",
             "description": "Campaign name"
           },
-          "workflowName": {
+          "workflowSlug": {
             "type": "string",
-            "description": "Workflow name used for execution"
+            "description": "Workflow slug used for execution"
           },
           "brandUrl": {
             "type": "string",
@@ -570,7 +570,7 @@
           "orgId",
           "createdByUserId",
           "name",
-          "workflowName",
+          "workflowSlug",
           "brandUrl",
           "brandId",
           "featureSlug",
@@ -623,10 +623,10 @@
             "type": "string",
             "description": "Campaign name"
           },
-          "workflowName": {
+          "workflowSlug": {
             "type": "string",
             "minLength": 1,
-            "description": "Workflow name (e.g. 'sales-email-cold-outreach-sienna'). Determines which execution pipeline to use."
+            "description": "Workflow slug (e.g. 'sales-email-cold-outreach-sienna'). Determines which execution pipeline to use."
           },
           "brandUrl": {
             "type": "string",
@@ -700,7 +700,7 @@
         },
         "required": [
           "name",
-          "workflowName",
+          "workflowSlug",
           "brandUrl",
           "featureSlug",
           "featureInputs"
@@ -1493,7 +1493,7 @@
             ],
             "default": "open"
           },
-          "workflowName": {
+          "workflowSlug": {
             "type": "string"
           }
         },
@@ -1562,7 +1562,7 @@
                   ],
                   "default": "open"
                 },
-                "workflowName": {
+                "workflowSlug": {
                   "type": "string"
                 }
               },
@@ -1608,7 +1608,7 @@
       "DiscoverOutletsRequest": {
         "type": "object",
         "properties": {
-          "workflowName": {
+          "workflowSlug": {
             "type": "string"
           }
         }
@@ -3604,7 +3604,7 @@
               },
               "name": {
                 "type": "string",
-                "description": "Auto-generated workflow name"
+                "description": "Auto-generated workflow slug"
               },
               "featureSlug": {
                 "type": "string",
@@ -3783,9 +3783,9 @@
       "WorkflowSummaryResponse": {
         "type": "object",
         "properties": {
-          "workflowName": {
+          "workflowSlug": {
             "type": "string",
-            "description": "Workflow name"
+            "description": "Workflow slug"
           },
           "summary": {
             "type": "string",
@@ -3807,7 +3807,7 @@
           }
         },
         "required": [
-          "workflowName",
+          "workflowSlug",
           "summary",
           "requiredProviders",
           "steps"
@@ -3848,9 +3848,9 @@
       "WorkflowKeyStatusResponse": {
         "type": "object",
         "properties": {
-          "workflowName": {
+          "workflowSlug": {
             "type": "string",
-            "description": "Workflow name"
+            "description": "Workflow slug"
           },
           "ready": {
             "type": "boolean",
@@ -3872,7 +3872,7 @@
           }
         },
         "required": [
-          "workflowName",
+          "workflowSlug",
           "ready",
           "keys",
           "missing"
@@ -6322,13 +6322,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -6434,13 +6434,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -6568,13 +6568,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -6658,13 +6658,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -6714,7 +6714,7 @@
           "Campaigns"
         ],
         "summary": "Create a campaign",
-        "description": "Create a new campaign. Requires `featureSlug` and `featureInputs`.\n\nFeature inputs are validated by key-presence against features-service (api-service never inspects values). The `workflowName` determines which execution pipeline campaign-service uses.",
+        "description": "Create a new campaign. Requires `featureSlug` and `featureInputs`.\n\nFeature inputs are validated by key-presence against features-service (api-service never inspects values). The `workflowSlug` determines which execution pipeline campaign-service uses.",
         "security": [
           {
             "bearerAuth": []
@@ -6809,13 +6809,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -6889,13 +6889,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -6999,13 +6999,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -7111,13 +7111,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -7223,13 +7223,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -7335,13 +7335,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -7447,13 +7447,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -7559,13 +7559,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -7671,13 +7671,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -7783,13 +7783,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -7895,13 +7895,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -8047,13 +8047,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -8163,13 +8163,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -8189,7 +8189,7 @@
           "Outlets"
         ],
         "summary": "Aggregated outlet discovery metrics",
-        "description": "Returns outlet discovery stats. Supports filtering by brandId, campaignId, workflowName and optional groupBy.",
+        "description": "Returns outlet discovery stats. Supports filtering by brandId, campaignId, workflowSlug and optional groupBy.",
         "security": [
           {
             "bearerAuth": []
@@ -8219,14 +8219,14 @@
               "type": "string"
             },
             "required": false,
-            "name": "workflowName",
+            "name": "workflowSlug",
             "in": "query"
           },
           {
             "schema": {
               "type": "string",
               "enum": [
-                "workflowName",
+                "workflowSlug",
                 "brandId",
                 "campaignId"
               ]
@@ -8272,13 +8272,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -8380,13 +8380,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -8473,13 +8473,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -8587,13 +8587,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -8666,13 +8666,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -8768,13 +8768,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -8892,13 +8892,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -9047,13 +9047,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -9157,13 +9157,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -9278,13 +9278,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -9365,13 +9365,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -9481,13 +9481,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -9568,13 +9568,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -9662,13 +9662,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -9790,13 +9790,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -9893,13 +9893,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -9977,13 +9977,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -10078,13 +10078,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -10181,13 +10181,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -10313,13 +10313,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -10429,13 +10429,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -10532,13 +10532,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -10645,13 +10645,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -10758,13 +10758,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -10860,13 +10860,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -10979,13 +10979,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -11059,13 +11059,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -11193,13 +11193,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -11273,13 +11273,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -11383,13 +11383,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -11555,13 +11555,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -11657,13 +11657,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -11766,13 +11766,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -11846,13 +11846,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -11980,13 +11980,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -12101,13 +12101,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -12222,13 +12222,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -12343,13 +12343,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -12423,13 +12423,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -12567,13 +12567,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -12686,13 +12686,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -12766,13 +12766,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -12878,13 +12878,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -13009,13 +13009,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -13172,13 +13172,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -13252,13 +13252,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -13374,13 +13374,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -13516,13 +13516,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -13638,13 +13638,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -13760,13 +13760,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -13911,13 +13911,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -13991,13 +13991,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -14101,13 +14101,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -14293,13 +14293,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -14373,13 +14373,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -14495,13 +14495,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -14607,13 +14607,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -14729,13 +14729,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -14900,13 +14900,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -15012,13 +15012,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -15134,13 +15134,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -15256,13 +15256,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -15437,13 +15437,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -15517,13 +15517,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -15652,13 +15652,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -15773,13 +15773,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -15905,13 +15905,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -16026,13 +16026,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -16147,13 +16147,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -16268,13 +16268,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -16370,13 +16370,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -16472,13 +16472,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -16574,13 +16574,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -16695,13 +16695,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -16795,13 +16795,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -16906,13 +16906,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -17017,13 +17017,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -17138,13 +17138,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -17259,13 +17259,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -17339,13 +17339,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -17492,13 +17492,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -17613,13 +17613,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -17693,13 +17693,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -17846,13 +17846,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -17926,13 +17926,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -18079,13 +18079,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -18159,13 +18159,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -18312,13 +18312,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -18433,13 +18433,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -18533,13 +18533,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -18696,13 +18696,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -18803,13 +18803,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -18937,13 +18937,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -19017,13 +19017,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -19200,13 +19200,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -19331,13 +19331,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -19432,13 +19432,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -19553,13 +19553,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -19674,13 +19674,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -19786,13 +19786,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -19898,13 +19898,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -19989,13 +19989,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -20100,13 +20100,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -20192,13 +20192,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -20284,13 +20284,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -20384,13 +20384,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -20475,13 +20475,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -20596,13 +20596,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -20698,13 +20698,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -20818,13 +20818,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -20979,13 +20979,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -21088,13 +21088,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -21168,13 +21168,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -21288,13 +21288,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -21449,13 +21449,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -21585,13 +21585,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -21738,13 +21738,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -21764,7 +21764,7 @@
           "Features"
         ],
         "summary": "Global stats cross-features",
-        "description": "Aggregated stats across all features. Supports groupBy (featureSlug, workflowName, brandId, campaignId — comma-separated combos allowed) and optional brandId filter. Requires x-org-id. Proxied from features-service.",
+        "description": "Aggregated stats across all features. Supports groupBy (featureSlug, workflowSlug, brandId, campaignId — comma-separated combos allowed) and optional brandId filter. Requires x-org-id. Proxied from features-service.",
         "security": [
           {
             "bearerAuth": []
@@ -21774,10 +21774,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Group dimension(s), comma-separated: featureSlug, workflowName, brandId, campaignId"
+              "description": "Group dimension(s), comma-separated: featureSlug, workflowSlug, brandId, campaignId"
             },
             "required": false,
-            "description": "Group dimension(s), comma-separated: featureSlug, workflowName, brandId, campaignId",
+            "description": "Group dimension(s), comma-separated: featureSlug, workflowSlug, brandId, campaignId",
             "name": "groupBy",
             "in": "query"
           },
@@ -21828,13 +21828,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
@@ -21886,7 +21886,7 @@
           "Features"
         ],
         "summary": "Feature stats",
-        "description": "Stats for a specific feature, groupable by workflowName, brandId, or campaignId. Supports optional brandId, campaignId, and workflowName filters. Requires x-org-id. Proxied from features-service.",
+        "description": "Stats for a specific feature, groupable by workflowSlug, brandId, or campaignId. Supports optional brandId, campaignId, and workflowSlug filters. Requires x-org-id. Proxied from features-service.",
         "security": [
           {
             "bearerAuth": []
@@ -21906,10 +21906,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Group dimension: workflowName | brandId | campaignId"
+              "description": "Group dimension: workflowSlug | brandId | campaignId"
             },
             "required": false,
-            "description": "Group dimension: workflowName | brandId | campaignId",
+            "description": "Group dimension: workflowSlug | brandId | campaignId",
             "name": "groupBy",
             "in": "query"
           },
@@ -21936,11 +21936,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by workflow name"
+              "description": "Filter by workflow slug"
             },
             "required": false,
-            "description": "Filter by workflow name",
-            "name": "workflowName",
+            "description": "Filter by workflow slug",
+            "name": "workflowSlug",
             "in": "query"
           },
           {
@@ -21980,13 +21980,13 @@
             "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
-            "name": "x-workflow-name",
+            "name": "x-workflow-slug",
             "in": "header",
             "required": false,
             "schema": {
               "type": "string"
             },
-            "description": "Workflow name. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
           },
           {
             "name": "x-feature-slug",
