@@ -53,7 +53,7 @@ router.get("/features/stats/registry", authenticate, requireOrg, requireUser, as
 router.get("/features/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["groupBy", "brandId", "featureSlug", "workflowSlug", "featureDynastySlug", "workflowDynastySlug"]) {
+    for (const key of ["groupBy", "brandId", "featureSlug", "workflowSlug", "featureDynastySlug"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";
@@ -134,7 +134,7 @@ router.get("/features/:slug/inputs", authenticate, requireOrg, requireUser, asyn
 router.get("/features/:slug/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["groupBy", "brandId", "campaignId", "workflowSlug", "featureDynastySlug", "workflowDynastySlug"]) {
+    for (const key of ["groupBy", "brandId", "campaignId", "workflowSlug", "featureDynastySlug"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";
