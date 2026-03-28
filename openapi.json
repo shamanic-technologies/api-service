@@ -140,6 +140,10 @@
             "type": "string",
             "description": "Workflow ID"
           },
+          "slug": {
+            "type": "string",
+            "description": "Unique technical identifier. Use this to execute via /workflows/by-slug/{slug}/execute"
+          },
           "name": {
             "type": "string",
             "description": "Workflow name"
@@ -148,6 +152,18 @@
             "type": "string",
             "nullable": true,
             "description": "Stable display name for the workflow family"
+          },
+          "dynastyName": {
+            "type": "string",
+            "description": "Stable name for the lineage. Constant across all versions of a dynasty"
+          },
+          "dynastySlug": {
+            "type": "string",
+            "description": "Stable slug for the lineage. Use as key for dynasty-level lookups and stats grouping"
+          },
+          "version": {
+            "type": "integer",
+            "description": "Version number within the dynasty. Starts at 1"
           },
           "createdForBrandId": {
             "type": "string",
@@ -181,8 +197,12 @@
         },
         "required": [
           "id",
+          "slug",
           "name",
           "displayName",
+          "dynastyName",
+          "dynastySlug",
+          "version",
           "createdForBrandId",
           "featureSlug",
           "signature",

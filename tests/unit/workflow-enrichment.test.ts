@@ -86,6 +86,44 @@ describe("GET /v1/workflows — enrichment with requiredProviders", () => {
     expect(res.body.workflows[1].requiredProviders).toEqual([{ name: "apollo", domain: "apollo.io" }, { name: "anthropic", domain: "anthropic.com" }]);
   });
 
+  it("should pass through dynastySlug, dynastyName, version, and slug from workflow-service", async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes("/required-providers")) {
+        return { ok: true, json: () => Promise.resolve({ providers: [] }) };
+      }
+      if (url.includes("/workflows")) {
+        return {
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              workflows: [
+                {
+                  id: "wf-1",
+                  name: "cold-outreach-v3",
+                  slug: "cold-outreach-hormozi-v3",
+                  dynastyName: "Cold Outreach Hormozi",
+                  dynastySlug: "cold-outreach-hormozi",
+                  version: 3,
+                  category: "sales",
+                },
+              ],
+            }),
+        };
+      }
+      return { ok: true, json: () => Promise.resolve({}) };
+    });
+
+    app = createApp();
+    const res = await request(app).get("/v1/workflows");
+
+    expect(res.status).toBe(200);
+    const wf = res.body.workflows[0];
+    expect(wf.dynastySlug).toBe("cold-outreach-hormozi");
+    expect(wf.dynastyName).toBe("Cold Outreach Hormozi");
+    expect(wf.version).toBe(3);
+    expect(wf.slug).toBe("cold-outreach-hormozi-v3");
+  });
+
   it("should call required-providers for each workflow", async () => {
     await request(app).get("/v1/workflows");
 
