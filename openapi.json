@@ -7410,7 +7410,7 @@
           "Campaigns"
         ],
         "summary": "Get stats for all campaigns (grouped)",
-        "description": "Aggregates stats from email-gateway, lead-service, content-generation, and runs-service using groupBy=campaignId. Returns one entry per campaign. Replaces the old POST /v1/campaigns/stats/batch endpoint.",
+        "description": "Aggregates stats from email-gateway, lead-service, content-generation, and runs-service using groupBy=campaignId. Returns one entry per campaign. Supports filtering by brandId, workflowSlug, featureSlug, workflowDynastySlug, or featureDynastySlug. Replaces the old POST /v1/campaigns/stats/batch endpoint.",
         "security": [
           {
             "bearerAuth": []
@@ -7425,6 +7425,46 @@
             "required": false,
             "description": "Filter by brand ID",
             "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact workflow slug"
+            },
+            "required": false,
+            "description": "Filter by exact workflow slug",
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact feature slug"
+            },
+            "required": false,
+            "description": "Filter by exact feature slug",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)",
+            "name": "workflowDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
+            "name": "featureDynastySlug",
             "in": "query"
           },
           {
@@ -13360,7 +13400,7 @@
           "Email Gateway"
         ],
         "summary": "Get email delivery stats",
-        "description": "Get broadcast delivery statistics from email-gateway. Filter by brandId and/or campaignId.",
+        "description": "Get broadcast delivery statistics from email-gateway. Filter by brandId, campaignId, workflowSlug, featureSlug, workflowDynastySlug, or featureDynastySlug.",
         "security": [
           {
             "bearerAuth": []
@@ -13385,6 +13425,46 @@
             "required": false,
             "description": "Filter by campaign ID",
             "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact workflow slug"
+            },
+            "required": false,
+            "description": "Filter by exact workflow slug",
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact feature slug"
+            },
+            "required": false,
+            "description": "Filter by exact feature slug",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)",
+            "name": "workflowDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
+            "name": "featureDynastySlug",
             "in": "query"
           },
           {
@@ -17375,7 +17455,7 @@
           "Emails"
         ],
         "summary": "Get email stats",
-        "description": "Get aggregated email sending stats for the org, optionally filtered by eventType.",
+        "description": "Get aggregated email sending stats for the org. Filterable by eventType, workflowSlug, featureSlug, workflowDynastySlug, or featureDynastySlug.",
         "security": [
           {
             "bearerAuth": []
@@ -17390,6 +17470,46 @@
             "required": false,
             "description": "Filter by event type",
             "name": "eventType",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact workflow slug"
+            },
+            "required": false,
+            "description": "Filter by exact workflow slug",
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact feature slug"
+            },
+            "required": false,
+            "description": "Filter by exact feature slug",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)",
+            "name": "workflowDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
+            "name": "featureDynastySlug",
             "in": "query"
           },
           {
@@ -18549,7 +18669,7 @@
           "Stripe"
         ],
         "summary": "Get Stripe sales stats",
-        "description": "Get aggregated sales stats. Filterable by brandId, campaignId, or runIds via query params.",
+        "description": "Get aggregated sales stats. Filterable by brandId, campaignId, runIds, workflowSlug, featureSlug, workflowDynastySlug, or featureDynastySlug.",
         "security": [
           {
             "bearerAuth": []
@@ -18584,6 +18704,46 @@
             "required": false,
             "description": "Comma-separated run IDs",
             "name": "runIds",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact workflow slug"
+            },
+            "required": false,
+            "description": "Filter by exact workflow slug",
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact feature slug"
+            },
+            "required": false,
+            "description": "Filter by exact feature slug",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)",
+            "name": "workflowDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
+            "name": "featureDynastySlug",
             "in": "query"
           },
           {

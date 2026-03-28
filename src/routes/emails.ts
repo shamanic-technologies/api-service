@@ -44,7 +44,9 @@ router.post("/emails/send", authenticate, requireOrg, async (req: AuthenticatedR
 router.get("/emails/stats", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams({ orgId: req.orgId! });
-    if (req.query.eventType) params.set("eventType", req.query.eventType as string);
+    for (const key of ["eventType", "workflowSlug", "featureSlug", "workflowDynastySlug", "featureDynastySlug"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
 
     const result = await callExternalService(
       externalServices.transactionalEmail,

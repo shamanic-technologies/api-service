@@ -11,13 +11,14 @@ interface EmailGatewayStats {
 
 /** Fetch delivery stats from email-gateway (aggregates transactional + broadcast). */
 export async function fetchDeliveryStats(
-  filters: { campaignId?: string; brandId?: string },
+  filters: { campaignId?: string; brandId?: string; workflowSlug?: string; featureSlug?: string; workflowDynastySlug?: string; featureDynastySlug?: string },
   req: AuthenticatedRequest,
 ): Promise<Record<string, number> | null> {
   const orgId = req.orgId!;
   const params = new URLSearchParams({ orgId });
-  if (filters.campaignId) params.set("campaignId", filters.campaignId);
-  if (filters.brandId) params.set("brandId", filters.brandId);
+  for (const key of ["campaignId", "brandId", "workflowSlug", "featureSlug", "workflowDynastySlug", "featureDynastySlug"] as const) {
+    if (filters[key]) params.set(key, filters[key]!);
+  }
   const deliveryResult = await callExternalService<{ transactional: EmailGatewayStats; broadcast: EmailGatewayStats }>(
     externalServices.emailGateway,
     `/stats?${params}`,

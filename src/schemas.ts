@@ -659,11 +659,16 @@ registry.registerPath({
   description:
     "Aggregates stats from email-gateway, lead-service, content-generation, and runs-service " +
     "using groupBy=campaignId. Returns one entry per campaign. " +
+    "Supports filtering by brandId, workflowSlug, featureSlug, workflowDynastySlug, or featureDynastySlug. " +
     "Replaces the old POST /v1/campaigns/stats/batch endpoint.",
   security: authed,
   request: {
     query: z.object({
       brandId: z.string().optional().describe("Filter by brand ID"),
+      workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
+      featureSlug: z.string().optional().describe("Filter by exact feature slug"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
     }),
   },
   responses: {
@@ -2612,12 +2617,16 @@ registry.registerPath({
   tags: ["Email Gateway"],
   summary: "Get email delivery stats",
   description:
-    "Get broadcast delivery statistics from email-gateway. Filter by brandId and/or campaignId.",
+    "Get broadcast delivery statistics from email-gateway. Filter by brandId, campaignId, workflowSlug, featureSlug, workflowDynastySlug, or featureDynastySlug.",
   security: authed,
   request: {
     query: z.object({
       brandId: z.string().optional().describe("Filter by brand ID"),
       campaignId: z.string().optional().describe("Filter by campaign ID"),
+      workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
+      featureSlug: z.string().optional().describe("Filter by exact feature slug"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
     }),
   },
   responses: {
@@ -4107,11 +4116,15 @@ registry.registerPath({
   path: "/v1/emails/stats",
   tags: ["Emails"],
   summary: "Get email stats",
-  description: "Get aggregated email sending stats for the org, optionally filtered by eventType.",
+  description: "Get aggregated email sending stats for the org. Filterable by eventType, workflowSlug, featureSlug, workflowDynastySlug, or featureDynastySlug.",
   security: authed,
   request: {
     query: z.object({
       eventType: z.string().optional().describe("Filter by event type"),
+      workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
+      featureSlug: z.string().optional().describe("Filter by exact feature slug"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
     }),
   },
   responses: {
@@ -4497,13 +4510,17 @@ registry.registerPath({
   path: "/v1/stripe/stats",
   tags: ["Stripe"],
   summary: "Get Stripe sales stats",
-  description: "Get aggregated sales stats. Filterable by brandId, campaignId, or runIds via query params.",
+  description: "Get aggregated sales stats. Filterable by brandId, campaignId, runIds, workflowSlug, featureSlug, workflowDynastySlug, or featureDynastySlug.",
   security: authed,
   request: {
     query: z.object({
       brandId: z.string().optional().describe("Filter by brand ID"),
       campaignId: z.string().optional().describe("Filter by campaign ID"),
       runIds: z.string().optional().describe("Comma-separated run IDs"),
+      workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
+      featureSlug: z.string().optional().describe("Filter by exact feature slug"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
     }),
   },
   responses: {
