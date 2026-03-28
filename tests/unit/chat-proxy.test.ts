@@ -79,6 +79,14 @@ describe("Chat proxy routes", () => {
   it("should handle errors after headers sent for SSE", () => {
     expect(content).toContain("res.headersSent");
   });
+
+  it("should strip null/falsy sessionId before forwarding to chat-service", () => {
+    // When the dashboard sends sessionId: null after "Reset Chat",
+    // the proxy must omit sessionId so chat-service creates a new session
+    // with the provided context (not a generic session).
+    expect(content).toContain("const { sessionId, ...rest } = req.body");
+    expect(content).toContain("sessionId ? { ...rest, sessionId } : rest");
+  });
 });
 
 describe("Chat OpenAPI schemas", () => {
