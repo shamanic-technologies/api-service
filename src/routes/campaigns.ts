@@ -177,23 +177,33 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
     const brandId = req.query.brandId as string | undefined;
     const internalHeaders = buildInternalHeaders(req);
 
+    // Dynasty / slug filters forwarded to all downstream stats calls
+    const slugFilters: Record<string, string> = {};
+    for (const key of ["workflowSlug", "featureSlug", "workflowDynastySlug", "featureDynastySlug"]) {
+      if (req.query[key]) slugFilters[key] = req.query[key] as string;
+    }
+
     // Build shared query params
     const baseParams = new URLSearchParams({ orgId });
     if (brandId) baseParams.set("brandId", brandId);
+    for (const [k, v] of Object.entries(slugFilters)) baseParams.set(k, v);
 
     const deliveryParams = new URLSearchParams(baseParams);
     deliveryParams.set("groupBy", "campaignId");
 
     const leadParams = new URLSearchParams({ orgId });
     if (brandId) leadParams.set("brandId", brandId);
+    for (const [k, v] of Object.entries(slugFilters)) leadParams.set(k, v);
     leadParams.set("groupBy", "campaignId");
 
     const emailgenParams = new URLSearchParams({ orgId });
     if (brandId) emailgenParams.set("brandId", brandId);
+    for (const [k, v] of Object.entries(slugFilters)) emailgenParams.set(k, v);
     emailgenParams.set("groupBy", "campaignId");
 
     const runsParams = new URLSearchParams({ orgId, groupBy: "campaignId" });
     if (brandId) runsParams.set("brandId", brandId);
+    for (const [k, v] of Object.entries(slugFilters)) runsParams.set(k, v);
 
     // 4 parallel calls
     const [deliveryGroups, leadGroups, emailgenGroups, costGroups] = await Promise.all([

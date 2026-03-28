@@ -11,10 +11,12 @@ const router = Router();
  */
 router.get("/email-gateway/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const brandId = req.query.brandId as string | undefined;
-    const campaignId = req.query.campaignId as string | undefined;
+    const filters: Record<string, string | undefined> = {};
+    for (const key of ["brandId", "campaignId", "workflowSlug", "featureSlug", "workflowDynastySlug", "featureDynastySlug"]) {
+      if (req.query[key]) filters[key] = req.query[key] as string;
+    }
 
-    const delivery = await fetchDeliveryStats({ brandId, campaignId }, req);
+    const delivery = await fetchDeliveryStats(filters, req);
 
     res.json(delivery ?? {
       emailsContacted: 0,

@@ -5,10 +5,16 @@ import * as path from "path";
 const featuresRoute = fs.readFileSync(path.join(__dirname, "../../src/routes/features.ts"), "utf-8");
 const outletsRoute = fs.readFileSync(path.join(__dirname, "../../src/routes/outlets.ts"), "utf-8");
 const runsRoute = fs.readFileSync(path.join(__dirname, "../../src/routes/runs.ts"), "utf-8");
+const emailGatewayRoute = fs.readFileSync(path.join(__dirname, "../../src/routes/email-gateway.ts"), "utf-8");
+const emailsRoute = fs.readFileSync(path.join(__dirname, "../../src/routes/emails.ts"), "utf-8");
+const stripeRoute = fs.readFileSync(path.join(__dirname, "../../src/routes/stripe.ts"), "utf-8");
+const campaignsRoute = fs.readFileSync(path.join(__dirname, "../../src/routes/campaigns.ts"), "utf-8");
+const deliveryStatsLib = fs.readFileSync(path.join(__dirname, "../../src/lib/delivery-stats.ts"), "utf-8");
 const schemaContent = fs.readFileSync(path.join(__dirname, "../../src/schemas.ts"), "utf-8");
 const openapiSpec = JSON.parse(fs.readFileSync(path.join(__dirname, "../../openapi.json"), "utf-8"));
 
 const dynastyParams = ["workflowDynastySlug", "featureDynastySlug"];
+const allSlugParams = ["workflowSlug", "featureSlug", "workflowDynastySlug", "featureDynastySlug"];
 
 describe("Dynasty slug forwarding — features/stats", () => {
   it("should forward dynasty slug filters on GET /features/stats", () => {
@@ -50,6 +56,50 @@ describe("Dynasty slug forwarding — runs/stats/costs", () => {
   it("should forward dynasty slug filters on GET /runs/stats/costs", () => {
     for (const param of [...dynastyParams, "workflowSlug", "featureSlug"]) {
       expect(runsRoute).toContain(`"${param}"`);
+    }
+  });
+});
+
+describe("Dynasty slug forwarding — email-gateway/stats", () => {
+  it("should forward dynasty slug filters on GET /email-gateway/stats", () => {
+    for (const param of allSlugParams) {
+      expect(emailGatewayRoute).toContain(`"${param}"`);
+    }
+  });
+
+  it("should accept dynasty slug filters in fetchDeliveryStats", () => {
+    for (const param of allSlugParams) {
+      expect(deliveryStatsLib).toContain(param);
+    }
+  });
+});
+
+describe("Dynasty slug forwarding — emails/stats", () => {
+  it("should forward dynasty slug filters on GET /emails/stats", () => {
+    const statsSection = emailsRoute.slice(emailsRoute.indexOf('"/emails/stats"'));
+    for (const param of allSlugParams) {
+      expect(statsSection).toContain(`"${param}"`);
+    }
+  });
+});
+
+describe("Dynasty slug forwarding — stripe/stats", () => {
+  it("should forward dynasty slug filters on GET /stripe/stats", () => {
+    const statsSection = stripeRoute.slice(stripeRoute.indexOf('"/stripe/stats"'));
+    for (const param of allSlugParams) {
+      expect(statsSection).toContain(`"${param}"`);
+    }
+  });
+});
+
+describe("Dynasty slug forwarding — campaigns/stats", () => {
+  it("should forward dynasty slug filters on GET /campaigns/stats downstream calls", () => {
+    const statsSection = campaignsRoute.slice(
+      campaignsRoute.indexOf('"/campaigns/stats"'),
+      campaignsRoute.indexOf('"/campaigns/:id"'),
+    );
+    for (const param of allSlugParams) {
+      expect(statsSection).toContain(`"${param}"`);
     }
   });
 });
@@ -98,6 +148,46 @@ describe("Dynasty slug OpenAPI schemas", () => {
     expect(runsStatsSection).toContain("featureSlug");
     expect(runsStatsSection).toContain("workflowSlug");
   });
+
+  it("should include dynasty slug filters in /v1/email-gateway/stats query schema", () => {
+    const section = schemaContent.slice(
+      schemaContent.indexOf('path: "/v1/email-gateway/stats"'),
+      schemaContent.indexOf('path: "/v1/email-gateway/stats"') + 1200,
+    );
+    for (const param of allSlugParams) {
+      expect(section).toContain(param);
+    }
+  });
+
+  it("should include dynasty slug filters in /v1/emails/stats query schema", () => {
+    const section = schemaContent.slice(
+      schemaContent.indexOf('path: "/v1/emails/stats"'),
+      schemaContent.indexOf('path: "/v1/emails/stats"') + 1200,
+    );
+    for (const param of allSlugParams) {
+      expect(section).toContain(param);
+    }
+  });
+
+  it("should include dynasty slug filters in /v1/stripe/stats query schema", () => {
+    const section = schemaContent.slice(
+      schemaContent.indexOf('path: "/v1/stripe/stats"'),
+      schemaContent.indexOf('path: "/v1/stripe/stats"') + 1200,
+    );
+    for (const param of allSlugParams) {
+      expect(section).toContain(param);
+    }
+  });
+
+  it("should include dynasty slug filters in /v1/campaigns/stats query schema", () => {
+    const section = schemaContent.slice(
+      schemaContent.indexOf('path: "/v1/campaigns/stats"'),
+      schemaContent.indexOf('path: "/v1/campaigns/stats"') + 1500,
+    );
+    for (const param of allSlugParams) {
+      expect(section).toContain(param);
+    }
+  });
 });
 
 describe("Dynasty slug params in generated openapi.json", () => {
@@ -141,5 +231,37 @@ describe("Dynasty slug params in generated openapi.json", () => {
     expect(paramNames).toContain("featureDynastySlug");
     expect(paramNames).toContain("workflowSlug");
     expect(paramNames).toContain("featureSlug");
+  });
+
+  it("should have dynasty query params on /v1/email-gateway/stats", () => {
+    const params = openapiSpec.paths["/v1/email-gateway/stats"]?.get?.parameters ?? [];
+    const paramNames = params.map((p: { name: string }) => p.name);
+    for (const param of allSlugParams) {
+      expect(paramNames).toContain(param);
+    }
+  });
+
+  it("should have dynasty query params on /v1/emails/stats", () => {
+    const params = openapiSpec.paths["/v1/emails/stats"]?.get?.parameters ?? [];
+    const paramNames = params.map((p: { name: string }) => p.name);
+    for (const param of allSlugParams) {
+      expect(paramNames).toContain(param);
+    }
+  });
+
+  it("should have dynasty query params on /v1/stripe/stats", () => {
+    const params = openapiSpec.paths["/v1/stripe/stats"]?.get?.parameters ?? [];
+    const paramNames = params.map((p: { name: string }) => p.name);
+    for (const param of allSlugParams) {
+      expect(paramNames).toContain(param);
+    }
+  });
+
+  it("should have dynasty query params on /v1/campaigns/stats", () => {
+    const params = openapiSpec.paths["/v1/campaigns/stats"]?.get?.parameters ?? [];
+    const paramNames = params.map((p: { name: string }) => p.name);
+    for (const param of allSlugParams) {
+      expect(paramNames).toContain(param);
+    }
   });
 });

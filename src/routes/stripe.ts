@@ -203,9 +203,9 @@ router.post("/stripe/checkout", authenticate, requireOrg, async (req: Authentica
 router.get("/stripe/stats", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    if (req.query.brandId) params.set("brandId", req.query.brandId as string);
-    if (req.query.campaignId) params.set("campaignId", req.query.campaignId as string);
-    if (req.query.runIds) params.set("runIds", req.query.runIds as string);
+    for (const key of ["brandId", "campaignId", "runIds", "workflowSlug", "featureSlug", "workflowDynastySlug", "featureDynastySlug"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
 
     const result = await callExternalService(
       externalServices.stripe,
