@@ -29,6 +29,7 @@ router.get("/press-kits/media-kits", authenticate, requireOrg, async (req: Authe
     if (req.query.org_id) params.set("org_id", req.query.org_id as string);
     if (req.query.organization_id) params.set("organization_id", req.query.organization_id as string);
     if (req.query.campaign_id) params.set("campaign_id", req.query.campaign_id as string);
+    if (req.query.brand_id) params.set("brand_id", req.query.brand_id as string);
     if (req.query.title) params.set("title", req.query.title as string);
     const qs = params.toString() ? `?${params.toString()}` : "";
     const result = await callExternalService(

@@ -1269,8 +1269,8 @@ registry.registerPath({
   method: "post",
   path: "/v1/journalists/resolve",
   tags: ["Journalists"],
-  summary: "Resolve journalists for a campaign+outlet",
-  description: "Discovers journalists if needed, scores them, and returns results sorted by relevance.",
+  summary: "Resolve journalists for a campaign+outlet or brand+outlet",
+  description: "Discovers journalists if needed, scores them, and returns results sorted by relevance. At least one of x-campaign-id header or brandId in body is required.",
   security: authed,
   request: {
     body: {
@@ -1279,6 +1279,7 @@ registry.registerPath({
           schema: z
             .object({
               outletId: z.string().uuid(),
+              brandId: z.string().uuid().optional().describe("Brand ID — alternative to x-campaign-id header. Returns journalists across all campaigns for this brand."),
               featureInputs: z.record(z.string()).optional().default({}),
               maxArticles: z.number().int().min(1).max(30).optional().default(15),
             })
@@ -4781,13 +4782,14 @@ registry.registerPath({
   path: "/v1/press-kits/media-kits",
   tags: ["Press Kits"],
   summary: "List media kits",
-  description: "List media kits, optionally filtered by org_id, organization_id, campaign_id, or title.",
+  description: "List media kits, optionally filtered by org_id, organization_id, campaign_id, brand_id, or title.",
   security: authed,
   request: {
     query: z.object({
       org_id: z.string().optional().describe("Filter by org ID"),
       organization_id: z.string().optional().describe("Filter by organization ID (alias for org_id)"),
       campaign_id: z.string().optional().describe("Filter by campaign ID — returns media kit(s) linked to this campaign"),
+      brand_id: z.string().optional().describe("Filter by brand ID — returns media kit(s) linked to this brand"),
       title: z.string().optional().describe("Filter by title"),
     }),
   },
