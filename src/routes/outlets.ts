@@ -118,6 +118,25 @@ router.post("/outlets/buffer/next", authenticate, requireOrg, requireUser, async
   }
 });
 
+// ── GET /v1/outlets/stats/costs — outlet discovery cost stats ────────────────
+router.get("/outlets/stats/costs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["brandId", "campaignId", "groupBy"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.outlet,
+      `/outlets/stats/costs${qs}`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get outlet cost stats" });
+  }
+});
+
 // ── GET /v1/outlets/:id — get outlet by ID ──────────────────────────────────
 router.get("/outlets/:id", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {

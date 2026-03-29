@@ -110,21 +110,40 @@ describe("Outlets proxy routes", () => {
   it("should use buildInternalHeaders for all endpoints", () => {
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(10);
+    expect(headerMatches!.length).toBe(11);
   });
 
   it("should proxy to externalServices.outlet", () => {
     expect(content).toContain("externalServices.outlet");
   });
 
+  it("should have GET /outlets/stats/costs with auth", () => {
+    const line = content.split("\n").find((l: string) =>
+      l.includes("router.get") && l.includes('"/outlets/stats/costs"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should forward query params on GET /outlets/stats/costs", () => {
+    const costSection = content.slice(content.indexOf('"/outlets/stats/costs"'));
+    expect(costSection).toContain('"brandId"');
+    expect(costSection).toContain('"campaignId"');
+    expect(costSection).toContain('"groupBy"');
+  });
+
   it("should register static routes before parameterized :id route", () => {
     const statsIdx = content.indexOf('"/outlets/stats"');
+    const statsCostsIdx = content.indexOf('"/outlets/stats/costs"');
     const bulkIdx = content.indexOf('"/outlets/bulk"');
     const searchIdx = content.indexOf('"/outlets/search"');
     const discoverIdx = content.indexOf('"/outlets/discover"');
     const bufferNextIdx = content.indexOf('"/outlets/buffer/next"');
     const idIdx = content.indexOf('"/outlets/:id"');
     expect(statsIdx).toBeLessThan(idIdx);
+    expect(statsCostsIdx).toBeLessThan(idIdx);
     expect(bulkIdx).toBeLessThan(idIdx);
     expect(searchIdx).toBeLessThan(idIdx);
     expect(discoverIdx).toBeLessThan(idIdx);
@@ -212,6 +231,11 @@ describe("Outlets OpenAPI schemas", () => {
 
   it("should register GET /v1/outlets/stats", () => {
     expect(schemaContent).toContain('path: "/v1/outlets/stats"');
+  });
+
+  it("should register GET /v1/outlets/stats/costs with response schema", () => {
+    expect(schemaContent).toContain('path: "/v1/outlets/stats/costs"');
+    expect(schemaContent).toContain("OutletStatsCostsResponse");
   });
 
   it("should use Outlets tag", () => {

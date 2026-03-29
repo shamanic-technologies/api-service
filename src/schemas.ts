@@ -980,6 +980,50 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/v1/outlets/stats/costs",
+  tags: ["Outlets"],
+  summary: "Get outlet discovery cost stats",
+  description:
+    "Returns cost statistics for outlet discovery runs. Supports filtering by brandId, campaignId, " +
+    "and grouping by outletId or runId. When grouped by outletId, cost = discovery run cost / number of outlets " +
+    "in that run (summed across multiple runs). When grouped by runId, returns totalCostInUsdCents, outletCount, " +
+    "and runCount per run. Without groupBy, returns flat totals across all discovery runs. " +
+    "All costs are org-scoped — each org only sees costs from their own discovery runs.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().optional().describe("Filter by brand ID"),
+      campaignId: z.string().uuid().optional().describe("Filter by campaign ID"),
+      groupBy: z.enum(["outletId", "runId"]).optional().describe("Group results by outletId or runId"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Cost statistics",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              groups: z.array(
+                z.object({
+                  dimensions: z.record(z.string()).describe("Grouping dimensions (e.g. outletId, runId)"),
+                  totalCostInUsdCents: z.number().describe("Total cost (actual + provisioned) in USD cents"),
+                  actualCostInUsdCents: z.number().describe("Actual billed cost in USD cents"),
+                  provisionedCostInUsdCents: z.number().describe("Provisioned (estimated) cost in USD cents"),
+                  runCount: z.number().int().describe("Number of discovery runs contributing to this group"),
+                }),
+              ),
+            })
+            .openapi("OutletStatsCostsResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/outlets/bulk",
   tags: ["Outlets"],
