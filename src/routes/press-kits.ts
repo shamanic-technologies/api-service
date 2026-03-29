@@ -148,6 +148,25 @@ router.get("/press-kits/media-kits/stats/views", authenticate, requireOrg, async
   }
 });
 
+// GET /v1/press-kits/media-kits/stats/costs — media kit cost stats
+router.get("/press-kits/media-kits/stats/costs", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["mediaKitId", "brandId", "campaignId", "groupBy"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.pressKits,
+      `/media-kits/stats/costs${qs}`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get media kit cost stats" });
+  }
+});
+
 // ── Admin routes (authenticated) ─────────────────────────────────────────────
 
 // GET /v1/press-kits/admin/media-kits — list media kits (admin)

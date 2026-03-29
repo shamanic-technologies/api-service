@@ -100,6 +100,16 @@ describe("Press Kits proxy routes", () => {
     }
   });
 
+  it("should have GET /press-kits/media-kits/stats/costs with auth", () => {
+    expect(content).toContain('"/press-kits/media-kits/stats/costs"');
+  });
+
+  it("should forward cost stats query params (mediaKitId, brandId, campaignId, groupBy)", () => {
+    for (const key of ["mediaKitId", "brandId", "campaignId", "groupBy"]) {
+      expect(content).toContain(`"${key}"`);
+    }
+  });
+
   // ── Admin endpoints ───────────────────────────────────────────────────
 
   it("should have GET /press-kits/admin/media-kits with auth", () => {
@@ -151,15 +161,15 @@ describe("Press Kits proxy routes", () => {
   it("should use authenticate and requireOrg on all authenticated endpoints", () => {
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    // 14 authenticated routes + 1 import = 15
-    expect(authMatches!.length).toBe(15);
+    // 15 authenticated routes + 1 import = 16
+    expect(authMatches!.length).toBe(16);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(14);
+    expect(headerMatches!.length).toBe(15);
   });
 
   it("should proxy to externalServices.pressKits", () => {
@@ -238,6 +248,7 @@ describe("Press Kits OpenAPI schemas", () => {
 
   it("should register stats paths", () => {
     expect(schemaContent).toContain('path: "/v1/press-kits/media-kits/stats/views"');
+    expect(schemaContent).toContain('path: "/v1/press-kits/media-kits/stats/costs"');
   });
 
   it("should register admin paths", () => {
