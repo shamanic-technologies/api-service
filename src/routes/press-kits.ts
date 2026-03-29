@@ -127,6 +127,27 @@ router.post("/press-kits/media-kits/:id/cancel", authenticate, requireOrg, async
   }
 });
 
+// ── Stats routes (authenticated) ─────────────────────────────────────────────
+
+// GET /v1/press-kits/media-kits/stats/views — media kit view stats
+router.get("/press-kits/media-kits/stats/views", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["brandId", "campaignId", "mediaKitId", "from", "to", "groupBy"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.pressKits,
+      `/media-kits/stats/views${qs}`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get media kit stats" });
+  }
+});
+
 // ── Admin routes (authenticated) ─────────────────────────────────────────────
 
 // GET /v1/press-kits/admin/media-kits — list media kits (admin)

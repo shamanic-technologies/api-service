@@ -88,6 +88,18 @@ describe("Press Kits proxy routes", () => {
     expect(content).toContain('"/press-kits/media-kits/:id/cancel"');
   });
 
+  // ── Stats endpoints ────────────────────────────────────────────────────
+
+  it("should have GET /press-kits/media-kits/stats/views with auth", () => {
+    expect(content).toContain('"/press-kits/media-kits/stats/views"');
+  });
+
+  it("should forward stats query params (brandId, campaignId, mediaKitId, from, to, groupBy)", () => {
+    for (const key of ["brandId", "campaignId", "mediaKitId", "from", "to", "groupBy"]) {
+      expect(content).toContain(`"${key}"`);
+    }
+  });
+
   // ── Admin endpoints ───────────────────────────────────────────────────
 
   it("should have GET /press-kits/admin/media-kits with auth", () => {
@@ -139,15 +151,15 @@ describe("Press Kits proxy routes", () => {
   it("should use authenticate and requireOrg on all authenticated endpoints", () => {
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    // 13 authenticated routes + 1 import = 14
-    expect(authMatches!.length).toBe(14);
+    // 14 authenticated routes + 1 import = 15
+    expect(authMatches!.length).toBe(15);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(13);
+    expect(headerMatches!.length).toBe(14);
   });
 
   it("should proxy to externalServices.pressKits", () => {
@@ -222,6 +234,10 @@ describe("Press Kits OpenAPI schemas", () => {
     expect(mdxMatch).not.toBeNull();
     const statusMatch = schemaContent.match(/method: "patch",\s*\n\s*path: "\/v1\/press-kits\/media-kits\/{id}\/status"/);
     expect(statusMatch).not.toBeNull();
+  });
+
+  it("should register stats paths", () => {
+    expect(schemaContent).toContain('path: "/v1/press-kits/media-kits/stats/views"');
   });
 
   it("should register admin paths", () => {

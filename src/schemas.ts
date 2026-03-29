@@ -5024,6 +5024,31 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/press-kits/media-kits/stats/views",
+  tags: ["Press Kits"],
+  summary: "Get media kit view stats",
+  description:
+    "Returns view statistics for media kits. Supports filtering by brandId, campaignId, mediaKitId, " +
+    "date range (from/to), and grouping by country, mediaKitId, or day.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().optional().describe("Filter by brand ID"),
+      campaignId: z.string().optional().describe("Filter by campaign ID"),
+      mediaKitId: z.string().optional().describe("Filter by media kit ID"),
+      from: z.string().optional().describe("Start date (ISO 8601)"),
+      to: z.string().optional().describe("End date (ISO 8601)"),
+      groupBy: z.enum(["country", "mediaKitId", "day"]).optional().describe("Group results by country, mediaKitId, or day"),
+    }),
+  },
+  responses: {
+    200: { description: "View statistics", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitMediaKitStatsViewsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
 // Content – Compose (proxy to content-generation-service)
 // ---------------------------------------------------------------------------
 export const ContentComposeRequestSchema = z

@@ -5808,6 +5808,10 @@
         "type": "object",
         "properties": {}
       },
+      "PressKitMediaKitStatsViewsResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "ContentComposeResponse": {
         "type": "object",
         "properties": {
@@ -20962,6 +20966,163 @@
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
           }
         ]
+      }
+    },
+    "/v1/press-kits/media-kits/stats/views": {
+      "get": {
+        "tags": [
+          "Press Kits"
+        ],
+        "summary": "Get media kit view stats",
+        "description": "Returns view statistics for media kits. Supports filtering by brandId, campaignId, mediaKitId, date range (from/to), and grouping by country, mediaKitId, or day.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by brand ID"
+            },
+            "required": false,
+            "description": "Filter by brand ID",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by campaign ID"
+            },
+            "required": false,
+            "description": "Filter by campaign ID",
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by media kit ID"
+            },
+            "required": false,
+            "description": "Filter by media kit ID",
+            "name": "mediaKitId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Start date (ISO 8601)"
+            },
+            "required": false,
+            "description": "Start date (ISO 8601)",
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "End date (ISO 8601)"
+            },
+            "required": false,
+            "description": "End date (ISO 8601)",
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "country",
+                "mediaKitId",
+                "day"
+              ],
+              "description": "Group results by country, mediaKitId, or day"
+            },
+            "required": false,
+            "description": "Group results by country, mediaKitId, or day",
+            "name": "groupBy",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "View statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PressKitMediaKitStatsViewsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/content/compose": {
