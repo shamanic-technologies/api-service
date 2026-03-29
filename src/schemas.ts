@@ -1097,7 +1097,7 @@ registry.registerPath({
   summary: "Discover relevant outlets via Google search + LLM scoring",
   description: "Generates search queries via LLM, searches Google, scores results, and stores discovered outlets as buffered. " +
     "Creates a child run — use the returned runId to query outlets from this specific discovery run via GET /v1/outlets?runId={runId}. " +
-    "Requires x-campaign-id and x-brand-id headers.",
+    "Requires x-brand-id header. x-campaign-id is optional — when omitted, campaign-specific scoring is skipped.",
   security: authed,
   request: {
     body: {
@@ -1293,7 +1293,7 @@ registry.registerPath({
   path: "/v1/journalists/discover",
   tags: ["Journalists"],
   summary: "Discover relevant journalists for a brand on an outlet",
-  description: "Triggers journalist discovery for a given outlet. Requires x-campaign-id and x-brand-id headers. Creates a child run, discovers journalists, and stores them as buffered. Use the returned runId to query journalists from this specific discovery run via GET /v1/journalists?runId={runId}.",
+  description: "Triggers journalist discovery for a given outlet. Requires x-brand-id header. x-campaign-id is optional — when omitted, campaign-specific scoring is skipped. Creates a child run, discovers journalists, and stores them as buffered. Use the returned runId to query journalists from this specific discovery run via GET /v1/journalists?runId={runId}.",
   security: authed,
   request: {
     body: {
