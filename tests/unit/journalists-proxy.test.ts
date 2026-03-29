@@ -64,20 +64,53 @@ describe("Journalists proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
+  it("should have POST /journalists/buffer/next with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.post") && l.includes('"/journalists/buffer/next"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should proxy POST /journalists/discover to /discover on journalist-service", () => {
+    // The callExternalService call should use "/discover" as the path
+    const lines = content.split("\n");
+    const routeIdx = lines.findIndex((l) => l.includes('router.post') && l.includes('"/journalists/discover"') && !l.includes("emails"));
+    expect(routeIdx).toBeGreaterThan(-1);
+    // Find the callExternalService line within the handler
+    const handlerLines = lines.slice(routeIdx + 1, routeIdx + 10);
+    const serviceLine = handlerLines.find((l) => l.includes("callExternalService"));
+    expect(serviceLine).toBeDefined();
+    // The next line or same block should reference "/discover" not "/journalists/discover"
+    const serviceBlock = handlerLines.join("\n");
+    expect(serviceBlock).toContain('"/discover"');
+  });
+
+  it("should forward runId query parameter on GET /journalists", () => {
+    expect(content).toContain("runId");
+    expect(content).toContain('params.set("run_id", runId)');
+  });
+
+  it("should proxy POST /journalists/buffer/next to /buffer/next on journalist-service", () => {
+    expect(content).toContain('"/buffer/next"');
+  });
+
   it("should use buildInternalHeaders for all endpoints", () => {
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(4);
+    expect(headerMatches!.length).toBe(5);
   });
 
   it("should proxy to externalServices.journalist", () => {
     expect(content).toContain("externalServices.journalist");
   });
 
-  it("should forward request body on discover and discover-emails endpoints", () => {
+  it("should forward request body on discover, discover-emails, and buffer/next endpoints", () => {
     const bodyMatches = content.match(/body: req\.body/g);
     expect(bodyMatches).not.toBeNull();
-    expect(bodyMatches!.length).toBe(2);
+    expect(bodyMatches!.length).toBe(3);
   });
 
   it("should translate resolve to GET /campaign-outlet-journalists on journalist-service", () => {
@@ -132,6 +165,11 @@ describe("Journalists OpenAPI schemas", () => {
     expect(schemaContent).toContain("DiscoverEmailsResponse");
   });
 
+  it("should register POST /v1/journalists/buffer/next", () => {
+    expect(schemaContent).toContain('path: "/v1/journalists/buffer/next"');
+    expect(schemaContent).toContain("BufferNextJournalistResponse");
+  });
+
   it("should register POST /v1/journalists/resolve", () => {
     expect(schemaContent).toContain('path: "/v1/journalists/resolve"');
     expect(schemaContent).toContain("ResolveJournalistsRequest");
@@ -154,6 +192,25 @@ describe("Journalists OpenAPI schemas", () => {
     const start = schemaContent.indexOf("DiscoverJournalistsRequest");
     const blockBefore = schemaContent.slice(Math.max(0, start - 400), start);
     expect(blockBefore).toContain("outletId:");
+  });
+
+  it("should have runId in DiscoverJournalistsResponse (new async response shape)", () => {
+    const start = schemaContent.indexOf("DiscoverJournalistsResponse");
+    const block = schemaContent.slice(Math.max(0, start - 600), start);
+    expect(block).toContain("runId:");
+    expect(block).toContain("discovered:");
+  });
+
+  it("should have runId in ListJournalistsResponse rows", () => {
+    const start = schemaContent.indexOf("ListJournalistsResponse");
+    const block = schemaContent.slice(Math.max(0, start - 800), start);
+    expect(block).toContain("runId:");
+  });
+
+  it("should have runId query param in ListJournalistsQuery", () => {
+    const start = schemaContent.indexOf("ListJournalistsQuery");
+    const block = schemaContent.slice(Math.max(0, start - 400), start);
+    expect(block).toContain("runId:");
   });
 
   it("should define journalist entity type enum", () => {

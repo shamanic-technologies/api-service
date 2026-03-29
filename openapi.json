@@ -1736,6 +1736,12 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "runId": {
+                  "type": "string",
+                  "nullable": true,
+                  "format": "uuid",
+                  "description": "The discovery run that created this journalist entry"
                 }
               },
               "required": [
@@ -1748,7 +1754,8 @@
                 "relevanceScore",
                 "whyRelevant",
                 "whyNotRelevant",
-                "articleUrls"
+                "articleUrls",
+                "runId"
               ]
             }
           }
@@ -1760,81 +1767,19 @@
       "DiscoverJournalistsResponse": {
         "type": "object",
         "properties": {
-          "journalists": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "journalistName": {
-                  "type": "string"
-                },
-                "firstName": {
-                  "type": "string"
-                },
-                "lastName": {
-                  "type": "string"
-                },
-                "entityType": {
-                  "type": "string",
-                  "enum": [
-                    "individual",
-                    "organization"
-                  ]
-                },
-                "relevanceScore": {
-                  "type": "number",
-                  "minimum": 0,
-                  "maximum": 100
-                },
-                "whyRelevant": {
-                  "type": "string"
-                },
-                "whyNotRelevant": {
-                  "type": "string"
-                },
-                "articleUrls": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "isNew": {
-                  "type": "boolean"
-                }
-              },
-              "required": [
-                "id",
-                "journalistName",
-                "firstName",
-                "lastName",
-                "entityType",
-                "relevanceScore",
-                "whyRelevant",
-                "whyNotRelevant",
-                "articleUrls",
-                "isNew"
-              ]
-            }
+          "runId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Child run ID for this discovery. Use to query journalists from this run or check costs via runs-service."
           },
-          "totalArticlesSearched": {
-            "type": "number"
-          },
-          "totalNamesExtracted": {
-            "type": "number"
-          },
-          "totalJournalistsStored": {
-            "type": "number"
+          "discovered": {
+            "type": "integer",
+            "description": "Number of journalists discovered and stored as buffered"
           }
         },
         "required": [
-          "journalists",
-          "totalArticlesSearched",
-          "totalNamesExtracted",
-          "totalJournalistsStored"
+          "runId",
+          "discovered"
         ]
       },
       "DiscoverJournalistsRequest": {
@@ -1848,7 +1793,8 @@
             "type": "integer",
             "minimum": 1,
             "maximum": 30,
-            "default": 15
+            "default": 15,
+            "description": "Maximum number of articles to search (1-30, default 15)"
           }
         },
         "required": [
@@ -1940,6 +1886,19 @@
           "organizationDomain",
           "brandId",
           "campaignId"
+        ]
+      },
+      "BufferNextJournalistResponse": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Child run ID for this buffer/next call"
+          }
+        },
+        "required": [
+          "runId"
         ]
       },
       "ResolveJournalistsResponse": {
@@ -9209,7 +9168,7 @@
           "Journalists"
         ],
         "summary": "List journalists by brand",
-        "description": "Returns all discovered journalists for a given brand across all campaigns. Proxies to journalists-service GET /campaign-outlet-journalists?brand_id={brandId}.",
+        "description": "Returns all discovered journalists for a given brand across all campaigns. Proxies to journalists-service GET /campaign-outlet-journalists?brand_id={brandId}. Optionally filter by runId to get journalists from a specific discovery run.",
         "security": [
           {
             "bearerAuth": []
@@ -9225,6 +9184,17 @@
             "required": true,
             "description": "Brand ID to filter journalists by",
             "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter journalists by discovery run ID"
+            },
+            "required": false,
+            "description": "Filter journalists by discovery run ID",
+            "name": "runId",
             "in": "query"
           },
           {
@@ -9322,7 +9292,7 @@
           "Journalists"
         ],
         "summary": "Discover relevant journalists for a brand on an outlet",
-        "description": "Searches outlet articles, extracts journalist names via LLM, scores them for relevance, and stores results.",
+        "description": "Triggers journalist discovery for a given outlet. Requires x-campaign-id and x-brand-id headers. Creates a child run, discovers journalists, and stores them as buffered. Use the returned runId to query journalists from this specific discovery run via GET /v1/journalists?runId={runId}.",
         "security": [
           {
             "bearerAuth": []
@@ -9339,7 +9309,7 @@
         },
         "responses": {
           "200": {
-            "description": "Discovered journalists with relevance scores",
+            "description": "Discovery initiated — returns run ID and count of discovered journalists",
             "content": {
               "application/json": {
                 "schema": {
@@ -9477,6 +9447,101 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
+      }
+    },
+    "/v1/journalists/buffer/next": {
+      "post": {
+        "tags": [
+          "Journalists"
+        ],
+        "summary": "Get next buffered journalist",
+        "description": "Returns the next buffered journalist from the queue. Response includes the runId (child run ID) for the buffer/next call.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Next buffered journalist",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BufferNextJournalistResponse"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No buffered journalists available"
           },
           "401": {
             "description": "Unauthorized",
