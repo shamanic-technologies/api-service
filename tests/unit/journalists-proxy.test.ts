@@ -100,7 +100,7 @@ describe("Journalists proxy routes", () => {
   it("should use buildInternalHeaders for all endpoints", () => {
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(5);
+    expect(headerMatches!.length).toBe(6);
   });
 
   it("should proxy to externalServices.journalist", () => {
@@ -123,6 +123,36 @@ describe("Journalists proxy routes", () => {
     expect(content).toContain("req.campaignId");
     expect(content).toContain("brandId");
     expect(content).toContain("Either x-campaign-id header or brandId in request body is required");
+  });
+
+  it("should have GET /journalists/stats/costs with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/journalists/stats/costs"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should proxy GET /journalists/stats/costs to /journalists/stats/costs on journalist-service", () => {
+    expect(content).toContain('`/journalists/stats/costs${qs}`');
+  });
+
+  it("should require brandId on GET /journalists/stats/costs", () => {
+    // The route validates brandId is present
+    expect(content).toContain("Missing required query parameter: brandId");
+  });
+
+  it("should forward groupBy and campaignId query params on stats/costs", () => {
+    // The route forwards brandId, campaignId, groupBy
+    const statsBlock = content.slice(
+      content.indexOf('"/journalists/stats/costs"'),
+      content.indexOf('"/journalists/stats/costs"') + 600
+    );
+    expect(statsBlock).toContain('"brandId"');
+    expect(statsBlock).toContain('"campaignId"');
+    expect(statsBlock).toContain('"groupBy"');
   });
 
   it("should enforce requireOrg + requireUser on ALL journalist routes", () => {
@@ -211,6 +241,11 @@ describe("Journalists OpenAPI schemas", () => {
     const start = schemaContent.indexOf("ListJournalistsQuery");
     const block = schemaContent.slice(Math.max(0, start - 400), start);
     expect(block).toContain("runId:");
+  });
+
+  it("should register GET /v1/journalists/stats/costs", () => {
+    expect(schemaContent).toContain('path: "/v1/journalists/stats/costs"');
+    expect(schemaContent).toContain("JournalistStatsCostsResponse");
   });
 
   it("should define journalist entity type enum", () => {

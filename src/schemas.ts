@@ -1463,6 +1463,49 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/journalists/stats/costs",
+  tags: ["Journalists"],
+  summary: "Get journalist discovery cost stats",
+  description:
+    "Returns cost statistics for journalist discovery runs. Requires brandId. " +
+    "Supports optional campaignId filter and groupBy=journalistId to get per-journalist breakdowns. " +
+    "Costs are fetched from runs-service via POST /v1/runs/costs/batch.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().describe("Filter by brand ID (required)"),
+      campaignId: z.string().optional().describe("Filter by campaign ID"),
+      groupBy: z.enum(["journalistId"]).optional().describe("Group results by journalistId"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Cost statistics",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              groups: z.array(
+                z.object({
+                  dimensions: z.record(z.string()).describe("Grouping dimensions (e.g. journalistId)"),
+                  totalCostInUsdCents: z.number(),
+                  actualCostInUsdCents: z.number(),
+                  provisionedCostInUsdCents: z.number(),
+                  runCount: z.number(),
+                }),
+              ),
+            })
+            .openapi("JournalistStatsCostsResponse"),
+        },
+      },
+    },
+    400: { description: "Missing required brandId parameter", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
 // ===================================================================
 // ARTICLES (airtik)
 // ===================================================================

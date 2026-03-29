@@ -70,6 +70,28 @@ router.post("/journalists/buffer/next", authenticate, requireOrg, requireUser, a
   }
 });
 
+// ── GET /v1/journalists/stats/costs — journalist discovery cost stats ────────
+router.get("/journalists/stats/costs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["brandId", "campaignId", "groupBy"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    if (!params.get("brandId")) {
+      return res.status(400).json({ error: "Missing required query parameter: brandId" });
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.journalist,
+      `/journalists/stats/costs${qs}`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get journalist cost stats" });
+  }
+});
+
 // ── POST /v1/journalists/resolve — resolve journalists for campaign+outlet or brand+outlet ──
 // Translates the POST body into a GET /campaign-outlet-journalists query on journalist-service
 router.post("/journalists/resolve", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
