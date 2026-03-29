@@ -99,15 +99,17 @@ describe("Chat OpenAPI schemas", () => {
     expect(schemaContent).toContain('path: "/v1/chat"');
   });
 
-  it("should define ChatConfigRequestSchema", () => {
+  it("should define ChatConfigRequestSchema with key and allowedTools", () => {
     expect(schemaContent).toContain("ChatConfigRequestSchema");
     expect(schemaContent).toContain("systemPrompt");
+    expect(schemaContent).toContain("allowedTools");
     expect(schemaContent).not.toContain("mcpServerUrl");
     expect(schemaContent).not.toContain("mcpKeyName");
   });
 
-  it("should define ChatMessageRequestSchema with session lifecycle docs", () => {
+  it("should define ChatMessageRequestSchema with configKey and session lifecycle docs", () => {
     expect(schemaContent).toContain("ChatMessageRequestSchema");
+    expect(schemaContent).toContain("configKey");
     expect(schemaContent).toContain("sessionId");
     // sessionId field must document the server-created session contract
     expect(schemaContent).toContain("Omit to create a new session");
@@ -146,24 +148,28 @@ describe("Chat OpenAPI schemas", () => {
   });
 
   it("should return full config object from PUT /v1/chat/config (not just message)", () => {
-    // chat-service returns { orgId, systemPrompt, createdAt, updatedAt }
+    // chat-service returns { orgId, key, systemPrompt, allowedTools, createdAt, updatedAt }
     const configResponseBlock = schemaContent.slice(
-      schemaContent.indexOf('.openapi("ChatConfigResponse")') - 300,
+      schemaContent.indexOf('.openapi("ChatConfigResponse")') - 500,
       schemaContent.indexOf('.openapi("ChatConfigResponse")'),
     );
     expect(configResponseBlock).toContain("orgId");
+    expect(configResponseBlock).toContain("key");
     expect(configResponseBlock).toContain("systemPrompt");
+    expect(configResponseBlock).toContain("allowedTools");
     expect(configResponseBlock).toContain("createdAt");
     expect(configResponseBlock).toContain("updatedAt");
   });
 
   it("should return full config object from PUT /platform-chat/config (not just message)", () => {
-    // chat-service returns { systemPrompt, createdAt, updatedAt }
+    // chat-service returns { key, systemPrompt, allowedTools, createdAt, updatedAt }
     const configResponseBlock = schemaContent.slice(
-      schemaContent.indexOf('.openapi("PlatformChatConfigResponse")') - 300,
+      schemaContent.indexOf('.openapi("PlatformChatConfigResponse")') - 400,
       schemaContent.indexOf('.openapi("PlatformChatConfigResponse")'),
     );
+    expect(configResponseBlock).toContain("key");
     expect(configResponseBlock).toContain("systemPrompt");
+    expect(configResponseBlock).toContain("allowedTools");
     expect(configResponseBlock).toContain("createdAt");
     expect(configResponseBlock).toContain("updatedAt");
   });

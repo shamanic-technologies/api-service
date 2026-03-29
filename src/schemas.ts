@@ -3458,13 +3458,22 @@ registry.registerPath({
 
 export const ChatConfigRequestSchema = z
   .object({
+    key: z.string().min(1).describe('Config key identifying this configuration (e.g. "workflow", "feature")'),
     systemPrompt: z.string().min(1).describe("System prompt for the AI assistant"),
+    allowedTools: z.array(z.string()).min(1).describe("List of MCP tool names this config is allowed to invoke"),
   })
   .openapi("ChatConfigRequest");
 
 export const ChatMessageRequestSchema = z
   .object({
     message: z.string().min(1).describe("The user's chat message"),
+    configKey: z
+      .string()
+      .min(1)
+      .describe(
+        'The config key to use for this chat session (e.g. "workflow", "feature"). ' +
+        "Must match a key previously registered via PUT /config or PUT /platform-config.",
+      ),
     sessionId: z
       .string()
       .uuid()
@@ -3597,7 +3606,9 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             orgId: z.string().describe("Organization ID"),
+            key: z.string().describe("Config key"),
             systemPrompt: z.string().describe("The registered system prompt"),
+            allowedTools: z.array(z.string()).describe("Allowed MCP tool names"),
             createdAt: z.string().describe("ISO timestamp of creation"),
             updatedAt: z.string().describe("ISO timestamp of last update"),
           }).openapi("ChatConfigResponse"),
@@ -3760,7 +3771,9 @@ registry.registerPath({
 
 export const PlatformChatConfigRequestSchema = z
   .object({
+    key: z.string().min(1).describe('Config key identifying this configuration (e.g. "workflow", "feature")'),
     systemPrompt: z.string().min(1).describe("System prompt for the AI assistant"),
+    allowedTools: z.array(z.string()).min(1).describe("List of MCP tool names this config is allowed to invoke"),
   })
   .openapi("PlatformChatConfigRequest");
 
@@ -3785,7 +3798,9 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z.object({
+            key: z.string().describe("Config key"),
             systemPrompt: z.string().describe("The registered system prompt"),
+            allowedTools: z.array(z.string()).describe("Allowed MCP tool names"),
             createdAt: z.string().describe("ISO timestamp of creation"),
             updatedAt: z.string().describe("ISO timestamp of last update"),
           }).openapi("PlatformChatConfigResponse"),
