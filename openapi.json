@@ -1625,13 +1625,48 @@
           "query"
         ]
       },
+      "DiscoverOutletsResponse": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Child run ID for this discovery batch"
+          },
+          "discovered": {
+            "type": "integer",
+            "description": "Number of outlets discovered"
+          }
+        },
+        "required": [
+          "runId",
+          "discovered"
+        ]
+      },
       "DiscoverOutletsRequest": {
         "type": "object",
         "properties": {
-          "workflowSlug": {
-            "type": "string"
+          "count": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200,
+            "default": 15,
+            "description": "Number of outlets to discover (1-200, default 15)"
           }
         }
+      },
+      "BufferNextOutletResponse": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Discovery run ID that originally found this outlet"
+          }
+        },
+        "required": [
+          "runId"
+        ]
       },
       "UpdateOutletRequest": {
         "type": "object",
@@ -8175,6 +8210,16 @@
           },
           {
             "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter outlets by discovery run ID"
+            },
+            "required": false,
+            "name": "runId",
+            "in": "query"
+          },
+          {
+            "schema": {
               "type": "integer",
               "nullable": true,
               "default": 100
@@ -8715,7 +8760,7 @@
           "Outlets"
         ],
         "summary": "Discover relevant outlets via Google search + LLM scoring",
-        "description": "Generates search queries via LLM, searches Google, scores results, and bulk upserts discovered outlets. Brand and campaign context are resolved via x-brand-id and x-campaign-id headers.",
+        "description": "Generates search queries via LLM, searches Google, scores results, and stores discovered outlets as buffered. Creates a child run — use the returned runId to query outlets from this specific discovery run via GET /v1/outlets?runId={runId}. Requires x-campaign-id and x-brand-id headers.",
         "security": [
           {
             "bearerAuth": []
@@ -8732,7 +8777,14 @@
         },
         "responses": {
           "201": {
-            "description": "Outlets discovered and saved"
+            "description": "Outlets discovered and stored as buffered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscoverOutletsResponse"
+                }
+              }
+            }
           },
           "400": {
             "description": "Validation error",
@@ -8756,6 +8808,101 @@
           },
           "502": {
             "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
+      }
+    },
+    "/v1/outlets/buffer/next": {
+      "post": {
+        "tags": [
+          "Outlets"
+        ],
+        "summary": "Get next buffered outlet",
+        "description": "Returns the next buffered outlet from the queue. Response includes the runId of the discovery run that originally found the outlet.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Next buffered outlet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BufferNextOutletResponse"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No buffered outlets available"
+          },
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {

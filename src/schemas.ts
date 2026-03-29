@@ -907,6 +907,7 @@ registry.registerPath({
       campaignId: z.string().uuid().optional(),
       brandId: z.string().uuid().optional(),
       status: z.enum(["open", "ended", "denied"]).optional(),
+      runId: z.string().uuid().optional().openapi({ description: "Filter outlets by discovery run ID" }),
       limit: z.coerce.number().int().optional().default(100),
       offset: z.coerce.number().int().optional().default(0),
     }),
@@ -1050,8 +1051,9 @@ registry.registerPath({
   path: "/v1/outlets/discover",
   tags: ["Outlets"],
   summary: "Discover relevant outlets via Google search + LLM scoring",
-  description: "Generates search queries via LLM, searches Google, scores results, and bulk upserts discovered outlets. " +
-    "Brand and campaign context are resolved via x-brand-id and x-campaign-id headers.",
+  description: "Generates search queries via LLM, searches Google, scores results, and stores discovered outlets as buffered. " +
+    "Creates a child run — use the returned runId to query outlets from this specific discovery run via GET /v1/outlets?runId={runId}. " +
+    "Requires x-campaign-id and x-brand-id headers.",
   security: authed,
   request: {
     body: {
@@ -1059,7 +1061,7 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              workflowSlug: z.string().optional(),
+              count: z.number().int().min(1).max(200).optional().default(15).describe("Number of outlets to discover (1-200, default 15)"),
             })
             .openapi("DiscoverOutletsRequest"),
         },
@@ -1067,10 +1069,49 @@ registry.registerPath({
     },
   },
   responses: {
-    201: { description: "Outlets discovered and saved" },
+    201: {
+      description: "Outlets discovered and stored as buffered",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              runId: z.string().uuid().describe("Child run ID for this discovery batch"),
+              discovered: z.number().int().describe("Number of outlets discovered"),
+            })
+            .openapi("DiscoverOutletsResponse"),
+        },
+      },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/outlets/buffer/next",
+  tags: ["Outlets"],
+  summary: "Get next buffered outlet",
+  description: "Returns the next buffered outlet from the queue. Response includes the runId of the discovery run that originally found the outlet.",
+  security: authed,
+  request: {},
+  responses: {
+    200: {
+      description: "Next buffered outlet",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              runId: z.string().uuid().describe("Discovery run ID that originally found this outlet"),
+            })
+            .passthrough()
+            .openapi("BufferNextOutletResponse"),
+        },
+      },
+    },
+    204: { description: "No buffered outlets available" },
+    401: { description: "Unauthorized", content: errorContent },
   },
 });
 
