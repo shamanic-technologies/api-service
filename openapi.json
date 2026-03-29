@@ -4362,9 +4362,20 @@
             "type": "string",
             "description": "Organization ID"
           },
+          "key": {
+            "type": "string",
+            "description": "Config key"
+          },
           "systemPrompt": {
             "type": "string",
             "description": "The registered system prompt"
+          },
+          "allowedTools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Allowed MCP tool names"
           },
           "createdAt": {
             "type": "string",
@@ -4377,7 +4388,9 @@
         },
         "required": [
           "orgId",
+          "key",
           "systemPrompt",
+          "allowedTools",
           "createdAt",
           "updatedAt"
         ]
@@ -4385,14 +4398,29 @@
       "ChatConfigRequest": {
         "type": "object",
         "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Config key identifying this configuration (e.g. \"workflow\", \"feature\")"
+          },
           "systemPrompt": {
             "type": "string",
             "minLength": 1,
             "description": "System prompt for the AI assistant"
+          },
+          "allowedTools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "List of MCP tool names this config is allowed to invoke"
           }
         },
         "required": [
-          "systemPrompt"
+          "key",
+          "systemPrompt",
+          "allowedTools"
         ]
       },
       "ChatMessageRequest": {
@@ -4402,6 +4430,11 @@
             "type": "string",
             "minLength": 1,
             "description": "The user's chat message"
+          },
+          "configKey": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The config key to use for this chat session (e.g. \"workflow\", \"feature\"). Must match a key previously registered via PUT /config or PUT /platform-config."
           },
           "sessionId": {
             "type": "string",
@@ -4417,7 +4450,8 @@
           }
         },
         "required": [
-          "message"
+          "message",
+          "configKey"
         ]
       },
       "PlatformKeyResponse": {
@@ -4491,9 +4525,20 @@
       "PlatformChatConfigResponse": {
         "type": "object",
         "properties": {
+          "key": {
+            "type": "string",
+            "description": "Config key"
+          },
           "systemPrompt": {
             "type": "string",
             "description": "The registered system prompt"
+          },
+          "allowedTools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Allowed MCP tool names"
           },
           "createdAt": {
             "type": "string",
@@ -4505,7 +4550,9 @@
           }
         },
         "required": [
+          "key",
           "systemPrompt",
+          "allowedTools",
           "createdAt",
           "updatedAt"
         ]
@@ -4513,14 +4560,29 @@
       "PlatformChatConfigRequest": {
         "type": "object",
         "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Config key identifying this configuration (e.g. \"workflow\", \"feature\")"
+          },
           "systemPrompt": {
             "type": "string",
             "minLength": 1,
             "description": "System prompt for the AI assistant"
+          },
+          "allowedTools": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "List of MCP tool names this config is allowed to invoke"
           }
         },
         "required": [
-          "systemPrompt"
+          "key",
+          "systemPrompt",
+          "allowedTools"
         ]
       },
       "BillingAccountResponse": {

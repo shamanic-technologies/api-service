@@ -63,7 +63,9 @@ describe("PUT /platform-chat/config", () => {
       .put("/platform-chat/config")
       .set("X-API-Key", VALID_API_KEY)
       .send({
+        key: "workflow",
         systemPrompt: "You are a helpful workflow assistant.",
+        allowedTools: ["request_user_input", "update_workflow"],
       });
 
     expect(res.status).toBe(200);
@@ -73,7 +75,9 @@ describe("PUT /platform-chat/config", () => {
     expect(call).toBeDefined();
     expect(call!.method).toBe("PUT");
     expect(call!.body).toMatchObject({
+      key: "workflow",
       systemPrompt: "You are a helpful workflow assistant.",
+      allowedTools: ["request_user_input", "update_workflow"],
     });
     // No identity headers forwarded
     expect(call!.headers!["x-org-id"]).toBeUndefined();
@@ -86,7 +90,9 @@ describe("PUT /platform-chat/config", () => {
       .put("/platform-chat/config")
       .set("X-API-Key", VALID_API_KEY)
       .send({
+        key: "workflow",
         systemPrompt: "You are a helpful assistant.",
+        allowedTools: ["request_user_input"],
         mcpServerUrl: "https://mcp.example.com",
         mcpKeyName: "dashboard-mcp",
       });
@@ -95,7 +101,9 @@ describe("PUT /platform-chat/config", () => {
 
     const call = fetchCalls.find((c) => c.url.includes("/platform-config"));
     expect(call!.body).toMatchObject({
+      key: "workflow",
       systemPrompt: "You are a helpful assistant.",
+      allowedTools: ["request_user_input"],
     });
     expect(call!.body).not.toHaveProperty("mcpServerUrl");
     expect(call!.body).not.toHaveProperty("mcpKeyName");
@@ -104,7 +112,7 @@ describe("PUT /platform-chat/config", () => {
   it("should return 401 without API key", async () => {
     const res = await request(app)
       .put("/platform-chat/config")
-      .send({ systemPrompt: "test" });
+      .send({ key: "workflow", systemPrompt: "test", allowedTools: ["request_user_input"] });
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe("Invalid or missing platform API key");
@@ -114,7 +122,7 @@ describe("PUT /platform-chat/config", () => {
     const res = await request(app)
       .put("/platform-chat/config")
       .set("X-API-Key", "wrong-key")
-      .send({ systemPrompt: "test" });
+      .send({ key: "workflow", systemPrompt: "test", allowedTools: ["request_user_input"] });
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe("Invalid or missing platform API key");
@@ -134,7 +142,7 @@ describe("PUT /platform-chat/config", () => {
     const res = await request(app)
       .put("/platform-chat/config")
       .set("X-API-Key", VALID_API_KEY)
-      .send({ systemPrompt: "" });
+      .send({ key: "workflow", systemPrompt: "", allowedTools: ["request_user_input"] });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("Invalid request");
