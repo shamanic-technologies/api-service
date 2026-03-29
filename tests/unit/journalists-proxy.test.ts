@@ -67,9 +67,10 @@ describe("Journalists proxy routes", () => {
     expect(content).toContain("outlet_id");
   });
 
-  it("should require x-campaign-id header for resolve endpoint", () => {
+  it("should require x-campaign-id header or brandId for resolve endpoint", () => {
     expect(content).toContain("req.campaignId");
-    expect(content).toContain("Missing x-campaign-id header");
+    expect(content).toContain("brandId");
+    expect(content).toContain("Either x-campaign-id header or brandId in request body is required");
   });
 
   it("should enforce requireOrg + requireUser on ALL journalist routes", () => {

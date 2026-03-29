@@ -1946,6 +1946,11 @@
             "type": "string",
             "format": "uuid"
           },
+          "brandId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Brand ID — alternative to x-campaign-id header. Returns journalists across all campaigns for this brand."
+          },
           "featureInputs": {
             "type": "object",
             "additionalProperties": {
@@ -9292,8 +9297,8 @@
         "tags": [
           "Journalists"
         ],
-        "summary": "Resolve journalists for a campaign+outlet",
-        "description": "Discovers journalists if needed, scores them, and returns results sorted by relevance.",
+        "summary": "Resolve journalists for a campaign+outlet or brand+outlet",
+        "description": "Discovers journalists if needed, scores them, and returns results sorted by relevance. At least one of x-campaign-id header or brandId in body is required.",
         "security": [
           {
             "bearerAuth": []
@@ -19386,7 +19391,7 @@
           "Press Kits"
         ],
         "summary": "List media kits",
-        "description": "List media kits, optionally filtered by org_id, organization_id, campaign_id, or title.",
+        "description": "List media kits, optionally filtered by org_id, organization_id, campaign_id, brand_id, or title.",
         "security": [
           {
             "bearerAuth": []
@@ -19421,6 +19426,16 @@
             "required": false,
             "description": "Filter by campaign ID — returns media kit(s) linked to this campaign",
             "name": "campaign_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by brand ID — returns media kit(s) linked to this brand"
+            },
+            "required": false,
+            "description": "Filter by brand ID — returns media kit(s) linked to this brand",
+            "name": "brand_id",
             "in": "query"
           },
           {
