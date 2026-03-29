@@ -5064,6 +5064,30 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/press-kits/media-kits/stats/costs",
+  tags: ["Press Kits"],
+  summary: "Get media kit cost stats",
+  description:
+    "Returns cost statistics for media kits. Supports filtering by mediaKitId, brandId, campaignId, " +
+    "and grouping by mediaKitId. Costs include downstream service costs (chat-service, etc.) via run hierarchy. " +
+    "Requires POST /v1/runs/costs/batch on runs-service to be deployed for costs to be visible.",
+  security: authed,
+  request: {
+    query: z.object({
+      mediaKitId: z.string().optional().describe("Filter by media kit ID"),
+      brandId: z.string().optional().describe("Filter by brand ID"),
+      campaignId: z.string().optional().describe("Filter by campaign ID"),
+      groupBy: z.enum(["mediaKitId"]).optional().describe("Group results by mediaKitId"),
+    }),
+  },
+  responses: {
+    200: { description: "Cost statistics", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitMediaKitStatsCostsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
 // Content – Compose (proxy to content-generation-service)
 // ---------------------------------------------------------------------------
 export const ContentComposeRequestSchema = z
