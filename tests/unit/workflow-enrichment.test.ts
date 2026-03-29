@@ -65,8 +65,8 @@ describe("GET /v1/workflows — enrichment with requiredProviders", () => {
           json: () =>
             Promise.resolve({
               workflows: [
-                { id: "wf-1", name: "cold-outreach-v1", category: "sales" },
-                { id: "wf-2", name: "pr-outreach-v1", category: "pr" },
+                { id: "00000000-0000-4000-8000-000000000001", name: "cold-outreach-v1", category: "sales" },
+                { id: "00000000-0000-4000-8000-000000000002", name: "pr-outreach-v1", category: "pr" },
               ],
             }),
         };
@@ -98,7 +98,7 @@ describe("GET /v1/workflows — enrichment with requiredProviders", () => {
             Promise.resolve({
               workflows: [
                 {
-                  id: "wf-1",
+                  id: "00000000-0000-4000-8000-000000000001",
                   name: "cold-outreach-v3",
                   slug: "cold-outreach-hormozi-v3",
                   dynastyName: "Cold Outreach Hormozi",
@@ -129,8 +129,8 @@ describe("GET /v1/workflows — enrichment with requiredProviders", () => {
 
     const providerCalls = fetchCalls.filter((c) => c.url.includes("/required-providers"));
     expect(providerCalls).toHaveLength(2);
-    expect(providerCalls[0].url).toContain("/workflows/wf-1/required-providers");
-    expect(providerCalls[1].url).toContain("/workflows/wf-2/required-providers");
+    expect(providerCalls[0].url).toContain("/workflows/00000000-0000-4000-8000-000000000001/required-providers");
+    expect(providerCalls[1].url).toContain("/workflows/00000000-0000-4000-8000-000000000002/required-providers");
   });
 
   it("should return empty requiredProviders if provider call fails", async () => {
@@ -148,8 +148,8 @@ describe("GET /v1/workflows — enrichment with requiredProviders", () => {
         json: () =>
           Promise.resolve({
             workflows: [
-              { id: "wf-1", name: "flow-1" },
-              { id: "wf-2", name: "flow-2" },
+              { id: "00000000-0000-4000-8000-000000000001", name: "flow-1" },
+              { id: "00000000-0000-4000-8000-000000000002", name: "flow-2" },
             ],
           }),
       };
@@ -183,10 +183,10 @@ describe("GET /v1/workflows/:id — enrichment with requiredProviders", () => {
           json: () => Promise.resolve({ providers: [{ name: "instantly", domain: "instantly.ai" }, { name: "anthropic", domain: "anthropic.com" }] }),
         };
       }
-      if (url.match(/\/workflows\/wf-\d+$/)) {
+      if (url.match(/\/workflows\/[0-9a-f-]+$/) && !url.includes("/required-providers")) {
         return {
           ok: true,
-          json: () => Promise.resolve({ workflow: { id: "wf-1", name: "cold-outreach-v1" } }),
+          json: () => Promise.resolve({ workflow: { id: "00000000-0000-4000-8000-000000000001", name: "cold-outreach-v1" } }),
         };
       }
       return { ok: true, json: () => Promise.resolve({}) };
@@ -196,7 +196,7 @@ describe("GET /v1/workflows/:id — enrichment with requiredProviders", () => {
   });
 
   it("should enrich single workflow with requiredProviders", async () => {
-    const res = await request(app).get("/v1/workflows/wf-1");
+    const res = await request(app).get("/v1/workflows/00000000-0000-4000-8000-000000000001");
 
     expect(res.status).toBe(200);
     expect(res.body.workflow.requiredProviders).toEqual([{ name: "instantly", domain: "instantly.ai" }, { name: "anthropic", domain: "anthropic.com" }]);
@@ -220,12 +220,12 @@ describe("GET /v1/workflows/:id/summary", () => {
           json: () => Promise.resolve({ providers: [{ name: "apollo", domain: "apollo.io" }, { name: "anthropic", domain: "anthropic.com" }, { name: "instantly", domain: "instantly.ai" }] }),
         };
       }
-      if (url.match(/\/workflows\/wf-1$/)) {
+      if (url.match(/\/workflows\/00000000-0000-4000-8000-000000000001$/)) {
         return {
           ok: true,
           json: () =>
             Promise.resolve({
-              id: "wf-1",
+              id: "00000000-0000-4000-8000-000000000001",
               name: "sales-email-cold-outreach-v1",
               dag: {
                 nodes: [
@@ -250,7 +250,7 @@ describe("GET /v1/workflows/:id/summary", () => {
   });
 
   it("should return a structured summary with steps", async () => {
-    const res = await request(app).get("/v1/workflows/wf-1/summary");
+    const res = await request(app).get("/v1/workflows/00000000-0000-4000-8000-000000000001/summary");
 
     expect(res.status).toBe(200);
     expect(res.body.workflowSlug).toBe("sales-email-cold-outreach-v1");
@@ -274,7 +274,7 @@ describe("GET /v1/workflows/:id/summary", () => {
         ok: true,
         json: () =>
           Promise.resolve({
-            id: "wf-regression",
+            id: "00000000-0000-4000-8000-000000000099",
             name: "regression-flow",
             dag: {
               nodes: [{ id: "step-1", type: "http.call", config: { service: "apollo", method: "GET", path: "/test" } }],
@@ -285,7 +285,7 @@ describe("GET /v1/workflows/:id/summary", () => {
     });
     app = createApp();
 
-    const res = await request(app).get("/v1/workflows/wf-regression/summary");
+    const res = await request(app).get("/v1/workflows/00000000-0000-4000-8000-000000000099/summary");
 
     expect(res.status).toBe(200);
     expect(res.body.workflowSlug).toBe("regression-flow");
@@ -299,12 +299,12 @@ describe("GET /v1/workflows/:id/summary", () => {
       }
       return {
         ok: true,
-        json: () => Promise.resolve({ id: "wf-1", name: "empty-flow", dag: null }),
+        json: () => Promise.resolve({ id: "00000000-0000-4000-8000-000000000001", name: "empty-flow", dag: null }),
       };
     });
     app = createApp();
 
-    const res = await request(app).get("/v1/workflows/wf-1/summary");
+    const res = await request(app).get("/v1/workflows/00000000-0000-4000-8000-000000000001/summary");
 
     expect(res.status).toBe(200);
     expect(res.body.steps).toEqual([]);
@@ -347,7 +347,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
       if (url.match(/\/keys$/) || url.includes("/keys?")) {
         return { ok: true, json: () => Promise.resolve({ keys: orgKeys }) };
       }
-      if (url.match(/\/workflows\/wf-1$/)) {
+      if (url.match(/\/workflows\/00000000-0000-4000-8000-000000000001$/)) {
         return { ok: true, json: () => Promise.resolve({ workflow: { name: workflowSlug } }) };
       }
       return { ok: true, json: () => Promise.resolve({}) };
@@ -372,7 +372,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
     });
     app = createApp();
 
-    const res = await request(app).get("/v1/workflows/wf-1/key-status");
+    const res = await request(app).get("/v1/workflows/00000000-0000-4000-8000-000000000001/key-status");
 
     expect(res.status).toBe(200);
     expect(res.body.workflowSlug).toBe("sales-email-cold-outreach-v1");
@@ -393,7 +393,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
     });
     app = createApp();
 
-    const res = await request(app).get("/v1/workflows/wf-1/key-status");
+    const res = await request(app).get("/v1/workflows/00000000-0000-4000-8000-000000000001/key-status");
 
     expect(res.status).toBe(200);
     expect(res.body.ready).toBe(true);
@@ -411,7 +411,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
     });
     app = createApp();
 
-    const res = await request(app).get("/v1/workflows/wf-1/key-status");
+    const res = await request(app).get("/v1/workflows/00000000-0000-4000-8000-000000000001/key-status");
 
     expect(res.status).toBe(200);
     expect(res.body.ready).toBe(true);
@@ -430,7 +430,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
     });
     app = createApp();
 
-    const res = await request(app).get("/v1/workflows/wf-1/key-status");
+    const res = await request(app).get("/v1/workflows/00000000-0000-4000-8000-000000000001/key-status");
 
     expect(res.status).toBe(200);
     expect(res.body.ready).toBe(false);
@@ -440,14 +440,14 @@ describe("GET /v1/workflows/:id/key-status", () => {
   });
 
   it("should fetch key sources from /keys/sources", async () => {
-    await request(app).get("/v1/workflows/wf-1/key-status");
+    await request(app).get("/v1/workflows/00000000-0000-4000-8000-000000000001/key-status");
 
     const sourcesCall = fetchCalls.find((c) => c.url.includes("/keys/sources"));
     expect(sourcesCall).toBeDefined();
   });
 
   it("should fetch org keys via /keys without orgId in query (uses headers)", async () => {
-    await request(app).get("/v1/workflows/wf-1/key-status");
+    await request(app).get("/v1/workflows/00000000-0000-4000-8000-000000000001/key-status");
 
     const keysCall = fetchCalls.find((c) => c.url.match(/\/keys$/) && !c.url.includes("/keys/sources"));
     expect(keysCall).toBeDefined();
@@ -468,14 +468,14 @@ describe("GET /v1/workflows/:id/key-status", () => {
       if (url.match(/\/keys$/) || url.includes("/keys?")) {
         return { ok: true, json: () => Promise.resolve({ keys: [] }) };
       }
-      if (url.match(/\/workflows\/wf-1$/)) {
+      if (url.match(/\/workflows\/00000000-0000-4000-8000-000000000001$/)) {
         return { ok: true, json: () => Promise.resolve({ workflow: { name: "test-flow" } }) };
       }
       return { ok: true, json: () => Promise.resolve({}) };
     });
     app = createApp();
 
-    const res = await request(app).get("/v1/workflows/wf-1/key-status");
+    const res = await request(app).get("/v1/workflows/00000000-0000-4000-8000-000000000001/key-status");
 
     // Should default to platform → configured = true
     expect(res.status).toBe(200);

@@ -14960,6 +14960,7 @@
           {
             "schema": {
               "type": "string",
+              "format": "uuid",
               "description": "Workflow ID"
             },
             "required": true,
@@ -15070,6 +15071,7 @@
           {
             "schema": {
               "type": "string",
+              "format": "uuid",
               "description": "Workflow ID"
             },
             "required": true,
@@ -15342,6 +15344,7 @@
           {
             "schema": {
               "type": "string",
+              "format": "uuid",
               "description": "Workflow ID"
             },
             "required": true,
@@ -15464,6 +15467,7 @@
           {
             "schema": {
               "type": "string",
+              "format": "uuid",
               "description": "Workflow ID"
             },
             "required": true,
@@ -15576,6 +15580,7 @@
           {
             "schema": {
               "type": "string",
+              "format": "uuid",
               "description": "Workflow ID"
             },
             "required": true,
@@ -15698,6 +15703,7 @@
           {
             "schema": {
               "type": "string",
+              "format": "uuid",
               "description": "Workflow ID"
             },
             "required": true,

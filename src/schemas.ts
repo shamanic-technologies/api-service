@@ -2971,7 +2971,7 @@ registry.registerPath({
   description: "Get a single workflow with full DAG definition",
   security: authed,
   request: {
-    params: z.object({ id: z.string().describe("Workflow ID") }),
+    params: z.object({ id: z.string().uuid().describe("Workflow ID") }),
   },
   responses: {
     200: {
@@ -3097,7 +3097,7 @@ registry.registerPath({
 // ===================================================================
 
 const WorkflowIdParam = z.object({
-  id: z.string().describe("Workflow ID"),
+  id: z.string().uuid().describe("Workflow ID"),
 });
 
 const ProviderInfoSchema = z
