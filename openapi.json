@@ -5790,6 +5790,7 @@
           "generating",
           "validated",
           "denied",
+          "failed",
           "archived"
         ]
       },

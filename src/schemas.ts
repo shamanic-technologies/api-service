@@ -4817,7 +4817,7 @@ const LlmContextResponseSchema = z
 // ===================================================================
 
 const PressKitMediaKitStatusEnum = z
-  .enum(["drafted", "generating", "validated", "denied", "archived"])
+  .enum(["drafted", "generating", "validated", "denied", "failed", "archived"])
   .openapi("PressKitMediaKitStatus");
 
 // ── Public endpoints (no auth) ──────────────────────────────────────────────
