@@ -1158,6 +1158,50 @@ registry.registerPath({
 // ===================================================================
 
 registry.registerPath({
+  method: "get",
+  path: "/v1/journalists",
+  tags: ["Journalists"],
+  summary: "List journalists by brand",
+  description: "Returns all discovered journalists for a given brand across all campaigns. Proxies to journalists-service GET /campaign-outlet-journalists?brand_id={brandId}.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().describe("Brand ID to filter journalists by"),
+    }).openapi("ListJournalistsQuery"),
+  },
+  responses: {
+    200: {
+      description: "List of journalists for the brand",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              campaignJournalists: z.array(
+                z.object({
+                  id: z.string().uuid(),
+                  journalistId: z.string().uuid(),
+                  journalistName: z.string(),
+                  firstName: z.string(),
+                  lastName: z.string(),
+                  entityType: z.enum(["individual", "organization"]),
+                  relevanceScore: z.number().nullable(),
+                  whyRelevant: z.string().nullable(),
+                  whyNotRelevant: z.string().nullable(),
+                  articleUrls: z.array(z.string()).nullable(),
+                }).passthrough(),
+              ),
+            })
+            .passthrough()
+            .openapi("ListJournalistsResponse"),
+        },
+      },
+    },
+    400: { description: "Missing brandId", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/journalists/discover",
   tags: ["Journalists"],

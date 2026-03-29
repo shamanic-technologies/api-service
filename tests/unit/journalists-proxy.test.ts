@@ -15,6 +15,25 @@ const serviceClientPath = path.join(__dirname, "../../src/lib/service-client.ts"
 const serviceClientContent = fs.readFileSync(serviceClientPath, "utf-8");
 
 describe("Journalists proxy routes", () => {
+  it("should have GET /journalists with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/journalists"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should proxy GET /journalists to /campaign-outlet-journalists with brand_id", () => {
+    // The route should forward brandId as brand_id query param to journalist-service
+    expect(content).toContain('params.set("brand_id", brandId)');
+  });
+
+  it("should require brandId query parameter on GET /journalists", () => {
+    expect(content).toContain("Missing required query parameter: brandId");
+  });
+
   it("should have POST /journalists/discover with auth + requireOrg + requireUser", () => {
     const line = content.split("\n").find((l) =>
       l.includes("router.post") && l.includes('"/journalists/discover"') && !l.includes("emails")
@@ -48,7 +67,7 @@ describe("Journalists proxy routes", () => {
   it("should use buildInternalHeaders for all endpoints", () => {
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(3);
+    expect(headerMatches!.length).toBe(4);
   });
 
   it("should proxy to externalServices.journalist", () => {
@@ -95,6 +114,12 @@ describe("Journalists service client", () => {
 });
 
 describe("Journalists OpenAPI schemas", () => {
+  it("should register GET /v1/journalists", () => {
+    expect(schemaContent).toContain('path: "/v1/journalists"');
+    expect(schemaContent).toContain("ListJournalistsQuery");
+    expect(schemaContent).toContain("ListJournalistsResponse");
+  });
+
   it("should register POST /v1/journalists/discover", () => {
     expect(schemaContent).toContain('path: "/v1/journalists/discover"');
     expect(schemaContent).toContain("DiscoverJournalistsRequest");
