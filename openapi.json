@@ -1686,6 +1686,77 @@
           "status"
         ]
       },
+      "ListJournalistsResponse": {
+        "type": "object",
+        "properties": {
+          "campaignJournalists": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "journalistId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "journalistName": {
+                  "type": "string"
+                },
+                "firstName": {
+                  "type": "string"
+                },
+                "lastName": {
+                  "type": "string"
+                },
+                "entityType": {
+                  "type": "string",
+                  "enum": [
+                    "individual",
+                    "organization"
+                  ]
+                },
+                "relevanceScore": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "whyRelevant": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "whyNotRelevant": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "articleUrls": {
+                  "type": "array",
+                  "nullable": true,
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "journalistId",
+                "journalistName",
+                "firstName",
+                "lastName",
+                "entityType",
+                "relevanceScore",
+                "whyRelevant",
+                "whyNotRelevant",
+                "articleUrls"
+              ]
+            }
+          }
+        },
+        "required": [
+          "campaignJournalists"
+        ]
+      },
       "DiscoverJournalistsResponse": {
         "type": "object",
         "properties": {
@@ -9050,6 +9121,119 @@
           },
           "404": {
             "description": "Not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/journalists": {
+      "get": {
+        "tags": [
+          "Journalists"
+        ],
+        "summary": "List journalists by brand",
+        "description": "Returns all discovered journalists for a given brand across all campaigns. Proxies to journalists-service GET /campaign-outlet-journalists?brand_id={brandId}.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Brand ID to filter journalists by"
+            },
+            "required": true,
+            "description": "Brand ID to filter journalists by",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of journalists for the brand",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListJournalistsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing brandId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
             "content": {
               "application/json": {
                 "schema": {
