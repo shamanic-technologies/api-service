@@ -1162,11 +1162,12 @@ registry.registerPath({
   path: "/v1/journalists",
   tags: ["Journalists"],
   summary: "List journalists by brand",
-  description: "Returns all discovered journalists for a given brand across all campaigns. Proxies to journalists-service GET /campaign-outlet-journalists?brand_id={brandId}.",
+  description: "Returns all discovered journalists for a given brand across all campaigns. Proxies to journalists-service GET /campaign-outlet-journalists?brand_id={brandId}. Optionally filter by runId to get journalists from a specific discovery run.",
   security: authed,
   request: {
     query: z.object({
       brandId: z.string().uuid().describe("Brand ID to filter journalists by"),
+      runId: z.string().uuid().optional().describe("Filter journalists by discovery run ID"),
     }).openapi("ListJournalistsQuery"),
   },
   responses: {
@@ -1188,6 +1189,7 @@ registry.registerPath({
                   whyRelevant: z.string().nullable(),
                   whyNotRelevant: z.string().nullable(),
                   articleUrls: z.array(z.string()).nullable(),
+                  runId: z.string().uuid().nullable().describe("The discovery run that created this journalist entry"),
                 }).passthrough(),
               ),
             })
@@ -1206,7 +1208,7 @@ registry.registerPath({
   path: "/v1/journalists/discover",
   tags: ["Journalists"],
   summary: "Discover relevant journalists for a brand on an outlet",
-  description: "Searches outlet articles, extracts journalist names via LLM, scores them for relevance, and stores results.",
+  description: "Triggers journalist discovery for a given outlet. Requires x-campaign-id and x-brand-id headers. Creates a child run, discovers journalists, and stores them as buffered. Use the returned runId to query journalists from this specific discovery run via GET /v1/journalists?runId={runId}.",
   security: authed,
   request: {
     body: {
@@ -1215,7 +1217,7 @@ registry.registerPath({
           schema: z
             .object({
               outletId: z.string().uuid(),
-              maxArticles: z.number().int().min(1).max(30).optional().default(15),
+              maxArticles: z.number().int().min(1).max(30).optional().default(15).describe("Maximum number of articles to search (1-30, default 15)"),
             })
             .openapi("DiscoverJournalistsRequest"),
         },
@@ -1224,28 +1226,13 @@ registry.registerPath({
   },
   responses: {
     200: {
-      description: "Discovered journalists with relevance scores",
+      description: "Discovery initiated — returns run ID and count of discovered journalists",
       content: {
         "application/json": {
           schema: z
             .object({
-              journalists: z.array(
-                z.object({
-                  id: z.string().uuid(),
-                  journalistName: z.string(),
-                  firstName: z.string(),
-                  lastName: z.string(),
-                  entityType: z.enum(["individual", "organization"]),
-                  relevanceScore: z.number().min(0).max(100),
-                  whyRelevant: z.string(),
-                  whyNotRelevant: z.string(),
-                  articleUrls: z.array(z.string()),
-                  isNew: z.boolean(),
-                }),
-              ),
-              totalArticlesSearched: z.number(),
-              totalNamesExtracted: z.number(),
-              totalJournalistsStored: z.number(),
+              runId: z.string().uuid().describe("Child run ID for this discovery. Use to query journalists from this run or check costs via runs-service."),
+              discovered: z.number().int().describe("Number of journalists discovered and stored as buffered"),
             })
             .openapi("DiscoverJournalistsResponse"),
         },
@@ -1305,6 +1292,33 @@ registry.registerPath({
       },
     },
     400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/journalists/buffer/next",
+  tags: ["Journalists"],
+  summary: "Get next buffered journalist",
+  description: "Returns the next buffered journalist from the queue. Response includes the runId (child run ID) for the buffer/next call.",
+  security: authed,
+  request: {},
+  responses: {
+    200: {
+      description: "Next buffered journalist",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              runId: z.string().uuid().describe("Child run ID for this buffer/next call"),
+            })
+            .passthrough()
+            .openapi("BufferNextJournalistResponse"),
+        },
+      },
+    },
+    204: { description: "No buffered journalists available" },
     401: { description: "Unauthorized", content: errorContent },
   },
 });

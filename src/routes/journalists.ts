@@ -8,13 +8,14 @@ const router = Router();
 // ── GET /v1/journalists — list journalists by brand ─────────────────────────
 router.get("/journalists", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const { brandId } = req.query as { brandId?: string };
+    const { brandId, runId } = req.query as { brandId?: string; runId?: string };
     if (!brandId) {
       return res.status(400).json({ error: "Missing required query parameter: brandId" });
     }
 
     const params = new URLSearchParams();
     params.set("brand_id", brandId);
+    if (runId) params.set("run_id", runId);
 
     const result = await callExternalService(
       externalServices.journalist,
@@ -32,7 +33,7 @@ router.post("/journalists/discover", authenticate, requireOrg, requireUser, asyn
   try {
     const result = await callExternalService(
       externalServices.journalist,
-      "/journalists/discover",
+      "/discover",
       { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -52,6 +53,20 @@ router.post("/journalists/discover-emails", authenticate, requireOrg, requireUse
     res.json(result);
   } catch (error: any) {
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to discover journalist emails" });
+  }
+});
+
+// ── POST /v1/journalists/buffer/next — get next buffered journalist ──────────
+router.post("/journalists/buffer/next", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.journalist,
+      "/buffer/next",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get next buffered journalist" });
   }
 });
 
