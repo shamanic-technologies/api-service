@@ -26,7 +26,7 @@ describe("Outlets proxy routes", () => {
   });
 
   it("should forward query params on GET /outlets", () => {
-    for (const param of ["campaignId", "brandId", "status", "limit", "offset"]) {
+    for (const param of ["campaignId", "brandId", "status", "runId", "limit", "offset"]) {
       expect(content).toContain(`"${param}"`);
     }
   });
@@ -72,6 +72,16 @@ describe("Outlets proxy routes", () => {
     expect(content).toContain('"/outlets/discover"');
   });
 
+  it("should have POST /outlets/buffer/next with auth", () => {
+    const line = content.split("\n").find((l: string) =>
+      l.includes("router.post") && l.includes('"/outlets/buffer/next"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
   it("should have GET /outlets/:id with auth", () => {
     expect(content).toContain('"/outlets/:id"');
     const line = content.split("\n").find((l) =>
@@ -100,7 +110,7 @@ describe("Outlets proxy routes", () => {
   it("should use buildInternalHeaders for all endpoints", () => {
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(9);
+    expect(headerMatches!.length).toBe(10);
   });
 
   it("should proxy to externalServices.outlet", () => {
@@ -112,11 +122,13 @@ describe("Outlets proxy routes", () => {
     const bulkIdx = content.indexOf('"/outlets/bulk"');
     const searchIdx = content.indexOf('"/outlets/search"');
     const discoverIdx = content.indexOf('"/outlets/discover"');
+    const bufferNextIdx = content.indexOf('"/outlets/buffer/next"');
     const idIdx = content.indexOf('"/outlets/:id"');
     expect(statsIdx).toBeLessThan(idIdx);
     expect(bulkIdx).toBeLessThan(idIdx);
     expect(searchIdx).toBeLessThan(idIdx);
     expect(discoverIdx).toBeLessThan(idIdx);
+    expect(bufferNextIdx).toBeLessThan(idIdx);
   });
 
   it("should enforce requireOrg + requireUser on ALL outlet routes", () => {
@@ -159,9 +171,29 @@ describe("Outlets OpenAPI schemas", () => {
     expect(schemaContent).toContain("SearchOutletsRequest");
   });
 
-  it("should register POST /v1/outlets/discover", () => {
+  it("should register POST /v1/outlets/discover with count param and response schema", () => {
     expect(schemaContent).toContain('path: "/v1/outlets/discover"');
     expect(schemaContent).toContain("DiscoverOutletsRequest");
+    expect(schemaContent).toContain("DiscoverOutletsResponse");
+    // count param
+    const discoverSection = schemaContent.slice(
+      schemaContent.indexOf("DiscoverOutletsRequest") - 500,
+      schemaContent.indexOf("DiscoverOutletsRequest")
+    );
+    expect(discoverSection).toContain("count:");
+  });
+
+  it("should register POST /v1/outlets/buffer/next", () => {
+    expect(schemaContent).toContain('path: "/v1/outlets/buffer/next"');
+    expect(schemaContent).toContain("BufferNextOutletResponse");
+  });
+
+  it("should include runId filter on GET /v1/outlets query params", () => {
+    const getOutletsSection = schemaContent.slice(
+      schemaContent.indexOf('path: "/v1/outlets"'),
+      schemaContent.indexOf('path: "/v1/outlets"') + 400
+    );
+    expect(getOutletsSection).toContain("runId:");
   });
 
   it("should register GET /v1/outlets/{id}", () => {

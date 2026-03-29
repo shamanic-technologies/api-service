@@ -12,6 +12,7 @@ router.get("/outlets", authenticate, requireOrg, requireUser, async (req: Authen
     if (req.query.campaignId) params.set("campaignId", req.query.campaignId as string);
     if (req.query.brandId) params.set("brandId", req.query.brandId as string);
     if (req.query.status) params.set("status", req.query.status as string);
+    if (req.query.runId) params.set("runId", req.query.runId as string);
     if (req.query.limit) params.set("limit", req.query.limit as string);
     if (req.query.offset) params.set("offset", req.query.offset as string);
     const qs = params.toString() ? `?${params.toString()}` : "";
@@ -100,6 +101,20 @@ router.post("/outlets/discover", authenticate, requireOrg, requireUser, async (r
     res.status(201).json(result);
   } catch (error: any) {
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to discover outlets" });
+  }
+});
+
+// ── POST /v1/outlets/buffer/next — get next buffered outlet ──────────────────
+router.post("/outlets/buffer/next", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.outlet,
+      "/buffer/next",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get next buffered outlet" });
   }
 });
 
