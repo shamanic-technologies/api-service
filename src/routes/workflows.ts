@@ -10,6 +10,12 @@ const router = Router();
 // Helpers
 // ---------------------------------------------------------------------------
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isUUID(value: string): boolean {
+  return UUID_RE.test(value);
+}
+
 interface ProviderInfo {
   name: string;
   domain: string | null;
@@ -247,6 +253,7 @@ router.post("/workflows", authenticate, requireOrg, requireUser, async (req: Aut
 router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
+    if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
 
     // Fetch workflow with DAG and required providers in parallel
     const [workflow, requiredProviders] = await Promise.all([
@@ -345,6 +352,7 @@ router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, asyn
 router.get("/workflows/:id/key-status", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
+    if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
 
     const internalHeaders = buildInternalHeaders(req);
     const [requiredProviders, orgKeys, keySources] = await Promise.all([
@@ -403,6 +411,7 @@ router.get("/workflows/:id/key-status", authenticate, requireOrg, requireUser, a
 router.post("/workflows/:id/validate", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
+    if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
 
     const result = await callExternalService(
       externalServices.workflow,
@@ -428,6 +437,7 @@ router.post("/workflows/:id/validate", authenticate, requireOrg, requireUser, as
 router.put("/workflows/:id", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
+    if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
 
     const parsed = UpdateWorkflowRequestSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -462,6 +472,7 @@ router.put("/workflows/:id", authenticate, requireOrg, requireUser, async (req: 
 router.get("/workflows/:id", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
+    if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
 
     const [workflow, requiredProviders] = await Promise.all([
       callExternalService(
@@ -491,6 +502,8 @@ router.get("/workflows/:id", authenticate, requireOrg, requireUser, async (req: 
 router.post("/workflows/:id/execute", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
+    if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
+
     const result = await callExternalService(
       externalServices.workflow,
       `/workflows/${id}/execute`,
@@ -541,6 +554,7 @@ router.get("/workflow-runs", authenticate, requireOrg, requireUser, async (req: 
 router.get("/workflow-runs/:id", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
+    if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow run ID — expected a UUID" });
     const result = await callExternalService(
       externalServices.workflow,
       `/workflow-runs/${id}`,
@@ -560,6 +574,7 @@ router.get("/workflow-runs/:id", authenticate, requireOrg, requireUser, async (r
 router.post("/workflow-runs/:id/cancel", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
+    if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow run ID — expected a UUID" });
     const result = await callExternalService(
       externalServices.workflow,
       `/workflow-runs/${id}/cancel`,

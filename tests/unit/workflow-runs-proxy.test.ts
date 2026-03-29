@@ -64,7 +64,7 @@ beforeEach(() => {
 
 describe("POST /v1/workflows", () => {
   it("should proxy to workflow-service POST /workflows", async () => {
-    mockFetchWith({ id: "wf-123", name: "test-flow" });
+    mockFetchWith({ id: "00000000-0000-4000-8000-000000000001", name: "test-flow" });
     const app = createApp();
     const res = await request(app)
       .post("/v1/workflows")
@@ -84,7 +84,7 @@ describe("POST /v1/workflows", () => {
 describe("DELETE /v1/workflows/:id", () => {
   it("should NOT be exposed — returns 404", async () => {
     const app = createApp();
-    const res = await request(app).delete("/v1/workflows/wf-123");
+    const res = await request(app).delete("/v1/workflows/00000000-0000-4000-8000-000000000001");
     expect(res.status).toBe(404);
   });
 });
@@ -95,16 +95,16 @@ describe("DELETE /v1/workflows/:id", () => {
 
 describe("POST /v1/workflows/:id/execute", () => {
   it("should proxy to workflow-service POST /workflows/:id/execute", async () => {
-    mockFetchWith({ id: "run-456", status: "queued" });
+    mockFetchWith({ id: "00000000-0000-4000-8000-000000000456", status: "queued" });
     const app = createApp();
     const res = await request(app)
-      .post("/v1/workflows/wf-123/execute")
+      .post("/v1/workflows/00000000-0000-4000-8000-000000000001/execute")
       .send({ inputs: { email: "test@example.com" } });
 
     expect(res.status).toBe(201);
     const call = fetchCalls.find((c) => c.method === "POST" && c.url.includes("/execute"));
     expect(call).toBeDefined();
-    expect(call!.url).toContain("/workflows/wf-123/execute");
+    expect(call!.url).toContain("/workflows/00000000-0000-4000-8000-000000000001/execute");
     expect(call!.body.inputs.email).toBe("test@example.com");
   });
 });
@@ -127,10 +127,10 @@ describe("GET /v1/workflow-runs", () => {
   it("should forward query params", async () => {
     mockFetchWith({ workflowRuns: [] });
     const app = createApp();
-    await request(app).get("/v1/workflow-runs?workflowId=wf-123&status=failed&featureSlug=pr-outreach");
+    await request(app).get("/v1/workflow-runs?workflowId=00000000-0000-4000-8000-000000000001&status=failed&featureSlug=pr-outreach");
 
     const call = fetchCalls[0];
-    expect(call.url).toContain("workflowId=wf-123");
+    expect(call.url).toContain("workflowId=00000000-0000-4000-8000-000000000001");
     expect(call.url).toContain("status=failed");
     expect(call.url).toContain("featureSlug=pr-outreach");
   });
@@ -142,13 +142,13 @@ describe("GET /v1/workflow-runs", () => {
 
 describe("GET /v1/workflow-runs/:id", () => {
   it("should proxy to workflow-service GET /workflow-runs/:id", async () => {
-    mockFetchWith({ id: "run-456", status: "completed", result: { ok: true } });
+    mockFetchWith({ id: "00000000-0000-4000-8000-000000000456", status: "completed", result: { ok: true } });
     const app = createApp();
-    const res = await request(app).get("/v1/workflow-runs/run-456");
+    const res = await request(app).get("/v1/workflow-runs/00000000-0000-4000-8000-000000000456");
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("completed");
-    expect(fetchCalls[0].url).toContain("/workflow-runs/run-456");
+    expect(fetchCalls[0].url).toContain("/workflow-runs/00000000-0000-4000-8000-000000000456");
   });
 });
 
@@ -159,7 +159,7 @@ describe("GET /v1/workflow-runs/:id", () => {
 describe("GET /v1/workflow-runs/:id/debug", () => {
   it("should NOT be exposed — returns 404", async () => {
     const app = createApp();
-    const res = await request(app).get("/v1/workflow-runs/run-456/debug");
+    const res = await request(app).get("/v1/workflow-runs/00000000-0000-4000-8000-000000000456/debug");
     expect(res.status).toBe(404);
   });
 });
@@ -170,14 +170,14 @@ describe("GET /v1/workflow-runs/:id/debug", () => {
 
 describe("POST /v1/workflow-runs/:id/cancel", () => {
   it("should proxy to workflow-service POST /workflow-runs/:id/cancel", async () => {
-    mockFetchWith({ id: "run-456", status: "cancelled" });
+    mockFetchWith({ id: "00000000-0000-4000-8000-000000000456", status: "cancelled" });
     const app = createApp();
-    const res = await request(app).post("/v1/workflow-runs/run-456/cancel");
+    const res = await request(app).post("/v1/workflow-runs/00000000-0000-4000-8000-000000000456/cancel");
 
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("cancelled");
     const call = fetchCalls.find((c) => c.method === "POST" && c.url.includes("/cancel"));
     expect(call).toBeDefined();
-    expect(call!.url).toContain("/workflow-runs/run-456/cancel");
+    expect(call!.url).toContain("/workflow-runs/00000000-0000-4000-8000-000000000456/cancel");
   });
 });
