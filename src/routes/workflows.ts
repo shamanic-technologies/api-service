@@ -257,7 +257,7 @@ router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, asyn
 
     // Fetch workflow with DAG and required providers in parallel
     const [workflow, requiredProviders] = await Promise.all([
-      callExternalService<{ id: string; name: string; dag?: { nodes: Array<{ id: string; type: string; config?: Record<string, unknown> }>; edges: Array<{ from: string; to: string }> } }>(
+      callExternalService<{ id: string; name: string; slug: string; dag?: { nodes: Array<{ id: string; type: string; config?: Record<string, unknown> }>; edges: Array<{ from: string; to: string }> } }>(
         externalServices.workflow,
         `/workflows/${id}`,
         { headers: buildInternalHeaders(req) },
@@ -272,7 +272,7 @@ router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, asyn
     const dag = workflow.dag;
     if (!dag || !dag.nodes?.length) {
       return res.json({
-        workflowSlug: workflow.name,
+        workflowSlug: workflow.slug,
         summary: "This workflow has no steps defined yet.",
         requiredProviders,
         steps: [],
@@ -334,7 +334,7 @@ router.get("/workflows/:id/summary", authenticate, requireOrg, requireUser, asyn
     const summary = `This workflow has ${ordered.length} step${ordered.length === 1 ? "" : "s"}.${providerList}`;
 
     res.json({
-      workflowSlug: workflow.name,
+      workflowSlug: workflow.slug,
       summary,
       requiredProviders,
       steps,
@@ -382,12 +382,12 @@ router.get("/workflows/:id/key-status", authenticate, requireOrg, requireUser, a
 
     let workflowSlug = id;
     try {
-      const wf = await callExternalService<{ workflow: { name: string } }>(
+      const wf = await callExternalService<{ slug: string }>(
         externalServices.workflow,
         `/workflows/${id}`,
         { headers: buildInternalHeaders(req) },
       );
-      workflowSlug = wf.workflow?.name ?? id;
+      workflowSlug = wf.slug ?? id;
     } catch {
       // Fall back to id
     }
