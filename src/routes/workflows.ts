@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, externalServices } from "../lib/service-client.js";
+import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { GenerateWorkflowRequestSchema, UpdateWorkflowRequestSchema } from "../schemas.js";
 
@@ -440,7 +440,7 @@ router.put("/workflows/:id", authenticate, requireOrg, requireUser, async (req: 
       });
     }
 
-    const result = await callExternalService(
+    const { status, data } = await callExternalServiceWithStatus(
       externalServices.workflow,
       `/workflows/${id}`,
       {
@@ -450,7 +450,7 @@ router.put("/workflows/:id", authenticate, requireOrg, requireUser, async (req: 
       },
     );
 
-    res.json(result);
+    res.status(status).json(data);
   } catch (error: any) {
     console.error("Update workflow error:", error.message);
     const status = error.statusCode || 500;
