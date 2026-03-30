@@ -1285,12 +1285,13 @@ registry.registerPath({
   path: "/v1/journalists",
   tags: ["Journalists"],
   summary: "List journalists by brand",
-  description: "Returns all discovered journalists for a given brand across all campaigns. Proxies to journalists-service GET /campaign-outlet-journalists?brand_id={brandId}. Optionally filter by runId to get journalists from a specific discovery run.",
+  description: "Returns all discovered journalists for a given brand across all campaigns. Proxies to journalists-service GET /campaign-outlet-journalists?brand_id={brandId}. Optionally filter by runId to get journalists from a specific discovery run, or by campaignId to get journalists from a specific campaign.",
   security: authed,
   request: {
     query: z.object({
       brandId: z.string().uuid().describe("Brand ID to filter journalists by"),
       runId: z.string().uuid().optional().describe("Filter journalists by discovery run ID"),
+      campaignId: z.string().uuid().optional().describe("Filter journalists by campaign ID"),
     }).openapi("ListJournalistsQuery"),
   },
   responses: {
@@ -1312,6 +1313,7 @@ registry.registerPath({
                   whyRelevant: z.string().nullable(),
                   whyNotRelevant: z.string().nullable(),
                   articleUrls: z.array(z.string()).nullable(),
+                  status: z.enum(["buffered", "claimed", "served", "contacted", "skipped"]).describe("Current status of this journalist in the campaign pipeline"),
                   runId: z.string().uuid().nullable().describe("The discovery run that created this journalist entry"),
                 }).passthrough(),
               ),

@@ -93,6 +93,11 @@ describe("Journalists proxy routes", () => {
     expect(content).toContain('params.set("run_id", runId)');
   });
 
+  it("should forward campaignId query parameter on GET /journalists", () => {
+    expect(content).toContain("campaignId");
+    expect(content).toContain('params.set("campaign_id", campaignId)');
+  });
+
   it("should proxy POST /journalists/buffer/next to /buffer/next on journalist-service", () => {
     expect(content).toContain('"/buffer/next"');
   });
@@ -241,6 +246,21 @@ describe("Journalists OpenAPI schemas", () => {
     const start = schemaContent.indexOf("ListJournalistsQuery");
     const block = schemaContent.slice(Math.max(0, start - 400), start);
     expect(block).toContain("runId:");
+  });
+
+  it("should have campaignId query param in ListJournalistsQuery", () => {
+    const start = schemaContent.indexOf("ListJournalistsQuery");
+    const block = schemaContent.slice(Math.max(0, start - 400), start);
+    expect(block).toContain("campaignId:");
+  });
+
+  it("should have status enum in ListJournalistsResponse", () => {
+    const start = schemaContent.indexOf("ListJournalistsResponse");
+    const block = schemaContent.slice(Math.max(0, start - 800), start);
+    expect(block).toContain("status:");
+    expect(block).toContain('"buffered"');
+    expect(block).toContain('"contacted"');
+    expect(block).toContain('"skipped"');
   });
 
   it("should register GET /v1/journalists/stats/costs", () => {
