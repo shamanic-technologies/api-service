@@ -187,6 +187,56 @@ router.get("/brands/:id/extracted-fields", authenticate, requireOrg, requireUser
 });
 
 /**
+ * POST /v1/brands/:id/extract-images
+ * Extract brand images by category (logo, product shots, hero image, etc.)
+ * via scraping + vision AI. Returns permanent R2 URLs.
+ */
+router.post("/brands/:id/extract-images", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.brand,
+      `/brands/${req.params.id}/extract-images`,
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+      },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Extract images error:", error);
+    const msg = error.message || "Failed to extract images";
+    if (msg.includes("No Anthropic API key found")) {
+      return res.status(400).json({
+        error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
+      });
+    }
+    res.status(error.statusCode || 500).json({ error: msg });
+  }
+});
+
+/**
+ * GET /v1/brands/:id/extracted-images
+ * List extracted images in cache. Supports ?campaignId= query param.
+ */
+router.get("/brands/:id/extracted-images", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    if (req.query.campaignId) params.set("campaignId", req.query.campaignId as string);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.brand,
+      `/brands/${req.params.id}/extracted-images${qs}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Get extracted images error:", error);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get extracted images" });
+  }
+});
+
+/**
  * POST /v1/brand/icp-suggestion
  * Get ICP suggestion (Apollo-compatible search params) for a brand URL
  */

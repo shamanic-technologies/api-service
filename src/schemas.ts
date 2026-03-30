@@ -2877,6 +2877,89 @@ registry.registerPath({
   },
 });
 
+const ExtractImageCategorySchema = z.object({
+  key: z.string().describe("Image category key (e.g. 'logo', 'product_shots', 'hero_image')"),
+  description: z.string().describe("Description of what kind of image to extract"),
+  maxCount: z.number().int().positive().describe("Maximum number of images to extract for this category"),
+}).openapi("ExtractImageCategory");
+
+const ExtractedImageSchema = z.object({
+  url: z.string().describe("Permanent R2 URL of the extracted image"),
+  category: z.string().describe("Image category key"),
+  sourceUrl: z.string().nullable().describe("Original source URL where the image was found"),
+  extractedAt: z.string().describe("ISO timestamp of extraction"),
+}).openapi("ExtractedImage");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/extract-images",
+  tags: ["Brand"],
+  summary: "Extract images from brand",
+  description:
+    "Extract brand images by category (logo, product shots, hero image, etc.) via scraping + vision AI. Returns permanent R2 URLs.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            categories: z.array(ExtractImageCategorySchema).describe("Image categories to extract"),
+          }).openapi("ExtractImagesRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Extracted image results",
+      content: {
+        "application/json": {
+          schema: z.object({
+            brandId: z.string().describe("Brand ID"),
+            images: z.array(ExtractedImageSchema).describe("Extracted images"),
+          }).openapi("ExtractImagesResponse"),
+        },
+      },
+    },
+    400: { description: "Anthropic API key not configured", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/extracted-images",
+  tags: ["Brand"],
+  summary: "List extracted images for a brand",
+  description:
+    "Lists all previously extracted and cached images for a brand. Supports ?campaignId= query param to filter by campaign.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    query: z.object({
+      campaignId: z.string().optional().describe("Filter by campaign ID"),
+    }).openapi("ExtractedImagesQuery"),
+  },
+  responses: {
+    200: {
+      description: "Cached extracted images",
+      content: {
+        "application/json": {
+          schema: z.object({
+            brandId: z.string().describe("Brand ID"),
+            images: z.array(ExtractedImageSchema).describe("Previously extracted and cached images"),
+          }).openapi("ExtractedImagesResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/v1/brand/icp-suggestion",
