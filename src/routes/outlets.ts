@@ -32,7 +32,7 @@ router.get("/outlets", authenticate, requireOrg, requireUser, async (req: Authen
 router.get("/outlets/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["brandId", "campaignId", "workflowSlug", "featureSlug", "workflowDynastySlug", "featureDynastySlug", "groupBy"]) {
+    for (const key of ["brandId", "campaignId", "workflowSlug", "workflowSlugs", "featureSlug", "featureSlugs", "workflowDynastySlug", "featureDynastySlug", "groupBy"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";

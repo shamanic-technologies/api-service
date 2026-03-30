@@ -46,6 +46,11 @@ describe("Outlets proxy routes", () => {
     expect(content).toContain('"workflowSlug"');
   });
 
+  it("should forward workflowSlugs and featureSlugs on GET /outlets/stats", () => {
+    expect(content).toContain('"workflowSlugs"');
+    expect(content).toContain('"featureSlugs"');
+  });
+
   it("should have POST /outlets with auth", () => {
     const line = content.split("\n").find((l) =>
       l.includes("router.post") && l.includes('"/outlets"') && !l.includes("/bulk") && !l.includes("/search") && !l.includes("/discover")

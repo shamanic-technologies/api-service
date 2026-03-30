@@ -159,6 +159,15 @@ describe("Features proxy routes", () => {
     expect(content).toContain('"brandId"');
   });
 
+  it("should forward campaignId and workflowDynastySlug on GET /features/stats", () => {
+    const statsBlock = content.slice(
+      content.indexOf('"/features/stats"'),
+      content.indexOf('"/features/stats"') + 300
+    );
+    expect(statsBlock).toContain('"campaignId"');
+    expect(statsBlock).toContain('"workflowDynastySlug"');
+  });
+
   it("should have GET /features/:slug/stats with auth + requireOrg + requireUser", () => {
     expect(content).toContain('"/features/:slug/stats"');
     const line = content.split("\n").find((l) =>
@@ -169,9 +178,10 @@ describe("Features proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should forward groupBy, brandId, campaignId, workflowSlug on GET /features/:slug/stats", () => {
+  it("should forward groupBy, brandId, campaignId, workflowSlug, workflowDynastySlug on GET /features/:slug/stats", () => {
     expect(content).toContain('"campaignId"');
     expect(content).toContain('"workflowSlug"');
+    expect(content).toContain('"workflowDynastySlug"');
   });
 
   it("should enforce requireOrg + requireUser on ALL feature routes", () => {

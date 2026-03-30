@@ -1005,7 +1005,9 @@ registry.registerPath({
       brandId: z.string().uuid().optional(),
       campaignId: z.string().uuid().optional(),
       workflowSlug: z.string().optional(),
+      workflowSlugs: z.string().optional().describe("Filter by multiple workflow slugs (comma-separated). Takes priority over workflowSlug."),
       featureSlug: z.string().optional().describe("Filter by exact feature slug"),
+      featureSlugs: z.string().optional().describe("Filter by multiple feature slugs (comma-separated). Takes priority over featureSlug."),
       workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
       featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
       groupBy: z.enum(["workflowSlug", "featureSlug", "brandId", "campaignId", "workflowDynastySlug", "featureDynastySlug"]).optional(),
@@ -5630,9 +5632,11 @@ registry.registerPath({
     query: z.object({
       groupBy: z.string().optional().openapi({ example: "featureDynastySlug" }).describe("Group dimension(s), comma-separated: featureSlug, workflowSlug, featureDynastySlug, brandId, campaignId"),
       brandId: z.string().optional().openapi({ example: "brand-uuid-123" }).describe("Filter by brand UUID"),
+      campaignId: z.string().optional().describe("Filter by campaign UUID"),
       featureSlug: z.string().optional().openapi({ example: "pr-cold-email-outreach-v3" }).describe("Filter by exact feature slug"),
       workflowSlug: z.string().optional().openapi({ example: "sales-email-cold-outreach-sienna-v3" }).describe("Filter by exact workflow slug"),
       featureDynastySlug: z.string().optional().openapi({ example: "pr-cold-email-outreach" }).describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
     }),
   },
   responses: {
@@ -5657,7 +5661,7 @@ registry.registerPath({
       brandId: z.string().optional().openapi({ example: "brand-uuid-123" }).describe("Filter by brand UUID"),
       campaignId: z.string().optional().openapi({ example: "campaign-uuid-456" }).describe("Filter by campaign UUID"),
       workflowSlug: z.string().optional().openapi({ example: "sales-email-cold-outreach-sienna-v3" }).describe("Filter by exact workflow slug"),
-      featureDynastySlug: z.string().optional().openapi({ example: "pr-cold-email-outreach" }).describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
     }),
   },
   responses: {
