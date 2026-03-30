@@ -133,7 +133,7 @@ registry.registerPath({
 // ===================================================================
 
 const rankedQueryParams = z.object({
-  objective: z.string().optional().describe("Optimization objective ('replies' or 'clicks')"),
+  objective: z.string().optional().describe("Stats key to rank by (e.g. 'replied', 'clicked', 'leads_found', 'outlets_found'). Dynamically resolved from the feature's declared outputs. If omitted, featureSlug or featureDynastySlug is required to auto-resolve the ranking metric."),
   limit: z.string().optional().describe("Max results (default 10, max 100)"),
   groupBy: z.string().optional().describe("'feature' to group by featureSlug, 'brand' to group by brand"),
   brandId: z.string().optional().describe("Filter by brand ID"),
@@ -143,7 +143,9 @@ const rankedQueryParams = z.object({
 
 const bestQueryParams = z.object({
   by: z.string().optional().describe("'workflow' (default) or 'brand' — hero records by workflow or by brand"),
-  featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)"),
+  objective: z.string().optional().describe("Stats key to optimize for (e.g. 'replied', 'clicked', 'leads_found'). Dynamically resolved from the feature's declared outputs if omitted."),
+  featureSlug: z.string().optional().describe("Filter by exact versioned feature slug. Required if objective is not provided."),
+  featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolves to all versioned slugs in the lineage). Required if objective is not provided."),
 });
 
 // -- Workflow response schemas (mirroring workflow-service) --
@@ -183,13 +185,13 @@ const WorkflowMetadataSchema = z
 const WorkflowStatsSchema = z
   .object({
     totalCostInUsdCents: z.number().describe("Total cost across all completed runs"),
-    totalOutcomes: z.number().describe("Total replies or clicks (depending on objective)"),
-    costPerOutcome: z.number().nullable().describe("Cost per reply or click in USD cents, null if no outcomes"),
+    totalOutcomes: z.number().describe("Total outcome count for the ranked metric (dynamic per feature — e.g. replies, leads found, outlets found)"),
+    costPerOutcome: z.number().nullable().describe("Cost per outcome in USD cents, null if no outcomes"),
     completedRuns: z.number().describe("Number of completed runs"),
     email: z.object({
       transactional: WorkflowEmailStatsSchema.describe("Aggregated transactional email stats"),
       broadcast: WorkflowEmailStatsSchema.describe("Aggregated broadcast email stats"),
-    }).describe("Email engagement stats aggregated across runs"),
+    }).optional().describe("Email engagement stats aggregated across runs. Present for email-based features."),
   })
   .openapi("WorkflowStats");
 
@@ -215,9 +217,9 @@ const BestWorkflowRecordSchema = z
   .object({
     workflowId: z.string().describe("ID of the workflow holding the record"),
     workflowSlug: z.string().describe("Slug of the workflow"),
-    displayName: z.string().nullable().describe("Stable display name of the workflow family"),
+    workflowName: z.string().describe("Display name of the workflow"),
     createdForBrandId: z.string().nullable().describe("Brand ID that created this workflow"),
-    value: z.number().describe("The record value in USD cents"),
+    value: z.number().describe("The record value (cost per outcome in USD cents)"),
   })
   .openapi("BestWorkflowRecord");
 
@@ -251,16 +253,16 @@ const publicRankedResponse = {
 
 const bestResponse = {
   200: {
-    description: "Hero records — best cost-per-open and cost-per-reply",
+    description: "Hero records — best cost-per-outcome for each dynamic metric. Metrics are resolved from the feature's declared outputs.",
     content: {
       "application/json": {
         schema: z.object({
-          bestCostPerOpen: BestWorkflowRecordSchema.nullable().describe("Workflow with the lowest cost per email open"),
-          bestCostPerReply: BestWorkflowRecordSchema.nullable().describe("Workflow with the lowest cost per reply"),
+          best: z.record(z.string(), BestWorkflowRecordSchema.nullable()).describe("Map of metric key (e.g. 'replied', 'leads_found') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."),
         }).openapi("BestWorkflowResponse"),
       },
     },
   },
+  400: { description: "Bad request — neither objective nor featureSlug/featureDynastySlug provided", content: errorContent },
   502: { description: "Upstream service error", content: errorContent },
 };
 
@@ -270,7 +272,7 @@ registry.registerPath({
   path: "/v1/public/workflows/ranked",
   tags: ["Workflows"],
   summary: "Ranked workflows (public)",
-  description: "Public ranked workflows by performance. Supports groupBy=feature and groupBy=brand. No authentication required.",
+  description: "Public ranked workflows by performance. Ranking metrics are dynamically resolved from the feature's declared outputs. Supports groupBy=feature and groupBy=brand. No authentication required.",
   request: { query: rankedQueryParams },
   responses: publicRankedResponse,
 });
@@ -280,7 +282,7 @@ registry.registerPath({
   path: "/v1/public/workflows/best",
   tags: ["Workflows"],
   summary: "Hero records (public)",
-  description: "Public hero records — best cost-per-open/reply. Use ?by=brand for brand-level heroes. No authentication required.",
+  description: "Public hero records — best cost-per-outcome for dynamic metrics resolved from the feature's outputs. Use ?by=brand for brand-level heroes. Requires objective or featureSlug/featureDynastySlug. No authentication required.",
   request: { query: bestQueryParams },
   responses: bestResponse,
 });
@@ -291,7 +293,7 @@ registry.registerPath({
   path: "/v1/workflows/ranked",
   tags: ["Workflows"],
   summary: "Ranked workflows",
-  description: "Workflows ranked by performance, scoped to the authenticated org. Supports groupBy=feature and groupBy=brand.",
+  description: "Workflows ranked by performance, scoped to the authenticated org. Ranking metrics are dynamically resolved from the feature's declared outputs. Supports groupBy=feature and groupBy=brand.",
   security: authed,
   request: { query: rankedQueryParams },
   responses: { ...rankedResponse, 401: { description: "Unauthorized", content: errorContent } },
@@ -302,7 +304,7 @@ registry.registerPath({
   path: "/v1/workflows/best",
   tags: ["Workflows"],
   summary: "Hero records",
-  description: "Best cost-per-open and cost-per-reply records, scoped to the authenticated org. Use ?by=brand for brand-level heroes.",
+  description: "Best cost-per-outcome records for dynamic metrics, scoped to the authenticated org. Metrics are resolved from the feature's declared outputs. Requires objective or featureSlug/featureDynastySlug. Use ?by=brand for brand-level heroes.",
   security: authed,
   request: { query: bestQueryParams },
   responses: { ...bestResponse, 401: { description: "Unauthorized", content: errorContent } },
