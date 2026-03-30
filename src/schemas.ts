@@ -5466,13 +5466,34 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/features/{slug}",
+  path: "/v1/features/by-dynasty/{dynastySlug}",
   tags: ["Features"],
-  summary: "Get feature by slug",
-  description: "Get a single feature definition by its slug. Proxied from features-service.",
+  summary: "Get active feature by dynasty slug",
+  description:
+    "Returns the active feature definition for a dynasty slug (e.g. 'pr-cold-email-outreach'). " +
+    "Returns 404 if no active feature exists for that dynasty. " +
+    "Preferred over GET /features/{slug} when the dashboard works with dynasty slugs. Proxied from features-service.",
   security: authed,
   request: {
-    params: z.object({ slug: z.string().describe("Feature slug") }),
+    params: z.object({ dynastySlug: z.string().describe("Dynasty slug (stable, unversioned — e.g. 'pr-cold-email-outreach')") }),
+  },
+  responses: {
+    200: { description: "Active feature for the dynasty", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureByDynastyResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No active feature for this dynasty slug", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/{slug}",
+  tags: ["Features"],
+  summary: "Get feature by versioned slug",
+  description: "Get a single feature definition by its exact versioned slug. Use GET /features/by-dynasty/{dynastySlug} when working with dynasty slugs. Proxied from features-service.",
+  security: authed,
+  request: {
+    params: z.object({ slug: z.string().describe("Exact versioned feature slug") }),
   },
   responses: {
     200: { description: "Feature details", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureResponse") } } },
@@ -5511,10 +5532,13 @@ registry.registerPath({
   path: "/v1/features/{slug}/inputs",
   tags: ["Features"],
   summary: "Get feature input schema",
-  description: "Get the input schema (required and optional fields) for a feature. Proxied from features-service.",
+  description:
+    "Get the input schema (required and optional fields) for a feature. " +
+    "The slug param accepts both dynasty slugs (e.g. 'pr-cold-email-outreach') and versioned slugs. " +
+    "Proxied from features-service.",
   security: authed,
   request: {
-    params: z.object({ slug: z.string().describe("Feature slug") }),
+    params: z.object({ slug: z.string().describe("Feature slug (dynasty or versioned — both accepted)") }),
   },
   responses: {
     200: { description: "Feature input schema", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureInputsResponse") } } },
@@ -5531,11 +5555,12 @@ registry.registerPath({
   summary: "Prefill feature form from brand",
   description:
     "Prefill the 'New Campaign' form for a feature using brand data. " +
+    "The slug param accepts both dynasty slugs (e.g. 'pr-cold-email-outreach') and versioned slugs. " +
     "Features-service calls brand-service internally to extract values. Proxied from features-service. " +
     "Use format=text for flat string values, format=full (default) for rich objects with cache/source metadata.",
   security: authed,
   request: {
-    params: z.object({ slug: z.string().describe("Feature slug") }),
+    params: z.object({ slug: z.string().describe("Feature slug (dynasty or versioned — both accepted)") }),
     query: z.object({
       format: z
         .enum(["text", "full"])
