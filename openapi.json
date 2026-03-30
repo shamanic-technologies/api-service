@@ -1851,6 +1851,17 @@
                     "type": "string"
                   }
                 },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "buffered",
+                    "claimed",
+                    "served",
+                    "contacted",
+                    "skipped"
+                  ],
+                  "description": "Current status of this journalist in the campaign pipeline"
+                },
                 "runId": {
                   "type": "string",
                   "nullable": true,
@@ -1869,6 +1880,7 @@
                 "whyRelevant",
                 "whyNotRelevant",
                 "articleUrls",
+                "status",
                 "runId"
               ]
             }
@@ -9867,7 +9879,7 @@
           "Journalists"
         ],
         "summary": "List journalists by brand",
-        "description": "Returns all discovered journalists for a given brand across all campaigns. Proxies to journalists-service GET /campaign-outlet-journalists?brand_id={brandId}. Optionally filter by runId to get journalists from a specific discovery run.",
+        "description": "Returns all discovered journalists for a given brand across all campaigns. Proxies to journalists-service GET /campaign-outlet-journalists?brand_id={brandId}. Optionally filter by runId to get journalists from a specific discovery run, or by campaignId to get journalists from a specific campaign.",
         "security": [
           {
             "bearerAuth": []
@@ -9894,6 +9906,17 @@
             "required": false,
             "description": "Filter journalists by discovery run ID",
             "name": "runId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter journalists by campaign ID"
+            },
+            "required": false,
+            "description": "Filter journalists by campaign ID",
+            "name": "campaignId",
             "in": "query"
           },
           {

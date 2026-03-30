@@ -8,7 +8,7 @@ const router = Router();
 // ── GET /v1/journalists — list journalists by brand ─────────────────────────
 router.get("/journalists", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const { brandId, runId } = req.query as { brandId?: string; runId?: string };
+    const { brandId, runId, campaignId } = req.query as { brandId?: string; runId?: string; campaignId?: string };
     if (!brandId) {
       return res.status(400).json({ error: "Missing required query parameter: brandId" });
     }
@@ -16,6 +16,7 @@ router.get("/journalists", authenticate, requireOrg, requireUser, async (req: Au
     const params = new URLSearchParams();
     params.set("brand_id", brandId);
     if (runId) params.set("run_id", runId);
+    if (campaignId) params.set("campaign_id", campaignId);
 
     const result = await callExternalService(
       externalServices.journalist,
