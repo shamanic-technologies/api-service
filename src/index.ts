@@ -159,6 +159,7 @@ app.use(
 // Public routes
 app.use(healthRoutes);
 app.use(pressKitsRoutes); // public press-kit endpoints (no auth)
+app.use(featuresRoutes);  // public features endpoints (no auth)
 
 // Internal platform routes (API key only, no identity)
 app.use("/internal", internalEmailsRoutes);

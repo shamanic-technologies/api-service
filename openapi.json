@@ -7351,6 +7351,86 @@
       "FeaturesBatchUpsertRequest": {
         "type": "object",
         "properties": {}
+      },
+      "PublicFeatureItem": {
+        "type": "object",
+        "properties": {
+          "dynastyName": {
+            "type": "string",
+            "description": "Stable dynasty display name",
+            "example": "Sales Cold Email"
+          },
+          "dynastySlug": {
+            "type": "string",
+            "description": "Stable dynasty slug (unversioned)",
+            "example": "sales-cold-email"
+          },
+          "description": {
+            "type": "string",
+            "example": "AI-powered cold email outreach campaigns"
+          },
+          "icon": {
+            "type": "string",
+            "description": "Lucide icon name",
+            "example": "mail"
+          },
+          "category": {
+            "type": "string",
+            "example": "sales"
+          },
+          "channel": {
+            "type": "string",
+            "example": "email"
+          },
+          "audienceType": {
+            "type": "string",
+            "example": "cold-outreach"
+          },
+          "displayOrder": {
+            "type": "integer",
+            "example": 0
+          }
+        },
+        "required": [
+          "dynastyName",
+          "dynastySlug",
+          "description",
+          "icon",
+          "category",
+          "channel",
+          "audienceType",
+          "displayOrder"
+        ]
+      },
+      "PublicFeaturesListResponse": {
+        "type": "object",
+        "properties": {
+          "features": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PublicFeatureItem"
+            },
+            "description": "Active features sorted by displayOrder"
+          }
+        },
+        "required": [
+          "features"
+        ]
+      },
+      "PublicDynastySlugsResponse": {
+        "type": "object",
+        "properties": {
+          "slugs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "All versioned slugs in the dynasty, sorted by version ascending"
+          }
+        },
+        "required": [
+          "slugs"
+        ]
       }
     },
     "parameters": {}
@@ -26110,6 +26190,101 @@
           },
           "404": {
             "description": "Feature not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/features": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "List active features (public, no auth)",
+        "description": "Returns all active features with display-safe fields only. Designed for landing pages and public-facing UIs. Sorted by displayOrder ascending. No authentication required. Proxied from features-service.",
+        "responses": {
+          "200": {
+            "description": "Active features",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicFeaturesListResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/features/dynasty/slugs": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "List dynasty versioned slugs (public, no auth)",
+        "description": "Returns all versioned feature slugs (active + deprecated) belonging to a dynasty. No authentication required. Proxied from features-service.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The stable dynasty slug (unversioned)",
+              "example": "sales-cold-email"
+            },
+            "required": true,
+            "description": "The stable dynasty slug (unversioned)",
+            "name": "dynastySlug",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dynasty slugs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicDynastySlugsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing dynastySlug parameter",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No features found for this dynasty slug",
             "content": {
               "application/json": {
                 "schema": {
