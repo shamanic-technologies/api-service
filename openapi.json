@@ -4187,6 +4187,13 @@
           {
             "type": "object",
             "properties": {
+              "_action": {
+                "type": "string",
+                "enum": [
+                  "updated"
+                ],
+                "description": "Indicates the workflow was updated in-place"
+              },
               "dag": {
                 "type": "object",
                 "properties": {
@@ -4208,7 +4215,68 @@
                   "edges"
                 ]
               }
-            }
+            },
+            "required": [
+              "_action"
+            ]
+          }
+        ]
+      },
+      "ForkedWorkflowResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/WorkflowMetadata"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_action": {
+                "type": "string",
+                "enum": [
+                  "forked"
+                ],
+                "description": "Indicates a new workflow was created (forked) due to a DAG signature change"
+              },
+              "_forkedFromName": {
+                "type": "string",
+                "description": "Name of the source workflow that was forked"
+              },
+              "_forkedFromId": {
+                "type": "string",
+                "description": "ID of the source workflow that was forked"
+              },
+              "_sourceDynastyDeprecated": {
+                "type": "boolean",
+                "description": "Whether the source dynasty was deprecated as a result"
+              },
+              "dag": {
+                "type": "object",
+                "properties": {
+                  "nodes": {
+                    "type": "array",
+                    "items": {
+                      "nullable": true
+                    }
+                  },
+                  "edges": {
+                    "type": "array",
+                    "items": {
+                      "nullable": true
+                    }
+                  }
+                },
+                "required": [
+                  "nodes",
+                  "edges"
+                ]
+              }
+            },
+            "required": [
+              "_action",
+              "_forkedFromName",
+              "_forkedFromId",
+              "_sourceDynastyDeprecated"
+            ]
           }
         ]
       },
@@ -15061,7 +15129,7 @@
           "Workflows"
         ],
         "summary": "Update a workflow",
-        "description": "Update a workflow's name, description, tags, or DAG. Send only the fields you want to change. After updating the DAG, call POST /v1/workflows/{id}/validate to verify consistency.",
+        "description": "Update a workflow's metadata or DAG. Without `dag` in the body → metadata-only update (200). With `dag` and same signature → in-place update (200). With `dag` and new signature → fork: creates a new workflow (201, `_action: \"forked\"`). Returns 409 if an active workflow with the same DAG signature already exists.",
         "security": [
           {
             "bearerAuth": []
@@ -15145,11 +15213,21 @@
         },
         "responses": {
           "200": {
-            "description": "Updated workflow",
+            "description": "Updated in-place (`_action: \"updated\"`)",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UpdateWorkflowResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Forked — new workflow created because the DAG signature changed (`_action: \"forked\"`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForkedWorkflowResponse"
                 }
               }
             }
@@ -15176,6 +15254,16 @@
           },
           "404": {
             "description": "Workflow not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict — an active workflow with the same DAG signature already exists",
             "content": {
               "application/json": {
                 "schema": {

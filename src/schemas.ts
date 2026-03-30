@@ -3300,9 +3300,11 @@ registry.registerPath({
   tags: ["Workflows"],
   summary: "Update a workflow",
   description:
-    "Update a workflow's name, description, tags, or DAG. " +
-    "Send only the fields you want to change. " +
-    "After updating the DAG, call POST /v1/workflows/{id}/validate to verify consistency.",
+    "Update a workflow's metadata or DAG. " +
+    "Without `dag` in the body → metadata-only update (200). " +
+    "With `dag` and same signature → in-place update (200). " +
+    "With `dag` and new signature → fork: creates a new workflow (201, `_action: \"forked\"`). " +
+    "Returns 409 if an active workflow with the same DAG signature already exists.",
   security: authed,
   request: {
     params: WorkflowIdParam,
@@ -3314,10 +3316,11 @@ registry.registerPath({
   },
   responses: {
     200: {
-      description: "Updated workflow",
+      description: "Updated in-place (`_action: \"updated\"`)",
       content: {
         "application/json": {
           schema: WorkflowMetadataSchema.extend({
+            _action: z.literal("updated").describe("Indicates the workflow was updated in-place"),
             dag: z.object({
               nodes: z.array(z.any()),
               edges: z.array(z.any()),
@@ -3326,9 +3329,27 @@ registry.registerPath({
         },
       },
     },
+    201: {
+      description: "Forked — new workflow created because the DAG signature changed (`_action: \"forked\"`)",
+      content: {
+        "application/json": {
+          schema: WorkflowMetadataSchema.extend({
+            _action: z.literal("forked").describe("Indicates a new workflow was created (forked) due to a DAG signature change"),
+            _forkedFromName: z.string().describe("Name of the source workflow that was forked"),
+            _forkedFromId: z.string().describe("ID of the source workflow that was forked"),
+            _sourceDynastyDeprecated: z.boolean().describe("Whether the source dynasty was deprecated as a result"),
+            dag: z.object({
+              nodes: z.array(z.any()),
+              edges: z.array(z.any()),
+            }).optional(),
+          }).openapi("ForkedWorkflowResponse"),
+        },
+      },
+    },
     400: { description: "Invalid request", content: errorContent },
-    404: { description: "Workflow not found", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Workflow not found", content: errorContent },
+    409: { description: "Conflict — an active workflow with the same DAG signature already exists", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
