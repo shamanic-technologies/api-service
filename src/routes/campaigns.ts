@@ -538,25 +538,41 @@ router.get("/campaigns/:id/leads", authenticate, requireOrg, requireUser, async 
   try {
     const { id } = req.params;
 
-    const result = await callExternalService(
-      externalServices.lead,
-      `/leads?campaignId=${id}`,
-      {
-        headers: buildInternalHeaders(req),
-      }
-    ) as { leads: Array<Record<string, unknown>> };
+    const headers = buildInternalHeaders(req);
 
-    const rawLeads = result.leads || [];
+    // Fetch leads and their delivery statuses in parallel
+    const [leadsResult, statusResult] = await Promise.all([
+      callExternalService(
+        externalServices.lead,
+        `/leads?campaignId=${id}`,
+        { headers }
+      ) as Promise<{ leads: Array<Record<string, unknown>> }>,
+      callExternalService<{ statuses: Array<{ leadId: string; email: string; contacted: boolean; delivered: boolean; bounced: boolean; replied: boolean; lastDeliveredAt: string | null }> }>(
+        externalServices.lead,
+        `/leads/status?campaignId=${id}`,
+        { headers }
+      ),
+    ]);
+
+    const rawLeads = leadsResult.leads || [];
+
+    // Build a lookup of email → delivery status from lead-service
+    const statusByEmail = new Map<string, { contacted: boolean; delivered: boolean; bounced: boolean; replied: boolean }>();
+    for (const s of statusResult.statuses || []) {
+      statusByEmail.set(s.email, { contacted: s.contacted, delivered: s.delivered, bounced: s.bounced, replied: s.replied });
+    }
 
     // Flatten enrichment data into each lead to match dashboard expectations.
     // Lead-service returns: { id, email, servedAt, runId, enrichment: { firstName, lastName, ... } }
-    // Dashboard expects: { id, email, createdAt, firstName, lastName, title, ... }
+    // Dashboard expects: { id, email, createdAt, firstName, lastName, title, status, ... }
     const leads = rawLeads.map((raw) => {
       const enrichment = (raw.enrichment as Record<string, unknown>) || {};
+      const email = raw.email as string;
+      const delivery = statusByEmail.get(email);
       return {
         id: raw.id,
         leadId: raw.leadId ?? null,
-        email: raw.email,
+        email,
         namespace: raw.namespace ?? null,
         externalId: raw.externalId,
         firstName: enrichment.firstName ?? null,
@@ -569,7 +585,11 @@ router.get("/campaigns/:id/leads", authenticate, requireOrg, requireUser, async 
         organizationIndustry: enrichment.organizationIndustry ?? null,
         organizationSize: enrichment.organizationSize ?? null,
         linkedinUrl: enrichment.linkedinUrl ?? null,
-        status: "contacted",
+        status: delivery?.contacted ? "contacted" : "served",
+        contacted: delivery?.contacted ?? false,
+        delivered: delivery?.delivered ?? false,
+        bounced: delivery?.bounced ?? false,
+        replied: delivery?.replied ?? false,
         createdAt: raw.servedAt ?? null,
         enrichmentRunId: raw.runId ?? null,
       };

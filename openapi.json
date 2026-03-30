@@ -1231,7 +1231,27 @@
                 },
                 "status": {
                   "type": "string",
-                  "description": "Always 'contacted'"
+                  "enum": [
+                    "contacted",
+                    "served"
+                  ],
+                  "description": "'contacted' if email was sent, 'served' if lead was served to workflow but not yet contacted"
+                },
+                "contacted": {
+                  "type": "boolean",
+                  "description": "Whether the lead has been contacted (email sent)"
+                },
+                "delivered": {
+                  "type": "boolean",
+                  "description": "Whether the email was delivered"
+                },
+                "bounced": {
+                  "type": "boolean",
+                  "description": "Whether the email bounced"
+                },
+                "replied": {
+                  "type": "boolean",
+                  "description": "Whether the lead replied"
                 },
                 "createdAt": {
                   "type": "string",
@@ -1271,6 +1291,10 @@
                 "organizationSize",
                 "linkedinUrl",
                 "status",
+                "contacted",
+                "delivered",
+                "bounced",
+                "replied",
                 "createdAt",
                 "enrichmentRunId",
                 "enrichmentRun"
