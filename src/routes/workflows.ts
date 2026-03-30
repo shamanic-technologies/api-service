@@ -355,10 +355,15 @@ router.get("/workflows/:id/key-status", authenticate, requireOrg, requireUser, a
     if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
 
     const internalHeaders = buildInternalHeaders(req);
-    const [requiredProviders, orgKeys, keySources] = await Promise.all([
+    const [requiredProviders, orgKeys, keySources, workflow] = await Promise.all([
       fetchRequiredProviders(id, internalHeaders),
       fetchOrgKeys(internalHeaders),
       fetchKeySources(internalHeaders),
+      callExternalService<{ slug: string }>(
+        externalServices.workflow,
+        `/workflows/${id}`,
+        { headers: internalHeaders },
+      ),
     ]);
 
     const configuredMap = new Map(orgKeys.map((k) => [k.provider, k.maskedKey]));
@@ -380,20 +385,8 @@ router.get("/workflows/:id/key-status", authenticate, requireOrg, requireUser, a
 
     const missing = keys.filter((k) => !k.configured).map((k) => k.provider);
 
-    let workflowSlug = id;
-    try {
-      const wf = await callExternalService<{ slug: string }>(
-        externalServices.workflow,
-        `/workflows/${id}`,
-        { headers: buildInternalHeaders(req) },
-      );
-      workflowSlug = wf.slug ?? id;
-    } catch {
-      // Fall back to id
-    }
-
     res.json({
-      workflowSlug,
+      workflowSlug: workflow.slug,
       ready: missing.length === 0,
       keys,
       missing,
