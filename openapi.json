@@ -492,7 +492,12 @@
           },
           "workflowSlug": {
             "type": "string",
-            "description": "Workflow slug used for execution"
+            "description": "Exact versioned workflow slug used for execution"
+          },
+          "workflowDynastySlug": {
+            "type": "string",
+            "nullable": true,
+            "description": "Stable dynasty slug for the workflow lineage (unversioned)"
           },
           "brandUrl": {
             "type": "string",
@@ -507,7 +512,12 @@
           "featureSlug": {
             "type": "string",
             "nullable": true,
-            "description": "Feature slug for tracking"
+            "description": "Exact versioned feature slug for tracking"
+          },
+          "featureDynastySlug": {
+            "type": "string",
+            "nullable": true,
+            "description": "Stable dynasty slug for the feature lineage (unversioned)"
           },
           "featureInputs": {
             "type": "object",
@@ -591,9 +601,11 @@
           "createdByUserId",
           "name",
           "workflowSlug",
+          "workflowDynastySlug",
           "brandUrl",
           "brandId",
           "featureSlug",
+          "featureDynastySlug",
           "featureInputs",
           "maxBudgetDailyUsd",
           "maxBudgetWeeklyUsd",
@@ -646,7 +658,12 @@
           "workflowSlug": {
             "type": "string",
             "minLength": 1,
-            "description": "Workflow slug (e.g. 'sales-email-cold-outreach-sienna'). Determines which execution pipeline to use."
+            "description": "Exact versioned workflow slug (e.g. 'sales-email-cold-outreach-sienna-v3'). Use for pinning to a specific version. Provide this OR workflowDynastySlug."
+          },
+          "workflowDynastySlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable dynasty slug for the workflow lineage (e.g. 'sales-email-cold-outreach-sienna'). Campaign-service resolves to the latest version automatically. Preferred over workflowSlug for dashboard use."
           },
           "brandUrl": {
             "type": "string",
@@ -656,7 +673,12 @@
           "featureSlug": {
             "type": "string",
             "minLength": 1,
-            "description": "Feature slug — used to validate inputs against features-service"
+            "description": "Exact versioned feature slug. Use for pinning to a specific version. Provide this OR featureDynastySlug."
+          },
+          "featureDynastySlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable dynasty slug for the feature lineage (e.g. 'pr-cold-email-outreach'). Campaign-service resolves to the latest version automatically. Preferred over featureSlug for dashboard use."
           },
           "featureInputs": {
             "type": "object",
@@ -720,9 +742,7 @@
         },
         "required": [
           "name",
-          "workflowSlug",
           "brandUrl",
-          "featureSlug",
           "featureInputs"
         ]
       },
@@ -6993,7 +7013,7 @@
           "Campaigns"
         ],
         "summary": "List campaigns",
-        "description": "List all campaigns for the organization, optionally filtered by brand ID",
+        "description": "List all campaigns for the organization. Supports filtering by brandId, status, and slug params. Use workflowDynastySlug/featureDynastySlug to filter by lineage (matches all versions), or workflowSlug/featureSlug for exact version match.",
         "security": [
           {
             "bearerAuth": []
@@ -7018,6 +7038,46 @@
             "required": false,
             "description": "Filter by status (e.g. 'active', 'stopped', 'all')",
             "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact versioned workflow slug"
+            },
+            "required": false,
+            "description": "Filter by exact versioned workflow slug",
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug (matches all versions in the lineage)"
+            },
+            "required": false,
+            "description": "Filter by workflow dynasty slug (matches all versions in the lineage)",
+            "name": "workflowDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact versioned feature slug"
+            },
+            "required": false,
+            "description": "Filter by exact versioned feature slug",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (matches all versions in the lineage)"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug (matches all versions in the lineage)",
+            "name": "featureDynastySlug",
             "in": "query"
           },
           {
@@ -7113,7 +7173,7 @@
           "Campaigns"
         ],
         "summary": "Create a campaign",
-        "description": "Create a new campaign. Requires `featureSlug` and `featureInputs`.\n\nFeature inputs are validated by key-presence against features-service (api-service never inspects values). The `workflowSlug` determines which execution pipeline campaign-service uses.",
+        "description": "Create a new campaign. Requires feature inputs and at least one of featureSlug/featureDynastySlug plus one of workflowSlug/workflowDynastySlug.\n\nUse `workflowDynastySlug`/`featureDynastySlug` (preferred) to let campaign-service resolve to the latest version automatically. Use `workflowSlug`/`featureSlug` only to pin to a specific version. Feature inputs are validated by key-presence against features-service (api-service never inspects values).",
         "security": [
           {
             "bearerAuth": []

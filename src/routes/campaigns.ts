@@ -19,11 +19,10 @@ const router = Router();
  */
 router.get("/campaigns", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const brandId = req.query.brandId as string;
-    const status = req.query.status as string;
     const params = new URLSearchParams();
-    if (brandId) params.set("brandId", brandId);
-    if (status) params.set("status", status);
+    for (const key of ["brandId", "status", "workflowSlug", "workflowDynastySlug", "featureSlug", "featureDynastySlug"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
     const queryString = params.toString() ? `?${params.toString()}` : "";
 
     const result = await callExternalService(
@@ -52,6 +51,8 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       orgId: req.orgId,
       userId: req.userId,
       featureSlug: req.body.featureSlug,
+      featureDynastySlug: req.body.featureDynastySlug,
+      workflowDynastySlug: req.body.workflowDynastySlug,
     });
 
     // 1. Validate structure (featureInputs is opaque — we only check it's present)
@@ -63,17 +64,19 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       return res.status(400).json({
         error: `Missing or invalid required fields: ${missingFields.join(", ")}.`,
         missingFields,
-        hint: "Campaign creation requires: name, workflowSlug, brandUrl, featureSlug, and featureInputs.",
+        hint: "Campaign creation requires: name, brandUrl, featureInputs, and at least one of workflowSlug/workflowDynastySlug plus one of featureSlug/featureDynastySlug.",
       });
     }
 
-    const { featureSlug, featureInputs, brandUrl } = parsed.data;
+    const { featureSlug, featureDynastySlug, featureInputs, brandUrl } = parsed.data;
+    // Prefer dynasty slug for features-service lookups (accepts both)
+    const featureLookupSlug = featureDynastySlug ?? featureSlug!;
 
     // 2. Validate feature inputs against features-service (key-presence only)
-    console.log("[api-service] POST /v1/campaigns — validating featureInputs against features-service", { featureSlug });
+    console.log("[api-service] POST /v1/campaigns — validating featureInputs against features-service", { featureLookupSlug });
     const featureDefinition = await callExternalService<{ inputs: Array<{ key: string; required?: boolean }> }>(
       externalServices.features,
-      `/features/${encodeURIComponent(featureSlug)}/inputs`,
+      `/features/${encodeURIComponent(featureLookupSlug)}/inputs`,
       { headers: buildInternalHeaders(req) },
     );
     const requiredKeys = (featureDefinition.inputs ?? [])
@@ -81,15 +84,15 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       .map((i) => i.key);
     const missingKeys = requiredKeys.filter((k) => !(k in featureInputs));
     if (missingKeys.length > 0) {
-      console.warn("[api-service] POST /v1/campaigns — missing feature inputs", { featureSlug, missingKeys });
+      console.warn("[api-service] POST /v1/campaigns — missing feature inputs", { featureLookupSlug, missingKeys });
       return res.status(400).json({
-        error: `Missing required feature inputs for "${featureSlug}": ${missingKeys.join(", ")}.`,
+        error: `Missing required feature inputs for "${featureLookupSlug}": ${missingKeys.join(", ")}.`,
         missingKeys,
         hint: "Check the feature definition for required inputs via GET /v1/features/:slug/inputs.",
       });
     }
     console.log("[api-service] POST /v1/campaigns — featureInputs validated OK", {
-      featureSlug,
+      featureLookupSlug,
       inputCount: Object.keys(featureInputs).length,
     });
 
@@ -111,15 +114,19 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     console.log("[api-service] POST /v1/campaigns — brand upserted", { brandId: brandResult.brandId });
 
     // 4. Forward to campaign-service (featureInputs forwarded as-is, never inspected)
-    const { workflowSlug, ...restData } = parsed.data;
-    const campaignType = deriveCampaignType(workflowSlug);
+    const { workflowSlug, workflowDynastySlug, ...restData } = parsed.data;
+    // Use dynasty slug or exact slug for campaign type derivation
+    const workflowSlugForType = workflowDynastySlug ?? workflowSlug!;
+    const campaignType = deriveCampaignType(workflowSlugForType);
     const body: Record<string, unknown> = {
       ...restData,
-      workflowSlug,
       type: campaignType,
       orgId: req.orgId,
       brandId: brandResult.brandId,
     };
+    // Forward whichever slug fields were provided — campaign-service accepts both
+    if (workflowSlug) body.workflowSlug = workflowSlug;
+    if (workflowDynastySlug) body.workflowDynastySlug = workflowDynastySlug;
 
     // Convert budget numbers to strings (campaign-service expects string type)
     for (const key of ["maxBudgetDailyUsd", "maxBudgetWeeklyUsd", "maxBudgetMonthlyUsd", "maxBudgetTotalUsd"]) {
@@ -129,8 +136,10 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     console.log("[api-service] POST /v1/campaigns — forwarding to campaign-service", {
       brandId: body.brandId,
       workflowSlug: body.workflowSlug,
+      workflowDynastySlug: body.workflowDynastySlug,
       type: body.type,
       featureSlug: body.featureSlug,
+      featureDynastySlug: body.featureDynastySlug,
     });
     // Enrich headers with IDs resolved during this request — the dashboard
     // sends brandUrl/workflowSlug/featureSlug in the body, not as headers,
@@ -138,8 +147,8 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     const campaignHeaders: Record<string, string> = {
       ...buildInternalHeaders(req),
       "x-brand-id": brandResult.brandId,
-      "x-feature-slug": featureSlug,
-      "x-workflow-slug": workflowSlug,
+      "x-feature-slug": featureLookupSlug,
+      "x-workflow-slug": workflowSlugForType,
     };
     const result = await callExternalService(
       externalServices.campaign,
