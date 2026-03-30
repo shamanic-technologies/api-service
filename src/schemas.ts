@@ -137,11 +137,13 @@ const rankedQueryParams = z.object({
   limit: z.string().optional().describe("Max results (default 10, max 100)"),
   groupBy: z.string().optional().describe("'feature' to group by featureSlug, 'brand' to group by brand"),
   brandId: z.string().optional().describe("Filter by brand ID"),
-  featureSlug: z.string().optional().describe("Filter by feature slug (e.g. 'pr-cold-email-outreach')"),
+  featureSlug: z.string().optional().describe("Filter by exact versioned feature slug"),
+  featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)"),
 });
 
 const bestQueryParams = z.object({
   by: z.string().optional().describe("'workflow' (default) or 'brand' — hero records by workflow or by brand"),
+  featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)"),
 });
 
 // -- Workflow response schemas (mirroring workflow-service) --
@@ -2952,12 +2954,16 @@ registry.registerPath({
   tags: ["Workflows"],
   summary: "List workflows",
   description:
-    "List available workflows from the workflow-service, optionally filtered by featureSlug or humanId",
+    "List available workflows from the workflow-service. Supports filtering by exact versioned slugs or dynasty slugs (lineage match). " +
+    "Use featureDynastySlug/workflowDynastySlug to match all versions in a lineage, or featureSlug/workflowSlug for exact version match.",
   security: authed,
   request: {
     query: z.object({
       humanId: z.string().optional().describe("Filter workflows by human expert ID"),
-      featureSlug: z.string().optional().describe("Filter by feature slug (e.g. 'pr-cold-email-outreach')"),
+      featureSlug: z.string().optional().describe("Filter by exact versioned feature slug"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)"),
+      workflowSlug: z.string().optional().describe("Filter by exact versioned workflow slug"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (exact match on dynasty_slug column)"),
     }),
   },
   responses: {
@@ -3475,7 +3481,10 @@ registry.registerPath({
     query: z.object({
       workflowId: z.string().optional().describe("Filter by workflow ID"),
       campaignId: z.string().optional().describe("Filter by campaign ID"),
-      featureSlug: z.string().optional().describe("Filter by feature slug"),
+      featureSlug: z.string().optional().describe("Filter by exact versioned feature slug"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolves to all versioned slugs via features-service)"),
+      workflowSlug: z.string().optional().describe("Filter by exact versioned workflow slug"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (subquery on workflows of the dynasty)"),
       status: z.string().optional().describe("Filter by status (queued, running, completed, failed, cancelled)"),
     }),
   },

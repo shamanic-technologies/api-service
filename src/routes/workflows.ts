@@ -98,8 +98,8 @@ function buildWorkflowParams(query: Record<string, unknown>, keys: string[]): UR
   return params;
 }
 
-const RANKED_PARAMS = ["objective", "limit", "groupBy", "brandId", "featureSlug"];
-const BEST_PARAMS = ["by", "orgId"];
+const RANKED_PARAMS = ["objective", "limit", "groupBy", "brandId", "featureSlug", "featureDynastySlug"];
+const BEST_PARAMS = ["by", "orgId", "featureDynastySlug"];
 
 // ---------------------------------------------------------------------------
 // Public routes (no auth — proxied from workflow-service /public/*)
@@ -156,9 +156,9 @@ router.get("/workflows", authenticate, requireOrg, requireUser, async (req: Auth
   try {
     const params = new URLSearchParams();
 
-    if (req.query.orgId) params.set("orgId", req.query.orgId as string);
-    if (req.query.humanId) params.set("humanId", req.query.humanId as string);
-    if (req.query.featureSlug) params.set("featureSlug", req.query.featureSlug as string);
+    for (const key of ["orgId", "humanId", "featureSlug", "featureDynastySlug", "workflowSlug", "workflowDynastySlug"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
 
     const result = await callExternalService<{ workflows: Array<{ id: string; [key: string]: unknown }> }>(
       externalServices.workflow,
@@ -524,7 +524,7 @@ router.post("/workflows/:id/execute", authenticate, requireOrg, requireUser, asy
 router.get("/workflow-runs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["workflowId", "campaignId", "featureSlug", "status"]) {
+    for (const key of ["workflowId", "campaignId", "featureSlug", "featureDynastySlug", "workflowSlug", "workflowDynastySlug", "status"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";

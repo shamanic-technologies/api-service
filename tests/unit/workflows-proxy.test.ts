@@ -82,13 +82,16 @@ describe("Workflow proxy routes", () => {
     expect(listBlock).toContain("humanId");
   });
 
-  it("should forward featureSlug query param on GET /workflows", () => {
+  it("should forward featureSlug and dynasty slug query params on GET /workflows", () => {
     const listStart = content.indexOf('router.get("/workflows"');
     const rankedStart = content.indexOf('router.get("/workflows/ranked"');
     const listBlock = content.slice(listStart, rankedStart);
 
-    expect(listBlock).toContain('req.query.featureSlug');
-    expect(listBlock).toContain('params.set("featureSlug"');
+    // All slug params are forwarded via the loop
+    expect(listBlock).toContain('"featureSlug"');
+    expect(listBlock).toContain('"featureDynastySlug"');
+    expect(listBlock).toContain('"workflowSlug"');
+    expect(listBlock).toContain('"workflowDynastySlug"');
   });
 
   it("should not forward category/channel/audienceType on GET /workflows", () => {
