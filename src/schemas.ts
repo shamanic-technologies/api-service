@@ -775,14 +775,17 @@ registry.registerPath({
               leads: z.array(
                 z.object({
                   id: z.string(),
-                  email: z.string(),
+                  leadId: z.string().nullable().describe("Lead UUID for cross-referencing with delivery status"),
+                  email: z.string().describe("Recipient email address"),
+                  namespace: z.string().nullable().describe("Lead source (e.g. 'apollo', 'journalist')"),
                   externalId: z.string().nullable(),
                   firstName: z.string().nullable(),
                   lastName: z.string().nullable(),
                   emailStatus: z.string().nullable(),
                   title: z.string().nullable(),
                   organizationName: z.string().nullable(),
-                  organizationDomain: z.string().nullable(),
+                  organizationDomain: z.string().nullable().describe("Company domain from enrichment"),
+                  organizationLogoUrl: z.string().nullable().describe("Company logo URL from enrichment"),
                   organizationIndustry: z.string().nullable(),
                   organizationSize: z.string().nullable(),
                   linkedinUrl: z.string().nullable(),
@@ -794,6 +797,48 @@ registry.registerPath({
               ),
             })
             .openapi("CampaignLeadsResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/campaigns/{id}/leads/status",
+  tags: ["Campaigns"],
+  summary: "Get per-lead delivery status",
+  description:
+    "Returns delivery status (contacted, delivered, bounced, replied) for each served lead in a campaign. Proxies to lead-service GET /leads/status.",
+  security: authed,
+  request: {
+    params: CampaignIdParam,
+    query: z.object({
+      brandId: z.string().optional().describe("Optional brand ID filter"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Per-lead delivery statuses",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              statuses: z.array(
+                z.object({
+                  leadId: z.string().describe("Lead UUID"),
+                  email: z.string().describe("Recipient email"),
+                  contacted: z.boolean().describe("Whether the lead has been contacted"),
+                  delivered: z.boolean().describe("Whether the email was delivered"),
+                  bounced: z.boolean().describe("Whether the email bounced"),
+                  replied: z.boolean().describe("Whether the lead replied"),
+                  lastDeliveredAt: z.string().nullable().describe("ISO timestamp of last delivery"),
+                }),
+              ),
+            })
+            .openapi("CampaignLeadsStatusResponse"),
         },
       },
     },

@@ -555,7 +555,9 @@ router.get("/campaigns/:id/leads", authenticate, requireOrg, requireUser, async 
       const enrichment = (raw.enrichment as Record<string, unknown>) || {};
       return {
         id: raw.id,
+        leadId: raw.leadId ?? null,
         email: raw.email,
+        namespace: raw.namespace ?? null,
         externalId: raw.externalId,
         firstName: enrichment.firstName ?? null,
         lastName: enrichment.lastName ?? null,
@@ -563,6 +565,7 @@ router.get("/campaigns/:id/leads", authenticate, requireOrg, requireUser, async 
         title: enrichment.title ?? null,
         organizationName: enrichment.organizationName ?? null,
         organizationDomain: enrichment.organizationDomain ?? null,
+        organizationLogoUrl: enrichment.organizationLogoUrl ?? null,
         organizationIndustry: enrichment.organizationIndustry ?? null,
         organizationSize: enrichment.organizationSize ?? null,
         linkedinUrl: enrichment.linkedinUrl ?? null,
@@ -610,6 +613,31 @@ router.get("/campaigns/:id/leads", authenticate, requireOrg, requireUser, async 
   } catch (error: any) {
     console.error("Get campaign leads error:", error);
     res.status(500).json({ error: error.message || "Failed to get campaign leads" });
+  }
+});
+
+/**
+ * GET /v1/campaigns/:id/leads/status
+ * Get per-lead delivery status for a campaign
+ */
+router.get("/campaigns/:id/leads/status", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const brandId = req.query.brandId as string | undefined;
+
+    const params = new URLSearchParams({ campaignId: id });
+    if (brandId) params.set("brandId", brandId);
+
+    const result = await callExternalService(
+      externalServices.lead,
+      `/leads/status?${params}`,
+      { headers: buildInternalHeaders(req) },
+    );
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Get campaign leads status error:", error);
+    res.status(500).json({ error: error.message || "Failed to get campaign leads status" });
   }
 });
 

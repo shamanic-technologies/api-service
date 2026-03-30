@@ -66,14 +66,48 @@ describe("Campaign leads/emails OpenAPI response schemas", () => {
       leadsSchema.properties.leads.items.properties;
     for (const field of [
       "id",
+      "leadId",
       "email",
+      "namespace",
       "firstName",
       "lastName",
       "title",
       "organizationName",
+      "organizationDomain",
+      "organizationLogoUrl",
       "enrichmentRun",
     ]) {
       expect(leadProps).toHaveProperty(field);
+    }
+  });
+
+  it("GET /v1/campaigns/{id}/leads/status should have a 200 response schema", () => {
+    const endpoint = spec.paths?.["/v1/campaigns/{id}/leads/status"]?.get;
+    expect(endpoint).toBeDefined();
+    const schema =
+      endpoint.responses?.["200"]?.content?.["application/json"]?.schema;
+    expect(schema).toBeDefined();
+    const resolved = schema.$ref
+      ? spec.components.schemas[schema.$ref.split("/").pop()!]
+      : schema;
+    expect(resolved.properties?.statuses).toBeDefined();
+  });
+
+  it("CampaignLeadsStatusResponse should document delivery status fields", () => {
+    const statusSchema = spec.components?.schemas?.CampaignLeadsStatusResponse;
+    expect(statusSchema).toBeDefined();
+    const statusProps =
+      statusSchema.properties.statuses.items.properties;
+    for (const field of [
+      "leadId",
+      "email",
+      "contacted",
+      "delivered",
+      "bounced",
+      "replied",
+      "lastDeliveredAt",
+    ]) {
+      expect(statusProps).toHaveProperty(field);
     }
   });
 
