@@ -21376,16 +21376,6 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by organization ID (alias for org_id)"
-            },
-            "required": false,
-            "description": "Filter by organization ID (alias for org_id)",
-            "name": "organization_id",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
               "description": "Filter by campaign ID — returns media kit(s) linked to this campaign"
             },
             "required": false,
@@ -22382,29 +22372,27 @@
             "bearerAuth": []
           }
         ],
-        "responses": {
-          "200": {
-            "description": "Media kit",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PressKitInternalCurrentResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by brand UUID"
+            },
+            "required": false,
+            "description": "Filter by brand UUID",
+            "name": "brand_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by campaign UUID"
+            },
+            "required": false,
+            "description": "Filter by campaign UUID",
+            "name": "campaign_id",
+            "in": "query"
+          },
           {
             "name": "x-org-id",
             "in": "header",
@@ -22459,7 +22447,29 @@
             },
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Media kit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PressKitInternalCurrentResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/press-kits/internal/media-kits/generation-data": {
@@ -22472,6 +22482,72 @@
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Target a specific kit. If omitted, finds the generating kit for the org."
+            },
+            "required": false,
+            "description": "Target a specific kit. If omitted, finds the generating kit for the org.",
+            "name": "media_kit_id",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
           }
         ],
         "responses": {
@@ -22495,63 +22571,7 @@
               }
             }
           }
-        },
-        "parameters": [
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-feature-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
-          }
-        ]
+        }
       }
     },
     "/v1/press-kits/internal/media-kits/generation-result": {
@@ -22791,6 +22811,46 @@
           {
             "schema": {
               "type": "string",
+              "description": "Filter by feature slug"
+            },
+            "required": false,
+            "description": "Filter by feature slug",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow slug"
+            },
+            "required": false,
+            "description": "Filter by workflow slug",
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug",
+            "name": "featureDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug"
+            },
+            "required": false,
+            "description": "Filter by workflow dynasty slug",
+            "name": "workflowDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "description": "Start date (ISO 8601)"
             },
             "required": false,
@@ -22943,6 +23003,46 @@
             "required": false,
             "description": "Filter by campaign ID",
             "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature slug"
+            },
+            "required": false,
+            "description": "Filter by feature slug",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow slug"
+            },
+            "required": false,
+            "description": "Filter by workflow slug",
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug",
+            "name": "featureDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug"
+            },
+            "required": false,
+            "description": "Filter by workflow dynasty slug",
+            "name": "workflowDynastySlug",
             "in": "query"
           },
           {
