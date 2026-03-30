@@ -40,11 +40,12 @@ describe("Dashboard endpoints OpenAPI documentation", () => {
   });
 
   it("should document status query param on GET /v1/campaigns", () => {
-    // Find the registerPath block for GET /v1/campaigns and verify status is in the query
-    const listCampaignsMatch = content.match(
-      /registerPath\(\{[^}]*method:\s*"get"[^}]*path:\s*"\/v1\/campaigns"[^]*?query:\s*z\.object\(\{([^}]+)\}/
-    );
-    expect(listCampaignsMatch).not.toBeNull();
-    expect(listCampaignsMatch![1]).toContain("status");
+    // Find the registerPath block for GET /v1/campaigns and verify status is in the query schema
+    const listStart = content.indexOf('path: "/v1/campaigns"');
+    expect(listStart).toBeGreaterThan(-1);
+    // Look at a reasonable window after the path declaration for the status param
+    const block = content.slice(listStart, listStart + 800);
+    expect(block).toContain("status:");
+    expect(block).toContain("Filter by status");
   });
 });

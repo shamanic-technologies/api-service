@@ -385,7 +385,19 @@
         },
         "required": [
           "best"
-        ]
+        ],
+        "example": {
+          "best": {
+            "replied": {
+              "workflowId": "wf-uuid-123",
+              "workflowSlug": "sales-email-cold-outreach-sienna-v3",
+              "workflowName": "Sales Cold Outreach (Sienna)",
+              "createdForBrandId": "brand-uuid-456",
+              "value": 42
+            },
+            "clicked": null
+          }
+        }
       },
       "RankedWorkflowItem": {
         "type": "object",
@@ -734,7 +746,18 @@
           "name",
           "brandUrl",
           "featureInputs"
-        ]
+        ],
+        "example": {
+          "name": "Q2 SaaS Outreach",
+          "workflowDynastySlug": "sales-email-cold-outreach-sienna",
+          "brandUrl": "https://acme.com",
+          "featureDynastySlug": "pr-cold-email-outreach",
+          "featureInputs": {
+            "targetAudience": "SaaS founders in the US",
+            "editorialAngle": "AI productivity tools"
+          },
+          "maxBudgetTotalUsd": "500"
+        }
       },
       "GetCampaignResponse": {
         "type": "object",
@@ -6520,7 +6543,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by (e.g. 'replied', 'clicked', 'leads_found', 'outlets_found'). Dynamically resolved from the feature's declared outputs. If omitted, featureSlug or featureDynastySlug is required to auto-resolve the ranking metric."
+              "description": "Stats key to rank by (e.g. 'replied', 'clicked', 'leads_found', 'outlets_found'). Dynamically resolved from the feature's declared outputs. If omitted, featureSlug or featureDynastySlug is required to auto-resolve the ranking metric.",
+              "example": "replied"
             },
             "required": false,
             "description": "Stats key to rank by (e.g. 'replied', 'clicked', 'leads_found', 'outlets_found'). Dynamically resolved from the feature's declared outputs. If omitted, featureSlug or featureDynastySlug is required to auto-resolve the ranking metric.",
@@ -6530,7 +6554,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Max results (default 10, max 100)"
+              "description": "Max results (default 10, max 100)",
+              "example": "10"
             },
             "required": false,
             "description": "Max results (default 10, max 100)",
@@ -6540,7 +6565,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "'feature' to group by featureSlug, 'brand' to group by brand"
+              "description": "'feature' to group by featureSlug, 'brand' to group by brand",
+              "example": "feature"
             },
             "required": false,
             "description": "'feature' to group by featureSlug, 'brand' to group by brand",
@@ -6550,7 +6576,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by brand ID"
+              "description": "Filter by brand ID",
+              "example": "brand-uuid-123"
             },
             "required": false,
             "description": "Filter by brand ID",
@@ -6560,7 +6587,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact versioned feature slug"
+              "description": "Filter by exact versioned feature slug",
+              "example": "pr-cold-email-outreach-v3"
             },
             "required": false,
             "description": "Filter by exact versioned feature slug",
@@ -6570,7 +6598,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)"
+              "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)",
+              "example": "pr-cold-email-outreach"
             },
             "required": false,
             "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)",
@@ -6613,7 +6642,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "'workflow' (default) or 'brand' — hero records by workflow or by brand"
+              "description": "'workflow' (default) or 'brand' — hero records by workflow or by brand",
+              "example": "workflow"
             },
             "required": false,
             "description": "'workflow' (default) or 'brand' — hero records by workflow or by brand",
@@ -6623,7 +6653,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to optimize for (e.g. 'replied', 'clicked', 'leads_found'). Dynamically resolved from the feature's declared outputs if omitted."
+              "description": "Stats key to optimize for (e.g. 'replied', 'clicked', 'leads_found'). Dynamically resolved from the feature's declared outputs if omitted.",
+              "example": "replied"
             },
             "required": false,
             "description": "Stats key to optimize for (e.g. 'replied', 'clicked', 'leads_found'). Dynamically resolved from the feature's declared outputs if omitted.",
@@ -6633,7 +6664,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact versioned feature slug. Required if objective is not provided."
+              "description": "Filter by exact versioned feature slug. Required if objective is not provided.",
+              "example": "pr-cold-email-outreach-v3"
             },
             "required": false,
             "description": "Filter by exact versioned feature slug. Required if objective is not provided.",
@@ -6643,7 +6675,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage). Required if objective is not provided."
+              "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage). Required if objective is not provided.",
+              "example": "pr-cold-email-outreach"
             },
             "required": false,
             "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage). Required if objective is not provided.",
@@ -6701,7 +6734,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by (e.g. 'replied', 'clicked', 'leads_found', 'outlets_found'). Dynamically resolved from the feature's declared outputs. If omitted, featureSlug or featureDynastySlug is required to auto-resolve the ranking metric."
+              "description": "Stats key to rank by (e.g. 'replied', 'clicked', 'leads_found', 'outlets_found'). Dynamically resolved from the feature's declared outputs. If omitted, featureSlug or featureDynastySlug is required to auto-resolve the ranking metric.",
+              "example": "replied"
             },
             "required": false,
             "description": "Stats key to rank by (e.g. 'replied', 'clicked', 'leads_found', 'outlets_found'). Dynamically resolved from the feature's declared outputs. If omitted, featureSlug or featureDynastySlug is required to auto-resolve the ranking metric.",
@@ -6711,7 +6745,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Max results (default 10, max 100)"
+              "description": "Max results (default 10, max 100)",
+              "example": "10"
             },
             "required": false,
             "description": "Max results (default 10, max 100)",
@@ -6721,7 +6756,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "'feature' to group by featureSlug, 'brand' to group by brand"
+              "description": "'feature' to group by featureSlug, 'brand' to group by brand",
+              "example": "feature"
             },
             "required": false,
             "description": "'feature' to group by featureSlug, 'brand' to group by brand",
@@ -6731,7 +6767,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by brand ID"
+              "description": "Filter by brand ID",
+              "example": "brand-uuid-123"
             },
             "required": false,
             "description": "Filter by brand ID",
@@ -6741,7 +6778,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact versioned feature slug"
+              "description": "Filter by exact versioned feature slug",
+              "example": "pr-cold-email-outreach-v3"
             },
             "required": false,
             "description": "Filter by exact versioned feature slug",
@@ -6751,7 +6789,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)"
+              "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)",
+              "example": "pr-cold-email-outreach"
             },
             "required": false,
             "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)",
@@ -6863,7 +6902,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "'workflow' (default) or 'brand' — hero records by workflow or by brand"
+              "description": "'workflow' (default) or 'brand' — hero records by workflow or by brand",
+              "example": "workflow"
             },
             "required": false,
             "description": "'workflow' (default) or 'brand' — hero records by workflow or by brand",
@@ -6873,7 +6913,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to optimize for (e.g. 'replied', 'clicked', 'leads_found'). Dynamically resolved from the feature's declared outputs if omitted."
+              "description": "Stats key to optimize for (e.g. 'replied', 'clicked', 'leads_found'). Dynamically resolved from the feature's declared outputs if omitted.",
+              "example": "replied"
             },
             "required": false,
             "description": "Stats key to optimize for (e.g. 'replied', 'clicked', 'leads_found'). Dynamically resolved from the feature's declared outputs if omitted.",
@@ -6883,7 +6924,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact versioned feature slug. Required if objective is not provided."
+              "description": "Filter by exact versioned feature slug. Required if objective is not provided.",
+              "example": "pr-cold-email-outreach-v3"
             },
             "required": false,
             "description": "Filter by exact versioned feature slug. Required if objective is not provided.",
@@ -6893,7 +6935,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage). Required if objective is not provided."
+              "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage). Required if objective is not provided.",
+              "example": "pr-cold-email-outreach"
             },
             "required": false,
             "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage). Required if objective is not provided.",
@@ -7117,7 +7160,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by brand ID"
+              "description": "Filter by brand ID",
+              "example": "brand-uuid-123"
             },
             "required": false,
             "description": "Filter by brand ID",
@@ -7127,7 +7171,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by status (e.g. 'active', 'stopped', 'all')"
+              "description": "Filter by status (e.g. 'active', 'stopped', 'all')",
+              "example": "active"
             },
             "required": false,
             "description": "Filter by status (e.g. 'active', 'stopped', 'all')",
@@ -7137,7 +7182,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact versioned workflow slug"
+              "description": "Filter by exact versioned workflow slug",
+              "example": "sales-email-cold-outreach-sienna-v3"
             },
             "required": false,
             "description": "Filter by exact versioned workflow slug",
@@ -7147,7 +7193,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by workflow dynasty slug (matches all versions in the lineage)"
+              "description": "Filter by workflow dynasty slug (matches all versions in the lineage)",
+              "example": "sales-email-cold-outreach-sienna"
             },
             "required": false,
             "description": "Filter by workflow dynasty slug (matches all versions in the lineage)",
@@ -7157,7 +7204,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact versioned feature slug"
+              "description": "Filter by exact versioned feature slug",
+              "example": "pr-cold-email-outreach-v3"
             },
             "required": false,
             "description": "Filter by exact versioned feature slug",
@@ -7167,7 +7215,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by feature dynasty slug (matches all versions in the lineage)"
+              "description": "Filter by feature dynasty slug (matches all versions in the lineage)",
+              "example": "pr-cold-email-outreach"
             },
             "required": false,
             "description": "Filter by feature dynasty slug (matches all versions in the lineage)",
@@ -15006,7 +15055,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter workflows by human expert ID"
+              "description": "Filter workflows by human expert ID",
+              "example": "human-uuid-123"
             },
             "required": false,
             "description": "Filter workflows by human expert ID",
@@ -15016,7 +15066,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact versioned feature slug"
+              "description": "Filter by exact versioned feature slug",
+              "example": "pr-cold-email-outreach-v3"
             },
             "required": false,
             "description": "Filter by exact versioned feature slug",
@@ -15026,7 +15077,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)"
+              "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)",
+              "example": "pr-cold-email-outreach"
             },
             "required": false,
             "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)",
@@ -15036,7 +15088,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact versioned workflow slug"
+              "description": "Filter by exact versioned workflow slug",
+              "example": "sales-email-cold-outreach-sienna-v3"
             },
             "required": false,
             "description": "Filter by exact versioned workflow slug",
@@ -15046,7 +15099,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by workflow dynasty slug (exact match on dynasty_slug column)"
+              "description": "Filter by workflow dynasty slug (exact match on dynasty_slug column)",
+              "example": "sales-email-cold-outreach-sienna"
             },
             "required": false,
             "description": "Filter by workflow dynasty slug (exact match on dynasty_slug column)",
@@ -16182,7 +16236,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by workflow ID"
+              "description": "Filter by workflow ID",
+              "example": "wf-uuid-123"
             },
             "required": false,
             "description": "Filter by workflow ID",
@@ -16192,7 +16247,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by campaign ID"
+              "description": "Filter by campaign ID",
+              "example": "campaign-uuid-456"
             },
             "required": false,
             "description": "Filter by campaign ID",
@@ -16202,7 +16258,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact versioned feature slug"
+              "description": "Filter by exact versioned feature slug",
+              "example": "pr-cold-email-outreach-v3"
             },
             "required": false,
             "description": "Filter by exact versioned feature slug",
@@ -16212,7 +16269,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by feature dynasty slug (resolves to all versioned slugs via features-service)"
+              "description": "Filter by feature dynasty slug (resolves to all versioned slugs via features-service)",
+              "example": "pr-cold-email-outreach"
             },
             "required": false,
             "description": "Filter by feature dynasty slug (resolves to all versioned slugs via features-service)",
@@ -16222,7 +16280,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact versioned workflow slug"
+              "description": "Filter by exact versioned workflow slug",
+              "example": "sales-email-cold-outreach-sienna-v3"
             },
             "required": false,
             "description": "Filter by exact versioned workflow slug",
@@ -16232,7 +16291,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by workflow dynasty slug (subquery on workflows of the dynasty)"
+              "description": "Filter by workflow dynasty slug (subquery on workflows of the dynasty)",
+              "example": "sales-email-cold-outreach-sienna"
             },
             "required": false,
             "description": "Filter by workflow dynasty slug (subquery on workflows of the dynasty)",
@@ -16242,7 +16302,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by status (queued, running, completed, failed, cancelled)"
+              "description": "Filter by status (queued, running, completed, failed, cancelled)",
+              "example": "completed"
             },
             "required": false,
             "description": "Filter by status (queued, running, completed, failed, cancelled)",
@@ -23024,7 +23085,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Dynasty slug (stable, unversioned — e.g. 'pr-cold-email-outreach')"
+              "description": "Dynasty slug (stable, unversioned — e.g. 'pr-cold-email-outreach')",
+              "example": "pr-cold-email-outreach"
             },
             "required": true,
             "description": "Dynasty slug (stable, unversioned — e.g. 'pr-cold-email-outreach')",
@@ -23427,7 +23489,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Feature slug (dynasty or versioned — both accepted)"
+              "description": "Feature slug (dynasty or versioned — both accepted)",
+              "example": "pr-cold-email-outreach"
             },
             "required": true,
             "description": "Feature slug (dynasty or versioned — both accepted)",
@@ -23549,7 +23612,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Feature slug (dynasty or versioned — both accepted)"
+              "description": "Feature slug (dynasty or versioned — both accepted)",
+              "example": "pr-cold-email-outreach"
             },
             "required": true,
             "description": "Feature slug (dynasty or versioned — both accepted)",
@@ -23796,7 +23860,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Group dimension(s), comma-separated: featureSlug, workflowSlug, featureDynastySlug, brandId, campaignId"
+              "description": "Group dimension(s), comma-separated: featureSlug, workflowSlug, featureDynastySlug, brandId, campaignId",
+              "example": "featureDynastySlug"
             },
             "required": false,
             "description": "Group dimension(s), comma-separated: featureSlug, workflowSlug, featureDynastySlug, brandId, campaignId",
@@ -23806,7 +23871,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by brand UUID"
+              "description": "Filter by brand UUID",
+              "example": "brand-uuid-123"
             },
             "required": false,
             "description": "Filter by brand UUID",
@@ -23816,7 +23882,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact feature slug"
+              "description": "Filter by exact feature slug",
+              "example": "pr-cold-email-outreach-v3"
             },
             "required": false,
             "description": "Filter by exact feature slug",
@@ -23826,7 +23893,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact workflow slug"
+              "description": "Filter by exact workflow slug",
+              "example": "sales-email-cold-outreach-sienna-v3"
             },
             "required": false,
             "description": "Filter by exact workflow slug",
@@ -23836,7 +23904,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)"
+              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
+              "example": "pr-cold-email-outreach"
             },
             "required": false,
             "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
@@ -23948,7 +24017,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Feature slug"
+              "description": "Feature slug",
+              "example": "pr-cold-email-outreach-v3"
             },
             "required": true,
             "description": "Feature slug",
@@ -23958,7 +24028,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Group dimension: workflowSlug | brandId | campaignId"
+              "description": "Group dimension: workflowSlug | brandId | campaignId",
+              "example": "workflowSlug"
             },
             "required": false,
             "description": "Group dimension: workflowSlug | brandId | campaignId",
@@ -23968,7 +24039,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by brand UUID"
+              "description": "Filter by brand UUID",
+              "example": "brand-uuid-123"
             },
             "required": false,
             "description": "Filter by brand UUID",
@@ -23978,7 +24050,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by campaign UUID"
+              "description": "Filter by campaign UUID",
+              "example": "campaign-uuid-456"
             },
             "required": false,
             "description": "Filter by campaign UUID",
@@ -23988,7 +24061,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact workflow slug"
+              "description": "Filter by exact workflow slug",
+              "example": "sales-email-cold-outreach-sienna-v3"
             },
             "required": false,
             "description": "Filter by exact workflow slug",
@@ -23998,7 +24072,8 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)"
+              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
+              "example": "pr-cold-email-outreach"
             },
             "required": false,
             "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
