@@ -3290,9 +3290,26 @@ export const UpdateWorkflowRequestSchema = z
     name: z.string().min(1).optional().describe("Workflow name"),
     description: z.string().optional().describe("Workflow description"),
     tags: z.array(z.string()).optional().describe("Tags for filtering/grouping"),
-    dag: DAGSchema.optional().describe("Updated DAG definition"),
+    dag: DAGSchema.optional().describe(
+      "Optional new DAG. When omitted, only metadata (description, tags) is updated in-place. " +
+      "When provided with the same structural signature, the DAG is updated in-place. " +
+      "When provided with a different structural signature, a new workflow is created (fork) " +
+      "and the original is kept active (unless its dynasty has zero campaign runs, in which case it is deprecated)."
+    ),
   })
-  .openapi("UpdateWorkflowRequest");
+  .openapi("UpdateWorkflowRequest", {
+    example: {
+      description: "Updated workflow description",
+      tags: ["email", "outreach"],
+      dag: {
+        nodes: [
+          { id: "fetch-lead", type: "http.call", config: { service: "lead", method: "POST", path: "/buffer/next" }, inputMapping: { "body.campaignId": "$ref:flow_input.campaignId" } },
+          { id: "send-email", type: "http.call", config: { service: "email-gateway", method: "POST", path: "/send" }, inputMapping: { "body.to": "$ref:fetch-lead.output.lead.email" }, retries: 0 },
+        ],
+        edges: [{ from: "fetch-lead", to: "send-email" }],
+      },
+    },
+  });
 
 registry.registerPath({
   method: "put",
@@ -3300,11 +3317,11 @@ registry.registerPath({
   tags: ["Workflows"],
   summary: "Update a workflow",
   description:
-    "Update a workflow's metadata or DAG. " +
-    "Without `dag` in the body → metadata-only update (200). " +
-    "With `dag` and same signature → in-place update (200). " +
-    "With `dag` and new signature → fork: creates a new workflow (201, `_action: \"forked\"`). " +
-    "Returns 409 if an active workflow with the same DAG signature already exists.",
+    "The single endpoint for modifying a workflow. Behavior depends on what you send:\n\n" +
+    "**Metadata only** (no `dag` in body): updates description/tags in-place. Returns 200 with `_action: 'updated'`.\n\n" +
+    "**DAG with same signature**: the DAG structure hasn't changed (e.g. only config tweaks that don't affect the hash). Updates in-place. Returns 200 with `_action: 'updated'`.\n\n" +
+    "**DAG with new signature**: creates a new workflow in a new dynasty (fork). The original workflow is kept active unless its entire dynasty has zero campaign runs, in which case it is deprecated. Returns 201 with `_action: 'forked'`, plus `_forkedFromName`, `_forkedFromId`, and `_sourceDynastyDeprecated`.\n\n" +
+    "Returns 409 if an active workflow with the same DAG signature already exists, with `existingWorkflowId` and `existingWorkflowSlug` in the response body.",
   security: authed,
   request: {
     params: WorkflowIdParam,
@@ -3349,7 +3366,18 @@ registry.registerPath({
     400: { description: "Invalid request", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Workflow not found", content: errorContent },
-    409: { description: "Conflict — an active workflow with the same DAG signature already exists", content: errorContent },
+    409: {
+      description: "Conflict — an active workflow with the same DAG signature already exists",
+      content: {
+        "application/json": {
+          schema: z.object({
+            error: z.string().describe("Error message"),
+            existingWorkflowId: z.string().uuid().describe("ID of the existing workflow that already has this DAG signature"),
+            existingWorkflowSlug: z.string().describe("Slug of the existing workflow that already has this DAG signature"),
+          }).openapi("WorkflowConflictResponse"),
+        },
+      },
+    },
     500: { description: "Internal error", content: errorContent },
   },
 });
