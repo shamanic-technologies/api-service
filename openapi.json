@@ -6305,6 +6305,10 @@
           "feature_dynasty_slug"
         ]
       },
+      "FeatureByDynastyResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "FeatureResponse": {
         "type": "object",
         "properties": {}
@@ -22954,13 +22958,13 @@
         }
       }
     },
-    "/v1/features/{slug}": {
+    "/v1/features/by-dynasty/{dynastySlug}": {
       "get": {
         "tags": [
           "Features"
         ],
-        "summary": "Get feature by slug",
-        "description": "Get a single feature definition by its slug. Proxied from features-service.",
+        "summary": "Get active feature by dynasty slug",
+        "description": "Returns the active feature definition for a dynasty slug (e.g. 'pr-cold-email-outreach'). Returns 404 if no active feature exists for that dynasty. Preferred over GET /features/{slug} when the dashboard works with dynasty slugs. Proxied from features-service.",
         "security": [
           {
             "bearerAuth": []
@@ -22970,10 +22974,132 @@
           {
             "schema": {
               "type": "string",
-              "description": "Feature slug"
+              "description": "Dynasty slug (stable, unversioned — e.g. 'pr-cold-email-outreach')"
             },
             "required": true,
-            "description": "Feature slug",
+            "description": "Dynasty slug (stable, unversioned — e.g. 'pr-cold-email-outreach')",
+            "name": "dynastySlug",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active feature for the dynasty",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureByDynastyResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No active feature for this dynasty slug",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/features/{slug}": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Get feature by versioned slug",
+        "description": "Get a single feature definition by its exact versioned slug. Use GET /features/by-dynasty/{dynastySlug} when working with dynasty slugs. Proxied from features-service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Exact versioned feature slug"
+            },
+            "required": true,
+            "description": "Exact versioned feature slug",
             "name": "slug",
             "in": "path"
           },
@@ -23241,7 +23367,7 @@
           "Features"
         ],
         "summary": "Get feature input schema",
-        "description": "Get the input schema (required and optional fields) for a feature. Proxied from features-service.",
+        "description": "Get the input schema (required and optional fields) for a feature. The slug param accepts both dynasty slugs (e.g. 'pr-cold-email-outreach') and versioned slugs. Proxied from features-service.",
         "security": [
           {
             "bearerAuth": []
@@ -23251,10 +23377,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Feature slug"
+              "description": "Feature slug (dynasty or versioned — both accepted)"
             },
             "required": true,
-            "description": "Feature slug",
+            "description": "Feature slug (dynasty or versioned — both accepted)",
             "name": "slug",
             "in": "path"
           },
@@ -23363,7 +23489,7 @@
           "Features"
         ],
         "summary": "Prefill feature form from brand",
-        "description": "Prefill the 'New Campaign' form for a feature using brand data. Features-service calls brand-service internally to extract values. Proxied from features-service. Use format=text for flat string values, format=full (default) for rich objects with cache/source metadata.",
+        "description": "Prefill the 'New Campaign' form for a feature using brand data. The slug param accepts both dynasty slugs (e.g. 'pr-cold-email-outreach') and versioned slugs. Features-service calls brand-service internally to extract values. Proxied from features-service. Use format=text for flat string values, format=full (default) for rich objects with cache/source metadata.",
         "security": [
           {
             "bearerAuth": []
@@ -23373,10 +23499,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Feature slug"
+              "description": "Feature slug (dynasty or versioned — both accepted)"
             },
             "required": true,
-            "description": "Feature slug",
+            "description": "Feature slug (dynasty or versioned — both accepted)",
             "name": "slug",
             "in": "path"
           },

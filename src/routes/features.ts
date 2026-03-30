@@ -92,6 +92,24 @@ router.get("/features/dynasty", authenticate, requireOrg, requireUser, async (re
 });
 
 /**
+ * GET /v1/features/by-dynasty/:dynastySlug
+ * Get the active feature for a dynasty slug. Returns 404 if none active.
+ */
+router.get("/features/by-dynasty/:dynastySlug", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/features/by-dynasty/${encodeURIComponent(req.params.dynastySlug)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Get feature by dynasty slug error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get feature by dynasty slug" });
+  }
+});
+
+/**
  * GET /v1/features/:slug
  * Get a single feature by slug
  */

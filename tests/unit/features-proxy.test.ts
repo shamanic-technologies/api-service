@@ -127,7 +127,7 @@ describe("Features proxy routes", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(11);
+    expect(headerMatches!.length).toBe(12);
   });
 
   it("should proxy to externalServices.features", () => {
