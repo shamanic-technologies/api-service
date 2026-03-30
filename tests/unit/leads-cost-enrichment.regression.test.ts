@@ -35,9 +35,16 @@ describe("leads endpoint cost enrichment", () => {
       { id: "lead-3", email: "bob@example.com", externalId: "ext-3", runId: "run-missing", servedAt: "2025-01-03T00:00:00Z", enrichment: { firstName: "Bob", lastName: "Smith", title: null, linkedinUrl: null, organizationName: null, organizationDomain: null, organizationIndustry: null, organizationSize: null, emailStatus: null } },
     ];
 
-    // Step 1: Flatten enrichment (mirrors campaigns.ts logic)
+    // Delivery statuses from lead-service /leads/status endpoint
+    const statusByEmail = new Map<string, { contacted: boolean; delivered: boolean; bounced: boolean; replied: boolean }>();
+    statusByEmail.set("john@example.com", { contacted: true, delivered: true, bounced: false, replied: false });
+    // jane@example.com has no status → not contacted yet
+    statusByEmail.set("bob@example.com", { contacted: false, delivered: false, bounced: false, replied: false });
+
+    // Step 1: Flatten enrichment + join delivery status (mirrors campaigns.ts logic)
     const leads = rawLeads.map((raw) => {
       const enrichment = (raw.enrichment as Record<string, unknown>) || {};
+      const delivery = statusByEmail.get(raw.email);
       return {
         id: raw.id,
         email: raw.email,
@@ -51,7 +58,11 @@ describe("leads endpoint cost enrichment", () => {
         organizationIndustry: enrichment.organizationIndustry ?? null,
         organizationSize: enrichment.organizationSize ?? null,
         linkedinUrl: enrichment.linkedinUrl ?? null,
-        status: "contacted",
+        status: delivery?.contacted ? "contacted" : "served",
+        contacted: delivery?.contacted ?? false,
+        delivered: delivery?.delivered ?? false,
+        bounced: delivery?.bounced ?? false,
+        replied: delivery?.replied ?? false,
         createdAt: raw.servedAt ?? null,
         enrichmentRunId: raw.runId ?? null,
       };
@@ -78,7 +89,9 @@ describe("leads endpoint cost enrichment", () => {
     expect(leadsWithRuns[0].firstName).toBe("John");
     expect(leadsWithRuns[0].organizationName).toBe("Acme");
     expect(leadsWithRuns[0].createdAt).toBe("2025-01-01T00:00:00Z");
-    expect(leadsWithRuns[0].status).toBe("contacted");
+    expect(leadsWithRuns[0].status).toBe("contacted"); // john@example.com has contacted: true
+    expect(leadsWithRuns[0].contacted).toBe(true);
+    expect(leadsWithRuns[0].delivered).toBe(true);
 
     // Lead with valid runId should have enrichmentRun attached
     expect(leadsWithRuns[0].enrichmentRun).not.toBeNull();
@@ -86,13 +99,18 @@ describe("leads endpoint cost enrichment", () => {
     expect(leadsWithRuns[0].enrichmentRun!.totalCostInUsdCents).toBe("5");
     expect(leadsWithRuns[0].enrichmentRun!.costs).toHaveLength(1);
 
-    // Lead with null enrichment should have null fields
+    // Lead with null enrichment should have null fields and status "served" (no delivery status)
     expect(leadsWithRuns[1].firstName).toBeNull();
     expect(leadsWithRuns[1].enrichmentRun).toBeNull();
+    expect(leadsWithRuns[1].status).toBe("served");
+    expect(leadsWithRuns[1].contacted).toBe(false);
 
     // Lead with runId not found in runMap should have null enrichmentRun
+    // bob@example.com has contacted: false → status "served"
     expect(leadsWithRuns[2].enrichmentRun).toBeNull();
     expect(leadsWithRuns[2].firstName).toBe("Bob");
+    expect(leadsWithRuns[2].status).toBe("served");
+    expect(leadsWithRuns[2].contacted).toBe(false);
   });
 
   it("should handle empty leads array gracefully", () => {
