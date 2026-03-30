@@ -266,12 +266,12 @@
           },
           "totalOutcomes": {
             "type": "number",
-            "description": "Total replies or clicks (depending on objective)"
+            "description": "Total outcome count for the ranked metric (dynamic per feature — e.g. replies, leads found, outlets found)"
           },
           "costPerOutcome": {
             "type": "number",
             "nullable": true,
-            "description": "Cost per reply or click in USD cents, null if no outcomes"
+            "description": "Cost per outcome in USD cents, null if no outcomes"
           },
           "completedRuns": {
             "type": "number",
@@ -298,15 +298,14 @@
               "transactional",
               "broadcast"
             ],
-            "description": "Email engagement stats aggregated across runs"
+            "description": "Email engagement stats aggregated across runs. Present for email-based features."
           }
         },
         "required": [
           "totalCostInUsdCents",
           "totalOutcomes",
           "costPerOutcome",
-          "completedRuns",
-          "email"
+          "completedRuns"
         ]
       },
       "PublicRankedWorkflowItem": {
@@ -351,10 +350,9 @@
             "type": "string",
             "description": "Slug of the workflow"
           },
-          "displayName": {
+          "workflowName": {
             "type": "string",
-            "nullable": true,
-            "description": "Stable display name of the workflow family"
+            "description": "Display name of the workflow"
           },
           "createdForBrandId": {
             "type": "string",
@@ -363,38 +361,30 @@
           },
           "value": {
             "type": "number",
-            "description": "The record value in USD cents"
+            "description": "The record value (cost per outcome in USD cents)"
           }
         },
         "required": [
           "workflowId",
           "workflowSlug",
-          "displayName",
+          "workflowName",
           "createdForBrandId",
           "value"
-        ],
-        "description": "Workflow with the lowest cost per email open"
+        ]
       },
       "BestWorkflowResponse": {
         "type": "object",
         "properties": {
-          "bestCostPerOpen": {
-            "$ref": "#/components/schemas/BestWorkflowRecord"
-          },
-          "bestCostPerReply": {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/BestWorkflowRecord"
-              },
-              {
-                "description": "Workflow with the lowest cost per reply"
-              }
-            ]
+          "best": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/BestWorkflowRecord"
+            },
+            "description": "Map of metric key (e.g. 'replied', 'leads_found') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."
           }
         },
         "required": [
-          "bestCostPerOpen",
-          "bestCostPerReply"
+          "best"
         ]
       },
       "RankedWorkflowItem": {
@@ -6525,15 +6515,15 @@
           "Workflows"
         ],
         "summary": "Ranked workflows (public)",
-        "description": "Public ranked workflows by performance. Supports groupBy=feature and groupBy=brand. No authentication required.",
+        "description": "Public ranked workflows by performance. Ranking metrics are dynamically resolved from the feature's declared outputs. Supports groupBy=feature and groupBy=brand. No authentication required.",
         "parameters": [
           {
             "schema": {
               "type": "string",
-              "description": "Optimization objective ('replies' or 'clicks')"
+              "description": "Stats key to rank by (e.g. 'replied', 'clicked', 'leads_found', 'outlets_found'). Dynamically resolved from the feature's declared outputs. If omitted, featureSlug or featureDynastySlug is required to auto-resolve the ranking metric."
             },
             "required": false,
-            "description": "Optimization objective ('replies' or 'clicks')",
+            "description": "Stats key to rank by (e.g. 'replied', 'clicked', 'leads_found', 'outlets_found'). Dynamically resolved from the feature's declared outputs. If omitted, featureSlug or featureDynastySlug is required to auto-resolve the ranking metric.",
             "name": "objective",
             "in": "query"
           },
@@ -6618,7 +6608,7 @@
           "Workflows"
         ],
         "summary": "Hero records (public)",
-        "description": "Public hero records — best cost-per-open/reply. Use ?by=brand for brand-level heroes. No authentication required.",
+        "description": "Public hero records — best cost-per-outcome for dynamic metrics resolved from the feature's outputs. Use ?by=brand for brand-level heroes. Requires objective or featureSlug/featureDynastySlug. No authentication required.",
         "parameters": [
           {
             "schema": {
@@ -6633,21 +6623,51 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)"
+              "description": "Stats key to optimize for (e.g. 'replied', 'clicked', 'leads_found'). Dynamically resolved from the feature's declared outputs if omitted."
             },
             "required": false,
-            "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)",
+            "description": "Stats key to optimize for (e.g. 'replied', 'clicked', 'leads_found'). Dynamically resolved from the feature's declared outputs if omitted.",
+            "name": "objective",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact versioned feature slug. Required if objective is not provided."
+            },
+            "required": false,
+            "description": "Filter by exact versioned feature slug. Required if objective is not provided.",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage). Required if objective is not provided."
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage). Required if objective is not provided.",
             "name": "featureDynastySlug",
             "in": "query"
           }
         ],
         "responses": {
           "200": {
-            "description": "Hero records — best cost-per-open and cost-per-reply",
+            "description": "Hero records — best cost-per-outcome for each dynamic metric. Metrics are resolved from the feature's declared outputs.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BestWorkflowResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request — neither objective nor featureSlug/featureDynastySlug provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -6671,7 +6691,7 @@
           "Workflows"
         ],
         "summary": "Ranked workflows",
-        "description": "Workflows ranked by performance, scoped to the authenticated org. Supports groupBy=feature and groupBy=brand.",
+        "description": "Workflows ranked by performance, scoped to the authenticated org. Ranking metrics are dynamically resolved from the feature's declared outputs. Supports groupBy=feature and groupBy=brand.",
         "security": [
           {
             "bearerAuth": []
@@ -6681,10 +6701,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Optimization objective ('replies' or 'clicks')"
+              "description": "Stats key to rank by (e.g. 'replied', 'clicked', 'leads_found', 'outlets_found'). Dynamically resolved from the feature's declared outputs. If omitted, featureSlug or featureDynastySlug is required to auto-resolve the ranking metric."
             },
             "required": false,
-            "description": "Optimization objective ('replies' or 'clicks')",
+            "description": "Stats key to rank by (e.g. 'replied', 'clicked', 'leads_found', 'outlets_found'). Dynamically resolved from the feature's declared outputs. If omitted, featureSlug or featureDynastySlug is required to auto-resolve the ranking metric.",
             "name": "objective",
             "in": "query"
           },
@@ -6833,7 +6853,7 @@
           "Workflows"
         ],
         "summary": "Hero records",
-        "description": "Best cost-per-open and cost-per-reply records, scoped to the authenticated org. Use ?by=brand for brand-level heroes.",
+        "description": "Best cost-per-outcome records for dynamic metrics, scoped to the authenticated org. Metrics are resolved from the feature's declared outputs. Requires objective or featureSlug/featureDynastySlug. Use ?by=brand for brand-level heroes.",
         "security": [
           {
             "bearerAuth": []
@@ -6853,10 +6873,30 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)"
+              "description": "Stats key to optimize for (e.g. 'replied', 'clicked', 'leads_found'). Dynamically resolved from the feature's declared outputs if omitted."
             },
             "required": false,
-            "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)",
+            "description": "Stats key to optimize for (e.g. 'replied', 'clicked', 'leads_found'). Dynamically resolved from the feature's declared outputs if omitted.",
+            "name": "objective",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact versioned feature slug. Required if objective is not provided."
+            },
+            "required": false,
+            "description": "Filter by exact versioned feature slug. Required if objective is not provided.",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage). Required if objective is not provided."
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug (resolves to all versioned slugs in the lineage). Required if objective is not provided.",
             "name": "featureDynastySlug",
             "in": "query"
           },
@@ -6917,11 +6957,21 @@
         ],
         "responses": {
           "200": {
-            "description": "Hero records — best cost-per-open and cost-per-reply",
+            "description": "Hero records — best cost-per-outcome for each dynamic metric. Metrics are resolved from the feature's declared outputs.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BestWorkflowResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request — neither objective nor featureSlug/featureDynastySlug provided",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

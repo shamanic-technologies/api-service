@@ -99,7 +99,7 @@ function buildWorkflowParams(query: Record<string, unknown>, keys: string[]): UR
 }
 
 const RANKED_PARAMS = ["objective", "limit", "groupBy", "brandId", "featureSlug", "featureDynastySlug"];
-const BEST_PARAMS = ["by", "orgId", "featureDynastySlug"];
+const BEST_PARAMS = ["by", "orgId", "objective", "featureSlug", "featureDynastySlug"];
 
 // ---------------------------------------------------------------------------
 // Public routes (no auth — proxied from workflow-service /public/*)
@@ -206,8 +206,8 @@ router.get("/workflows/ranked", authenticate, requireOrg, requireUser, async (re
 
 /**
  * GET /v1/workflows/best
- * Hero records — best cost-per-open/reply, scoped to the authenticated org.
- * Proxies to workflow-service GET /workflows/best.
+ * Hero records — best value per dynamic metric, scoped to the authenticated org.
+ * Metrics are resolved from the feature's declared outputs. Proxies to workflow-service GET /workflows/best.
  */
 router.get("/workflows/best", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
