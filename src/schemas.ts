@@ -5218,7 +5218,6 @@ registry.registerPath({
   request: {
     query: z.object({
       org_id: z.string().optional().describe("Filter by org ID"),
-      organization_id: z.string().optional().describe("Filter by organization ID (alias for org_id)"),
       campaign_id: z.string().optional().describe("Filter by campaign ID — returns media kit(s) linked to this campaign"),
       brand_id: z.string().optional().describe("Filter by brand ID — returns media kit(s) linked to this brand"),
       title: z.string().optional().describe("Filter by title"),
@@ -5365,6 +5364,12 @@ registry.registerPath({
   summary: "Get latest media kit for org (internal)",
   description: "Uses x-org-id header to identify the org. No path param needed.",
   security: authed,
+  request: {
+    query: z.object({
+      brand_id: z.string().optional().describe("Filter by brand UUID"),
+      campaign_id: z.string().optional().describe("Filter by campaign UUID"),
+    }),
+  },
   responses: {
     200: { description: "Media kit", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitInternalCurrentResponse") } } },
     401: { description: "Unauthorized", content: errorContent },
@@ -5378,6 +5383,11 @@ registry.registerPath({
   summary: "Get generation workflow data (internal)",
   description: "Uses x-org-id header to identify the org.",
   security: authed,
+  request: {
+    query: z.object({
+      media_kit_id: z.string().optional().describe("Target a specific kit. If omitted, finds the generating kit for the org."),
+    }),
+  },
   responses: {
     200: { description: "Generation data", content: { "application/json": { schema: z.object({}).passthrough().openapi("PressKitGenerationDataResponse") } } },
     401: { description: "Unauthorized", content: errorContent },
@@ -5425,6 +5435,10 @@ registry.registerPath({
       brandId: z.string().optional().describe("Filter by brand ID"),
       campaignId: z.string().optional().describe("Filter by campaign ID"),
       mediaKitId: z.string().optional().describe("Filter by media kit ID"),
+      featureSlug: z.string().optional().describe("Filter by feature slug"),
+      workflowSlug: z.string().optional().describe("Filter by workflow slug"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug"),
       from: z.string().optional().describe("Start date (ISO 8601)"),
       to: z.string().optional().describe("End date (ISO 8601)"),
       groupBy: z.enum(["country", "mediaKitId", "day"]).optional().describe("Group results by country, mediaKitId, or day"),
@@ -5451,6 +5465,10 @@ registry.registerPath({
       mediaKitId: z.string().optional().describe("Filter by media kit ID"),
       brandId: z.string().optional().describe("Filter by brand ID"),
       campaignId: z.string().optional().describe("Filter by campaign ID"),
+      featureSlug: z.string().optional().describe("Filter by feature slug"),
+      workflowSlug: z.string().optional().describe("Filter by workflow slug"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug"),
       groupBy: z.enum(["mediaKitId"]).optional().describe("Group results by mediaKitId"),
     }),
   },

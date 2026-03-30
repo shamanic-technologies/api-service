@@ -94,8 +94,8 @@ describe("Press Kits proxy routes", () => {
     expect(content).toContain('"/press-kits/media-kits/stats/views"');
   });
 
-  it("should forward stats query params (brandId, campaignId, mediaKitId, from, to, groupBy)", () => {
-    for (const key of ["brandId", "campaignId", "mediaKitId", "from", "to", "groupBy"]) {
+  it("should forward stats query params (brandId, campaignId, mediaKitId, featureSlug, workflowSlug, featureDynastySlug, workflowDynastySlug, from, to, groupBy)", () => {
+    for (const key of ["brandId", "campaignId", "mediaKitId", "featureSlug", "workflowSlug", "featureDynastySlug", "workflowDynastySlug", "from", "to", "groupBy"]) {
       expect(content).toContain(`"${key}"`);
     }
   });
@@ -104,8 +104,8 @@ describe("Press Kits proxy routes", () => {
     expect(content).toContain('"/press-kits/media-kits/stats/costs"');
   });
 
-  it("should forward cost stats query params (mediaKitId, brandId, campaignId, groupBy)", () => {
-    for (const key of ["mediaKitId", "brandId", "campaignId", "groupBy"]) {
+  it("should forward cost stats query params (mediaKitId, brandId, campaignId, featureSlug, workflowSlug, featureDynastySlug, workflowDynastySlug, groupBy)", () => {
+    for (const key of ["mediaKitId", "brandId", "campaignId", "featureSlug", "workflowSlug", "featureDynastySlug", "workflowDynastySlug", "groupBy"]) {
       expect(content).toContain(`"${key}"`);
     }
   });
@@ -132,8 +132,17 @@ describe("Press Kits proxy routes", () => {
     expect(content).toContain('"/press-kits/internal/media-kits/current"');
   });
 
+  it("should forward brand_id and campaign_id query params on internal/current", () => {
+    expect(content).toContain('"brand_id"');
+    expect(content).toContain('"campaign_id"');
+  });
+
   it("should have GET /press-kits/internal/media-kits/generation-data with auth", () => {
     expect(content).toContain('"/press-kits/internal/media-kits/generation-data"');
+  });
+
+  it("should forward media_kit_id query param on internal/generation-data", () => {
+    expect(content).toContain('"media_kit_id"');
   });
 
   it("should have POST /press-kits/internal/media-kits/generation-result with auth", () => {

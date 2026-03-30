@@ -27,7 +27,6 @@ router.get("/press-kits/media-kits", authenticate, requireOrg, async (req: Authe
   try {
     const params = new URLSearchParams();
     if (req.query.org_id) params.set("org_id", req.query.org_id as string);
-    if (req.query.organization_id) params.set("organization_id", req.query.organization_id as string);
     if (req.query.campaign_id) params.set("campaign_id", req.query.campaign_id as string);
     if (req.query.brand_id) params.set("brand_id", req.query.brand_id as string);
     if (req.query.title) params.set("title", req.query.title as string);
@@ -133,7 +132,7 @@ router.post("/press-kits/media-kits/:id/cancel", authenticate, requireOrg, async
 router.get("/press-kits/media-kits/stats/views", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["brandId", "campaignId", "mediaKitId", "from", "to", "groupBy"]) {
+    for (const key of ["brandId", "campaignId", "mediaKitId", "featureSlug", "workflowSlug", "featureDynastySlug", "workflowDynastySlug", "from", "to", "groupBy"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";
@@ -152,7 +151,7 @@ router.get("/press-kits/media-kits/stats/views", authenticate, requireOrg, async
 router.get("/press-kits/media-kits/stats/costs", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["mediaKitId", "brandId", "campaignId", "groupBy"]) {
+    for (const key of ["mediaKitId", "brandId", "campaignId", "featureSlug", "workflowSlug", "featureDynastySlug", "workflowDynastySlug", "groupBy"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";
@@ -204,9 +203,13 @@ router.delete("/press-kits/admin/media-kits/:id", authenticate, requireOrg, asyn
 // GET /v1/press-kits/internal/media-kits/current — latest kit for org (uses x-org-id header)
 router.get("/press-kits/internal/media-kits/current", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
+    const params = new URLSearchParams();
+    if (req.query.brand_id) params.set("brand_id", req.query.brand_id as string);
+    if (req.query.campaign_id) params.set("campaign_id", req.query.campaign_id as string);
+    const qs = params.toString() ? `?${params.toString()}` : "";
     const result = await callExternalService(
       externalServices.pressKits,
-      "/internal/media-kits/current",
+      `/internal/media-kits/current${qs}`,
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -218,9 +221,12 @@ router.get("/press-kits/internal/media-kits/current", authenticate, requireOrg, 
 // GET /v1/press-kits/internal/media-kits/generation-data — generation workflow data (uses x-org-id header)
 router.get("/press-kits/internal/media-kits/generation-data", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
+    const params = new URLSearchParams();
+    if (req.query.media_kit_id) params.set("media_kit_id", req.query.media_kit_id as string);
+    const qs = params.toString() ? `?${params.toString()}` : "";
     const result = await callExternalService(
       externalServices.pressKits,
-      "/internal/media-kits/generation-data",
+      `/internal/media-kits/generation-data${qs}`,
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
