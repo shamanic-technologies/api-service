@@ -1643,8 +1643,96 @@ registry.registerPath({
 });
 
 // ===================================================================
-// ARTICLES (airtik)
+// ARTICLES (airtik) — schemas synced from articles-service openapi.json
 // ===================================================================
+
+const ArticleSchema = z
+  .object({
+    id: z.string().uuid().openapi({ description: "Unique article identifier", example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890" }),
+    articleUrl: z.string().url().openapi({ description: "Canonical URL of the article", example: "https://techcrunch.com/2025/03/15/ai-funding-roundup" }),
+    snippet: z.string().nullable().openapi({ description: "Short text excerpt from the article or search result" }),
+    ogDescription: z.string().nullable().openapi({ description: "OpenGraph og:description meta tag value" }),
+    twitterCreator: z.string().nullable().openapi({ description: "Twitter/X @handle of the article creator", example: "@johndoe" }),
+    newsKeywords: z.string().nullable().openapi({ description: "Comma-separated news keywords meta tag" }),
+    articlePublished: z.string().nullable().openapi({ description: "Published date from article metadata", example: "2025-03-15T10:00:00Z" }),
+    articleChannel: z.string().nullable().openapi({ description: "Channel or vertical the article belongs to", example: "Technology" }),
+    twitterTitle: z.string().nullable().openapi({ description: "Twitter/X card title meta tag" }),
+    articleSection: z.string().nullable().openapi({ description: "Section of the publication", example: "Startups" }),
+    author: z.string().nullable().openapi({ description: "Serialized author data extracted via scraping (JSON array of ExtractedAuthor objects)" }),
+    ogTitle: z.string().nullable().openapi({ description: "OpenGraph og:title meta tag value", example: "AI Funding Hits Record High in Q1 2025" }),
+    articleAuthor: z.string().nullable().openapi({ description: "Raw author string from article:author meta tag" }),
+    twitterDescription: z.string().nullable().openapi({ description: "Twitter/X card description meta tag" }),
+    articleModified: z.string().nullable().openapi({ description: "Last modified date from article metadata" }),
+    createdAt: z.string().datetime().openapi({ description: "When this article record was first created" }),
+    updatedAt: z.string().datetime().openapi({ description: "When this article record was last updated" }),
+  })
+  .openapi("Article");
+
+const ExtractedAuthorSchema = z
+  .object({
+    type: z.enum(["person", "organization"]).openapi({ description: "Whether this author is a person or an organization", example: "person" }),
+    firstName: z.string().openapi({ description: "First name (empty string for organizations or single-name authors)", example: "Sarah" }),
+    lastName: z.string().openapi({ description: "Last name, or full name for organizations", example: "Perez" }),
+  })
+  .openapi("ExtractedAuthor");
+
+const DiscoveredArticleSchema = z
+  .object({
+    articleId: z.string().uuid().openapi({ description: "ID of the upserted article record" }),
+    articleUrl: z.string().openapi({ description: "URL of the discovered article", example: "https://techcrunch.com/2025/03/15/ai-funding-roundup" }),
+    title: z.string().nullable().openapi({ description: "Article title from OpenGraph or search result" }),
+    snippet: z.string().nullable().openapi({ description: "Short excerpt from the article" }),
+    authors: z.array(ExtractedAuthorSchema).openapi({ description: "Authors extracted via scraping + LLM analysis" }),
+    publishedAt: z.string().nullable().openapi({ description: "Publication date extracted from article metadata", example: "2025-03-15T10:00:00Z" }),
+  })
+  .openapi("DiscoveredArticle");
+
+const ArticleAuthorViewSchema = z
+  .object({
+    articleId: z.string().uuid().openapi({ description: "Article identifier" }),
+    articleUrl: z.string().openapi({ description: "Canonical URL of the article" }),
+    computedTitle: z.string().nullable().openapi({ description: "Best-effort title derived from og:title, twitter:title, or snippet" }),
+    computedLargestContent: z.string().nullable().openapi({ description: "Longest content field available (for display/preview)" }),
+    computedAuthors: z.array(z.string()).openapi({ description: "Deduplicated list of author names extracted from all metadata sources" }),
+    computedPublishedAt: z.string().nullable().openapi({ description: "Best-effort publication date from available metadata" }),
+    lastActivityAt: z.string().datetime().openapi({ description: "Most recent update across all linked records" }),
+    articleCreatedAt: z.string().datetime().openapi({ description: "When the article was first indexed" }),
+  })
+  .openapi("ArticleAuthorView");
+
+const TopicSchema = z
+  .object({
+    id: z.string().uuid().openapi({ description: "Unique topic identifier" }),
+    topicName: z.string().openapi({ description: "Human-readable topic name", example: "Artificial Intelligence" }),
+    createdAt: z.string().datetime().openapi({ description: "When this topic was created" }),
+    updatedAt: z.string().datetime().openapi({ description: "When this topic was last updated" }),
+  })
+  .openapi("Topic");
+
+const ArticleDiscoverySchema = z
+  .object({
+    id: z.string().uuid().openapi({ description: "Unique discovery record identifier" }),
+    articleId: z.string().uuid().openapi({ description: "ID of the discovered article" }),
+    orgId: z.string().uuid().openapi({ description: "Organization that owns this discovery" }),
+    brandId: z.string().uuid().openapi({ description: "Brand this discovery is scoped to" }),
+    featureSlug: z.string().openapi({ description: "Feature that triggered this discovery", example: "press-outreach-v3" }),
+    workflowSlug: z.string().nullable().openapi({ description: "Workflow that triggered this discovery" }),
+    campaignId: z.string().uuid().openapi({ description: "Campaign this discovery belongs to" }),
+    outletId: z.string().uuid().nullable().openapi({ description: "Outlet linked to this discovery (if from outlet discovery)" }),
+    journalistId: z.string().uuid().nullable().openapi({ description: "Journalist linked to this discovery (if from journalist discovery)" }),
+    topicId: z.string().uuid().nullable().openapi({ description: "Topic linked to this discovery" }),
+    createdAt: z.string().datetime().openapi({ description: "When this discovery was created" }),
+  })
+  .openapi("ArticleDiscovery");
+
+const DiscoveryStatsSchema = z
+  .object({
+    totalDiscoveries: z.number().openapi({ description: "Total number of article discoveries" }),
+    uniqueArticles: z.number().openapi({ description: "Number of unique articles" }),
+    uniqueOutlets: z.number().openapi({ description: "Number of unique outlets" }),
+    uniqueJournalists: z.number().openapi({ description: "Number of unique journalists" }),
+  })
+  .openapi("DiscoveryStats");
 
 registry.registerPath({
   method: "get",
@@ -1659,7 +1747,14 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "List of articles" },
+    200: {
+      description: "List of articles",
+      content: {
+        "application/json": {
+          schema: z.object({ articles: z.array(ArticleSchema) }).openapi("ListArticlesResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
   },
 });
@@ -1669,6 +1764,7 @@ registry.registerPath({
   path: "/v1/articles",
   tags: ["Articles"],
   summary: "Create or upsert an article by URL",
+  description: "Inserts a new article or updates an existing one based on the articleUrl (unique key). Returns the full article record.",
   security: authed,
   request: {
     body: {
@@ -1676,20 +1772,20 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              articleUrl: z.string().url(),
-              snippet: z.string().optional(),
-              ogDescription: z.string().optional(),
-              twitterCreator: z.string().optional(),
-              newsKeywords: z.string().optional(),
-              articlePublished: z.string().optional(),
-              articleChannel: z.string().optional(),
-              twitterTitle: z.string().optional(),
-              articleSection: z.string().optional(),
-              author: z.string().optional(),
-              ogTitle: z.string().optional(),
-              articleAuthor: z.string().optional(),
-              twitterDescription: z.string().optional(),
-              articleModified: z.string().optional(),
+              articleUrl: z.string().url().openapi({ description: "Canonical URL of the article (used as upsert key)", example: "https://techcrunch.com/2025/03/15/ai-funding-roundup" }),
+              snippet: z.string().optional().openapi({ description: "Short text excerpt from the article" }),
+              ogDescription: z.string().optional().openapi({ description: "OpenGraph og:description meta tag" }),
+              twitterCreator: z.string().optional().openapi({ description: "Twitter/X @handle of the creator" }),
+              newsKeywords: z.string().optional().openapi({ description: "Comma-separated news keywords" }),
+              articlePublished: z.string().optional().openapi({ description: "Published date string from metadata" }),
+              articleChannel: z.string().optional().openapi({ description: "Channel or vertical" }),
+              twitterTitle: z.string().optional().openapi({ description: "Twitter/X card title" }),
+              articleSection: z.string().optional().openapi({ description: "Section of the publication" }),
+              author: z.string().optional().openapi({ description: "Serialized author data" }),
+              ogTitle: z.string().optional().openapi({ description: "OpenGraph og:title" }),
+              articleAuthor: z.string().optional().openapi({ description: "Raw author string from article:author meta tag" }),
+              twitterDescription: z.string().optional().openapi({ description: "Twitter/X card description" }),
+              articleModified: z.string().optional().openapi({ description: "Last modified date from metadata" }),
             })
             .openapi("CreateArticleRequest"),
         },
@@ -1697,7 +1793,10 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Article created or updated" },
+    200: {
+      description: "Article created or updated",
+      content: { "application/json": { schema: ArticleSchema } },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
   },
@@ -1707,7 +1806,7 @@ registry.registerPath({
   method: "get",
   path: "/v1/articles/authors",
   tags: ["Articles"],
-  summary: "Articles with computed authors",
+  summary: "Articles with computed authors (v_articles_authors)",
   security: authed,
   request: {
     query: z.object({
@@ -1716,7 +1815,14 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "Articles with computed authors view" },
+    200: {
+      description: "Articles with computed authors view",
+      content: {
+        "application/json": {
+          schema: z.object({ articles: z.array(ArticleAuthorViewSchema) }).openapi("ListArticleAuthorsResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
   },
 });
@@ -1733,7 +1839,10 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "Article found" },
+    200: {
+      description: "Article found",
+      content: { "application/json": { schema: ArticleSchema } },
+    },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Article not found", content: errorContent },
   },
@@ -1744,6 +1853,7 @@ registry.registerPath({
   path: "/v1/articles/bulk",
   tags: ["Articles"],
   summary: "Bulk upsert articles",
+  description: "Upserts multiple articles in a single transaction. Each article is matched by articleUrl.",
   security: authed,
   request: {
     body: {
@@ -1753,22 +1863,22 @@ registry.registerPath({
             .object({
               articles: z.array(
                 z.object({
-                  articleUrl: z.string().url(),
-                  snippet: z.string().optional(),
-                  ogDescription: z.string().optional(),
-                  twitterCreator: z.string().optional(),
-                  newsKeywords: z.string().optional(),
-                  articlePublished: z.string().optional(),
-                  articleChannel: z.string().optional(),
-                  twitterTitle: z.string().optional(),
-                  articleSection: z.string().optional(),
-                  author: z.string().optional(),
-                  ogTitle: z.string().optional(),
-                  articleAuthor: z.string().optional(),
-                  twitterDescription: z.string().optional(),
-                  articleModified: z.string().optional(),
+                  articleUrl: z.string().url().openapi({ description: "Canonical URL of the article (used as upsert key)", example: "https://techcrunch.com/2025/03/15/ai-funding-roundup" }),
+                  snippet: z.string().optional().openapi({ description: "Short text excerpt from the article" }),
+                  ogDescription: z.string().optional().openapi({ description: "OpenGraph og:description meta tag" }),
+                  twitterCreator: z.string().optional().openapi({ description: "Twitter/X @handle of the creator" }),
+                  newsKeywords: z.string().optional().openapi({ description: "Comma-separated news keywords" }),
+                  articlePublished: z.string().optional().openapi({ description: "Published date string from metadata" }),
+                  articleChannel: z.string().optional().openapi({ description: "Channel or vertical" }),
+                  twitterTitle: z.string().optional().openapi({ description: "Twitter/X card title" }),
+                  articleSection: z.string().optional().openapi({ description: "Section of the publication" }),
+                  author: z.string().optional().openapi({ description: "Serialized author data" }),
+                  ogTitle: z.string().optional().openapi({ description: "OpenGraph og:title" }),
+                  articleAuthor: z.string().optional().openapi({ description: "Raw author string from article:author meta tag" }),
+                  twitterDescription: z.string().optional().openapi({ description: "Twitter/X card description" }),
+                  articleModified: z.string().optional().openapi({ description: "Last modified date from metadata" }),
                 }),
-              ),
+              ).openapi({ description: "Array of articles to upsert" }),
             })
             .openapi("BulkCreateArticlesRequest"),
         },
@@ -1776,7 +1886,14 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Articles upserted" },
+    200: {
+      description: "Articles upserted",
+      content: {
+        "application/json": {
+          schema: z.object({ articles: z.array(ArticleSchema) }).openapi("BulkCreateArticlesResponse"),
+        },
+      },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
   },
@@ -1794,9 +1911,9 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              query: z.string().min(1),
-              limit: z.number().int().optional(),
-              offset: z.number().int().optional(),
+              query: z.string().min(1).openapi({ description: "Full-text search query", example: "AI funding startup" }),
+              limit: z.number().int().optional().openapi({ description: "Max results to return (default 20, max 100)" }),
+              offset: z.number().int().optional().openapi({ description: "Number of results to skip for pagination" }),
             })
             .openapi("SearchArticlesRequest"),
         },
@@ -1804,7 +1921,14 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Search results" },
+    200: {
+      description: "Search results",
+      content: {
+        "application/json": {
+          schema: z.object({ articles: z.array(ArticleSchema) }).openapi("SearchArticlesResponse"),
+        },
+      },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
   },
@@ -1819,7 +1943,14 @@ registry.registerPath({
   summary: "List all topics",
   security: authed,
   responses: {
-    200: { description: "List of topics" },
+    200: {
+      description: "List of topics",
+      content: {
+        "application/json": {
+          schema: z.object({ topics: z.array(TopicSchema) }).openapi("ListTopicsResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
   },
 });
@@ -1836,7 +1967,7 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              topicName: z.string().min(1),
+              topicName: z.string().min(1).openapi({ description: "Topic name (used as upsert key)", example: "Artificial Intelligence" }),
             })
             .openapi("CreateTopicRequest"),
         },
@@ -1844,7 +1975,10 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Topic created or updated" },
+    200: {
+      description: "Topic created or updated",
+      content: { "application/json": { schema: TopicSchema } },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
   },
@@ -1864,9 +1998,9 @@ registry.registerPath({
             .object({
               topics: z.array(
                 z.object({
-                  topicName: z.string().min(1),
+                  topicName: z.string().min(1).openapi({ description: "Topic name (used as upsert key)", example: "Artificial Intelligence" }),
                 }),
-              ),
+              ).openapi({ description: "Array of topics to upsert" }),
             })
             .openapi("BulkCreateTopicsRequest"),
         },
@@ -1874,7 +2008,14 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Topics upserted" },
+    200: {
+      description: "Topics upserted",
+      content: {
+        "application/json": {
+          schema: z.object({ topics: z.array(TopicSchema) }).openapi("BulkCreateTopicsResponse"),
+        },
+      },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
   },
@@ -1890,17 +2031,31 @@ registry.registerPath({
   security: authed,
   request: {
     query: z.object({
-      brandId: z.string().uuid().optional(),
-      campaignId: z.string().uuid().optional(),
-      outletId: z.string().uuid().optional(),
-      journalistId: z.string().uuid().optional(),
-      topicId: z.string().uuid().optional(),
+      brandId: z.string().uuid().optional().openapi({ description: "Filter by brand ID" }),
+      campaignId: z.string().uuid().optional().openapi({ description: "Filter by campaign ID" }),
+      outletId: z.string().uuid().optional().openapi({ description: "Filter by outlet ID" }),
+      journalistId: z.string().uuid().optional().openapi({ description: "Filter by journalist ID" }),
+      topicId: z.string().uuid().optional().openapi({ description: "Filter by topic ID" }),
       limit: z.coerce.number().int().optional(),
       offset: z.coerce.number().int().optional(),
     }),
   },
   responses: {
-    200: { description: "List of discoveries" },
+    200: {
+      description: "List of discoveries with their associated articles",
+      content: {
+        "application/json": {
+          schema: z.object({
+            discoveries: z.array(
+              z.object({
+                discovery: ArticleDiscoverySchema,
+                article: ArticleSchema,
+              }),
+            ),
+          }).openapi("ListDiscoveriesResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
   },
 });
@@ -1910,6 +2065,7 @@ registry.registerPath({
   path: "/v1/discoveries",
   tags: ["Articles"],
   summary: "Link an article to a campaign context",
+  description: "Creates a discovery record that links an article to a specific org/brand/campaign context. Requires x-brand-id and x-campaign-id headers. Optionally associates the discovery with an outlet, journalist, or topic.",
   security: authed,
   request: {
     body: {
@@ -1917,12 +2073,12 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              articleId: z.string().uuid(),
-              brandId: z.string().uuid(),
-              campaignId: z.string().uuid(),
-              outletId: z.string().uuid().optional(),
-              journalistId: z.string().uuid().optional(),
-              topicId: z.string().uuid().optional(),
+              articleId: z.string().uuid().openapi({ description: "ID of the article to link" }),
+              brandId: z.string().uuid().openapi({ description: "Brand to scope this discovery to" }),
+              campaignId: z.string().uuid().openapi({ description: "Campaign to scope this discovery to" }),
+              outletId: z.string().uuid().optional().openapi({ description: "Outlet to associate with this discovery" }),
+              journalistId: z.string().uuid().optional().openapi({ description: "Journalist to associate with this discovery" }),
+              topicId: z.string().uuid().optional().openapi({ description: "Topic to associate with this discovery" }),
             })
             .openapi("CreateDiscoveryRequest"),
         },
@@ -1930,7 +2086,10 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Discovery created" },
+    200: {
+      description: "Discovery created",
+      content: { "application/json": { schema: ArticleDiscoverySchema } },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
   },
@@ -1950,14 +2109,14 @@ registry.registerPath({
             .object({
               discoveries: z.array(
                 z.object({
-                  articleId: z.string().uuid(),
-                  brandId: z.string().uuid(),
-                  campaignId: z.string().uuid(),
-                  outletId: z.string().uuid().optional(),
-                  journalistId: z.string().uuid().optional(),
-                  topicId: z.string().uuid().optional(),
+                  articleId: z.string().uuid().openapi({ description: "ID of the article to link" }),
+                  brandId: z.string().uuid().openapi({ description: "Brand to scope this discovery to" }),
+                  campaignId: z.string().uuid().openapi({ description: "Campaign to scope this discovery to" }),
+                  outletId: z.string().uuid().optional().openapi({ description: "Outlet to associate with this discovery" }),
+                  journalistId: z.string().uuid().optional().openapi({ description: "Journalist to associate with this discovery" }),
+                  topicId: z.string().uuid().optional().openapi({ description: "Topic to associate with this discovery" }),
                 }),
-              ),
+              ).openapi({ description: "Array of discovery records to create" }),
             })
             .openapi("BulkCreateDiscoveriesRequest"),
         },
@@ -1965,7 +2124,14 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Discoveries created" },
+    200: {
+      description: "Discoveries created",
+      content: {
+        "application/json": {
+          schema: z.object({ discoveries: z.array(ArticleDiscoverySchema) }).openapi("BulkCreateDiscoveriesResponse"),
+        },
+      },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
   },
@@ -1981,7 +2147,7 @@ registry.registerPath({
   description:
     "Returns aggregated discovery stats (totalDiscoveries, uniqueArticles, uniqueOutlets, uniqueJournalists). " +
     "Supports filtering by orgId, brandId, campaignId, workflowSlug, featureSlug, and dynasty slugs. " +
-    "Optional groupBy returns grouped results.",
+    "Optional groupBy returns grouped results. Dynasty slug filters resolve to all versioned slugs via the respective service.",
   security: authed,
   request: {
     query: z.object({
@@ -1997,10 +2163,15 @@ registry.registerPath({
   },
   responses: {
     200: {
-      description: "Aggregated stats (flat or grouped)",
+      description: "Aggregated stats — flat when no groupBy, grouped array when groupBy is provided",
       content: {
         "application/json": {
-          schema: z.object({}).passthrough().openapi("ArticleStatsResponse"),
+          schema: z.union([
+            z.object({ stats: DiscoveryStatsSchema }).openapi("FlatArticleStatsResponse"),
+            z.object({
+              groups: z.array(z.object({ key: z.string(), stats: DiscoveryStatsSchema })),
+            }).openapi("GroupedArticleStatsResponse"),
+          ]).openapi("ArticleStatsResponse"),
         },
       },
     },
@@ -2016,6 +2187,11 @@ registry.registerPath({
   path: "/v1/discover/outlet-articles",
   tags: ["Articles"],
   summary: "Discover recent articles from an outlet via Google News + scraping",
+  description:
+    "Pipeline endpoint: (1) searches Google News for recent articles from the given outlet domain, " +
+    "(2) scrapes each article URL to extract authors and publication dates via LLM, " +
+    "(3) upserts the articles in the database, and (4) creates discovery records scoped to the campaign " +
+    "(x-brand-id, x-campaign-id headers required). Returns the discovered articles with extracted author details.",
   security: authed,
   request: {
     body: {
@@ -2023,10 +2199,10 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              outletDomain: z.string().min(1),
-              brandId: z.string().uuid(),
-              campaignId: z.string().uuid(),
-              maxArticles: z.number().int().optional(),
+              outletDomain: z.string().min(1).openapi({ description: "Domain of the outlet (e.g. techcrunch.com)", example: "techcrunch.com" }),
+              brandId: z.string().uuid().openapi({ description: "Brand to scope discoveries to" }),
+              campaignId: z.string().uuid().openapi({ description: "Campaign to scope discoveries to" }),
+              maxArticles: z.number().int().optional().openapi({ description: "Max articles to discover (default 10, max 20)" }),
             })
             .openapi("DiscoverOutletArticlesRequest"),
         },
@@ -2034,7 +2210,14 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Discovered articles" },
+    200: {
+      description: "Discovered articles with extracted author details",
+      content: {
+        "application/json": {
+          schema: z.object({ articles: z.array(DiscoveredArticleSchema) }).openapi("DiscoverOutletArticlesResponse"),
+        },
+      },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
@@ -2045,7 +2228,12 @@ registry.registerPath({
   method: "post",
   path: "/v1/discover/journalist-publications",
   tags: ["Articles"],
-  summary: "Discover recent publications by a journalist",
+  summary: "Discover recent publications by a journalist and create scoped discoveries",
+  description:
+    "Pipeline endpoint: (1) searches Google News for recent articles by the given journalist (by name), " +
+    "(2) scrapes each article URL to extract authors and publication dates via LLM, " +
+    "(3) upserts the articles in the database, and (4) creates discovery records scoped to the campaign and journalist " +
+    "(x-brand-id, x-campaign-id headers required). Ideal for enriching pitch generation with a journalist's recent work.",
   security: authed,
   request: {
     body: {
@@ -2053,12 +2241,12 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              journalistFirstName: z.string().min(1),
-              journalistLastName: z.string().min(1),
-              journalistId: z.string().uuid(),
-              brandId: z.string().uuid(),
-              campaignId: z.string().uuid(),
-              maxResults: z.number().int().optional(),
+              journalistFirstName: z.string().min(1).openapi({ description: "Journalist first name", example: "Sarah" }),
+              journalistLastName: z.string().min(1).openapi({ description: "Journalist last name", example: "Perez" }),
+              journalistId: z.string().uuid().openapi({ description: "Journalist UUID for linking discoveries back to the journalist record" }),
+              brandId: z.string().uuid().openapi({ description: "Brand to scope discoveries to" }),
+              campaignId: z.string().uuid().openapi({ description: "Campaign to scope discoveries to" }),
+              maxResults: z.number().int().optional().openapi({ description: "Max publications to find (default 10, max 20)" }),
             })
             .openapi("DiscoverJournalistPublicationsRequest"),
         },
@@ -2066,7 +2254,14 @@ registry.registerPath({
     },
   },
   responses: {
-    200: { description: "Discovered publications" },
+    200: {
+      description: "Discovered publications with extracted author details",
+      content: {
+        "application/json": {
+          schema: z.object({ articles: z.array(DiscoveredArticleSchema) }).openapi("DiscoverJournalistPublicationsResponse"),
+        },
+      },
+    },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
