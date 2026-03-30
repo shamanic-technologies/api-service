@@ -1,9 +1,52 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
+
+// ── Public routes (no auth) ─────────────────────────────────────────────────
+
+/**
+ * GET /public/features
+ * List active features with display-safe fields (public, no auth).
+ * Designed for landing pages and public-facing UIs.
+ */
+router.get("/public/features", async (req: Request, res: Response) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      "/public/features",
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public features list error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to list public features" });
+  }
+});
+
+/**
+ * GET /public/features/dynasty/slugs?dynastySlug=...
+ * List all versioned slugs for a dynasty (public, no auth).
+ */
+router.get("/public/features/dynasty/slugs", async (req: Request, res: Response) => {
+  try {
+    const dynastySlug = req.query.dynastySlug as string | undefined;
+    if (!dynastySlug) {
+      return res.status(400).json({ error: "Missing required query parameter: dynastySlug" });
+    }
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/features/dynasty/slugs?dynastySlug=${encodeURIComponent(dynastySlug)}`,
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public dynasty slugs error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to list dynasty slugs" });
+  }
+});
+
+// ── Authenticated routes (mounted at /v1) ────────────────────────────────────
 
 /**
  * GET /v1/features

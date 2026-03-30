@@ -6135,3 +6135,72 @@ registry.registerPath({
     500: { description: "Internal error", content: errorContent },
   },
 });
+
+// ---------------------------------------------------------------------------
+// PUBLIC FEATURES (no auth — landing page endpoints)
+// ---------------------------------------------------------------------------
+
+const PublicFeatureItemSchema = z.object({
+  dynastyName: z.string().openapi({ example: "Sales Cold Email" }).describe("Stable dynasty display name"),
+  dynastySlug: z.string().openapi({ example: "sales-cold-email" }).describe("Stable dynasty slug (unversioned)"),
+  description: z.string().openapi({ example: "AI-powered cold email outreach campaigns" }),
+  icon: z.string().openapi({ example: "mail" }).describe("Lucide icon name"),
+  category: z.string().openapi({ example: "sales" }),
+  channel: z.string().openapi({ example: "email" }),
+  audienceType: z.string().openapi({ example: "cold-outreach" }),
+  displayOrder: z.number().int().openapi({ example: 0 }),
+}).openapi("PublicFeatureItem");
+
+registry.registerPath({
+  method: "get",
+  path: "/public/features",
+  tags: ["Features"],
+  summary: "List active features (public, no auth)",
+  description:
+    "Returns all active features with display-safe fields only. " +
+    "Designed for landing pages and public-facing UIs. Sorted by displayOrder ascending. " +
+    "No authentication required. Proxied from features-service.",
+  responses: {
+    200: {
+      description: "Active features",
+      content: {
+        "application/json": {
+          schema: z.object({
+            features: z.array(PublicFeatureItemSchema).describe("Active features sorted by displayOrder"),
+          }).openapi("PublicFeaturesListResponse"),
+        },
+      },
+    },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/public/features/dynasty/slugs",
+  tags: ["Features"],
+  summary: "List dynasty versioned slugs (public, no auth)",
+  description:
+    "Returns all versioned feature slugs (active + deprecated) belonging to a dynasty. " +
+    "No authentication required. Proxied from features-service.",
+  request: {
+    query: z.object({
+      dynastySlug: z.string().openapi({ example: "sales-cold-email" }).describe("The stable dynasty slug (unversioned)"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Dynasty slugs",
+      content: {
+        "application/json": {
+          schema: z.object({
+            slugs: z.array(z.string()).describe("All versioned slugs in the dynasty, sorted by version ascending"),
+          }).openapi("PublicDynastySlugsResponse"),
+        },
+      },
+    },
+    400: { description: "Missing dynastySlug parameter", content: errorContent },
+    404: { description: "No features found for this dynasty slug", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});

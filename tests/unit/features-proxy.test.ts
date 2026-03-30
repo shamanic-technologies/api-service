@@ -184,10 +184,10 @@ describe("Features proxy routes", () => {
     expect(content).toContain('"workflowDynastySlug"');
   });
 
-  it("should enforce requireOrg + requireUser on ALL feature routes", () => {
-    // Every router.get / router.post / router.put line must include both guards
+  it("should enforce requireOrg + requireUser on ALL authenticated feature routes", () => {
+    // Every non-public router.get / router.post / router.put line must include both guards
     const routeLines = content.split("\n").filter((l) =>
-      /router\.(get|post|put)\(/.test(l) && l.includes('"/')
+      /router\.(get|post|put)\(/.test(l) && l.includes('"/') && !l.includes("/public/")
     );
     expect(routeLines.length).toBeGreaterThan(0);
     for (const line of routeLines) {
@@ -303,6 +303,73 @@ describe("Features OpenAPI schemas", () => {
   });
 });
 
+describe("Public features proxy routes", () => {
+  it("should have GET /public/features without auth middleware", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/public/features"') && !l.includes("dynasty")
+    );
+    expect(line).toBeDefined();
+    expect(line).not.toContain("authenticate");
+    expect(line).not.toContain("requireOrg");
+  });
+
+  it("should proxy to /public/features on features-service", () => {
+    expect(content).toContain('"/public/features"');
+  });
+
+  it("should have GET /public/features/dynasty/slugs without auth middleware", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/public/features/dynasty/slugs"')
+    );
+    expect(line).toBeDefined();
+    expect(line).not.toContain("authenticate");
+    expect(line).not.toContain("requireOrg");
+  });
+
+  it("should validate dynastySlug query param on GET /public/features/dynasty/slugs", () => {
+    const publicDynastySection = content.slice(content.indexOf('"/public/features/dynasty/slugs"'));
+    expect(publicDynastySection).toContain("req.query.dynastySlug");
+    expect(publicDynastySection).toContain("dynastySlug=");
+  });
+
+  it("should return 400 when dynastySlug is missing on GET /public/features/dynasty/slugs", () => {
+    const publicDynastySection = content.slice(content.indexOf('"/public/features/dynasty/slugs"'));
+    expect(publicDynastySection).toContain("400");
+    expect(publicDynastySection).toContain("Missing required query parameter: dynastySlug");
+  });
+});
+
+describe("Public features OpenAPI schemas", () => {
+  it("should register GET /public/features", () => {
+    expect(schemaContent).toContain('path: "/public/features"');
+  });
+
+  it("should register GET /public/features/dynasty/slugs", () => {
+    expect(schemaContent).toContain('path: "/public/features/dynasty/slugs"');
+  });
+
+  it("should define PublicFeatureItem schema with all display fields", () => {
+    expect(schemaContent).toContain("PublicFeatureItem");
+    expect(schemaContent).toContain("dynastyName");
+    expect(schemaContent).toContain("dynastySlug");
+    expect(schemaContent).toContain("displayOrder");
+    expect(schemaContent).toContain("audienceType");
+  });
+
+  it("should define PublicDynastySlugsResponse schema", () => {
+    expect(schemaContent).toContain("PublicDynastySlugsResponse");
+  });
+
+  it("should not require auth on public feature endpoints", () => {
+    // The public feature registerPath calls should NOT have security: authed
+    const publicFeaturesBlock = schemaContent.slice(
+      schemaContent.indexOf('path: "/public/features"'),
+      schemaContent.indexOf('path: "/public/features"') + 500
+    );
+    expect(publicFeaturesBlock).not.toContain("security:");
+  });
+});
+
 describe("Features routes are mounted in index.ts", () => {
   it("should import and mount features routes", () => {
     expect(indexContent).toContain("featuresRoutes");
@@ -311,5 +378,10 @@ describe("Features routes are mounted in index.ts", () => {
 
   it("should mount at /v1", () => {
     expect(indexContent).toContain('app.use("/v1", featuresRoutes)');
+  });
+
+  it("should mount at root for public endpoints", () => {
+    // featuresRoutes should be mounted without prefix for public routes
+    expect(indexContent).toContain("app.use(featuresRoutes)");
   });
 });
