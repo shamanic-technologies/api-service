@@ -1505,6 +1505,51 @@ registry.registerPath({
   },
 });
 
+const journalistStatsQueryParams = z.object({
+  orgId: z.string().uuid().optional().describe("Filter by organization ID"),
+  campaignId: z.string().uuid().optional().describe("Filter by campaign ID"),
+  outletId: z.string().uuid().optional().describe("Filter by outlet ID"),
+  brandId: z.string().uuid().optional().describe("Filter by brand ID"),
+  featureSlug: z.string().optional().describe("Filter by exact feature slug"),
+  workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
+  workflowSlugs: z.string().optional().describe("Comma-separated list of workflow slugs to filter by"),
+  featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug — resolves to all versioned slugs"),
+  workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug — resolves to all versioned slugs"),
+  groupBy: z.enum(["featureSlug", "workflowSlug", "featureDynastySlug", "workflowDynastySlug"]).optional().describe("Dimension to group results by"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/journalists/stats",
+  tags: ["Journalists"],
+  summary: "Get journalist stats with dynasty-aware filtering and grouping",
+  description:
+    "Returns journalist counts by status (buffered, claimed, served, contacted, skipped). " +
+    "Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. " +
+    "Optional groupBy returns per-slug breakdowns.",
+  security: authed,
+  request: { query: journalistStatsQueryParams },
+  responses: {
+    200: {
+      description: "Journalist stats (flat or grouped)",
+      content: {
+        "application/json": {
+          schema: z.object({
+            totalJournalists: z.number(),
+            byStatus: z.record(z.number()).describe("Map of status to count (buffered, claimed, served, contacted, skipped)"),
+            groupedBy: z.record(z.object({
+              totalJournalists: z.number(),
+              byStatus: z.record(z.number()),
+            })).optional().describe("Per-slug breakdown when groupBy is specified"),
+          }).openapi("JournalistStatsResponse"),
+        },
+      },
+    },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/journalists/stats/costs",
@@ -1873,6 +1918,44 @@ registry.registerPath({
   responses: {
     200: { description: "Discoveries created" },
     400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+// ── Article stats ───────────────────────────────────────────────────────────
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/articles/stats",
+  tags: ["Articles"],
+  summary: "Get aggregated article discovery stats",
+  description:
+    "Returns aggregated discovery stats (totalDiscoveries, uniqueArticles, uniqueOutlets, uniqueJournalists). " +
+    "Supports filtering by orgId, brandId, campaignId, workflowSlug, featureSlug, and dynasty slugs. " +
+    "Optional groupBy returns grouped results.",
+  security: authed,
+  request: {
+    query: z.object({
+      orgId: z.string().uuid().optional().describe("Filter by organization ID"),
+      brandId: z.string().uuid().optional().describe("Filter by brand ID"),
+      campaignId: z.string().uuid().optional().describe("Filter by campaign ID"),
+      workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
+      featureSlug: z.string().optional().describe("Filter by exact feature slug"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
+      groupBy: z.enum(["brandId", "campaignId", "workflowSlug", "featureSlug", "workflowDynastySlug", "featureDynastySlug"]).optional().describe("Group results by dimension"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Aggregated stats (flat or grouped)",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("ArticleStatsResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid request", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
   },
 });

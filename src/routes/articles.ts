@@ -88,6 +88,26 @@ router.post("/articles/search", authenticate, requireOrg, requireUser, async (re
   }
 });
 
+// GET /v1/articles/stats — aggregated article discovery stats
+// (must be before /articles/:id to avoid matching "stats" as an :id)
+router.get("/articles/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["orgId", "brandId", "campaignId", "workflowSlug", "featureSlug", "workflowDynastySlug", "featureDynastySlug", "groupBy"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.articles,
+      `/v1/stats${qs}`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get article stats" });
+  }
+});
+
 // GET /v1/articles/:id — get a single article by ID
 router.get("/articles/:id", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {

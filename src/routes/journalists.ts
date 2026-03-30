@@ -71,6 +71,25 @@ router.post("/journalists/buffer/next", authenticate, requireOrg, requireUser, a
   }
 });
 
+// ── GET /v1/journalists/stats — journalist stats with dynasty-aware filtering ─
+router.get("/journalists/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["orgId", "campaignId", "outletId", "brandId", "featureSlug", "workflowSlug", "workflowSlugs", "featureDynastySlug", "workflowDynastySlug", "groupBy"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.journalist,
+      `/stats${qs}`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get journalist stats" });
+  }
+});
+
 // ── GET /v1/journalists/stats/costs — journalist discovery cost stats ────────
 router.get("/journalists/stats/costs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {

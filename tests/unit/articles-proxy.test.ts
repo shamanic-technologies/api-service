@@ -68,10 +68,36 @@ describe("Articles proxy routes", () => {
     const authorsIdx = content.indexOf('"/articles/authors"');
     const bulkIdx = content.indexOf('"/articles/bulk"');
     const searchIdx = content.indexOf('"/articles/search"');
+    const statsIdx = content.indexOf('"/articles/stats"');
     const idIdx = content.indexOf('"/articles/:id"');
     expect(authorsIdx).toBeLessThan(idIdx);
     expect(bulkIdx).toBeLessThan(idIdx);
     expect(searchIdx).toBeLessThan(idIdx);
+    expect(statsIdx).toBeLessThan(idIdx);
+  });
+
+  it("should have GET /articles/stats with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/articles/stats"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should proxy GET /articles/stats to /v1/stats on articles-service", () => {
+    expect(content).toContain('`/v1/stats${qs}`');
+  });
+
+  it("should forward all filter params on GET /articles/stats", () => {
+    const statsBlock = content.slice(
+      content.indexOf('"/articles/stats"'),
+      content.indexOf('"/articles/stats"') + 600
+    );
+    for (const param of ["orgId", "brandId", "campaignId", "workflowSlug", "featureSlug", "workflowDynastySlug", "featureDynastySlug", "groupBy"]) {
+      expect(statsBlock).toContain(`"${param}"`);
+    }
   });
 
   // ── Topics ────────────────────────────────────────────────────────────
@@ -144,7 +170,7 @@ describe("Articles proxy routes", () => {
   it("should use buildInternalHeaders for all endpoints", () => {
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(14);
+    expect(headerMatches!.length).toBe(15);
   });
 
   it("should enforce requireOrg + requireUser on ALL article routes", () => {
@@ -229,6 +255,11 @@ describe("Articles OpenAPI schemas", () => {
   it("should register POST /v1/discover/journalist-publications", () => {
     expect(schemaContent).toContain('path: "/v1/discover/journalist-publications"');
     expect(schemaContent).toContain("DiscoverJournalistPublicationsRequest");
+  });
+
+  it("should register GET /v1/articles/stats", () => {
+    expect(schemaContent).toContain('path: "/v1/articles/stats"');
+    expect(schemaContent).toContain("ArticleStatsResponse");
   });
 
   it("should use Articles tag", () => {
