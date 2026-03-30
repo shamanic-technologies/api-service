@@ -2125,6 +2125,47 @@
           "outletId"
         ]
       },
+      "JournalistStatsResponse": {
+        "type": "object",
+        "properties": {
+          "totalJournalists": {
+            "type": "number"
+          },
+          "byStatus": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Map of status to count (buffered, claimed, served, contacted, skipped)"
+          },
+          "groupedBy": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "totalJournalists": {
+                  "type": "number"
+                },
+                "byStatus": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "number"
+                  }
+                }
+              },
+              "required": [
+                "totalJournalists",
+                "byStatus"
+              ]
+            },
+            "description": "Per-slug breakdown when groupBy is specified"
+          }
+        },
+        "required": [
+          "totalJournalists",
+          "byStatus"
+        ]
+      },
       "JournalistStatsCostsResponse": {
         "type": "object",
         "properties": {
@@ -2411,6 +2452,10 @@
         "required": [
           "discoveries"
         ]
+      },
+      "ArticleStatsResponse": {
+        "type": "object",
+        "properties": {}
       },
       "DiscoverOutletArticlesRequest": {
         "type": "object",
@@ -10475,6 +10520,218 @@
         ]
       }
     },
+    "/v1/journalists/stats": {
+      "get": {
+        "tags": [
+          "Journalists"
+        ],
+        "summary": "Get journalist stats with dynasty-aware filtering and grouping",
+        "description": "Returns journalist counts by status (buffered, claimed, served, contacted, skipped). Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. Optional groupBy returns per-slug breakdowns.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by organization ID"
+            },
+            "required": false,
+            "description": "Filter by organization ID",
+            "name": "orgId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by campaign ID"
+            },
+            "required": false,
+            "description": "Filter by campaign ID",
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by outlet ID"
+            },
+            "required": false,
+            "description": "Filter by outlet ID",
+            "name": "outletId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by brand ID"
+            },
+            "required": false,
+            "description": "Filter by brand ID",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact feature slug"
+            },
+            "required": false,
+            "description": "Filter by exact feature slug",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact workflow slug"
+            },
+            "required": false,
+            "description": "Filter by exact workflow slug",
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated list of workflow slugs to filter by"
+            },
+            "required": false,
+            "description": "Comma-separated list of workflow slugs to filter by",
+            "name": "workflowSlugs",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug — resolves to all versioned slugs"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug — resolves to all versioned slugs",
+            "name": "featureDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug — resolves to all versioned slugs"
+            },
+            "required": false,
+            "description": "Filter by workflow dynasty slug — resolves to all versioned slugs",
+            "name": "workflowDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "featureSlug",
+                "workflowSlug",
+                "featureDynastySlug",
+                "workflowDynastySlug"
+              ],
+              "description": "Dimension to group results by"
+            },
+            "required": false,
+            "description": "Dimension to group results by",
+            "name": "groupBy",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Journalist stats (flat or grouped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JournalistStatsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/journalists/stats/costs": {
       "get": {
         "tags": [
@@ -11862,6 +12119,199 @@
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
           }
         ]
+      }
+    },
+    "/v1/articles/stats": {
+      "get": {
+        "tags": [
+          "Articles"
+        ],
+        "summary": "Get aggregated article discovery stats",
+        "description": "Returns aggregated discovery stats (totalDiscoveries, uniqueArticles, uniqueOutlets, uniqueJournalists). Supports filtering by orgId, brandId, campaignId, workflowSlug, featureSlug, and dynasty slugs. Optional groupBy returns grouped results.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by organization ID"
+            },
+            "required": false,
+            "description": "Filter by organization ID",
+            "name": "orgId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by brand ID"
+            },
+            "required": false,
+            "description": "Filter by brand ID",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter by campaign ID"
+            },
+            "required": false,
+            "description": "Filter by campaign ID",
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact workflow slug"
+            },
+            "required": false,
+            "description": "Filter by exact workflow slug",
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact feature slug"
+            },
+            "required": false,
+            "description": "Filter by exact feature slug",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)",
+            "name": "workflowDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
+            "name": "featureDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "brandId",
+                "campaignId",
+                "workflowSlug",
+                "featureSlug",
+                "workflowDynastySlug",
+                "featureDynastySlug"
+              ],
+              "description": "Group results by dimension"
+            },
+            "required": false,
+            "description": "Group results by dimension",
+            "name": "groupBy",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Aggregated stats (flat or grouped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArticleStatsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/discover/outlet-articles": {

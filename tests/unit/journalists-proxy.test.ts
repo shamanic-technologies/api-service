@@ -105,7 +105,7 @@ describe("Journalists proxy routes", () => {
   it("should use buildInternalHeaders for all endpoints", () => {
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(6);
+    expect(headerMatches!.length).toBe(7);
   });
 
   it("should proxy to externalServices.journalist", () => {
@@ -128,6 +128,30 @@ describe("Journalists proxy routes", () => {
     expect(content).toContain("req.campaignId");
     expect(content).toContain("brandId");
     expect(content).toContain("Either x-campaign-id header or brandId in request body is required");
+  });
+
+  it("should have GET /journalists/stats with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/journalists/stats"') && !l.includes("costs")
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should proxy GET /journalists/stats to /stats on journalist-service", () => {
+    expect(content).toContain('`/stats${qs}`');
+  });
+
+  it("should forward all filter params on GET /journalists/stats", () => {
+    const statsBlock = content.slice(
+      content.indexOf('"/journalists/stats"'),
+      content.indexOf('"/journalists/stats"') + 600
+    );
+    for (const param of ["orgId", "campaignId", "outletId", "brandId", "featureSlug", "workflowSlug", "workflowSlugs", "featureDynastySlug", "workflowDynastySlug", "groupBy"]) {
+      expect(statsBlock).toContain(`"${param}"`);
+    }
   });
 
   it("should have GET /journalists/stats/costs with auth + requireOrg + requireUser", () => {
@@ -261,6 +285,11 @@ describe("Journalists OpenAPI schemas", () => {
     expect(block).toContain('"buffered"');
     expect(block).toContain('"contacted"');
     expect(block).toContain('"skipped"');
+  });
+
+  it("should register GET /v1/journalists/stats", () => {
+    expect(schemaContent).toContain('path: "/v1/journalists/stats"');
+    expect(schemaContent).toContain("JournalistStatsResponse");
   });
 
   it("should register GET /v1/journalists/stats/costs", () => {

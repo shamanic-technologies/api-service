@@ -17,24 +17,22 @@ const dynastyParams = ["workflowDynastySlug", "featureDynastySlug"];
 const allSlugParams = ["workflowSlug", "featureSlug", "workflowDynastySlug", "featureDynastySlug"];
 
 describe("Dynasty slug forwarding — features/stats", () => {
-  it("should forward featureDynastySlug but NOT workflowDynastySlug on GET /features/stats", () => {
+  it("should forward all dynasty slug params on GET /features/stats", () => {
     const statsSection = featuresRoute.slice(
       featuresRoute.indexOf('"/features/stats"'),
       featuresRoute.indexOf('"/features/dynasty"'),
     );
     expect(statsSection).toContain('"featureDynastySlug"');
-    expect(statsSection).not.toContain('"workflowDynastySlug"');
-    // Also forwards featureSlug + workflowSlug filters
+    expect(statsSection).toContain('"workflowDynastySlug"');
     expect(statsSection).toContain('"featureSlug"');
     expect(statsSection).toContain('"workflowSlug"');
   });
 
-  it("should forward featureDynastySlug but NOT workflowDynastySlug on GET /features/:slug/stats", () => {
+  it("should forward workflowDynastySlug on GET /features/:slug/stats (featureDynastySlug not needed — slug already specified)", () => {
     const slugStatsSection = featuresRoute.slice(
       featuresRoute.indexOf('"/features/:slug/stats"'),
     );
-    expect(slugStatsSection).toContain('"featureDynastySlug"');
-    expect(slugStatsSection).not.toContain('"workflowDynastySlug"');
+    expect(slugStatsSection).toContain('"workflowDynastySlug"');
   });
 });
 
@@ -112,28 +110,28 @@ describe("Dynasty slug OpenAPI schemas", () => {
     // The enum should include dynasty slugs
     const outletsStatsSection = schemaContent.slice(
       schemaContent.indexOf('path: "/v1/outlets/stats"'),
-      schemaContent.indexOf('path: "/v1/outlets/stats"') + 1200,
+      schemaContent.indexOf('path: "/v1/outlets/stats"') + 1800,
     );
     expect(outletsStatsSection).toContain('"workflowDynastySlug"');
     expect(outletsStatsSection).toContain('"featureDynastySlug"');
   });
 
-  it("should include featureDynastySlug but NOT workflowDynastySlug in /v1/features/stats query schema", () => {
+  it("should include all dynasty slug filters in /v1/features/stats query schema", () => {
     const featuresStatsSection = schemaContent.slice(
       schemaContent.indexOf('path: "/v1/features/stats"'),
-      schemaContent.indexOf('path: "/v1/features/stats"') + 1200,
+      schemaContent.indexOf('path: "/v1/features/stats"') + 1500,
     );
     expect(featuresStatsSection).toContain("featureDynastySlug");
-    expect(featuresStatsSection).not.toContain("workflowDynastySlug");
+    expect(featuresStatsSection).toContain("workflowDynastySlug");
     expect(featuresStatsSection).toContain("featureSlug");
     expect(featuresStatsSection).toContain("workflowSlug");
   });
 
-  it("should include featureDynastySlug but NOT workflowDynastySlug in /v1/features/{featureSlug}/stats query schema", () => {
+  it("should include all dynasty slug filters in /v1/features/{featureSlug}/stats query schema", () => {
     const start = schemaContent.indexOf('path: "/v1/features/{featureSlug}/stats"');
     const featureSlugStatsSection = schemaContent.slice(start, start + 1200);
     expect(featureSlugStatsSection).toContain("featureDynastySlug");
-    expect(featureSlugStatsSection).not.toContain("workflowDynastySlug");
+    expect(featureSlugStatsSection).toContain("workflowDynastySlug");
   });
 
   it("should include dynasty slug filters in /v1/runs/stats/costs query schema", () => {
@@ -206,20 +204,19 @@ describe("Dynasty slug params in generated openapi.json", () => {
     expect(groupByParam.schema.enum).toContain("featureSlug");
   });
 
-  it("should have featureDynastySlug but NOT workflowDynastySlug on /v1/features/stats", () => {
+  it("should have all dynasty slug params on /v1/features/stats", () => {
     const params = openapiSpec.paths["/v1/features/stats"]?.get?.parameters ?? [];
     const paramNames = params.map((p: { name: string }) => p.name);
     expect(paramNames).toContain("featureDynastySlug");
-    expect(paramNames).not.toContain("workflowDynastySlug");
+    expect(paramNames).toContain("workflowDynastySlug");
     expect(paramNames).toContain("featureSlug");
     expect(paramNames).toContain("workflowSlug");
   });
 
-  it("should have featureDynastySlug but NOT workflowDynastySlug on /v1/features/{featureSlug}/stats", () => {
+  it("should have workflowDynastySlug on /v1/features/{featureSlug}/stats (featureDynastySlug not needed)", () => {
     const params = openapiSpec.paths["/v1/features/{featureSlug}/stats"]?.get?.parameters ?? [];
     const paramNames = params.map((p: { name: string }) => p.name);
-    expect(paramNames).toContain("featureDynastySlug");
-    expect(paramNames).not.toContain("workflowDynastySlug");
+    expect(paramNames).toContain("workflowDynastySlug");
   });
 
   it("should have dynasty query params on /v1/runs/stats/costs", () => {
