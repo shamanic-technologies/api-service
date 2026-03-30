@@ -226,7 +226,8 @@ describe("GET /v1/workflows/:id/summary", () => {
           json: () =>
             Promise.resolve({
               id: "00000000-0000-4000-8000-000000000001",
-              name: "sales-email-cold-outreach-v1",
+              name: "Sales Email Cold Outreach V1",
+              slug: "sales-email-cold-outreach-v1",
               dag: {
                 nodes: [
                   { id: "find-leads", type: "http.call", config: { service: "apollo", method: "POST", path: "/search" }, inputMapping: {} },
@@ -275,7 +276,8 @@ describe("GET /v1/workflows/:id/summary", () => {
         json: () =>
           Promise.resolve({
             id: "00000000-0000-4000-8000-000000000099",
-            name: "regression-flow",
+            name: "Regression Flow",
+            slug: "regression-flow",
             dag: {
               nodes: [{ id: "step-1", type: "http.call", config: { service: "apollo", method: "GET", path: "/test" } }],
               edges: [],
@@ -292,6 +294,37 @@ describe("GET /v1/workflows/:id/summary", () => {
     expect(res.body.steps).toHaveLength(1);
   });
 
+  it("should return slug not name as workflowSlug (regression: campaign creation bug)", async () => {
+    // Regression: workflowSlug was returning workflow.name (with spaces/caps)
+    // instead of workflow.slug (kebab-case), causing campaign-service 404s
+    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes("/required-providers")) {
+        return { ok: true, json: () => Promise.resolve({ providers: [] }) };
+      }
+      return {
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            id: "00000000-0000-4000-8000-000000000001",
+            name: "Hiring Cold Email Outreach Harmony",
+            slug: "hiring-cold-email-outreach-harmony",
+            dag: {
+              nodes: [{ id: "step-1", type: "http.call", config: { service: "apollo", method: "GET", path: "/test" } }],
+              edges: [],
+            },
+          }),
+      };
+    });
+    app = createApp();
+
+    const res = await request(app).get("/v1/workflows/00000000-0000-4000-8000-000000000001/summary");
+
+    expect(res.status).toBe(200);
+    // Must be the slug, not the human-readable name
+    expect(res.body.workflowSlug).toBe("hiring-cold-email-outreach-harmony");
+    expect(res.body.workflowSlug).not.toContain(" ");
+  });
+
   it("should handle workflow with no DAG", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
       if (url.includes("/required-providers")) {
@@ -299,7 +332,7 @@ describe("GET /v1/workflows/:id/summary", () => {
       }
       return {
         ok: true,
-        json: () => Promise.resolve({ id: "00000000-0000-4000-8000-000000000001", name: "empty-flow", dag: null }),
+        json: () => Promise.resolve({ id: "00000000-0000-4000-8000-000000000001", name: "Empty Flow", slug: "empty-flow", dag: null }),
       };
     });
     app = createApp();
@@ -348,7 +381,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
         return { ok: true, json: () => Promise.resolve({ keys: orgKeys }) };
       }
       if (url.match(/\/workflows\/00000000-0000-4000-8000-000000000001$/)) {
-        return { ok: true, json: () => Promise.resolve({ workflow: { name: workflowSlug } }) };
+        return { ok: true, json: () => Promise.resolve({ slug: workflowSlug }) };
       }
       return { ok: true, json: () => Promise.resolve({}) };
     });
