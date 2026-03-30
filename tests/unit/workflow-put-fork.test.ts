@@ -71,7 +71,9 @@ describe("PUT /workflows/{id} OpenAPI spec — fork/conflict responses", () => {
 describe("Generated openapi.json reflects fork/conflict changes", () => {
   const openapiPath = path.join(__dirname, "../../openapi.json");
   const spec = JSON.parse(fs.readFileSync(openapiPath, "utf-8"));
-  const putResponses = spec.paths["/v1/workflows/{id}"]?.put?.responses;
+  const putEndpoint = spec.paths["/v1/workflows/{id}"]?.put;
+  const putResponses = putEndpoint?.responses;
+  const schemas = spec.components?.schemas;
 
   it("should have 200 response", () => {
     expect(putResponses).toHaveProperty("200");
@@ -90,5 +92,35 @@ describe("Generated openapi.json reflects fork/conflict changes", () => {
   it("should reference ForkedWorkflowResponse schema", () => {
     const ref201 = putResponses["201"]?.content?.["application/json"]?.schema?.$ref;
     expect(ref201).toContain("ForkedWorkflowResponse");
+  });
+
+  it("should have WorkflowConflictResponse schema with existingWorkflowId and existingWorkflowSlug", () => {
+    const conflictSchema = schemas?.WorkflowConflictResponse;
+    expect(conflictSchema).toBeDefined();
+    expect(conflictSchema.properties).toHaveProperty("existingWorkflowId");
+    expect(conflictSchema.properties).toHaveProperty("existingWorkflowSlug");
+    expect(conflictSchema.required).toContain("error");
+    expect(conflictSchema.required).toContain("existingWorkflowId");
+    expect(conflictSchema.required).toContain("existingWorkflowSlug");
+  });
+
+  it("should reference WorkflowConflictResponse in 409 response", () => {
+    const ref409 = putResponses["409"]?.content?.["application/json"]?.schema?.$ref;
+    expect(ref409).toContain("WorkflowConflictResponse");
+  });
+
+  it("should have an example on UpdateWorkflowRequest schema", () => {
+    const reqSchema = schemas?.UpdateWorkflowRequest;
+    expect(reqSchema).toBeDefined();
+    expect(reqSchema.example).toBeDefined();
+    expect(reqSchema.example.dag).toBeDefined();
+    expect(reqSchema.example.dag.nodes).toBeInstanceOf(Array);
+  });
+
+  it("should have a detailed description with markdown formatting", () => {
+    expect(putEndpoint.description).toContain("**Metadata only**");
+    expect(putEndpoint.description).toContain("**DAG with same signature**");
+    expect(putEndpoint.description).toContain("**DAG with new signature**");
+    expect(putEndpoint.description).toContain("existingWorkflowId");
   });
 });
