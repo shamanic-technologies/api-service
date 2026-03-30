@@ -346,9 +346,11 @@ registry.registerPath({
 export const CreateCampaignRequestSchema = z
   .object({
     name: z.string().describe("Campaign name"),
-    workflowSlug: z.string().min(1).describe("Workflow slug (e.g. 'sales-email-cold-outreach-sienna'). Determines which execution pipeline to use."),
+    workflowSlug: z.string().min(1).optional().describe("Exact versioned workflow slug (e.g. 'sales-email-cold-outreach-sienna-v3'). Use for pinning to a specific version. Provide this OR workflowDynastySlug."),
+    workflowDynastySlug: z.string().min(1).optional().describe("Stable dynasty slug for the workflow lineage (e.g. 'sales-email-cold-outreach-sienna'). Campaign-service resolves to the latest version automatically. Preferred over workflowSlug for dashboard use."),
     brandUrl: z.string().min(1).describe("Brand website URL"),
-    featureSlug: z.string().min(1).describe("Feature slug — used to validate inputs against features-service"),
+    featureSlug: z.string().min(1).optional().describe("Exact versioned feature slug. Use for pinning to a specific version. Provide this OR featureDynastySlug."),
+    featureDynastySlug: z.string().min(1).optional().describe("Stable dynasty slug for the feature lineage (e.g. 'pr-cold-email-outreach'). Campaign-service resolves to the latest version automatically. Preferred over featureSlug for dashboard use."),
     featureInputs: z.record(z.unknown()).describe("Opaque feature inputs. Validated by key-presence against features-service, never inspected by api-service."),
     maxBudgetDailyUsd: z.union([z.string(), z.number()]).optional().describe("Max daily budget in USD"),
     maxBudgetWeeklyUsd: z.union([z.string(), z.number()]).optional().describe("Max weekly budget in USD"),
@@ -357,6 +359,14 @@ export const CreateCampaignRequestSchema = z
     maxLeads: z.number().int().optional().describe("Maximum number of leads to contact"),
     endDate: z.string().optional().describe("Campaign end date"),
   })
+  .refine(
+    (d) => d.workflowSlug || d.workflowDynastySlug,
+    { message: "Either workflowSlug or workflowDynastySlug is required", path: ["workflowSlug"] },
+  )
+  .refine(
+    (d) => d.featureSlug || d.featureDynastySlug,
+    { message: "Either featureSlug or featureDynastySlug is required", path: ["featureSlug"] },
+  )
   .openapi("CreateCampaignRequest");
 
 /** Known discovery workflow prefixes and their campaign types. */
@@ -419,10 +429,12 @@ const CampaignSchema = z
     orgId: z.string().describe("Organization ID"),
     createdByUserId: z.string().nullable().describe("User who created the campaign"),
     name: z.string().describe("Campaign name"),
-    workflowSlug: z.string().describe("Workflow slug used for execution"),
+    workflowSlug: z.string().describe("Exact versioned workflow slug used for execution"),
+    workflowDynastySlug: z.string().nullable().describe("Stable dynasty slug for the workflow lineage (unversioned)"),
     brandUrl: z.string().nullable().describe("Brand website URL"),
     brandId: z.string().nullable().describe("Brand ID"),
-    featureSlug: z.string().nullable().describe("Feature slug for tracking"),
+    featureSlug: z.string().nullable().describe("Exact versioned feature slug for tracking"),
+    featureDynastySlug: z.string().nullable().describe("Stable dynasty slug for the feature lineage (unversioned)"),
     featureInputs: z.record(z.unknown()).nullable().describe("Free-form JSONB inputs for the feature"),
     maxBudgetDailyUsd: z.string().nullable().describe("Max daily budget in USD"),
     maxBudgetWeeklyUsd: z.string().nullable().describe("Max weekly budget in USD"),
@@ -449,12 +461,17 @@ registry.registerPath({
   tags: ["Campaigns"],
   summary: "List campaigns",
   description:
-    "List all campaigns for the organization, optionally filtered by brand ID",
+    "List all campaigns for the organization. Supports filtering by brandId, status, and slug params. " +
+    "Use workflowDynastySlug/featureDynastySlug to filter by lineage (matches all versions), or workflowSlug/featureSlug for exact version match.",
   security: authed,
   request: {
     query: z.object({
       brandId: z.string().optional().describe("Filter by brand ID"),
       status: z.string().optional().describe("Filter by status (e.g. 'active', 'stopped', 'all')"),
+      workflowSlug: z.string().optional().describe("Filter by exact versioned workflow slug"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (matches all versions in the lineage)"),
+      featureSlug: z.string().optional().describe("Filter by exact versioned feature slug"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (matches all versions in the lineage)"),
     }),
   },
   responses: {
@@ -479,9 +496,10 @@ registry.registerPath({
   tags: ["Campaigns"],
   summary: "Create a campaign",
   description:
-    "Create a new campaign. Requires `featureSlug` and `featureInputs`.\n\n" +
-    "Feature inputs are validated by key-presence against features-service (api-service never inspects values). " +
-    "The `workflowSlug` determines which execution pipeline campaign-service uses.",
+    "Create a new campaign. Requires feature inputs and at least one of featureSlug/featureDynastySlug plus one of workflowSlug/workflowDynastySlug.\n\n" +
+    "Use `workflowDynastySlug`/`featureDynastySlug` (preferred) to let campaign-service resolve to the latest version automatically. " +
+    "Use `workflowSlug`/`featureSlug` only to pin to a specific version. " +
+    "Feature inputs are validated by key-presence against features-service (api-service never inspects values).",
   security: authed,
   request: {
     body: {
