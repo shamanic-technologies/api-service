@@ -3,9 +3,9 @@ import express from "express";
 import request from "supertest";
 
 /**
- * Tests that dynasty slug query params are forwarded to workflow-service
- * on GET /workflows, GET /workflow-runs, GET /public/workflows/ranked,
- * and GET /public/workflows/best.
+ * Tests that dynasty slug query params are forwarded correctly
+ * on GET /workflows, GET /workflow-runs, GET /public/features/ranked,
+ * and GET /public/features/best.
  */
 
 let fetchCalls: Array<{ url: string; method?: string }> = [];
@@ -29,11 +29,13 @@ vi.mock("../../src/middleware/auth.js", () => ({
 }));
 
 import workflowsRoutes from "../../src/routes/workflows.js";
+import featuresRoutes from "../../src/routes/features.js";
 
 function createApp() {
   const app = express();
   app.use(express.json());
   app.use("/v1", workflowsRoutes);
+  app.use("/v1", featuresRoutes);
   return app;
 }
 
@@ -124,13 +126,13 @@ describe("Workflow dynasty slug forwarding", () => {
   });
 
   // -----------------------------------------------------------------------
-  // GET /v1/public/workflows/ranked
+  // GET /v1/public/features/ranked
   // -----------------------------------------------------------------------
 
-  it("should forward featureDynastySlug to features-service on GET /public/workflows/ranked", async () => {
+  it("should forward featureDynastySlug to features-service on GET /public/features/ranked", async () => {
     const app = createApp();
     await request(app)
-      .get("/v1/public/workflows/ranked")
+      .get("/v1/public/features/ranked")
       .query({ featureDynastySlug: "pr-cold-email-outreach" });
 
     const call = fetchCalls.find((c) => c.url.includes("/public/stats/ranked"));
@@ -139,13 +141,13 @@ describe("Workflow dynasty slug forwarding", () => {
   });
 
   // -----------------------------------------------------------------------
-  // GET /v1/public/workflows/best (proxied to features-service /public/stats/best)
+  // GET /v1/public/features/best (proxied to features-service /public/stats/best)
   // -----------------------------------------------------------------------
 
-  it("should forward featureDynastySlug to features-service on GET /public/workflows/best", async () => {
+  it("should forward featureDynastySlug to features-service on GET /public/features/best", async () => {
     const app = createApp();
     await request(app)
-      .get("/v1/public/workflows/best")
+      .get("/v1/public/features/best")
       .query({ featureDynastySlug: "pr-cold-email-outreach" });
 
     const call = fetchCalls.find((c) => c.url.includes("/public/stats/best"));

@@ -5,7 +5,58 @@ import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function buildParams(query: Record<string, unknown>, keys: string[]): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const key of keys) {
+    if (query[key]) params.set(key, query[key] as string);
+  }
+  return params;
+}
+
+const PUBLIC_RANKED_PARAMS = ["featureDynastySlug", "objective", "limit", "groupBy", "brandId"];
+const PUBLIC_BEST_PARAMS = ["featureDynastySlug", "brandId", "by"];
+
 // ── Public routes (no auth) ─────────────────────────────────────────────────
+
+/**
+ * GET /v1/public/features/ranked
+ * Public ranked workflows by performance. Proxied to features-service GET /public/stats/ranked.
+ */
+router.get("/public/features/ranked", async (req: Request, res: Response) => {
+  try {
+    const params = buildParams(req.query as Record<string, unknown>, PUBLIC_RANKED_PARAMS);
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/ranked?${params}`,
+      {},
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public ranked features error:", error.message);
+    res.status(502).json({ error: error.message || "Failed to get public ranked features" });
+  }
+});
+
+/**
+ * GET /v1/public/features/best
+ * Public hero records — best cost-per-outcome. Proxied to features-service GET /public/stats/best.
+ */
+router.get("/public/features/best", async (req: Request, res: Response) => {
+  try {
+    const params = buildParams(req.query as Record<string, unknown>, PUBLIC_BEST_PARAMS);
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/best?${params}`,
+      {},
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public best features error:", error.message);
+    res.status(502).json({ error: error.message || "Failed to get public best features" });
+  }
+});
 
 /**
  * GET /public/features
