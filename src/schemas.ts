@@ -3010,9 +3010,10 @@ registry.registerPath({
   method: "post",
   path: "/v1/brands/{id}/extract-fields",
   tags: ["Brand"],
-  summary: "Extract fields from brand",
+  summary: "Extract fields from brand (single brand, deprecated)",
   description:
-    "Generic field extraction: send fields you want with a key and description, and brand-service extracts them via AI. Results are cached 30 days per field. To reproduce the old sales-profile, send the same fields as items in the fields array. For discovery campaigns, send industry, suggestedAngles, suggestedGeo.",
+    "Deprecated — use POST /v1/brands/extract-fields instead (reads brand IDs from x-brand-id header). " +
+    "Generic field extraction: send fields you want with a key and description, and brand-service extracts them via AI. Results are cached 30 days per field.",
   security: authed,
   request: {
     params: BrandIdParam,
@@ -3039,6 +3040,45 @@ registry.registerPath({
       },
     },
     400: { description: "Anthropic API key not configured", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/extract-fields",
+  tags: ["Brand"],
+  summary: "Extract fields from brand(s)",
+  description:
+    "Multi-brand field extraction: reads brand IDs from the x-brand-id header (comma-separated UUIDs). " +
+    "Send fields you want with a key and description, and brand-service extracts them via AI. " +
+    "Results are cached 30 days per field per brand. " +
+    "Replaces POST /v1/brands/{id}/extract-fields for multi-brand campaigns.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            fields: z.array(ExtractFieldRequestSchema).describe("Fields to extract"),
+          }).openapi("ExtractFieldsFromHeaderRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Extracted field results",
+      content: {
+        "application/json": {
+          schema: z.object({
+            results: z.record(z.string(), ExtractFieldResultSchema).describe("Extraction results keyed by field name"),
+          }).openapi("ExtractFieldsFromHeaderResponse"),
+        },
+      },
+    },
+    400: { description: "Missing x-brand-id header or Anthropic API key not configured", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },

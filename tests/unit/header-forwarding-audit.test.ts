@@ -68,7 +68,7 @@ describe("header forwarding audit", () => {
       expect(src).toContain('req.headers["x-campaign-id"]');
     });
 
-    it("should extract x-brand-id from incoming request", () => {
+    it("should extract x-brand-id from incoming request (supports CSV multi-brand)", () => {
       expect(src).toContain('req.headers["x-brand-id"]');
     });
 

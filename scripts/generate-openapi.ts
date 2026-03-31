@@ -110,9 +110,10 @@ const identityParams = [
     name: "x-brand-id",
     in: "header" as const,
     required: false,
-    schema: { type: "string" as const },
+    schema: { type: "string" as const, example: "uuid1,uuid2,uuid3" },
     description:
-      "Brand ID. Automatically injected by workflow-service on workflow HTTP calls. " +
+      "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. " +
+      "Automatically injected by workflow-service on workflow HTTP calls. " +
       "Optional — forwarded to downstream services for tracking.",
   },
   {
