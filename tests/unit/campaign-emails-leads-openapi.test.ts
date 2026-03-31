@@ -49,6 +49,7 @@ describe("Campaign leads/emails OpenAPI response schemas", () => {
       "leadFirstName",
       "leadLastName",
       "leadCompany",
+      "leadOrganizationDomain",
       "leadTitle",
       "leadIndustry",
       "clientCompanyName",

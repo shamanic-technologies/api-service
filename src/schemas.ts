@@ -878,6 +878,7 @@ registry.registerPath({
                   leadFirstName: z.string().nullable(),
                   leadLastName: z.string().nullable(),
                   leadCompany: z.string().nullable(),
+                  leadOrganizationDomain: z.string().nullable().describe("Company domain from lead enrichment"),
                   leadTitle: z.string().nullable(),
                   leadIndustry: z.string().nullable(),
                   clientCompanyName: z.string().nullable(),
