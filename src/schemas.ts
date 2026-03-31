@@ -2245,8 +2245,7 @@ registry.registerPath({
               journalistFirstName: z.string().min(1).openapi({ description: "Journalist first name", example: "Sarah" }),
               journalistLastName: z.string().min(1).openapi({ description: "Journalist last name", example: "Perez" }),
               journalistId: z.string().uuid().openapi({ description: "Journalist UUID for linking discoveries back to the journalist record" }),
-              brandId: z.string().uuid().openapi({ description: "Brand to scope discoveries to" }),
-              campaignId: z.string().uuid().openapi({ description: "Campaign to scope discoveries to" }),
+              outletDomain: z.string().min(1).optional().openapi({ description: "Outlet domain to scope the Google News search via site: filter (e.g. 'techcrunch.com')", example: "techcrunch.com" }),
               maxResults: z.number().int().optional().openapi({ description: "Max publications to find (default 10, max 20)" }),
             })
             .openapi("DiscoverJournalistPublicationsRequest"),

@@ -3240,15 +3240,11 @@
             "format": "uuid",
             "description": "Journalist UUID for linking discoveries back to the journalist record"
           },
-          "brandId": {
+          "outletDomain": {
             "type": "string",
-            "format": "uuid",
-            "description": "Brand to scope discoveries to"
-          },
-          "campaignId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Campaign to scope discoveries to"
+            "minLength": 1,
+            "description": "Outlet domain to scope the Google News search via site: filter (e.g. 'techcrunch.com')",
+            "example": "techcrunch.com"
           },
           "maxResults": {
             "type": "integer",
@@ -3258,9 +3254,7 @@
         "required": [
           "journalistFirstName",
           "journalistLastName",
-          "journalistId",
-          "brandId",
-          "campaignId"
+          "journalistId"
         ]
       },
       "OrgKeyItem": {
