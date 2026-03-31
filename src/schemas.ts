@@ -3050,7 +3050,7 @@ registry.registerPath({
   tags: ["Brand"],
   summary: "Extract fields from brand(s)",
   description:
-    "Multi-brand field extraction: reads brand IDs from the x-brand-id header (comma-separated UUIDs). " +
+    "Multi-brand field extraction. Pass brandIds in the request body — api-service sets x-brand-id header and proxies to brand-service. " +
     "Send fields you want with a key and description, and brand-service extracts them via AI. " +
     "Results are cached 30 days per field per brand. " +
     "Replaces POST /v1/brands/{id}/extract-fields for multi-brand campaigns.",
@@ -3060,6 +3060,7 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z.object({
+            brandIds: z.array(z.string()).min(1).describe("Brand UUIDs to extract fields for"),
             fields: z.array(ExtractFieldRequestSchema).describe("Fields to extract"),
           }).openapi("ExtractFieldsFromHeaderRequest"),
         },
@@ -3151,10 +3152,58 @@ const ExtractedImageSchema = z.object({
 
 registry.registerPath({
   method: "post",
+  path: "/v1/brands/extract-images",
+  tags: ["Brand"],
+  summary: "Extract images from brand(s)",
+  description:
+    "Multi-brand image extraction. Pass brandIds in the request body — api-service sets x-brand-id header and proxies to brand-service. " +
+    "Replaces POST /v1/brands/{id}/extract-images for multi-brand campaigns.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            brandIds: z.array(z.string()).min(1).describe("Brand UUIDs to extract images for"),
+            categories: z.array(ExtractImageCategorySchema).describe("Image categories to extract"),
+          }).openapi("ExtractImagesFromHeaderRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Extracted image results",
+      content: {
+        "application/json": {
+          schema: z.object({
+            brands: z.array(z.object({
+              brandId: z.string().describe("Internal brand UUID"),
+              domain: z.string().describe("Brand domain"),
+              name: z.string().describe("Brand display name"),
+            })).describe("Metadata for each brand"),
+            results: z.array(z.object({
+              category: z.string().describe("Image category"),
+              images: z.array(ExtractedImageSchema).describe("Consolidated images"),
+              byBrand: z.record(z.string(), z.array(ExtractedImageSchema)).describe("Per-brand images, keyed by domain"),
+            })).describe("Extracted images by category"),
+          }).openapi("ExtractImagesMultiBrandResponse"),
+        },
+      },
+    },
+    400: { description: "Validation error or Anthropic API key not configured", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
   path: "/v1/brands/{id}/extract-images",
   tags: ["Brand"],
-  summary: "Extract images from brand",
+  summary: "Extract images from brand (single brand, deprecated)",
   description:
+    "Deprecated — use POST /v1/brands/extract-images instead. " +
     "Extract brand images by category (logo, product shots, hero image, etc.) via scraping + vision AI. Returns permanent R2 URLs.",
   security: authed,
   request: {

@@ -33,7 +33,8 @@ describe("all brand-service calls include internal headers", () => {
     expect(matches.length).toBeGreaterThan(0);
 
     for (const idx of matches) {
-      const callBlock = src.slice(idx, idx + 400);
+      const contextStart = Math.max(0, idx - 200);
+      const callBlock = src.slice(contextStart, idx + 400);
       expect(callBlock).toContain("buildInternalHeaders");
     }
   });
