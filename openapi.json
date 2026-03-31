@@ -501,15 +501,21 @@
             "nullable": true,
             "description": "Stable dynasty slug for the workflow lineage (unversioned)"
           },
-          "brandUrl": {
-            "type": "string",
+          "brandUrls": {
+            "type": "array",
             "nullable": true,
-            "description": "Brand website URL"
+            "items": {
+              "type": "string"
+            },
+            "description": "Brand website URLs"
           },
-          "brandId": {
-            "type": "string",
+          "brandIds": {
+            "type": "array",
             "nullable": true,
-            "description": "Brand ID"
+            "items": {
+              "type": "string"
+            },
+            "description": "Brand IDs"
           },
           "featureSlug": {
             "type": "string",
@@ -604,8 +610,8 @@
           "name",
           "workflowSlug",
           "workflowDynastySlug",
-          "brandUrl",
-          "brandId",
+          "brandUrls",
+          "brandIds",
           "featureSlug",
           "featureDynastySlug",
           "featureInputs",
@@ -667,10 +673,14 @@
             "minLength": 1,
             "description": "Stable dynasty slug for the workflow lineage (e.g. 'sales-email-cold-outreach-sienna'). Campaign-service resolves to the latest version automatically. Preferred over workflowSlug for dashboard use."
           },
-          "brandUrl": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Brand website URL"
+          "brandUrls": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "description": "Brand website URLs. First URL is the primary brand; additional URLs are secondary brands."
           },
           "featureSlug": {
             "type": "string",
@@ -744,13 +754,15 @@
         },
         "required": [
           "name",
-          "brandUrl",
+          "brandUrls",
           "featureInputs"
         ],
         "example": {
           "name": "Q2 SaaS Outreach",
           "workflowDynastySlug": "sales-email-cold-outreach-sienna",
-          "brandUrl": "https://acme.com",
+          "brandUrls": [
+            "https://acme.com"
+          ],
           "featureDynastySlug": "pr-cold-email-outreach",
           "featureInputs": {
             "targetAudience": "SaaS founders in the US",

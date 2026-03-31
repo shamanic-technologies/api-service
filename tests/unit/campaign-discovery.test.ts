@@ -88,7 +88,7 @@ describe("Discovery campaign creation", () => {
       .send({
         name: "Tech Media Discovery",
         workflowSlug: "outlets-database-discovery-cedar",
-        brandUrl: "https://acme.com",
+        brandUrls: ["https://acme.com"],
         featureSlug: "outlet-discovery",
         featureInputs: { targetAudience: "Tech publications covering SaaS and AI" },
       });
@@ -114,7 +114,7 @@ describe("Discovery campaign creation", () => {
       .send({
         name: "Journalist Discovery",
         workflowSlug: "journalists-database-discovery-birch",
-        brandUrl: "https://acme.com",
+        brandUrls: ["https://acme.com"],
         featureSlug: "journalist-discovery",
         featureInputs: { targetAudience: "Journalists covering fintech in the US" },
       });
@@ -132,7 +132,7 @@ describe("Discovery campaign creation", () => {
       .send({
         name: "Missing Slug",
         workflowSlug: "outlets-database-discovery-cedar",
-        brandUrl: "https://acme.com",
+        brandUrls: ["https://acme.com"],
         featureInputs: { targetAudience: "Tech publications" },
       });
 
@@ -147,7 +147,7 @@ describe("Discovery campaign creation", () => {
       .send({
         name: "Missing Input",
         workflowSlug: "outlets-database-discovery-cedar",
-        brandUrl: "https://acme.com",
+        brandUrls: ["https://acme.com"],
         featureSlug: "outlet-discovery",
         featureInputs: {}, // Missing targetAudience
       });
@@ -164,7 +164,7 @@ describe("Discovery campaign creation", () => {
       .send({
         name: "Header Test",
         workflowSlug: "outlets-database-discovery-cedar",
-        brandUrl: "https://acme.com",
+        brandUrls: ["https://acme.com"],
         featureSlug: "outlet-discovery",
         featureInputs: { targetAudience: "Tech publications" },
       });
@@ -185,7 +185,7 @@ describe("Discovery campaign creation", () => {
       .send({
         name: "Budget Discovery",
         workflowSlug: "outlets-database-discovery-cedar",
-        brandUrl: "https://acme.com",
+        brandUrls: ["https://acme.com"],
         featureSlug: "outlet-discovery",
         featureInputs: { targetAudience: "Tech publications" },
         maxBudgetDailyUsd: 25,

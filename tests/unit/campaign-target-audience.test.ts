@@ -47,7 +47,7 @@ function createApp() {
 const validBody = {
   name: "Test Campaign",
   workflowSlug: "sales-email-cold-outreach-sienna",
-  brandUrl: "https://example.com",
+  brandUrls: ["https://example.com"],
   featureSlug: "cold-outreach-v2",
   featureInputs: {
     targetAudience: "CTOs at SaaS startups with 10-50 employees in the US",
@@ -131,7 +131,7 @@ describe("POST /v1/campaigns with featureInputs", () => {
     expect(campaignCall!.body!.type).toBe("cold-email-outreach");
     expect(campaignCall!.body!.featureSlug).toBe("cold-outreach-v2");
     expect(campaignCall!.body!.featureInputs).toEqual(validBody.featureInputs);
-    expect(campaignCall!.body!.brandId).toBe("brand-uuid-123");
+    expect(campaignCall!.body!.brandIds).toEqual(["brand-uuid-123"]);
 
     // Verify legacy top-level fields are NOT present
     expect(campaignCall!.body!.targetAudience).toBeUndefined();
@@ -202,7 +202,7 @@ describe("POST /v1/campaigns with featureInputs", () => {
       .send({
         name: "Custom Feature",
         workflowSlug: "custom-workflow-v1",
-        brandUrl: "https://example.com",
+        brandUrls: ["https://example.com"],
         featureSlug: "custom-search",
         featureInputs: { query: "AI startups", customField: 42, nested: { a: 1 } },
       });

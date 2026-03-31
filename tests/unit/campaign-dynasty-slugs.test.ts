@@ -96,7 +96,7 @@ describe("Campaign dynasty slug support", () => {
       .send({
         name: "Dynasty Test",
         workflowDynastySlug: "sales-email-cold-outreach-sienna",
-        brandUrl: "https://acme.com",
+        brandUrls: ["https://acme.com"],
         featureDynastySlug: "pr-cold-email-outreach",
         featureInputs: { targetAudience: "SaaS founders" },
       });
@@ -127,7 +127,7 @@ describe("Campaign dynasty slug support", () => {
         name: "Both Slugs",
         workflowSlug: "sales-email-cold-outreach-sienna-v3",
         workflowDynastySlug: "sales-email-cold-outreach-sienna",
-        brandUrl: "https://acme.com",
+        brandUrls: ["https://acme.com"],
         featureSlug: "pr-cold-email-outreach-v2",
         featureDynastySlug: "pr-cold-email-outreach",
         featureInputs: { targetAudience: "SaaS founders" },
@@ -149,7 +149,7 @@ describe("Campaign dynasty slug support", () => {
       .post("/v1/campaigns")
       .send({
         name: "No Workflow Slug",
-        brandUrl: "https://acme.com",
+        brandUrls: ["https://acme.com"],
         featureDynastySlug: "pr-cold-email-outreach",
         featureInputs: { targetAudience: "SaaS founders" },
       });
@@ -165,7 +165,7 @@ describe("Campaign dynasty slug support", () => {
       .send({
         name: "No Feature Slug",
         workflowDynastySlug: "sales-email-cold-outreach-sienna",
-        brandUrl: "https://acme.com",
+        brandUrls: ["https://acme.com"],
         featureInputs: { targetAudience: "SaaS founders" },
       });
 
@@ -180,7 +180,7 @@ describe("Campaign dynasty slug support", () => {
       .send({
         name: "Discovery Dynasty",
         workflowDynastySlug: "outlets-database-discovery-cedar",
-        brandUrl: "https://acme.com",
+        brandUrls: ["https://acme.com"],
         featureDynastySlug: "outlet-discovery",
         featureInputs: { targetAudience: "Tech publications" },
       });
@@ -196,7 +196,7 @@ describe("Campaign dynasty slug support", () => {
       .send({
         name: "Header Dynasty",
         workflowDynastySlug: "sales-email-cold-outreach-sienna",
-        brandUrl: "https://acme.com",
+        brandUrls: ["https://acme.com"],
         featureDynastySlug: "pr-cold-email-outreach",
         featureInputs: { targetAudience: "SaaS founders" },
       });
