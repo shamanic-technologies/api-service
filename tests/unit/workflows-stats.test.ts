@@ -25,6 +25,7 @@ vi.mock("../../src/lib/service-client.js", () => ({
     instantly: { url: "http://mock-instantly", apiKey: "k" },
     billing: { url: "http://mock-billing", apiKey: "k" },
     chat: { url: "http://mock-chat", apiKey: "k" },
+    features: { url: "http://mock-features", apiKey: "k" },
   },
 }));
 
@@ -117,46 +118,84 @@ describe("GET /v1/workflows/best", () => {
 describe("GET /v1/public/workflows/ranked", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("proxies to workflow-service /public/workflows/ranked without auth", async () => {
+  it("proxies to features-service /public/stats/ranked without auth", async () => {
     const app = createApp();
     mockCallExternalService.mockImplementation((service: any, path: string) => {
-      if (service.url === "http://mock-workflow" && path.startsWith("/public/workflows/ranked")) {
+      if (service.url === "http://mock-features" && path.startsWith("/public/stats/ranked")) {
         return Promise.resolve(MOCK_RANKED);
       }
       return Promise.resolve({});
     });
 
-    const res = await request(app).get("/v1/public/workflows/ranked?objective=sales&groupBy=brand");
+    const res = await request(app).get("/v1/public/workflows/ranked?featureDynastySlug=pr-cold-email&objective=replied&groupBy=brand");
 
     expect(res.status).toBe(200);
     expect(res.body.results).toEqual(MOCK_RANKED.results);
 
     const call = mockCallExternalService.mock.calls.find(
-      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/public/workflows/ranked"),
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/public/stats/ranked"),
     );
     expect(call).toBeDefined();
     const url = call![1] as string;
-    expect(url).toContain("objective=sales");
+    expect(url).toContain("featureDynastySlug=pr-cold-email");
+    expect(url).toContain("objective=replied");
     expect(url).toContain("groupBy=brand");
+  });
+
+  it("does not forward featureSlug to features-service", async () => {
+    const app = createApp();
+    mockCallExternalService.mockResolvedValue(MOCK_RANKED);
+
+    await request(app).get("/v1/public/workflows/ranked?featureSlug=pr-cold-email-v3&featureDynastySlug=pr-cold-email&objective=replied");
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/public/stats/ranked"),
+    );
+    expect(call).toBeDefined();
+    const url = call![1] as string;
+    expect(url).not.toContain("featureSlug=");
   });
 });
 
 describe("GET /v1/public/workflows/best", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("proxies to workflow-service /public/workflows/best without auth", async () => {
+  it("proxies to features-service /public/stats/best without auth", async () => {
     const app = createApp();
     mockCallExternalService.mockImplementation((service: any, path: string) => {
-      if (service.url === "http://mock-workflow" && path.startsWith("/public/workflows/best")) {
+      if (service.url === "http://mock-features" && path.startsWith("/public/stats/best")) {
         return Promise.resolve(MOCK_HERO);
       }
       return Promise.resolve({});
     });
 
-    const res = await request(app).get("/v1/public/workflows/best?by=workflow");
+    const res = await request(app).get("/v1/public/workflows/best?featureDynastySlug=pr-cold-email&by=workflow");
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(MOCK_HERO);
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/public/stats/best"),
+    );
+    expect(call).toBeDefined();
+    const url = call![1] as string;
+    expect(url).toContain("featureDynastySlug=pr-cold-email");
+    expect(url).toContain("by=workflow");
+  });
+
+  it("does not forward featureSlug or objective to features-service", async () => {
+    const app = createApp();
+    mockCallExternalService.mockResolvedValue(MOCK_HERO);
+
+    await request(app).get("/v1/public/workflows/best?featureDynastySlug=pr-cold-email&featureSlug=pr-cold-email-v3&objective=replied");
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/public/stats/best"),
+    );
+    expect(call).toBeDefined();
+    const url = call![1] as string;
+    expect(url).not.toContain("featureSlug=");
+    expect(url).not.toContain("objective=");
   });
 });
 
