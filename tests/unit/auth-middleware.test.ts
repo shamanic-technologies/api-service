@@ -352,6 +352,32 @@ describe("Auth middleware — run creation is mandatory", () => {
     expect(res.body.error).toBe("Run tracking unavailable");
   });
 
+  it("should forward CSV x-brand-id header to createRun for multi-brand campaigns", async () => {
+    const { createRun } = await import("@distribute/runs-client");
+    const mockCreateRun = vi.mocked(createRun);
+    mockCreateRun.mockResolvedValueOnce({ id: "run-multi-brand" } as never);
+
+    mockCall.mockResolvedValueOnce({
+      orgId: "org-uuid-123",
+      userId: "user-uuid-456",
+    });
+
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("X-API-Key", ADMIN_KEY)
+      .set("x-external-org-id", "ext_org_123")
+      .set("x-external-user-id", "ext_user_456")
+      .set("x-brand-id", "brand-aaa,brand-bbb,brand-ccc");
+
+    expect(res.status).toBe(200);
+    expect(mockCreateRun).toHaveBeenCalledWith(
+      expect.objectContaining({ orgId: "org-uuid-123" }),
+      expect.objectContaining({
+        "x-brand-id": "brand-aaa,brand-bbb,brand-ccc",
+      }),
+    );
+  });
+
   it("should forward x-brand-id, x-campaign-id, x-workflow-slug, x-feature-slug headers to createRun", async () => {
     const { createRun } = await import("@distribute/runs-client");
     const mockCreateRun = vi.mocked(createRun);

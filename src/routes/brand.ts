@@ -140,9 +140,43 @@ router.get("/brands/:id", authenticate, async (req: AuthenticatedRequest, res) =
 });
 
 /**
+ * POST /v1/brands/extract-fields
+ * Multi-brand field extraction: reads brand IDs from x-brand-id header (CSV).
+ * Proxies to brand-service POST /brands/extract-fields (no path param).
+ */
+router.post("/brands/extract-fields", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!req.brandId) {
+      return res.status(400).json({ error: "x-brand-id header is required" });
+    }
+
+    const result = await callExternalService(
+      externalServices.brand,
+      "/brands/extract-fields",
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+      },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Extract fields (header) error:", error);
+    const msg = error.message || "Failed to extract fields";
+    if (msg.includes("No Anthropic API key found")) {
+      return res.status(400).json({
+        error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
+      });
+    }
+    res.status(error.statusCode || 500).json({ error: msg });
+  }
+});
+
+/**
  * POST /v1/brands/:id/extract-fields
  * Generic field extraction: send fields you want with key + description,
  * brand-service extracts them via AI. Results cached 30 days per field.
+ * Deprecated — use POST /v1/brands/extract-fields instead.
  */
 router.post("/brands/:id/extract-fields", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {

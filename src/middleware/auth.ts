@@ -9,6 +9,7 @@ export interface AuthenticatedRequest extends Request {
   authType?: "user_key" | "admin";
   /** Workflow tracking headers — injected by workflow-service, optional */
   campaignId?: string;
+  /** Brand ID(s) — may be a comma-separated list of UUIDs for multi-brand campaigns */
   brandId?: string;
   workflowSlug?: string;
   featureSlug?: string;
