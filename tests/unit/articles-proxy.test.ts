@@ -257,6 +257,12 @@ describe("Articles OpenAPI schemas", () => {
     expect(schemaContent).toContain("DiscoverJournalistPublicationsRequest");
   });
 
+  it("should include optional outletDomain in DiscoverJournalistPublicationsRequest schema", () => {
+    // outletDomain must be present and optional in the journalist-publications request schema
+    const line = schemaContent.split("\n").find((l) => l.includes("outletDomain") && l.includes("optional"));
+    expect(line).toBeDefined();
+  });
+
   it("should register GET /v1/articles/stats", () => {
     expect(schemaContent).toContain('path: "/v1/articles/stats"');
     expect(schemaContent).toContain("ArticleStatsResponse");
