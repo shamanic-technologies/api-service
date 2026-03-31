@@ -257,10 +257,16 @@ describe("Articles OpenAPI schemas", () => {
     expect(schemaContent).toContain("DiscoverJournalistPublicationsRequest");
   });
 
-  it("should include optional outletDomain in DiscoverJournalistPublicationsRequest schema", () => {
-    // outletDomain must be present and optional in the journalist-publications request schema
-    const line = schemaContent.split("\n").find((l) => l.includes("outletDomain") && l.includes("optional"));
-    expect(line).toBeDefined();
+  it("should include required outletDomain and exclude journalistId in DiscoverJournalistPublicationsRequest schema", () => {
+    // outletDomain is required (no .optional())
+    const outletLine = schemaContent.split("\n").find((l) => l.includes("outletDomain") && !l.includes("optional"));
+    expect(outletLine).toBeDefined();
+    // journalistId was removed from this endpoint's request body
+    const block = schemaContent.slice(
+      schemaContent.indexOf("DiscoverJournalistPublicationsRequest") - 300,
+      schemaContent.indexOf("DiscoverJournalistPublicationsRequest")
+    );
+    expect(block).not.toContain("journalistId");
   });
 
   it("should register GET /v1/articles/stats", () => {
