@@ -137,14 +137,12 @@ const rankedQueryParams = z.object({
   featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature dynasty slug (required). Resolves to all versioned slugs in the lineage."),
   objective: z.string().openapi({ example: "emailsReplied" }).describe("Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'."),
   groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
-  brandId: z.string().optional().openapi({ example: "brand-uuid-123" }).describe("Filter by brand ID"),
   limit: z.string().optional().openapi({ example: "10" }).describe("Max results (default 10, max 100)"),
 });
 
 const bestQueryParams = z.object({
   featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature dynasty slug (required). Resolves to all versioned slugs in the lineage."),
-  by: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — hero records by workflow or by brand."),
-  brandId: z.string().optional().openapi({ example: "brand-uuid-123" }).describe("Filter by brand ID"),
+  groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
 });
 
 // -- Workflow response schemas (mirroring workflow-service) --
@@ -245,7 +243,7 @@ registry.registerPath({
   path: "/v1/public/features/best",
   tags: ["Features"],
   summary: "Hero records (public)",
-  description: "Public hero records — best cost-per-outcome. Proxied to features-service. featureDynastySlug and by are required. No authentication required.",
+  description: "Public hero records — best cost-per-outcome. Proxied to features-service. featureDynastySlug and groupBy are required. No authentication required.",
   request: { query: bestQueryParams },
   responses: bestResponse,
 });
@@ -267,7 +265,7 @@ registry.registerPath({
   path: "/v1/workflows/best",
   tags: ["Workflows"],
   summary: "Hero records",
-  description: "Best cost-per-outcome records, scoped to the authenticated org. Proxied to features-service. featureDynastySlug and by are required.",
+  description: "Best cost-per-outcome records, scoped to the authenticated org. Proxied to features-service. featureDynastySlug and groupBy are required.",
   security: authed,
   request: { query: bestQueryParams },
   responses: { ...bestResponse, 401: { description: "Unauthorized", content: errorContent } },

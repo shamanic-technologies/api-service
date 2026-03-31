@@ -99,8 +99,8 @@ function buildWorkflowParams(query: Record<string, unknown>, keys: string[]): UR
 }
 
 // Authenticated endpoints — migrated to features-service
-const RANKED_PARAMS = ["featureDynastySlug", "objective", "limit", "groupBy", "brandId"];
-const BEST_PARAMS = ["featureDynastySlug", "brandId", "by"];
+const RANKED_PARAMS = ["featureDynastySlug", "objective", "groupBy", "limit"];
+const BEST_PARAMS = ["featureDynastySlug", "groupBy"];
 
 // ---------------------------------------------------------------------------
 // Authenticated routes

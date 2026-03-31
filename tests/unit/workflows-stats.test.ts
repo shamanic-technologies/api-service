@@ -72,7 +72,7 @@ describe("GET /v1/workflows/ranked", () => {
       return Promise.resolve({});
     });
 
-    const res = await request(app).get("/v1/workflows/ranked?featureDynastySlug=pr-cold-email&objective=replied&groupBy=brand&limit=20&brandId=b-1");
+    const res = await request(app).get("/v1/workflows/ranked?featureDynastySlug=pr-cold-email&objective=replied&groupBy=brand&limit=20");
 
     expect(res.status).toBe(200);
     expect(res.body.results).toEqual(MOCK_RANKED.results);
@@ -86,7 +86,6 @@ describe("GET /v1/workflows/ranked", () => {
     expect(url).toContain("objective=replied");
     expect(url).toContain("groupBy=brand");
     expect(url).toContain("limit=20");
-    expect(url).toContain("brandId=b-1");
   });
 
   it("does not forward featureSlug to features-service", async () => {
@@ -116,7 +115,7 @@ describe("GET /v1/workflows/best", () => {
       return Promise.resolve({});
     });
 
-    const res = await request(app).get("/v1/workflows/best?featureDynastySlug=pr-cold-email&by=brand");
+    const res = await request(app).get("/v1/workflows/best?featureDynastySlug=pr-cold-email&groupBy=brand");
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(MOCK_HERO);
@@ -127,14 +126,14 @@ describe("GET /v1/workflows/best", () => {
     expect(call).toBeDefined();
     const url = call![1] as string;
     expect(url).toContain("featureDynastySlug=pr-cold-email");
-    expect(url).toContain("by=brand");
+    expect(url).toContain("groupBy=brand");
   });
 
-  it("does not forward featureSlug or objective to features-service", async () => {
+  it("does not forward featureSlug, objective, brandId, or by to features-service", async () => {
     const app = createApp();
     mockCallExternalService.mockResolvedValue(MOCK_HERO);
 
-    await request(app).get("/v1/workflows/best?featureDynastySlug=pr-cold-email&featureSlug=pr-cold-email-v3&objective=replied");
+    await request(app).get("/v1/workflows/best?featureDynastySlug=pr-cold-email&featureSlug=pr-cold-email-v3&objective=replied&brandId=b-1&by=brand");
 
     const call = mockCallExternalService.mock.calls.find(
       (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/stats/best"),
@@ -143,6 +142,8 @@ describe("GET /v1/workflows/best", () => {
     const url = call![1] as string;
     expect(url).not.toContain("featureSlug=");
     expect(url).not.toContain("objective=");
+    expect(url).not.toContain("brandId=");
+    expect(url).not.toContain("by=");
   });
 });
 

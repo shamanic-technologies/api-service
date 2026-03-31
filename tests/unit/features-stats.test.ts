@@ -75,7 +75,7 @@ describe("GET /v1/public/features/ranked", () => {
       return Promise.resolve({});
     });
 
-    const res = await request(app).get("/v1/public/features/ranked?featureDynastySlug=pr-cold-email&objective=emailsReplied&groupBy=brand&brandId=b-1");
+    const res = await request(app).get("/v1/public/features/ranked?featureDynastySlug=pr-cold-email&objective=emailsReplied&groupBy=brand");
 
     expect(res.status).toBe(200);
     expect(res.body.results).toEqual(MOCK_RANKED.results);
@@ -88,7 +88,6 @@ describe("GET /v1/public/features/ranked", () => {
     expect(url).toContain("featureDynastySlug=pr-cold-email");
     expect(url).toContain("objective=emailsReplied");
     expect(url).toContain("groupBy=brand");
-    expect(url).toContain("brandId=b-1");
   });
 
   it("does not forward featureSlug to features-service", async () => {
@@ -118,7 +117,7 @@ describe("GET /v1/public/features/best", () => {
       return Promise.resolve({});
     });
 
-    const res = await request(app).get("/v1/public/features/best?featureDynastySlug=pr-cold-email&by=workflow&brandId=b-1");
+    const res = await request(app).get("/v1/public/features/best?featureDynastySlug=pr-cold-email&groupBy=workflow");
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(MOCK_HERO);
@@ -129,15 +128,14 @@ describe("GET /v1/public/features/best", () => {
     expect(call).toBeDefined();
     const url = call![1] as string;
     expect(url).toContain("featureDynastySlug=pr-cold-email");
-    expect(url).toContain("by=workflow");
-    expect(url).toContain("brandId=b-1");
+    expect(url).toContain("groupBy=workflow");
   });
 
-  it("does not forward featureSlug or objective to features-service", async () => {
+  it("does not forward featureSlug, objective, brandId, or by to features-service", async () => {
     const app = createApp();
     mockCallExternalService.mockResolvedValue(MOCK_HERO);
 
-    await request(app).get("/v1/public/features/best?featureDynastySlug=pr-cold-email&featureSlug=pr-cold-email-v3&objective=replied");
+    await request(app).get("/v1/public/features/best?featureDynastySlug=pr-cold-email&featureSlug=pr-cold-email-v3&objective=replied&brandId=b-1&by=brand");
 
     const call = mockCallExternalService.mock.calls.find(
       (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/public/stats/best"),
@@ -146,5 +144,7 @@ describe("GET /v1/public/features/best", () => {
     const url = call![1] as string;
     expect(url).not.toContain("featureSlug=");
     expect(url).not.toContain("objective=");
+    expect(url).not.toContain("brandId=");
+    expect(url).not.toContain("by=");
   });
 });

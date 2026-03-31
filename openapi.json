@@ -7702,17 +7702,6 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by brand ID",
-              "example": "brand-uuid-123"
-            },
-            "required": false,
-            "description": "Filter by brand ID",
-            "name": "brandId",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
               "description": "Max results (default 10, max 100)",
               "example": "10"
             },
@@ -7752,7 +7741,7 @@
           "Features"
         ],
         "summary": "Hero records (public)",
-        "description": "Public hero records — best cost-per-outcome. Proxied to features-service. featureDynastySlug and by are required. No authentication required.",
+        "description": "Public hero records — best cost-per-outcome. Proxied to features-service. featureDynastySlug and groupBy are required. No authentication required.",
         "parameters": [
           {
             "schema": {
@@ -7772,23 +7761,12 @@
                 "workflow",
                 "brand"
               ],
-              "description": "'workflow' or 'brand' — hero records by workflow or by brand.",
+              "description": "'workflow' or 'brand' — group results by workflow or by brand.",
               "example": "workflow"
             },
             "required": true,
-            "description": "'workflow' or 'brand' — hero records by workflow or by brand.",
-            "name": "by",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by brand ID",
-              "example": "brand-uuid-123"
-            },
-            "required": false,
-            "description": "Filter by brand ID",
-            "name": "brandId",
+            "description": "'workflow' or 'brand' — group results by workflow or by brand.",
+            "name": "groupBy",
             "in": "query"
           }
         ],
@@ -7874,17 +7852,6 @@
             "required": true,
             "description": "'workflow' or 'brand' — group results by workflow or by brand.",
             "name": "groupBy",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by brand ID",
-              "example": "brand-uuid-123"
-            },
-            "required": false,
-            "description": "Filter by brand ID",
-            "name": "brandId",
             "in": "query"
           },
           {
@@ -7994,7 +7961,7 @@
           "Workflows"
         ],
         "summary": "Hero records",
-        "description": "Best cost-per-outcome records, scoped to the authenticated org. Proxied to features-service. featureDynastySlug and by are required.",
+        "description": "Best cost-per-outcome records, scoped to the authenticated org. Proxied to features-service. featureDynastySlug and groupBy are required.",
         "security": [
           {
             "bearerAuth": []
@@ -8019,23 +7986,12 @@
                 "workflow",
                 "brand"
               ],
-              "description": "'workflow' or 'brand' — hero records by workflow or by brand.",
+              "description": "'workflow' or 'brand' — group results by workflow or by brand.",
               "example": "workflow"
             },
             "required": true,
-            "description": "'workflow' or 'brand' — hero records by workflow or by brand.",
-            "name": "by",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by brand ID",
-              "example": "brand-uuid-123"
-            },
-            "required": false,
-            "description": "Filter by brand ID",
-            "name": "brandId",
+            "description": "'workflow' or 'brand' — group results by workflow or by brand.",
+            "name": "groupBy",
             "in": "query"
           },
           {
