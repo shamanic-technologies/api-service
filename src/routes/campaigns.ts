@@ -64,11 +64,11 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       return res.status(400).json({
         error: `Missing or invalid required fields: ${missingFields.join(", ")}.`,
         missingFields,
-        hint: "Campaign creation requires: name, brandUrl, featureInputs, and at least one of workflowSlug/workflowDynastySlug plus one of featureSlug/featureDynastySlug.",
+        hint: "Campaign creation requires: name, brandUrls, featureInputs, and at least one of workflowSlug/workflowDynastySlug plus one of featureSlug/featureDynastySlug.",
       });
     }
 
-    const { featureSlug, featureDynastySlug, featureInputs, brandUrl } = parsed.data;
+    const { featureSlug, featureDynastySlug, featureInputs, brandUrls } = parsed.data;
     // Prefer dynasty slug for features-service lookups (accepts both)
     const featureLookupSlug = featureDynastySlug ?? featureSlug!;
 
@@ -96,25 +96,30 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       inputCount: Object.keys(featureInputs).length,
     });
 
-    // 3. Upsert brand to get brandId
-    console.log("[api-service] POST /v1/campaigns — upserting brand", { brandUrl, orgId: req.orgId });
-    const brandResult = await callExternalService<{ brandId: string }>(
-      externalServices.brand,
-      "/brands",
-      {
-        method: "POST",
-        headers: buildInternalHeaders(req),
-        body: {
-          orgId: req.orgId,
-          url: brandUrl,
-          userId: req.userId,
-        },
-      }
+    // 3. Upsert brands to get brandIds (resolve all URLs in parallel)
+    console.log("[api-service] POST /v1/campaigns — upserting brands", { brandUrls, orgId: req.orgId });
+    const brandResults = await Promise.all(
+      brandUrls.map((url) =>
+        callExternalService<{ brandId: string }>(
+          externalServices.brand,
+          "/brands",
+          {
+            method: "POST",
+            headers: buildInternalHeaders(req),
+            body: {
+              orgId: req.orgId,
+              url,
+              userId: req.userId,
+            },
+          }
+        )
+      )
     );
-    console.log("[api-service] POST /v1/campaigns — brand upserted", { brandId: brandResult.brandId });
+    const brandIds = brandResults.map((r) => r.brandId);
+    console.log("[api-service] POST /v1/campaigns — brands upserted", { brandIds });
 
     // 4. Forward to campaign-service (featureInputs forwarded as-is, never inspected)
-    const { workflowSlug, workflowDynastySlug, ...restData } = parsed.data;
+    const { workflowSlug, workflowDynastySlug, brandUrls: _brandUrls, ...restData } = parsed.data;
     // Use dynasty slug or exact slug for campaign type derivation
     const workflowSlugForType = workflowDynastySlug ?? workflowSlug!;
     const campaignType = deriveCampaignType(workflowSlugForType);
@@ -122,7 +127,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       ...restData,
       type: campaignType,
       orgId: req.orgId,
-      brandId: brandResult.brandId,
+      brandIds,
     };
     // Forward whichever slug fields were provided — campaign-service accepts both
     if (workflowSlug) body.workflowSlug = workflowSlug;
@@ -134,7 +139,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     }
 
     console.log("[api-service] POST /v1/campaigns — forwarding to campaign-service", {
-      brandId: body.brandId,
+      brandIds: body.brandIds,
       workflowSlug: body.workflowSlug,
       workflowDynastySlug: body.workflowDynastySlug,
       type: body.type,
@@ -142,11 +147,11 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       featureDynastySlug: body.featureDynastySlug,
     });
     // Enrich headers with IDs resolved during this request — the dashboard
-    // sends brandUrl/workflowSlug/featureSlug in the body, not as headers,
+    // sends brandUrls/workflowSlug/featureSlug in the body, not as headers,
     // so buildInternalHeaders(req) alone won't include them.
     const campaignHeaders: Record<string, string> = {
       ...buildInternalHeaders(req),
-      "x-brand-id": brandResult.brandId,
+      "x-brand-id": brandIds.join(","),
       "x-feature-slug": featureLookupSlug,
       "x-workflow-slug": workflowSlugForType,
     };
@@ -869,9 +874,9 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
     const { id } = req.params;
     const baseHeaders = buildInternalHeaders(req);
 
-    // Fetch campaign to get brandId/featureSlug/workflowSlug for downstream headers
+    // Fetch campaign to get brandIds/featureSlug/workflowSlug for downstream headers
     const campaignResult = await callExternalService<{
-      campaign: { brandId?: string; featureSlug?: string; workflowSlug?: string };
+      campaign: { brandId?: string; brandIds?: string[]; featureSlug?: string; workflowSlug?: string };
     }>(externalServices.campaign, `/campaigns/${encodeURIComponent(id)}`, { headers: baseHeaders });
 
     const campaign = campaignResult.campaign;
@@ -893,7 +898,9 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
       ...baseHeaders,
       "x-campaign-id": id,
     };
-    if (campaign.brandId) headers["x-brand-id"] = campaign.brandId;
+    // Forward brand IDs as CSV — prefer brandIds array, fall back to legacy brandId
+    const campaignBrandIds = campaign.brandIds ?? (campaign.brandId ? [campaign.brandId] : []);
+    if (campaignBrandIds.length > 0) headers["x-brand-id"] = campaignBrandIds.join(",");
     if (campaign.featureSlug) headers["x-feature-slug"] = campaign.featureSlug;
     if (campaign.workflowSlug) headers["x-workflow-slug"] = campaign.workflowSlug;
 

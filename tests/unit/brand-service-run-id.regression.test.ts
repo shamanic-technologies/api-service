@@ -166,7 +166,7 @@ describe("campaign brand upsert sends internal headers", () => {
       .send({
         name: "Test Campaign",
         workflowSlug: "sales-email-cold-outreach-sienna",
-        brandUrl: "https://example.com",
+        brandUrls: ["https://example.com"],
         featureSlug: "cold-outreach-v2",
         featureInputs: {
           targetAudience: "CTOs at SaaS startups with 10-50 employees in the US",

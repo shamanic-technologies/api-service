@@ -39,7 +39,7 @@ function createApp() {
 const validCampaignBody = {
   name: "Test Campaign",
   workflowSlug: "sales-email-cold-outreach-v1",
-  brandUrl: "https://example.com",
+  brandUrls: ["https://example.com"],
   featureSlug: "cold-outreach-v2",
   featureInputs: {
     targetAudience: "CTOs at SaaS startups",
