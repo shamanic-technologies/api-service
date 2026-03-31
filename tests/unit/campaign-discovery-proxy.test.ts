@@ -106,7 +106,7 @@ describe("Campaign journalists: header enrichment from campaign data", () => {
       content.indexOf('"/campaigns/:id/journalists"'),
     );
     expect(journalistsSection).toContain('"x-brand-id"');
-    expect(journalistsSection).toContain("campaign.brandId");
+    expect(journalistsSection).toContain("campaign.brandIds");
   });
 
   it("should forward x-feature-slug and x-workflow-slug from campaign data", () => {

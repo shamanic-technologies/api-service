@@ -876,7 +876,7 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
 
     // Fetch campaign to get brandIds/featureSlug/workflowSlug for downstream headers
     const campaignResult = await callExternalService<{
-      campaign: { brandId?: string; brandIds?: string[]; featureSlug?: string; workflowSlug?: string };
+      campaign: { brandIds?: string[]; featureSlug?: string; workflowSlug?: string };
     }>(externalServices.campaign, `/campaigns/${encodeURIComponent(id)}`, { headers: baseHeaders });
 
     const campaign = campaignResult.campaign;
@@ -898,9 +898,7 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
       ...baseHeaders,
       "x-campaign-id": id,
     };
-    // Forward brand IDs as CSV — prefer brandIds array, fall back to legacy brandId
-    const campaignBrandIds = campaign.brandIds ?? (campaign.brandId ? [campaign.brandId] : []);
-    if (campaignBrandIds.length > 0) headers["x-brand-id"] = campaignBrandIds.join(",");
+    if (campaign.brandIds?.length) headers["x-brand-id"] = campaign.brandIds.join(",");
     if (campaign.featureSlug) headers["x-feature-slug"] = campaign.featureSlug;
     if (campaign.workflowSlug) headers["x-workflow-slug"] = campaign.workflowSlug;
 

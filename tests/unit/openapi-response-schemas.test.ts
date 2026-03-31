@@ -77,7 +77,7 @@ describe("OpenAPI spec — response schemas", () => {
     expect(campaign.properties).toHaveProperty("name");
     expect(campaign.properties).toHaveProperty("workflowSlug");
     expect(campaign.properties).toHaveProperty("status");
-    expect(campaign.properties).toHaveProperty("brandId");
+    expect(campaign.properties).toHaveProperty("brandIds");
   });
 
   it("should define brand response schemas", () => {
