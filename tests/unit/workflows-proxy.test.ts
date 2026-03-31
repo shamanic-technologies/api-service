@@ -38,11 +38,11 @@ describe("Workflow proxy routes", () => {
     expect(content).toContain("req.params");
   });
 
-  it("should proxy GET /workflows/ranked and /workflows/best", () => {
+  it("should proxy GET /workflows/ranked and /workflows/best to features-service", () => {
     expect(content).toContain('"/workflows/ranked"');
     expect(content).toContain('"/workflows/best"');
-    expect(content).toContain("/workflows/ranked?");
-    expect(content).toContain("/workflows/best?");
+    expect(content).toContain("/stats/ranked?");
+    expect(content).toContain("/stats/best?");
   });
 
   it("should define /workflows/ranked and /workflows/best before /workflows/:id to avoid param capture", () => {
@@ -56,32 +56,27 @@ describe("Workflow proxy routes", () => {
     expect(bestIndex).toBeLessThan(idIndex);
   });
 
-  it("should define public workflow routes", () => {
-    expect(content).toContain('"/public/workflows/ranked"');
-    expect(content).toContain('"/public/workflows/best"');
+  it("should not have public workflow ranked/best routes (moved to features router)", () => {
+    expect(content).not.toContain('"/public/workflows/ranked"');
+    expect(content).not.toContain('"/public/workflows/best"');
   });
 
-  it("should proxy public ranked/best to features-service, not workflow-service", () => {
-    // Extract public ranked block
-    const pubRankedStart = content.indexOf('"/public/workflows/ranked"');
-    const pubRankedEnd = content.indexOf("});", pubRankedStart) + 3;
-    const pubRankedBlock = content.slice(pubRankedStart, pubRankedEnd);
-    expect(pubRankedBlock).toContain("externalServices.features");
-    expect(pubRankedBlock).toContain("/public/stats/ranked");
-    expect(pubRankedBlock).not.toContain("externalServices.workflow");
+  it("should proxy authenticated ranked/best to features-service, not workflow-service", () => {
+    // Authenticated ranked
+    const authRankedStart = content.indexOf('"/workflows/ranked"');
+    const authRankedEnd = content.indexOf("});", authRankedStart) + 3;
+    const authRankedBlock = content.slice(authRankedStart, authRankedEnd);
+    expect(authRankedBlock).toContain("externalServices.features");
+    expect(authRankedBlock).toContain("/stats/ranked");
+    expect(authRankedBlock).not.toContain("externalServices.workflow");
 
-    // Extract public best block
-    const pubBestStart = content.indexOf('"/public/workflows/best"');
-    const pubBestEnd = content.indexOf("});", pubBestStart) + 3;
-    const pubBestBlock = content.slice(pubBestStart, pubBestEnd);
-    expect(pubBestBlock).toContain("externalServices.features");
-    expect(pubBestBlock).toContain("/public/stats/best");
-    expect(pubBestBlock).not.toContain("externalServices.workflow");
-  });
-
-  it("should use PUBLIC_RANKED_PARAMS and PUBLIC_BEST_PARAMS for public routes", () => {
-    expect(content).toContain("PUBLIC_RANKED_PARAMS");
-    expect(content).toContain("PUBLIC_BEST_PARAMS");
+    // Authenticated best
+    const authBestStart = content.indexOf('"/workflows/best"');
+    const authBestEnd = content.indexOf("});", authBestStart) + 3;
+    const authBestBlock = content.slice(authBestStart, authBestEnd);
+    expect(authBestBlock).toContain("externalServices.features");
+    expect(authBestBlock).toContain("/stats/best");
+    expect(authBestBlock).not.toContain("externalServices.workflow");
   });
 
   it("should forward featureSlug query param on ranked endpoints", () => {
@@ -208,9 +203,11 @@ describe("Workflow schemas — ranked and best endpoints", () => {
     expect(content).toContain('path: "/v1/workflows/best"');
   });
 
-  it("should register public /v1/public/workflows/* paths", () => {
-    expect(content).toContain('path: "/v1/public/workflows/ranked"');
-    expect(content).toContain('path: "/v1/public/workflows/best"');
+  it("should register public /v1/public/features/* paths (not /v1/public/workflows/*)", () => {
+    expect(content).toContain('path: "/v1/public/features/ranked"');
+    expect(content).toContain('path: "/v1/public/features/best"');
+    expect(content).not.toContain('path: "/v1/public/workflows/ranked"');
+    expect(content).not.toContain('path: "/v1/public/workflows/best"');
   });
 
   it("should include humanId query param on GET /v1/workflows", () => {
@@ -251,25 +248,20 @@ describe("Workflow schemas — ranked and best endpoints", () => {
     expect(audienceLine).toContain(".optional()");
   });
 
-  it("should use groupBy=feature in authenticated ranked query params", () => {
+  it("should require featureDynastySlug and objective in rankedQueryParams (features-service contract)", () => {
     const start = content.indexOf("const rankedQueryParams");
     const end = content.indexOf("});", start) + 3;
     const rankedSection = content.slice(start, end);
-    expect(rankedSection).toContain("feature");
-    expect(rankedSection).not.toContain("'section'");
+    expect(rankedSection).toContain("featureDynastySlug: z.string()");
+    expect(rankedSection).toContain("objective: z.string()");
+    expect(rankedSection).not.toContain("featureSlug");
+    // groupBy supports "workflow" and "brand"
+    expect(rankedSection).toContain('"workflow"');
+    expect(rankedSection).toContain('"brand"');
   });
 
-  it("should define publicRankedQueryParams with required featureDynastySlug and objective", () => {
-    const start = content.indexOf("const publicRankedQueryParams");
-    const end = content.indexOf("});", start) + 3;
-    const section = content.slice(start, end);
-    expect(section).toContain("featureDynastySlug: z.string()");
-    expect(section).toContain("objective: z.string()");
-    expect(section).not.toContain("featureSlug");
-  });
-
-  it("should define publicBestQueryParams with required featureDynastySlug and no featureSlug/objective", () => {
-    const start = content.indexOf("const publicBestQueryParams");
+  it("should require featureDynastySlug in bestQueryParams and not accept featureSlug/objective", () => {
+    const start = content.indexOf("const bestQueryParams");
     const end = content.indexOf("});", start) + 3;
     const section = content.slice(start, end);
     expect(section).toContain("featureDynastySlug: z.string()");

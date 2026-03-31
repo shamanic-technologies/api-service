@@ -98,54 +98,9 @@ function buildWorkflowParams(query: Record<string, unknown>, keys: string[]): UR
   return params;
 }
 
-const RANKED_PARAMS = ["objective", "limit", "groupBy", "brandId", "featureSlug", "featureDynastySlug"];
-const BEST_PARAMS = ["by", "orgId", "objective", "featureSlug", "featureDynastySlug"];
-
-// Public endpoints migrated to features-service — stricter contract
-const PUBLIC_RANKED_PARAMS = ["featureDynastySlug", "objective", "limit", "groupBy", "brandId"];
-const PUBLIC_BEST_PARAMS = ["featureDynastySlug", "by"];
-
-// ---------------------------------------------------------------------------
-// Public routes (no auth — proxied from workflow-service /public/*)
-// ---------------------------------------------------------------------------
-
-/**
- * GET /v1/public/workflows/ranked
- * Public ranked workflows by performance (no DAG, no auth).
- */
-router.get("/public/workflows/ranked", async (_req, res) => {
-  try {
-    const params = buildWorkflowParams(_req.query as Record<string, unknown>, PUBLIC_RANKED_PARAMS);
-    const result = await callExternalService(
-      externalServices.features,
-      `/public/stats/ranked?${params}`,
-      {},
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("[api-service] Public ranked workflows error:", error.message);
-    res.status(502).json({ error: error.message || "Failed to get public ranked workflows" });
-  }
-});
-
-/**
- * GET /v1/public/workflows/best
- * Public hero records — best cost-per-open/reply (no auth).
- */
-router.get("/public/workflows/best", async (_req, res) => {
-  try {
-    const params = buildWorkflowParams(_req.query as Record<string, unknown>, PUBLIC_BEST_PARAMS);
-    const result = await callExternalService(
-      externalServices.features,
-      `/public/stats/best?${params}`,
-      {},
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("[api-service] Public best workflows error:", error.message);
-    res.status(502).json({ error: error.message || "Failed to get public best workflows" });
-  }
-});
+// Authenticated endpoints — migrated to features-service
+const RANKED_PARAMS = ["featureDynastySlug", "objective", "limit", "groupBy", "brandId"];
+const BEST_PARAMS = ["featureDynastySlug", "brandId", "by"];
 
 // ---------------------------------------------------------------------------
 // Authenticated routes
@@ -191,19 +146,19 @@ router.get("/workflows", authenticate, requireOrg, requireUser, async (req: Auth
 /**
  * GET /v1/workflows/ranked
  * Workflows ranked by performance, scoped to the authenticated org.
- * Proxies to workflow-service GET /workflows/ranked.
+ * Proxies to features-service GET /stats/ranked.
  */
 router.get("/workflows/ranked", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = buildWorkflowParams(req.query as Record<string, unknown>, RANKED_PARAMS);
     const result = await callExternalService(
-      externalServices.workflow,
-      `/workflows/ranked?${params}`,
+      externalServices.features,
+      `/stats/ranked?${params}`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
   } catch (error: any) {
-    console.error("Ranked workflows error:", error.message);
+    console.error("[api-service] Ranked workflows error:", error.message);
     res.status(500).json({ error: error.message || "Failed to get ranked workflows" });
   }
 });
@@ -211,19 +166,19 @@ router.get("/workflows/ranked", authenticate, requireOrg, requireUser, async (re
 /**
  * GET /v1/workflows/best
  * Hero records — best value per dynamic metric, scoped to the authenticated org.
- * Metrics are resolved from the feature's declared outputs. Proxies to workflow-service GET /workflows/best.
+ * Proxies to features-service GET /stats/best.
  */
 router.get("/workflows/best", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = buildWorkflowParams(req.query as Record<string, unknown>, BEST_PARAMS);
     const result = await callExternalService(
-      externalServices.workflow,
-      `/workflows/best?${params}`,
+      externalServices.features,
+      `/stats/best?${params}`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
   } catch (error: any) {
-    console.error("Best workflows error:", error.message);
+    console.error("[api-service] Best workflows error:", error.message);
     res.status(500).json({ error: error.message || "Failed to get best workflows" });
   }
 });

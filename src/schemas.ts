@@ -132,50 +132,22 @@ registry.registerPath({
 // WORKFLOW RANKED & BEST (public + authenticated)
 // ===================================================================
 
+// All ranked/best endpoints now proxy to features-service
 const rankedQueryParams = z.object({
-  objective: z.string().optional().openapi({ example: "replied" }).describe("Stats key to rank by (e.g. 'replied', 'clicked', 'leads_found', 'outlets_found'). Dynamically resolved from the feature's declared outputs. If omitted, featureSlug or featureDynastySlug is required to auto-resolve the ranking metric."),
+  featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature dynasty slug (required). Resolves to all versioned slugs in the lineage."),
+  objective: z.string().openapi({ example: "emailsReplied" }).describe("Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'."),
   limit: z.string().optional().openapi({ example: "10" }).describe("Max results (default 10, max 100)"),
-  groupBy: z.string().optional().openapi({ example: "feature" }).describe("'feature' to group by featureSlug, 'brand' to group by brand"),
+  groupBy: z.enum(["workflow", "brand"]).optional().openapi({ example: "brand" }).describe("'workflow' or 'brand' — group results by workflow or brand."),
   brandId: z.string().optional().openapi({ example: "brand-uuid-123" }).describe("Filter by brand ID"),
-  featureSlug: z.string().optional().openapi({ example: "pr-cold-email-outreach-v3" }).describe("Filter by exact versioned feature slug"),
-  featureDynastySlug: z.string().optional().openapi({ example: "pr-cold-email-outreach" }).describe("Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)"),
 });
 
 const bestQueryParams = z.object({
-  by: z.string().optional().openapi({ example: "workflow" }).describe("'workflow' (default) or 'brand' — hero records by workflow or by brand"),
-  objective: z.string().optional().openapi({ example: "replied" }).describe("Stats key to optimize for (e.g. 'replied', 'clicked', 'leads_found'). Dynamically resolved from the feature's declared outputs if omitted."),
-  featureSlug: z.string().optional().openapi({ example: "pr-cold-email-outreach-v3" }).describe("Filter by exact versioned feature slug. Required if objective is not provided."),
-  featureDynastySlug: z.string().optional().openapi({ example: "pr-cold-email-outreach" }).describe("Filter by feature dynasty slug (resolves to all versioned slugs in the lineage). Required if objective is not provided."),
-});
-
-// Public endpoints — migrated to features-service with stricter contract
-const publicRankedQueryParams = z.object({
   featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature dynasty slug (required). Resolves to all versioned slugs in the lineage."),
-  objective: z.string().openapi({ example: "replied" }).describe("Stats key to rank by (required). e.g. 'replied', 'clicked', 'leads_found', 'outlets_found'."),
-  limit: z.string().optional().openapi({ example: "10" }).describe("Max results (default 10, max 100)"),
-  groupBy: z.enum(["brand"]).optional().openapi({ example: "brand" }).describe("'brand' to group by brand. groupBy=feature is no longer supported."),
   brandId: z.string().optional().openapi({ example: "brand-uuid-123" }).describe("Filter by brand ID"),
-});
-
-const publicBestQueryParams = z.object({
-  featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature dynasty slug (required). Resolves to all versioned slugs in the lineage."),
   by: z.string().optional().openapi({ example: "workflow" }).describe("'workflow' (default) or 'brand' — hero records by workflow or by brand"),
 });
 
 // -- Workflow response schemas (mirroring workflow-service) --
-
-const WorkflowEmailStatsSchema = z
-  .object({
-    sent: z.number().describe("Total emails sent"),
-    delivered: z.number().describe("Total emails delivered"),
-    opened: z.number().describe("Total emails opened"),
-    clicked: z.number().describe("Total link clicks"),
-    replied: z.number().describe("Total replies received"),
-    bounced: z.number().describe("Total emails bounced"),
-    unsubscribed: z.number().describe("Total unsubscribes"),
-    recipients: z.number().describe("Total unique recipients"),
-  })
-  .openapi("WorkflowEmailStats");
 
 const WorkflowMetadataSchema = z
   .object({
@@ -202,43 +174,18 @@ const WorkflowStatsSchema = z
     totalOutcomes: z.number().describe("Total outcome count for the ranked metric (dynamic per feature — e.g. replies, leads found, outlets found)"),
     costPerOutcome: z.number().nullable().describe("Cost per outcome in USD cents, null if no outcomes"),
     completedRuns: z.number().describe("Number of completed runs"),
-    email: z.object({
-      transactional: WorkflowEmailStatsSchema.describe("Aggregated transactional email stats"),
-      broadcast: WorkflowEmailStatsSchema.describe("Aggregated broadcast email stats"),
-    }).optional().describe("Email engagement stats aggregated across runs. Present for email-based features."),
   })
   .openapi("WorkflowStats");
 
 const RankedWorkflowItemSchema = z
   .object({
     workflow: WorkflowMetadataSchema,
-    dag: z.object({
-      nodes: z.array(z.any()).describe("DAG nodes"),
-      edges: z.array(z.any()).describe("DAG edges"),
-    }).describe("The DAG definition"),
     stats: WorkflowStatsSchema,
   })
   .openapi("RankedWorkflowItem");
 
-const PublicWorkflowStatsSchema = z
-  .object({
-    totalCostInUsdCents: z.number().describe("Total cost across all completed runs"),
-    totalOutcomes: z.number().describe("Total outcome count for the ranked metric"),
-    costPerOutcome: z.number().nullable().describe("Cost per outcome in USD cents, null if no outcomes"),
-    completedRuns: z.number().describe("Number of completed runs"),
-  })
-  .openapi("PublicWorkflowStats");
-
-const PublicRankedWorkflowItemSchema = z
-  .object({
-    workflow: WorkflowMetadataSchema,
-    stats: PublicWorkflowStatsSchema,
-  })
-  .openapi("PublicRankedWorkflowItem");
-
 const BestWorkflowRecordSchema = z
   .object({
-    workflowId: z.string().describe("ID of the workflow holding the record"),
     workflowSlug: z.string().describe("Slug of the workflow"),
     workflowName: z.string().describe("Display name of the workflow"),
     createdForBrandId: z.string().nullable().describe("Brand ID that created this workflow"),
@@ -246,37 +193,14 @@ const BestWorkflowRecordSchema = z
   })
   .openapi("BestWorkflowRecord");
 
-const PublicBestWorkflowRecordSchema = z
-  .object({
-    workflowSlug: z.string().describe("Slug of the workflow"),
-    workflowName: z.string().describe("Display name of the workflow"),
-    createdForBrandId: z.string().nullable().describe("Brand ID that created this workflow"),
-    value: z.number().describe("The record value (cost per outcome in USD cents)"),
-  })
-  .openapi("PublicBestWorkflowRecord");
-
 const rankedResponse = {
   200: {
-    description: "Ranked workflows with stats",
+    description: "Ranked workflows with stats (from features-service)",
     content: {
       "application/json": {
         schema: z.object({
           results: z.array(RankedWorkflowItemSchema).describe("Workflows ranked by performance, best first"),
         }).openapi("RankedWorkflowResponse"),
-      },
-    },
-  },
-  502: { description: "Upstream service error", content: errorContent },
-};
-
-const publicRankedResponse = {
-  200: {
-    description: "Ranked workflows with stats (no DAG)",
-    content: {
-      "application/json": {
-        schema: z.object({
-          results: z.array(PublicRankedWorkflowItemSchema).describe("Workflows ranked by performance, best first"),
-        }).openapi("PublicRankedWorkflowResponse"),
       },
     },
   },
@@ -293,28 +217,6 @@ const bestResponse = {
         }).openapi("BestWorkflowResponse", {
           example: {
             best: {
-              replied: { workflowId: "wf-uuid-123", workflowSlug: "sales-email-cold-outreach-sienna-v3", workflowName: "Sales Cold Outreach (Sienna)", createdForBrandId: "brand-uuid-456", value: 42 },
-              clicked: null,
-            },
-          },
-        }),
-      },
-    },
-  },
-  400: { description: "Bad request — neither objective nor featureSlug/featureDynastySlug provided", content: errorContent },
-  502: { description: "Upstream service error", content: errorContent },
-};
-
-const publicBestResponse = {
-  200: {
-    description: "Hero records — best cost-per-outcome (public). No workflowId in response.",
-    content: {
-      "application/json": {
-        schema: z.object({
-          best: z.record(z.string(), PublicBestWorkflowRecordSchema.nullable()).describe("Map of metric key to the workflow holding the best cost-per-outcome record. Null if no data."),
-        }).openapi("PublicBestWorkflowResponse", {
-          example: {
-            best: {
               replied: { workflowSlug: "sales-email-cold-outreach-sienna-v3", workflowName: "Sales Cold Outreach (Sienna)", createdForBrandId: "brand-uuid-456", value: 42 },
               clicked: null,
             },
@@ -327,34 +229,34 @@ const publicBestResponse = {
   502: { description: "Upstream service error", content: errorContent },
 };
 
-// Public endpoints (no auth)
+// Public endpoints (no auth) — proxied to features-service
 registry.registerPath({
   method: "get",
-  path: "/v1/public/workflows/ranked",
-  tags: ["Workflows"],
-  summary: "Ranked workflows (public)",
-  description: "Public ranked workflows by performance. Proxied to features-service. featureDynastySlug and objective are required. Only groupBy=brand is supported. No authentication required.",
-  request: { query: publicRankedQueryParams },
-  responses: publicRankedResponse,
+  path: "/v1/public/features/ranked",
+  tags: ["Features"],
+  summary: "Ranked features (public)",
+  description: "Public ranked workflows by performance. Proxied to features-service. featureDynastySlug and objective are required. No authentication required.",
+  request: { query: rankedQueryParams },
+  responses: rankedResponse,
 });
 
 registry.registerPath({
   method: "get",
-  path: "/v1/public/workflows/best",
-  tags: ["Workflows"],
+  path: "/v1/public/features/best",
+  tags: ["Features"],
   summary: "Hero records (public)",
-  description: "Public hero records — best cost-per-outcome. Proxied to features-service. featureDynastySlug is required. Response does not include workflowId. No authentication required.",
-  request: { query: publicBestQueryParams },
-  responses: publicBestResponse,
+  description: "Public hero records — best cost-per-outcome. Proxied to features-service. featureDynastySlug is required. No authentication required.",
+  request: { query: bestQueryParams },
+  responses: bestResponse,
 });
 
-// Authenticated endpoints
+// Authenticated endpoints — proxied to features-service
 registry.registerPath({
   method: "get",
   path: "/v1/workflows/ranked",
   tags: ["Workflows"],
   summary: "Ranked workflows",
-  description: "Workflows ranked by performance, scoped to the authenticated org. Ranking metrics are dynamically resolved from the feature's declared outputs. Supports groupBy=feature and groupBy=brand.",
+  description: "Workflows ranked by performance, scoped to the authenticated org. Proxied to features-service. featureDynastySlug and objective are required. Only groupBy=brand is supported.",
   security: authed,
   request: { query: rankedQueryParams },
   responses: { ...rankedResponse, 401: { description: "Unauthorized", content: errorContent } },
@@ -365,7 +267,7 @@ registry.registerPath({
   path: "/v1/workflows/best",
   tags: ["Workflows"],
   summary: "Hero records",
-  description: "Best cost-per-outcome records for dynamic metrics, scoped to the authenticated org. Metrics are resolved from the feature's declared outputs. Requires objective or featureSlug/featureDynastySlug. Use ?by=brand for brand-level heroes.",
+  description: "Best cost-per-outcome records, scoped to the authenticated org. Proxied to features-service. featureDynastySlug is required. Use ?by=brand for brand-level heroes.",
   security: authed,
   request: { query: bestQueryParams },
   responses: { ...bestResponse, 401: { description: "Unauthorized", content: errorContent } },
