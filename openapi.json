@@ -1407,6 +1407,11 @@
                   "type": "string",
                   "nullable": true
                 },
+                "leadOrganizationDomain": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Company domain from lead enrichment"
+                },
                 "leadTitle": {
                   "type": "string",
                   "nullable": true
@@ -1449,6 +1454,7 @@
                 "leadFirstName",
                 "leadLastName",
                 "leadCompany",
+                "leadOrganizationDomain",
                 "leadTitle",
                 "leadIndustry",
                 "clientCompanyName",

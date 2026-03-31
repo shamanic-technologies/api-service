@@ -85,6 +85,7 @@ describe("Email lead fields: passed through from emailgen dedicated columns", ()
               leadLastName: "Bailey",
               leadTitle: "Outreach Director",
               leadCompany: "ECMC",
+              leadOrganizationDomain: "ecmc.org",
               leadIndustry: "financial services",
               clientCompanyName: "Sortes",
               generationRunId: null,
@@ -108,6 +109,7 @@ describe("Email lead fields: passed through from emailgen dedicated columns", ()
     expect(email.leadLastName).toBe("Bailey");
     expect(email.leadTitle).toBe("Outreach Director");
     expect(email.leadCompany).toBe("ECMC");
+    expect(email.leadOrganizationDomain).toBe("ecmc.org");
     expect(email.leadIndustry).toBe("financial services");
     expect(email.clientCompanyName).toBe("Sortes");
   });
