@@ -1183,9 +1183,20 @@
                   "nullable": true,
                   "description": "Lead source (e.g. 'apollo', 'journalist')"
                 },
-                "externalId": {
+                "apolloPersonId": {
                   "type": "string",
-                  "nullable": true
+                  "nullable": true,
+                  "description": "Apollo person ID, or null if lead is not from Apollo"
+                },
+                "journalistId": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Journalist ID from journalists-service, or null if lead is not a journalist"
+                },
+                "outletId": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Outlet ID, or null if lead is not a journalist"
                 },
                 "firstName": {
                   "type": "string",
@@ -1279,7 +1290,9 @@
                 "leadId",
                 "email",
                 "namespace",
-                "externalId",
+                "apolloPersonId",
+                "journalistId",
+                "outletId",
                 "firstName",
                 "lastName",
                 "emailStatus",

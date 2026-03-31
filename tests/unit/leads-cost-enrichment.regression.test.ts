@@ -30,9 +30,9 @@ describe("leads endpoint cost enrichment", () => {
 
     // Raw lead-service response shape
     const rawLeads = [
-      { id: "lead-1", email: "john@example.com", externalId: "ext-1", runId: "run-1", servedAt: "2025-01-01T00:00:00Z", enrichment: { firstName: "John", lastName: "Doe", title: "CTO", linkedinUrl: null, organizationName: "Acme", organizationDomain: "acme.com", organizationIndustry: "Tech", organizationSize: "50", emailStatus: "verified" } },
-      { id: "lead-2", email: "jane@example.com", externalId: null, runId: null, servedAt: "2025-01-02T00:00:00Z", enrichment: null },
-      { id: "lead-3", email: "bob@example.com", externalId: "ext-3", runId: "run-missing", servedAt: "2025-01-03T00:00:00Z", enrichment: { firstName: "Bob", lastName: "Smith", title: null, linkedinUrl: null, organizationName: null, organizationDomain: null, organizationIndustry: null, organizationSize: null, emailStatus: null } },
+      { id: "lead-1", email: "john@example.com", apolloPersonId: "5f2a1234", journalistId: null, outletId: null, runId: "run-1", servedAt: "2025-01-01T00:00:00Z", enrichment: { firstName: "John", lastName: "Doe", title: "CTO", linkedinUrl: null, organizationName: "Acme", organizationDomain: "acme.com", organizationIndustry: "Tech", organizationSize: "50", emailStatus: "verified" } },
+      { id: "lead-2", email: "jane@example.com", apolloPersonId: null, journalistId: "journalist-uuid-1", outletId: "outlet-uuid-1", runId: null, servedAt: "2025-01-02T00:00:00Z", enrichment: null },
+      { id: "lead-3", email: "bob@example.com", apolloPersonId: "5f2b5678", journalistId: null, outletId: null, runId: "run-missing", servedAt: "2025-01-03T00:00:00Z", enrichment: { firstName: "Bob", lastName: "Smith", title: null, linkedinUrl: null, organizationName: null, organizationDomain: null, organizationIndustry: null, organizationSize: null, emailStatus: null } },
     ];
 
     // Delivery statuses from lead-service /leads/status endpoint
@@ -48,7 +48,9 @@ describe("leads endpoint cost enrichment", () => {
       return {
         id: raw.id,
         email: raw.email,
-        externalId: raw.externalId,
+        apolloPersonId: raw.apolloPersonId ?? null,
+        journalistId: raw.journalistId ?? null,
+        outletId: raw.outletId ?? null,
         firstName: enrichment.firstName ?? null,
         lastName: enrichment.lastName ?? null,
         emailStatus: enrichment.emailStatus ?? null,
