@@ -248,7 +248,7 @@ describe("Workflow schemas — ranked and best endpoints", () => {
     expect(audienceLine).toContain(".optional()");
   });
 
-  it("should require featureDynastySlug, objective, and groupBy in rankedQueryParams", () => {
+  it("should require featureDynastySlug, objective, and groupBy in rankedQueryParams — no brandId", () => {
     const start = content.indexOf("const rankedQueryParams");
     const end = content.indexOf("});", start) + 3;
     const rankedSection = content.slice(start, end);
@@ -256,9 +256,10 @@ describe("Workflow schemas — ranked and best endpoints", () => {
     expect(rankedSection).toContain("objective: z.string()");
     expect(rankedSection).toContain('z.enum(["workflow", "brand"])');
     expect(rankedSection).not.toContain("featureSlug");
+    expect(rankedSection).not.toContain("brandId");
   });
 
-  it("should require featureDynastySlug and by in bestQueryParams, not accept featureSlug/objective", () => {
+  it("should require featureDynastySlug and groupBy in bestQueryParams — no by, brandId, featureSlug, or objective", () => {
     const start = content.indexOf("const bestQueryParams");
     const end = content.indexOf("});", start) + 3;
     const section = content.slice(start, end);
@@ -266,6 +267,8 @@ describe("Workflow schemas — ranked and best endpoints", () => {
     expect(section).toContain('z.enum(["workflow", "brand"])');
     expect(section).not.toContain("featureSlug");
     expect(section).not.toContain("objective");
+    expect(section).not.toContain("brandId");
+    expect(section).not.toContain('"by"');
   });
 
   it("should not include category/channel/audienceType in rankedQueryParams", () => {
