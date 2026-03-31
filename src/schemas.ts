@@ -3073,7 +3073,31 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z.object({
-            results: z.record(z.string(), ExtractFieldResultSchema).describe("Extraction results keyed by field name"),
+            brands: z.array(z.object({
+              brandId: z.string().describe("Internal brand UUID"),
+              domain: z.string().describe("Brand domain (e.g. acme.com)"),
+              name: z.string().describe("Brand display name"),
+            })).describe("Metadata for each brand included in the extraction"),
+            fields: z.record(z.string(), z.object({
+              value: z.union([
+                z.string(),
+                z.array(z.unknown()),
+                z.record(z.unknown()),
+                z.null(),
+              ]).describe("Merged/primary extracted value across all brands"),
+              byBrand: z.record(z.string(), z.object({
+                value: z.union([
+                  z.string(),
+                  z.array(z.unknown()),
+                  z.record(z.unknown()),
+                  z.null(),
+                ]).describe("Extracted value for this brand"),
+                cached: z.boolean().describe("Whether this result was served from cache"),
+                extractedAt: z.string().describe("ISO timestamp of extraction"),
+                expiresAt: z.string().describe("ISO timestamp when cached result expires"),
+                sourceUrls: z.array(z.string()).nullable().describe("URLs scraped to extract this field"),
+              })).describe("Per-brand extraction details keyed by domain"),
+            })).describe("Extraction results keyed by field name"),
           }).openapi("ExtractFieldsFromHeaderResponse"),
         },
       },
