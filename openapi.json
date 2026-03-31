@@ -304,7 +304,7 @@
             "additionalProperties": {
               "$ref": "#/components/schemas/BestWorkflowRecord"
             },
-            "description": "Map of metric key (e.g. 'replied', 'leads_found') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."
+            "description": "Map of metric key (e.g. 'emailsReplied', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."
           }
         },
         "required": [
@@ -312,13 +312,13 @@
         ],
         "example": {
           "best": {
-            "replied": {
+            "emailsReplied": {
               "workflowSlug": "sales-email-cold-outreach-sienna-v3",
               "workflowName": "Sales Cold Outreach (Sienna)",
               "createdForBrandId": "brand-uuid-456",
               "value": 42
             },
-            "clicked": null
+            "leadsServed": null
           }
         }
       },
@@ -7699,14 +7699,13 @@
             "schema": {
               "type": "string",
               "enum": [
-                "workflow",
                 "brand"
               ],
-              "description": "'workflow' or 'brand' — group results by workflow or brand.",
+              "description": "'brand' to aggregate by brand. Omit for default per-workflow ranking.",
               "example": "brand"
             },
             "required": false,
-            "description": "'workflow' or 'brand' — group results by workflow or brand.",
+            "description": "'brand' to aggregate by brand. Omit for default per-workflow ranking.",
             "name": "groupBy",
             "in": "query"
           },
@@ -7872,14 +7871,13 @@
             "schema": {
               "type": "string",
               "enum": [
-                "workflow",
                 "brand"
               ],
-              "description": "'workflow' or 'brand' — group results by workflow or brand.",
+              "description": "'brand' to aggregate by brand. Omit for default per-workflow ranking.",
               "example": "brand"
             },
             "required": false,
-            "description": "'workflow' or 'brand' — group results by workflow or brand.",
+            "description": "'brand' to aggregate by brand. Omit for default per-workflow ranking.",
             "name": "groupBy",
             "in": "query"
           },

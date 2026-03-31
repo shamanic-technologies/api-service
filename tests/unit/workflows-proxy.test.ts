@@ -255,8 +255,7 @@ describe("Workflow schemas — ranked and best endpoints", () => {
     expect(rankedSection).toContain("featureDynastySlug: z.string()");
     expect(rankedSection).toContain("objective: z.string()");
     expect(rankedSection).not.toContain("featureSlug");
-    // groupBy supports "workflow" and "brand"
-    expect(rankedSection).toContain('"workflow"');
+    // groupBy only supports "brand" (omit for per-workflow ranking)
     expect(rankedSection).toContain('"brand"');
   });
 

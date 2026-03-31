@@ -137,7 +137,7 @@ const rankedQueryParams = z.object({
   featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature dynasty slug (required). Resolves to all versioned slugs in the lineage."),
   objective: z.string().openapi({ example: "emailsReplied" }).describe("Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'."),
   limit: z.string().optional().openapi({ example: "10" }).describe("Max results (default 10, max 100)"),
-  groupBy: z.enum(["workflow", "brand"]).optional().openapi({ example: "brand" }).describe("'workflow' or 'brand' — group results by workflow or brand."),
+  groupBy: z.enum(["brand"]).optional().openapi({ example: "brand" }).describe("'brand' to aggregate by brand. Omit for default per-workflow ranking."),
   brandId: z.string().optional().openapi({ example: "brand-uuid-123" }).describe("Filter by brand ID"),
 });
 
@@ -213,12 +213,12 @@ const bestResponse = {
     content: {
       "application/json": {
         schema: z.object({
-          best: z.record(z.string(), BestWorkflowRecordSchema.nullable()).describe("Map of metric key (e.g. 'replied', 'leads_found') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."),
+          best: z.record(z.string(), BestWorkflowRecordSchema.nullable()).describe("Map of metric key (e.g. 'emailsReplied', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."),
         }).openapi("BestWorkflowResponse", {
           example: {
             best: {
-              replied: { workflowSlug: "sales-email-cold-outreach-sienna-v3", workflowName: "Sales Cold Outreach (Sienna)", createdForBrandId: "brand-uuid-456", value: 42 },
-              clicked: null,
+              emailsReplied: { workflowSlug: "sales-email-cold-outreach-sienna-v3", workflowName: "Sales Cold Outreach (Sienna)", createdForBrandId: "brand-uuid-456", value: 42 },
+              leadsServed: null,
             },
           },
         }),
