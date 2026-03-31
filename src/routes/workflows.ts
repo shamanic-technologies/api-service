@@ -101,6 +101,10 @@ function buildWorkflowParams(query: Record<string, unknown>, keys: string[]): UR
 const RANKED_PARAMS = ["objective", "limit", "groupBy", "brandId", "featureSlug", "featureDynastySlug"];
 const BEST_PARAMS = ["by", "orgId", "objective", "featureSlug", "featureDynastySlug"];
 
+// Public endpoints migrated to features-service — stricter contract
+const PUBLIC_RANKED_PARAMS = ["featureDynastySlug", "objective", "limit", "groupBy", "brandId"];
+const PUBLIC_BEST_PARAMS = ["featureDynastySlug", "by"];
+
 // ---------------------------------------------------------------------------
 // Public routes (no auth — proxied from workflow-service /public/*)
 // ---------------------------------------------------------------------------
@@ -111,15 +115,15 @@ const BEST_PARAMS = ["by", "orgId", "objective", "featureSlug", "featureDynastyS
  */
 router.get("/public/workflows/ranked", async (_req, res) => {
   try {
-    const params = buildWorkflowParams(_req.query as Record<string, unknown>, RANKED_PARAMS);
+    const params = buildWorkflowParams(_req.query as Record<string, unknown>, PUBLIC_RANKED_PARAMS);
     const result = await callExternalService(
-      externalServices.workflow,
-      `/public/workflows/ranked?${params}`,
+      externalServices.features,
+      `/public/stats/ranked?${params}`,
       {},
     );
     res.json(result);
   } catch (error: any) {
-    console.error("Public ranked workflows error:", error.message);
+    console.error("[api-service] Public ranked workflows error:", error.message);
     res.status(502).json({ error: error.message || "Failed to get public ranked workflows" });
   }
 });
@@ -130,15 +134,15 @@ router.get("/public/workflows/ranked", async (_req, res) => {
  */
 router.get("/public/workflows/best", async (_req, res) => {
   try {
-    const params = buildWorkflowParams(_req.query as Record<string, unknown>, BEST_PARAMS);
+    const params = buildWorkflowParams(_req.query as Record<string, unknown>, PUBLIC_BEST_PARAMS);
     const result = await callExternalService(
-      externalServices.workflow,
-      `/public/workflows/best?${params}`,
+      externalServices.features,
+      `/public/stats/best?${params}`,
       {},
     );
     res.json(result);
   } catch (error: any) {
-    console.error("Public best workflows error:", error.message);
+    console.error("[api-service] Public best workflows error:", error.message);
     res.status(502).json({ error: error.message || "Failed to get public best workflows" });
   }
 });

@@ -127,28 +127,28 @@ describe("Workflow dynasty slug forwarding", () => {
   // GET /v1/public/workflows/ranked
   // -----------------------------------------------------------------------
 
-  it("should forward featureDynastySlug on GET /public/workflows/ranked", async () => {
+  it("should forward featureDynastySlug to features-service on GET /public/workflows/ranked", async () => {
     const app = createApp();
     await request(app)
       .get("/v1/public/workflows/ranked")
       .query({ featureDynastySlug: "pr-cold-email-outreach" });
 
-    const call = fetchCalls.find((c) => c.url.includes("/public/workflows/ranked"));
+    const call = fetchCalls.find((c) => c.url.includes("/public/stats/ranked"));
     expect(call).toBeDefined();
     expect(call!.url).toContain("featureDynastySlug=pr-cold-email-outreach");
   });
 
   // -----------------------------------------------------------------------
-  // GET /v1/public/workflows/best
+  // GET /v1/public/workflows/best (proxied to features-service /public/stats/best)
   // -----------------------------------------------------------------------
 
-  it("should forward featureDynastySlug on GET /public/workflows/best", async () => {
+  it("should forward featureDynastySlug to features-service on GET /public/workflows/best", async () => {
     const app = createApp();
     await request(app)
       .get("/v1/public/workflows/best")
       .query({ featureDynastySlug: "pr-cold-email-outreach" });
 
-    const call = fetchCalls.find((c) => c.url.includes("/public/workflows/best"));
+    const call = fetchCalls.find((c) => c.url.includes("/public/stats/best"));
     expect(call).toBeDefined();
     expect(call!.url).toContain("featureDynastySlug=pr-cold-email-outreach");
   });
