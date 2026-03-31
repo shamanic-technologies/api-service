@@ -141,22 +141,27 @@ router.get("/brands/:id", authenticate, async (req: AuthenticatedRequest, res) =
 
 /**
  * POST /v1/brands/extract-fields
- * Multi-brand field extraction: reads brand IDs from x-brand-id header (CSV).
- * Proxies to brand-service POST /brands/extract-fields (no path param).
+ * Multi-brand field extraction. Dashboard sends brandIds in the body;
+ * api-service sets x-brand-id CSV header and strips brandIds before proxying.
  */
 router.post("/brands/extract-fields", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    if (!req.brandId) {
-      return res.status(400).json({ error: "x-brand-id header is required" });
+    const { brandIds, ...restBody } = req.body as { brandIds?: string[]; [k: string]: unknown };
+    if (!brandIds || !Array.isArray(brandIds) || brandIds.length === 0) {
+      return res.status(400).json({ error: "brandIds (non-empty string array) is required in the request body" });
     }
 
+    const headers: Record<string, string> = {
+      ...buildInternalHeaders(req),
+      "x-brand-id": brandIds.join(","),
+    };
     const result = await callExternalService(
       externalServices.brand,
       "/brands/extract-fields",
       {
         method: "POST",
-        headers: buildInternalHeaders(req),
-        body: req.body,
+        headers,
+        body: restBody,
       },
     );
     res.json(result);
@@ -221,9 +226,46 @@ router.get("/brands/:id/extracted-fields", authenticate, requireOrg, requireUser
 });
 
 /**
+ * POST /v1/brands/extract-images
+ * Multi-brand image extraction. Dashboard sends brandIds in the body;
+ * api-service sets x-brand-id CSV header and strips brandIds before proxying.
+ */
+router.post("/brands/extract-images", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { brandIds, ...restBody } = req.body as { brandIds?: string[]; [k: string]: unknown };
+    if (!brandIds || !Array.isArray(brandIds) || brandIds.length === 0) {
+      return res.status(400).json({ error: "brandIds (non-empty string array) is required in the request body" });
+    }
+
+    const headers: Record<string, string> = {
+      ...buildInternalHeaders(req),
+      "x-brand-id": brandIds.join(","),
+    };
+    const result = await callExternalService(
+      externalServices.brand,
+      "/brands/extract-images",
+      {
+        method: "POST",
+        headers,
+        body: restBody,
+      },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Extract images error:", error);
+    const msg = error.message || "Failed to extract images";
+    if (msg.includes("No Anthropic API key found")) {
+      return res.status(400).json({
+        error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
+      });
+    }
+    res.status(error.statusCode || 500).json({ error: msg });
+  }
+});
+
+/**
  * POST /v1/brands/:id/extract-images
- * Extract brand images by category (logo, product shots, hero image, etc.)
- * via scraping + vision AI. Returns permanent R2 URLs.
+ * Deprecated — use POST /v1/brands/extract-images instead.
  */
 router.post("/brands/:id/extract-images", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
@@ -238,7 +280,7 @@ router.post("/brands/:id/extract-images", authenticate, requireOrg, requireUser,
     );
     res.json(result);
   } catch (error: any) {
-    console.error("Extract images error:", error);
+    console.error("Extract images (deprecated) error:", error);
     const msg = error.message || "Failed to extract images";
     if (msg.includes("No Anthropic API key found")) {
       return res.status(400).json({
