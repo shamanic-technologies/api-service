@@ -112,23 +112,22 @@ router.get("/journalists/stats/costs", authenticate, requireOrg, requireUser, as
   }
 });
 
-// ── POST /v1/journalists/resolve — resolve journalists for campaign+outlet or brand+outlet ──
+// ── POST /v1/journalists/resolve — resolve journalists for campaign+outlet ──
 // Translates the POST body into a GET /campaign-outlet-journalists query on journalist-service
 router.post("/journalists/resolve", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const { outletId, brandId } = req.body as { outletId?: string; brandId?: string };
+    const { outletId } = req.body as { outletId?: string };
     const campaignId = req.campaignId;
 
-    if (!campaignId && !brandId) {
-      return res.status(400).json({ error: "Either x-campaign-id header or brandId in request body is required" });
+    if (!campaignId) {
+      return res.status(400).json({ error: "x-campaign-id header is required" });
     }
     if (!outletId) {
       return res.status(400).json({ error: "Missing outletId in request body" });
     }
 
     const params = new URLSearchParams();
-    if (campaignId) params.set("campaign_id", campaignId);
-    if (brandId) params.set("brand_id", brandId);
+    params.set("campaign_id", campaignId);
     params.set("outlet_id", outletId);
 
     const result = await callExternalService<{

@@ -82,6 +82,18 @@ describe("Features proxy routes", () => {
     expect(content).toContain("?format=");
   });
 
+  it("should extract brandIds from body and set x-brand-id header on prefill", () => {
+    const prefillSection = content.slice(content.indexOf('"/features/:slug/prefill"'));
+    expect(prefillSection).toContain("brandIds");
+    expect(prefillSection).toContain('"x-brand-id"');
+    expect(prefillSection).toContain('brandIds.join(",")');
+  });
+
+  it("should validate brandIds is present and non-empty on prefill", () => {
+    const prefillSection = content.slice(content.indexOf('"/features/:slug/prefill"'));
+    expect(prefillSection).toContain("brandIds (non-empty string array) is required");
+  });
+
   it("should have POST /features with auth + requireOrg + requireUser", () => {
     const postLine = content.split("\n").find((l) =>
       l.includes("router.post") && l.includes('"/features"')
@@ -281,9 +293,9 @@ describe("Features OpenAPI schemas", () => {
     expect(schemaContent).toContain('tags: ["Features"]');
   });
 
-  it("should define FeaturePrefillRequest schema with brandId", () => {
+  it("should define FeaturePrefillRequest schema with brandIds", () => {
     expect(schemaContent).toContain("FeaturePrefillRequest");
-    expect(schemaContent).toContain("brandId");
+    expect(schemaContent).toContain("brandIds");
   });
 
   it("should register GET /v1/features/stats/registry", () => {

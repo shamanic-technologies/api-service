@@ -452,7 +452,7 @@ const CampaignSchema = z
     workflowSlug: z.string().describe("Exact versioned workflow slug used for execution"),
     workflowDynastySlug: z.string().nullable().describe("Stable dynasty slug for the workflow lineage (unversioned)"),
     brandUrls: z.array(z.string()).nullable().describe("Brand website URLs"),
-    brandIds: z.array(z.string()).nullable().describe("Brand IDs"),
+    brandIds: z.array(z.string()).describe("Brand IDs"),
     featureSlug: z.string().nullable().describe("Exact versioned feature slug for tracking"),
     featureDynastySlug: z.string().nullable().describe("Stable dynasty slug for the feature lineage (unversioned)"),
     featureInputs: z.record(z.unknown()).nullable().describe("Free-form JSONB inputs for the feature"),
@@ -1506,8 +1506,8 @@ registry.registerPath({
   method: "post",
   path: "/v1/journalists/resolve",
   tags: ["Journalists"],
-  summary: "Resolve journalists for a campaign+outlet or brand+outlet",
-  description: "Discovers journalists if needed, scores them, and returns results sorted by relevance. At least one of x-campaign-id header or brandId in body is required.",
+  summary: "Resolve journalists for a campaign+outlet",
+  description: "Discovers journalists if needed, scores them, and returns results sorted by relevance. Requires x-campaign-id header.",
   security: authed,
   request: {
     body: {
@@ -1516,9 +1516,8 @@ registry.registerPath({
           schema: z
             .object({
               outletId: z.string().uuid(),
-              brandId: z.string().uuid().optional().describe("Brand ID — alternative to x-campaign-id header. Returns journalists across all campaigns for this brand."),
-              featureInputs: z.record(z.string()).optional().default({}),
-              maxArticles: z.number().int().min(1).max(30).optional().default(15),
+              featureInputs: z.record(z.string()).optional(),
+              maxArticles: z.number().int().min(1).max(30).optional(),
             })
             .openapi("ResolveJournalistsRequest"),
         },
@@ -5893,7 +5892,7 @@ registry.registerPath({
 
 const FeaturePrefillRequestSchema = z
   .object({
-    brandId: z.string().describe("Brand UUID to prefill from"),
+    brandIds: z.array(z.string()).min(1).describe("Brand UUIDs to prefill from (CSV in x-brand-id header to features-service)"),
   })
   .openapi("FeaturePrefillRequest");
 

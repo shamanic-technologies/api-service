@@ -511,7 +511,6 @@
           },
           "brandIds": {
             "type": "array",
-            "nullable": true,
             "items": {
               "type": "string"
             },
@@ -2231,23 +2230,16 @@
             "type": "string",
             "format": "uuid"
           },
-          "brandId": {
-            "type": "string",
-            "format": "uuid",
-            "description": "Brand ID — alternative to x-campaign-id header. Returns journalists across all campaigns for this brand."
-          },
           "featureInputs": {
             "type": "object",
             "additionalProperties": {
               "type": "string"
-            },
-            "default": {}
+            }
           },
           "maxArticles": {
             "type": "integer",
             "minimum": 1,
-            "maximum": 30,
-            "default": 15
+            "maximum": 30
           }
         },
         "required": [
@@ -7486,13 +7478,17 @@
       "FeaturePrefillRequest": {
         "type": "object",
         "properties": {
-          "brandId": {
-            "type": "string",
-            "description": "Brand UUID to prefill from"
+          "brandIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "description": "Brand UUIDs to prefill from (CSV in x-brand-id header to features-service)"
           }
         },
         "required": [
-          "brandId"
+          "brandIds"
         ]
       },
       "StatsRegistryResponse": {
@@ -11655,8 +11651,8 @@
         "tags": [
           "Journalists"
         ],
-        "summary": "Resolve journalists for a campaign+outlet or brand+outlet",
-        "description": "Discovers journalists if needed, scores them, and returns results sorted by relevance. At least one of x-campaign-id header or brandId in body is required.",
+        "summary": "Resolve journalists for a campaign+outlet",
+        "description": "Discovers journalists if needed, scores them, and returns results sorted by relevance. Requires x-campaign-id header.",
         "security": [
           {
             "bearerAuth": []
