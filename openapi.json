@@ -4214,16 +4214,137 @@
       "ExtractFieldsFromHeaderResponse": {
         "type": "object",
         "properties": {
-          "results": {
+          "brands": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "brandId": {
+                  "type": "string",
+                  "description": "Internal brand UUID"
+                },
+                "domain": {
+                  "type": "string",
+                  "description": "Brand domain (e.g. acme.com)"
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Brand display name"
+                }
+              },
+              "required": [
+                "brandId",
+                "domain",
+                "name"
+              ]
+            },
+            "description": "Metadata for each brand included in the extraction"
+          },
+          "fields": {
             "type": "object",
             "additionalProperties": {
-              "$ref": "#/components/schemas/ExtractFieldResult"
+              "type": "object",
+              "properties": {
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "nullable": true
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": {
+                        "nullable": true
+                      }
+                    },
+                    {
+                      "nullable": true
+                    },
+                    {
+                      "nullable": true
+                    }
+                  ],
+                  "description": "Merged/primary extracted value across all brands"
+                },
+                "byBrand": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "value": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "array",
+                            "items": {
+                              "nullable": true
+                            }
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": {
+                              "nullable": true
+                            }
+                          },
+                          {
+                            "nullable": true
+                          },
+                          {
+                            "nullable": true
+                          }
+                        ],
+                        "description": "Extracted value for this brand"
+                      },
+                      "cached": {
+                        "type": "boolean",
+                        "description": "Whether this result was served from cache"
+                      },
+                      "extractedAt": {
+                        "type": "string",
+                        "description": "ISO timestamp of extraction"
+                      },
+                      "expiresAt": {
+                        "type": "string",
+                        "description": "ISO timestamp when cached result expires"
+                      },
+                      "sourceUrls": {
+                        "type": "array",
+                        "nullable": true,
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "URLs scraped to extract this field"
+                      }
+                    },
+                    "required": [
+                      "value",
+                      "cached",
+                      "extractedAt",
+                      "expiresAt",
+                      "sourceUrls"
+                    ]
+                  },
+                  "description": "Per-brand extraction details keyed by domain"
+                }
+              },
+              "required": [
+                "value",
+                "byBrand"
+              ]
             },
             "description": "Extraction results keyed by field name"
           }
         },
         "required": [
-          "results"
+          "brands",
+          "fields"
         ]
       },
       "ExtractFieldsFromHeaderRequest": {
