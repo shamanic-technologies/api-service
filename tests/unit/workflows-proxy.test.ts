@@ -248,22 +248,22 @@ describe("Workflow schemas — ranked and best endpoints", () => {
     expect(audienceLine).toContain(".optional()");
   });
 
-  it("should require featureDynastySlug and objective in rankedQueryParams (features-service contract)", () => {
+  it("should require featureDynastySlug, objective, and groupBy in rankedQueryParams", () => {
     const start = content.indexOf("const rankedQueryParams");
     const end = content.indexOf("});", start) + 3;
     const rankedSection = content.slice(start, end);
     expect(rankedSection).toContain("featureDynastySlug: z.string()");
     expect(rankedSection).toContain("objective: z.string()");
+    expect(rankedSection).toContain('z.enum(["workflow", "brand"])');
     expect(rankedSection).not.toContain("featureSlug");
-    // groupBy only supports "brand" (omit for per-workflow ranking)
-    expect(rankedSection).toContain('"brand"');
   });
 
-  it("should require featureDynastySlug in bestQueryParams and not accept featureSlug/objective", () => {
+  it("should require featureDynastySlug and by in bestQueryParams, not accept featureSlug/objective", () => {
     const start = content.indexOf("const bestQueryParams");
     const end = content.indexOf("});", start) + 3;
     const section = content.slice(start, end);
     expect(section).toContain("featureDynastySlug: z.string()");
+    expect(section).toContain('z.enum(["workflow", "brand"])');
     expect(section).not.toContain("featureSlug");
     expect(section).not.toContain("objective");
   });

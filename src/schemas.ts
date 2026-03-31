@@ -136,15 +136,15 @@ registry.registerPath({
 const rankedQueryParams = z.object({
   featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature dynasty slug (required). Resolves to all versioned slugs in the lineage."),
   objective: z.string().openapi({ example: "emailsReplied" }).describe("Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'."),
-  limit: z.string().optional().openapi({ example: "10" }).describe("Max results (default 10, max 100)"),
-  groupBy: z.enum(["brand"]).optional().openapi({ example: "brand" }).describe("'brand' to aggregate by brand. Omit for default per-workflow ranking."),
+  groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
   brandId: z.string().optional().openapi({ example: "brand-uuid-123" }).describe("Filter by brand ID"),
+  limit: z.string().optional().openapi({ example: "10" }).describe("Max results (default 10, max 100)"),
 });
 
 const bestQueryParams = z.object({
   featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature dynasty slug (required). Resolves to all versioned slugs in the lineage."),
+  by: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — hero records by workflow or by brand."),
   brandId: z.string().optional().openapi({ example: "brand-uuid-123" }).describe("Filter by brand ID"),
-  by: z.string().optional().openapi({ example: "workflow" }).describe("'workflow' (default) or 'brand' — hero records by workflow or by brand"),
 });
 
 // -- Workflow response schemas (mirroring workflow-service) --
@@ -235,7 +235,7 @@ registry.registerPath({
   path: "/v1/public/features/ranked",
   tags: ["Features"],
   summary: "Ranked features (public)",
-  description: "Public ranked workflows by performance. Proxied to features-service. featureDynastySlug and objective are required. No authentication required.",
+  description: "Public ranked workflows by performance. Proxied to features-service. featureDynastySlug, objective, and groupBy are required. No authentication required.",
   request: { query: rankedQueryParams },
   responses: rankedResponse,
 });
@@ -245,7 +245,7 @@ registry.registerPath({
   path: "/v1/public/features/best",
   tags: ["Features"],
   summary: "Hero records (public)",
-  description: "Public hero records — best cost-per-outcome. Proxied to features-service. featureDynastySlug is required. No authentication required.",
+  description: "Public hero records — best cost-per-outcome. Proxied to features-service. featureDynastySlug and by are required. No authentication required.",
   request: { query: bestQueryParams },
   responses: bestResponse,
 });
@@ -256,7 +256,7 @@ registry.registerPath({
   path: "/v1/workflows/ranked",
   tags: ["Workflows"],
   summary: "Ranked workflows",
-  description: "Workflows ranked by performance, scoped to the authenticated org. Proxied to features-service. featureDynastySlug and objective are required. Only groupBy=brand is supported.",
+  description: "Workflows ranked by performance, scoped to the authenticated org. Proxied to features-service. featureDynastySlug, objective, and groupBy are required.",
   security: authed,
   request: { query: rankedQueryParams },
   responses: { ...rankedResponse, 401: { description: "Unauthorized", content: errorContent } },
@@ -267,7 +267,7 @@ registry.registerPath({
   path: "/v1/workflows/best",
   tags: ["Workflows"],
   summary: "Hero records",
-  description: "Best cost-per-outcome records, scoped to the authenticated org. Proxied to features-service. featureDynastySlug is required. Use ?by=brand for brand-level heroes.",
+  description: "Best cost-per-outcome records, scoped to the authenticated org. Proxied to features-service. featureDynastySlug and by are required.",
   security: authed,
   request: { query: bestQueryParams },
   responses: { ...bestResponse, 401: { description: "Unauthorized", content: errorContent } },

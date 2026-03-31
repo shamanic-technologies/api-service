@@ -7660,7 +7660,7 @@
           "Features"
         ],
         "summary": "Ranked features (public)",
-        "description": "Public ranked workflows by performance. Proxied to features-service. featureDynastySlug and objective are required. No authentication required.",
+        "description": "Public ranked workflows by performance. Proxied to features-service. featureDynastySlug, objective, and groupBy are required. No authentication required.",
         "parameters": [
           {
             "schema": {
@@ -7687,25 +7687,15 @@
           {
             "schema": {
               "type": "string",
-              "description": "Max results (default 10, max 100)",
-              "example": "10"
-            },
-            "required": false,
-            "description": "Max results (default 10, max 100)",
-            "name": "limit",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
               "enum": [
+                "workflow",
                 "brand"
               ],
-              "description": "'brand' to aggregate by brand. Omit for default per-workflow ranking.",
-              "example": "brand"
+              "description": "'workflow' or 'brand' — group results by workflow or by brand.",
+              "example": "workflow"
             },
-            "required": false,
-            "description": "'brand' to aggregate by brand. Omit for default per-workflow ranking.",
+            "required": true,
+            "description": "'workflow' or 'brand' — group results by workflow or by brand.",
             "name": "groupBy",
             "in": "query"
           },
@@ -7718,6 +7708,17 @@
             "required": false,
             "description": "Filter by brand ID",
             "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Max results (default 10, max 100)",
+              "example": "10"
+            },
+            "required": false,
+            "description": "Max results (default 10, max 100)",
+            "name": "limit",
             "in": "query"
           }
         ],
@@ -7751,7 +7752,7 @@
           "Features"
         ],
         "summary": "Hero records (public)",
-        "description": "Public hero records — best cost-per-outcome. Proxied to features-service. featureDynastySlug is required. No authentication required.",
+        "description": "Public hero records — best cost-per-outcome. Proxied to features-service. featureDynastySlug and by are required. No authentication required.",
         "parameters": [
           {
             "schema": {
@@ -7767,23 +7768,27 @@
           {
             "schema": {
               "type": "string",
+              "enum": [
+                "workflow",
+                "brand"
+              ],
+              "description": "'workflow' or 'brand' — hero records by workflow or by brand.",
+              "example": "workflow"
+            },
+            "required": true,
+            "description": "'workflow' or 'brand' — hero records by workflow or by brand.",
+            "name": "by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "description": "Filter by brand ID",
               "example": "brand-uuid-123"
             },
             "required": false,
             "description": "Filter by brand ID",
             "name": "brandId",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "'workflow' (default) or 'brand' — hero records by workflow or by brand",
-              "example": "workflow"
-            },
-            "required": false,
-            "description": "'workflow' (default) or 'brand' — hero records by workflow or by brand",
-            "name": "by",
             "in": "query"
           }
         ],
@@ -7827,7 +7832,7 @@
           "Workflows"
         ],
         "summary": "Ranked workflows",
-        "description": "Workflows ranked by performance, scoped to the authenticated org. Proxied to features-service. featureDynastySlug and objective are required. Only groupBy=brand is supported.",
+        "description": "Workflows ranked by performance, scoped to the authenticated org. Proxied to features-service. featureDynastySlug, objective, and groupBy are required.",
         "security": [
           {
             "bearerAuth": []
@@ -7859,25 +7864,15 @@
           {
             "schema": {
               "type": "string",
-              "description": "Max results (default 10, max 100)",
-              "example": "10"
-            },
-            "required": false,
-            "description": "Max results (default 10, max 100)",
-            "name": "limit",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
               "enum": [
+                "workflow",
                 "brand"
               ],
-              "description": "'brand' to aggregate by brand. Omit for default per-workflow ranking.",
-              "example": "brand"
+              "description": "'workflow' or 'brand' — group results by workflow or by brand.",
+              "example": "workflow"
             },
-            "required": false,
-            "description": "'brand' to aggregate by brand. Omit for default per-workflow ranking.",
+            "required": true,
+            "description": "'workflow' or 'brand' — group results by workflow or by brand.",
             "name": "groupBy",
             "in": "query"
           },
@@ -7890,6 +7885,17 @@
             "required": false,
             "description": "Filter by brand ID",
             "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Max results (default 10, max 100)",
+              "example": "10"
+            },
+            "required": false,
+            "description": "Max results (default 10, max 100)",
+            "name": "limit",
             "in": "query"
           },
           {
@@ -7988,7 +7994,7 @@
           "Workflows"
         ],
         "summary": "Hero records",
-        "description": "Best cost-per-outcome records, scoped to the authenticated org. Proxied to features-service. featureDynastySlug is required. Use ?by=brand for brand-level heroes.",
+        "description": "Best cost-per-outcome records, scoped to the authenticated org. Proxied to features-service. featureDynastySlug and by are required.",
         "security": [
           {
             "bearerAuth": []
@@ -8009,23 +8015,27 @@
           {
             "schema": {
               "type": "string",
+              "enum": [
+                "workflow",
+                "brand"
+              ],
+              "description": "'workflow' or 'brand' — hero records by workflow or by brand.",
+              "example": "workflow"
+            },
+            "required": true,
+            "description": "'workflow' or 'brand' — hero records by workflow or by brand.",
+            "name": "by",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "description": "Filter by brand ID",
               "example": "brand-uuid-123"
             },
             "required": false,
             "description": "Filter by brand ID",
             "name": "brandId",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "'workflow' (default) or 'brand' — hero records by workflow or by brand",
-              "example": "workflow"
-            },
-            "required": false,
-            "description": "'workflow' (default) or 'brand' — hero records by workflow or by brand",
-            "name": "by",
             "in": "query"
           },
           {
