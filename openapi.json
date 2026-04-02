@@ -16875,7 +16875,7 @@
           "Email Gateway"
         ],
         "summary": "Get email delivery stats",
-        "description": "Get broadcast delivery statistics from email-gateway. Filter by brandId, campaignId, workflowSlug, featureSlug, workflowDynastySlug, or featureDynastySlug.",
+        "description": "Get broadcast delivery statistics from email-gateway. Filter by brandId, campaignId, workflowSlugs, featureSlugs, workflowDynastySlug, or featureDynastySlug.",
         "security": [
           {
             "bearerAuth": []
@@ -16905,21 +16905,21 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact workflow slug"
+              "description": "Filter by workflow slugs (comma-separated, e.g. 'slug-v1,slug-v2')"
             },
             "required": false,
-            "description": "Filter by exact workflow slug",
-            "name": "workflowSlug",
+            "description": "Filter by workflow slugs (comma-separated, e.g. 'slug-v1,slug-v2')",
+            "name": "workflowSlugs",
             "in": "query"
           },
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact feature slug"
+              "description": "Filter by feature slugs (comma-separated, e.g. 'feature-v1,feature-v2')"
             },
             "required": false,
-            "description": "Filter by exact feature slug",
-            "name": "featureSlug",
+            "description": "Filter by feature slugs (comma-separated, e.g. 'feature-v1,feature-v2')",
+            "name": "featureSlugs",
             "in": "query"
           },
           {

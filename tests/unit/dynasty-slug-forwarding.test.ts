@@ -57,14 +57,16 @@ describe("Dynasty slug forwarding — runs/stats/costs", () => {
 });
 
 describe("Dynasty slug forwarding — email-gateway/stats", () => {
-  it("should forward dynasty slug filters on GET /email-gateway/stats", () => {
-    for (const param of allSlugParams) {
+  const emailGatewaySlugParams = ["workflowSlugs", "featureSlugs", "workflowDynastySlug", "featureDynastySlug"];
+
+  it("should forward slug filters on GET /email-gateway/stats (plural workflowSlugs/featureSlugs)", () => {
+    for (const param of emailGatewaySlugParams) {
       expect(emailGatewayRoute).toContain(`"${param}"`);
     }
   });
 
-  it("should accept dynasty slug filters in fetchDeliveryStats", () => {
-    for (const param of allSlugParams) {
+  it("should accept slug filters in fetchDeliveryStats (plural workflowSlugs/featureSlugs)", () => {
+    for (const param of emailGatewaySlugParams) {
       expect(deliveryStatsLib).toContain(param);
     }
   });
@@ -228,10 +230,10 @@ describe("Dynasty slug params in generated openapi.json", () => {
     expect(paramNames).toContain("featureSlug");
   });
 
-  it("should have dynasty query params on /v1/email-gateway/stats", () => {
+  it("should have dynasty query params on /v1/email-gateway/stats (plural workflowSlugs/featureSlugs)", () => {
     const params = openapiSpec.paths["/v1/email-gateway/stats"]?.get?.parameters ?? [];
     const paramNames = params.map((p: { name: string }) => p.name);
-    for (const param of allSlugParams) {
+    for (const param of ["workflowSlugs", "featureSlugs", "workflowDynastySlug", "featureDynastySlug"]) {
       expect(paramNames).toContain(param);
     }
   });
