@@ -7225,6 +7225,65 @@
           "outputBlobToken"
         ]
       },
+      "LlmServiceOverview": {
+        "type": "object",
+        "properties": {
+          "service": {
+            "type": "string",
+            "description": "Service name"
+          },
+          "title": {
+            "type": "string",
+            "description": "Service title"
+          },
+          "description": {
+            "type": "string",
+            "description": "Service description"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message if service metadata could not be loaded"
+          },
+          "endpointCount": {
+            "type": "number",
+            "description": "Number of endpoints exposed by this service"
+          }
+        },
+        "required": [
+          "service",
+          "endpointCount"
+        ]
+      },
+      "LlmContextResponse": {
+        "type": "object",
+        "properties": {
+          "_description": {
+            "type": "string",
+            "description": "Description of this context payload"
+          },
+          "_workflow": {
+            "type": "string",
+            "description": "Progressive-disclosure workflow: overview first, then drill into a service"
+          },
+          "serviceCount": {
+            "type": "number",
+            "description": "Total number of registered services"
+          },
+          "services": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LlmServiceOverview"
+            },
+            "description": "Lightweight service list (use /llm-context/{service} for endpoints)"
+          }
+        },
+        "required": [
+          "_description",
+          "_workflow",
+          "serviceCount",
+          "services"
+        ]
+      },
       "LlmEndpointSummary": {
         "type": "object",
         "properties": {
@@ -7239,36 +7298,6 @@
           "summary": {
             "type": "string",
             "description": "Endpoint summary"
-          },
-          "params": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "in": {
-                  "type": "string"
-                },
-                "required": {
-                  "type": "boolean"
-                }
-              },
-              "required": [
-                "name",
-                "in",
-                "required"
-              ]
-            },
-            "description": "Endpoint parameters"
-          },
-          "bodyFields": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Request body field names"
           }
         },
         "required": [
@@ -7277,16 +7306,37 @@
           "summary"
         ]
       },
-      "LlmServiceSummary": {
+      "LlmEndpointGroup": {
+        "type": "object",
+        "properties": {
+          "group": {
+            "type": "string",
+            "description": "Path group prefix"
+          },
+          "endpointCount": {
+            "type": "number",
+            "description": "Number of endpoints in this group"
+          },
+          "endpoints": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LlmEndpointSummary"
+            },
+            "description": "Endpoints in this group"
+          }
+        },
+        "required": [
+          "group",
+          "endpointCount",
+          "endpoints"
+        ]
+      },
+      "LlmServiceDetailResponse": {
         "type": "object",
         "properties": {
           "service": {
             "type": "string",
             "description": "Service name"
-          },
-          "baseUrl": {
-            "type": "string",
-            "description": "Service base URL"
           },
           "title": {
             "type": "string",
@@ -7296,43 +7346,35 @@
             "type": "string",
             "description": "Service description"
           },
+          "endpointCount": {
+            "type": "number",
+            "description": "Number of endpoints returned"
+          },
           "endpoints": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/LlmEndpointSummary"
             },
-            "description": "Available endpoints"
-          }
-        },
-        "required": [
-          "service",
-          "baseUrl",
-          "endpoints"
-        ]
-      },
-      "LlmContextResponse": {
-        "type": "object",
-        "properties": {
-          "_description": {
-            "type": "string",
-            "description": "Description of this context payload"
+            "description": "Flat endpoint list (for small services)"
           },
-          "_usage": {
-            "type": "string",
-            "description": "Usage instructions for LLMs"
+          "totalEndpoints": {
+            "type": "number",
+            "description": "Total endpoints (when grouped)"
           },
-          "services": {
+          "groupCount": {
+            "type": "number",
+            "description": "Number of groups (when grouped)"
+          },
+          "groups": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/LlmServiceSummary"
+              "$ref": "#/components/schemas/LlmEndpointGroup"
             },
-            "description": "All platform services with their endpoints"
+            "description": "Grouped endpoints (for large services with 30+ endpoints)"
           }
         },
         "required": [
-          "_description",
-          "_usage",
-          "services"
+          "service"
         ]
       },
       "FeaturesListResponse": {
@@ -24910,8 +24952,8 @@
         "tags": [
           "Platform"
         ],
-        "summary": "Get LLM-friendly platform context",
-        "description": "Returns a compact summary of all platform services and their endpoints, optimized for LLM consumption. Proxied from api-registry. Ideal for giving an LLM full platform awareness to answer questions like 'what services exist?' or 'can the platform do X?'.",
+        "summary": "Get LLM-friendly platform overview",
+        "description": "Returns a lightweight overview of all platform services (name, description, endpoint count). Proxied from api-registry. Use GET /v1/platform/llm-context/{service} to drill into a specific service's endpoints.",
         "security": [
           {
             "bearerAuth": []
@@ -24919,7 +24961,7 @@
         ],
         "responses": {
           "200": {
-            "description": "LLM context with all services and endpoints",
+            "description": "Lightweight service overview for LLM consumption",
             "content": {
               "application/json": {
                 "schema": {
@@ -25006,6 +25048,159 @@
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
           }
         ]
+      }
+    },
+    "/v1/platform/llm-context/{service}": {
+      "get": {
+        "tags": [
+          "Platform"
+        ],
+        "summary": "Get LLM-friendly endpoint details for a service",
+        "description": "Returns endpoint details for a specific service. Supports filtering by method, path group, or path prefix. Large services (30+ endpoints) auto-group by path prefix. Proxied from api-registry.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Service name"
+            },
+            "required": true,
+            "description": "Service name",
+            "name": "service",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by HTTP method (e.g. 'POST')"
+            },
+            "required": false,
+            "description": "Filter by HTTP method (e.g. 'POST')",
+            "name": "method",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by path group (e.g. 'campaigns')"
+            },
+            "required": false,
+            "description": "Filter by path group (e.g. 'campaigns')",
+            "name": "group",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by path prefix (e.g. '/v1/campaigns')"
+            },
+            "required": false,
+            "description": "Filter by path prefix (e.g. '/v1/campaigns')",
+            "name": "pathPrefix",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Endpoint list for the service (flat or grouped depending on size)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LlmServiceDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Service not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/features": {

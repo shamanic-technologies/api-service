@@ -73,9 +73,13 @@ describe("Platform proxy routes", () => {
     expect(platformContent).toContain('"/platform/llm-context"');
   });
 
+  it("should have GET /platform/llm-context/:service endpoint", () => {
+    expect(platformContent).toContain('"/platform/llm-context/:service"');
+  });
+
   it("should use authenticate, requireOrg, requireUser on all endpoints", () => {
     const routeLines = platformContent.split("\n").filter((l) => l.includes("router.get"));
-    expect(routeLines.length).toBe(3);
+    expect(routeLines.length).toBe(4);
     for (const line of routeLines) {
       expect(line).toContain("authenticate");
       expect(line).toContain("requireOrg");
@@ -100,7 +104,7 @@ describe("Platform proxy routes", () => {
     expect(platformContent).toContain("buildInternalHeaders");
     const headerMatches = platformContent.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(3);
+    expect(headerMatches!.length).toBe(4);
   });
 
   it("should forward upstream status codes on error", () => {
@@ -135,9 +139,11 @@ describe("Platform OpenAPI schemas", () => {
     expect(schemaContent).toContain('path: "/v1/platform/services"');
     expect(schemaContent).toContain('path: "/v1/platform/services/{service}"');
     expect(schemaContent).toContain('path: "/v1/platform/llm-context"');
+    expect(schemaContent).toContain('path: "/v1/platform/llm-context/{service}"');
     expect(schemaContent).toContain('tags: ["Platform"]');
     expect(schemaContent).toContain('"PlatformServicesResponse"');
     expect(schemaContent).toContain('"LlmContextResponse"');
+    expect(schemaContent).toContain('"LlmServiceDetailResponse"');
   });
 });
 
@@ -255,16 +261,14 @@ describe("GET /v1/platform/llm-context — integration", () => {
 
   const mockLlmContext = {
     _description: "Compact summary of all platform services",
-    _usage: "Use this to discover services and endpoints",
+    _workflow: "1. Read this overview  2. GET /llm-context/{service} for endpoint details",
+    serviceCount: 1,
     services: [
       {
         service: "lead",
-        baseUrl: "https://lead.distribute.you",
         title: "Lead Service",
         description: "Find and manage leads",
-        endpoints: [
-          { method: "POST", path: "/search", summary: "Search leads by ICP criteria", params: [], bodyFields: ["query", "limit"] },
-        ],
+        endpointCount: 3,
       },
     ],
   };
@@ -285,14 +289,19 @@ describe("GET /v1/platform/llm-context — integration", () => {
     app = createApp();
   });
 
-  it("should proxy to api-registry /llm-context", async () => {
+  it("should proxy to api-registry /llm-context with lightweight format", async () => {
     const res = await request(app).get("/v1/platform/llm-context");
 
     expect(res.status).toBe(200);
     expect(res.body._description).toBeDefined();
+    expect(res.body._workflow).toBeDefined();
+    expect(res.body.serviceCount).toBe(1);
     expect(res.body.services).toHaveLength(1);
     expect(res.body.services[0].service).toBe("lead");
-    expect(res.body.services[0].endpoints[0].method).toBe("POST");
+    expect(res.body.services[0].endpointCount).toBe(3);
+    // Should NOT have inline endpoints (progressive disclosure)
+    expect(res.body.services[0].endpoints).toBeUndefined();
+    expect(res.body.services[0].baseUrl).toBeUndefined();
   });
 
   it("should handle upstream failure gracefully", async () => {
@@ -303,5 +312,66 @@ describe("GET /v1/platform/llm-context — integration", () => {
 
     const res = await request(app).get("/v1/platform/llm-context");
     expect(res.status).toBe(502);
+  });
+});
+
+describe("GET /v1/platform/llm-context/:service — integration", () => {
+  let app: express.Express;
+
+  const mockServiceDetail = {
+    service: "lead",
+    title: "Lead Service",
+    description: "Find and manage leads",
+    endpointCount: 2,
+    endpoints: [
+      { method: "POST", path: "/search", summary: "Search leads by ICP criteria" },
+      { method: "GET", path: "/search/:id", summary: "Get lead by ID" },
+    ],
+  };
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    fetchCalls = [];
+
+    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      fetchCalls.push({ url, method: init?.method });
+
+      if (url.includes("/llm-context/lead")) {
+        return { ok: true, json: () => Promise.resolve(mockServiceDetail) };
+      }
+      if (url.includes("/llm-context/nonexistent")) {
+        return {
+          ok: false,
+          status: 404,
+          text: () => Promise.resolve('{"error":"Service \\"nonexistent\\" not found"}'),
+        };
+      }
+      return { ok: true, json: () => Promise.resolve({}) };
+    });
+
+    app = createApp();
+  });
+
+  it("should proxy to api-registry /llm-context/:service with endpoint details", async () => {
+    const res = await request(app).get("/v1/platform/llm-context/lead");
+
+    expect(res.status).toBe(200);
+    expect(res.body.service).toBe("lead");
+    expect(res.body.endpointCount).toBe(2);
+    expect(res.body.endpoints).toHaveLength(2);
+    expect(res.body.endpoints[0].method).toBe("POST");
+  });
+
+  it("should forward query parameters to api-registry", async () => {
+    await request(app).get("/v1/platform/llm-context/lead?method=POST&group=search");
+
+    const registryCall = fetchCalls.find((c) => c.url.includes("/llm-context/lead"));
+    expect(registryCall?.url).toContain("method=POST");
+    expect(registryCall?.url).toContain("group=search");
+  });
+
+  it("should return 404 for unknown service", async () => {
+    const res = await request(app).get("/v1/platform/llm-context/nonexistent");
+    expect(res.status).toBe(404);
   });
 });

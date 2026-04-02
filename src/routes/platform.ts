@@ -44,7 +44,7 @@ router.get("/platform/services/:service", authenticate, requireOrg, requireUser,
 
 /**
  * GET /v1/platform/llm-context
- * Get LLM context from api-registry (service descriptions + endpoint summaries for chat)
+ * Get lightweight LLM context overview from api-registry (service names + endpoint counts)
  */
 router.get("/platform/llm-context", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
@@ -55,8 +55,29 @@ router.get("/platform/llm-context", authenticate, requireOrg, requireUser, async
     );
     res.json(result);
   } catch (error: any) {
-    console.error("Get platform LLM context error:", error.message);
+    console.error("[api-service] Get platform LLM context error:", error.message);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get LLM context" });
+  }
+});
+
+/**
+ * GET /v1/platform/llm-context/:service
+ * Get LLM-friendly endpoint details for a specific service from api-registry
+ */
+router.get("/platform/llm-context/:service", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { service } = req.params;
+    const queryString = new URLSearchParams(req.query as Record<string, string>).toString();
+    const path = `/llm-context/${service}${queryString ? `?${queryString}` : ""}`;
+    const result = await callExternalService(
+      externalServices.apiRegistry,
+      path,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Get platform LLM context for service error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get LLM context for service" });
   }
 });
 
