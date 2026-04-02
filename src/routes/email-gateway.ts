@@ -12,7 +12,7 @@ const router = Router();
 router.get("/email-gateway/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const filters: Record<string, string | undefined> = {};
-    for (const key of ["brandId", "campaignId", "workflowSlug", "featureSlug", "workflowDynastySlug", "featureDynastySlug"]) {
+    for (const key of ["brandId", "campaignId", "workflowSlugs", "featureSlugs", "workflowDynastySlug", "featureDynastySlug"]) {
       if (req.query[key]) filters[key] = req.query[key] as string;
     }
 

@@ -3327,14 +3327,14 @@ registry.registerPath({
   tags: ["Email Gateway"],
   summary: "Get email delivery stats",
   description:
-    "Get broadcast delivery statistics from email-gateway. Filter by brandId, campaignId, workflowSlug, featureSlug, workflowDynastySlug, or featureDynastySlug.",
+    "Get broadcast delivery statistics from email-gateway. Filter by brandId, campaignId, workflowSlugs, featureSlugs, workflowDynastySlug, or featureDynastySlug.",
   security: authed,
   request: {
     query: z.object({
       brandId: z.string().optional().describe("Filter by brand ID"),
       campaignId: z.string().optional().describe("Filter by campaign ID"),
-      workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
-      featureSlug: z.string().optional().describe("Filter by exact feature slug"),
+      workflowSlugs: z.string().optional().describe("Filter by workflow slugs (comma-separated, e.g. 'slug-v1,slug-v2')"),
+      featureSlugs: z.string().optional().describe("Filter by feature slugs (comma-separated, e.g. 'feature-v1,feature-v2')"),
       workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
       featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
     }),
