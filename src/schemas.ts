@@ -5496,37 +5496,57 @@ registry.registerPath({
   },
 });
 
+// -- /v1/platform/llm-context (overview — lightweight, no inline endpoints) --
+
+const LlmServiceOverviewSchema = z
+  .object({
+    service: z.string().describe("Service name"),
+    title: z.string().optional().describe("Service title"),
+    description: z.string().optional().describe("Service description"),
+    error: z.string().optional().describe("Error message if service metadata could not be loaded"),
+    endpointCount: z.number().describe("Number of endpoints exposed by this service"),
+  })
+  .openapi("LlmServiceOverview");
+
+const LlmContextResponseSchema = z
+  .object({
+    _description: z.string().describe("Description of this context payload"),
+    _workflow: z.string().describe("Progressive-disclosure workflow: overview first, then drill into a service"),
+    serviceCount: z.number().describe("Total number of registered services"),
+    services: z.array(LlmServiceOverviewSchema).describe("Lightweight service list (use /llm-context/{service} for endpoints)"),
+  })
+  .openapi("LlmContextResponse");
+
+// -- /v1/platform/llm-context/{service} (drill-down — endpoint details) --
+
 const LlmEndpointSummarySchema = z
   .object({
     method: z.string().describe("HTTP method"),
     path: z.string().describe("Endpoint path"),
     summary: z.string().describe("Endpoint summary"),
-    params: z.array(z.object({
-      name: z.string(),
-      in: z.string(),
-      required: z.boolean(),
-    })).optional().describe("Endpoint parameters"),
-    bodyFields: z.array(z.string()).optional().describe("Request body field names"),
   })
   .openapi("LlmEndpointSummary");
 
-const LlmServiceSummarySchema = z
+const LlmEndpointGroupSchema = z
+  .object({
+    group: z.string().describe("Path group prefix"),
+    endpointCount: z.number().describe("Number of endpoints in this group"),
+    endpoints: z.array(LlmEndpointSummarySchema).describe("Endpoints in this group"),
+  })
+  .openapi("LlmEndpointGroup");
+
+const LlmServiceDetailResponseSchema = z
   .object({
     service: z.string().describe("Service name"),
-    baseUrl: z.string().describe("Service base URL"),
     title: z.string().optional().describe("Service title"),
     description: z.string().optional().describe("Service description"),
-    endpoints: z.array(LlmEndpointSummarySchema).describe("Available endpoints"),
+    endpointCount: z.number().optional().describe("Number of endpoints returned"),
+    endpoints: z.array(LlmEndpointSummarySchema).optional().describe("Flat endpoint list (for small services)"),
+    totalEndpoints: z.number().optional().describe("Total endpoints (when grouped)"),
+    groupCount: z.number().optional().describe("Number of groups (when grouped)"),
+    groups: z.array(LlmEndpointGroupSchema).optional().describe("Grouped endpoints (for large services with 30+ endpoints)"),
   })
-  .openapi("LlmServiceSummary");
-
-const LlmContextResponseSchema = z
-  .object({
-    _description: z.string().describe("Description of this context payload"),
-    _usage: z.string().describe("Usage instructions for LLMs"),
-    services: z.array(LlmServiceSummarySchema).describe("All platform services with their endpoints"),
-  })
-  .openapi("LlmContextResponse");
+  .openapi("LlmServiceDetailResponse");
 
 // ---------------------------------------------------------------------------
 // ===================================================================
@@ -5873,18 +5893,47 @@ registry.registerPath({
   method: "get",
   path: "/v1/platform/llm-context",
   tags: ["Platform"],
-  summary: "Get LLM-friendly platform context",
+  summary: "Get LLM-friendly platform overview",
   description:
-    "Returns a compact summary of all platform services and their endpoints, optimized for LLM consumption. " +
-    "Proxied from api-registry. Ideal for giving an LLM full platform awareness to answer questions " +
-    "like 'what services exist?' or 'can the platform do X?'.",
+    "Returns a lightweight overview of all platform services (name, description, endpoint count). " +
+    "Proxied from api-registry. Use GET /v1/platform/llm-context/{service} to drill into a specific service's endpoints.",
   security: authed,
   responses: {
     200: {
-      description: "LLM context with all services and endpoints",
+      description: "Lightweight service overview for LLM consumption",
       content: { "application/json": { schema: LlmContextResponseSchema } },
     },
     401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/platform/llm-context/{service}",
+  tags: ["Platform"],
+  summary: "Get LLM-friendly endpoint details for a service",
+  description:
+    "Returns endpoint details for a specific service. Supports filtering by method, path group, or path prefix. " +
+    "Large services (30+ endpoints) auto-group by path prefix. Proxied from api-registry.",
+  security: authed,
+  request: {
+    params: z.object({
+      service: z.string().describe("Service name"),
+    }),
+    query: z.object({
+      method: z.string().optional().describe("Filter by HTTP method (e.g. 'POST')"),
+      group: z.string().optional().describe("Filter by path group (e.g. 'campaigns')"),
+      pathPrefix: z.string().optional().describe("Filter by path prefix (e.g. '/v1/campaigns')"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Endpoint list for the service (flat or grouped depending on size)",
+      content: { "application/json": { schema: LlmServiceDetailResponseSchema } },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Service not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
