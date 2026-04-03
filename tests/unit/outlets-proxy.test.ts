@@ -215,7 +215,7 @@ describe("Outlets OpenAPI schemas", () => {
   it("should include runId filter on GET /v1/outlets query params", () => {
     const getOutletsSection = schemaContent.slice(
       schemaContent.indexOf('path: "/v1/outlets"'),
-      schemaContent.indexOf('path: "/v1/outlets"') + 400
+      schemaContent.indexOf('path: "/v1/outlets"') + 600
     );
     expect(getOutletsSection).toContain("runId:");
   });
@@ -259,6 +259,50 @@ describe("Outlets OpenAPI schemas", () => {
     expect(blockBefore).not.toContain("targetGeo:");
     expect(blockBefore).not.toContain("targetAudience:");
     expect(blockBefore).not.toContain("angles:");
+  });
+});
+
+describe("Outlets OpenAPI — required workflow headers", () => {
+  const openapiPath = path.join(__dirname, "../../openapi.json");
+  const openapi = JSON.parse(fs.readFileSync(openapiPath, "utf-8"));
+
+  const outletPaths = [
+    ["/v1/outlets", "get"],
+    ["/v1/outlets", "post"],
+    ["/v1/outlets/stats", "get"],
+    ["/v1/outlets/stats/costs", "get"],
+    ["/v1/outlets/bulk", "post"],
+    ["/v1/outlets/search", "post"],
+    ["/v1/outlets/discover", "post"],
+    ["/v1/outlets/buffer/next", "post"],
+    ["/v1/outlets/{id}", "get"],
+    ["/v1/outlets/{id}", "patch"],
+    ["/v1/outlets/{id}/status", "patch"],
+  ] as const;
+
+  const requiredHeaders = ["x-campaign-id", "x-brand-id", "x-feature-slug", "x-workflow-slug"];
+
+  for (const [pathKey, method] of outletPaths) {
+    it(`${method.toUpperCase()} ${pathKey} should declare all 4 workflow headers as required`, () => {
+      const pathEntry = openapi.paths[pathKey];
+      expect(pathEntry).toBeDefined();
+
+      const operation = pathEntry[method];
+      expect(operation).toBeDefined();
+
+      const params: Array<{ name: string; in: string; required?: boolean }> = operation.parameters || [];
+      const headerParams = params.filter((p) => p.in === "header");
+
+      for (const header of requiredHeaders) {
+        const param = headerParams.find((p) => p.name === header);
+        expect(param, `Missing header parameter: ${header} on ${method.toUpperCase()} ${pathKey}`).toBeDefined();
+        expect(param!.required, `${header} should be required on ${method.toUpperCase()} ${pathKey}`).toBe(true);
+      }
+    });
+  }
+
+  it("schemas.ts should define outletsRequiredHeaders with all 4 headers", () => {
+    expect(schemaContent).toContain("outletsRequiredHeaders");
   });
 });
 

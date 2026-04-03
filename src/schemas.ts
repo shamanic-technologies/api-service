@@ -1045,6 +1045,18 @@ registry.registerPath({
 // OUTLETS
 // ===================================================================
 
+/**
+ * outlets-service requires all 7 identity headers on every request.
+ * x-org-id, x-user-id, x-run-id are set by auth middleware.
+ * These 4 must be provided by the caller.
+ */
+const outletsRequiredHeaders = z.object({
+  "x-campaign-id": z.string().uuid().describe("Campaign ID — required by outlets-service"),
+  "x-brand-id": z.string().describe("Brand ID (may be comma-separated for multi-brand) — required by outlets-service"),
+  "x-feature-slug": z.string().describe("Feature slug — required by outlets-service"),
+  "x-workflow-slug": z.string().describe("Workflow slug — required by outlets-service"),
+});
+
 const OutletIdParam = z.object({
   id: z.string().uuid().openapi({ description: "Outlet ID" }),
 });
@@ -1054,8 +1066,10 @@ registry.registerPath({
   path: "/v1/outlets",
   tags: ["Outlets"],
   summary: "List outlets with filters",
+  description: "List outlets with optional filters. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
+    headers: outletsRequiredHeaders,
     query: z.object({
       campaignId: z.string().uuid().optional(),
       brandId: z.string().uuid().optional(),
@@ -1076,8 +1090,10 @@ registry.registerPath({
   path: "/v1/outlets",
   tags: ["Outlets"],
   summary: "Create outlet (upsert by outlet_url)",
+  description: "Create or upsert an outlet. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
+    headers: outletsRequiredHeaders,
     body: {
       content: {
         "application/json": {
@@ -1113,9 +1129,10 @@ registry.registerPath({
   path: "/v1/outlets/stats",
   tags: ["Outlets"],
   summary: "Aggregated outlet discovery metrics",
-  description: "Returns outlet discovery stats. Supports filtering by brandId, campaignId, workflowSlug, featureSlug, workflowDynastySlug, featureDynastySlug and optional groupBy.",
+  description: "Returns outlet discovery stats. Supports filtering by brandId, campaignId, workflowSlug, featureSlug, workflowDynastySlug, featureDynastySlug and optional groupBy. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
+    headers: outletsRequiredHeaders,
     query: z.object({
       brandId: z.string().uuid().optional(),
       campaignId: z.string().uuid().optional(),
@@ -1144,9 +1161,11 @@ registry.registerPath({
     "and grouping by outletId or runId. When grouped by outletId, cost = discovery run cost / number of outlets " +
     "in that run (summed across multiple runs). When grouped by runId, returns totalCostInUsdCents, outletCount, " +
     "and runCount per run. Without groupBy, returns flat totals across all discovery runs. " +
-    "All costs are org-scoped — each org only sees costs from their own discovery runs.",
+    "All costs are org-scoped — each org only sees costs from their own discovery runs. " +
+    "All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
+    headers: outletsRequiredHeaders,
     query: z.object({
       brandId: z.string().uuid().optional().describe("Filter by brand ID"),
       campaignId: z.string().uuid().optional().describe("Filter by campaign ID"),
@@ -1183,8 +1202,10 @@ registry.registerPath({
   path: "/v1/outlets/bulk",
   tags: ["Outlets"],
   summary: "Bulk upsert outlets",
+  description: "Bulk create or upsert outlets. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
+    headers: outletsRequiredHeaders,
     body: {
       content: {
         "application/json": {
@@ -1223,8 +1244,10 @@ registry.registerPath({
   path: "/v1/outlets/search",
   tags: ["Outlets"],
   summary: "Search outlets by name/url",
+  description: "Search outlets by name or URL. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
+    headers: outletsRequiredHeaders,
     body: {
       content: {
         "application/json": {
@@ -1252,9 +1275,10 @@ registry.registerPath({
   summary: "Discover relevant outlets via Google search + LLM scoring",
   description: "Generates search queries via LLM, searches Google, scores results, and stores discovered outlets as buffered. " +
     "Creates a child run — use the returned runId to query outlets from this specific discovery run via GET /v1/outlets?runId={runId}. " +
-    "Requires x-campaign-id and x-brand-id headers.",
+    "All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
+    headers: outletsRequiredHeaders,
     body: {
       content: {
         "application/json": {
@@ -1292,9 +1316,9 @@ registry.registerPath({
   path: "/v1/outlets/buffer/next",
   tags: ["Outlets"],
   summary: "Get next buffered outlet",
-  description: "Returns the next buffered outlet from the queue. Response includes the runId of the discovery run that originally found the outlet.",
+  description: "Returns the next buffered outlet from the queue. Response includes the runId of the discovery run that originally found the outlet. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
-  request: {},
+  request: { headers: outletsRequiredHeaders },
   responses: {
     200: {
       description: "Next buffered outlet",
@@ -1319,8 +1343,9 @@ registry.registerPath({
   path: "/v1/outlets/{id}",
   tags: ["Outlets"],
   summary: "Get outlet by ID",
+  description: "Get a single outlet by ID. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
-  request: { params: OutletIdParam },
+  request: { headers: outletsRequiredHeaders, params: OutletIdParam },
   responses: {
     200: { description: "Outlet found" },
     401: { description: "Unauthorized", content: errorContent },
@@ -1333,8 +1358,10 @@ registry.registerPath({
   path: "/v1/outlets/{id}",
   tags: ["Outlets"],
   summary: "Update outlet",
+  description: "Update an outlet's fields. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
+    headers: outletsRequiredHeaders,
     params: OutletIdParam,
     body: {
       content: {
@@ -1367,8 +1394,10 @@ registry.registerPath({
   path: "/v1/outlets/{id}/status",
   tags: ["Outlets"],
   summary: "Update outlet status",
+  description: "Update an outlet's status. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
+    headers: outletsRequiredHeaders,
     params: OutletIdParam,
     query: z.object({
       campaignId: z.string().uuid().describe("Campaign ID (required)"),
