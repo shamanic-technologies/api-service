@@ -885,7 +885,7 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
     // First get the campaign's outlets, then resolve journalists for each
     const outletsResult = await callExternalService<{ outlets: Array<{ id: string; outletName?: string; outletDomain?: string | null }> }>(
       externalServices.outlet,
-      `/internal/outlets/by-campaign/${encodeURIComponent(id)}`,
+      `/internal/outlets?campaignId=${encodeURIComponent(id)}`,
       { headers: baseHeaders }
     );
 

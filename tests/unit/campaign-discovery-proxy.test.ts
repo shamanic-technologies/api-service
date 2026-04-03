@@ -168,6 +168,16 @@ describe("OpenAPI schemas: campaign discovery endpoints", () => {
   });
 });
 
+describe("Campaign journalists: consolidated internal outlets endpoint", () => {
+  it("should call GET /internal/outlets?campaignId= (not the old /internal/outlets/by-campaign/ path)", () => {
+    const journalistsSection = content.slice(
+      content.indexOf('"/campaigns/:id/journalists"'),
+    );
+    expect(journalistsSection).toContain("/internal/outlets?campaignId=");
+    expect(journalistsSection).not.toContain("/internal/outlets/by-campaign/");
+  });
+});
+
 describe("Campaign journalists: outlet name/domain enrichment", () => {
   it("should build an outlet lookup map from the fetched outlets", () => {
     const journalistsSection = content.slice(
