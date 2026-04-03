@@ -1989,6 +1989,527 @@
           "campaignJournalists"
         ]
       },
+      "JournalistListResponse": {
+        "type": "object",
+        "properties": {
+          "journalists": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "journalistId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "campaignId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "outletId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "orgId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "brandIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "featureSlug": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "workflowSlug": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "relevanceScore": {
+                  "type": "string"
+                },
+                "whyRelevant": {
+                  "type": "string"
+                },
+                "whyNotRelevant": {
+                  "type": "string"
+                },
+                "articleUrls": {
+                  "type": "array",
+                  "nullable": true,
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "buffered",
+                    "claimed",
+                    "served",
+                    "contacted",
+                    "skipped"
+                  ]
+                },
+                "email": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "runId": {
+                  "type": "string",
+                  "nullable": true,
+                  "format": "uuid"
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "journalistName": {
+                  "type": "string"
+                },
+                "firstName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "lastName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "entityType": {
+                  "type": "string",
+                  "enum": [
+                    "individual",
+                    "organization"
+                  ]
+                },
+                "emailStatus": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "broadcast": {
+                      "type": "object",
+                      "properties": {
+                        "campaign": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "lead": {
+                              "type": "object",
+                              "properties": {
+                                "contacted": {
+                                  "type": "boolean"
+                                },
+                                "delivered": {
+                                  "type": "boolean"
+                                },
+                                "replied": {
+                                  "type": "boolean"
+                                },
+                                "replyClassification": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "positive",
+                                    "negative",
+                                    "neutral"
+                                  ]
+                                },
+                                "lastDeliveredAt": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "contacted",
+                                "delivered",
+                                "replied",
+                                "replyClassification",
+                                "lastDeliveredAt"
+                              ]
+                            },
+                            "email": {
+                              "type": "object",
+                              "properties": {
+                                "contacted": {
+                                  "type": "boolean"
+                                },
+                                "delivered": {
+                                  "type": "boolean"
+                                },
+                                "bounced": {
+                                  "type": "boolean"
+                                },
+                                "unsubscribed": {
+                                  "type": "boolean"
+                                },
+                                "lastDeliveredAt": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "contacted",
+                                "delivered",
+                                "bounced",
+                                "unsubscribed",
+                                "lastDeliveredAt"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "lead",
+                            "email"
+                          ]
+                        },
+                        "brand": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "lead": {
+                              "type": "object",
+                              "properties": {
+                                "contacted": {
+                                  "type": "boolean"
+                                },
+                                "delivered": {
+                                  "type": "boolean"
+                                },
+                                "replied": {
+                                  "type": "boolean"
+                                },
+                                "replyClassification": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "positive",
+                                    "negative",
+                                    "neutral"
+                                  ]
+                                },
+                                "lastDeliveredAt": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "contacted",
+                                "delivered",
+                                "replied",
+                                "replyClassification",
+                                "lastDeliveredAt"
+                              ]
+                            },
+                            "email": {
+                              "type": "object",
+                              "properties": {
+                                "contacted": {
+                                  "type": "boolean"
+                                },
+                                "delivered": {
+                                  "type": "boolean"
+                                },
+                                "bounced": {
+                                  "type": "boolean"
+                                },
+                                "unsubscribed": {
+                                  "type": "boolean"
+                                },
+                                "lastDeliveredAt": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "contacted",
+                                "delivered",
+                                "bounced",
+                                "unsubscribed",
+                                "lastDeliveredAt"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "lead",
+                            "email"
+                          ]
+                        },
+                        "global": {
+                          "type": "object",
+                          "properties": {
+                            "email": {
+                              "type": "object",
+                              "properties": {
+                                "bounced": {
+                                  "type": "boolean"
+                                },
+                                "unsubscribed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "bounced",
+                                "unsubscribed"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "email"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "campaign",
+                        "brand",
+                        "global"
+                      ]
+                    },
+                    "transactional": {
+                      "type": "object",
+                      "properties": {
+                        "campaign": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "lead": {
+                              "type": "object",
+                              "properties": {
+                                "contacted": {
+                                  "type": "boolean"
+                                },
+                                "delivered": {
+                                  "type": "boolean"
+                                },
+                                "replied": {
+                                  "type": "boolean"
+                                },
+                                "replyClassification": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "positive",
+                                    "negative",
+                                    "neutral"
+                                  ]
+                                },
+                                "lastDeliveredAt": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "contacted",
+                                "delivered",
+                                "replied",
+                                "replyClassification",
+                                "lastDeliveredAt"
+                              ]
+                            },
+                            "email": {
+                              "type": "object",
+                              "properties": {
+                                "contacted": {
+                                  "type": "boolean"
+                                },
+                                "delivered": {
+                                  "type": "boolean"
+                                },
+                                "bounced": {
+                                  "type": "boolean"
+                                },
+                                "unsubscribed": {
+                                  "type": "boolean"
+                                },
+                                "lastDeliveredAt": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "contacted",
+                                "delivered",
+                                "bounced",
+                                "unsubscribed",
+                                "lastDeliveredAt"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "lead",
+                            "email"
+                          ]
+                        },
+                        "brand": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "lead": {
+                              "type": "object",
+                              "properties": {
+                                "contacted": {
+                                  "type": "boolean"
+                                },
+                                "delivered": {
+                                  "type": "boolean"
+                                },
+                                "replied": {
+                                  "type": "boolean"
+                                },
+                                "replyClassification": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "positive",
+                                    "negative",
+                                    "neutral"
+                                  ]
+                                },
+                                "lastDeliveredAt": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "contacted",
+                                "delivered",
+                                "replied",
+                                "replyClassification",
+                                "lastDeliveredAt"
+                              ]
+                            },
+                            "email": {
+                              "type": "object",
+                              "properties": {
+                                "contacted": {
+                                  "type": "boolean"
+                                },
+                                "delivered": {
+                                  "type": "boolean"
+                                },
+                                "bounced": {
+                                  "type": "boolean"
+                                },
+                                "unsubscribed": {
+                                  "type": "boolean"
+                                },
+                                "lastDeliveredAt": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "contacted",
+                                "delivered",
+                                "bounced",
+                                "unsubscribed",
+                                "lastDeliveredAt"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "lead",
+                            "email"
+                          ]
+                        },
+                        "global": {
+                          "type": "object",
+                          "properties": {
+                            "email": {
+                              "type": "object",
+                              "properties": {
+                                "bounced": {
+                                  "type": "boolean"
+                                },
+                                "unsubscribed": {
+                                  "type": "boolean"
+                                }
+                              },
+                              "required": [
+                                "bounced",
+                                "unsubscribed"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "email"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "campaign",
+                        "brand",
+                        "global"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "broadcast",
+                    "transactional"
+                  ],
+                  "description": "Email delivery statuses from email-gateway. Null if journalist has no email."
+                },
+                "cost": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "totalCostInUsdCents": {
+                      "type": "number"
+                    },
+                    "actualCostInUsdCents": {
+                      "type": "number"
+                    },
+                    "provisionedCostInUsdCents": {
+                      "type": "number"
+                    },
+                    "runCount": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "totalCostInUsdCents",
+                    "actualCostInUsdCents",
+                    "provisionedCostInUsdCents",
+                    "runCount"
+                  ],
+                  "description": "Per-journalist cost from runs-service. Null if no runs."
+                }
+              },
+              "required": [
+                "id",
+                "journalistId",
+                "campaignId",
+                "outletId",
+                "orgId",
+                "brandIds",
+                "featureSlug",
+                "workflowSlug",
+                "relevanceScore",
+                "whyRelevant",
+                "whyNotRelevant",
+                "articleUrls",
+                "status",
+                "email",
+                "runId",
+                "createdAt",
+                "journalistName",
+                "firstName",
+                "lastName",
+                "entityType",
+                "emailStatus",
+                "cost"
+              ]
+            }
+          }
+        },
+        "required": [
+          "journalists"
+        ]
+      },
       "DiscoverJournalistsResponse": {
         "type": "object",
         "properties": {
@@ -12453,6 +12974,172 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ListJournalistsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing brandId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/journalists/list": {
+      "get": {
+        "tags": [
+          "Journalists"
+        ],
+        "summary": "List journalists with email statuses and costs",
+        "description": "Returns all journalists for a brand, each enriched with per-journalist email delivery statuses (broadcast + transactional, at campaign/brand/global scope) and cost breakdown from runs-service. Replaces the need to aggregate contacted status from lead-service — delivery details come directly. Proxies to journalists-service GET /journalists/list.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Brand ID (required)"
+            },
+            "required": true,
+            "description": "Brand ID (required)",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optionally narrow to a single campaign"
+            },
+            "required": false,
+            "description": "Optionally narrow to a single campaign",
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — optional for stats endpoints"
+            },
+            "required": false,
+            "description": "Campaign ID — optional for stats endpoints",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — optional for stats endpoints"
+            },
+            "required": false,
+            "description": "Brand ID (may be comma-separated for multi-brand) — optional for stats endpoints",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — optional for stats endpoints"
+            },
+            "required": false,
+            "description": "Feature slug — optional for stats endpoints",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — optional for stats endpoints"
+            },
+            "required": false,
+            "description": "Workflow slug — optional for stats endpoints",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Enriched journalist list with email statuses and costs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JournalistListResponse"
                 }
               }
             }

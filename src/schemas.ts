@@ -1496,6 +1496,111 @@ registry.registerPath({
   },
 });
 
+// Shared sub-schemas for journalist email delivery statuses
+const JournalistLeadDeliverySchema = z.object({
+  contacted: z.boolean(),
+  delivered: z.boolean(),
+  replied: z.boolean(),
+  replyClassification: z.enum(["positive", "negative", "neutral"]).nullable(),
+  lastDeliveredAt: z.string().nullable(),
+});
+
+const JournalistEmailDeliverySchema = z.object({
+  contacted: z.boolean(),
+  delivered: z.boolean(),
+  bounced: z.boolean(),
+  unsubscribed: z.boolean(),
+  lastDeliveredAt: z.string().nullable(),
+});
+
+const JournalistScopeDeliverySchema = z.object({
+  lead: JournalistLeadDeliverySchema,
+  email: JournalistEmailDeliverySchema,
+}).nullable();
+
+const JournalistGlobalDeliverySchema = z.object({
+  email: z.object({ bounced: z.boolean(), unsubscribed: z.boolean() }),
+});
+
+const JournalistChannelStatusSchema = z.object({
+  campaign: JournalistScopeDeliverySchema,
+  brand: JournalistScopeDeliverySchema,
+  global: JournalistGlobalDeliverySchema,
+});
+
+const JournalistEmailStatusSchema = z.object({
+  broadcast: JournalistChannelStatusSchema,
+  transactional: JournalistChannelStatusSchema,
+}).nullable().describe("Email delivery statuses from email-gateway. Null if journalist has no email.");
+
+const JournalistCostSchema = z.object({
+  totalCostInUsdCents: z.number(),
+  actualCostInUsdCents: z.number(),
+  provisionedCostInUsdCents: z.number(),
+  runCount: z.number(),
+}).nullable().describe("Per-journalist cost from runs-service. Null if no runs.");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/journalists/list",
+  tags: ["Journalists"],
+  summary: "List journalists with email statuses and costs",
+  description:
+    "Returns all journalists for a brand, each enriched with per-journalist email delivery statuses " +
+    "(broadcast + transactional, at campaign/brand/global scope) and cost breakdown from runs-service. " +
+    "Replaces the need to aggregate contacted status from lead-service — delivery details come directly. " +
+    "Proxies to journalists-service GET /journalists/list.",
+  security: authed,
+  request: {
+    headers: journalistsStatsOptionalHeaders,
+    query: z.object({
+      brandId: z.string().uuid().describe("Brand ID (required)"),
+      campaignId: z.string().uuid().optional().describe("Optionally narrow to a single campaign"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Enriched journalist list with email statuses and costs",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              journalists: z.array(
+                z.object({
+                  id: z.string().uuid(),
+                  journalistId: z.string().uuid(),
+                  campaignId: z.string().uuid(),
+                  outletId: z.string().uuid(),
+                  orgId: z.string().uuid(),
+                  brandIds: z.array(z.string().uuid()),
+                  featureSlug: z.string().nullable(),
+                  workflowSlug: z.string().nullable(),
+                  relevanceScore: z.string(),
+                  whyRelevant: z.string(),
+                  whyNotRelevant: z.string(),
+                  articleUrls: z.array(z.string()).nullable(),
+                  status: z.enum(["buffered", "claimed", "served", "contacted", "skipped"]),
+                  email: z.string().nullable(),
+                  runId: z.string().uuid().nullable(),
+                  createdAt: z.string(),
+                  journalistName: z.string(),
+                  firstName: z.string().nullable(),
+                  lastName: z.string().nullable(),
+                  entityType: z.enum(["individual", "organization"]),
+                  emailStatus: JournalistEmailStatusSchema,
+                  cost: JournalistCostSchema,
+                }),
+              ),
+            })
+            .openapi("JournalistListResponse"),
+        },
+      },
+    },
+    400: { description: "Missing brandId", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/v1/journalists/discover",
