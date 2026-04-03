@@ -1438,6 +1438,15 @@ const journalistsRequiredHeaders = z.object({
   "x-workflow-slug": z.string().describe("Workflow slug — required by journalists-service"),
 });
 
+// Stats endpoints on journalists-service accept just the base 3 auth headers;
+// workflow-context headers are optional (forwarded when available).
+const journalistsStatsOptionalHeaders = z.object({
+  "x-campaign-id": z.string().uuid().optional().describe("Campaign ID — optional for stats endpoints"),
+  "x-brand-id": z.string().optional().describe("Brand ID (may be comma-separated for multi-brand) — optional for stats endpoints"),
+  "x-feature-slug": z.string().optional().describe("Feature slug — optional for stats endpoints"),
+  "x-workflow-slug": z.string().optional().describe("Workflow slug — optional for stats endpoints"),
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/journalists",
@@ -1688,7 +1697,7 @@ registry.registerPath({
     "Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. " +
     "Optional groupBy returns per-slug breakdowns.",
   security: authed,
-  request: { headers: journalistsRequiredHeaders, query: journalistStatsQueryParams },
+  request: { headers: journalistsStatsOptionalHeaders, query: journalistStatsQueryParams },
   responses: {
     200: {
       description: "Journalist stats (flat or grouped)",
@@ -1719,10 +1728,10 @@ registry.registerPath({
     "Returns cost statistics for journalist discovery runs. Requires brandId. " +
     "Supports optional campaignId filter and groupBy=journalistId to get per-journalist breakdowns. " +
     "Costs are fetched from runs-service via POST /v1/runs/costs/batch. " +
-    "All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
+    "Workflow-context headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are optional — send them if available.",
   security: authed,
   request: {
-    headers: journalistsRequiredHeaders,
+    headers: journalistsStatsOptionalHeaders,
     query: z.object({
       brandId: z.string().describe("Filter by brand ID (required)"),
       campaignId: z.string().optional().describe("Filter by campaign ID"),

@@ -306,24 +306,22 @@ describe("Journalists OpenAPI — required workflow headers", () => {
   const openapiPath = path.join(__dirname, "../../openapi.json");
   const openapi = JSON.parse(fs.readFileSync(openapiPath, "utf-8"));
 
-  const journalistPaths = [
+  const workflowHeaders = ["x-campaign-id", "x-brand-id", "x-feature-slug", "x-workflow-slug"];
+
+  // Non-stats endpoints require all 4 workflow headers
+  const requiredHeaderPaths = [
     "/v1/journalists",
     "/v1/journalists/discover",
     "/v1/journalists/discover-emails",
     "/v1/journalists/buffer/next",
     "/v1/journalists/resolve",
-    "/v1/journalists/stats",
-    "/v1/journalists/stats/costs",
   ];
 
-  const requiredHeaders = ["x-campaign-id", "x-brand-id", "x-feature-slug", "x-workflow-slug"];
-
-  for (const pathKey of journalistPaths) {
+  for (const pathKey of requiredHeaderPaths) {
     it(`${pathKey} should declare all 4 workflow headers as required parameters`, () => {
       const pathEntry = openapi.paths[pathKey];
       expect(pathEntry).toBeDefined();
 
-      // Get the first method (get or post)
       const method = Object.keys(pathEntry).find((k) => ["get", "post"].includes(k));
       expect(method).toBeDefined();
 
@@ -331,7 +329,7 @@ describe("Journalists OpenAPI — required workflow headers", () => {
       const params: Array<{ name: string; in: string; required?: boolean }> = operation.parameters || [];
       const headerParams = params.filter((p) => p.in === "header");
 
-      for (const header of requiredHeaders) {
+      for (const header of workflowHeaders) {
         const param = headerParams.find((p) => p.name === header);
         expect(param, `Missing header parameter: ${header} on ${pathKey}`).toBeDefined();
         expect(param!.required, `${header} should be required on ${pathKey}`).toBe(true);
@@ -339,11 +337,41 @@ describe("Journalists OpenAPI — required workflow headers", () => {
     });
   }
 
+  // Stats endpoints accept workflow headers as optional (dashboard queries have no workflow context)
+  const optionalHeaderPaths = [
+    "/v1/journalists/stats",
+    "/v1/journalists/stats/costs",
+  ];
+
+  for (const pathKey of optionalHeaderPaths) {
+    it(`${pathKey} should declare all 4 workflow headers as optional parameters`, () => {
+      const pathEntry = openapi.paths[pathKey];
+      expect(pathEntry).toBeDefined();
+
+      const method = Object.keys(pathEntry).find((k) => ["get", "post"].includes(k));
+      expect(method).toBeDefined();
+
+      const operation = pathEntry[method!];
+      const params: Array<{ name: string; in: string; required?: boolean }> = operation.parameters || [];
+      const headerParams = params.filter((p) => p.in === "header");
+
+      for (const header of workflowHeaders) {
+        const param = headerParams.find((p) => p.name === header);
+        expect(param, `Missing header parameter: ${header} on ${pathKey}`).toBeDefined();
+        expect(param!.required, `${header} should NOT be required on ${pathKey}`).toBeFalsy();
+      }
+    });
+  }
+
   it("schemas.ts should define journalistsRequiredHeaders with all 4 headers", () => {
-    for (const header of requiredHeaders) {
+    for (const header of workflowHeaders) {
       expect(schemaContent).toContain(`"${header}"`);
     }
     expect(schemaContent).toContain("journalistsRequiredHeaders");
+  });
+
+  it("schemas.ts should define journalistsStatsOptionalHeaders with all 4 headers as optional", () => {
+    expect(schemaContent).toContain("journalistsStatsOptionalHeaders");
   });
 });
 
