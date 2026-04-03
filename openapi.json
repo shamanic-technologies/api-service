@@ -10297,6 +10297,7 @@
           "Outlets"
         ],
         "summary": "List outlets with filters",
+        "description": "List outlets with optional filters. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
@@ -10363,6 +10364,47 @@
             "required": false,
             "name": "offset",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by outlets-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by outlets-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by outlets-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by outlets-service",
+            "name": "x-workflow-slug",
+            "in": "header"
           },
           {
             "name": "x-org-id",
@@ -10441,46 +10483,54 @@
           "Outlets"
         ],
         "summary": "Create outlet (upsert by outlet_url)",
+        "description": "Create or upsert an outlet. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CreateOutletRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "201": {
-            "description": "Outlet created"
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by outlets-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by outlets-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by outlets-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by outlets-service",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
           {
             "name": "x-org-id",
             "in": "header",
@@ -10536,7 +10586,41 @@
             },
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
           }
-        ]
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOutletRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Outlet created"
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/outlets/stats": {
@@ -10545,7 +10629,7 @@
           "Outlets"
         ],
         "summary": "Aggregated outlet discovery metrics",
-        "description": "Returns outlet discovery stats. Supports filtering by brandId, campaignId, workflowSlug, featureSlug, workflowDynastySlug, featureDynastySlug and optional groupBy.",
+        "description": "Returns outlet discovery stats. Supports filtering by brandId, campaignId, workflowSlug, featureSlug, workflowDynastySlug, featureDynastySlug and optional groupBy. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
@@ -10645,6 +10729,47 @@
             "in": "query"
           },
           {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by outlets-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by outlets-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by outlets-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by outlets-service",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
+          {
             "name": "x-org-id",
             "in": "header",
             "required": false,
@@ -10723,7 +10848,7 @@
           "Outlets"
         ],
         "summary": "Get outlet discovery cost stats",
-        "description": "Returns cost statistics for outlet discovery runs. Supports filtering by brandId, campaignId, and grouping by outletId or runId. When grouped by outletId, cost = discovery run cost / number of outlets in that run (summed across multiple runs). When grouped by runId, returns totalCostInUsdCents, outletCount, and runCount per run. Without groupBy, returns flat totals across all discovery runs. All costs are org-scoped — each org only sees costs from their own discovery runs.",
+        "description": "Returns cost statistics for outlet discovery runs. Supports filtering by brandId, campaignId, and grouping by outletId or runId. When grouped by outletId, cost = discovery run cost / number of outlets in that run (summed across multiple runs). When grouped by runId, returns totalCostInUsdCents, outletCount, and runCount per run. Without groupBy, returns flat totals across all discovery runs. All costs are org-scoped — each org only sees costs from their own discovery runs. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
@@ -10765,6 +10890,47 @@
             "description": "Group results by outletId or runId",
             "name": "groupBy",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by outlets-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by outlets-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by outlets-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by outlets-service",
+            "name": "x-workflow-slug",
+            "in": "header"
           },
           {
             "name": "x-org-id",
@@ -10852,9 +11018,108 @@
           "Outlets"
         ],
         "summary": "Bulk upsert outlets",
+        "description": "Bulk create or upsert outlets. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by outlets-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by outlets-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by outlets-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by outlets-service",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
           }
         ],
         "requestBody": {
@@ -10880,8 +11145,63 @@
               }
             }
           }
-        },
+        }
+      }
+    },
+    "/v1/outlets/search": {
+      "post": {
+        "tags": [
+          "Outlets"
+        ],
+        "summary": "Search outlets by name/url",
+        "description": "Search outlets by name or URL. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by outlets-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by outlets-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by outlets-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by outlets-service",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
           {
             "name": "x-org-id",
             "in": "header",
@@ -10936,19 +11256,6 @@
               "type": "string"
             },
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
-          }
-        ]
-      }
-    },
-    "/v1/outlets/search": {
-      "post": {
-        "tags": [
-          "Outlets"
-        ],
-        "summary": "Search outlets by name/url",
-        "security": [
-          {
-            "bearerAuth": []
           }
         ],
         "requestBody": {
@@ -10974,8 +11281,63 @@
               }
             }
           }
-        },
+        }
+      }
+    },
+    "/v1/outlets/discover": {
+      "post": {
+        "tags": [
+          "Outlets"
+        ],
+        "summary": "Discover relevant outlets via Google search + LLM scoring",
+        "description": "Generates search queries via LLM, searches Google, scores results, and stores discovered outlets as buffered. Creates a child run — use the returned runId to query outlets from this specific discovery run via GET /v1/outlets?runId={runId}. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by outlets-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by outlets-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by outlets-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by outlets-service",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
           {
             "name": "x-org-id",
             "in": "header",
@@ -11030,20 +11392,6 @@
               "type": "string"
             },
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
-          }
-        ]
-      }
-    },
-    "/v1/outlets/discover": {
-      "post": {
-        "tags": [
-          "Outlets"
-        ],
-        "summary": "Discover relevant outlets via Google search + LLM scoring",
-        "description": "Generates search queries via LLM, searches Google, scores results, and stores discovered outlets as buffered. Creates a child run — use the returned runId to query outlets from this specific discovery run via GET /v1/outlets?runId={runId}. Requires x-campaign-id and x-brand-id headers.",
-        "security": [
-          {
-            "bearerAuth": []
           }
         ],
         "requestBody": {
@@ -11096,8 +11444,63 @@
               }
             }
           }
-        },
+        }
+      }
+    },
+    "/v1/outlets/buffer/next": {
+      "post": {
+        "tags": [
+          "Outlets"
+        ],
+        "summary": "Get next buffered outlet",
+        "description": "Returns the next buffered outlet from the queue. Response includes the runId of the discovery run that originally found the outlet. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by outlets-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by outlets-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by outlets-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by outlets-service",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
           {
             "name": "x-org-id",
             "in": "header",
@@ -11152,20 +11555,6 @@
               "type": "string"
             },
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
-          }
-        ]
-      }
-    },
-    "/v1/outlets/buffer/next": {
-      "post": {
-        "tags": [
-          "Outlets"
-        ],
-        "summary": "Get next buffered outlet",
-        "description": "Returns the next buffered outlet from the queue. Response includes the runId of the discovery run that originally found the outlet.",
-        "security": [
-          {
-            "bearerAuth": []
           }
         ],
         "responses": {
@@ -11192,64 +11581,7 @@
               }
             }
           }
-        },
-        "parameters": [
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "example": "uuid1,uuid2,uuid3"
-            },
-            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-feature-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
-          }
-        ]
+        }
       }
     },
     "/v1/outlets/{id}": {
@@ -11258,6 +11590,7 @@
           "Outlets"
         ],
         "summary": "Get outlet by ID",
+        "description": "Get a single outlet by ID. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
@@ -11273,6 +11606,47 @@
             "required": true,
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by outlets-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by outlets-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by outlets-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by outlets-service",
+            "name": "x-workflow-slug",
+            "in": "header"
           },
           {
             "name": "x-org-id",
@@ -11361,6 +11735,7 @@
           "Outlets"
         ],
         "summary": "Update outlet",
+        "description": "Update an outlet's fields. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
@@ -11376,6 +11751,47 @@
             "required": true,
             "name": "id",
             "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by outlets-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by outlets-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by outlets-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by outlets-service",
+            "name": "x-workflow-slug",
+            "in": "header"
           },
           {
             "name": "x-org-id",
@@ -11475,6 +11891,7 @@
           "Outlets"
         ],
         "summary": "Update outlet status",
+        "description": "Update an outlet's status. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
@@ -11501,6 +11918,47 @@
             "description": "Campaign ID (required)",
             "name": "campaignId",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by outlets-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by outlets-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by outlets-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by outlets-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by outlets-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by outlets-service",
+            "name": "x-workflow-slug",
+            "in": "header"
           },
           {
             "name": "x-org-id",
