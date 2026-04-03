@@ -2881,6 +2881,70 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/leads",
+  tags: ["Leads"],
+  summary: "List leads by brand",
+  description:
+    "List all leads across campaigns for a brand. Returns the same enriched shape as GET /campaigns/{id}/leads. " +
+    "Proxies to lead-service GET /leads with brandId filter.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().openapi({ description: "Brand ID (required)" }),
+      campaignId: z.string().uuid().optional().openapi({ description: "Optional campaign ID filter" }),
+      limit: z.coerce.number().int().optional().openapi({ description: "Max results to return" }),
+      offset: z.coerce.number().int().optional().openapi({ description: "Offset for pagination" }),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Leads with enrichment and delivery status data",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              leads: z.array(
+                z.object({
+                  id: z.string(),
+                  leadId: z.string().nullable(),
+                  email: z.string(),
+                  namespace: z.string().nullable(),
+                  apolloPersonId: z.string().nullable(),
+                  journalistId: z.string().nullable(),
+                  outletId: z.string().nullable(),
+                  firstName: z.string().nullable(),
+                  lastName: z.string().nullable(),
+                  emailStatus: z.string().nullable(),
+                  title: z.string().nullable(),
+                  organizationName: z.string().nullable(),
+                  organizationDomain: z.string().nullable(),
+                  organizationLogoUrl: z.string().nullable(),
+                  organizationIndustry: z.string().nullable(),
+                  organizationSize: z.string().nullable(),
+                  linkedinUrl: z.string().nullable(),
+                  status: z.enum(["contacted", "served"]),
+                  contacted: z.boolean(),
+                  delivered: z.boolean(),
+                  bounced: z.boolean(),
+                  replied: z.boolean(),
+                  createdAt: z.string().nullable(),
+                  enrichmentRunId: z.string().nullable(),
+                  enrichmentRun: RunCostDataSchema.nullable(),
+                }),
+              ),
+            })
+            .openapi("BrandLeadsResponse"),
+        },
+      },
+    },
+    400: { description: "Missing brandId", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // QUALIFY
 // ===================================================================
@@ -5024,6 +5088,61 @@ export const DeployEmailTemplatesRequestSchema = z
     templates: z.array(TemplateItemSchema).min(1).describe("Templates to deploy"),
   })
   .openapi("DeployEmailTemplatesRequest");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/emails",
+  tags: ["Emails"],
+  summary: "List generated emails by brand",
+  description:
+    "List all generated emails across campaigns for a brand. Returns the same enriched shape as GET /campaigns/{id}/emails. " +
+    "Proxies to content-generation-service GET /generations with brandId filter.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().openapi({ description: "Brand ID (required)" }),
+      campaignId: z.string().uuid().optional().openapi({ description: "Optional campaign ID filter" }),
+      limit: z.coerce.number().int().optional().openapi({ description: "Max results to return" }),
+      offset: z.coerce.number().int().optional().openapi({ description: "Offset for pagination" }),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Generated emails with run cost data",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              emails: z.array(
+                z.object({
+                  id: z.string().describe("Generation ID"),
+                  campaignId: z.string(),
+                  subject: z.string().nullable(),
+                  bodyHtml: z.string().nullable(),
+                  bodyText: z.string().nullable(),
+                  sequence: z.number().nullable(),
+                  leadFirstName: z.string().nullable(),
+                  leadLastName: z.string().nullable(),
+                  leadCompany: z.string().nullable(),
+                  leadOrganizationDomain: z.string().nullable(),
+                  leadTitle: z.string().nullable(),
+                  leadIndustry: z.string().nullable(),
+                  clientCompanyName: z.string().nullable(),
+                  generationRunId: z.string().nullable(),
+                  createdAt: z.string(),
+                  generationRun: RunCostDataSchema.nullable(),
+                }),
+              ),
+            })
+            .openapi("BrandEmailsResponse"),
+        },
+      },
+    },
+    400: { description: "Missing brandId", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
 
 registry.registerPath({
   method: "post",

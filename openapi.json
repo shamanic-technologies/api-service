@@ -3840,6 +3840,152 @@
           "person_titles"
         ]
       },
+      "BrandLeadsResponse": {
+        "type": "object",
+        "properties": {
+          "leads": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "leadId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "email": {
+                  "type": "string"
+                },
+                "namespace": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "apolloPersonId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "journalistId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "outletId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "firstName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "lastName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "emailStatus": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "title": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "organizationName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "organizationDomain": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "organizationLogoUrl": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "organizationIndustry": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "organizationSize": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "linkedinUrl": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "contacted",
+                    "served"
+                  ]
+                },
+                "contacted": {
+                  "type": "boolean"
+                },
+                "delivered": {
+                  "type": "boolean"
+                },
+                "bounced": {
+                  "type": "boolean"
+                },
+                "replied": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "enrichmentRunId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "enrichmentRun": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/RunCostData"
+                    },
+                    {
+                      "nullable": true
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "leadId",
+                "email",
+                "namespace",
+                "apolloPersonId",
+                "journalistId",
+                "outletId",
+                "firstName",
+                "lastName",
+                "emailStatus",
+                "title",
+                "organizationName",
+                "organizationDomain",
+                "organizationLogoUrl",
+                "organizationIndustry",
+                "organizationSize",
+                "linkedinUrl",
+                "status",
+                "contacted",
+                "delivered",
+                "bounced",
+                "replied",
+                "createdAt",
+                "enrichmentRunId",
+                "enrichmentRun"
+              ]
+            }
+          }
+        },
+        "required": [
+          "leads"
+        ]
+      },
       "QualifyResponse": {
         "type": "object",
         "properties": {
@@ -6313,6 +6459,108 @@
         },
         "required": [
           "return_url"
+        ]
+      },
+      "BrandEmailsResponse": {
+        "type": "object",
+        "properties": {
+          "emails": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Generation ID"
+                },
+                "campaignId": {
+                  "type": "string"
+                },
+                "subject": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "bodyHtml": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "bodyText": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "sequence": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "leadFirstName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "leadLastName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "leadCompany": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "leadOrganizationDomain": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "leadTitle": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "leadIndustry": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "clientCompanyName": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "generationRunId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "generationRun": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/RunCostData"
+                    },
+                    {
+                      "nullable": true
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "campaignId",
+                "subject",
+                "bodyHtml",
+                "bodyText",
+                "sequence",
+                "leadFirstName",
+                "leadLastName",
+                "leadCompany",
+                "leadOrganizationDomain",
+                "leadTitle",
+                "leadIndustry",
+                "clientCompanyName",
+                "generationRunId",
+                "createdAt",
+                "generationRun"
+              ]
+            }
+          }
+        },
+        "required": [
+          "emails"
         ]
       },
       "SendEmailResponse": {
@@ -16430,6 +16678,159 @@
         ]
       }
     },
+    "/v1/leads": {
+      "get": {
+        "tags": [
+          "Leads"
+        ],
+        "summary": "List leads by brand",
+        "description": "List all leads across campaigns for a brand. Returns the same enriched shape as GET /campaigns/{id}/leads. Proxies to lead-service GET /leads with brandId filter.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Brand ID (required)"
+            },
+            "required": true,
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optional campaign ID filter"
+            },
+            "required": false,
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "description": "Max results to return"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "description": "Offset for pagination"
+            },
+            "required": false,
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Leads with enrichment and delivery status data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandLeadsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing brandId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/qualify": {
       "post": {
         "tags": [
@@ -22194,6 +22595,159 @@
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
           }
         ]
+      }
+    },
+    "/v1/emails": {
+      "get": {
+        "tags": [
+          "Emails"
+        ],
+        "summary": "List generated emails by brand",
+        "description": "List all generated emails across campaigns for a brand. Returns the same enriched shape as GET /campaigns/{id}/emails. Proxies to content-generation-service GET /generations with brandId filter.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Brand ID (required)"
+            },
+            "required": true,
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optional campaign ID filter"
+            },
+            "required": false,
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "description": "Max results to return"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "description": "Offset for pagination"
+            },
+            "required": false,
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Generated emails with run cost data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandEmailsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing brandId",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/emails/send": {
