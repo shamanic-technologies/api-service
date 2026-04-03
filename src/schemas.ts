@@ -932,6 +932,115 @@ registry.registerPath({
   },
 });
 
+// -- Pipeline endpoints (proxied to campaign-service) --
+
+export const EndRunRequestSchema = z
+  .object({
+    success: z.boolean().describe("Whether the run succeeded"),
+    stopCampaign: z.boolean().describe("If true, campaign-service auto-stops the campaign instead of re-triggering"),
+  })
+  .openapi("EndRunRequest");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/campaigns/pipeline/gate-check",
+  tags: ["Campaigns"],
+  summary: "Gate-check a campaign iteration",
+  description:
+    "Check if a campaign can run a new iteration. Validates budget limits, volume limits, campaign status, and consecutive failures. " +
+    "All contextual headers (x-org-id, x-campaign-id, x-user-id, x-run-id, x-workflow-slug, x-feature-slug) are required.",
+  security: authed,
+  responses: {
+    200: {
+      description: "Gate check result",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              allowed: z.boolean(),
+              reason: z.string().optional(),
+              autoStopped: z.boolean().optional(),
+            })
+            .openapi("GateCheckResponse"),
+        },
+      },
+    },
+    400: { description: "Missing required headers", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Campaign not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/campaigns/pipeline/start-run",
+  tags: ["Campaigns"],
+  summary: "Start a campaign run",
+  description:
+    "Create a run in runs-service and return all campaign data needed by downstream DAG nodes. " +
+    "All contextual headers (x-org-id, x-campaign-id, x-user-id, x-run-id, x-workflow-slug, x-feature-slug) are required.",
+  security: authed,
+  responses: {
+    200: {
+      description: "Run created, campaign data returned",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              runId: z.string().uuid(),
+              campaignId: z.string().uuid(),
+              orgId: z.string(),
+              brandIds: z.array(z.string().uuid()),
+              workflowSlug: z.string(),
+              userId: z.string().nullable(),
+              featureSlug: z.string().nullable(),
+              featureInputs: z.record(z.unknown()).nullable(),
+              searchParams: z.record(z.unknown()).nullable(),
+            })
+            .openapi("StartRunResponse"),
+        },
+      },
+    },
+    400: { description: "Missing required headers", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Campaign not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/campaigns/pipeline/end-run",
+  tags: ["Campaigns"],
+  summary: "Finalize a campaign run",
+  description:
+    "Marks running runs as completed or failed. If stopCampaign=true, auto-stops the campaign. " +
+    "Otherwise re-triggers the workflow for the next iteration. " +
+    "All contextual headers (x-org-id, x-campaign-id, x-user-id, x-run-id, x-workflow-slug, x-feature-slug) are required.",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: EndRunRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Run finalized",
+      content: {
+        "application/json": {
+          schema: z
+            .object({ status: z.string() })
+            .openapi("EndRunResponse"),
+        },
+      },
+    },
+    400: { description: "Missing required headers or body", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // OUTLETS
 // ===================================================================
