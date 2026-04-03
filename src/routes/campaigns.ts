@@ -6,6 +6,7 @@ import { fetchDeliveryStats } from "../lib/delivery-stats.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import {
   CreateCampaignRequestSchema,
+  EndRunRequestSchema,
   deriveCampaignType,
 } from "../schemas.js";
 
@@ -933,6 +934,86 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
   } catch (error: any) {
     console.error("Get campaign journalists error:", error);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get campaign journalists" });
+  }
+});
+
+// ===================================================================
+// Pipeline endpoints (proxied to campaign-service)
+// All require contextual headers: x-org-id, x-campaign-id, x-user-id,
+// x-run-id, x-workflow-slug, x-feature-slug.
+// ===================================================================
+
+/**
+ * POST /v1/campaigns/pipeline/gate-check
+ * Check if a campaign can run a new iteration
+ */
+router.post("/campaigns/pipeline/gate-check", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.campaign,
+      "/gate-check",
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+      }
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] POST /v1/campaigns/pipeline/gate-check — FAILED:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to gate-check campaign" });
+  }
+});
+
+/**
+ * POST /v1/campaigns/pipeline/start-run
+ * Create a run and return campaign data for downstream nodes
+ */
+router.post("/campaigns/pipeline/start-run", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.campaign,
+      "/start-run",
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+      }
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] POST /v1/campaigns/pipeline/start-run — FAILED:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to start campaign run" });
+  }
+});
+
+/**
+ * POST /v1/campaigns/pipeline/end-run
+ * Finalize run and optionally stop or re-trigger campaign
+ */
+router.post("/campaigns/pipeline/end-run", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const parsed = EndRunRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const flat = parsed.error.flatten();
+      return res.status(400).json({
+        error: `Invalid request body: ${Object.keys(flat.fieldErrors).join(", ")}`,
+        details: flat.fieldErrors,
+        hint: "Body requires { success: boolean, stopCampaign: boolean }.",
+      });
+    }
+
+    const result = await callExternalService(
+      externalServices.campaign,
+      "/end-run",
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body: parsed.data,
+      }
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] POST /v1/campaigns/pipeline/end-run — FAILED:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to end campaign run" });
   }
 });
 
