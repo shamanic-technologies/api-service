@@ -43,6 +43,29 @@ router.get("/journalists", authenticate, requireOrg, requireUser, async (req: Au
   }
 });
 
+// ── GET /v1/journalists/list — enriched journalist list with email statuses + costs ──
+router.get("/journalists/list", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { brandId, campaignId } = req.query as { brandId?: string; campaignId?: string };
+    if (!brandId) {
+      return res.status(400).json({ error: "Missing required query parameter: brandId" });
+    }
+
+    const params = new URLSearchParams();
+    params.set("brandId", brandId);
+    if (campaignId) params.set("campaignId", campaignId);
+
+    const result = await callExternalService(
+      externalServices.journalist,
+      `/journalists/list?${params}`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to list journalists" });
+  }
+});
+
 // ── POST /v1/journalists/discover — discover journalists for brand+outlet ───
 router.post("/journalists/discover", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
