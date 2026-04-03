@@ -11600,7 +11600,7 @@
           "Journalists"
         ],
         "summary": "List journalists by brand",
-        "description": "Returns all discovered journalists for a given brand across all campaigns. Proxies to journalists-service GET /campaign-outlet-journalists?brand_id={brandId}. Optionally filter by runId to get journalists from a specific discovery run, or by campaignId to get journalists from a specific campaign.",
+        "description": "Returns all discovered journalists for a given brand across all campaigns. Proxies to journalists-service GET /campaign-outlet-journalists?brand_id={brandId}. Optionally filter by runId to get journalists from a specific discovery run, or by campaignId to get journalists from a specific campaign. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
@@ -11639,6 +11639,47 @@
             "description": "Filter journalists by campaign ID",
             "name": "campaignId",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by journalists-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by journalists-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by journalists-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by journalists-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by journalists-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by journalists-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by journalists-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by journalists-service",
+            "name": "x-workflow-slug",
+            "in": "header"
           },
           {
             "name": "x-org-id",
@@ -11736,10 +11777,108 @@
           "Journalists"
         ],
         "summary": "Discover relevant journalists for a brand on an outlet",
-        "description": "Triggers journalist discovery for a given outlet. Requires x-campaign-id and x-brand-id headers. Creates a child run, discovers journalists, and stores them as buffered. Use the returned runId to query journalists from this specific discovery run via GET /v1/journalists?runId={runId}.",
+        "description": "Triggers journalist discovery for a given outlet. Creates a child run, discovers journalists, and stores them as buffered. Use the returned runId to query journalists from this specific discovery run via GET /v1/journalists?runId={runId}. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by journalists-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by journalists-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by journalists-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by journalists-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by journalists-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by journalists-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by journalists-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by journalists-service",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
           }
         ],
         "requestBody": {
@@ -11792,8 +11931,63 @@
               }
             }
           }
-        },
+        }
+      }
+    },
+    "/v1/journalists/discover-emails": {
+      "post": {
+        "tags": [
+          "Journalists"
+        ],
+        "summary": "Discover journalist emails via Apollo person match",
+        "description": "Discovers journalist email addresses via Apollo person match. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by journalists-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by journalists-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by journalists-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by journalists-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by journalists-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by journalists-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by journalists-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by journalists-service",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
           {
             "name": "x-org-id",
             "in": "header",
@@ -11848,19 +12042,6 @@
               "type": "string"
             },
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
-          }
-        ]
-      }
-    },
-    "/v1/journalists/discover-emails": {
-      "post": {
-        "tags": [
-          "Journalists"
-        ],
-        "summary": "Discover journalist emails via Apollo person match",
-        "security": [
-          {
-            "bearerAuth": []
           }
         ],
         "requestBody": {
@@ -11903,8 +12084,63 @@
               }
             }
           }
-        },
+        }
+      }
+    },
+    "/v1/journalists/buffer/next": {
+      "post": {
+        "tags": [
+          "Journalists"
+        ],
+        "summary": "Get next buffered journalist",
+        "description": "Returns the next buffered journalist from the queue. Response includes the runId (child run ID) for the buffer/next call. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by journalists-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by journalists-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by journalists-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by journalists-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by journalists-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by journalists-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by journalists-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by journalists-service",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
           {
             "name": "x-org-id",
             "in": "header",
@@ -11959,20 +12195,6 @@
               "type": "string"
             },
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
-          }
-        ]
-      }
-    },
-    "/v1/journalists/buffer/next": {
-      "post": {
-        "tags": [
-          "Journalists"
-        ],
-        "summary": "Get next buffered journalist",
-        "description": "Returns the next buffered journalist from the queue. Response includes the runId (child run ID) for the buffer/next call.",
-        "security": [
-          {
-            "bearerAuth": []
           }
         ],
         "responses": {
@@ -11999,8 +12221,63 @@
               }
             }
           }
-        },
+        }
+      }
+    },
+    "/v1/journalists/resolve": {
+      "post": {
+        "tags": [
+          "Journalists"
+        ],
+        "summary": "Resolve journalists for a campaign+outlet",
+        "description": "Discovers journalists if needed, scores them, and returns results sorted by relevance. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by journalists-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by journalists-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by journalists-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by journalists-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by journalists-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by journalists-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by journalists-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by journalists-service",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
           {
             "name": "x-org-id",
             "in": "header",
@@ -12055,20 +12332,6 @@
               "type": "string"
             },
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
-          }
-        ]
-      }
-    },
-    "/v1/journalists/resolve": {
-      "post": {
-        "tags": [
-          "Journalists"
-        ],
-        "summary": "Resolve journalists for a campaign+outlet",
-        "description": "Discovers journalists if needed, scores them, and returns results sorted by relevance. Requires x-campaign-id header.",
-        "security": [
-          {
-            "bearerAuth": []
           }
         ],
         "requestBody": {
@@ -12121,64 +12384,7 @@
               }
             }
           }
-        },
-        "parameters": [
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "example": "uuid1,uuid2,uuid3"
-            },
-            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-feature-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
-          }
-        ]
+        }
       }
     },
     "/v1/journalists/stats": {
@@ -12305,6 +12511,47 @@
             "in": "query"
           },
           {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by journalists-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by journalists-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by journalists-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by journalists-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by journalists-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by journalists-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by journalists-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by journalists-service",
+            "name": "x-workflow-slug",
+            "in": "header"
+          },
+          {
             "name": "x-org-id",
             "in": "header",
             "required": false,
@@ -12400,7 +12647,7 @@
           "Journalists"
         ],
         "summary": "Get journalist discovery cost stats",
-        "description": "Returns cost statistics for journalist discovery runs. Requires brandId. Supports optional campaignId filter and groupBy=journalistId to get per-journalist breakdowns. Costs are fetched from runs-service via POST /v1/runs/costs/batch.",
+        "description": "Returns cost statistics for journalist discovery runs. Requires brandId. Supports optional campaignId filter and groupBy=journalistId to get per-journalist breakdowns. Costs are fetched from runs-service via POST /v1/runs/costs/batch. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
@@ -12439,6 +12686,47 @@
             "description": "Group results by journalistId",
             "name": "groupBy",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Campaign ID — required by journalists-service"
+            },
+            "required": true,
+            "description": "Campaign ID — required by journalists-service",
+            "name": "x-campaign-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID (may be comma-separated for multi-brand) — required by journalists-service"
+            },
+            "required": true,
+            "description": "Brand ID (may be comma-separated for multi-brand) — required by journalists-service",
+            "name": "x-brand-id",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug — required by journalists-service"
+            },
+            "required": true,
+            "description": "Feature slug — required by journalists-service",
+            "name": "x-feature-slug",
+            "in": "header"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Workflow slug — required by journalists-service"
+            },
+            "required": true,
+            "description": "Workflow slug — required by journalists-service",
+            "name": "x-workflow-slug",
+            "in": "header"
           },
           {
             "name": "x-org-id",

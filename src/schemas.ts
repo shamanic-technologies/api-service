@@ -1397,14 +1397,27 @@ registry.registerPath({
 // JOURNALISTS
 // ===================================================================
 
+/**
+ * journalists-service requires all 7 identity headers on every request.
+ * x-org-id, x-user-id, x-run-id are set by auth middleware.
+ * These 4 must be provided by the caller.
+ */
+const journalistsRequiredHeaders = z.object({
+  "x-campaign-id": z.string().uuid().describe("Campaign ID — required by journalists-service"),
+  "x-brand-id": z.string().describe("Brand ID (may be comma-separated for multi-brand) — required by journalists-service"),
+  "x-feature-slug": z.string().describe("Feature slug — required by journalists-service"),
+  "x-workflow-slug": z.string().describe("Workflow slug — required by journalists-service"),
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/journalists",
   tags: ["Journalists"],
   summary: "List journalists by brand",
-  description: "Returns all discovered journalists for a given brand across all campaigns. Proxies to journalists-service GET /campaign-outlet-journalists?brand_id={brandId}. Optionally filter by runId to get journalists from a specific discovery run, or by campaignId to get journalists from a specific campaign.",
+  description: "Returns all discovered journalists for a given brand across all campaigns. Proxies to journalists-service GET /campaign-outlet-journalists?brand_id={brandId}. Optionally filter by runId to get journalists from a specific discovery run, or by campaignId to get journalists from a specific campaign. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
+    headers: journalistsRequiredHeaders,
     query: z.object({
       brandId: z.string().uuid().describe("Brand ID to filter journalists by"),
       runId: z.string().uuid().optional().describe("Filter journalists by discovery run ID"),
@@ -1450,9 +1463,10 @@ registry.registerPath({
   path: "/v1/journalists/discover",
   tags: ["Journalists"],
   summary: "Discover relevant journalists for a brand on an outlet",
-  description: "Triggers journalist discovery for a given outlet. Requires x-campaign-id and x-brand-id headers. Creates a child run, discovers journalists, and stores them as buffered. Use the returned runId to query journalists from this specific discovery run via GET /v1/journalists?runId={runId}.",
+  description: "Triggers journalist discovery for a given outlet. Creates a child run, discovers journalists, and stores them as buffered. Use the returned runId to query journalists from this specific discovery run via GET /v1/journalists?runId={runId}. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
+    headers: journalistsRequiredHeaders,
     body: {
       content: {
         "application/json": {
@@ -1491,8 +1505,10 @@ registry.registerPath({
   path: "/v1/journalists/discover-emails",
   tags: ["Journalists"],
   summary: "Discover journalist emails via Apollo person match",
+  description: "Discovers journalist email addresses via Apollo person match. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
+    headers: journalistsRequiredHeaders,
     body: {
       content: {
         "application/json": {
@@ -1543,9 +1559,9 @@ registry.registerPath({
   path: "/v1/journalists/buffer/next",
   tags: ["Journalists"],
   summary: "Get next buffered journalist",
-  description: "Returns the next buffered journalist from the queue. Response includes the runId (child run ID) for the buffer/next call.",
+  description: "Returns the next buffered journalist from the queue. Response includes the runId (child run ID) for the buffer/next call. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
-  request: {},
+  request: { headers: journalistsRequiredHeaders },
   responses: {
     200: {
       description: "Next buffered journalist",
@@ -1570,9 +1586,10 @@ registry.registerPath({
   path: "/v1/journalists/resolve",
   tags: ["Journalists"],
   summary: "Resolve journalists for a campaign+outlet",
-  description: "Discovers journalists if needed, scores them, and returns results sorted by relevance. Requires x-campaign-id header.",
+  description: "Discovers journalists if needed, scores them, and returns results sorted by relevance. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
+    headers: journalistsRequiredHeaders,
     body: {
       content: {
         "application/json": {
@@ -1642,7 +1659,7 @@ registry.registerPath({
     "Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. " +
     "Optional groupBy returns per-slug breakdowns.",
   security: authed,
-  request: { query: journalistStatsQueryParams },
+  request: { headers: journalistsRequiredHeaders, query: journalistStatsQueryParams },
   responses: {
     200: {
       description: "Journalist stats (flat or grouped)",
@@ -1672,9 +1689,11 @@ registry.registerPath({
   description:
     "Returns cost statistics for journalist discovery runs. Requires brandId. " +
     "Supports optional campaignId filter and groupBy=journalistId to get per-journalist breakdowns. " +
-    "Costs are fetched from runs-service via POST /v1/runs/costs/batch.",
+    "Costs are fetched from runs-service via POST /v1/runs/costs/batch. " +
+    "All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
+    headers: journalistsRequiredHeaders,
     query: z.object({
       brandId: z.string().describe("Filter by brand ID (required)"),
       campaignId: z.string().optional().describe("Filter by campaign ID"),
