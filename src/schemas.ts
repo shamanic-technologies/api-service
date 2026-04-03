@@ -405,7 +405,7 @@ const CampaignSchema = z
     name: z.string().describe("Campaign name"),
     workflowSlug: z.string().describe("Exact versioned workflow slug used for execution"),
     workflowDynastySlug: z.string().nullable().describe("Stable dynasty slug for the workflow lineage (unversioned)"),
-    brandUrls: z.array(z.string()).nullable().describe("Brand website URLs"),
+    brandUrls: z.array(z.string()).describe("Brand website URLs (resolved from brandIds via brand-service)"),
     brandIds: z.array(z.string()).describe("Brand IDs"),
     featureSlug: z.string().nullable().describe("Exact versioned feature slug for tracking"),
     featureDynastySlug: z.string().nullable().describe("Stable dynasty slug for the feature lineage (unversioned)"),

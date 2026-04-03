@@ -371,11 +371,10 @@
           },
           "brandUrls": {
             "type": "array",
-            "nullable": true,
             "items": {
               "type": "string"
             },
-            "description": "Brand website URLs"
+            "description": "Brand website URLs (resolved from brandIds via brand-service)"
           },
           "brandIds": {
             "type": "array",
