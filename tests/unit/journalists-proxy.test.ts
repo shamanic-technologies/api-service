@@ -98,6 +98,19 @@ describe("Journalists proxy routes", () => {
     expect(content).toContain('params.set("campaign_id", campaignId)');
   });
 
+  it("should enrich workflow headers from campaign-service when campaignId query param is present but headers are missing", () => {
+    // The GET /journalists handler fetches campaign metadata to populate x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug
+    expect(content).toContain("externalServices.campaign");
+    expect(content).toContain("/campaigns/");
+    // Should only enrich when workflow headers are missing
+    expect(content).toContain("!req.campaignId || !req.brandId || !req.featureSlug || !req.workflowSlug");
+    // Should set missing headers from campaign data
+    expect(content).toContain('headers["x-campaign-id"] = campaignId');
+    expect(content).toContain('headers["x-brand-id"]');
+    expect(content).toContain('headers["x-feature-slug"]');
+    expect(content).toContain('headers["x-workflow-slug"]');
+  });
+
   it("should proxy POST /journalists/buffer/next to /buffer/next on journalist-service", () => {
     expect(content).toContain('"/buffer/next"');
   });
