@@ -123,6 +123,24 @@ router.get("/features", authenticate, requireOrg, requireUser, async (req: Authe
 });
 
 /**
+ * GET /v1/features/entities/registry
+ * Entity type registry — label, icon, pathSuffix, description per type.
+ */
+router.get("/features/entities/registry", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      "/entities/registry",
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Entities registry error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get entities registry" });
+  }
+});
+
+/**
  * GET /v1/features/stats/registry
  * Public dictionary of stats keys (label + type per key)
  */

@@ -139,11 +139,21 @@ describe("Features proxy routes", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(12);
+    expect(headerMatches!.length).toBe(13);
   });
 
   it("should proxy to externalServices.features", () => {
     expect(content).toContain("externalServices.features");
+  });
+
+  it("should have GET /features/entities/registry with auth + requireOrg + requireUser", () => {
+    expect(content).toContain('"/features/entities/registry"');
+    const line = content.split("\n").find((l) =>
+      l.includes('"/features/entities/registry"')
+    );
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
   });
 
   it("should have GET /features/stats/registry with auth + requireOrg + requireUser", () => {
@@ -210,10 +220,12 @@ describe("Features proxy routes", () => {
   });
 
   it("should register static routes before parameterized :slug route", () => {
+    const entitiesRegistryIdx = content.indexOf('"/features/entities/registry"');
     const registryIdx = content.indexOf('"/features/stats/registry"');
     const globalStatsIdx = content.indexOf('"/features/stats"');
     const dynastyIdx = content.indexOf('"/features/dynasty"');
     const slugIdx = content.indexOf('"/features/:slug"');
+    expect(entitiesRegistryIdx).toBeLessThan(slugIdx);
     expect(registryIdx).toBeLessThan(slugIdx);
     expect(globalStatsIdx).toBeLessThan(slugIdx);
     expect(dynastyIdx).toBeLessThan(slugIdx);
@@ -296,6 +308,10 @@ describe("Features OpenAPI schemas", () => {
   it("should define FeaturePrefillRequest schema with brandIds", () => {
     expect(schemaContent).toContain("FeaturePrefillRequest");
     expect(schemaContent).toContain("brandIds");
+  });
+
+  it("should register GET /v1/features/entities/registry", () => {
+    expect(schemaContent).toContain('path: "/v1/features/entities/registry"');
   });
 
   it("should register GET /v1/features/stats/registry", () => {
