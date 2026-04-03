@@ -6318,6 +6318,20 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/entities/registry",
+  tags: ["Features"],
+  summary: "Entity type registry",
+  description: "Complete entity type registry — label, icon, pathSuffix, and description for each entity type. Proxied from features-service.",
+  security: authed,
+  responses: {
+    200: { description: "Entity type registry", content: { "application/json": { schema: z.object({}).passthrough().openapi("EntitiesRegistryResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/features/stats/registry",
   tags: ["Features"],
   summary: "Stats key registry",
