@@ -18,10 +18,24 @@ router.get("/journalists", authenticate, requireOrg, requireUser, async (req: Au
     if (runId) params.set("run_id", runId);
     if (campaignId) params.set("campaign_id", campaignId);
 
+    // Build headers, enriching with campaign metadata when workflow headers are missing
+    const headers = buildInternalHeaders(req);
+    if (campaignId && (!req.campaignId || !req.brandId || !req.featureSlug || !req.workflowSlug)) {
+      const campaignResult = await callExternalService<{
+        campaign: { brandIds?: string[]; featureSlug?: string; workflowSlug?: string };
+      }>(externalServices.campaign, `/campaigns/${encodeURIComponent(campaignId)}`, { headers });
+
+      const campaign = campaignResult.campaign;
+      if (!headers["x-campaign-id"]) headers["x-campaign-id"] = campaignId;
+      if (!headers["x-brand-id"] && campaign.brandIds?.length) headers["x-brand-id"] = campaign.brandIds.join(",");
+      if (!headers["x-feature-slug"] && campaign.featureSlug) headers["x-feature-slug"] = campaign.featureSlug;
+      if (!headers["x-workflow-slug"] && campaign.workflowSlug) headers["x-workflow-slug"] = campaign.workflowSlug;
+    }
+
     const result = await callExternalService(
       externalServices.journalist,
       `/campaign-outlet-journalists?${params}`,
-      { headers: buildInternalHeaders(req) }
+      { headers }
     );
     res.json(result);
   } catch (error: any) {
