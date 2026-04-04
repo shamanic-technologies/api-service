@@ -11801,7 +11801,7 @@
           "Outlets"
         ],
         "summary": "Get outlet discovery cost stats",
-        "description": "Returns cost statistics for outlet discovery runs. Supports filtering by brandId, campaignId, and grouping by outletId or runId. When grouped by outletId, cost = discovery run cost / number of outlets in that run (summed across multiple runs). When grouped by runId, returns totalCostInUsdCents, outletCount, and runCount per run. Without groupBy, returns flat totals across all discovery runs. All costs are org-scoped — each org only sees costs from their own discovery runs. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
+        "description": "Returns cost statistics for outlet discovery runs. Supports filtering by brandId, campaignId, featureDynastySlug, and grouping by outletId or runId. When grouped by outletId, cost = discovery run cost / number of outlets in that run (summed across multiple runs). When grouped by runId, returns totalCostInUsdCents, outletCount, and runCount per run. Without groupBy, returns flat totals across all discovery runs. All costs are org-scoped — each org only sees costs from their own discovery runs. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
@@ -11828,6 +11828,16 @@
             "required": false,
             "description": "Filter by campaign ID",
             "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug",
+            "name": "featureDynastySlug",
             "in": "query"
           },
           {
