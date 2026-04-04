@@ -2122,6 +2122,86 @@
           "campaignJournalists"
         ]
       },
+      "JournalistCampaignEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "campaign_journalist row ID"
+          },
+          "campaignId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "featureSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "workflowSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "buffered",
+              "claimed",
+              "served",
+              "contacted",
+              "skipped"
+            ]
+          },
+          "relevanceScore": {
+            "type": "string"
+          },
+          "whyRelevant": {
+            "type": "string"
+          },
+          "whyNotRelevant": {
+            "type": "string"
+          },
+          "articleUrls": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "email": {
+            "type": "string",
+            "nullable": true,
+            "description": "Per-campaign email (from campaign_journalists table)"
+          },
+          "apolloPersonId": {
+            "type": "string",
+            "nullable": true
+          },
+          "runId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "campaignId",
+          "featureSlug",
+          "workflowSlug",
+          "status",
+          "relevanceScore",
+          "whyRelevant",
+          "whyNotRelevant",
+          "articleUrls",
+          "email",
+          "apolloPersonId",
+          "runId",
+          "createdAt"
+        ]
+      },
       "JournalistListResponse": {
         "type": "object",
         "properties": {
@@ -2130,78 +2210,9 @@
             "items": {
               "type": "object",
               "properties": {
-                "id": {
-                  "type": "string",
-                  "format": "uuid"
-                },
                 "journalistId": {
                   "type": "string",
                   "format": "uuid"
-                },
-                "campaignId": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "outletId": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "orgId": {
-                  "type": "string",
-                  "format": "uuid"
-                },
-                "brandIds": {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "format": "uuid"
-                  }
-                },
-                "featureSlug": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "workflowSlug": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "relevanceScore": {
-                  "type": "string"
-                },
-                "whyRelevant": {
-                  "type": "string"
-                },
-                "whyNotRelevant": {
-                  "type": "string"
-                },
-                "articleUrls": {
-                  "type": "array",
-                  "nullable": true,
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                "status": {
-                  "type": "string",
-                  "enum": [
-                    "buffered",
-                    "claimed",
-                    "served",
-                    "contacted",
-                    "skipped"
-                  ]
-                },
-                "email": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "runId": {
-                  "type": "string",
-                  "nullable": true,
-                  "format": "uuid"
-                },
-                "createdAt": {
-                  "type": "string"
                 },
                 "journalistName": {
                   "type": "string"
@@ -2220,6 +2231,19 @@
                     "individual",
                     "organization"
                   ]
+                },
+                "outletId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "email": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Global email (from journalists table apollo_email, fallback to best campaign email)"
+                },
+                "apolloPersonId": {
+                  "type": "string",
+                  "nullable": true
                 },
                 "emailStatus": {
                   "type": "object",
@@ -2610,31 +2634,27 @@
                     "runCount"
                   ],
                   "description": "Per-journalist cost from runs-service. Null if no runs."
+                },
+                "campaigns": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/JournalistCampaignEntry"
+                  },
+                  "description": "Per-campaign entries for this journalist"
                 }
               },
               "required": [
-                "id",
                 "journalistId",
-                "campaignId",
-                "outletId",
-                "orgId",
-                "brandIds",
-                "featureSlug",
-                "workflowSlug",
-                "relevanceScore",
-                "whyRelevant",
-                "whyNotRelevant",
-                "articleUrls",
-                "status",
-                "email",
-                "runId",
-                "createdAt",
                 "journalistName",
                 "firstName",
                 "lastName",
                 "entityType",
+                "outletId",
+                "email",
+                "apolloPersonId",
                 "emailStatus",
-                "cost"
+                "cost",
+                "campaigns"
               ]
             }
           }
@@ -13167,8 +13187,8 @@
         "tags": [
           "Journalists"
         ],
-        "summary": "List journalists with email statuses and costs",
-        "description": "Returns all journalists for a brand, each enriched with per-journalist email delivery statuses (broadcast + transactional, at campaign/brand/global scope) and cost breakdown from runs-service. Replaces the need to aggregate contacted status from lead-service — delivery details come directly. Proxies to journalists-service GET /journalists/list.",
+        "summary": "List journalists grouped by identity with per-campaign details",
+        "description": "Returns journalists for a brand, grouped by journalist identity. Each journalist has global data (email, cost, emailStatus) and a campaigns[] array with per-campaign entries (status, relevanceScore, etc.). Filter by featureSlugs (comma-separated) and/or workflowSlug. Proxies to journalists-service GET /journalists/list.",
         "security": [
           {
             "bearerAuth": []
@@ -13179,10 +13199,10 @@
             "schema": {
               "type": "string",
               "format": "uuid",
-              "description": "Brand ID (required)"
+              "description": "Brand ID (required). Returns journalists whose brand_ids array contains this brand."
             },
             "required": true,
-            "description": "Brand ID (required)",
+            "description": "Brand ID (required). Returns journalists whose brand_ids array contains this brand.",
             "name": "brandId",
             "in": "query"
           },
@@ -13195,6 +13215,26 @@
             "required": false,
             "description": "Optionally narrow to a single campaign",
             "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated feature slugs to filter campaign rows"
+            },
+            "required": false,
+            "description": "Comma-separated feature slugs to filter campaign rows",
+            "name": "featureSlugs",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optionally filter campaign rows by workflow slug"
+            },
+            "required": false,
+            "description": "Optionally filter campaign rows by workflow slug",
+            "name": "workflowSlug",
             "in": "query"
           },
           {
@@ -13296,7 +13336,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Enriched journalist list with email statuses and costs",
+            "description": "Grouped journalist list with per-campaign entries",
             "content": {
               "application/json": {
                 "schema": {

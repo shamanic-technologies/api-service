@@ -118,7 +118,7 @@ describe("Journalists proxy routes", () => {
   it("should use buildInternalHeaders for all endpoints", () => {
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(7);
+    expect(headerMatches!.length).toBe(8);
   });
 
   it("should proxy to externalServices.journalist", () => {

@@ -43,17 +43,19 @@ router.get("/journalists", authenticate, requireOrg, requireUser, async (req: Au
   }
 });
 
-// ── GET /v1/journalists/list — enriched journalist list with email statuses + costs ──
+// ── GET /v1/journalists/list — grouped journalist list with email statuses + costs ──
 router.get("/journalists/list", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const { brandId, campaignId } = req.query as { brandId?: string; campaignId?: string };
+    const { brandId } = req.query as { brandId?: string };
     if (!brandId) {
       return res.status(400).json({ error: "Missing required query parameter: brandId" });
     }
 
     const params = new URLSearchParams();
     params.set("brandId", brandId);
-    if (campaignId) params.set("campaignId", campaignId);
+    for (const key of ["campaignId", "featureSlugs", "workflowSlug"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
 
     const result = await callExternalService(
       externalServices.journalist,

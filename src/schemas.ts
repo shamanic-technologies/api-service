@@ -1585,51 +1585,58 @@ registry.registerPath({
   method: "get",
   path: "/v1/journalists/list",
   tags: ["Journalists"],
-  summary: "List journalists with email statuses and costs",
+  summary: "List journalists grouped by identity with per-campaign details",
   description:
-    "Returns all journalists for a brand, each enriched with per-journalist email delivery statuses " +
-    "(broadcast + transactional, at campaign/brand/global scope) and cost breakdown from runs-service. " +
-    "Replaces the need to aggregate contacted status from lead-service — delivery details come directly. " +
+    "Returns journalists for a brand, grouped by journalist identity. Each journalist has global data " +
+    "(email, cost, emailStatus) and a campaigns[] array with per-campaign entries (status, relevanceScore, etc.). " +
+    "Filter by featureSlugs (comma-separated) and/or workflowSlug. " +
     "Proxies to journalists-service GET /journalists/list.",
   security: authed,
   request: {
     headers: journalistsStatsOptionalHeaders,
     query: z.object({
-      brandId: z.string().uuid().describe("Brand ID (required)"),
+      brandId: z.string().uuid().describe("Brand ID (required). Returns journalists whose brand_ids array contains this brand."),
       campaignId: z.string().uuid().optional().describe("Optionally narrow to a single campaign"),
+      featureSlugs: z.string().optional().describe("Comma-separated feature slugs to filter campaign rows"),
+      workflowSlug: z.string().optional().describe("Optionally filter campaign rows by workflow slug"),
     }),
   },
   responses: {
     200: {
-      description: "Enriched journalist list with email statuses and costs",
+      description: "Grouped journalist list with per-campaign entries",
       content: {
         "application/json": {
           schema: z
             .object({
               journalists: z.array(
                 z.object({
-                  id: z.string().uuid(),
                   journalistId: z.string().uuid(),
-                  campaignId: z.string().uuid(),
-                  outletId: z.string().uuid(),
-                  orgId: z.string().uuid(),
-                  brandIds: z.array(z.string().uuid()),
-                  featureSlug: z.string().nullable(),
-                  workflowSlug: z.string().nullable(),
-                  relevanceScore: z.string(),
-                  whyRelevant: z.string(),
-                  whyNotRelevant: z.string(),
-                  articleUrls: z.array(z.string()).nullable(),
-                  status: z.enum(["buffered", "claimed", "served", "contacted", "skipped"]),
-                  email: z.string().nullable(),
-                  runId: z.string().uuid().nullable(),
-                  createdAt: z.string(),
                   journalistName: z.string(),
                   firstName: z.string().nullable(),
                   lastName: z.string().nullable(),
                   entityType: z.enum(["individual", "organization"]),
+                  outletId: z.string().uuid(),
+                  email: z.string().nullable().describe("Global email (from journalists table apollo_email, fallback to best campaign email)"),
+                  apolloPersonId: z.string().nullable(),
                   emailStatus: JournalistEmailStatusSchema,
                   cost: JournalistCostSchema,
+                  campaigns: z.array(
+                    z.object({
+                      id: z.string().uuid().describe("campaign_journalist row ID"),
+                      campaignId: z.string().uuid(),
+                      featureSlug: z.string().nullable(),
+                      workflowSlug: z.string().nullable(),
+                      status: z.enum(["buffered", "claimed", "served", "contacted", "skipped"]),
+                      relevanceScore: z.string(),
+                      whyRelevant: z.string(),
+                      whyNotRelevant: z.string(),
+                      articleUrls: z.array(z.string()).nullable(),
+                      email: z.string().nullable().describe("Per-campaign email (from campaign_journalists table)"),
+                      apolloPersonId: z.string().nullable(),
+                      runId: z.string().uuid().nullable(),
+                      createdAt: z.string(),
+                    }).openapi("JournalistCampaignEntry"),
+                  ).describe("Per-campaign entries for this journalist"),
                 }),
               ),
             })
