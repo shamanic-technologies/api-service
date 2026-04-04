@@ -1603,18 +1603,59 @@
             "type": "string",
             "format": "uuid"
           },
-          "status": {
+          "featureSlug": {
+            "type": "string"
+          },
+          "brandIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "whyRelevant": {
+            "type": "string"
+          },
+          "whyNotRelevant": {
             "type": "string"
           },
           "relevanceScore": {
-            "type": "number",
+            "type": "number"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "ended",
+              "denied",
+              "served",
+              "skipped"
+            ]
+          },
+          "overallRelevance": {
+            "type": "string",
             "nullable": true
+          },
+          "relevanceRationale": {
+            "type": "string",
+            "nullable": true
+          },
+          "runId": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
           "campaignId",
+          "featureSlug",
+          "brandIds",
+          "relevanceScore",
           "status",
-          "relevanceScore"
+          "updatedAt"
         ]
       },
       "OutletWithCampaigns": {
@@ -1630,14 +1671,25 @@
           "outletUrl": {
             "type": "string"
           },
+          "outletDomain": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
           "latestStatus": {
             "type": "string",
-            "description": "Most recent status across all campaigns"
+            "enum": [
+              "open",
+              "ended",
+              "denied",
+              "served",
+              "skipped"
+            ]
           },
           "latestRelevanceScore": {
-            "type": "number",
-            "nullable": true,
-            "description": "Most recent relevance score across all campaigns"
+            "type": "number"
           },
           "campaigns": {
             "type": "array",
@@ -1651,6 +1703,8 @@
           "id",
           "outletName",
           "outletUrl",
+          "outletDomain",
+          "createdAt",
           "latestStatus",
           "latestRelevanceScore",
           "campaigns"
@@ -1667,7 +1721,7 @@
           },
           "total": {
             "type": "integer",
-            "description": "Total number of deduplicated outlets matching the filters"
+            "description": "Total number of distinct outlets matching filters"
           }
         },
         "required": [
@@ -11147,8 +11201,8 @@
         "tags": [
           "Outlets"
         ],
-        "summary": "List outlets with filters",
-        "description": "List deduplicated outlets with optional filters. Each outlet appears once with a nested campaigns[] array containing per-campaign data (status, relevance score, etc.). Top-level latestStatus and latestRelevanceScore fields provide a quick summary. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
+        "summary": "List outlets with filters (deduplicated)",
+        "description": "Returns outlets deduplicated by outlet_id with nested campaign data. Each outlet appears once with a campaigns[] array containing per-campaign details. Filter by campaignId, brandId, status, featureSlugs (comma-separated), or featureDynastySlug. Supports pagination on distinct outlets. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
@@ -11179,7 +11233,9 @@
               "enum": [
                 "open",
                 "ended",
-                "denied"
+                "denied",
+                "served",
+                "skipped"
               ]
             },
             "required": false,
@@ -11189,8 +11245,7 @@
           {
             "schema": {
               "type": "string",
-              "format": "uuid",
-              "description": "Filter outlets by discovery run ID"
+              "description": "Filter by run ID (from discover endpoint)"
             },
             "required": false,
             "name": "runId",
@@ -11199,30 +11254,20 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact feature slug"
+              "description": "Filter by feature slugs (comma-separated). Use a single slug or multiple."
             },
             "required": false,
-            "description": "Filter by exact feature slug",
-            "name": "featureSlug",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by multiple feature slugs (comma-separated)"
-            },
-            "required": false,
-            "description": "Filter by multiple feature slugs (comma-separated)",
+            "description": "Filter by feature slugs (comma-separated). Use a single slug or multiple.",
             "name": "featureSlugs",
             "in": "query"
           },
           {
             "schema": {
               "type": "string",
-              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)"
+              "description": "Filter by feature dynasty slug (resolved to all versioned slugs via features-service). Takes priority over featureSlugs."
             },
             "required": false,
-            "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
+            "description": "Filter by feature dynasty slug (resolved to all versioned slugs via features-service). Takes priority over featureSlugs.",
             "name": "featureDynastySlug",
             "in": "query"
           },
@@ -11345,7 +11390,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Deduplicated list of outlets, each with a nested campaigns[] array",
+            "description": "List of deduplicated outlets with nested campaigns",
             "content": {
               "application/json": {
                 "schema": {

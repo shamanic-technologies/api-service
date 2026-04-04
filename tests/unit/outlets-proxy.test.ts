@@ -26,9 +26,20 @@ describe("Outlets proxy routes", () => {
   });
 
   it("should forward query params on GET /outlets", () => {
-    for (const param of ["campaignId", "brandId", "status", "runId", "limit", "offset", "featureSlug", "featureSlugs", "featureDynastySlug"]) {
+    for (const param of ["campaignId", "brandId", "status", "runId", "limit", "offset", "featureSlugs", "featureDynastySlug"]) {
       expect(content).toContain(`"${param}"`);
     }
+  });
+
+  it("should NOT forward removed featureSlug (singular) on GET /outlets", () => {
+    // featureSlug was removed in outlets-service PR #54, replaced by featureSlugs
+    const getOutletsSection = content.slice(
+      content.indexOf('"/outlets"'),
+      content.indexOf('"/outlets/stats"')
+    );
+    // featureSlugs is present, but featureSlug as a standalone key should not be
+    const keys = getOutletsSection.match(/"(\w+)"/g)?.map((k) => k.replace(/"/g, "")) || [];
+    expect(keys).not.toContain("featureSlug");
   });
 
   it("should have GET /outlets/stats with auth", () => {
@@ -220,14 +231,19 @@ describe("Outlets OpenAPI schemas", () => {
     expect(getOutletsSection).toContain("runId:");
   });
 
-  it("should include featureSlug, featureSlugs, and featureDynastySlug filters on GET /v1/outlets", () => {
+  it("should include featureSlugs and featureDynastySlug filters on GET /v1/outlets (no singular featureSlug)", () => {
     const getOutletsSection = schemaContent.slice(
       schemaContent.indexOf('path: "/v1/outlets"'),
-      schemaContent.indexOf('path: "/v1/outlets"') + 1200
+      schemaContent.indexOf('path: "/v1/outlets"') + 1500
     );
-    expect(getOutletsSection).toContain("featureSlug:");
     expect(getOutletsSection).toContain("featureSlugs:");
     expect(getOutletsSection).toContain("featureDynastySlug:");
+    // featureSlug (singular) was removed in outlets-service PR #54
+    const queryBlock = getOutletsSection.slice(
+      getOutletsSection.indexOf("query: z.object"),
+      getOutletsSection.indexOf("responses:")
+    );
+    expect(queryBlock).not.toMatch(/\bfeatureSlug\b(?!s)/);
   });
 
   it("should document deduplicated response with campaigns[] array on GET /v1/outlets", () => {
@@ -236,6 +252,24 @@ describe("Outlets OpenAPI schemas", () => {
     expect(schemaContent).toContain("OutletCampaignEntry");
     expect(schemaContent).toContain("latestStatus");
     expect(schemaContent).toContain("latestRelevanceScore");
+    expect(schemaContent).toContain("outletDomain");
+  });
+
+  it("should include full campaign entry fields in OutletCampaignEntry", () => {
+    const idx = schemaContent.indexOf("OutletCampaignEntry");
+    const entrySection = schemaContent.slice(Math.max(0, idx - 800), idx + 100);
+    for (const field of ["campaignId", "featureSlug", "brandIds", "whyRelevant", "relevanceScore", "updatedAt"]) {
+      expect(entrySection).toContain(field);
+    }
+  });
+
+  it("should include served and skipped in status enum on GET /v1/outlets", () => {
+    const getOutletsSection = schemaContent.slice(
+      schemaContent.indexOf('path: "/v1/outlets"'),
+      schemaContent.indexOf('path: "/v1/outlets"') + 1500
+    );
+    expect(getOutletsSection).toContain('"served"');
+    expect(getOutletsSection).toContain('"skipped"');
   });
 
   it("should register GET /v1/outlets/{id}", () => {
