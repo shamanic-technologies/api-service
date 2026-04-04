@@ -2083,7 +2083,21 @@
                     "type": "string"
                   }
                 },
-                "status": {
+                "consolidatedStatus": {
+                  "type": "string",
+                  "enum": [
+                    "buffered",
+                    "claimed",
+                    "served",
+                    "contacted",
+                    "delivered",
+                    "replied",
+                    "bounced",
+                    "skipped"
+                  ],
+                  "description": "Consolidated status: email-gateway status when available, otherwise local DB status"
+                },
+                "localStatus": {
                   "type": "string",
                   "enum": [
                     "buffered",
@@ -2092,7 +2106,18 @@
                     "contacted",
                     "skipped"
                   ],
-                  "description": "Current status of this journalist in the campaign pipeline"
+                  "description": "Status from the local database"
+                },
+                "emailGatewayStatus": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "contacted",
+                    "delivered",
+                    "replied",
+                    "bounced"
+                  ],
+                  "description": "Status derived from email-gateway. Null if no email-gateway data."
                 },
                 "runId": {
                   "type": "string",
@@ -2112,7 +2137,9 @@
                 "whyRelevant",
                 "whyNotRelevant",
                 "articleUrls",
-                "status",
+                "consolidatedStatus",
+                "localStatus",
+                "emailGatewayStatus",
                 "runId"
               ]
             }
@@ -2142,7 +2169,21 @@
             "type": "string",
             "nullable": true
           },
-          "status": {
+          "consolidatedStatus": {
+            "type": "string",
+            "enum": [
+              "buffered",
+              "claimed",
+              "served",
+              "contacted",
+              "delivered",
+              "replied",
+              "bounced",
+              "skipped"
+            ],
+            "description": "Consolidated status: email-gateway status when available, otherwise local DB status"
+          },
+          "localStatus": {
             "type": "string",
             "enum": [
               "buffered",
@@ -2150,7 +2191,19 @@
               "served",
               "contacted",
               "skipped"
-            ]
+            ],
+            "description": "Status from the local database"
+          },
+          "emailGatewayStatus": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "contacted",
+              "delivered",
+              "replied",
+              "bounced"
+            ],
+            "description": "Status derived from email-gateway. Null if no email-gateway data."
           },
           "relevanceScore": {
             "type": "string"
@@ -2191,7 +2244,9 @@
           "campaignId",
           "featureSlug",
           "workflowSlug",
-          "status",
+          "consolidatedStatus",
+          "localStatus",
+          "emailGatewayStatus",
           "relevanceScore",
           "whyRelevant",
           "whyNotRelevant",
@@ -2902,7 +2957,7 @@
             "additionalProperties": {
               "type": "number"
             },
-            "description": "Map of status to count (buffered, claimed, served, contacted, skipped)"
+            "description": "Map of status to count. Local: buffered, claimed, served, skipped. Email-gateway enriched: contacted, delivered, replied, bounced."
           },
           "groupedBy": {
             "type": "object",
@@ -14020,7 +14075,7 @@
           "Journalists"
         ],
         "summary": "Get journalist stats with dynasty-aware filtering and grouping",
-        "description": "Returns journalist counts by status (buffered, claimed, served, contacted, skipped). Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. Optional groupBy returns per-slug breakdowns.",
+        "description": "Returns journalist counts by status. Local statuses: buffered, claimed, served, skipped. Email-gateway enriched statuses: contacted, delivered, replied, bounced. Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. Optional groupBy returns per-slug breakdowns.",
         "security": [
           {
             "bearerAuth": []
