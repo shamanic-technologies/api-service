@@ -15418,6 +15418,7 @@
           "Articles"
         ],
         "summary": "List article discoveries with filters",
+        "description": "List discoveries with optional filters. Supports filtering by featureDynastySlug (resolves to all versioned slugs via features-service), featureSlugs (comma-separated), and equivalent workflow filters. Dynasty slug takes priority over slugs list.",
         "security": [
           {
             "bearerAuth": []
@@ -15472,6 +15473,42 @@
             },
             "required": false,
             "name": "topicId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature slugs (comma-separated or single value)"
+            },
+            "required": false,
+            "name": "featureSlugs",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (resolves to all versioned slugs via features-service)"
+            },
+            "required": false,
+            "name": "featureDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow slugs (comma-separated or single value)"
+            },
+            "required": false,
+            "name": "workflowSlugs",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug (resolves to all versioned slugs via workflow-service)"
+            },
+            "required": false,
+            "name": "workflowDynastySlug",
             "in": "query"
           },
           {
