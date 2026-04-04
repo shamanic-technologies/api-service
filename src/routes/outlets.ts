@@ -9,12 +9,9 @@ const router = Router();
 router.get("/outlets", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    if (req.query.campaignId) params.set("campaignId", req.query.campaignId as string);
-    if (req.query.brandId) params.set("brandId", req.query.brandId as string);
-    if (req.query.status) params.set("status", req.query.status as string);
-    if (req.query.runId) params.set("runId", req.query.runId as string);
-    if (req.query.limit) params.set("limit", req.query.limit as string);
-    if (req.query.offset) params.set("offset", req.query.offset as string);
+    for (const key of ["campaignId", "brandId", "status", "runId", "limit", "offset", "featureSlug", "featureSlugs", "featureDynastySlug"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
     const qs = params.toString() ? `?${params.toString()}` : "";
 
     const result = await callExternalService(

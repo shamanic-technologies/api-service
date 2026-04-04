@@ -1596,6 +1596,85 @@
           "stopCampaign"
         ]
       },
+      "OutletCampaignEntry": {
+        "type": "object",
+        "properties": {
+          "campaignId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "relevanceScore": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "campaignId",
+          "status",
+          "relevanceScore"
+        ]
+      },
+      "OutletWithCampaigns": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "outletName": {
+            "type": "string"
+          },
+          "outletUrl": {
+            "type": "string"
+          },
+          "latestStatus": {
+            "type": "string",
+            "description": "Most recent status across all campaigns"
+          },
+          "latestRelevanceScore": {
+            "type": "number",
+            "nullable": true,
+            "description": "Most recent relevance score across all campaigns"
+          },
+          "campaigns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OutletCampaignEntry"
+            },
+            "description": "Per-campaign data for this outlet"
+          }
+        },
+        "required": [
+          "id",
+          "outletName",
+          "outletUrl",
+          "latestStatus",
+          "latestRelevanceScore",
+          "campaigns"
+        ]
+      },
+      "ListOutletsResponse": {
+        "type": "object",
+        "properties": {
+          "outlets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OutletWithCampaigns"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total number of deduplicated outlets matching the filters"
+          }
+        },
+        "required": [
+          "outlets",
+          "total"
+        ]
+      },
       "CreateOutletRequest": {
         "type": "object",
         "properties": {
@@ -11069,7 +11148,7 @@
           "Outlets"
         ],
         "summary": "List outlets with filters",
-        "description": "List outlets with optional filters. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
+        "description": "List deduplicated outlets with optional filters. Each outlet appears once with a nested campaigns[] array containing per-campaign data (status, relevance score, etc.). Top-level latestStatus and latestRelevanceScore fields provide a quick summary. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
@@ -11115,6 +11194,36 @@
             },
             "required": false,
             "name": "runId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact feature slug"
+            },
+            "required": false,
+            "description": "Filter by exact feature slug",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by multiple feature slugs (comma-separated)"
+            },
+            "required": false,
+            "description": "Filter by multiple feature slugs (comma-separated)",
+            "name": "featureSlugs",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
+            "name": "featureDynastySlug",
             "in": "query"
           },
           {
@@ -11236,7 +11345,14 @@
         ],
         "responses": {
           "200": {
-            "description": "List of outlets"
+            "description": "Deduplicated list of outlets, each with a nested campaigns[] array",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListOutletsResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
