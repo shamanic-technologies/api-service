@@ -173,9 +173,16 @@ describe("GET /journalists/list OpenAPI schema", () => {
     expect(campaignEntryRef).toBe("#/components/schemas/JournalistCampaignEntry");
     const campaignEntry = openapi.components?.schemas?.JournalistCampaignEntry;
     expect(campaignEntry).toBeDefined();
-    expect(campaignEntry.properties.status).toBeDefined();
+    expect(campaignEntry.properties.consolidatedStatus).toBeDefined();
+    expect(campaignEntry.properties.localStatus).toBeDefined();
+    expect(campaignEntry.properties.emailGatewayStatus).toBeDefined();
     expect(campaignEntry.properties.relevanceScore).toBeDefined();
     expect(campaignEntry.properties.campaignId).toBeDefined();
+  });
+
+  it("campaign entries should NOT have old 'status' field (replaced by consolidatedStatus/localStatus/emailGatewayStatus)", () => {
+    const campaignEntry = openapi.components?.schemas?.JournalistCampaignEntry;
+    expect(campaignEntry.properties.status).toBeUndefined();
   });
 
   it("should NOT have flat campaign fields at journalist top level", () => {

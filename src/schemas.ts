@@ -1524,7 +1524,9 @@ registry.registerPath({
                   whyRelevant: z.string().nullable(),
                   whyNotRelevant: z.string().nullable(),
                   articleUrls: z.array(z.string()).nullable(),
-                  status: z.enum(["buffered", "claimed", "served", "contacted", "skipped"]).describe("Current status of this journalist in the campaign pipeline"),
+                  consolidatedStatus: z.enum(["buffered", "claimed", "served", "contacted", "delivered", "replied", "bounced", "skipped"]).describe("Consolidated status: email-gateway status when available, otherwise local DB status"),
+                  localStatus: z.enum(["buffered", "claimed", "served", "contacted", "skipped"]).describe("Status from the local database"),
+                  emailGatewayStatus: z.enum(["contacted", "delivered", "replied", "bounced"]).nullable().describe("Status derived from email-gateway. Null if no email-gateway data."),
                   runId: z.string().uuid().nullable().describe("The discovery run that created this journalist entry"),
                 }).passthrough(),
               ),
@@ -1629,7 +1631,9 @@ registry.registerPath({
                       campaignId: z.string().uuid(),
                       featureSlug: z.string().nullable(),
                       workflowSlug: z.string().nullable(),
-                      status: z.enum(["buffered", "claimed", "served", "contacted", "skipped"]),
+                      consolidatedStatus: z.enum(["buffered", "claimed", "served", "contacted", "delivered", "replied", "bounced", "skipped"]).describe("Consolidated status: email-gateway status when available, otherwise local DB status"),
+                      localStatus: z.enum(["buffered", "claimed", "served", "contacted", "skipped"]).describe("Status from the local database"),
+                      emailGatewayStatus: z.enum(["contacted", "delivered", "replied", "bounced"]).nullable().describe("Status derived from email-gateway. Null if no email-gateway data."),
                       relevanceScore: z.string(),
                       whyRelevant: z.string(),
                       whyNotRelevant: z.string(),
@@ -1849,7 +1853,8 @@ registry.registerPath({
   tags: ["Journalists"],
   summary: "Get journalist stats with dynasty-aware filtering and grouping",
   description:
-    "Returns journalist counts by status (buffered, claimed, served, contacted, skipped). " +
+    "Returns journalist counts by status. Local statuses: buffered, claimed, served, skipped. " +
+    "Email-gateway enriched statuses: contacted, delivered, replied, bounced. " +
     "Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. " +
     "Optional groupBy returns per-slug breakdowns.",
   security: authed,
@@ -1861,7 +1866,7 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             totalJournalists: z.number(),
-            byStatus: z.record(z.number()).describe("Map of status to count (buffered, claimed, served, contacted, skipped)"),
+            byStatus: z.record(z.number()).describe("Map of status to count. Local: buffered, claimed, served, skipped. Email-gateway enriched: contacted, delivered, replied, bounced."),
             groupedBy: z.record(z.object({
               totalJournalists: z.number(),
               byStatus: z.record(z.number()),

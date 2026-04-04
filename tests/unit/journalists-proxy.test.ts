@@ -299,13 +299,24 @@ describe("Journalists OpenAPI schemas", () => {
     expect(block).toContain("campaignId:");
   });
 
-  it("should have status enum in ListJournalistsResponse", () => {
+  it("should have consolidatedStatus/localStatus/emailGatewayStatus in ListJournalistsResponse", () => {
     const start = schemaContent.indexOf("ListJournalistsResponse");
     const block = schemaContent.slice(Math.max(0, start - 800), start);
-    expect(block).toContain("status:");
+    expect(block).toContain("consolidatedStatus:");
+    expect(block).toContain("localStatus:");
+    expect(block).toContain("emailGatewayStatus:");
     expect(block).toContain('"buffered"');
-    expect(block).toContain('"contacted"');
-    expect(block).toContain('"skipped"');
+    expect(block).toContain('"delivered"');
+    expect(block).toContain('"replied"');
+    expect(block).toContain('"bounced"');
+  });
+
+  it("should NOT have old 'status' field in ListJournalistsResponse", () => {
+    const start = schemaContent.indexOf("ListJournalistsResponse");
+    const block = schemaContent.slice(Math.max(0, start - 800), start);
+    // consolidatedStatus contains "Status" but standalone "status:" should not exist
+    const lines = block.split("\n").filter((l: string) => l.trim().startsWith("status:"));
+    expect(lines.length).toBe(0);
   });
 
   it("should register GET /v1/journalists/stats", () => {
