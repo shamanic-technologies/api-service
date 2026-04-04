@@ -9,7 +9,7 @@ const router = Router();
 router.get("/outlets", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["campaignId", "brandId", "status", "runId", "limit", "offset", "featureSlug", "featureSlugs", "featureDynastySlug"]) {
+    for (const key of ["campaignId", "brandId", "status", "runId", "limit", "offset", "featureSlugs", "featureDynastySlug"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";

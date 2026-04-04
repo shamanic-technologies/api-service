@@ -1065,9 +1065,9 @@ registry.registerPath({
   method: "get",
   path: "/v1/outlets",
   tags: ["Outlets"],
-  summary: "List outlets with filters",
-  description: "List deduplicated outlets with optional filters. Each outlet appears once with a nested campaigns[] array containing per-campaign data (status, relevance score, etc.). " +
-    "Top-level latestStatus and latestRelevanceScore fields provide a quick summary. " +
+  summary: "List outlets with filters (deduplicated)",
+  description: "Returns outlets deduplicated by outlet_id with nested campaign data. Each outlet appears once with a campaigns[] array containing per-campaign details. " +
+    "Filter by campaignId, brandId, status, featureSlugs (comma-separated), or featureDynastySlug. Supports pagination on distinct outlets. " +
     "All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
@@ -1075,18 +1075,17 @@ registry.registerPath({
     query: z.object({
       campaignId: z.string().uuid().optional(),
       brandId: z.string().uuid().optional(),
-      status: z.enum(["open", "ended", "denied"]).optional(),
-      runId: z.string().uuid().optional().openapi({ description: "Filter outlets by discovery run ID" }),
-      featureSlug: z.string().optional().describe("Filter by exact feature slug"),
-      featureSlugs: z.string().optional().describe("Filter by multiple feature slugs (comma-separated)"),
-      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
+      status: z.enum(["open", "ended", "denied", "served", "skipped"]).optional(),
+      runId: z.string().optional().openapi({ description: "Filter by run ID (from discover endpoint)" }),
+      featureSlugs: z.string().optional().describe("Filter by feature slugs (comma-separated). Use a single slug or multiple."),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs via features-service). Takes priority over featureSlugs."),
       limit: z.coerce.number().int().optional().default(100),
       offset: z.coerce.number().int().optional().default(0),
     }),
   },
   responses: {
     200: {
-      description: "Deduplicated list of outlets, each with a nested campaigns[] array",
+      description: "List of deduplicated outlets with nested campaigns",
       content: {
         "application/json": {
           schema: z
@@ -1096,18 +1095,28 @@ registry.registerPath({
                   id: z.string().uuid(),
                   outletName: z.string(),
                   outletUrl: z.string(),
-                  latestStatus: z.string().describe("Most recent status across all campaigns"),
-                  latestRelevanceScore: z.number().nullable().describe("Most recent relevance score across all campaigns"),
+                  outletDomain: z.string(),
+                  createdAt: z.string().datetime(),
+                  latestStatus: z.enum(["open", "ended", "denied", "served", "skipped"]),
+                  latestRelevanceScore: z.number(),
                   campaigns: z.array(
                     z.object({
                       campaignId: z.string().uuid(),
-                      status: z.string(),
-                      relevanceScore: z.number().nullable(),
+                      featureSlug: z.string(),
+                      brandIds: z.array(z.string().uuid()),
+                      whyRelevant: z.string().optional(),
+                      whyNotRelevant: z.string().optional(),
+                      relevanceScore: z.number(),
+                      status: z.enum(["open", "ended", "denied", "served", "skipped"]),
+                      overallRelevance: z.string().nullable().optional(),
+                      relevanceRationale: z.string().nullable().optional(),
+                      runId: z.string().nullable().optional(),
+                      updatedAt: z.string().datetime(),
                     }).openapi("OutletCampaignEntry"),
                   ).describe("Per-campaign data for this outlet"),
                 }).openapi("OutletWithCampaigns"),
               ),
-              total: z.number().int().describe("Total number of deduplicated outlets matching the filters"),
+              total: z.number().int().describe("Total number of distinct outlets matching filters"),
             })
             .openapi("ListOutletsResponse"),
         },
