@@ -1198,7 +1198,7 @@ registry.registerPath({
   tags: ["Outlets"],
   summary: "Get outlet discovery cost stats",
   description:
-    "Returns cost statistics for outlet discovery runs. Supports filtering by brandId, campaignId, " +
+    "Returns cost statistics for outlet discovery runs. Supports filtering by brandId, campaignId, featureDynastySlug, " +
     "and grouping by outletId or runId. When grouped by outletId, cost = discovery run cost / number of outlets " +
     "in that run (summed across multiple runs). When grouped by runId, returns totalCostInUsdCents, outletCount, " +
     "and runCount per run. Without groupBy, returns flat totals across all discovery runs. " +
@@ -1210,6 +1210,7 @@ registry.registerPath({
     query: z.object({
       brandId: z.string().uuid().optional().describe("Filter by brand ID"),
       campaignId: z.string().uuid().optional().describe("Filter by campaign ID"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug"),
       groupBy: z.enum(["outletId", "runId"]).optional().describe("Group results by outletId or runId"),
     }),
   },

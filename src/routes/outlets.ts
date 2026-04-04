@@ -119,7 +119,7 @@ router.post("/outlets/buffer/next", authenticate, requireOrg, requireUser, async
 router.get("/outlets/stats/costs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["brandId", "campaignId", "groupBy"]) {
+    for (const key of ["brandId", "campaignId", "groupBy", "featureDynastySlug"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";

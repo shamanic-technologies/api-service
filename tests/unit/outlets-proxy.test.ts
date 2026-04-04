@@ -148,6 +148,7 @@ describe("Outlets proxy routes", () => {
     expect(costSection).toContain('"brandId"');
     expect(costSection).toContain('"campaignId"');
     expect(costSection).toContain('"groupBy"');
+    expect(costSection).toContain('"featureDynastySlug"');
   });
 
   it("should register static routes before parameterized :id route", () => {
