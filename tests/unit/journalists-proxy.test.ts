@@ -34,6 +34,15 @@ describe("Journalists proxy routes", () => {
     expect(content).toContain("Missing required query parameter: brandId");
   });
 
+  it("should forward featureDynastySlug as feature_dynasty_slug on GET /journalists", () => {
+    const getSection = content.slice(
+      content.indexOf('"/journalists"'),
+      content.indexOf('"/journalists/list"')
+    );
+    expect(getSection).toContain("feature_dynasty_slug");
+    expect(getSection).toContain("featureDynastySlug");
+  });
+
   it("should have POST /journalists/discover with auth + requireOrg + requireUser", () => {
     const line = content.split("\n").find((l) =>
       l.includes("router.post") && l.includes('"/journalists/discover"') && !l.includes("emails")

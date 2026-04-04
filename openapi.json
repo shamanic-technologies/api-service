@@ -13054,6 +13054,16 @@
           {
             "schema": {
               "type": "string",
+              "description": "Filter by feature dynasty slug (resolved to all versioned slugs via features-service)"
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug (resolved to all versioned slugs via features-service)",
+            "name": "featureDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "format": "uuid",
               "description": "Campaign ID — required by journalists-service"
             },
@@ -13225,6 +13235,16 @@
             "required": false,
             "description": "Comma-separated feature slugs to filter campaign rows",
             "name": "featureSlugs",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature dynasty slug (resolved to all versioned slugs via features-service). Takes priority over featureSlugs."
+            },
+            "required": false,
+            "description": "Filter by feature dynasty slug (resolved to all versioned slugs via features-service). Takes priority over featureSlugs.",
+            "name": "featureDynastySlug",
             "in": "query"
           },
           {

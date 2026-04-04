@@ -30,7 +30,7 @@ describe("GET /journalists/list route", () => {
     expect(listSection).toContain('"Missing required query parameter: brandId"');
   });
 
-  it("should forward brandId, campaignId, featureSlugs, and workflowSlug", () => {
+  it("should forward brandId, campaignId, featureSlugs, featureDynastySlug, and workflowSlug", () => {
     const listSection = content.slice(
       content.indexOf('"/journalists/list"'),
       content.indexOf("// ── POST /v1/journalists/discover")
@@ -38,6 +38,7 @@ describe("GET /journalists/list route", () => {
     expect(listSection).toContain('params.set("brandId", brandId)');
     expect(listSection).toContain('"campaignId"');
     expect(listSection).toContain('"featureSlugs"');
+    expect(listSection).toContain('"featureDynastySlug"');
     expect(listSection).toContain('"workflowSlug"');
   });
 
@@ -123,6 +124,16 @@ describe("GET /journalists/list OpenAPI schema", () => {
     const params = listPath.get.parameters || [];
     const param = params.find(
       (p: { name: string; in: string }) => p.name === "featureSlugs" && p.in === "query"
+    );
+    expect(param).toBeDefined();
+    expect(param.required).toBeFalsy();
+  });
+
+  it("should have optional featureDynastySlug in OpenAPI spec", () => {
+    const listPath = openapi.paths["/v1/journalists/list"];
+    const params = listPath.get.parameters || [];
+    const param = params.find(
+      (p: { name: string; in: string }) => p.name === "featureDynastySlug" && p.in === "query"
     );
     expect(param).toBeDefined();
     expect(param.required).toBeFalsy();

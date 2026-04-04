@@ -1501,6 +1501,7 @@ registry.registerPath({
       brandId: z.string().uuid().describe("Brand ID to filter journalists by"),
       runId: z.string().uuid().optional().describe("Filter journalists by discovery run ID"),
       campaignId: z.string().uuid().optional().describe("Filter journalists by campaign ID"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs via features-service)"),
     }).openapi("ListJournalistsQuery"),
   },
   responses: {
@@ -1598,6 +1599,7 @@ registry.registerPath({
       brandId: z.string().uuid().describe("Brand ID (required). Returns journalists whose brand_ids array contains this brand."),
       campaignId: z.string().uuid().optional().describe("Optionally narrow to a single campaign"),
       featureSlugs: z.string().optional().describe("Comma-separated feature slugs to filter campaign rows"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs via features-service). Takes priority over featureSlugs."),
       workflowSlug: z.string().optional().describe("Optionally filter campaign rows by workflow slug"),
     }),
   },
