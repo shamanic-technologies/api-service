@@ -258,7 +258,7 @@ describe("Outlets OpenAPI schemas", () => {
 
   it("should include full campaign entry fields in OutletCampaignEntry", () => {
     const idx = schemaContent.indexOf("OutletCampaignEntry");
-    const entrySection = schemaContent.slice(Math.max(0, idx - 800), idx + 100);
+    const entrySection = schemaContent.slice(Math.max(0, idx - 1200), idx + 100);
     for (const field of ["campaignId", "featureSlug", "brandIds", "whyRelevant", "relevanceScore", "updatedAt"]) {
       expect(entrySection).toContain(field);
     }
@@ -271,6 +271,24 @@ describe("Outlets OpenAPI schemas", () => {
     );
     expect(getOutletsSection).toContain('"served"');
     expect(getOutletsSection).toContain('"skipped"');
+  });
+
+  it("latestStatus enum should include journalist-level statuses (contacted, delivered, replied, bounced)", () => {
+    const getOutletsSection = schemaContent.slice(
+      schemaContent.indexOf('path: "/v1/outlets"'),
+      schemaContent.indexOf('path: "/v1/outlets"') + 2000
+    );
+    for (const status of ["contacted", "delivered", "replied", "bounced", "buffered", "claimed"]) {
+      expect(getOutletsSection).toContain(`"${status}"`);
+    }
+  });
+
+  it("per-campaign status enum should include journalist-level statuses (contacted, delivered, replied, bounced)", () => {
+    const idx = schemaContent.indexOf("OutletCampaignEntry");
+    const entrySection = schemaContent.slice(Math.max(0, idx - 1200), idx + 100);
+    for (const status of ["contacted", "delivered", "replied", "bounced", "buffered", "claimed"]) {
+      expect(entrySection).toContain(`"${status}"`);
+    }
   });
 
   it("should register GET /v1/outlets/{id}", () => {
