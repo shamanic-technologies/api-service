@@ -1097,7 +1097,7 @@ registry.registerPath({
                   outletUrl: z.string(),
                   outletDomain: z.string(),
                   createdAt: z.string().datetime(),
-                  latestStatus: z.enum(["open", "ended", "denied", "served", "skipped"]),
+                  latestStatus: z.enum(["open", "ended", "denied", "served", "skipped", "buffered", "claimed", "contacted", "delivered", "replied", "bounced"]).describe("Consolidated status: most advanced status across all journalists in this outlet"),
                   latestRelevanceScore: z.number(),
                   campaigns: z.array(
                     z.object({
@@ -1107,7 +1107,7 @@ registry.registerPath({
                       whyRelevant: z.string().optional(),
                       whyNotRelevant: z.string().optional(),
                       relevanceScore: z.number(),
-                      status: z.enum(["open", "ended", "denied", "served", "skipped"]),
+                      status: z.enum(["open", "ended", "denied", "served", "skipped", "buffered", "claimed", "contacted", "delivered", "replied", "bounced"]).describe("Consolidated status: most advanced journalist status for this campaign"),
                       overallRelevance: z.string().nullable().optional(),
                       relevanceRationale: z.string().nullable().optional(),
                       runId: z.string().nullable().optional(),

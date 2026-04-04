@@ -1629,8 +1629,15 @@
               "ended",
               "denied",
               "served",
-              "skipped"
-            ]
+              "skipped",
+              "buffered",
+              "claimed",
+              "contacted",
+              "delivered",
+              "replied",
+              "bounced"
+            ],
+            "description": "Consolidated status: most advanced journalist status for this campaign"
           },
           "overallRelevance": {
             "type": "string",
@@ -1685,8 +1692,15 @@
               "ended",
               "denied",
               "served",
-              "skipped"
-            ]
+              "skipped",
+              "buffered",
+              "claimed",
+              "contacted",
+              "delivered",
+              "replied",
+              "bounced"
+            ],
+            "description": "Consolidated status: most advanced status across all journalists in this outlet"
           },
           "latestRelevanceScore": {
             "type": "number"
