@@ -26,7 +26,7 @@ describe("Outlets proxy routes", () => {
   });
 
   it("should forward query params on GET /outlets", () => {
-    for (const param of ["campaignId", "brandId", "status", "runId", "limit", "offset"]) {
+    for (const param of ["campaignId", "brandId", "status", "runId", "limit", "offset", "featureSlug", "featureSlugs", "featureDynastySlug"]) {
       expect(content).toContain(`"${param}"`);
     }
   });
@@ -215,9 +215,27 @@ describe("Outlets OpenAPI schemas", () => {
   it("should include runId filter on GET /v1/outlets query params", () => {
     const getOutletsSection = schemaContent.slice(
       schemaContent.indexOf('path: "/v1/outlets"'),
-      schemaContent.indexOf('path: "/v1/outlets"') + 600
+      schemaContent.indexOf('path: "/v1/outlets"') + 1200
     );
     expect(getOutletsSection).toContain("runId:");
+  });
+
+  it("should include featureSlug, featureSlugs, and featureDynastySlug filters on GET /v1/outlets", () => {
+    const getOutletsSection = schemaContent.slice(
+      schemaContent.indexOf('path: "/v1/outlets"'),
+      schemaContent.indexOf('path: "/v1/outlets"') + 1200
+    );
+    expect(getOutletsSection).toContain("featureSlug:");
+    expect(getOutletsSection).toContain("featureSlugs:");
+    expect(getOutletsSection).toContain("featureDynastySlug:");
+  });
+
+  it("should document deduplicated response with campaigns[] array on GET /v1/outlets", () => {
+    expect(schemaContent).toContain("ListOutletsResponse");
+    expect(schemaContent).toContain("OutletWithCampaigns");
+    expect(schemaContent).toContain("OutletCampaignEntry");
+    expect(schemaContent).toContain("latestStatus");
+    expect(schemaContent).toContain("latestRelevanceScore");
   });
 
   it("should register GET /v1/outlets/{id}", () => {

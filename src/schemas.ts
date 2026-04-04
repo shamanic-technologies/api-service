@@ -1066,7 +1066,9 @@ registry.registerPath({
   path: "/v1/outlets",
   tags: ["Outlets"],
   summary: "List outlets with filters",
-  description: "List outlets with optional filters. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
+  description: "List deduplicated outlets with optional filters. Each outlet appears once with a nested campaigns[] array containing per-campaign data (status, relevance score, etc.). " +
+    "Top-level latestStatus and latestRelevanceScore fields provide a quick summary. " +
+    "All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
     headers: outletsRequiredHeaders,
@@ -1075,12 +1077,42 @@ registry.registerPath({
       brandId: z.string().uuid().optional(),
       status: z.enum(["open", "ended", "denied"]).optional(),
       runId: z.string().uuid().optional().openapi({ description: "Filter outlets by discovery run ID" }),
+      featureSlug: z.string().optional().describe("Filter by exact feature slug"),
+      featureSlugs: z.string().optional().describe("Filter by multiple feature slugs (comma-separated)"),
+      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
       limit: z.coerce.number().int().optional().default(100),
       offset: z.coerce.number().int().optional().default(0),
     }),
   },
   responses: {
-    200: { description: "List of outlets" },
+    200: {
+      description: "Deduplicated list of outlets, each with a nested campaigns[] array",
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              outlets: z.array(
+                z.object({
+                  id: z.string().uuid(),
+                  outletName: z.string(),
+                  outletUrl: z.string(),
+                  latestStatus: z.string().describe("Most recent status across all campaigns"),
+                  latestRelevanceScore: z.number().nullable().describe("Most recent relevance score across all campaigns"),
+                  campaigns: z.array(
+                    z.object({
+                      campaignId: z.string().uuid(),
+                      status: z.string(),
+                      relevanceScore: z.number().nullable(),
+                    }).openapi("OutletCampaignEntry"),
+                  ).describe("Per-campaign data for this outlet"),
+                }).openapi("OutletWithCampaigns"),
+              ),
+              total: z.number().int().describe("Total number of deduplicated outlets matching the filters"),
+            })
+            .openapi("ListOutletsResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
   },
 });
