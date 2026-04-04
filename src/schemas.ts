@@ -2305,6 +2305,8 @@ registry.registerPath({
   path: "/v1/discoveries",
   tags: ["Articles"],
   summary: "List article discoveries with filters",
+  description: "List discoveries with optional filters. Supports filtering by featureDynastySlug (resolves to all versioned slugs via features-service), " +
+    "featureSlugs (comma-separated), and equivalent workflow filters. Dynasty slug takes priority over slugs list.",
   security: authed,
   request: {
     query: z.object({
@@ -2313,6 +2315,10 @@ registry.registerPath({
       outletId: z.string().uuid().optional().openapi({ description: "Filter by outlet ID" }),
       journalistId: z.string().uuid().optional().openapi({ description: "Filter by journalist ID" }),
       topicId: z.string().uuid().optional().openapi({ description: "Filter by topic ID" }),
+      featureSlugs: z.string().optional().openapi({ description: "Filter by feature slugs (comma-separated or single value)" }),
+      featureDynastySlug: z.string().optional().openapi({ description: "Filter by feature dynasty slug (resolves to all versioned slugs via features-service)" }),
+      workflowSlugs: z.string().optional().openapi({ description: "Filter by workflow slugs (comma-separated or single value)" }),
+      workflowDynastySlug: z.string().optional().openapi({ description: "Filter by workflow dynasty slug (resolves to all versioned slugs via workflow-service)" }),
       limit: z.coerce.number().int().optional(),
       offset: z.coerce.number().int().optional(),
     }),

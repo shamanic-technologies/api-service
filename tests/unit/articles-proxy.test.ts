@@ -134,6 +134,17 @@ describe("Articles proxy routes", () => {
     expect(section).toContain('"topicId"');
   });
 
+  it("should forward feature and workflow dynasty/slug filters on GET /discoveries", () => {
+    const section = content.slice(
+      content.indexOf('router.get("/discoveries"'),
+      content.indexOf('router.post("/discoveries"')
+    );
+    expect(section).toContain('"featureSlugs"');
+    expect(section).toContain('"featureDynastySlug"');
+    expect(section).toContain('"workflowSlugs"');
+    expect(section).toContain('"workflowDynastySlug"');
+  });
+
   it("should have POST /discoveries with auth", () => {
     const line = content.split("\n").find((l) =>
       l.includes("router.post") && l.includes('"/discoveries"') && !l.includes("/bulk")
@@ -236,6 +247,17 @@ describe("Articles OpenAPI schemas", () => {
 
   it("should register GET /v1/discoveries", () => {
     expect(schemaContent).toContain('path: "/v1/discoveries"');
+  });
+
+  it("should include featureDynastySlug and featureSlugs in GET /v1/discoveries schema", () => {
+    const discoveriesSection = schemaContent.slice(
+      schemaContent.indexOf('path: "/v1/discoveries"'),
+      schemaContent.indexOf('path: "/v1/discoveries"') + 1500
+    );
+    expect(discoveriesSection).toContain("featureSlugs:");
+    expect(discoveriesSection).toContain("featureDynastySlug:");
+    expect(discoveriesSection).toContain("workflowSlugs:");
+    expect(discoveriesSection).toContain("workflowDynastySlug:");
   });
 
   it("should register POST /v1/discoveries", () => {

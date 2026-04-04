@@ -172,13 +172,9 @@ router.post("/topics/bulk", authenticate, requireOrg, requireUser, async (req: A
 router.get("/discoveries", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    if (req.query.brandId) params.set("brandId", req.query.brandId as string);
-    if (req.query.campaignId) params.set("campaignId", req.query.campaignId as string);
-    if (req.query.outletId) params.set("outletId", req.query.outletId as string);
-    if (req.query.journalistId) params.set("journalistId", req.query.journalistId as string);
-    if (req.query.topicId) params.set("topicId", req.query.topicId as string);
-    if (req.query.limit) params.set("limit", req.query.limit as string);
-    if (req.query.offset) params.set("offset", req.query.offset as string);
+    for (const key of ["brandId", "campaignId", "outletId", "journalistId", "topicId", "featureSlugs", "featureDynastySlug", "workflowSlugs", "workflowDynastySlug", "limit", "offset"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
     const qs = params.toString() ? `?${params.toString()}` : "";
 
     const result = await callExternalService(
