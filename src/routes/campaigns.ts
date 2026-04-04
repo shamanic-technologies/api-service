@@ -888,17 +888,31 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
 router.get("/campaigns/:id/outlets", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
+    const baseHeaders = buildInternalHeaders(req);
+
+    // Fetch campaign to enrich headers with campaign metadata for downstream calls
+    const campaignResult = await callExternalService<{
+      campaign: { brandIds?: string[]; featureSlug?: string; workflowSlug?: string };
+    }>(externalServices.campaign, `/campaigns/${encodeURIComponent(id)}`, { headers: baseHeaders });
+
+    const campaign = campaignResult.campaign;
+
+    const headers: Record<string, string> = {
+      ...baseHeaders,
+      "x-campaign-id": id,
+    };
+    if (campaign.brandIds?.length) headers["x-brand-id"] = campaign.brandIds.join(",");
+    if (campaign.featureSlug) headers["x-feature-slug"] = campaign.featureSlug;
+    if (campaign.workflowSlug) headers["x-workflow-slug"] = campaign.workflowSlug;
 
     const result = await callExternalService(
       externalServices.outlet,
       `/outlets?campaignId=${encodeURIComponent(id)}`,
-      {
-        headers: buildInternalHeaders(req),
-      }
+      { headers }
     );
     res.json(result);
   } catch (error: any) {
-    console.error("Get campaign outlets error:", error);
+    console.error("[api-service] Get campaign outlets error:", error);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get campaign outlets" });
   }
 });
