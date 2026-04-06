@@ -94,7 +94,7 @@ describe("Journalists proxy routes", () => {
     expect(serviceLine).toBeDefined();
     // The next line or same block should reference "/discover" not "/journalists/discover"
     const serviceBlock = handlerLines.join("\n");
-    expect(serviceBlock).toContain('"/discover"');
+    expect(serviceBlock).toContain('"/orgs/discover"');
   });
 
   it("should forward runId query parameter on GET /journalists", () => {
@@ -121,7 +121,7 @@ describe("Journalists proxy routes", () => {
   });
 
   it("should proxy POST /journalists/buffer/next to /buffer/next on journalist-service", () => {
-    expect(content).toContain('"/buffer/next"');
+    expect(content).toContain('"/orgs/buffer/next"');
   });
 
   it("should use buildInternalHeaders for all endpoints", () => {
@@ -162,7 +162,7 @@ describe("Journalists proxy routes", () => {
   });
 
   it("should proxy GET /journalists/stats to /stats on journalist-service", () => {
-    expect(content).toContain('`/stats${qs}`');
+    expect(content).toContain('`/orgs/stats${qs}`');
   });
 
   it("should forward all filter params on GET /journalists/stats", () => {
@@ -186,7 +186,7 @@ describe("Journalists proxy routes", () => {
   });
 
   it("should proxy GET /journalists/stats/costs to /journalists/stats/costs on journalist-service", () => {
-    expect(content).toContain('`/journalists/stats/costs${qs}`');
+    expect(content).toContain('`/orgs/journalists/stats/costs${qs}`');
   });
 
   it("should require brandId on GET /journalists/stats/costs", () => {

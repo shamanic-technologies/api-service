@@ -35,7 +35,7 @@ router.get("/journalists", authenticate, requireOrg, requireUser, async (req: Au
 
     const result = await callExternalService(
       externalServices.journalist,
-      `/campaign-outlet-journalists?${params}`,
+      `/orgs/campaign-outlet-journalists?${params}`,
       { headers }
     );
     res.json(result);
@@ -60,7 +60,7 @@ router.get("/journalists/list", authenticate, requireOrg, requireUser, async (re
 
     const result = await callExternalService(
       externalServices.journalist,
-      `/journalists/list?${params}`,
+      `/orgs/journalists/list?${params}`,
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -74,7 +74,7 @@ router.post("/journalists/discover", authenticate, requireOrg, requireUser, asyn
   try {
     const result = await callExternalService(
       externalServices.journalist,
-      "/discover",
+      "/orgs/discover",
       { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -88,7 +88,7 @@ router.post("/journalists/discover-emails", authenticate, requireOrg, requireUse
   try {
     const result = await callExternalService(
       externalServices.journalist,
-      "/journalists/discover-emails",
+      "/orgs/journalists/discover-emails",
       { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -102,7 +102,7 @@ router.post("/journalists/buffer/next", authenticate, requireOrg, requireUser, a
   try {
     const result = await callExternalService(
       externalServices.journalist,
-      "/buffer/next",
+      "/orgs/buffer/next",
       { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -121,7 +121,7 @@ router.get("/journalists/stats", authenticate, requireOrg, requireUser, async (r
     const qs = params.toString() ? `?${params.toString()}` : "";
     const result = await callExternalService(
       externalServices.journalist,
-      `/stats${qs}`,
+      `/orgs/stats${qs}`,
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -143,7 +143,7 @@ router.get("/journalists/stats/costs", authenticate, requireOrg, requireUser, as
     const qs = params.toString() ? `?${params.toString()}` : "";
     const result = await callExternalService(
       externalServices.journalist,
-      `/journalists/stats/costs${qs}`,
+      `/orgs/journalists/stats/costs${qs}`,
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -174,7 +174,7 @@ router.post("/journalists/resolve", authenticate, requireOrg, requireUser, async
       campaignJournalists: Array<Record<string, unknown>>;
     }>(
       externalServices.journalist,
-      `/campaign-outlet-journalists?${params}`,
+      `/orgs/campaign-outlet-journalists?${params}`,
       { headers: buildInternalHeaders(req) }
     );
 

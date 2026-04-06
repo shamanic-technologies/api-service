@@ -960,7 +960,7 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
       campaignJournalists: Array<Record<string, unknown>>;
     }>(
       externalServices.journalist,
-      `/campaign-outlet-journalists?campaign_id=${encodeURIComponent(id)}`,
+      `/orgs/campaign-outlet-journalists?campaign_id=${encodeURIComponent(id)}`,
       { headers }
     );
 

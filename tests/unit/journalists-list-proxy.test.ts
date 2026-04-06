@@ -52,7 +52,7 @@ describe("GET /journalists/list route", () => {
   });
 
   it("should proxy to journalists-service /journalists/list", () => {
-    expect(content).toContain("`/journalists/list?${params}`");
+    expect(content).toContain("`/orgs/journalists/list?${params}`");
   });
 
   it("should use buildInternalHeaders", () => {
