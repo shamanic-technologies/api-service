@@ -1541,26 +1541,16 @@ registry.registerPath({
   },
 });
 
-// Shared sub-schemas for journalist email delivery statuses
-const JournalistLeadDeliverySchema = z.object({
+// Shared sub-schemas for journalist email delivery statuses (flat format since journalists-service PR #76)
+const JournalistScopeDeliverySchema = z.object({
   contacted: z.boolean(),
   delivered: z.boolean(),
+  opened: z.boolean(),
   replied: z.boolean(),
   replyClassification: z.enum(["positive", "negative", "neutral"]).nullable(),
-  lastDeliveredAt: z.string().nullable(),
-});
-
-const JournalistEmailDeliverySchema = z.object({
-  contacted: z.boolean(),
-  delivered: z.boolean(),
   bounced: z.boolean(),
   unsubscribed: z.boolean(),
   lastDeliveredAt: z.string().nullable(),
-});
-
-const JournalistScopeDeliverySchema = z.object({
-  lead: JournalistLeadDeliverySchema,
-  email: JournalistEmailDeliverySchema,
 }).nullable();
 
 const JournalistGlobalDeliverySchema = z.object({

@@ -2325,144 +2325,94 @@
                           "type": "object",
                           "nullable": true,
                           "properties": {
-                            "lead": {
-                              "type": "object",
-                              "properties": {
-                                "contacted": {
-                                  "type": "boolean"
-                                },
-                                "delivered": {
-                                  "type": "boolean"
-                                },
-                                "replied": {
-                                  "type": "boolean"
-                                },
-                                "replyClassification": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "positive",
-                                    "negative",
-                                    "neutral"
-                                  ]
-                                },
-                                "lastDeliveredAt": {
-                                  "type": "string",
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "contacted",
-                                "delivered",
-                                "replied",
-                                "replyClassification",
-                                "lastDeliveredAt"
+                            "contacted": {
+                              "type": "boolean"
+                            },
+                            "delivered": {
+                              "type": "boolean"
+                            },
+                            "opened": {
+                              "type": "boolean"
+                            },
+                            "replied": {
+                              "type": "boolean"
+                            },
+                            "replyClassification": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "positive",
+                                "negative",
+                                "neutral"
                               ]
                             },
-                            "email": {
-                              "type": "object",
-                              "properties": {
-                                "contacted": {
-                                  "type": "boolean"
-                                },
-                                "delivered": {
-                                  "type": "boolean"
-                                },
-                                "bounced": {
-                                  "type": "boolean"
-                                },
-                                "unsubscribed": {
-                                  "type": "boolean"
-                                },
-                                "lastDeliveredAt": {
-                                  "type": "string",
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "contacted",
-                                "delivered",
-                                "bounced",
-                                "unsubscribed",
-                                "lastDeliveredAt"
-                              ]
+                            "bounced": {
+                              "type": "boolean"
+                            },
+                            "unsubscribed": {
+                              "type": "boolean"
+                            },
+                            "lastDeliveredAt": {
+                              "type": "string",
+                              "nullable": true
                             }
                           },
                           "required": [
-                            "lead",
-                            "email"
+                            "contacted",
+                            "delivered",
+                            "opened",
+                            "replied",
+                            "replyClassification",
+                            "bounced",
+                            "unsubscribed",
+                            "lastDeliveredAt"
                           ]
                         },
                         "brand": {
                           "type": "object",
                           "nullable": true,
                           "properties": {
-                            "lead": {
-                              "type": "object",
-                              "properties": {
-                                "contacted": {
-                                  "type": "boolean"
-                                },
-                                "delivered": {
-                                  "type": "boolean"
-                                },
-                                "replied": {
-                                  "type": "boolean"
-                                },
-                                "replyClassification": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "positive",
-                                    "negative",
-                                    "neutral"
-                                  ]
-                                },
-                                "lastDeliveredAt": {
-                                  "type": "string",
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "contacted",
-                                "delivered",
-                                "replied",
-                                "replyClassification",
-                                "lastDeliveredAt"
+                            "contacted": {
+                              "type": "boolean"
+                            },
+                            "delivered": {
+                              "type": "boolean"
+                            },
+                            "opened": {
+                              "type": "boolean"
+                            },
+                            "replied": {
+                              "type": "boolean"
+                            },
+                            "replyClassification": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "positive",
+                                "negative",
+                                "neutral"
                               ]
                             },
-                            "email": {
-                              "type": "object",
-                              "properties": {
-                                "contacted": {
-                                  "type": "boolean"
-                                },
-                                "delivered": {
-                                  "type": "boolean"
-                                },
-                                "bounced": {
-                                  "type": "boolean"
-                                },
-                                "unsubscribed": {
-                                  "type": "boolean"
-                                },
-                                "lastDeliveredAt": {
-                                  "type": "string",
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "contacted",
-                                "delivered",
-                                "bounced",
-                                "unsubscribed",
-                                "lastDeliveredAt"
-                              ]
+                            "bounced": {
+                              "type": "boolean"
+                            },
+                            "unsubscribed": {
+                              "type": "boolean"
+                            },
+                            "lastDeliveredAt": {
+                              "type": "string",
+                              "nullable": true
                             }
                           },
                           "required": [
-                            "lead",
-                            "email"
+                            "contacted",
+                            "delivered",
+                            "opened",
+                            "replied",
+                            "replyClassification",
+                            "bounced",
+                            "unsubscribed",
+                            "lastDeliveredAt"
                           ]
                         },
                         "global": {
@@ -2502,144 +2452,94 @@
                           "type": "object",
                           "nullable": true,
                           "properties": {
-                            "lead": {
-                              "type": "object",
-                              "properties": {
-                                "contacted": {
-                                  "type": "boolean"
-                                },
-                                "delivered": {
-                                  "type": "boolean"
-                                },
-                                "replied": {
-                                  "type": "boolean"
-                                },
-                                "replyClassification": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "positive",
-                                    "negative",
-                                    "neutral"
-                                  ]
-                                },
-                                "lastDeliveredAt": {
-                                  "type": "string",
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "contacted",
-                                "delivered",
-                                "replied",
-                                "replyClassification",
-                                "lastDeliveredAt"
+                            "contacted": {
+                              "type": "boolean"
+                            },
+                            "delivered": {
+                              "type": "boolean"
+                            },
+                            "opened": {
+                              "type": "boolean"
+                            },
+                            "replied": {
+                              "type": "boolean"
+                            },
+                            "replyClassification": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "positive",
+                                "negative",
+                                "neutral"
                               ]
                             },
-                            "email": {
-                              "type": "object",
-                              "properties": {
-                                "contacted": {
-                                  "type": "boolean"
-                                },
-                                "delivered": {
-                                  "type": "boolean"
-                                },
-                                "bounced": {
-                                  "type": "boolean"
-                                },
-                                "unsubscribed": {
-                                  "type": "boolean"
-                                },
-                                "lastDeliveredAt": {
-                                  "type": "string",
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "contacted",
-                                "delivered",
-                                "bounced",
-                                "unsubscribed",
-                                "lastDeliveredAt"
-                              ]
+                            "bounced": {
+                              "type": "boolean"
+                            },
+                            "unsubscribed": {
+                              "type": "boolean"
+                            },
+                            "lastDeliveredAt": {
+                              "type": "string",
+                              "nullable": true
                             }
                           },
                           "required": [
-                            "lead",
-                            "email"
+                            "contacted",
+                            "delivered",
+                            "opened",
+                            "replied",
+                            "replyClassification",
+                            "bounced",
+                            "unsubscribed",
+                            "lastDeliveredAt"
                           ]
                         },
                         "brand": {
                           "type": "object",
                           "nullable": true,
                           "properties": {
-                            "lead": {
-                              "type": "object",
-                              "properties": {
-                                "contacted": {
-                                  "type": "boolean"
-                                },
-                                "delivered": {
-                                  "type": "boolean"
-                                },
-                                "replied": {
-                                  "type": "boolean"
-                                },
-                                "replyClassification": {
-                                  "type": "string",
-                                  "nullable": true,
-                                  "enum": [
-                                    "positive",
-                                    "negative",
-                                    "neutral"
-                                  ]
-                                },
-                                "lastDeliveredAt": {
-                                  "type": "string",
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "contacted",
-                                "delivered",
-                                "replied",
-                                "replyClassification",
-                                "lastDeliveredAt"
+                            "contacted": {
+                              "type": "boolean"
+                            },
+                            "delivered": {
+                              "type": "boolean"
+                            },
+                            "opened": {
+                              "type": "boolean"
+                            },
+                            "replied": {
+                              "type": "boolean"
+                            },
+                            "replyClassification": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "positive",
+                                "negative",
+                                "neutral"
                               ]
                             },
-                            "email": {
-                              "type": "object",
-                              "properties": {
-                                "contacted": {
-                                  "type": "boolean"
-                                },
-                                "delivered": {
-                                  "type": "boolean"
-                                },
-                                "bounced": {
-                                  "type": "boolean"
-                                },
-                                "unsubscribed": {
-                                  "type": "boolean"
-                                },
-                                "lastDeliveredAt": {
-                                  "type": "string",
-                                  "nullable": true
-                                }
-                              },
-                              "required": [
-                                "contacted",
-                                "delivered",
-                                "bounced",
-                                "unsubscribed",
-                                "lastDeliveredAt"
-                              ]
+                            "bounced": {
+                              "type": "boolean"
+                            },
+                            "unsubscribed": {
+                              "type": "boolean"
+                            },
+                            "lastDeliveredAt": {
+                              "type": "string",
+                              "nullable": true
                             }
                           },
                           "required": [
-                            "lead",
-                            "email"
+                            "contacted",
+                            "delivered",
+                            "opened",
+                            "replied",
+                            "replyClassification",
+                            "bounced",
+                            "unsubscribed",
+                            "lastDeliveredAt"
                           ]
                         },
                         "global": {
