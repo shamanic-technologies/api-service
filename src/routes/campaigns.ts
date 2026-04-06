@@ -261,7 +261,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
     const [deliveryGroups, leadGroups, emailgenGroups, costGroups] = await Promise.all([
       callExternalService<{ groups: Array<{ key: string; broadcast: Record<string, number> | null; transactional: Record<string, number> | null }> }>(
         externalServices.emailGateway,
-        `/stats?${deliveryParams}`,
+        `/orgs/stats?${deliveryParams}`,
         { headers: internalHeaders },
       ).catch((err) => {
         console.warn("[campaigns/stats] email-gateway groupBy failed:", (err as Error).message);

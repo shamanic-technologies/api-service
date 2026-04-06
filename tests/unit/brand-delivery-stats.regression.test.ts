@@ -78,7 +78,7 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
     const app = createApp();
 
     mockCallExternalService.mockImplementation((_service: any, path: string, opts: any) => {
-      if (path.startsWith("/stats?")) {
+      if (path.startsWith("/orgs/stats?")) {
         expect(path).toContain("brandId=brand-123");
         return Promise.resolve({
           transactional: {
@@ -166,7 +166,7 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
     await request(app).get("/v1/email-gateway/stats?brandId=brand-123");
 
     const emailGatewayCalls = mockCallExternalService.mock.calls.filter(
-      (call: any[]) => typeof call[1] === "string" && call[1].startsWith("/stats?")
+      (call: any[]) => typeof call[1] === "string" && call[1].startsWith("/orgs/stats?")
     );
     expect(emailGatewayCalls).toHaveLength(1);
   });
