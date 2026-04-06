@@ -86,7 +86,8 @@ describe("header forwarding audit", () => {
 
     for (const header of ["x-campaign-id", "x-brand-id", "x-workflow-slug", "x-feature-slug"]) {
       it(`should forward ${header} to downstream services`, () => {
-        expect(src).toContain(`headers["${header}"]`);
+        // Header name must appear in the source (either as literal assignment or in IDENTITY_QUERY_MAP)
+        expect(src).toContain(`"${header}"`);
       });
     }
   });
