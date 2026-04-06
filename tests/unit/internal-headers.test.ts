@@ -1,32 +1,109 @@
 import { describe, it, expect } from "vitest";
-import * as fs from "fs";
-import * as path from "path";
+import { buildInternalHeaders } from "../../src/lib/internal-headers.js";
+import { AuthenticatedRequest } from "../../src/middleware/auth.js";
 
-const headersPath = path.join(__dirname, "../../src/lib/internal-headers.ts");
-const content = fs.readFileSync(headersPath, "utf-8");
+function fakeReq(overrides: Partial<AuthenticatedRequest> = {}): AuthenticatedRequest {
+  return {
+    orgId: "org-1",
+    userId: "user-1",
+    query: {},
+    ...overrides,
+  } as unknown as AuthenticatedRequest;
+}
 
 describe("buildInternalHeaders", () => {
-  it("should include x-org-id always", () => {
-    expect(content).toContain('"x-org-id"');
+  it("forwards all identity headers from req", () => {
+    const headers = buildInternalHeaders(fakeReq({
+      orgId: "org-1",
+      userId: "user-1",
+      runId: "run-1",
+      campaignId: "camp-1",
+      brandId: "brand-1",
+      workflowSlug: "wf-slug",
+      featureSlug: "ft-slug",
+    }));
+    expect(headers).toEqual({
+      "x-org-id": "org-1",
+      "x-user-id": "user-1",
+      "x-run-id": "run-1",
+      "x-campaign-id": "camp-1",
+      "x-brand-id": "brand-1",
+      "x-workflow-slug": "wf-slug",
+      "x-feature-slug": "ft-slug",
+    });
   });
 
-  it("should include x-user-id when req.userId is set", () => {
-    expect(content).toContain('"x-user-id"');
-    expect(content).toContain("req.userId");
+  it("promotes brandId from query param to x-brand-id header", () => {
+    const headers = buildInternalHeaders(fakeReq({
+      query: { brandId: "brand-from-query" } as any,
+    }));
+    expect(headers["x-brand-id"]).toBe("brand-from-query");
   });
 
-  it("should include x-run-id when req.runId is set", () => {
-    expect(content).toContain('"x-run-id"');
-    expect(content).toContain("req.runId");
+  it("promotes campaignId from query param to x-campaign-id header", () => {
+    const headers = buildInternalHeaders(fakeReq({
+      query: { campaignId: "camp-from-query" } as any,
+    }));
+    expect(headers["x-campaign-id"]).toBe("camp-from-query");
   });
 
-  it("should NOT include x-app-id (removed)", () => {
-    expect(content).not.toContain('"x-app-id"');
-    expect(content).not.toContain("req.appId");
+  it("uses header value when query param matches", () => {
+    const headers = buildInternalHeaders(fakeReq({
+      brandId: "brand-1",
+      query: { brandId: "brand-1" } as any,
+    }));
+    expect(headers["x-brand-id"]).toBe("brand-1");
   });
 
-  it("should NOT include x-key-source (removed)", () => {
-    expect(content).not.toContain('"x-key-source"');
-    expect(content).not.toContain("req.keySource");
+  it("throws 400 when brandId header and query param conflict", () => {
+    expect(() =>
+      buildInternalHeaders(fakeReq({
+        brandId: "brand-header",
+        query: { brandId: "brand-query" } as any,
+      })),
+    ).toThrow(/Conflict/);
+
+    try {
+      buildInternalHeaders(fakeReq({
+        brandId: "brand-header",
+        query: { brandId: "brand-query" } as any,
+      }));
+    } catch (err: any) {
+      expect(err.statusCode).toBe(400);
+    }
+  });
+
+  it("throws 400 when campaignId header and query param conflict", () => {
+    expect(() =>
+      buildInternalHeaders(fakeReq({
+        campaignId: "camp-header",
+        query: { campaignId: "camp-query" } as any,
+      })),
+    ).toThrow(/Conflict/);
+  });
+
+  it("omits optional headers when not present", () => {
+    const headers = buildInternalHeaders(fakeReq());
+    expect(headers).toEqual({
+      "x-org-id": "org-1",
+      "x-user-id": "user-1",
+    });
+    expect(headers).not.toHaveProperty("x-brand-id");
+    expect(headers).not.toHaveProperty("x-campaign-id");
+    expect(headers).not.toHaveProperty("x-run-id");
+  });
+
+  it("does NOT include x-app-id or x-key-source (removed)", () => {
+    const headers = buildInternalHeaders(fakeReq({
+      orgId: "org-1",
+      userId: "user-1",
+      brandId: "brand-1",
+      campaignId: "camp-1",
+      runId: "run-1",
+      workflowSlug: "wf",
+      featureSlug: "ft",
+    }));
+    expect(headers).not.toHaveProperty("x-app-id");
+    expect(headers).not.toHaveProperty("x-key-source");
   });
 });
