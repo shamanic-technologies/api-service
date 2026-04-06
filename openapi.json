@@ -6302,7 +6302,7 @@
                 "config": {
                   "service": "lead",
                   "method": "POST",
-                  "path": "/buffer/next"
+                  "path": "/orgs/buffer/next"
                 },
                 "inputMapping": {
                   "body.campaignId": "$ref:flow_input.campaignId"
@@ -10274,7 +10274,7 @@
           "Campaigns"
         ],
         "summary": "Get per-lead delivery status",
-        "description": "Returns delivery status (contacted, delivered, bounced, replied) for each served lead in a campaign. Proxies to lead-service GET /leads/status.",
+        "description": "Returns delivery status (contacted, delivered, bounced, replied) for each served lead in a campaign. Proxies to lead-service GET /orgs/leads/status.",
         "security": [
           {
             "bearerAuth": []
@@ -17368,7 +17368,7 @@
           "Leads"
         ],
         "summary": "List leads by brand",
-        "description": "List all leads across campaigns for a brand. Returns the same enriched shape as GET /campaigns/{id}/leads. Proxies to lead-service GET /leads with brandId filter.",
+        "description": "List all leads across campaigns for a brand. Returns the same enriched shape as GET /campaigns/{id}/leads. Proxies to lead-service GET /orgs/leads with brandId filter.",
         "security": [
           {
             "bearerAuth": []

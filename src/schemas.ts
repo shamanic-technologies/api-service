@@ -771,7 +771,7 @@ registry.registerPath({
   tags: ["Campaigns"],
   summary: "Get per-lead delivery status",
   description:
-    "Returns delivery status (contacted, delivered, bounced, replied) for each served lead in a campaign. Proxies to lead-service GET /leads/status.",
+    "Returns delivery status (contacted, delivered, bounced, replied) for each served lead in a campaign. Proxies to lead-service GET /orgs/leads/status.",
   security: authed,
   request: {
     params: CampaignIdParam,
@@ -2992,7 +2992,7 @@ registry.registerPath({
   summary: "List leads by brand",
   description:
     "List all leads across campaigns for a brand. Returns the same enriched shape as GET /campaigns/{id}/leads. " +
-    "Proxies to lead-service GET /leads with brandId filter.",
+    "Proxies to lead-service GET /orgs/leads with brandId filter.",
   security: authed,
   request: {
     query: z.object({
@@ -4160,7 +4160,7 @@ export const UpdateWorkflowRequestSchema = z
       tags: ["email", "outreach"],
       dag: {
         nodes: [
-          { id: "fetch-lead", type: "http.call", config: { service: "lead", method: "POST", path: "/buffer/next" }, inputMapping: { "body.campaignId": "$ref:flow_input.campaignId" } },
+          { id: "fetch-lead", type: "http.call", config: { service: "lead", method: "POST", path: "/orgs/buffer/next" }, inputMapping: { "body.campaignId": "$ref:flow_input.campaignId" } },
           { id: "send-email", type: "http.call", config: { service: "email-gateway", method: "POST", path: "/send" }, inputMapping: { "body.to": "$ref:fetch-lead.output.lead.email" }, retries: 0 },
         ],
         edges: [{ from: "fetch-lead", to: "send-email" }],

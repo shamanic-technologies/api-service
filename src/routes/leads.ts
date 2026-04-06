@@ -9,7 +9,7 @@ const router = Router();
 
 /**
  * GET /v1/leads — list leads with filters (brand-level)
- * Proxies to lead-service GET /leads with brandId query param.
+ * Proxies to lead-service GET /orgs/leads with brandId query param.
  * Returns the same enriched shape as GET /campaigns/:id/leads.
  */
 router.get("/leads", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
@@ -36,12 +36,12 @@ router.get("/leads", authenticate, requireOrg, requireUser, async (req: Authenti
     const [leadsResult, statusResult] = await Promise.all([
       callExternalService(
         externalServices.lead,
-        `/leads?${params}`,
+        `/orgs/leads?${params}`,
         { headers }
       ) as Promise<{ leads: Array<Record<string, unknown>> }>,
       callExternalService<{ statuses: Array<{ leadId: string; email: string; contacted: boolean; delivered: boolean; bounced: boolean; replied: boolean; lastDeliveredAt: string | null }> }>(
         externalServices.lead,
-        `/leads/status?${params}`,
+        `/orgs/leads/status?${params}`,
         { headers }
       ),
     ]);
