@@ -33,7 +33,7 @@ describe("Campaign discovery proxy: outlets", () => {
       content.indexOf('"/campaigns/:id/journalists"'),
     );
     expect(outletsSection).toContain("externalServices.outlet");
-    expect(outletsSection).toContain("/outlets?campaignId=");
+    expect(outletsSection).toContain("/org/outlets?campaignId=");
   });
 
   it("should forward internal headers", () => {
