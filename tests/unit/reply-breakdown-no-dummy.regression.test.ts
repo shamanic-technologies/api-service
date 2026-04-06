@@ -78,7 +78,7 @@ describe("Reply breakdown: no dummy data when 0 replies", () => {
 
     mockCallExternalService.mockImplementation((service: any, path: string) => {
       // Email-gateway: GET /stats?orgId=...&campaignId=...
-      if (service.url === "http://mock-email" && path.startsWith("/stats?")) {
+      if (service.url === "http://mock-email" && path.startsWith("/orgs/stats?")) {
         return Promise.resolve({
           transactional: { emailsSent: 10, emailsDelivered: 8, emailsOpened: 3, emailsClicked: 1, emailsReplied: 0, emailsBounced: 0, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0, recipients: 10 },
           broadcast: { emailsSent: 5, emailsDelivered: 4, emailsOpened: 2, emailsClicked: 0, emailsReplied: 0, emailsBounced: 0, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0, recipients: 5 },
@@ -119,7 +119,7 @@ describe("Reply breakdown: no dummy data when 0 replies", () => {
 
     mockCallExternalService.mockImplementation((service: any, path: string) => {
       // Email-gateway: GET /stats?orgId=...&campaignId=...
-      if (service.url === "http://mock-email" && path.startsWith("/stats?")) {
+      if (service.url === "http://mock-email" && path.startsWith("/orgs/stats?")) {
         return Promise.resolve({
           transactional: { emailsSent: 10, emailsDelivered: 8, emailsOpened: 3, emailsClicked: 1, emailsReplied: 0, emailsBounced: 0, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0, recipients: 10 },
           broadcast: { emailsSent: 5, emailsDelivered: 4, emailsOpened: 2, emailsClicked: 0, emailsReplied: 5, emailsBounced: 0, repliesWillingToMeet: 2, repliesInterested: 1, repliesNotInterested: 1, repliesOutOfOffice: 1, repliesUnsubscribe: 0, recipients: 5 },

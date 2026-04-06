@@ -21,7 +21,7 @@ export async function fetchDeliveryStats(
   }
   const deliveryResult = await callExternalService<{ transactional: EmailGatewayStats; broadcast: EmailGatewayStats }>(
     externalServices.emailGateway,
-    `/stats?${params}`,
+    `/orgs/stats?${params}`,
     {
       headers: buildInternalHeaders(req),
     }
