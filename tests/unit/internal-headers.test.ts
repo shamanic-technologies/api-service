@@ -82,6 +82,38 @@ describe("buildInternalHeaders", () => {
     ).toThrow(/Conflict/);
   });
 
+  it("promotes featureSlug from query param to x-feature-slug header", () => {
+    const headers = buildInternalHeaders(fakeReq({
+      query: { featureSlug: "ft-from-query" } as any,
+    }));
+    expect(headers["x-feature-slug"]).toBe("ft-from-query");
+  });
+
+  it("promotes workflowSlug from query param to x-workflow-slug header", () => {
+    const headers = buildInternalHeaders(fakeReq({
+      query: { workflowSlug: "wf-from-query" } as any,
+    }));
+    expect(headers["x-workflow-slug"]).toBe("wf-from-query");
+  });
+
+  it("throws 400 when featureSlug header and query param conflict", () => {
+    expect(() =>
+      buildInternalHeaders(fakeReq({
+        featureSlug: "ft-header",
+        query: { featureSlug: "ft-query" } as any,
+      })),
+    ).toThrow(/Conflict/);
+  });
+
+  it("throws 400 when workflowSlug header and query param conflict", () => {
+    expect(() =>
+      buildInternalHeaders(fakeReq({
+        workflowSlug: "wf-header",
+        query: { workflowSlug: "wf-query" } as any,
+      })),
+    ).toThrow(/Conflict/);
+  });
+
   it("omits optional headers when not present", () => {
     const headers = buildInternalHeaders(fakeReq());
     expect(headers).toEqual({

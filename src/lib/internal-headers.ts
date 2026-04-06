@@ -21,32 +21,37 @@ function resolveHeaderOrQuery(
 }
 
 /**
+ * Identity query params that map 1:1 to forwarded headers.
+ * Each entry: [header-name, req property on AuthenticatedRequest, query param name]
+ */
+const IDENTITY_QUERY_MAP: Array<[string, keyof AuthenticatedRequest, string]> = [
+  ["x-brand-id", "brandId", "brandId"],
+  ["x-campaign-id", "campaignId", "campaignId"],
+  ["x-feature-slug", "featureSlug", "featureSlug"],
+  ["x-workflow-slug", "workflowSlug", "workflowSlug"],
+];
+
+/**
  * Build headers for internal service-to-service calls.
  * Identity headers from the incoming request are forwarded.
- * brandId and campaignId are also read from query params and promoted
- * to headers so downstream services always receive them.
+ * brandId, campaignId, featureSlug, and workflowSlug are also read
+ * from query params and promoted to headers so downstream services
+ * always receive them. Throws 400 if header and query param conflict.
  */
 export function buildInternalHeaders(req: AuthenticatedRequest): Record<string, string> {
   const headers: Record<string, string> = {};
   if (req.orgId) headers["x-org-id"] = req.orgId;
   if (req.userId) headers["x-user-id"] = req.userId;
   if (req.runId) headers["x-run-id"] = req.runId;
-  if (req.workflowSlug) headers["x-workflow-slug"] = req.workflowSlug;
-  if (req.featureSlug) headers["x-feature-slug"] = req.featureSlug;
 
-  const brandId = resolveHeaderOrQuery(
-    req.brandId,
-    req.query?.brandId as string | undefined,
-    "x-brand-id",
-  );
-  if (brandId) headers["x-brand-id"] = brandId;
-
-  const campaignId = resolveHeaderOrQuery(
-    req.campaignId,
-    req.query?.campaignId as string | undefined,
-    "x-campaign-id",
-  );
-  if (campaignId) headers["x-campaign-id"] = campaignId;
+  for (const [headerName, reqProp, queryParam] of IDENTITY_QUERY_MAP) {
+    const resolved = resolveHeaderOrQuery(
+      req[reqProp] as string | undefined,
+      req.query?.[queryParam] as string | undefined,
+      headerName,
+    );
+    if (resolved) headers[headerName] = resolved;
+  }
 
   return headers;
 }
