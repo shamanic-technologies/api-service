@@ -1698,59 +1698,6 @@ registry.registerPath({
   },
 });
 
-registry.registerPath({
-  method: "post",
-  path: "/v1/journalists/discover-emails",
-  tags: ["Journalists"],
-  summary: "Discover journalist emails via Apollo person match",
-  description: "Discovers journalist email addresses via Apollo person match. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
-  security: authed,
-  request: {
-    headers: journalistsRequiredHeaders,
-    body: {
-      content: {
-        "application/json": {
-          schema: z
-            .object({
-              outletId: z.string().uuid(),
-              organizationDomain: z.string().min(1),
-              journalistIds: z.array(z.string().uuid()).optional(),
-              brandId: z.string().uuid(),
-              campaignId: z.string().uuid(),
-            })
-            .openapi("DiscoverEmailsRequest"),
-        },
-      },
-    },
-  },
-  responses: {
-    200: {
-      description: "Discovery results",
-      content: {
-        "application/json": {
-          schema: z
-            .object({
-              discovered: z.number(),
-              total: z.number(),
-              skipped: z.number(),
-              results: z.array(
-                z.object({
-                  journalistId: z.string().uuid(),
-                  email: z.string().nullable(),
-                  emailStatus: z.string().nullable(),
-                  cached: z.boolean(),
-                  enrichmentId: z.string(),
-                }),
-              ),
-            })
-            .openapi("DiscoverEmailsResponse"),
-        },
-      },
-    },
-    400: { description: "Validation error", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-  },
-});
 
 registry.registerPath({
   method: "post",
