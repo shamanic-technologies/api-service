@@ -83,19 +83,6 @@ router.post("/journalists/discover", authenticate, requireOrg, requireUser, asyn
   }
 });
 
-// ── POST /v1/journalists/discover-emails — discover journalist emails ───────
-router.post("/journalists/discover-emails", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.journalist,
-      "/orgs/journalists/discover-emails",
-      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to discover journalist emails" });
-  }
-});
 
 // ── POST /v1/journalists/buffer/next — get next buffered journalist ──────────
 router.post("/journalists/buffer/next", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {

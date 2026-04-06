@@ -53,15 +53,6 @@ describe("Journalists proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should have POST /journalists/discover-emails with auth + requireOrg + requireUser", () => {
-    const line = content.split("\n").find((l) =>
-      l.includes("router.post") && l.includes('"/journalists/discover-emails"')
-    );
-    expect(line).toBeDefined();
-    expect(line).toContain("authenticate");
-    expect(line).toContain("requireOrg");
-    expect(line).toContain("requireUser");
-  });
 
   it("should have POST /journalists/resolve with auth + requireOrg + requireUser", () => {
     const line = content.split("\n").find((l) =>
@@ -127,17 +118,17 @@ describe("Journalists proxy routes", () => {
   it("should use buildInternalHeaders for all endpoints", () => {
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(8);
+    expect(headerMatches!.length).toBe(7);
   });
 
   it("should proxy to externalServices.journalist", () => {
     expect(content).toContain("externalServices.journalist");
   });
 
-  it("should forward request body on discover, discover-emails, and buffer/next endpoints", () => {
+  it("should forward request body on discover and buffer/next endpoints", () => {
     const bodyMatches = content.match(/body: req\.body/g);
     expect(bodyMatches).not.toBeNull();
-    expect(bodyMatches!.length).toBe(3);
+    expect(bodyMatches!.length).toBe(2);
   });
 
   it("should translate resolve to GET /campaign-outlet-journalists on journalist-service", () => {
@@ -239,11 +230,6 @@ describe("Journalists OpenAPI schemas", () => {
     expect(schemaContent).toContain("DiscoverJournalistsResponse");
   });
 
-  it("should register POST /v1/journalists/discover-emails", () => {
-    expect(schemaContent).toContain('path: "/v1/journalists/discover-emails"');
-    expect(schemaContent).toContain("DiscoverEmailsRequest");
-    expect(schemaContent).toContain("DiscoverEmailsResponse");
-  });
 
   it("should register POST /v1/journalists/buffer/next", () => {
     expect(schemaContent).toContain('path: "/v1/journalists/buffer/next"');
@@ -345,7 +331,6 @@ describe("Journalists OpenAPI — required workflow headers", () => {
   const requiredHeaderPaths = [
     "/v1/journalists",
     "/v1/journalists/discover",
-    "/v1/journalists/discover-emails",
     "/v1/journalists/buffer/next",
     "/v1/journalists/resolve",
   ];
