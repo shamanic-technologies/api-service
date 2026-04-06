@@ -16,7 +16,7 @@ router.get("/outlets", authenticate, requireOrg, requireUser, async (req: Authen
 
     const result = await callExternalService(
       externalServices.outlet,
-      `/outlets${qs}`,
+      `/org/outlets${qs}`,
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -36,7 +36,7 @@ router.get("/outlets/stats", authenticate, requireOrg, requireUser, async (req: 
 
     const result = await callExternalService(
       externalServices.outlet,
-      `/outlets/stats${qs}`,
+      `/org/outlets/stats${qs}`,
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -50,7 +50,7 @@ router.post("/outlets", authenticate, requireOrg, requireUser, async (req: Authe
   try {
     const result = await callExternalService(
       externalServices.outlet,
-      "/outlets",
+      "/org/outlets",
       { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.status(201).json(result);
@@ -64,7 +64,7 @@ router.post("/outlets/bulk", authenticate, requireOrg, requireUser, async (req: 
   try {
     const result = await callExternalService(
       externalServices.outlet,
-      "/outlets/bulk",
+      "/org/outlets/bulk",
       { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.status(201).json(result);
@@ -78,7 +78,7 @@ router.post("/outlets/search", authenticate, requireOrg, requireUser, async (req
   try {
     const result = await callExternalService(
       externalServices.outlet,
-      "/outlets/search",
+      "/org/outlets/search",
       { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -92,7 +92,7 @@ router.post("/outlets/discover", authenticate, requireOrg, requireUser, async (r
   try {
     const result = await callExternalService(
       externalServices.outlet,
-      "/outlets/discover",
+      "/org/outlets/discover",
       { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.status(201).json(result);
@@ -106,7 +106,7 @@ router.post("/outlets/buffer/next", authenticate, requireOrg, requireUser, async
   try {
     const result = await callExternalService(
       externalServices.outlet,
-      "/buffer/next",
+      "/org/buffer/next",
       { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -125,7 +125,7 @@ router.get("/outlets/stats/costs", authenticate, requireOrg, requireUser, async 
     const qs = params.toString() ? `?${params.toString()}` : "";
     const result = await callExternalService(
       externalServices.outlet,
-      `/outlets/stats/costs${qs}`,
+      `/org/outlets/stats/costs${qs}`,
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -139,7 +139,7 @@ router.get("/outlets/:id", authenticate, requireOrg, requireUser, async (req: Au
   try {
     const result = await callExternalService(
       externalServices.outlet,
-      `/outlets/${encodeURIComponent(req.params.id)}`,
+      `/org/outlets/${encodeURIComponent(req.params.id)}`,
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -153,7 +153,7 @@ router.patch("/outlets/:id", authenticate, requireOrg, requireUser, async (req: 
   try {
     const result = await callExternalService(
       externalServices.outlet,
-      `/outlets/${encodeURIComponent(req.params.id)}`,
+      `/org/outlets/${encodeURIComponent(req.params.id)}`,
       { method: "PATCH", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
@@ -171,7 +171,7 @@ router.patch("/outlets/:id/status", authenticate, requireOrg, requireUser, async
 
     const result = await callExternalService(
       externalServices.outlet,
-      `/outlets/${encodeURIComponent(req.params.id)}/status${qs}`,
+      `/org/outlets/${encodeURIComponent(req.params.id)}/status${qs}`,
       { method: "PATCH", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);

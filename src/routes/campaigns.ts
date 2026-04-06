@@ -907,7 +907,7 @@ router.get("/campaigns/:id/outlets", authenticate, requireOrg, requireUser, asyn
 
     const result = await callExternalService(
       externalServices.outlet,
-      `/outlets?campaignId=${encodeURIComponent(id)}`,
+      `/org/outlets?campaignId=${encodeURIComponent(id)}`,
       { headers }
     );
     res.json(result);
