@@ -33,11 +33,11 @@ describe("Brand-level GET /leads route", () => {
 
   it("should call lead-service /leads endpoint", () => {
     expect(content).toContain("externalServices.lead");
-    expect(content).toContain("`/leads?${params}`");
+    expect(content).toContain("`/orgs/leads?${params}`");
   });
 
   it("should call lead-service /leads/status endpoint in parallel", () => {
-    expect(content).toContain("`/leads/status?${params}`");
+    expect(content).toContain("`/orgs/leads/status?${params}`");
   });
 
   it("should flatten enrichment data into each lead", () => {

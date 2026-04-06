@@ -269,7 +269,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
       }),
       callExternalService<{ groups: Array<{ key: string; served: number; contacted?: number; buffered: number; skipped: number }> }>(
         externalServices.lead,
-        `/stats?${leadParams}`,
+        `/orgs/stats?${leadParams}`,
         { headers: internalHeaders },
       ).catch((err) => {
         console.warn("[campaigns/stats] lead-service groupBy failed:", (err as Error).message);
@@ -473,7 +473,7 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
     const [leadStats, emailgenStats, delivery, budgetUsage, costBreakdown] = await Promise.all([
       callExternalService(
         externalServices.lead,
-        `/stats?campaignId=${id}`,
+        `/orgs/stats?campaignId=${id}`,
         { headers: internalHeaders }
       ).catch((err) => {
         console.warn("[campaigns] Lead-service stats failed:", (err as Error).message);
@@ -588,12 +588,12 @@ router.get("/campaigns/:id/leads", authenticate, requireOrg, requireUser, async 
     const [leadsResult, statusResult] = await Promise.all([
       callExternalService(
         externalServices.lead,
-        `/leads?campaignId=${id}`,
+        `/orgs/leads?campaignId=${id}`,
         { headers }
       ) as Promise<{ leads: Array<Record<string, unknown>> }>,
       callExternalService<{ statuses: Array<{ leadId: string; email: string; contacted: boolean; delivered: boolean; bounced: boolean; replied: boolean; lastDeliveredAt: string | null }> }>(
         externalServices.lead,
-        `/leads/status?campaignId=${id}`,
+        `/orgs/leads/status?campaignId=${id}`,
         { headers }
       ),
     ]);
@@ -696,7 +696,7 @@ router.get("/campaigns/:id/leads/status", authenticate, requireOrg, requireUser,
 
     const result = await callExternalService(
       externalServices.lead,
-      `/leads/status?${params}`,
+      `/orgs/leads/status?${params}`,
       { headers: buildInternalHeaders(req) },
     );
 
@@ -811,7 +811,7 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
         ).catch(() => null),
         callExternalService<{ served: number; buffered: number; skipped: number }>(
           externalServices.lead,
-          `/stats?campaignId=${id}`,
+          `/orgs/stats?campaignId=${id}`,
           { headers: internalHeaders }
         ).catch(() => null),
         callExternalService<{ stats?: { emailsGenerated?: number } }>(
