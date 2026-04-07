@@ -712,103 +712,6 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/campaigns/{id}/leads",
-  tags: ["Campaigns"],
-  summary: "Get campaign leads",
-  description:
-    "Get all leads for a campaign with enrichment cost data",
-  security: authed,
-  request: { params: CampaignIdParam },
-  responses: {
-    200: {
-      description: "Campaign leads with enrichment run data",
-      content: {
-        "application/json": {
-          schema: z
-            .object({
-              leads: z.array(
-                z.object({
-                  id: z.string(),
-                  leadId: z.string().nullable().describe("Lead UUID for cross-referencing with delivery status"),
-                  email: z.string().describe("Recipient email address"),
-                  namespace: z.string().nullable().describe("Lead source (e.g. 'apollo', 'journalist')"),
-                  apolloPersonId: z.string().nullable().describe("Apollo person ID, or null if lead is not from Apollo"),
-                  journalistId: z.string().nullable().describe("Journalist ID from journalists-service, or null if lead is not a journalist"),
-                  outletId: z.string().nullable().describe("Outlet ID, or null if lead is not a journalist"),
-                  firstName: z.string().nullable(),
-                  lastName: z.string().nullable(),
-                  emailStatus: z.string().nullable(),
-                  title: z.string().nullable(),
-                  organizationName: z.string().nullable(),
-                  organizationDomain: z.string().nullable().describe("Company domain from enrichment"),
-                  organizationLogoUrl: z.string().nullable().describe("Company logo URL from enrichment"),
-                  organizationIndustry: z.string().nullable(),
-                  organizationSize: z.string().nullable(),
-                  linkedinUrl: z.string().nullable(),
-                  status: z.enum(["contacted", "served"]).describe("'contacted' if email was sent, 'served' if lead was served to workflow but not yet contacted"),
-                  contacted: z.boolean().describe("Whether the lead has been contacted (email sent)"),
-                  delivered: z.boolean().describe("Whether the email was delivered"),
-                  bounced: z.boolean().describe("Whether the email bounced"),
-                  replied: z.boolean().describe("Whether the lead replied"),
-                  createdAt: z.string().nullable().describe("ISO timestamp (from lead-service servedAt)"),
-                  enrichmentRunId: z.string().nullable(),
-                  enrichmentRun: RunCostDataSchema.nullable().describe("Enrichment run cost data, null if no run"),
-                }),
-              ),
-            })
-            .openapi("CampaignLeadsResponse"),
-        },
-      },
-    },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/campaigns/{id}/leads/status",
-  tags: ["Campaigns"],
-  summary: "Get per-lead delivery status",
-  description:
-    "Returns delivery status (contacted, delivered, bounced, replied) for each served lead in a campaign. Proxies to lead-service GET /orgs/leads/status.",
-  security: authed,
-  request: {
-    params: CampaignIdParam,
-    query: z.object({
-      brandId: z.string().optional().describe("Optional brand ID filter"),
-    }),
-  },
-  responses: {
-    200: {
-      description: "Per-lead delivery statuses",
-      content: {
-        "application/json": {
-          schema: z
-            .object({
-              statuses: z.array(
-                z.object({
-                  leadId: z.string().describe("Lead UUID"),
-                  email: z.string().describe("Recipient email"),
-                  contacted: z.boolean().describe("Whether the lead has been contacted"),
-                  delivered: z.boolean().describe("Whether the email was delivered"),
-                  bounced: z.boolean().describe("Whether the email bounced"),
-                  replied: z.boolean().describe("Whether the lead replied"),
-                  lastDeliveredAt: z.string().nullable().describe("ISO timestamp of last delivery"),
-                }),
-              ),
-            })
-            .openapi("CampaignLeadsStatusResponse"),
-        },
-      },
-    },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/v1/campaigns/{id}/emails",
   tags: ["Campaigns"],
   summary: "Get campaign emails",
@@ -2989,15 +2892,15 @@ registry.registerPath({
   method: "get",
   path: "/v1/leads",
   tags: ["Leads"],
-  summary: "List leads by brand",
+  summary: "List leads",
   description:
-    "List all leads across campaigns for a brand. Returns the same enriched shape as GET /campaigns/{id}/leads. " +
-    "Proxies to lead-service GET /orgs/leads with brandId filter.",
+    "List leads filtered by brandId and/or campaignId, with enrichment and delivery status data. " +
+    "At least one of brandId or campaignId is required. Proxies to lead-service GET /orgs/leads.",
   security: authed,
   request: {
     query: z.object({
-      brandId: z.string().uuid().openapi({ description: "Brand ID (required)" }),
-      campaignId: z.string().uuid().optional().openapi({ description: "Optional campaign ID filter" }),
+      brandId: z.string().uuid().optional().openapi({ description: "Brand ID filter" }),
+      campaignId: z.string().uuid().optional().openapi({ description: "Campaign ID filter" }),
       limit: z.coerce.number().int().optional().openapi({ description: "Max results to return" }),
       offset: z.coerce.number().int().optional().openapi({ description: "Offset for pagination" }),
     }),
@@ -3044,7 +2947,7 @@ registry.registerPath({
         },
       },
     },
-    400: { description: "Missing brandId", content: errorContent },
+    400: { description: "Missing brandId or campaignId", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },

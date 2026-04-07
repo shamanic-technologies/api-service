@@ -20,14 +20,14 @@ router.get("/leads", authenticate, requireOrg, requireUser, async (req: Authenti
       limit?: string;
       offset?: string;
     };
-    if (!brandId) {
-      return res.status(400).json({ error: "Missing required query parameter: brandId" });
+    if (!brandId && !campaignId) {
+      return res.status(400).json({ error: "Missing required query parameter: brandId or campaignId" });
     }
 
     const headers = buildInternalHeaders(req);
 
     const params = new URLSearchParams();
-    params.set("brandId", brandId);
+    if (brandId) params.set("brandId", brandId);
     if (campaignId) params.set("campaignId", campaignId);
     if (limit) params.set("limit", limit);
     if (offset) params.set("offset", offset);
