@@ -4561,116 +4561,6 @@
           "brand"
         ]
       },
-      "ExtractFieldResult": {
-        "type": "object",
-        "properties": {
-          "value": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "nullable": true
-                }
-              },
-              {
-                "type": "object",
-                "additionalProperties": {
-                  "nullable": true
-                }
-              },
-              {
-                "nullable": true
-              },
-              {
-                "nullable": true
-              }
-            ],
-            "description": "Extracted value. Type depends on the field key: string (companyOverview, valueProposition, callToAction), array (targetAudience, keyFeatures, customerPainPoints, productDifferentiators), object (socialProof, funding, additionalContext, riskReversal, scarcity, urgency), or null when the field was not found on the site (e.g. competitors, leadership)."
-          },
-          "cached": {
-            "type": "boolean",
-            "description": "Whether this result was served from cache"
-          },
-          "extractedAt": {
-            "type": "string",
-            "description": "ISO timestamp of extraction"
-          },
-          "expiresAt": {
-            "type": "string",
-            "description": "ISO timestamp when cached result expires"
-          },
-          "sourceUrls": {
-            "type": "array",
-            "nullable": true,
-            "items": {
-              "type": "string"
-            },
-            "description": "URLs scraped to extract this field. Null for pre-existing extractions."
-          }
-        },
-        "required": [
-          "value",
-          "cached",
-          "extractedAt",
-          "expiresAt",
-          "sourceUrls"
-        ]
-      },
-      "ExtractFieldsResponse": {
-        "type": "object",
-        "properties": {
-          "brandId": {
-            "type": "string",
-            "description": "Brand ID"
-          },
-          "results": {
-            "type": "object",
-            "additionalProperties": {
-              "$ref": "#/components/schemas/ExtractFieldResult"
-            },
-            "description": "Extraction results keyed by field name (e.g. results.biography.value)"
-          }
-        },
-        "required": [
-          "brandId",
-          "results"
-        ]
-      },
-      "ExtractFieldRequest": {
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": "string",
-            "description": "Field key (e.g. 'industry', 'valueProposition')"
-          },
-          "description": {
-            "type": "string",
-            "description": "Description of what to extract"
-          }
-        },
-        "required": [
-          "key",
-          "description"
-        ]
-      },
-      "ExtractFieldsRequest": {
-        "type": "object",
-        "properties": {
-          "fields": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ExtractFieldRequest"
-            },
-            "description": "Fields to extract"
-          }
-        },
-        "required": [
-          "fields"
-        ]
-      },
       "ExtractFieldsFromHeaderResponse": {
         "type": "object",
         "properties": {
@@ -4805,6 +4695,23 @@
         "required": [
           "brands",
           "fields"
+        ]
+      },
+      "ExtractFieldRequest": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "Field key (e.g. 'industry', 'valueProposition')"
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of what to extract"
+          }
+        },
+        "required": [
+          "key",
+          "description"
         ]
       },
       "ExtractFieldsFromHeaderRequest": {
@@ -5052,41 +4959,6 @@
         },
         "required": [
           "brandIds",
-          "categories"
-        ]
-      },
-      "ExtractImagesResponse": {
-        "type": "object",
-        "properties": {
-          "brandId": {
-            "type": "string",
-            "description": "Brand ID"
-          },
-          "images": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ExtractedImage"
-            },
-            "description": "Extracted images"
-          }
-        },
-        "required": [
-          "brandId",
-          "images"
-        ]
-      },
-      "ExtractImagesRequest": {
-        "type": "object",
-        "properties": {
-          "categories": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ExtractImageCategory"
-            },
-            "description": "Image categories to extract"
-          }
-        },
-        "required": [
           "categories"
         ]
       },
@@ -17777,145 +17649,13 @@
         }
       }
     },
-    "/v1/brands/{id}/extract-fields": {
-      "post": {
-        "tags": [
-          "Brand"
-        ],
-        "summary": "Extract fields from brand (single brand, deprecated)",
-        "description": "Deprecated — use POST /v1/brands/extract-fields instead (reads brand IDs from x-brand-id header). Generic field extraction: send fields you want with a key and description, and brand-service extracts them via AI. Results are cached 30 days per field.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Brand ID"
-            },
-            "required": true,
-            "description": "Brand ID",
-            "name": "id",
-            "in": "path"
-          },
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "example": "uuid1,uuid2,uuid3"
-            },
-            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-feature-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ExtractFieldsRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Extracted field results",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExtractFieldsResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Anthropic API key not configured",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/v1/brands/extract-fields": {
       "post": {
         "tags": [
           "Brand"
         ],
         "summary": "Extract fields from brand(s)",
-        "description": "Multi-brand field extraction. Pass brandIds in the request body — api-service sets x-brand-id header and proxies to brand-service. Send fields you want with a key and description, and brand-service extracts them via AI. Results are cached 30 days per field per brand. Replaces POST /v1/brands/{id}/extract-fields for multi-brand campaigns.",
+        "description": "Multi-brand field extraction. Pass brandIds in the request body — api-service sets x-brand-id header and proxies to brand-service. Send fields you want with a key and description, and brand-service extracts them via AI. Results are cached 30 days per field per brand. Pass brandIds in the request body — api-service sets x-brand-id header and proxies to brand-service.",
         "security": [
           {
             "bearerAuth": []
@@ -18160,7 +17900,7 @@
           "Brand"
         ],
         "summary": "Extract images from brand(s)",
-        "description": "Multi-brand image extraction. Pass brandIds in the request body — api-service sets x-brand-id header and proxies to brand-service. Replaces POST /v1/brands/{id}/extract-images for multi-brand campaigns.",
+        "description": "Multi-brand image extraction. Pass brandIds in the request body — api-service sets x-brand-id header and proxies to brand-service. Pass brandIds in the request body — api-service sets x-brand-id header and proxies to brand-service.",
         "security": [
           {
             "bearerAuth": []
@@ -18274,138 +18014,6 @@
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
           }
         ]
-      }
-    },
-    "/v1/brands/{id}/extract-images": {
-      "post": {
-        "tags": [
-          "Brand"
-        ],
-        "summary": "Extract images from brand (single brand, deprecated)",
-        "description": "Deprecated — use POST /v1/brands/extract-images instead. Extract brand images by category (logo, product shots, hero image, etc.) via scraping + vision AI. Returns permanent R2 URLs.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Brand ID"
-            },
-            "required": true,
-            "description": "Brand ID",
-            "name": "id",
-            "in": "path"
-          },
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "example": "uuid1,uuid2,uuid3"
-            },
-            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-feature-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ExtractImagesRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Extracted image results",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ExtractImagesResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Anthropic API key not configured",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
       }
     },
     "/v1/brands/{id}/extracted-images": {

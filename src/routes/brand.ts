@@ -178,36 +178,6 @@ router.post("/brands/extract-fields", authenticate, requireOrg, requireUser, asy
 });
 
 /**
- * POST /v1/brands/:id/extract-fields
- * Generic field extraction: send fields you want with key + description,
- * brand-service extracts them via AI. Results cached 30 days per field.
- * Deprecated — use POST /v1/brands/extract-fields instead.
- */
-router.post("/brands/:id/extract-fields", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.brand,
-      `/orgs/brands/${req.params.id}/extract-fields`,
-      {
-        method: "POST",
-        headers: buildInternalHeaders(req),
-        body: req.body,
-      },
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("Extract fields error:", error);
-    const msg = error.message || "Failed to extract fields";
-    if (msg.includes("No Anthropic API key found")) {
-      return res.status(400).json({
-        error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
-      });
-    }
-    res.status(error.statusCode || 500).json({ error: msg });
-  }
-});
-
-/**
  * GET /v1/brands/:id/extracted-fields
  * List all previously extracted and cached fields for a brand.
  */
@@ -215,12 +185,12 @@ router.get("/brands/:id/extracted-fields", authenticate, requireOrg, requireUser
   try {
     const result = await callExternalService(
       externalServices.brand,
-      `/orgs/brands/${req.params.id}/extracted-fields`,
+      `/internal/brands/${req.params.id}/extracted-fields`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
   } catch (error: any) {
-    console.error("Get extracted fields error:", error);
+    console.error("[api-service] Get extracted fields error:", error);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get extracted fields" });
   }
 });
@@ -264,34 +234,6 @@ router.post("/brands/extract-images", authenticate, requireOrg, requireUser, asy
 });
 
 /**
- * POST /v1/brands/:id/extract-images
- * Deprecated — use POST /v1/brands/extract-images instead.
- */
-router.post("/brands/:id/extract-images", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.brand,
-      `/orgs/brands/${req.params.id}/extract-images`,
-      {
-        method: "POST",
-        headers: buildInternalHeaders(req),
-        body: req.body,
-      },
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("Extract images (deprecated) error:", error);
-    const msg = error.message || "Failed to extract images";
-    if (msg.includes("No Anthropic API key found")) {
-      return res.status(400).json({
-        error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
-      });
-    }
-    res.status(error.statusCode || 500).json({ error: msg });
-  }
-});
-
-/**
  * GET /v1/brands/:id/extracted-images
  * List extracted images in cache. Supports ?campaignId= query param.
  */
@@ -302,12 +244,12 @@ router.get("/brands/:id/extracted-images", authenticate, requireOrg, requireUser
     const qs = params.toString() ? `?${params.toString()}` : "";
     const result = await callExternalService(
       externalServices.brand,
-      `/orgs/brands/${req.params.id}/extracted-images${qs}`,
+      `/internal/brands/${req.params.id}/extracted-images${qs}`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
   } catch (error: any) {
-    console.error("Get extracted images error:", error);
+    console.error("[api-service] Get extracted images error:", error);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get extracted images" });
   }
 });
@@ -362,7 +304,7 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
     // 1. Get runs list from brand-service
     const data = await callExternalService<{ runs?: Array<{ id: string; taskName: string; status: string; startedAt: string; completedAt: string | null }> }>(
       externalServices.brand,
-      `/orgs/brands/${id}/runs`,
+      `/internal/brands/${id}/runs`,
       { headers: buildInternalHeaders(req) },
     );
     const runs: Array<{ id: string; taskName: string; status: string; startedAt: string; completedAt: string | null }> = data.runs || [];

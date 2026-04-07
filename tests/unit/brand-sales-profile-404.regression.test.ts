@@ -3,9 +3,9 @@ import request from "supertest";
 import express from "express";
 
 /**
- * POST /v1/brands/:id/extract-fields
- * Generic field extraction proxy to brand-service.
- * Replaces the old GET/POST/PUT sales-profile endpoints.
+ * Regression: deprecated brand endpoints return 404.
+ * POST /v1/brands/:id/extract-fields was removed (use POST /v1/brands/extract-fields instead).
+ * Old sales-profile endpoints were removed long ago.
  */
 
 vi.mock("../../src/middleware/auth.js", () => ({
@@ -33,7 +33,7 @@ function buildApp() {
   return app;
 }
 
-describe("POST /v1/brands/:id/extract-fields", () => {
+describe("deprecated brand endpoints return 404", () => {
   let app: express.Express;
 
   beforeEach(() => {
@@ -41,88 +41,21 @@ describe("POST /v1/brands/:id/extract-fields", () => {
     app = buildApp();
   });
 
-  it("should return 200 with extracted results", async () => {
-    const response = {
-      brandId: "b-1",
-      results: {
-        industry: { value: "SaaS", cached: true, extractedAt: "2026-03-01T00:00:00Z", expiresAt: "2026-03-31T00:00:00Z" },
-        valueProposition: { value: "All-in-one platform", cached: false, extractedAt: "2026-03-23T00:00:00Z", expiresAt: "2026-04-22T00:00:00Z" },
-      },
-    };
-    global.fetch = vi.fn().mockImplementation(async () => ({
-      ok: true,
-      json: () => Promise.resolve(response),
-    }));
-
-    const res = await request(app)
-      .post("/v1/brands/some-brand-id/extract-fields")
-      .send({
-        fields: [
-          { key: "industry", description: "Brand sector" },
-          { key: "valueProposition", description: "Core value proposition" },
-        ],
-      });
-
-    expect(res.status).toBe(200);
-    expect(res.body.brandId).toBe("b-1");
-    expect(Object.keys(res.body.results)).toHaveLength(2);
-    expect(res.body.results.industry.value).toBe("SaaS");
-    expect(res.body.results.industry.cached).toBe(true);
-  });
-
-  it("should forward the request body to brand-service", async () => {
-    global.fetch = vi.fn().mockImplementation(async () => ({
-      ok: true,
-      json: () => Promise.resolve({ brandId: "b-1", results: {} }),
-    }));
-
-    const fields = [
-      { key: "industry", description: "Brand sector" },
-      { key: "suggestedAngles", description: "PR angles" },
-    ];
-
-    await request(app)
-      .post("/v1/brands/some-brand-id/extract-fields")
-      .send({ fields });
-
-    const fetchCall = (global.fetch as any).mock.calls[0];
-    const url = typeof fetchCall[0] === "string" ? fetchCall[0] : fetchCall[0].url;
-    expect(url).toContain("/brands/some-brand-id/extract-fields");
-
-    const body = JSON.parse(fetchCall[1].body);
-    expect(body.fields).toEqual(fields);
-  });
-
-  it("should return 400 when Anthropic key is missing", async () => {
-    global.fetch = vi.fn().mockImplementation(async () => ({
-      ok: false,
-      status: 400,
-      text: () => Promise.resolve('{"error":"No Anthropic API key found"}'),
-    }));
-
+  it("POST /v1/brands/:id/extract-fields returns 404 (use POST /v1/brands/extract-fields)", async () => {
     const res = await request(app)
       .post("/v1/brands/some-brand-id/extract-fields")
       .send({ fields: [{ key: "industry", description: "Brand sector" }] });
-
-    expect(res.status).toBe(400);
-    expect(res.body.error).toContain("Anthropic API key not configured");
+    expect(res.status).toBe(404);
   });
 
-  it("should return 500 for genuine server errors", async () => {
-    global.fetch = vi.fn().mockImplementation(async () => ({
-      ok: false,
-      status: 500,
-      text: () => Promise.resolve('{"error":"Internal server error"}'),
-    }));
-
+  it("POST /v1/brands/:id/extract-images returns 404 (use POST /v1/brands/extract-images)", async () => {
     const res = await request(app)
-      .post("/v1/brands/some-brand-id/extract-fields")
-      .send({ fields: [{ key: "industry", description: "Brand sector" }] });
-
-    expect(res.status).toBe(500);
+      .post("/v1/brands/some-brand-id/extract-images")
+      .send({ categories: [{ key: "logo", description: "Logo" }] });
+    expect(res.status).toBe(404);
   });
 
-  it("should return 404 for old sales-profile endpoints", async () => {
+  it("GET /v1/brands/:id/sales-profile returns 404", async () => {
     const res = await request(app).get("/v1/brands/some-brand-id/sales-profile");
     expect(res.status).toBe(404);
   });
