@@ -31,13 +31,28 @@ describe("Brand-level GET /leads route", () => {
     expect(content).toContain('params.set("campaignId", campaignId)');
   });
 
-  it("should call lead-service /leads endpoint", () => {
+  it("should call lead-service /orgs/leads endpoint (single call, no /status)", () => {
     expect(content).toContain("externalServices.lead");
     expect(content).toContain("`/orgs/leads?${params}`");
+    expect(content).not.toContain("/orgs/leads/status");
   });
 
-  it("should call lead-service /leads/status endpoint in parallel", () => {
-    expect(content).toContain("`/orgs/leads/status?${params}`");
+  it("should NOT use Promise.all to merge two endpoints", () => {
+    // After lead-service PR #171, status fields are on the lead object directly
+    const leadsRoute = content.slice(
+      content.indexOf('router.get("/leads"'),
+      content.indexOf('router.post("/leads/search"')
+    );
+    expect(leadsRoute).not.toContain("Promise.all");
+    expect(leadsRoute).not.toContain("statusByEmail");
+  });
+
+  it("should read status fields directly from each lead object", () => {
+    expect(content).toContain("raw.contacted");
+    expect(content).toContain("raw.delivered");
+    expect(content).toContain("raw.bounced");
+    expect(content).toContain("raw.replied");
+    expect(content).toContain("raw.replyClassification");
   });
 
   it("should flatten enrichment data into each lead", () => {
@@ -47,7 +62,7 @@ describe("Brand-level GET /leads route", () => {
   });
 
   it("should compute contacted status from delivery data", () => {
-    expect(content).toContain('delivery?.contacted ? "contacted" : "served"');
+    expect(content).toContain('raw.contacted ? "contacted" : "served"');
   });
 
   it("should batch-fetch run costs via getRunsBatch", () => {

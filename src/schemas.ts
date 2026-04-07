@@ -3033,6 +3033,7 @@ registry.registerPath({
                   delivered: z.boolean(),
                   bounced: z.boolean(),
                   replied: z.boolean(),
+                  replyClassification: z.enum(["positive", "negative", "neutral"]).nullable(),
                   createdAt: z.string().nullable(),
                   enrichmentRunId: z.string().nullable(),
                   enrichmentRun: RunCostDataSchema.nullable(),

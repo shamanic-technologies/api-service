@@ -32,33 +32,19 @@ router.get("/leads", authenticate, requireOrg, requireUser, async (req: Authenti
     if (limit) params.set("limit", limit);
     if (offset) params.set("offset", offset);
 
-    // Fetch leads and their delivery statuses in parallel
-    const [leadsResult, statusResult] = await Promise.all([
-      callExternalService(
-        externalServices.lead,
-        `/orgs/leads?${params}`,
-        { headers }
-      ) as Promise<{ leads: Array<Record<string, unknown>> }>,
-      callExternalService<{ statuses: Array<{ leadId: string; email: string; contacted: boolean; delivered: boolean; bounced: boolean; replied: boolean; lastDeliveredAt: string | null }> }>(
-        externalServices.lead,
-        `/orgs/leads/status?${params}`,
-        { headers }
-      ),
-    ]);
+    // Single call to lead-service — delivery status fields are included directly on each lead (PR #171)
+    const leadsResult = await callExternalService(
+      externalServices.lead,
+      `/orgs/leads?${params}`,
+      { headers }
+    ) as { leads: Array<Record<string, unknown>> };
 
     const rawLeads = leadsResult.leads || [];
-
-    // Build a lookup of email → delivery status from lead-service
-    const statusByEmail = new Map<string, { contacted: boolean; delivered: boolean; bounced: boolean; replied: boolean }>();
-    for (const s of statusResult.statuses || []) {
-      statusByEmail.set(s.email, { contacted: s.contacted, delivered: s.delivered, bounced: s.bounced, replied: s.replied });
-    }
 
     // Flatten enrichment data into each lead to match dashboard expectations.
     const leads = rawLeads.map((raw) => {
       const enrichment = (raw.enrichment as Record<string, unknown>) || {};
       const email = raw.email as string;
-      const delivery = statusByEmail.get(email);
       return {
         id: raw.id,
         leadId: raw.leadId ?? null,
@@ -77,11 +63,12 @@ router.get("/leads", authenticate, requireOrg, requireUser, async (req: Authenti
         organizationIndustry: enrichment.organizationIndustry ?? null,
         organizationSize: enrichment.organizationSize ?? null,
         linkedinUrl: enrichment.linkedinUrl ?? null,
-        status: delivery?.contacted ? "contacted" : "served",
-        contacted: delivery?.contacted ?? false,
-        delivered: delivery?.delivered ?? false,
-        bounced: delivery?.bounced ?? false,
-        replied: delivery?.replied ?? false,
+        status: raw.contacted ? "contacted" : "served",
+        contacted: raw.contacted as boolean,
+        delivered: raw.delivered as boolean,
+        bounced: raw.bounced as boolean,
+        replied: raw.replied as boolean,
+        replyClassification: (raw.replyClassification as string) ?? null,
         createdAt: raw.servedAt ?? null,
         enrichmentRunId: raw.runId ?? null,
       };
