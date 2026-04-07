@@ -55,7 +55,7 @@ router.post("/brands", authenticate, requireOrg, requireUser, async (req: Authen
 
     const result = await callExternalService<{ brandId: string }>(
       externalServices.brand,
-      "/brands",
+      "/orgs/brands",
       {
         method: "POST",
         headers: buildInternalHeaders(req),
@@ -111,7 +111,7 @@ router.get("/brands", authenticate, requireOrg, requireUser, async (req: Authent
 
     const result = await callExternalService(
       externalServices.brand,
-      `/brands?${params}`,
+      `/orgs/brands?${params}`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
@@ -129,7 +129,7 @@ router.get("/brands/:id", authenticate, async (req: AuthenticatedRequest, res) =
   try {
     const result = await callExternalService(
       externalServices.brand,
-      `/brands/${req.params.id}`,
+      `/internal/brands/${req.params.id}`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
@@ -157,7 +157,7 @@ router.post("/brands/extract-fields", authenticate, requireOrg, requireUser, asy
     };
     const result = await callExternalService(
       externalServices.brand,
-      "/brands/extract-fields",
+      "/orgs/brands/extract-fields",
       {
         method: "POST",
         headers,
@@ -187,7 +187,7 @@ router.post("/brands/:id/extract-fields", authenticate, requireOrg, requireUser,
   try {
     const result = await callExternalService(
       externalServices.brand,
-      `/brands/${req.params.id}/extract-fields`,
+      `/orgs/brands/${req.params.id}/extract-fields`,
       {
         method: "POST",
         headers: buildInternalHeaders(req),
@@ -215,7 +215,7 @@ router.get("/brands/:id/extracted-fields", authenticate, requireOrg, requireUser
   try {
     const result = await callExternalService(
       externalServices.brand,
-      `/brands/${req.params.id}/extracted-fields`,
+      `/orgs/brands/${req.params.id}/extracted-fields`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
@@ -243,7 +243,7 @@ router.post("/brands/extract-images", authenticate, requireOrg, requireUser, asy
     };
     const result = await callExternalService(
       externalServices.brand,
-      "/brands/extract-images",
+      "/orgs/brands/extract-images",
       {
         method: "POST",
         headers,
@@ -271,7 +271,7 @@ router.post("/brands/:id/extract-images", authenticate, requireOrg, requireUser,
   try {
     const result = await callExternalService(
       externalServices.brand,
-      `/brands/${req.params.id}/extract-images`,
+      `/orgs/brands/${req.params.id}/extract-images`,
       {
         method: "POST",
         headers: buildInternalHeaders(req),
@@ -302,7 +302,7 @@ router.get("/brands/:id/extracted-images", authenticate, requireOrg, requireUser
     const qs = params.toString() ? `?${params.toString()}` : "";
     const result = await callExternalService(
       externalServices.brand,
-      `/brands/${req.params.id}/extracted-images${qs}`,
+      `/orgs/brands/${req.params.id}/extracted-images${qs}`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
@@ -326,7 +326,7 @@ router.post("/brand/icp-suggestion", authenticate, requireOrg, requireUser, asyn
 
     const result = await callExternalService(
       externalServices.brand,
-      "/icp-suggestion",
+      "/orgs/icp-suggestion",
       {
         method: "POST",
         headers: buildInternalHeaders(req),
@@ -362,7 +362,7 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
     // 1. Get runs list from brand-service
     const data = await callExternalService<{ runs?: Array<{ id: string; taskName: string; status: string; startedAt: string; completedAt: string | null }> }>(
       externalServices.brand,
-      `/brands/${id}/runs`,
+      `/orgs/brands/${id}/runs`,
       { headers: buildInternalHeaders(req) },
     );
     const runs: Array<{ id: string; taskName: string; status: string; startedAt: string; completedAt: string | null }> = data.runs || [];
