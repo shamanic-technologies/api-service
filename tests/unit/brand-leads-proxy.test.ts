@@ -22,11 +22,11 @@ describe("Brand-level GET /leads route", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should require brandId query param", () => {
-    expect(content).toContain('"Missing required query parameter: brandId"');
+  it("should require brandId or campaignId query param", () => {
+    expect(content).toContain('"Missing required query parameter: brandId or campaignId"');
   });
 
-  it("should forward brandId and optional campaignId to lead-service", () => {
+  it("should forward brandId and campaignId to lead-service when present", () => {
     expect(content).toContain('params.set("brandId", brandId)');
     expect(content).toContain('params.set("campaignId", campaignId)');
   });
@@ -73,7 +73,7 @@ describe("Brand-level GET /leads route", () => {
     expect(content).toContain("buildInternalHeaders(req)");
   });
 
-  it("should return 400 when brandId is missing", () => {
+  it("should return 400 when both brandId and campaignId are missing", () => {
     const brandIdCheckSection = content.slice(
       content.indexOf('router.get("/leads"'),
       content.indexOf('router.post("/leads/search"')
@@ -87,7 +87,7 @@ describe("Brand-level GET /leads OpenAPI schema", () => {
     expect(schemaContent).toContain('path: "/v1/leads"');
   });
 
-  it("should have brandId query param in OpenAPI spec", () => {
+  it("should have brandId and campaignId query params in OpenAPI spec (both optional)", () => {
     const leadsPath = openapi.paths["/v1/leads"];
     expect(leadsPath).toBeDefined();
     expect(leadsPath.get).toBeDefined();
@@ -96,7 +96,11 @@ describe("Brand-level GET /leads OpenAPI schema", () => {
       (p: { name: string; in: string }) => p.name === "brandId" && p.in === "query"
     );
     expect(brandIdParam).toBeDefined();
-    expect(brandIdParam.required).toBe(true);
+    expect(brandIdParam.required).toBeFalsy();
+    const campaignIdParam = params.find(
+      (p: { name: string; in: string }) => p.name === "campaignId" && p.in === "query"
+    );
+    expect(campaignIdParam).toBeDefined();
   });
 
   it("should use BrandLeadsResponse schema name", () => {
