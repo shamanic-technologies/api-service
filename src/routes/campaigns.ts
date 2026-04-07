@@ -14,7 +14,7 @@ const router = Router();
 
 /**
  * Resolve brandIds → brandUrls via brand-service.
- * Calls GET /brands/:id for each brand in parallel and extracts the URL.
+ * Calls GET /orgs/brands/:id for each brand in parallel and extracts the URL.
  */
 async function resolveBrandUrls(
   brandIds: string[],
@@ -25,7 +25,7 @@ async function resolveBrandUrls(
     brandIds.map((id) =>
       callExternalService<{ brand: { brandUrl: string | null } }>(
         externalServices.brand,
-        `/brands/${encodeURIComponent(id)}`,
+        `/orgs/brands/${encodeURIComponent(id)}`,
         { headers },
       ),
     ),
@@ -140,7 +140,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       brandUrls.map((url) =>
         callExternalService<{ brandId: string }>(
           externalServices.brand,
-          "/brands",
+          "/orgs/brands",
           {
             method: "POST",
             headers: buildInternalHeaders(req),
