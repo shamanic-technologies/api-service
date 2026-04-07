@@ -4489,6 +4489,15 @@
                 "replied": {
                   "type": "boolean"
                 },
+                "replyClassification": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "positive",
+                    "negative",
+                    "neutral"
+                  ]
+                },
                 "createdAt": {
                   "type": "string",
                   "nullable": true
@@ -4531,6 +4540,7 @@
                 "delivered",
                 "bounced",
                 "replied",
+                "replyClassification",
                 "createdAt",
                 "enrichmentRunId",
                 "enrichmentRun"
