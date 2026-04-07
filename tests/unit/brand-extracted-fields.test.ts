@@ -89,7 +89,7 @@ describe("GET /v1/brands/:id/extracted-fields", () => {
 
     await request(app).get("/v1/brands/brand-xyz/extracted-fields");
 
-    expect(capturedUrl).toContain("/brands/brand-xyz/extracted-fields");
+    expect(capturedUrl).toContain("/internal/brands/brand-xyz/extracted-fields");
   });
 
   it("should return 404 when brand-service returns 404", async () => {

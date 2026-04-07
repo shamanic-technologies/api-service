@@ -3199,45 +3199,6 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/v1/brands/{id}/extract-fields",
-  tags: ["Brand"],
-  summary: "Extract fields from brand (single brand, deprecated)",
-  description:
-    "Deprecated — use POST /v1/brands/extract-fields instead (reads brand IDs from x-brand-id header). " +
-    "Generic field extraction: send fields you want with a key and description, and brand-service extracts them via AI. Results are cached 30 days per field.",
-  security: authed,
-  request: {
-    params: BrandIdParam,
-    body: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            fields: z.array(ExtractFieldRequestSchema).describe("Fields to extract"),
-          }).openapi("ExtractFieldsRequest"),
-        },
-      },
-    },
-  },
-  responses: {
-    200: {
-      description: "Extracted field results",
-      content: {
-        "application/json": {
-          schema: z.object({
-            brandId: z.string().describe("Brand ID"),
-            results: z.record(z.string(), ExtractFieldResultSchema).describe("Extraction results keyed by field name (e.g. results.biography.value)"),
-          }).openapi("ExtractFieldsResponse"),
-        },
-      },
-    },
-    400: { description: "Anthropic API key not configured", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
   path: "/v1/brands/extract-fields",
   tags: ["Brand"],
   summary: "Extract fields from brand(s)",
@@ -3245,7 +3206,7 @@ registry.registerPath({
     "Multi-brand field extraction. Pass brandIds in the request body — api-service sets x-brand-id header and proxies to brand-service. " +
     "Send fields you want with a key and description, and brand-service extracts them via AI. " +
     "Results are cached 30 days per field per brand. " +
-    "Replaces POST /v1/brands/{id}/extract-fields for multi-brand campaigns.",
+    "Pass brandIds in the request body — api-service sets x-brand-id header and proxies to brand-service.",
   security: authed,
   request: {
     body: {
@@ -3349,7 +3310,7 @@ registry.registerPath({
   summary: "Extract images from brand(s)",
   description:
     "Multi-brand image extraction. Pass brandIds in the request body — api-service sets x-brand-id header and proxies to brand-service. " +
-    "Replaces POST /v1/brands/{id}/extract-images for multi-brand campaigns.",
+    "Pass brandIds in the request body — api-service sets x-brand-id header and proxies to brand-service.",
   security: authed,
   request: {
     body: {
@@ -3384,45 +3345,6 @@ registry.registerPath({
       },
     },
     400: { description: "Validation error or Anthropic API key not configured", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/brands/{id}/extract-images",
-  tags: ["Brand"],
-  summary: "Extract images from brand (single brand, deprecated)",
-  description:
-    "Deprecated — use POST /v1/brands/extract-images instead. " +
-    "Extract brand images by category (logo, product shots, hero image, etc.) via scraping + vision AI. Returns permanent R2 URLs.",
-  security: authed,
-  request: {
-    params: BrandIdParam,
-    body: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            categories: z.array(ExtractImageCategorySchema).describe("Image categories to extract"),
-          }).openapi("ExtractImagesRequest"),
-        },
-      },
-    },
-  },
-  responses: {
-    200: {
-      description: "Extracted image results",
-      content: {
-        "application/json": {
-          schema: z.object({
-            brandId: z.string().describe("Brand ID"),
-            images: z.array(ExtractedImageSchema).describe("Extracted images"),
-          }).openapi("ExtractImagesResponse"),
-        },
-      },
-    },
-    400: { description: "Anthropic API key not configured", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
