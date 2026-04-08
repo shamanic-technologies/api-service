@@ -970,7 +970,9 @@ registry.registerPath({
   tags: ["Outlets"],
   summary: "List outlets with filters (deduplicated)",
   description: "Returns outlets deduplicated by outlet_id with nested campaign data. Each outlet appears once with a campaigns[] array containing per-campaign details. " +
-    "Filter by campaignId, brandId, status, featureSlugs (comma-separated), or featureDynastySlug. Supports pagination on distinct outlets. " +
+    "At least one of brandId or campaignId is required (returns 400 otherwise). " +
+    "Outreach status is enriched from journalists-service at the query's scope. " +
+    "Filter by status, featureSlugs (comma-separated), or featureDynastySlug. Supports pagination on distinct outlets. " +
     "All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
@@ -1000,8 +1002,8 @@ registry.registerPath({
                   outletUrl: z.string(),
                   outletDomain: z.string(),
                   createdAt: z.string().datetime(),
-                  latestStatus: z.enum(["open", "ended", "denied", "served", "skipped", "buffered", "claimed", "contacted", "delivered", "replied", "bounced"]).describe("Consolidated status: most advanced status across all journalists in this outlet"),
-                  latestRelevanceScore: z.number(),
+                  outreachStatus: z.enum(["open", "ended", "denied", "served", "contacted", "delivered", "replied", "skipped"]).describe("High watermark outreach status from journalists-service at the query's scope (campaign or brand). Falls back to most advanced DB status when no journalist data exists."),
+                  replyClassification: z.enum(["positive", "negative", "neutral"]).nullable().describe("Best reply classification when outreachStatus is 'replied'. Null otherwise."),
                   campaigns: z.array(
                     z.object({
                       campaignId: z.string().uuid(),
@@ -1010,7 +1012,8 @@ registry.registerPath({
                       whyRelevant: z.string().optional(),
                       whyNotRelevant: z.string().optional(),
                       relevanceScore: z.number(),
-                      status: z.enum(["open", "ended", "denied", "served", "skipped", "buffered", "claimed", "contacted", "delivered", "replied", "bounced"]).describe("Consolidated status: most advanced journalist status for this campaign"),
+                      outreachStatus: z.enum(["open", "ended", "denied", "served", "contacted", "delivered", "replied", "skipped"]).describe("Outreach status scoped to this specific campaign."),
+                      replyClassification: z.enum(["positive", "negative", "neutral"]).nullable().describe("Reply classification when outreachStatus is 'replied'. Null otherwise."),
                       overallRelevance: z.string().nullable().optional(),
                       relevanceRationale: z.string().nullable().optional(),
                       runId: z.string().nullable().optional(),
@@ -1073,7 +1076,10 @@ registry.registerPath({
   path: "/v1/outlets/stats",
   tags: ["Outlets"],
   summary: "Aggregated outlet discovery metrics",
-  description: "Returns outlet discovery stats. Supports filtering by brandId, campaignId, workflowSlug, featureSlug, workflowDynastySlug, featureDynastySlug and optional groupBy. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
+  description: "Returns outlet discovery stats with byOutreachStatus breakdown enriched from journalists-service. " +
+    "All outlets are enriched (not just served ones). " +
+    "Supports filtering by brandId, campaignId, workflowSlug, featureSlug, workflowDynastySlug, featureDynastySlug and optional groupBy. " +
+    "All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
   security: authed,
   request: {
     headers: outletsRequiredHeaders,
@@ -1090,7 +1096,25 @@ registry.registerPath({
     }),
   },
   responses: {
-    200: { description: "Stats (flat or grouped)" },
+    200: {
+      description: "Stats (flat when no groupBy, grouped when groupBy is set). Flat response includes byOutreachStatus — a map of outreach status to count, enriched from journalists-service.",
+      content: {
+        "application/json": {
+          schema: z.object({
+            outletsDiscovered: z.number().describe("Total outlets discovered matching the filters"),
+            avgRelevanceScore: z.number().describe("Average relevance score across matching outlets"),
+            searchQueriesUsed: z.number().describe("Number of distinct search queries used"),
+            byOutreachStatus: z.record(z.number()).optional().describe("Map of outreach status to outlet count. Enriched from journalists-service with DB status fallback."),
+            groups: z.array(z.object({
+              key: z.string(),
+              outletsDiscovered: z.number(),
+              avgRelevanceScore: z.number(),
+              searchQueriesUsed: z.number(),
+            })).optional().describe("Per-dimension breakdown when groupBy is specified"),
+          }).openapi("OutletStatsResponse"),
+        },
+      },
+    },
     401: { description: "Unauthorized", content: errorContent },
   },
 });

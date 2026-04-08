@@ -1407,22 +1407,29 @@
           "relevanceScore": {
             "type": "number"
           },
-          "status": {
+          "outreachStatus": {
             "type": "string",
             "enum": [
               "open",
               "ended",
               "denied",
               "served",
-              "skipped",
-              "buffered",
-              "claimed",
               "contacted",
               "delivered",
               "replied",
-              "bounced"
+              "skipped"
             ],
-            "description": "Consolidated status: most advanced journalist status for this campaign"
+            "description": "Outreach status scoped to this specific campaign."
+          },
+          "replyClassification": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "positive",
+              "negative",
+              "neutral"
+            ],
+            "description": "Reply classification when outreachStatus is 'replied'. Null otherwise."
           },
           "overallRelevance": {
             "type": "string",
@@ -1446,7 +1453,8 @@
           "featureSlug",
           "brandIds",
           "relevanceScore",
-          "status",
+          "outreachStatus",
+          "replyClassification",
           "updatedAt"
         ]
       },
@@ -1470,25 +1478,29 @@
             "type": "string",
             "format": "date-time"
           },
-          "latestStatus": {
+          "outreachStatus": {
             "type": "string",
             "enum": [
               "open",
               "ended",
               "denied",
               "served",
-              "skipped",
-              "buffered",
-              "claimed",
               "contacted",
               "delivered",
               "replied",
-              "bounced"
+              "skipped"
             ],
-            "description": "Consolidated status: most advanced status across all journalists in this outlet"
+            "description": "High watermark outreach status from journalists-service at the query's scope (campaign or brand). Falls back to most advanced DB status when no journalist data exists."
           },
-          "latestRelevanceScore": {
-            "type": "number"
+          "replyClassification": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "positive",
+              "negative",
+              "neutral"
+            ],
+            "description": "Best reply classification when outreachStatus is 'replied'. Null otherwise."
           },
           "campaigns": {
             "type": "array",
@@ -1504,8 +1516,8 @@
           "outletUrl",
           "outletDomain",
           "createdAt",
-          "latestStatus",
-          "latestRelevanceScore",
+          "outreachStatus",
+          "replyClassification",
           "campaigns"
         ]
       },
@@ -1590,6 +1602,62 @@
           "whyRelevant",
           "whyNotRelevant",
           "relevanceScore"
+        ]
+      },
+      "OutletStatsResponse": {
+        "type": "object",
+        "properties": {
+          "outletsDiscovered": {
+            "type": "number",
+            "description": "Total outlets discovered matching the filters"
+          },
+          "avgRelevanceScore": {
+            "type": "number",
+            "description": "Average relevance score across matching outlets"
+          },
+          "searchQueriesUsed": {
+            "type": "number",
+            "description": "Number of distinct search queries used"
+          },
+          "byOutreachStatus": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Map of outreach status to outlet count. Enriched from journalists-service with DB status fallback."
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "outletsDiscovered": {
+                  "type": "number"
+                },
+                "avgRelevanceScore": {
+                  "type": "number"
+                },
+                "searchQueriesUsed": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "key",
+                "outletsDiscovered",
+                "avgRelevanceScore",
+                "searchQueriesUsed"
+              ]
+            },
+            "description": "Per-dimension breakdown when groupBy is specified"
+          }
+        },
+        "required": [
+          "outletsDiscovered",
+          "avgRelevanceScore",
+          "searchQueriesUsed"
         ]
       },
       "OutletStatsCostsResponse": {
@@ -10488,7 +10556,7 @@
           "Outlets"
         ],
         "summary": "List outlets with filters (deduplicated)",
-        "description": "Returns outlets deduplicated by outlet_id with nested campaign data. Each outlet appears once with a campaigns[] array containing per-campaign details. Filter by campaignId, brandId, status, featureSlugs (comma-separated), or featureDynastySlug. Supports pagination on distinct outlets. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
+        "description": "Returns outlets deduplicated by outlet_id with nested campaign data. Each outlet appears once with a campaigns[] array containing per-campaign details. At least one of brandId or campaignId is required (returns 400 otherwise). Outreach status is enriched from journalists-service at the query's scope. Filter by status, featureSlugs (comma-separated), or featureDynastySlug. Supports pagination on distinct outlets. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
@@ -10848,7 +10916,7 @@
           "Outlets"
         ],
         "summary": "Aggregated outlet discovery metrics",
-        "description": "Returns outlet discovery stats. Supports filtering by brandId, campaignId, workflowSlug, featureSlug, workflowDynastySlug, featureDynastySlug and optional groupBy. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
+        "description": "Returns outlet discovery stats with byOutreachStatus breakdown enriched from journalists-service. All outlets are enriched (not just served ones). Supports filtering by brandId, campaignId, workflowSlug, featureSlug, workflowDynastySlug, featureDynastySlug and optional groupBy. All 4 workflow headers (x-campaign-id, x-brand-id, x-feature-slug, x-workflow-slug) are required.",
         "security": [
           {
             "bearerAuth": []
@@ -11046,7 +11114,14 @@
         ],
         "responses": {
           "200": {
-            "description": "Stats (flat or grouped)"
+            "description": "Stats (flat when no groupBy, grouped when groupBy is set). Flat response includes byOutreachStatus — a map of outreach status to count, enriched from journalists-service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OutletStatsResponse"
+                }
+              }
+            }
           },
           "401": {
             "description": "Unauthorized",
