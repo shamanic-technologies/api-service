@@ -1502,6 +1502,10 @@
             ],
             "description": "Best reply classification when outreachStatus is 'replied'. Null otherwise."
           },
+          "relevanceScore": {
+            "type": "number",
+            "description": "Max relevance score across all per-campaign scores for this outlet (same high watermark logic as outreachStatus)."
+          },
           "campaigns": {
             "type": "array",
             "items": {
@@ -1518,6 +1522,7 @@
           "createdAt",
           "outreachStatus",
           "replyClassification",
+          "relevanceScore",
           "campaigns"
         ]
       },
