@@ -251,9 +251,12 @@ describe("Outlets OpenAPI schemas", () => {
     expect(schemaContent).toContain("ListOutletsResponse");
     expect(schemaContent).toContain("OutletWithCampaigns");
     expect(schemaContent).toContain("OutletCampaignEntry");
-    expect(schemaContent).toContain("latestStatus");
-    expect(schemaContent).toContain("latestRelevanceScore");
+    expect(schemaContent).toContain("outreachStatus");
+    expect(schemaContent).toContain("replyClassification");
     expect(schemaContent).toContain("outletDomain");
+    // latestStatus was replaced by outreachStatus in outlets-service v5.0.0
+    expect(schemaContent).not.toContain("latestStatus");
+    expect(schemaContent).not.toContain("latestRelevanceScore");
   });
 
   it("should include full campaign entry fields in OutletCampaignEntry", () => {
@@ -273,22 +276,37 @@ describe("Outlets OpenAPI schemas", () => {
     expect(getOutletsSection).toContain('"skipped"');
   });
 
-  it("latestStatus enum should include journalist-level statuses (contacted, delivered, replied, bounced)", () => {
-    const getOutletsSection = schemaContent.slice(
-      schemaContent.indexOf('path: "/v1/outlets"'),
-      schemaContent.indexOf('path: "/v1/outlets"') + 2000
+  it("outreachStatus enum should include enriched statuses (contacted, delivered, replied, skipped)", () => {
+    // Use ListOutletsResponse block which contains both outlet-level and campaign-level schemas
+    const start = schemaContent.indexOf("ListOutletsResponse");
+    const responseBlock = schemaContent.slice(Math.max(0, start - 3000), start);
+    for (const status of ["open", "ended", "denied", "served", "contacted", "delivered", "replied", "skipped"]) {
+      expect(responseBlock).toContain(`"${status}"`);
+    }
+    // buffered, claimed, bounced removed from outlet-level enum in outlets-service v5.0.0
+    const outreachEnumBlock = responseBlock.slice(
+      responseBlock.indexOf("outreachStatus"),
+      responseBlock.indexOf("outreachStatus") + 400
     );
-    for (const status of ["contacted", "delivered", "replied", "bounced", "buffered", "claimed"]) {
-      expect(getOutletsSection).toContain(`"${status}"`);
+    expect(outreachEnumBlock).not.toContain('"buffered"');
+    expect(outreachEnumBlock).not.toContain('"claimed"');
+    expect(outreachEnumBlock).not.toContain('"bounced"');
+  });
+
+  it("per-campaign outreachStatus enum should match outlet-level enum", () => {
+    const idx = schemaContent.indexOf("OutletCampaignEntry");
+    const entrySection = schemaContent.slice(Math.max(0, idx - 1200), idx + 100);
+    for (const status of ["open", "ended", "denied", "served", "contacted", "delivered", "replied", "skipped"]) {
+      expect(entrySection).toContain(`"${status}"`);
     }
   });
 
-  it("per-campaign status enum should include journalist-level statuses (contacted, delivered, replied, bounced)", () => {
-    const idx = schemaContent.indexOf("OutletCampaignEntry");
-    const entrySection = schemaContent.slice(Math.max(0, idx - 1200), idx + 100);
-    for (const status of ["contacted", "delivered", "replied", "bounced", "buffered", "claimed"]) {
-      expect(entrySection).toContain(`"${status}"`);
-    }
+  it("should have replyClassification at both outlet and campaign level", () => {
+    const start = schemaContent.indexOf("ListOutletsResponse");
+    const responseBlock = schemaContent.slice(Math.max(0, start - 3000), start);
+    const matches = responseBlock.match(/replyClassification/g);
+    expect(matches).not.toBeNull();
+    expect(matches!.length).toBeGreaterThanOrEqual(2);
   });
 
   it("should register GET /v1/outlets/{id}", () => {
