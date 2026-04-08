@@ -1882,7 +1882,7 @@
                     "type": "string"
                   }
                 },
-                "consolidatedStatus": {
+                "outreachStatus": {
                   "type": "string",
                   "enum": [
                     "buffered",
@@ -1894,29 +1894,7 @@
                     "bounced",
                     "skipped"
                   ],
-                  "description": "Consolidated status: email-gateway status when available, otherwise local DB status"
-                },
-                "localStatus": {
-                  "type": "string",
-                  "enum": [
-                    "buffered",
-                    "claimed",
-                    "served",
-                    "contacted",
-                    "skipped"
-                  ],
-                  "description": "Status from the local database"
-                },
-                "emailGatewayStatus": {
-                  "type": "string",
-                  "nullable": true,
-                  "enum": [
-                    "contacted",
-                    "delivered",
-                    "replied",
-                    "bounced"
-                  ],
-                  "description": "Status derived from email-gateway. Null if no email-gateway data."
+                  "description": "Outreach status: email-gateway status when available, otherwise local DB status"
                 },
                 "runId": {
                   "type": "string",
@@ -1936,9 +1914,7 @@
                 "whyRelevant",
                 "whyNotRelevant",
                 "articleUrls",
-                "consolidatedStatus",
-                "localStatus",
-                "emailGatewayStatus",
+                "outreachStatus",
                 "runId"
               ]
             }
@@ -1968,7 +1944,7 @@
             "type": "string",
             "nullable": true
           },
-          "consolidatedStatus": {
+          "outreachStatus": {
             "type": "string",
             "enum": [
               "buffered",
@@ -1980,29 +1956,7 @@
               "bounced",
               "skipped"
             ],
-            "description": "Consolidated status: email-gateway status when available, otherwise local DB status"
-          },
-          "localStatus": {
-            "type": "string",
-            "enum": [
-              "buffered",
-              "claimed",
-              "served",
-              "contacted",
-              "skipped"
-            ],
-            "description": "Status from the local database"
-          },
-          "emailGatewayStatus": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "contacted",
-              "delivered",
-              "replied",
-              "bounced"
-            ],
-            "description": "Status derived from email-gateway. Null if no email-gateway data."
+            "description": "Outreach status: email-gateway status when available, otherwise local DB status"
           },
           "relevanceScore": {
             "type": "string"
@@ -2043,9 +1997,7 @@
           "campaignId",
           "featureSlug",
           "workflowSlug",
-          "consolidatedStatus",
-          "localStatus",
-          "emailGatewayStatus",
+          "outreachStatus",
           "relevanceScore",
           "whyRelevant",
           "whyNotRelevant",
@@ -2564,12 +2516,12 @@
           "totalJournalists": {
             "type": "number"
           },
-          "byStatus": {
+          "byOutreachStatus": {
             "type": "object",
             "additionalProperties": {
               "type": "number"
             },
-            "description": "Map of status to count. Local: buffered, claimed, served, skipped. Email-gateway enriched: contacted, delivered, replied, bounced."
+            "description": "Map of outreach status to count. Statuses: buffered, claimed, served, skipped, contacted, delivered, replied, bounced."
           },
           "groupedBy": {
             "type": "object",
@@ -2579,7 +2531,7 @@
                 "totalJournalists": {
                   "type": "number"
                 },
-                "byStatus": {
+                "byOutreachStatus": {
                   "type": "object",
                   "additionalProperties": {
                     "type": "number"
@@ -2588,7 +2540,7 @@
               },
               "required": [
                 "totalJournalists",
-                "byStatus"
+                "byOutreachStatus"
               ]
             },
             "description": "Per-slug breakdown when groupBy is specified"
@@ -2596,7 +2548,7 @@
         },
         "required": [
           "totalJournalists",
-          "byStatus"
+          "byOutreachStatus"
         ]
       },
       "JournalistStatsCostsResponse": {
