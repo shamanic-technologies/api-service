@@ -1537,6 +1537,7 @@ registry.registerPath({
                   lastName: z.string().nullable(),
                   entityType: z.enum(["individual", "organization"]),
                   outletId: z.string().uuid(),
+                  outreachStatus: z.enum(["buffered", "claimed", "served", "contacted", "delivered", "replied", "bounced", "skipped"]).describe("High watermark outreach status across all campaigns for this journalist"),
                   email: z.string().nullable().describe("Global email (from journalists table apollo_email, fallback to best campaign email)"),
                   apolloPersonId: z.string().nullable(),
                   emailStatus: JournalistEmailStatusSchema,
