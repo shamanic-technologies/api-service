@@ -1538,11 +1538,19 @@
           "total": {
             "type": "integer",
             "description": "Total number of distinct outlets matching filters"
+          },
+          "byOutreachStatus": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Map of outreach status to outlet count across ALL outlets (not affected by pagination). Statuses: open, ended, denied, served, contacted, delivered, replied, skipped."
           }
         },
         "required": [
           "outlets",
-          "total"
+          "total",
+          "byOutreachStatus"
         ]
       },
       "CreateOutletRequest": {
@@ -1800,8 +1808,7 @@
           "limit": {
             "type": "integer",
             "minimum": 0,
-            "maximum": 100,
-            "default": 20
+            "description": "Max results to return. Omit to return all."
           }
         },
         "required": [
@@ -10658,7 +10665,7 @@
             "schema": {
               "type": "integer",
               "nullable": true,
-              "default": 100
+              "description": "Max distinct outlets to return. Omit to return all."
             },
             "required": false,
             "name": "limit",

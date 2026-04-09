@@ -984,7 +984,7 @@ registry.registerPath({
       runId: z.string().optional().openapi({ description: "Filter by run ID (from discover endpoint)" }),
       featureSlugs: z.string().optional().describe("Filter by feature slugs (comma-separated). Use a single slug or multiple."),
       featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs via features-service). Takes priority over featureSlugs."),
-      limit: z.coerce.number().int().optional().default(100),
+      limit: z.coerce.number().int().optional().openapi({ description: "Max distinct outlets to return. Omit to return all." }),
       offset: z.coerce.number().int().optional().default(0),
     }),
   },
@@ -1024,6 +1024,7 @@ registry.registerPath({
                 }).openapi("OutletWithCampaigns"),
               ),
               total: z.number().int().describe("Total number of distinct outlets matching filters"),
+              byOutreachStatus: z.record(z.number()).describe("Map of outreach status to outlet count across ALL outlets (not affected by pagination). Statuses: open, ended, denied, served, contacted, delivered, replied, skipped."),
             })
             .openapi("ListOutletsResponse"),
         },
@@ -1225,7 +1226,7 @@ registry.registerPath({
             .object({
               query: z.string().min(1),
               campaignId: z.string().uuid().optional(),
-              limit: z.number().int().min(0).max(100).optional().default(20),
+              limit: z.number().int().min(0).optional().openapi({ description: "Max results to return. Omit to return all." }),
             })
             .openapi("SearchOutletsRequest"),
         },
