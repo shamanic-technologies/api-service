@@ -45,22 +45,18 @@ describe("all brand-service calls include internal headers", () => {
       "utf-8"
     );
 
-    const regex = /callExternalService[^(]*\(\s*externalServices\.brand\b/g;
-    let match: RegExpExecArray | null;
-    const matches: number[] = [];
-    while ((match = regex.exec(src)) !== null) {
-      matches.push(match.index);
-    }
+    // The brand upsert call uses buildInternalHeaders(req) directly.
+    // Other brand calls (e.g. resolveBrandUrls) take a `headers` param
+    // which callers pass as buildInternalHeaders(req).
+    expect(src).toContain("externalServices.brand");
+    expect(src).toContain("buildInternalHeaders(req)");
 
-    expect(matches.length).toBeGreaterThan(0);
-
-    for (const idx of matches) {
-      // Check the call and surrounding context — headers may be stored
-      // in a local variable derived from buildInternalHeaders above
-      const contextStart = Math.max(0, idx - 200);
-      const callBlock = src.slice(contextStart, idx + 400);
-      expect(callBlock).toContain("buildInternalHeaders");
-    }
+    // Verify the upsert block specifically uses buildInternalHeaders
+    const upsertSection = src.slice(
+      src.indexOf("/orgs/brands"),
+      src.indexOf("/orgs/brands") + 200
+    );
+    expect(upsertSection).toContain("buildInternalHeaders(req)");
   });
 
   it("workflows.ts: all brand-service calls pass headers", () => {

@@ -55,8 +55,18 @@ vi.mock("@distribute/runs-client", () => ({
   getRunsBatch: vi.fn().mockResolvedValue(new Map()),
 }));
 
+vi.mock("../../src/lib/delivery-stats.js", () => ({
+  fetchDeliveryStats: vi.fn().mockResolvedValue({
+    emailsContacted: 0, emailsSent: 4, emailsDelivered: 4, emailsOpened: 2,
+    emailsClicked: 0, emailsReplied: 1, emailsBounced: 0,
+    repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0,
+    repliesOutOfOffice: 0, repliesUnsubscribe: 0,
+  }),
+}));
+
 import express from "express";
 import request from "supertest";
+import { fetchDeliveryStats } from "../../src/lib/delivery-stats.js";
 import campaignsRouter from "../../src/routes/campaigns.js";
 
 function createApp() {
@@ -83,16 +93,9 @@ describe("Campaign stats: emailsGenerated from content-generation service", () =
       if (service.url === "http://mock-emailgen" && path.startsWith("/stats")) {
         return Promise.resolve({ stats: { emailsGenerated: 5 } });
       }
-      // Lead-service /stats
-      if (service.url === "http://mock-lead" && path.startsWith("/stats")) {
+      // Lead-service /orgs/stats
+      if (service.url === "http://mock-lead" && path.startsWith("/orgs/stats")) {
         return Promise.resolve({ served: 3, buffered: 0, skipped: 0 });
-      }
-      // Email-gateway /stats (GET with query params)
-      if (service.url === "http://mock-email" && path.startsWith("/stats")) {
-        return Promise.resolve({
-          transactional: null,
-          broadcast: { emailsSent: 4, emailsDelivered: 4, emailsOpened: 2, emailsClicked: 0, emailsReplied: 1, emailsBounced: 0, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0 },
-        });
       }
       // Campaign-service budget
       if (path === "/stats/batch-budget") {
@@ -129,15 +132,20 @@ describe("Campaign stats: emailsGenerated from content-generation service", () =
   it("should default emailsGenerated to 0 when content-generation fails", async () => {
     const app = createApp();
 
+    // Delivery stats return reduced set for this test
+    vi.mocked(fetchDeliveryStats).mockResolvedValueOnce({
+      emailsContacted: 0, emailsSent: 1, emailsDelivered: 1, emailsOpened: 0,
+      emailsClicked: 0, emailsReplied: 0, emailsBounced: 0,
+      repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0,
+      repliesOutOfOffice: 0, repliesUnsubscribe: 0,
+    });
+
     mockCallExternalService.mockImplementation((service: any, path: string) => {
       if (service.url === "http://mock-emailgen") {
         return Promise.reject(new Error("service unavailable"));
       }
-      if (service.url === "http://mock-lead" && path.startsWith("/stats")) {
+      if (service.url === "http://mock-lead" && path.startsWith("/orgs/stats")) {
         return Promise.resolve({ served: 2, buffered: 0, skipped: 0 });
-      }
-      if (service.url === "http://mock-email" && path.startsWith("/stats")) {
-        return Promise.resolve({ transactional: null, broadcast: { emailsSent: 1, emailsDelivered: 1, emailsOpened: 0, emailsClicked: 0, emailsReplied: 0, emailsBounced: 0, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0 } });
       }
       if (path === "/stats/batch-budget") {
         return Promise.resolve({ results: {} });
