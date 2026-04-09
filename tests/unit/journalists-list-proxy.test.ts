@@ -157,7 +157,7 @@ describe("GET /journalists/list OpenAPI schema", () => {
     expect(op.responses["401"]).toBeDefined();
   });
 
-  it("should include emailStatus, cost, and campaigns[] in response schema", () => {
+  it("should include outreachStatus, emailStatus, cost, and campaigns[] in response schema", () => {
     const ref =
       openapi.paths["/v1/journalists/list"]?.get?.responses?.["200"]?.content?.["application/json"]?.schema?.$ref;
     expect(ref).toBe("#/components/schemas/JournalistListResponse");
@@ -165,6 +165,7 @@ describe("GET /journalists/list OpenAPI schema", () => {
     expect(schema).toBeDefined();
     const journalistProps = schema.properties?.journalists?.items?.properties;
     expect(journalistProps).toBeDefined();
+    expect(journalistProps.outreachStatus).toBeDefined();
     expect(journalistProps.emailStatus).toBeDefined();
     expect(journalistProps.cost).toBeDefined();
     expect(journalistProps.campaigns).toBeDefined();
