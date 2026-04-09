@@ -780,7 +780,7 @@
           "descendantRuns"
         ]
       },
-      "CampaignRunsResponse": {
+      "ListRunsResponse": {
         "type": "object",
         "properties": {
           "runs": {
@@ -788,10 +788,17 @@
             "items": {
               "$ref": "#/components/schemas/RunCostData"
             }
+          },
+          "offset": {
+            "type": "number"
+          },
+          "limit": {
+            "type": "number"
           }
         },
         "required": [
-          "runs"
+          "runs",
+          "offset"
         ]
       },
       "CampaignStatsResponse": {
@@ -9499,13 +9506,13 @@
         }
       }
     },
-    "/v1/campaigns/{id}/runs": {
+    "/v1/runs": {
       "get": {
         "tags": [
-          "Campaigns"
+          "Runs"
         ],
-        "summary": "Get campaign runs",
-        "description": "Get execution history/runs for a campaign",
+        "summary": "List runs",
+        "description": "Transparent proxy to runs-service GET /v1/runs. Supports all runs-service query params: campaignId, brandId, userId, workflowSlug, featureSlug, serviceName, taskName, status, parentRunId, startedAfter, startedBefore, limit, offset.",
         "security": [
           {
             "bearerAuth": []
@@ -9514,13 +9521,109 @@
         "parameters": [
           {
             "schema": {
-              "type": "string",
-              "description": "Campaign ID"
+              "type": "string"
             },
-            "required": true,
-            "description": "Campaign ID",
-            "name": "id",
-            "in": "path"
+            "required": false,
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "userId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "serviceName",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "taskName",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "parentRunId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "startedAfter",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "startedBefore",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "offset",
+            "in": "query"
           },
           {
             "name": "x-org-id",
@@ -9580,11 +9683,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Campaign runs list",
+            "description": "List of runs with cost totals",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CampaignRunsResponse"
+                  "$ref": "#/components/schemas/ListRunsResponse"
                 }
               }
             }
