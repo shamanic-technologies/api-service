@@ -233,8 +233,8 @@ describe("GET /v1/users", () => {
     const url = new URL(call!.url);
     expect(url.searchParams.has("appId")).toBe(false);
     expect(url.searchParams.get("orgId")).toBe("org_test456");
-    expect(url.searchParams.get("limit")).toBe("50");
-    expect(url.searchParams.get("offset")).toBe("0");
+    expect(url.searchParams.has("limit")).toBe(false);
+    expect(url.searchParams.has("offset")).toBe(false);
   });
 
   it("should forward email filter to client-service", async () => {
@@ -258,13 +258,13 @@ describe("GET /v1/users", () => {
     expect(url.searchParams.get("offset")).toBe("20");
   });
 
-  it("should use defaults when limit/offset are omitted", async () => {
+  it("should NOT inject limit/offset defaults when omitted", async () => {
     await request(app).get("/v1/users");
 
-    const call = fetchCalls.find((c) => c.url.includes("/users?"));
+    const call = fetchCalls.find((c) => c.url.includes("/users"));
     const url = new URL(call!.url);
-    expect(url.searchParams.get("limit")).toBe("50");
-    expect(url.searchParams.get("offset")).toBe("0");
+    expect(url.searchParams.has("limit")).toBe(false);
+    expect(url.searchParams.has("offset")).toBe(false);
   });
 
   it("should not send email param when not provided", async () => {

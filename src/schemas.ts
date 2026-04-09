@@ -984,8 +984,8 @@ registry.registerPath({
       runId: z.string().optional().openapi({ description: "Filter by run ID (from discover endpoint)" }),
       featureSlugs: z.string().optional().describe("Filter by feature slugs (comma-separated). Use a single slug or multiple."),
       featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs via features-service). Takes priority over featureSlugs."),
-      limit: z.coerce.number().int().optional().openapi({ description: "Max distinct outlets to return. Omit to return all." }),
-      offset: z.coerce.number().int().optional().default(0),
+      limit: z.coerce.number().int().positive().optional(),
+      offset: z.coerce.number().int().min(0).optional(),
     }),
   },
   responses: {
@@ -1226,7 +1226,7 @@ registry.registerPath({
             .object({
               query: z.string().min(1),
               campaignId: z.string().uuid().optional(),
-              limit: z.number().int().min(0).optional().openapi({ description: "Max results to return. Omit to return all." }),
+              limit: z.number().int().min(0).optional(),
             })
             .openapi("SearchOutletsRequest"),
         },
@@ -5620,8 +5620,8 @@ registry.registerPath({
 export const ListUsersQuerySchema = z
   .object({
     email: z.string().email().optional().describe("Filter by exact email address"),
-    limit: z.coerce.number().int().min(1).max(200).default(50).describe("Max results (1–200, default 50)"),
-    offset: z.coerce.number().int().min(0).default(0).describe("Pagination offset (default 0)"),
+    limit: z.coerce.number().int().positive().optional().describe("Max results to return"),
+    offset: z.coerce.number().int().min(0).optional().describe("Pagination offset"),
   })
   .openapi("ListUsersQuery");
 

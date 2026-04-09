@@ -1807,8 +1807,7 @@
           },
           "limit": {
             "type": "integer",
-            "minimum": 0,
-            "description": "Max results to return. Omit to return all."
+            "minimum": 0
           }
         },
         "required": [
@@ -10664,8 +10663,8 @@
           {
             "schema": {
               "type": "integer",
-              "nullable": true,
-              "description": "Max distinct outlets to return. Omit to return all."
+              "minimum": 0,
+              "exclusiveMinimum": true
             },
             "required": false,
             "name": "limit",
@@ -10675,7 +10674,7 @@
             "schema": {
               "type": "integer",
               "nullable": true,
-              "default": 0
+              "minimum": 0
             },
             "required": false,
             "name": "offset",
@@ -24343,13 +24342,12 @@
           {
             "schema": {
               "type": "integer",
-              "minimum": 1,
-              "maximum": 200,
-              "default": 50,
-              "description": "Max results (1–200, default 50)"
+              "minimum": 0,
+              "exclusiveMinimum": true,
+              "description": "Max results to return"
             },
             "required": false,
-            "description": "Max results (1–200, default 50)",
+            "description": "Max results to return",
             "name": "limit",
             "in": "query"
           },
@@ -24358,11 +24356,10 @@
               "type": "integer",
               "nullable": true,
               "minimum": 0,
-              "default": 0,
-              "description": "Pagination offset (default 0)"
+              "description": "Pagination offset"
             },
             "required": false,
-            "description": "Pagination offset (default 0)",
+            "description": "Pagination offset",
             "name": "offset",
             "in": "query"
           },
