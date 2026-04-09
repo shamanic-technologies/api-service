@@ -295,7 +295,7 @@ describe("Journalists OpenAPI schemas", () => {
     expect(block).toContain('"buffered"');
     expect(block).toContain('"delivered"');
     expect(block).toContain('"replied"');
-    expect(block).not.toContain('"bounced"');
+    expect(block).toContain('"bounced"');
   });
 
   it("should register GET /v1/journalists/stats", () => {

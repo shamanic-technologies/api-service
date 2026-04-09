@@ -1452,7 +1452,7 @@ registry.registerPath({
                   whyRelevant: z.string().nullable(),
                   whyNotRelevant: z.string().nullable(),
                   articleUrls: z.array(z.string()).nullable(),
-                  outreachStatus: z.enum(["open", "ended", "denied", "buffered", "claimed", "served", "contacted", "delivered", "replied", "skipped"]).describe("Outreach status: email-gateway status when available, otherwise local DB status"),
+                  outreachStatus: z.enum(["buffered", "claimed", "served", "contacted", "delivered", "replied", "bounced", "skipped"]).describe("Outreach status: email-gateway status when available, otherwise local DB status"),
                   runId: z.string().uuid().nullable().describe("The discovery run that created this journalist entry"),
                 }).passthrough(),
               ),
@@ -1537,7 +1537,7 @@ registry.registerPath({
                   lastName: z.string().nullable().openapi({ example: "Perez" }),
                   entityType: z.enum(["individual", "organization"]).openapi({ example: "individual" }),
                   outletId: z.string().uuid().openapi({ example: "f7e6d5c4-b3a2-4190-8877-665544332211" }),
-                  outreachStatus: z.enum(["open", "ended", "denied", "buffered", "claimed", "served", "contacted", "delivered", "replied", "skipped"]).openapi({ example: "contacted" }).describe("High watermark outreach status across all campaigns for this journalist. Represents the most advanced status reached in any campaign (e.g. if campaign A is 'served' and campaign B is 'replied', this will be 'replied')."),
+                  outreachStatus: z.enum(["buffered", "claimed", "served", "contacted", "delivered", "replied", "bounced", "skipped"]).openapi({ example: "contacted" }).describe("High watermark outreach status across all campaigns for this journalist. Represents the most advanced status reached in any campaign (e.g. if campaign A is 'served' and campaign B is 'replied', this will be 'replied')."),
                   email: z.string().nullable().describe("Global email (from journalists table apollo_email, fallback to best campaign email)"),
                   apolloPersonId: z.string().nullable(),
                   emailStatus: JournalistEmailStatusSchema,
@@ -1548,7 +1548,7 @@ registry.registerPath({
                       campaignId: z.string().uuid(),
                       featureSlug: z.string().nullable(),
                       workflowSlug: z.string().nullable(),
-                      outreachStatus: z.enum(["open", "ended", "denied", "buffered", "claimed", "served", "contacted", "delivered", "replied", "skipped"]).openapi({ example: "served" }).describe("Outreach status for this specific campaign. Email-gateway status when available, otherwise local DB status."),
+                      outreachStatus: z.enum(["buffered", "claimed", "served", "contacted", "delivered", "replied", "bounced", "skipped"]).openapi({ example: "served" }).describe("Outreach status for this specific campaign. Email-gateway status when available, otherwise local DB status."),
                       relevanceScore: z.string(),
                       whyRelevant: z.string(),
                       whyNotRelevant: z.string(),
@@ -1715,7 +1715,7 @@ registry.registerPath({
   tags: ["Journalists"],
   summary: "Get journalist stats with dynasty-aware filtering and grouping",
   description:
-    "Returns journalist counts grouped by outreach status (open, ended, denied, buffered, claimed, served, skipped, contacted, delivered, replied). " +
+    "Returns journalist counts grouped by outreach status (buffered, claimed, served, skipped, contacted, delivered, replied, bounced). " +
     "Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. " +
     "Optional groupBy returns per-slug breakdowns.",
   security: authed,
@@ -1727,7 +1727,7 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             totalJournalists: z.number(),
-            byOutreachStatus: z.record(z.number()).describe("Map of outreach status to count. Statuses: open, ended, denied, buffered, claimed, served, skipped, contacted, delivered, replied."),
+            byOutreachStatus: z.record(z.number()).describe("Map of outreach status to count. Statuses: buffered, claimed, served, skipped, contacted, delivered, replied, bounced."),
             groupedBy: z.record(z.object({
               totalJournalists: z.number(),
               byOutreachStatus: z.record(z.number()).describe("Map of outreach status to count for this group"),
