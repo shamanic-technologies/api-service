@@ -2029,7 +2029,8 @@
               "bounced",
               "skipped"
             ],
-            "description": "Outreach status: email-gateway status when available, otherwise local DB status"
+            "description": "Outreach status for this specific campaign. Email-gateway status when available, otherwise local DB status.",
+            "example": "served"
           },
           "relevanceScore": {
             "type": "string"
@@ -2091,29 +2092,36 @@
               "properties": {
                 "journalistId": {
                   "type": "string",
-                  "format": "uuid"
+                  "format": "uuid",
+                  "example": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d"
                 },
                 "journalistName": {
-                  "type": "string"
+                  "type": "string",
+                  "description": "Full display name of the journalist",
+                  "example": "Sarah Perez"
                 },
                 "firstName": {
                   "type": "string",
-                  "nullable": true
+                  "nullable": true,
+                  "example": "Sarah"
                 },
                 "lastName": {
                   "type": "string",
-                  "nullable": true
+                  "nullable": true,
+                  "example": "Perez"
                 },
                 "entityType": {
                   "type": "string",
                   "enum": [
                     "individual",
                     "organization"
-                  ]
+                  ],
+                  "example": "individual"
                 },
                 "outletId": {
                   "type": "string",
-                  "format": "uuid"
+                  "format": "uuid",
+                  "example": "f7e6d5c4-b3a2-4190-8877-665544332211"
                 },
                 "outreachStatus": {
                   "type": "string",
@@ -2127,7 +2135,8 @@
                     "bounced",
                     "skipped"
                   ],
-                  "description": "High watermark outreach status across all campaigns for this journalist"
+                  "description": "High watermark outreach status across all campaigns for this journalist. Represents the most advanced status reached in any campaign (e.g. if campaign A is 'served' and campaign B is 'replied', this will be 'replied').",
+                  "example": "contacted"
                 },
                 "email": {
                   "type": "string",
