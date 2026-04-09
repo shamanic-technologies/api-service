@@ -437,31 +437,6 @@ router.post("/campaigns/:id/stop", authenticate, requireOrg, requireUser, async 
   }
 });
 
-/**
- * GET /v1/campaigns/:id/runs
- * Get campaign runs/history
- */
-router.get("/campaigns/:id/runs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { id } = req.params;
-    const qs = new URLSearchParams({ campaignId: id });
-    // Forward pagination params from the client
-    if (req.query.limit) qs.set("limit", String(req.query.limit));
-    if (req.query.offset) qs.set("offset", String(req.query.offset));
-
-    const result = await callExternalService(
-      externalServices.runs,
-      `/v1/runs?${qs.toString()}`,
-      {
-        headers: buildInternalHeaders(req),
-      }
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("[api-service] Get campaign runs error:", error);
-    res.status(500).json({ error: error.message || "Failed to get campaign runs" });
-  }
-});
 
 /**
  * GET /v1/campaigns/:id/stats
