@@ -280,23 +280,21 @@ describe("Outlets OpenAPI schemas", () => {
     // Use ListOutletsResponse block which contains both outlet-level and campaign-level schemas
     const start = schemaContent.indexOf("ListOutletsResponse");
     const responseBlock = schemaContent.slice(Math.max(0, start - 3000), start);
-    for (const status of ["open", "ended", "denied", "served", "contacted", "delivered", "replied", "skipped"]) {
+    for (const status of ["open", "ended", "denied", "buffered", "claimed", "served", "contacted", "delivered", "replied", "skipped"]) {
       expect(responseBlock).toContain(`"${status}"`);
     }
-    // buffered, claimed, bounced removed from outlet-level enum in outlets-service v5.0.0
+    // bounced removed from outlet-level enum
     const outreachEnumBlock = responseBlock.slice(
       responseBlock.indexOf("outreachStatus"),
       responseBlock.indexOf("outreachStatus") + 400
     );
-    expect(outreachEnumBlock).not.toContain('"buffered"');
-    expect(outreachEnumBlock).not.toContain('"claimed"');
     expect(outreachEnumBlock).not.toContain('"bounced"');
   });
 
   it("per-campaign outreachStatus enum should match outlet-level enum", () => {
     const idx = schemaContent.indexOf("OutletCampaignEntry");
     const entrySection = schemaContent.slice(Math.max(0, idx - 1200), idx + 100);
-    for (const status of ["open", "ended", "denied", "served", "contacted", "delivered", "replied", "skipped"]) {
+    for (const status of ["open", "ended", "denied", "buffered", "claimed", "served", "contacted", "delivered", "replied", "skipped"]) {
       expect(entrySection).toContain(`"${status}"`);
     }
   });

@@ -1413,6 +1413,8 @@
               "open",
               "ended",
               "denied",
+              "buffered",
+              "claimed",
               "served",
               "contacted",
               "delivered",
@@ -1484,6 +1486,8 @@
               "open",
               "ended",
               "denied",
+              "buffered",
+              "claimed",
               "served",
               "contacted",
               "delivered",
@@ -1956,13 +1960,15 @@
                 "outreachStatus": {
                   "type": "string",
                   "enum": [
+                    "open",
+                    "ended",
+                    "denied",
                     "buffered",
                     "claimed",
                     "served",
                     "contacted",
                     "delivered",
                     "replied",
-                    "bounced",
                     "skipped"
                   ],
                   "description": "Outreach status: email-gateway status when available, otherwise local DB status"
@@ -2018,13 +2024,15 @@
           "outreachStatus": {
             "type": "string",
             "enum": [
+              "open",
+              "ended",
+              "denied",
               "buffered",
               "claimed",
               "served",
               "contacted",
               "delivered",
               "replied",
-              "bounced",
               "skipped"
             ],
             "description": "Outreach status for this specific campaign. Email-gateway status when available, otherwise local DB status.",
@@ -2124,13 +2132,15 @@
                 "outreachStatus": {
                   "type": "string",
                   "enum": [
+                    "open",
+                    "ended",
+                    "denied",
                     "buffered",
                     "claimed",
                     "served",
                     "contacted",
                     "delivered",
                     "replied",
-                    "bounced",
                     "skipped"
                   ],
                   "description": "High watermark outreach status across all campaigns for this journalist. Represents the most advanced status reached in any campaign (e.g. if campaign A is 'served' and campaign B is 'replied', this will be 'replied').",
@@ -2616,7 +2626,7 @@
             "additionalProperties": {
               "type": "number"
             },
-            "description": "Map of outreach status to count. Statuses: buffered, claimed, served, skipped, contacted, delivered, replied, bounced."
+            "description": "Map of outreach status to count. Statuses: open, ended, denied, buffered, claimed, served, skipped, contacted, delivered, replied."
           },
           "groupedBy": {
             "type": "object",
@@ -13235,7 +13245,7 @@
           "Journalists"
         ],
         "summary": "Get journalist stats with dynasty-aware filtering and grouping",
-        "description": "Returns journalist counts grouped by outreach status (buffered, claimed, served, skipped, contacted, delivered, replied, bounced). Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. Optional groupBy returns per-slug breakdowns.",
+        "description": "Returns journalist counts grouped by outreach status (open, ended, denied, buffered, claimed, served, skipped, contacted, delivered, replied). Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. Optional groupBy returns per-slug breakdowns.",
         "security": [
           {
             "bearerAuth": []
