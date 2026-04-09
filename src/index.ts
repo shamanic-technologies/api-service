@@ -1,4 +1,5 @@
 // Sentry is loaded via --import flag in package.json start script
+// v0.1.4
 
 // ── Prefix all console output with [api-service] ────────────────────────────
 // Shared Railway log streams mix output from multiple containers;
