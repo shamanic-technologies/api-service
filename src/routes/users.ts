@@ -46,11 +46,9 @@ router.get("/users", authenticate, requireOrg, async (req: AuthenticatedRequest,
     }
 
     const { email, limit, offset } = parsed.data;
-    const params = new URLSearchParams({
-      orgId: req.orgId!,
-      limit: String(limit),
-      offset: String(offset),
-    });
+    const params = new URLSearchParams({ orgId: req.orgId! });
+    if (limit !== undefined) params.set("limit", String(limit));
+    if (offset !== undefined) params.set("offset", String(offset));
     if (email) params.set("email", email);
 
     const result = await callExternalService(
