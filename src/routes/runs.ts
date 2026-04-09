@@ -6,6 +6,29 @@ import { buildInternalHeaders } from "../lib/internal-headers.js";
 const router = Router();
 
 /**
+ * GET /v1/runs
+ * List runs from runs-service. Transparent proxy — all query params forwarded as-is.
+ */
+router.get("/runs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const qs = new URLSearchParams();
+    for (const [key, val] of Object.entries(req.query)) {
+      if (val != null) qs.set(key, String(val));
+    }
+
+    const result = await callExternalService(
+      externalServices.runs,
+      `/v1/runs?${qs.toString()}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] List runs error:", error);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to list runs" });
+  }
+});
+
+/**
  * GET /v1/runs/stats/costs
  * Get cost stats from runs-service.
  *

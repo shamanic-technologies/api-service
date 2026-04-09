@@ -566,20 +566,42 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/campaigns/{id}/runs",
-  tags: ["Campaigns"],
-  summary: "Get campaign runs",
-  description: "Get execution history/runs for a campaign",
+  path: "/v1/runs",
+  tags: ["Runs"],
+  summary: "List runs",
+  description:
+    "Transparent proxy to runs-service GET /v1/runs. " +
+    "Supports all runs-service query params: campaignId, brandId, userId, " +
+    "workflowSlug, featureSlug, serviceName, taskName, status, parentRunId, " +
+    "startedAfter, startedBefore, limit, offset.",
   security: authed,
-  request: { params: CampaignIdParam },
+  request: {
+    query: z.object({
+      campaignId: z.string().optional(),
+      brandId: z.string().optional(),
+      userId: z.string().uuid().optional(),
+      workflowSlug: z.string().optional(),
+      featureSlug: z.string().optional(),
+      serviceName: z.string().optional(),
+      taskName: z.string().optional(),
+      status: z.string().optional(),
+      parentRunId: z.string().uuid().optional(),
+      startedAfter: z.string().optional(),
+      startedBefore: z.string().optional(),
+      limit: z.string().optional(),
+      offset: z.string().optional(),
+    }).openapi("ListRunsQuery"),
+  },
   responses: {
     200: {
-      description: "Campaign runs list",
+      description: "List of runs with cost totals",
       content: {
         "application/json": {
           schema: z.object({
             runs: z.array(RunCostDataSchema),
-          }).openapi("CampaignRunsResponse"),
+            offset: z.number(),
+            limit: z.number().optional(),
+          }).openapi("ListRunsResponse"),
         },
       },
     },
