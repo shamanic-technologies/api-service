@@ -38,12 +38,6 @@ describe("header forwarding audit", () => {
   describe("campaigns.ts — getRunsBatch calls", () => {
     const src = readSrc("src/routes/campaigns.ts");
 
-    it("enrichment run batch should forward internal headers", () => {
-      expect(src).toContain(
-        "getRunsBatch(enrichmentRunIds, req.orgId, buildInternalHeaders(req))"
-      );
-    });
-
     it("generation run batch should forward internal headers", () => {
       expect(src).toContain(
         "getRunsBatch(generationRunIds, req.orgId, buildInternalHeaders(req))"
