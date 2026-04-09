@@ -126,14 +126,14 @@ describe("auth middleware — x-brand-id CSV forwarding", () => {
 
 describe("buildInternalHeaders — CSV x-brand-id forwarding", () => {
   it("should forward CSV brand ID value as-is in x-brand-id header", async () => {
-    // Read the source to verify buildInternalHeaders forwards brandId
+    // Read the source to verify buildInternalHeaders forwards brandId via IDENTITY_QUERY_MAP
     const fs = await import("fs");
     const path = await import("path");
     const src = fs.readFileSync(
       path.join(__dirname, "../../src/lib/internal-headers.ts"),
       "utf-8",
     );
-    // Verify that brandId is forwarded as x-brand-id
-    expect(src).toContain('headers["x-brand-id"] = req.brandId');
+    // brandId is forwarded as x-brand-id via the IDENTITY_QUERY_MAP loop
+    expect(src).toContain('["x-brand-id", "brandId", "brandId"]');
   });
 });
