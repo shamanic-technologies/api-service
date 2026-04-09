@@ -2115,6 +2115,20 @@
                   "type": "string",
                   "format": "uuid"
                 },
+                "outreachStatus": {
+                  "type": "string",
+                  "enum": [
+                    "buffered",
+                    "claimed",
+                    "served",
+                    "contacted",
+                    "delivered",
+                    "replied",
+                    "bounced",
+                    "skipped"
+                  ],
+                  "description": "High watermark outreach status across all campaigns for this journalist"
+                },
                 "email": {
                   "type": "string",
                   "nullable": true,
@@ -2429,6 +2443,7 @@
                 "lastName",
                 "entityType",
                 "outletId",
+                "outreachStatus",
                 "email",
                 "apolloPersonId",
                 "emailStatus",
