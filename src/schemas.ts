@@ -3068,15 +3068,6 @@ registry.registerPath({
 // BRAND
 // ===================================================================
 
-export const BrandScrapeRequestSchema = z
-  .object({
-    url: z.string().min(1).describe("Brand website URL to scrape"),
-    skipCache: z
-      .boolean()
-      .optional()
-      .describe("Skip cached results and force re-scrape"),
-  })
-  .openapi("BrandScrapeRequest");
 
 export const BrandUpsertRequestSchema = z
   .object({
@@ -3143,23 +3134,31 @@ const CachedFieldSchema = z.object({
 
 registry.registerPath({
   method: "post",
-  path: "/v1/brand/scrape",
-  tags: ["Brand"],
-  summary: "Scrape brand info",
+  path: "/v1/scraping/scrape",
+  tags: ["Scraping"],
+  summary: "Scrape a URL",
   description:
-    "Scrape brand information from a URL using the scraping service",
+    "Transparent proxy to scraping-service POST /scrape. Body is forwarded as-is.",
   security: authed,
   request: {
     body: {
-      content: { "application/json": { schema: BrandScrapeRequestSchema } },
+      content: {
+        "application/json": {
+          schema: z.object({
+            url: z.string().min(1).describe("URL to scrape"),
+            skipCache: z.boolean().optional().describe("Skip cached results and force re-scrape"),
+            provider: z.enum(["scrape-do", "firecrawl"]).optional().describe("Scraping provider (default: scrape-do)"),
+          }).passthrough().openapi("ScrapeRequest"),
+        },
+      },
     },
   },
   responses: {
     200: {
-      description: "Scraped brand information",
+      description: "Scrape result",
       content: {
         "application/json": {
-          schema: z.object({ brand: BrandDetailSchema }).openapi("BrandScrapeResponse"),
+          schema: z.object({}).passthrough().openapi("ScrapeResponse"),
         },
       },
     },
@@ -3171,22 +3170,22 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/brand/by-url",
-  tags: ["Brand"],
-  summary: "Get brand by URL",
-  description: "Get cached brand info by website URL",
+  path: "/v1/scraping/scrape/by-url",
+  tags: ["Scraping"],
+  summary: "Get scrape result by URL",
+  description: "Transparent proxy to scraping-service GET /scrape/by-url",
   security: authed,
   request: {
     query: z.object({
-      url: z.string().describe("Brand website URL"),
+      url: z.string().describe("URL to look up"),
     }),
   },
   responses: {
     200: {
-      description: "Cached brand information",
+      description: "Cached scrape result",
       content: {
         "application/json": {
-          schema: z.object({ brand: BrandDetailSchema }).openapi("BrandByUrlResponse"),
+          schema: z.object({}).passthrough().openapi("ScrapeByUrlResponse"),
         },
       },
     },
@@ -3627,20 +3626,20 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/brand/{id}",
-  tags: ["Brand"],
-  summary: "Get brand scrape result",
-  description: "Get brand scrape result by scrape ID",
+  path: "/v1/scraping/scrape/{id}",
+  tags: ["Scraping"],
+  summary: "Get scrape result by ID",
+  description: "Transparent proxy to scraping-service GET /scrape/:id",
   security: authed,
   request: {
     params: z.object({ id: z.string().describe("Scrape ID") }),
   },
   responses: {
     200: {
-      description: "Brand scrape result",
+      description: "Scrape result",
       content: {
         "application/json": {
-          schema: z.object({ brand: BrandDetailSchema }).openapi("BrandScrapeResultResponse"),
+          schema: z.object({}).passthrough().openapi("ScrapeResultResponse"),
         },
       },
     },

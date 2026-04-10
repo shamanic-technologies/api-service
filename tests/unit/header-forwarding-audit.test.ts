@@ -18,17 +18,29 @@ const readSrc = (relativePath: string) =>
   fs.readFileSync(path.join(__dirname, "../..", relativePath), "utf-8");
 
 describe("header forwarding audit", () => {
-  describe("brand.ts — scraping service calls", () => {
-    const src = readSrc("src/routes/brand.ts");
+  describe("scraping.ts — scraping service calls", () => {
+    const src = readSrc("src/routes/scraping.ts");
 
     it("POST /scrape should forward internal headers", () => {
-      // Find the callExternalService block for scraping /scrape POST
       const scrapingMatch = src.match(
         /callExternalService\(\s*externalServices\.scraping,\s*"\/scrape",[\s\S]*?\)/
       );
       expect(scrapingMatch).not.toBeNull();
       expect(scrapingMatch![0]).toContain("headers: buildInternalHeaders(req)");
     });
+
+    it("POST /scrape should forward req.body transparently", () => {
+      // Match the full callExternalService block including nested objects
+      const scrapingBlock = src.match(
+        /callExternalService\(\s*externalServices\.scraping,\s*"\/scrape",\s*\{[\s\S]*?\}\s*\)/
+      );
+      expect(scrapingBlock).not.toBeNull();
+      expect(scrapingBlock![0]).toContain("body: req.body");
+    });
+  });
+
+  describe("brand.ts — brand service calls", () => {
+    const src = readSrc("src/routes/brand.ts");
 
     it("getRunsBatch should forward internal headers", () => {
       expect(src).toContain("getRunsBatch(runIds, req.orgId, buildInternalHeaders(req))");
@@ -110,6 +122,7 @@ describe("header forwarding audit", () => {
     const routeFiles = [
       "src/routes/campaigns.ts",
       "src/routes/brand.ts",
+      "src/routes/scraping.ts",
       "src/routes/workflows.ts",
       "src/routes/leads.ts",
       "src/routes/chat.ts",

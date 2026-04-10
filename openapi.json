@@ -45,7 +45,11 @@
     },
     {
       "name": "Brand",
-      "description": "Brand scraping and management"
+      "description": "Brand management"
+    },
+    {
+      "name": "Scraping",
+      "description": "URL scraping via scraping-service"
     },
     {
       "name": "Activity",
@@ -4468,6 +4472,39 @@
           "toEmail"
         ]
       },
+      "ScrapeResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "ScrapeRequest": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "description": "URL to scrape"
+          },
+          "skipCache": {
+            "type": "boolean",
+            "description": "Skip cached results and force re-scrape"
+          },
+          "provider": {
+            "type": "string",
+            "enum": [
+              "scrape-do",
+              "firecrawl"
+            ],
+            "description": "Scraping provider (default: scrape-do)"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      },
+      "ScrapeByUrlResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "BrandSummary": {
         "type": "object",
         "properties": {
@@ -4522,6 +4559,20 @@
           "elevatorPitch"
         ]
       },
+      "ListBrandsResponse": {
+        "type": "object",
+        "properties": {
+          "brands": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BrandSummary"
+            }
+          }
+        },
+        "required": [
+          "brands"
+        ]
+      },
       "BrandDetail": {
         "allOf": [
           {
@@ -4558,59 +4609,6 @@
               "categories"
             ]
           }
-        ]
-      },
-      "BrandScrapeResponse": {
-        "type": "object",
-        "properties": {
-          "brand": {
-            "$ref": "#/components/schemas/BrandDetail"
-          }
-        },
-        "required": [
-          "brand"
-        ]
-      },
-      "BrandScrapeRequest": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Brand website URL to scrape"
-          },
-          "skipCache": {
-            "type": "boolean",
-            "description": "Skip cached results and force re-scrape"
-          }
-        },
-        "required": [
-          "url"
-        ]
-      },
-      "BrandByUrlResponse": {
-        "type": "object",
-        "properties": {
-          "brand": {
-            "$ref": "#/components/schemas/BrandDetail"
-          }
-        },
-        "required": [
-          "brand"
-        ]
-      },
-      "ListBrandsResponse": {
-        "type": "object",
-        "properties": {
-          "brands": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/BrandSummary"
-            }
-          }
-        },
-        "required": [
-          "brands"
         ]
       },
       "GetBrandResponse": {
@@ -5271,16 +5269,9 @@
           "groups"
         ]
       },
-      "BrandScrapeResultResponse": {
+      "ScrapeResultResponse": {
         "type": "object",
-        "properties": {
-          "brand": {
-            "$ref": "#/components/schemas/BrandDetail"
-          }
-        },
-        "required": [
-          "brand"
-        ]
+        "properties": {}
       },
       "ListWorkflowsResponse": {
         "type": "object",
@@ -17246,13 +17237,13 @@
         ]
       }
     },
-    "/v1/brand/scrape": {
+    "/v1/scraping/scrape": {
       "post": {
         "tags": [
-          "Brand"
+          "Scraping"
         ],
-        "summary": "Scrape brand info",
-        "description": "Scrape brand information from a URL using the scraping service",
+        "summary": "Scrape a URL",
+        "description": "Transparent proxy to scraping-service POST /scrape. Body is forwarded as-is.",
         "security": [
           {
             "bearerAuth": []
@@ -17262,18 +17253,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BrandScrapeRequest"
+                "$ref": "#/components/schemas/ScrapeRequest"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Scraped brand information",
+            "description": "Scrape result",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BrandScrapeResponse"
+                  "$ref": "#/components/schemas/ScrapeResponse"
                 }
               }
             }
@@ -17368,13 +17359,13 @@
         ]
       }
     },
-    "/v1/brand/by-url": {
+    "/v1/scraping/scrape/by-url": {
       "get": {
         "tags": [
-          "Brand"
+          "Scraping"
         ],
-        "summary": "Get brand by URL",
-        "description": "Get cached brand info by website URL",
+        "summary": "Get scrape result by URL",
+        "description": "Transparent proxy to scraping-service GET /scrape/by-url",
         "security": [
           {
             "bearerAuth": []
@@ -17384,10 +17375,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Brand website URL"
+              "description": "URL to look up"
             },
             "required": true,
-            "description": "Brand website URL",
+            "description": "URL to look up",
             "name": "url",
             "in": "query"
           },
@@ -17449,11 +17440,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Cached brand information",
+            "description": "Cached scrape result",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BrandByUrlResponse"
+                  "$ref": "#/components/schemas/ScrapeByUrlResponse"
                 }
               }
             }
@@ -18918,13 +18909,13 @@
         }
       }
     },
-    "/v1/brand/{id}": {
+    "/v1/scraping/scrape/{id}": {
       "get": {
         "tags": [
-          "Brand"
+          "Scraping"
         ],
-        "summary": "Get brand scrape result",
-        "description": "Get brand scrape result by scrape ID",
+        "summary": "Get scrape result by ID",
+        "description": "Transparent proxy to scraping-service GET /scrape/:id",
         "security": [
           {
             "bearerAuth": []
@@ -18999,11 +18990,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Brand scrape result",
+            "description": "Scrape result",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BrandScrapeResultResponse"
+                  "$ref": "#/components/schemas/ScrapeResultResponse"
                 }
               }
             }

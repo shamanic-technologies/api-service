@@ -2,45 +2,10 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
-import { BrandScrapeRequestSchema, BrandUpsertRequestSchema, IcpSuggestionRequestSchema } from "../schemas.js";
+import { BrandUpsertRequestSchema, IcpSuggestionRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
-
-/**
- * POST /v1/brand/scrape
- * Scrape brand information from a URL using scraping-service
- */
-router.post("/brand/scrape", authenticate, async (req: AuthenticatedRequest, res) => {
-  try {
-    const parsed = BrandScrapeRequestSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
-    }
-    const { url, skipCache } = parsed.data;
-
-    const result = await callExternalService(
-      externalServices.scraping,
-      "/scrape",
-      {
-        method: "POST",
-        headers: buildInternalHeaders(req),
-        body: {
-          url,
-          sourceService: "api-service",
-          sourceOrgId: req.orgId,
-          userId: req.userId,
-          skipCache,
-        },
-      }
-    );
-
-    res.json(result);
-  } catch (error: any) {
-    console.error("Brand scrape error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to scrape brand" });
-  }
-});
 
 /**
  * POST /v1/brands
@@ -71,33 +36,6 @@ router.post("/brands", authenticate, requireOrg, requireUser, async (req: Authen
   } catch (error: any) {
     console.error("Brand upsert error:", error.message);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to upsert brand" });
-  }
-});
-
-/**
- * GET /v1/brand/by-url
- * Get cached brand info by URL
- */
-router.get("/brand/by-url", authenticate, async (req: AuthenticatedRequest, res) => {
-  try {
-    const url = req.query.url as string;
-
-    if (!url) {
-      return res.status(400).json({ error: "url query param is required" });
-    }
-
-    const params = new URLSearchParams({ url });
-
-    const result = await callExternalService(
-      externalServices.scraping,
-      `/scrape/by-url?${params}`,
-      { headers: buildInternalHeaders(req) },
-    );
-
-    res.json(result);
-  } catch (error: any) {
-    console.error("Get brand error:", error);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand" });
   }
 });
 
@@ -347,27 +285,6 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
   } catch (error: any) {
     console.error("Get brand runs error:", error);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand runs" });
-  }
-});
-
-/**
- * GET /v1/brand/:id
- * Get brand scrape result by ID
- */
-router.get("/brand/:id", authenticate, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { id } = req.params;
-
-    const result = await callExternalService(
-      externalServices.scraping,
-      `/scrape/${id}`,
-      { headers: buildInternalHeaders(req) },
-    );
-
-    res.json(result);
-  } catch (error: any) {
-    console.error("Get brand error:", error);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand" });
   }
 });
 
