@@ -84,14 +84,14 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
           transactional: {
             emailsSent: 50, emailsDelivered: 48, emailsOpened: 30,
             emailsClicked: 5, emailsReplied: 10, emailsBounced: 2,
-            repliesWillingToMeet: 3, repliesInterested: 2,
+            repliesMeetingBooked: 3, repliesInterested: 2,
             repliesNotInterested: 1, repliesOutOfOffice: 1,
             repliesUnsubscribe: 0, recipients: 50,
           },
           broadcast: {
             emailsSent: 6, emailsDelivered: 6, emailsOpened: 4,
             emailsClicked: 0, emailsReplied: 1, emailsBounced: 0,
-            repliesWillingToMeet: 0, repliesInterested: 0,
+            repliesMeetingBooked: 0, repliesInterested: 0,
             repliesNotInterested: 1, repliesOutOfOffice: 0,
             repliesUnsubscribe: 0, recipients: 6,
           },
@@ -133,7 +133,7 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
       transactional: {
         emailsSent: 50, emailsDelivered: 48, emailsOpened: 30,
         emailsClicked: 5, emailsReplied: 10, emailsBounced: 2,
-        repliesWillingToMeet: 3, repliesInterested: 2,
+        repliesMeetingBooked: 3, repliesInterested: 2,
         repliesNotInterested: 1, repliesOutOfOffice: 1,
         repliesUnsubscribe: 0, recipients: 50,
       },
@@ -157,7 +157,7 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
       broadcast: {
         emailsSent: 3, emailsDelivered: 3, emailsOpened: 1,
         emailsClicked: 0, emailsReplied: 0, emailsBounced: 0,
-        repliesWillingToMeet: 0, repliesInterested: 0,
+        repliesMeetingBooked: 0, repliesInterested: 0,
         repliesNotInterested: 0, repliesOutOfOffice: 0,
         repliesUnsubscribe: 0, recipients: 3,
       },

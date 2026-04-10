@@ -59,7 +59,7 @@ vi.mock("../../src/lib/delivery-stats.js", () => ({
   fetchDeliveryStats: vi.fn().mockResolvedValue({
     emailsContacted: 0, emailsSent: 4, emailsDelivered: 4, emailsOpened: 2,
     emailsClicked: 0, emailsReplied: 1, emailsBounced: 0,
-    repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0,
+    repliesMeetingBooked: 0, repliesInterested: 0, repliesNotInterested: 0,
     repliesOutOfOffice: 0, repliesUnsubscribe: 0,
   }),
 }));
@@ -136,7 +136,7 @@ describe("Campaign stats: emailsGenerated from content-generation service", () =
     vi.mocked(fetchDeliveryStats).mockResolvedValueOnce({
       emailsContacted: 0, emailsSent: 1, emailsDelivered: 1, emailsOpened: 0,
       emailsClicked: 0, emailsReplied: 0, emailsBounced: 0,
-      repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0,
+      repliesMeetingBooked: 0, repliesInterested: 0, repliesNotInterested: 0,
       repliesOutOfOffice: 0, repliesUnsubscribe: 0,
     });
 
