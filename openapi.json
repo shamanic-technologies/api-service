@@ -1545,11 +1545,19 @@
           "total": {
             "type": "integer",
             "description": "Total number of distinct outlets matching filters"
+          },
+          "byOutreachStatus": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Map of outreach status to outlet count across ALL outlets (not affected by pagination). Statuses: open, ended, denied, served, contacted, delivered, replied, skipped."
           }
         },
         "required": [
           "outlets",
-          "total"
+          "total",
+          "byOutreachStatus"
         ]
       },
       "CreateOutletRequest": {

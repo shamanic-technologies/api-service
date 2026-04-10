@@ -1046,6 +1046,7 @@ registry.registerPath({
                 }).openapi("OutletWithCampaigns"),
               ),
               total: z.number().int().describe("Total number of distinct outlets matching filters"),
+              byOutreachStatus: z.record(z.number()).describe("Map of outreach status to outlet count across ALL outlets (not affected by pagination). Statuses: open, ended, denied, served, contacted, delivered, replied, skipped."),
             })
             .openapi("ListOutletsResponse"),
         },
