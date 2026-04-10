@@ -4643,12 +4643,18 @@
                 "name": {
                   "type": "string",
                   "description": "Brand display name"
+                },
+                "brandUrl": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Full brand website URL (e.g. https://acme.com)"
                 }
               },
               "required": [
                 "brandId",
                 "domain",
-                "name"
+                "name",
+                "brandUrl"
               ]
             },
             "description": "Metadata for each brand included in the extraction"
@@ -4926,12 +4932,18 @@
                 "name": {
                   "type": "string",
                   "description": "Brand display name"
+                },
+                "brandUrl": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Full brand website URL (e.g. https://acme.com)"
                 }
               },
               "required": [
                 "brandId",
                 "domain",
-                "name"
+                "name",
+                "brandUrl"
               ]
             },
             "description": "Metadata for each brand"
