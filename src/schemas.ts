@@ -1024,7 +1024,7 @@ registry.registerPath({
                   outletUrl: z.string(),
                   outletDomain: z.string(),
                   createdAt: z.string().datetime(),
-                  outreachStatus: z.enum(["open", "ended", "denied", "served", "contacted", "delivered", "replied", "skipped"]).describe("High watermark outreach status from journalists-service at the query's scope (campaign or brand). Falls back to most advanced DB status when no journalist data exists."),
+                  outreachStatus: z.enum(["open", "ended", "denied", "buffered", "claimed", "served", "contacted", "delivered", "replied", "skipped"]).describe("High watermark outreach status from journalists-service at the query's scope (campaign or brand). Falls back to most advanced DB status when no journalist data exists."),
                   replyClassification: z.enum(["positive", "negative", "neutral"]).nullable().describe("Best reply classification when outreachStatus is 'replied'. Null otherwise."),
                   relevanceScore: z.number().describe("Max relevance score across all per-campaign scores for this outlet (same high watermark logic as outreachStatus)."),
                   campaigns: z.array(
@@ -1035,7 +1035,7 @@ registry.registerPath({
                       whyRelevant: z.string().optional(),
                       whyNotRelevant: z.string().optional(),
                       relevanceScore: z.number(),
-                      outreachStatus: z.enum(["open", "ended", "denied", "served", "contacted", "delivered", "replied", "skipped"]).describe("Outreach status scoped to this specific campaign."),
+                      outreachStatus: z.enum(["open", "ended", "denied", "buffered", "claimed", "served", "contacted", "delivered", "replied", "skipped"]).describe("Outreach status scoped to this specific campaign."),
                       replyClassification: z.enum(["positive", "negative", "neutral"]).nullable().describe("Reply classification when outreachStatus is 'replied'. Null otherwise."),
                       overallRelevance: z.string().nullable().optional(),
                       relevanceRationale: z.string().nullable().optional(),
