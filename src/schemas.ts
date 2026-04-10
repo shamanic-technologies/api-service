@@ -3274,6 +3274,7 @@ registry.registerPath({
               brandId: z.string().describe("Internal brand UUID"),
               domain: z.string().describe("Brand domain (e.g. acme.com)"),
               name: z.string().describe("Brand display name"),
+              brandUrl: z.string().nullable().describe("Full brand website URL (e.g. https://acme.com)"),
             })).describe("Metadata for each brand included in the extraction"),
             fields: z.record(z.string(), z.object({
               value: z.union([
@@ -3378,6 +3379,7 @@ registry.registerPath({
               brandId: z.string().describe("Internal brand UUID"),
               domain: z.string().describe("Brand domain"),
               name: z.string().describe("Brand display name"),
+              brandUrl: z.string().nullable().describe("Full brand website URL (e.g. https://acme.com)"),
             })).describe("Metadata for each brand"),
             results: z.array(z.object({
               category: z.string().describe("Image category"),
