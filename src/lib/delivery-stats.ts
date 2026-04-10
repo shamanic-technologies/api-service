@@ -5,7 +5,8 @@ import { buildInternalHeaders } from "./internal-headers.js";
 interface EmailGatewayStats {
   emailsContacted: number; emailsSent: number; emailsDelivered: number; emailsOpened: number;
   emailsClicked: number; emailsReplied: number; emailsBounced: number;
-  repliesWillingToMeet: number; repliesInterested: number; repliesNotInterested: number;
+  repliesMeetingBooked: number; repliesInterested: number; repliesNotInterested: number;
+  repliesClosed: number; repliesNeutral: number;
   repliesOutOfOffice: number; repliesUnsubscribe: number; recipients: number;
 }
 
@@ -43,9 +44,11 @@ export async function fetchDeliveryStats(
     emailsClicked: b.emailsClicked || 0,
     emailsReplied: b.emailsReplied || 0,
     emailsBounced: b.emailsBounced || 0,
-    repliesWillingToMeet: b.repliesWillingToMeet || 0,
+    repliesMeetingBooked: b.repliesMeetingBooked || 0,
     repliesInterested: b.repliesInterested || 0,
     repliesNotInterested: b.repliesNotInterested || 0,
+    repliesClosed: b.repliesClosed || 0,
+    repliesNeutral: b.repliesNeutral || 0,
     repliesOutOfOffice: b.repliesOutOfOffice || 0,
     repliesUnsubscribe: b.repliesUnsubscribe || 0,
   };

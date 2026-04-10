@@ -311,9 +311,11 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
       s.emailsClicked = b?.emailsClicked ?? 0;
       s.emailsReplied = b?.emailsReplied ?? 0;
       s.emailsBounced = b?.emailsBounced ?? 0;
-      s.repliesWillingToMeet = b?.repliesWillingToMeet ?? 0;
+      s.repliesMeetingBooked = b?.repliesMeetingBooked ?? 0;
       s.repliesInterested = b?.repliesInterested ?? 0;
       s.repliesNotInterested = b?.repliesNotInterested ?? 0;
+      s.repliesClosed = b?.repliesClosed ?? 0;
+      s.repliesNeutral = b?.repliesNeutral ?? 0;
       s.repliesOutOfOffice = b?.repliesOutOfOffice ?? 0;
       s.repliesUnsubscribe = b?.repliesUnsubscribe ?? 0;
     }
@@ -348,8 +350,8 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
       emailsGenerated: 0,
       emailsContacted: 0, emailsSent: 0, emailsDelivered: 0, emailsOpened: 0, emailsClicked: 0,
       emailsReplied: 0, emailsBounced: 0,
-      repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0,
-      repliesOutOfOffice: 0, repliesUnsubscribe: 0,
+      repliesMeetingBooked: 0, repliesInterested: 0, repliesNotInterested: 0,
+      repliesClosed: 0, repliesNeutral: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0,
       totalCostInUsdCents: null, runCount: 0,
     };
     for (const stats of merged.values()) {

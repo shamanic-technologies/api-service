@@ -877,13 +877,19 @@
           "emailsBounced": {
             "type": "number"
           },
-          "repliesWillingToMeet": {
+          "repliesMeetingBooked": {
             "type": "number"
           },
           "repliesInterested": {
             "type": "number"
           },
           "repliesNotInterested": {
+            "type": "number"
+          },
+          "repliesClosed": {
+            "type": "number"
+          },
+          "repliesNeutral": {
             "type": "number"
           },
           "repliesOutOfOffice": {
@@ -995,13 +1001,19 @@
                 "emailsBounced": {
                   "type": "number"
                 },
-                "repliesWillingToMeet": {
+                "repliesMeetingBooked": {
                   "type": "number"
                 },
                 "repliesInterested": {
                   "type": "number"
                 },
                 "repliesNotInterested": {
+                  "type": "number"
+                },
+                "repliesClosed": {
+                  "type": "number"
+                },
+                "repliesNeutral": {
                   "type": "number"
                 },
                 "repliesOutOfOffice": {
@@ -1032,9 +1044,11 @@
                 "emailsClicked",
                 "emailsReplied",
                 "emailsBounced",
-                "repliesWillingToMeet",
+                "repliesMeetingBooked",
                 "repliesInterested",
                 "repliesNotInterested",
+                "repliesClosed",
+                "repliesNeutral",
                 "repliesOutOfOffice",
                 "repliesUnsubscribe",
                 "totalCostInUsdCents",
@@ -5187,13 +5201,19 @@
           "emailsBounced": {
             "type": "number"
           },
-          "repliesWillingToMeet": {
+          "repliesMeetingBooked": {
             "type": "number"
           },
           "repliesInterested": {
             "type": "number"
           },
           "repliesNotInterested": {
+            "type": "number"
+          },
+          "repliesClosed": {
+            "type": "number"
+          },
+          "repliesNeutral": {
             "type": "number"
           },
           "repliesOutOfOffice": {
@@ -5211,9 +5231,11 @@
           "emailsClicked",
           "emailsReplied",
           "emailsBounced",
-          "repliesWillingToMeet",
+          "repliesMeetingBooked",
           "repliesInterested",
           "repliesNotInterested",
+          "repliesClosed",
+          "repliesNeutral",
           "repliesOutOfOffice",
           "repliesUnsubscribe"
         ]
