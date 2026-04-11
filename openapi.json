@@ -877,26 +877,60 @@
           "emailsBounced": {
             "type": "number"
           },
-          "repliesMeetingBooked": {
+          "repliesPositive": {
             "type": "number"
           },
-          "repliesInterested": {
-            "type": "number"
-          },
-          "repliesNotInterested": {
-            "type": "number"
-          },
-          "repliesClosed": {
+          "repliesNegative": {
             "type": "number"
           },
           "repliesNeutral": {
             "type": "number"
           },
-          "repliesOutOfOffice": {
+          "repliesAutoReply": {
             "type": "number"
           },
-          "repliesUnsubscribe": {
-            "type": "number"
+          "repliesDetail": {
+            "type": "object",
+            "properties": {
+              "interested": {
+                "type": "number"
+              },
+              "meetingBooked": {
+                "type": "number"
+              },
+              "closed": {
+                "type": "number"
+              },
+              "notInterested": {
+                "type": "number"
+              },
+              "wrongPerson": {
+                "type": "number"
+              },
+              "unsubscribe": {
+                "type": "number"
+              },
+              "neutral": {
+                "type": "number"
+              },
+              "autoReply": {
+                "type": "number"
+              },
+              "outOfOffice": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "interested",
+              "meetingBooked",
+              "closed",
+              "notInterested",
+              "wrongPerson",
+              "unsubscribe",
+              "neutral",
+              "autoReply",
+              "outOfOffice"
+            ]
           },
           "totalCostInUsdCents": {
             "type": "string",
@@ -1001,26 +1035,60 @@
                 "emailsBounced": {
                   "type": "number"
                 },
-                "repliesMeetingBooked": {
+                "repliesPositive": {
                   "type": "number"
                 },
-                "repliesInterested": {
-                  "type": "number"
-                },
-                "repliesNotInterested": {
-                  "type": "number"
-                },
-                "repliesClosed": {
+                "repliesNegative": {
                   "type": "number"
                 },
                 "repliesNeutral": {
                   "type": "number"
                 },
-                "repliesOutOfOffice": {
+                "repliesAutoReply": {
                   "type": "number"
                 },
-                "repliesUnsubscribe": {
-                  "type": "number"
+                "repliesDetail": {
+                  "type": "object",
+                  "properties": {
+                    "interested": {
+                      "type": "number"
+                    },
+                    "meetingBooked": {
+                      "type": "number"
+                    },
+                    "closed": {
+                      "type": "number"
+                    },
+                    "notInterested": {
+                      "type": "number"
+                    },
+                    "wrongPerson": {
+                      "type": "number"
+                    },
+                    "unsubscribe": {
+                      "type": "number"
+                    },
+                    "neutral": {
+                      "type": "number"
+                    },
+                    "autoReply": {
+                      "type": "number"
+                    },
+                    "outOfOffice": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "interested",
+                    "meetingBooked",
+                    "closed",
+                    "notInterested",
+                    "wrongPerson",
+                    "unsubscribe",
+                    "neutral",
+                    "autoReply",
+                    "outOfOffice"
+                  ]
                 },
                 "totalCostInUsdCents": {
                   "type": "string",
@@ -1044,13 +1112,11 @@
                 "emailsClicked",
                 "emailsReplied",
                 "emailsBounced",
-                "repliesMeetingBooked",
-                "repliesInterested",
-                "repliesNotInterested",
-                "repliesClosed",
+                "repliesPositive",
+                "repliesNegative",
                 "repliesNeutral",
-                "repliesOutOfOffice",
-                "repliesUnsubscribe",
+                "repliesAutoReply",
+                "repliesDetail",
                 "totalCostInUsdCents",
                 "runCount"
               ]
@@ -5201,26 +5267,60 @@
           "emailsBounced": {
             "type": "number"
           },
-          "repliesMeetingBooked": {
+          "repliesPositive": {
             "type": "number"
           },
-          "repliesInterested": {
-            "type": "number"
-          },
-          "repliesNotInterested": {
-            "type": "number"
-          },
-          "repliesClosed": {
+          "repliesNegative": {
             "type": "number"
           },
           "repliesNeutral": {
             "type": "number"
           },
-          "repliesOutOfOffice": {
+          "repliesAutoReply": {
             "type": "number"
           },
-          "repliesUnsubscribe": {
-            "type": "number"
+          "repliesDetail": {
+            "type": "object",
+            "properties": {
+              "interested": {
+                "type": "number"
+              },
+              "meetingBooked": {
+                "type": "number"
+              },
+              "closed": {
+                "type": "number"
+              },
+              "notInterested": {
+                "type": "number"
+              },
+              "wrongPerson": {
+                "type": "number"
+              },
+              "unsubscribe": {
+                "type": "number"
+              },
+              "neutral": {
+                "type": "number"
+              },
+              "autoReply": {
+                "type": "number"
+              },
+              "outOfOffice": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "interested",
+              "meetingBooked",
+              "closed",
+              "notInterested",
+              "wrongPerson",
+              "unsubscribe",
+              "neutral",
+              "autoReply",
+              "outOfOffice"
+            ]
           }
         },
         "required": [
@@ -5231,13 +5331,11 @@
           "emailsClicked",
           "emailsReplied",
           "emailsBounced",
-          "repliesMeetingBooked",
-          "repliesInterested",
-          "repliesNotInterested",
-          "repliesClosed",
+          "repliesPositive",
+          "repliesNegative",
           "repliesNeutral",
-          "repliesOutOfOffice",
-          "repliesUnsubscribe"
+          "repliesAutoReply",
+          "repliesDetail"
         ]
       },
       "RunsCostStatsResponse": {

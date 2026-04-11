@@ -84,16 +84,16 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
           transactional: {
             emailsSent: 50, emailsDelivered: 48, emailsOpened: 30,
             emailsClicked: 5, emailsReplied: 10, emailsBounced: 2,
-            repliesMeetingBooked: 3, repliesInterested: 2,
-            repliesNotInterested: 1, repliesOutOfOffice: 1,
-            repliesUnsubscribe: 0, recipients: 50,
+            repliesPositive: 5, repliesNegative: 2, repliesNeutral: 1, repliesAutoReply: 2,
+            repliesDetail: { interested: 2, meetingBooked: 3, closed: 0, notInterested: 1, wrongPerson: 0, unsubscribe: 0, neutral: 1, autoReply: 1, outOfOffice: 1 },
+            recipients: 50,
           },
           broadcast: {
             emailsSent: 6, emailsDelivered: 6, emailsOpened: 4,
             emailsClicked: 0, emailsReplied: 1, emailsBounced: 0,
-            repliesMeetingBooked: 0, repliesInterested: 0,
-            repliesNotInterested: 1, repliesOutOfOffice: 0,
-            repliesUnsubscribe: 0, recipients: 6,
+            repliesPositive: 0, repliesNegative: 1, repliesNeutral: 0, repliesAutoReply: 0,
+            repliesDetail: { interested: 0, meetingBooked: 0, closed: 0, notInterested: 1, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 },
+            recipients: 6,
           },
         });
       }
@@ -107,7 +107,8 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
     expect(res.body.emailsSent).toBe(6);
     expect(res.body.emailsOpened).toBe(4);
     expect(res.body.emailsReplied).toBe(1);
-    expect(res.body.repliesNotInterested).toBe(1);
+    expect(res.body.repliesNegative).toBe(1);
+    expect(res.body.repliesDetail.notInterested).toBe(1);
     // Transactional values (50, 30, 10) must NOT appear
     expect(res.body.emailsSent).not.toBe(56); // not 50+6
     expect(res.body.emailsSent).not.toBe(50);
@@ -133,9 +134,9 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
       transactional: {
         emailsSent: 50, emailsDelivered: 48, emailsOpened: 30,
         emailsClicked: 5, emailsReplied: 10, emailsBounced: 2,
-        repliesMeetingBooked: 3, repliesInterested: 2,
-        repliesNotInterested: 1, repliesOutOfOffice: 1,
-        repliesUnsubscribe: 0, recipients: 50,
+        repliesPositive: 5, repliesNegative: 2, repliesNeutral: 1, repliesAutoReply: 2,
+        repliesDetail: { interested: 2, meetingBooked: 3, closed: 0, notInterested: 1, wrongPerson: 0, unsubscribe: 0, neutral: 1, autoReply: 1, outOfOffice: 1 },
+        recipients: 50,
       },
       broadcast: null,
     });
@@ -157,9 +158,9 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
       broadcast: {
         emailsSent: 3, emailsDelivered: 3, emailsOpened: 1,
         emailsClicked: 0, emailsReplied: 0, emailsBounced: 0,
-        repliesMeetingBooked: 0, repliesInterested: 0,
-        repliesNotInterested: 0, repliesOutOfOffice: 0,
-        repliesUnsubscribe: 0, recipients: 3,
+        repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
+        repliesDetail: { interested: 0, meetingBooked: 0, closed: 0, notInterested: 0, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 },
+        recipients: 3,
       },
     });
 
