@@ -69,12 +69,12 @@ describe("GET /v1/campaigns/stats", () => {
           groups: [
             {
               key: "c1",
-              broadcast: { emailsContacted: 15, emailsSent: 10, emailsDelivered: 9, emailsOpened: 5, emailsClicked: 2, emailsReplied: 1, emailsBounced: 1, repliesWillingToMeet: 0, repliesInterested: 1, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0 },
+              broadcast: { emailsContacted: 15, emailsSent: 10, emailsDelivered: 9, emailsOpened: 5, emailsClicked: 2, emailsBounced: 1, repliesPositive: 1, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0, repliesDetail: { interested: 1, meetingBooked: 0, closed: 0, notInterested: 0, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 } },
               transactional: null,
             },
             {
               key: "c2",
-              broadcast: { emailsContacted: 25, emailsSent: 20, emailsDelivered: 18, emailsOpened: 12, emailsClicked: 3, emailsReplied: 2, emailsBounced: 2, repliesWillingToMeet: 1, repliesInterested: 0, repliesNotInterested: 1, repliesOutOfOffice: 0, repliesUnsubscribe: 0 },
+              broadcast: { emailsContacted: 25, emailsSent: 20, emailsDelivered: 18, emailsOpened: 12, emailsClicked: 3, emailsBounced: 2, repliesPositive: 0, repliesNegative: 1, repliesNeutral: 0, repliesAutoReply: 0, repliesDetail: { interested: 0, meetingBooked: 0, closed: 0, notInterested: 1, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 } },
               transactional: null,
             },
           ],
@@ -125,7 +125,7 @@ describe("GET /v1/campaigns/stats", () => {
     expect(c1.emailsContacted).toBe(15);
     expect(c1.emailsSent).toBe(10);
     expect(c1.emailsOpened).toBe(5);
-    expect(c1.emailsReplied).toBe(1);
+    expect(c1.repliesPositive).toBe(1);
     expect(c1.totalCostInUsdCents).toBe("500");
     expect(c1.runCount).toBe(15);
 
@@ -236,8 +236,8 @@ describe("GET /v1/campaigns/stats", () => {
         return Promise.resolve({
           groups: [{
             key: "c1",
-            broadcast: { emailsContacted: 8, emailsSent: 5, emailsDelivered: 5, emailsOpened: 3, emailsClicked: 0, emailsReplied: 1, emailsBounced: 0, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0 },
-            transactional: { emailsContacted: 200, emailsSent: 100, emailsDelivered: 95, emailsOpened: 60, emailsClicked: 10, emailsReplied: 20, emailsBounced: 5, repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0, repliesOutOfOffice: 0, repliesUnsubscribe: 0 },
+            broadcast: { emailsContacted: 8, emailsSent: 5, emailsDelivered: 5, emailsOpened: 3, emailsClicked: 0, emailsBounced: 0, repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0, repliesDetail: { interested: 0, meetingBooked: 0, closed: 0, notInterested: 0, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 } },
+            transactional: { emailsContacted: 200, emailsSent: 100, emailsDelivered: 95, emailsOpened: 60, emailsClicked: 10, emailsBounced: 5, repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0, repliesDetail: { interested: 0, meetingBooked: 0, closed: 0, notInterested: 0, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 } },
           }],
         });
       }
@@ -251,7 +251,7 @@ describe("GET /v1/campaigns/stats", () => {
     expect(c1.emailsContacted).toBe(8);
     expect(c1.emailsSent).toBe(5);
     expect(c1.emailsOpened).toBe(3);
-    expect(c1.emailsReplied).toBe(1);
+    expect(c1.repliesPositive).toBe(0);
   });
 });
 

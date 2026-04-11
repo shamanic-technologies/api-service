@@ -58,7 +58,7 @@ const MOCK_RANKED = {
 
 const MOCK_HERO = {
   best: {
-    emailsReplied: { workflowSlug: "sales-email-cold-outreach-mintaka", workflowName: "Mintaka", createdForBrandId: "b-1", value: 12 },
+    repliesPositive: { workflowSlug: "sales-email-cold-outreach-mintaka", workflowName: "Mintaka", createdForBrandId: "b-1", value: 12 },
     leadsServed: null,
   },
 };
@@ -75,7 +75,7 @@ describe("GET /v1/public/features/ranked", () => {
       return Promise.resolve({});
     });
 
-    const res = await request(app).get("/v1/public/features/ranked?featureDynastySlug=pr-cold-email&objective=emailsReplied&groupBy=brand");
+    const res = await request(app).get("/v1/public/features/ranked?featureDynastySlug=pr-cold-email&objective=repliesPositive&groupBy=brand");
 
     expect(res.status).toBe(200);
     expect(res.body.results).toEqual(MOCK_RANKED.results);
@@ -86,7 +86,7 @@ describe("GET /v1/public/features/ranked", () => {
     expect(call).toBeDefined();
     const url = call![1] as string;
     expect(url).toContain("featureDynastySlug=pr-cold-email");
-    expect(url).toContain("objective=emailsReplied");
+    expect(url).toContain("objective=repliesPositive");
     expect(url).toContain("groupBy=brand");
   });
 
@@ -94,7 +94,7 @@ describe("GET /v1/public/features/ranked", () => {
     const app = createApp();
     mockCallExternalService.mockResolvedValue(MOCK_RANKED);
 
-    await request(app).get("/v1/public/features/ranked?featureSlug=pr-cold-email-v3&featureDynastySlug=pr-cold-email&objective=emailsReplied");
+    await request(app).get("/v1/public/features/ranked?featureSlug=pr-cold-email-v3&featureDynastySlug=pr-cold-email&objective=repliesPositive");
 
     const call = mockCallExternalService.mock.calls.find(
       (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/public/stats/ranked"),
