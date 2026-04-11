@@ -308,7 +308,7 @@
             "additionalProperties": {
               "$ref": "#/components/schemas/BestWorkflowRecord"
             },
-            "description": "Map of metric key (e.g. 'emailsReplied', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."
+            "description": "Map of metric key (e.g. 'repliesPositive', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."
           }
         },
         "required": [
@@ -316,7 +316,7 @@
         ],
         "example": {
           "best": {
-            "emailsReplied": {
+            "repliesPositive": {
               "workflowSlug": "sales-email-cold-outreach-sienna-v3",
               "workflowName": "Sales Cold Outreach (Sienna)",
               "createdForBrandId": "brand-uuid-456",
@@ -8362,11 +8362,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'.",
-              "example": "emailsReplied"
+              "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
+              "example": "repliesPositive"
             },
             "required": true,
-            "description": "Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'.",
+            "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
             "name": "objective",
             "in": "query"
           },
@@ -8517,11 +8517,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'.",
-              "example": "emailsReplied"
+              "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
+              "example": "repliesPositive"
             },
             "required": true,
-            "description": "Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'.",
+            "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
             "name": "objective",
             "in": "query"
           },
