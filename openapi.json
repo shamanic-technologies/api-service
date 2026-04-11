@@ -308,7 +308,7 @@
             "additionalProperties": {
               "$ref": "#/components/schemas/BestWorkflowRecord"
             },
-            "description": "Map of metric key (e.g. 'emailsReplied', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."
+            "description": "Map of metric key (e.g. 'repliesPositive', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."
           }
         },
         "required": [
@@ -316,7 +316,7 @@
         ],
         "example": {
           "best": {
-            "emailsReplied": {
+            "repliesPositive": {
               "workflowSlug": "sales-email-cold-outreach-sienna-v3",
               "workflowName": "Sales Cold Outreach (Sienna)",
               "createdForBrandId": "brand-uuid-456",
@@ -871,32 +871,63 @@
           "emailsClicked": {
             "type": "number"
           },
-          "emailsReplied": {
-            "type": "number"
-          },
           "emailsBounced": {
             "type": "number"
           },
-          "repliesMeetingBooked": {
+          "repliesPositive": {
             "type": "number"
           },
-          "repliesInterested": {
-            "type": "number"
-          },
-          "repliesNotInterested": {
-            "type": "number"
-          },
-          "repliesClosed": {
+          "repliesNegative": {
             "type": "number"
           },
           "repliesNeutral": {
             "type": "number"
           },
-          "repliesOutOfOffice": {
+          "repliesAutoReply": {
             "type": "number"
           },
-          "repliesUnsubscribe": {
-            "type": "number"
+          "repliesDetail": {
+            "type": "object",
+            "properties": {
+              "interested": {
+                "type": "number"
+              },
+              "meetingBooked": {
+                "type": "number"
+              },
+              "closed": {
+                "type": "number"
+              },
+              "notInterested": {
+                "type": "number"
+              },
+              "wrongPerson": {
+                "type": "number"
+              },
+              "unsubscribe": {
+                "type": "number"
+              },
+              "neutral": {
+                "type": "number"
+              },
+              "autoReply": {
+                "type": "number"
+              },
+              "outOfOffice": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "interested",
+              "meetingBooked",
+              "closed",
+              "notInterested",
+              "wrongPerson",
+              "unsubscribe",
+              "neutral",
+              "autoReply",
+              "outOfOffice"
+            ]
           },
           "totalCostInUsdCents": {
             "type": "string",
@@ -946,7 +977,6 @@
           "emailsSent",
           "emailsOpened",
           "emailsClicked",
-          "emailsReplied",
           "emailsBounced"
         ]
       },
@@ -995,32 +1025,63 @@
                 "emailsClicked": {
                   "type": "number"
                 },
-                "emailsReplied": {
-                  "type": "number"
-                },
                 "emailsBounced": {
                   "type": "number"
                 },
-                "repliesMeetingBooked": {
+                "repliesPositive": {
                   "type": "number"
                 },
-                "repliesInterested": {
-                  "type": "number"
-                },
-                "repliesNotInterested": {
-                  "type": "number"
-                },
-                "repliesClosed": {
+                "repliesNegative": {
                   "type": "number"
                 },
                 "repliesNeutral": {
                   "type": "number"
                 },
-                "repliesOutOfOffice": {
+                "repliesAutoReply": {
                   "type": "number"
                 },
-                "repliesUnsubscribe": {
-                  "type": "number"
+                "repliesDetail": {
+                  "type": "object",
+                  "properties": {
+                    "interested": {
+                      "type": "number"
+                    },
+                    "meetingBooked": {
+                      "type": "number"
+                    },
+                    "closed": {
+                      "type": "number"
+                    },
+                    "notInterested": {
+                      "type": "number"
+                    },
+                    "wrongPerson": {
+                      "type": "number"
+                    },
+                    "unsubscribe": {
+                      "type": "number"
+                    },
+                    "neutral": {
+                      "type": "number"
+                    },
+                    "autoReply": {
+                      "type": "number"
+                    },
+                    "outOfOffice": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "interested",
+                    "meetingBooked",
+                    "closed",
+                    "notInterested",
+                    "wrongPerson",
+                    "unsubscribe",
+                    "neutral",
+                    "autoReply",
+                    "outOfOffice"
+                  ]
                 },
                 "totalCostInUsdCents": {
                   "type": "string",
@@ -1042,15 +1103,12 @@
                 "emailsDelivered",
                 "emailsOpened",
                 "emailsClicked",
-                "emailsReplied",
                 "emailsBounced",
-                "repliesMeetingBooked",
-                "repliesInterested",
-                "repliesNotInterested",
-                "repliesClosed",
+                "repliesPositive",
+                "repliesNegative",
                 "repliesNeutral",
-                "repliesOutOfOffice",
-                "repliesUnsubscribe",
+                "repliesAutoReply",
+                "repliesDetail",
                 "totalCostInUsdCents",
                 "runCount"
               ]
@@ -5195,32 +5253,63 @@
           "emailsClicked": {
             "type": "number"
           },
-          "emailsReplied": {
-            "type": "number"
-          },
           "emailsBounced": {
             "type": "number"
           },
-          "repliesMeetingBooked": {
+          "repliesPositive": {
             "type": "number"
           },
-          "repliesInterested": {
-            "type": "number"
-          },
-          "repliesNotInterested": {
-            "type": "number"
-          },
-          "repliesClosed": {
+          "repliesNegative": {
             "type": "number"
           },
           "repliesNeutral": {
             "type": "number"
           },
-          "repliesOutOfOffice": {
+          "repliesAutoReply": {
             "type": "number"
           },
-          "repliesUnsubscribe": {
-            "type": "number"
+          "repliesDetail": {
+            "type": "object",
+            "properties": {
+              "interested": {
+                "type": "number"
+              },
+              "meetingBooked": {
+                "type": "number"
+              },
+              "closed": {
+                "type": "number"
+              },
+              "notInterested": {
+                "type": "number"
+              },
+              "wrongPerson": {
+                "type": "number"
+              },
+              "unsubscribe": {
+                "type": "number"
+              },
+              "neutral": {
+                "type": "number"
+              },
+              "autoReply": {
+                "type": "number"
+              },
+              "outOfOffice": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "interested",
+              "meetingBooked",
+              "closed",
+              "notInterested",
+              "wrongPerson",
+              "unsubscribe",
+              "neutral",
+              "autoReply",
+              "outOfOffice"
+            ]
           }
         },
         "required": [
@@ -5229,15 +5318,12 @@
           "emailsDelivered",
           "emailsOpened",
           "emailsClicked",
-          "emailsReplied",
           "emailsBounced",
-          "repliesMeetingBooked",
-          "repliesInterested",
-          "repliesNotInterested",
-          "repliesClosed",
+          "repliesPositive",
+          "repliesNegative",
           "repliesNeutral",
-          "repliesOutOfOffice",
-          "repliesUnsubscribe"
+          "repliesAutoReply",
+          "repliesDetail"
         ]
       },
       "RunsCostStatsResponse": {
@@ -8384,11 +8470,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'.",
-              "example": "emailsReplied"
+              "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
+              "example": "repliesPositive"
             },
             "required": true,
-            "description": "Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'.",
+            "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
             "name": "objective",
             "in": "query"
           },
@@ -8539,11 +8625,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'.",
-              "example": "emailsReplied"
+              "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
+              "example": "repliesPositive"
             },
             "required": true,
-            "description": "Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'.",
+            "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
             "name": "objective",
             "in": "query"
           },

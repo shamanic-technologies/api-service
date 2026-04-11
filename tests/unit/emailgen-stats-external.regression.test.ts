@@ -58,9 +58,9 @@ vi.mock("@distribute/runs-client", () => ({
 vi.mock("../../src/lib/delivery-stats.js", () => ({
   fetchDeliveryStats: vi.fn().mockResolvedValue({
     emailsContacted: 0, emailsSent: 4, emailsDelivered: 4, emailsOpened: 2,
-    emailsClicked: 0, emailsReplied: 1, emailsBounced: 0,
-    repliesMeetingBooked: 0, repliesInterested: 0, repliesNotInterested: 0,
-    repliesOutOfOffice: 0, repliesUnsubscribe: 0,
+    emailsClicked: 0, emailsBounced: 0,
+    repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
+    repliesDetail: { interested: 0, meetingBooked: 0, closed: 0, notInterested: 0, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 },
   }),
 }));
 
@@ -135,9 +135,9 @@ describe("Campaign stats: emailsGenerated from content-generation service", () =
     // Delivery stats return reduced set for this test
     vi.mocked(fetchDeliveryStats).mockResolvedValueOnce({
       emailsContacted: 0, emailsSent: 1, emailsDelivered: 1, emailsOpened: 0,
-      emailsClicked: 0, emailsReplied: 0, emailsBounced: 0,
-      repliesMeetingBooked: 0, repliesInterested: 0, repliesNotInterested: 0,
-      repliesOutOfOffice: 0, repliesUnsubscribe: 0,
+      emailsClicked: 0, emailsBounced: 0,
+      repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
+      repliesDetail: { interested: 0, meetingBooked: 0, closed: 0, notInterested: 0, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 },
     });
 
     mockCallExternalService.mockImplementation((service: any, path: string) => {

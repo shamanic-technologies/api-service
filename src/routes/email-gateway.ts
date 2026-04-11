@@ -24,15 +24,16 @@ router.get("/email-gateway/stats", authenticate, requireOrg, requireUser, async 
       emailsDelivered: 0,
       emailsOpened: 0,
       emailsClicked: 0,
-      emailsReplied: 0,
       emailsBounced: 0,
-      repliesMeetingBooked: 0,
-      repliesInterested: 0,
-      repliesNotInterested: 0,
-      repliesClosed: 0,
+      repliesPositive: 0,
+      repliesNegative: 0,
       repliesNeutral: 0,
-      repliesOutOfOffice: 0,
-      repliesUnsubscribe: 0,
+      repliesAutoReply: 0,
+      repliesDetail: {
+        interested: 0, meetingBooked: 0, closed: 0,
+        notInterested: 0, wrongPerson: 0, unsubscribe: 0,
+        neutral: 0, autoReply: 0, outOfOffice: 0,
+      },
     });
   } catch (error: any) {
     console.error("Get email-gateway stats error:", error);
