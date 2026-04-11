@@ -871,10 +871,16 @@
           "emailsClicked": {
             "type": "number"
           },
-          "emailsReplied": {
+          "emailsBounced": {
             "type": "number"
           },
-          "emailsBounced": {
+          "repliesPositive": {
+            "type": "number"
+          },
+          "repliesNegative": {
+            "type": "number"
+          },
+          "repliesNeutral": {
             "type": "number"
           },
           "repliesWillingToMeet": {
@@ -940,7 +946,6 @@
           "emailsSent",
           "emailsOpened",
           "emailsClicked",
-          "emailsReplied",
           "emailsBounced"
         ]
       },
@@ -989,10 +994,16 @@
                 "emailsClicked": {
                   "type": "number"
                 },
-                "emailsReplied": {
+                "emailsBounced": {
                   "type": "number"
                 },
-                "emailsBounced": {
+                "repliesPositive": {
+                  "type": "number"
+                },
+                "repliesNegative": {
+                  "type": "number"
+                },
+                "repliesNeutral": {
                   "type": "number"
                 },
                 "repliesWillingToMeet": {
@@ -1030,8 +1041,10 @@
                 "emailsDelivered",
                 "emailsOpened",
                 "emailsClicked",
-                "emailsReplied",
                 "emailsBounced",
+                "repliesPositive",
+                "repliesNegative",
+                "repliesNeutral",
                 "repliesWillingToMeet",
                 "repliesInterested",
                 "repliesNotInterested",
@@ -5181,10 +5194,16 @@
           "emailsClicked": {
             "type": "number"
           },
-          "emailsReplied": {
+          "emailsBounced": {
             "type": "number"
           },
-          "emailsBounced": {
+          "repliesPositive": {
+            "type": "number"
+          },
+          "repliesNegative": {
+            "type": "number"
+          },
+          "repliesNeutral": {
             "type": "number"
           },
           "repliesWillingToMeet": {
@@ -5209,8 +5228,10 @@
           "emailsDelivered",
           "emailsOpened",
           "emailsClicked",
-          "emailsReplied",
           "emailsBounced",
+          "repliesPositive",
+          "repliesNegative",
+          "repliesNeutral",
           "repliesWillingToMeet",
           "repliesInterested",
           "repliesNotInterested",
