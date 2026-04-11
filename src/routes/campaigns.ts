@@ -309,7 +309,6 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
       s.emailsDelivered = b?.emailsDelivered ?? 0;
       s.emailsOpened = b?.emailsOpened ?? 0;
       s.emailsClicked = b?.emailsClicked ?? 0;
-      s.emailsReplied = b?.emailsReplied ?? 0;
       s.emailsBounced = b?.emailsBounced ?? 0;
       s.repliesPositive = b?.repliesPositive ?? 0;
       s.repliesNegative = b?.repliesNegative ?? 0;
@@ -358,7 +357,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
       leadsServed: 0, leadsContacted: 0, leadsBuffered: 0, leadsSkipped: 0,
       emailsGenerated: 0,
       emailsContacted: 0, emailsSent: 0, emailsDelivered: 0, emailsOpened: 0, emailsClicked: 0,
-      emailsReplied: 0, emailsBounced: 0,
+      emailsBounced: 0,
       repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
       repliesDetail: {
         interested: 0, meetingBooked: 0, closed: 0,
@@ -539,7 +538,6 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
       stats.emailsSent = 0;
       stats.emailsOpened = 0;
       stats.emailsClicked = 0;
-      stats.emailsReplied = 0;
       stats.emailsBounced = 0;
     }
 
@@ -706,7 +704,7 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
           emailsGenerated: currentEmails,
           emailsSent: (delivery as any)?.emailsSent ?? 0,
           emailsOpened: (delivery as any)?.emailsOpened ?? 0,
-          emailsReplied: (delivery as any)?.emailsReplied ?? 0,
+          repliesPositive: (delivery as any)?.repliesPositive ?? 0,
         };
 
         res.write(`event: update\ndata: ${JSON.stringify(payload)}\n\n`);

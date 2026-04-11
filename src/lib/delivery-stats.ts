@@ -10,7 +10,7 @@ interface RepliesDetail {
 
 interface EmailGatewayStats {
   emailsContacted: number; emailsSent: number; emailsDelivered: number; emailsOpened: number;
-  emailsClicked: number; emailsReplied: number; emailsBounced: number;
+  emailsClicked: number; emailsBounced: number;
   repliesPositive: number; repliesNegative: number; repliesNeutral: number; repliesAutoReply: number;
   repliesDetail: RepliesDetail;
   recipients: number;
@@ -49,7 +49,6 @@ export async function fetchDeliveryStats(
     emailsDelivered: b.emailsDelivered || 0,
     emailsOpened: b.emailsOpened || 0,
     emailsClicked: b.emailsClicked || 0,
-    emailsReplied: b.emailsReplied || 0,
     emailsBounced: b.emailsBounced || 0,
     repliesPositive: b.repliesPositive || 0,
     repliesNegative: b.repliesNegative || 0,
