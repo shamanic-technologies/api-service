@@ -1744,7 +1744,7 @@ registry.registerPath({
   tags: ["Journalists"],
   summary: "Get journalist stats with dynasty-aware filtering and grouping",
   description:
-    "Returns journalist counts grouped by outreach status (buffered, claimed, served, skipped, contacted, delivered, replied, bounced). " +
+    "Returns journalist counts grouped by outreach status (buffered, claimed, served, skipped, contacted, delivered, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply). " +
     "Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. " +
     "Optional groupBy returns per-slug breakdowns.",
   security: authed,
@@ -1756,7 +1756,7 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             totalJournalists: z.number(),
-            byOutreachStatus: z.record(z.number()).describe("Map of outreach status to count. Statuses: buffered, claimed, served, skipped, contacted, delivered, replied, bounced."),
+            byOutreachStatus: z.record(z.number()).describe("Map of outreach status to count. Statuses: buffered, claimed, served, skipped, contacted, delivered, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply."),
             groupedBy: z.record(z.object({
               totalJournalists: z.number(),
               byOutreachStatus: z.record(z.number()).describe("Map of outreach status to count for this group"),
