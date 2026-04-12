@@ -55,6 +55,18 @@ function createApp() {
   return app;
 }
 
+/** Helper: build a valid email-gateway Stats object */
+function makeStats(overrides: Record<string, number> = {}) {
+  return {
+    emailsContacted: 0, emailsSent: 0, emailsDelivered: 0, emailsOpened: 0,
+    emailsClicked: 0, emailsReplied: 0, emailsBounced: 0,
+    repliesInterested: 0, repliesMeetingBooked: 0, repliesClosed: 0,
+    repliesNotInterested: 0, repliesNeutral: 0, repliesOutOfOffice: 0,
+    repliesUnsubscribe: 0, recipients: 0,
+    ...overrides,
+  };
+}
+
 describe("GET /v1/campaigns/stats", () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.restoreAllMocks());
@@ -69,12 +81,12 @@ describe("GET /v1/campaigns/stats", () => {
           groups: [
             {
               key: "c1",
-              broadcast: { emailsContacted: 15, emailsSent: 10, emailsDelivered: 9, emailsOpened: 5, emailsClicked: 2, emailsBounced: 1, repliesPositive: 1, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0, repliesDetail: { interested: 1, meetingBooked: 0, closed: 0, notInterested: 0, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 } },
+              broadcast: makeStats({ emailsContacted: 15, emailsSent: 10, emailsDelivered: 9, emailsOpened: 5, emailsClicked: 2, emailsBounced: 1, repliesInterested: 1 }),
               transactional: null,
             },
             {
               key: "c2",
-              broadcast: { emailsContacted: 25, emailsSent: 20, emailsDelivered: 18, emailsOpened: 12, emailsClicked: 3, emailsBounced: 2, repliesPositive: 0, repliesNegative: 1, repliesNeutral: 0, repliesAutoReply: 0, repliesDetail: { interested: 0, meetingBooked: 0, closed: 0, notInterested: 1, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 } },
+              broadcast: makeStats({ emailsContacted: 25, emailsSent: 20, emailsDelivered: 18, emailsOpened: 12, emailsClicked: 3, emailsBounced: 2, repliesNotInterested: 1 }),
               transactional: null,
             },
           ],
@@ -125,7 +137,7 @@ describe("GET /v1/campaigns/stats", () => {
     expect(c1.emailsContacted).toBe(15);
     expect(c1.emailsSent).toBe(10);
     expect(c1.emailsOpened).toBe(5);
-    expect(c1.repliesPositive).toBe(1);
+    expect(c1.repliesInterested).toBe(1);
     expect(c1.totalCostInUsdCents).toBe("500");
     expect(c1.runCount).toBe(15);
 
@@ -236,8 +248,8 @@ describe("GET /v1/campaigns/stats", () => {
         return Promise.resolve({
           groups: [{
             key: "c1",
-            broadcast: { emailsContacted: 8, emailsSent: 5, emailsDelivered: 5, emailsOpened: 3, emailsClicked: 0, emailsBounced: 0, repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0, repliesDetail: { interested: 0, meetingBooked: 0, closed: 0, notInterested: 0, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 } },
-            transactional: { emailsContacted: 200, emailsSent: 100, emailsDelivered: 95, emailsOpened: 60, emailsClicked: 10, emailsBounced: 5, repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0, repliesDetail: { interested: 0, meetingBooked: 0, closed: 0, notInterested: 0, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 } },
+            broadcast: makeStats({ emailsContacted: 8, emailsSent: 5, emailsDelivered: 5, emailsOpened: 3 }),
+            transactional: makeStats({ emailsContacted: 200, emailsSent: 100, emailsDelivered: 95, emailsOpened: 60, emailsClicked: 10, emailsBounced: 5 }),
           }],
         });
       }
@@ -251,7 +263,7 @@ describe("GET /v1/campaigns/stats", () => {
     expect(c1.emailsContacted).toBe(8);
     expect(c1.emailsSent).toBe(5);
     expect(c1.emailsOpened).toBe(3);
-    expect(c1.repliesPositive).toBe(0);
+    expect(c1.repliesInterested).toBe(0);
   });
 });
 
