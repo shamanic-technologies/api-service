@@ -1,0 +1,70 @@
+name: Reset Neon Staging Branches
+
+on:
+  schedule:
+    - cron: "0 3 * * *" # Daily at 3am UTC
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  reset-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install neonctl
+        run: npm i -g neonctl
+
+      - name: Reset all staging branches from production
+        env:
+          NEON_API_KEY: ${{ secrets.NEON_API_KEY }}
+          NEON_ORG_ID: ${{ vars.NEON_ORG_ID }}
+        run: |
+          set -euo pipefail
+
+          # Fetch all projects once
+          PROJECTS_JSON=$(neonctl projects list --api-key "$NEON_API_KEY" --org-id "$NEON_ORG_ID" --output json)
+
+          TOTAL=0
+          RESET=0
+          SKIPPED=0
+          FAILED=0
+
+          echo "$PROJECTS_JSON" | jq -c '.[]' | while read -r project; do
+            PROJECT_ID=$(echo "$project" | jq -r '.id')
+            PROJECT_NAME=$(echo "$project" | jq -r '.name')
+            TOTAL=$((TOTAL + 1))
+
+            # Check if a staging branch exists in this project
+            STAGING_ID=$(neonctl branches list \
+              --project-id "$PROJECT_ID" \
+              --api-key "$NEON_API_KEY" \
+              --output json 2>/dev/null \
+              | jq -r '[.[] | select(.name == "staging")] | first | .id // empty')
+
+            if [ -z "$STAGING_ID" ]; then
+              echo "SKIP $PROJECT_NAME — no staging branch"
+              SKIPPED=$((SKIPPED + 1))
+              continue
+            fi
+
+            echo "RESET $PROJECT_NAME (project=$PROJECT_ID, branch=$STAGING_ID)..."
+            if neonctl branches reset staging \
+              --project-id "$PROJECT_ID" \
+              --parent \
+              --api-key "$NEON_API_KEY" 2>&1; then
+              RESET=$((RESET + 1))
+              echo "  OK"
+            else
+              FAILED=$((FAILED + 1))
+              echo "  FAILED"
+            fi
+          done
+
+          echo ""
+          echo "=== Summary ==="
+          echo "Total projects: $TOTAL"
+          echo "Reset:          $RESET"
+          echo "Skipped:        $SKIPPED"
+          echo "Failed:         $FAILED"
+
+          if [ "$FAILED" -gt 0 ]; then
+            echo "::warning::$FAILED project(s) failed to reset staging branch"
+          fi

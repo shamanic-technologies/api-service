@@ -145,8 +145,6 @@ const bestQueryParams = z.object({
   groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
 });
 
-// -- Workflow response schemas (mirroring workflow-service) --
-
 const WorkflowMetadataSchema = z
   .object({
     id: z.string().describe("Workflow ID"),
@@ -223,6 +221,7 @@ const bestResponse = {
       },
     },
   },
+  400: { description: "Bad request — featureDynastySlug is required", content: errorContent },
   400: { description: "Bad request — featureDynastySlug is required", content: errorContent },
   502: { description: "Upstream service error", content: errorContent },
 };
