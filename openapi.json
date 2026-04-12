@@ -137,13 +137,194 @@
           "error"
         ]
       },
-      "RankedResponse": {
+      "WorkflowMetadata": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Workflow ID"
+          },
+          "slug": {
+            "type": "string",
+            "description": "Unique technical identifier. Use this to execute via /workflows/by-slug/{slug}/execute"
+          },
+          "name": {
+            "type": "string",
+            "description": "Workflow name"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Stable display name for the workflow family"
+          },
+          "dynastyName": {
+            "type": "string",
+            "description": "Stable name for the lineage. Constant across all versions of a dynasty"
+          },
+          "dynastySlug": {
+            "type": "string",
+            "description": "Stable slug for the lineage. Use as key for dynasty-level lookups and stats grouping"
+          },
+          "version": {
+            "type": "integer",
+            "description": "Version number within the dynasty. Starts at 1"
+          },
+          "createdForBrandId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Brand ID that created this workflow"
+          },
+          "category": {
+            "type": "string",
+            "description": "Workflow category (e.g. 'sales', 'pr')"
+          },
+          "channel": {
+            "type": "string",
+            "description": "Communication channel (e.g. 'email')"
+          },
+          "audienceType": {
+            "type": "string",
+            "description": "Audience type (e.g. 'cold-outreach')"
+          },
+          "featureSlug": {
+            "type": "string",
+            "description": "Feature slug this workflow belongs to (e.g. 'pr-cold-email-outreach')"
+          },
+          "signature": {
+            "type": "string",
+            "description": "SHA-256 hash of the canonical DAG"
+          },
+          "signatureName": {
+            "type": "string",
+            "description": "Human-readable name for this DAG variant"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "name",
+          "displayName",
+          "dynastyName",
+          "dynastySlug",
+          "version",
+          "createdForBrandId",
+          "featureSlug",
+          "signature",
+          "signatureName"
+        ]
       },
-      "BestResponse": {
+      "WorkflowStats": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "totalCostInUsdCents": {
+            "type": "number",
+            "description": "Total cost across all completed runs"
+          },
+          "totalOutcomes": {
+            "type": "number",
+            "description": "Total outcome count for the ranked metric (dynamic per feature — e.g. replies, leads found, outlets found)"
+          },
+          "costPerOutcome": {
+            "type": "number",
+            "nullable": true,
+            "description": "Cost per outcome in USD cents, null if no outcomes"
+          },
+          "completedRuns": {
+            "type": "number",
+            "description": "Number of completed runs"
+          }
+        },
+        "required": [
+          "totalCostInUsdCents",
+          "totalOutcomes",
+          "costPerOutcome",
+          "completedRuns"
+        ]
+      },
+      "RankedWorkflowItem": {
+        "type": "object",
+        "properties": {
+          "workflow": {
+            "$ref": "#/components/schemas/WorkflowMetadata"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/WorkflowStats"
+          }
+        },
+        "required": [
+          "workflow",
+          "stats"
+        ]
+      },
+      "RankedWorkflowResponse": {
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RankedWorkflowItem"
+            },
+            "description": "Workflows ranked by performance, best first"
+          }
+        },
+        "required": [
+          "results"
+        ]
+      },
+      "BestWorkflowRecord": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "workflowSlug": {
+            "type": "string",
+            "description": "Slug of the workflow"
+          },
+          "workflowName": {
+            "type": "string",
+            "description": "Display name of the workflow"
+          },
+          "createdForBrandId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Brand ID that created this workflow"
+          },
+          "value": {
+            "type": "number",
+            "description": "The record value (cost per outcome in USD cents)"
+          }
+        },
+        "required": [
+          "workflowSlug",
+          "workflowName",
+          "createdForBrandId",
+          "value"
+        ]
+      },
+      "BestWorkflowResponse": {
+        "type": "object",
+        "properties": {
+          "best": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/BestWorkflowRecord"
+            },
+            "description": "Map of metric key (e.g. 'repliesInterested', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."
+          }
+        },
+        "required": [
+          "best"
+        ],
+        "example": {
+          "best": {
+            "repliesInterested": {
+              "workflowSlug": "sales-email-cold-outreach-sienna-v3",
+              "workflowName": "Sales Cold Outreach (Sienna)",
+              "createdForBrandId": "brand-uuid-456",
+              "value": 42
+            },
+            "leadsServed": null
+          }
+        }
       },
       "MeResponse": {
         "type": "object",
@@ -693,9 +874,6 @@
           "emailsBounced": {
             "type": "number"
           },
-          "emailsReplied": {
-            "type": "number"
-          },
           "repliesInterested": {
             "type": "number"
           },
@@ -816,9 +994,6 @@
                 "emailsBounced": {
                   "type": "number"
                 },
-                "emailsReplied": {
-                  "type": "number"
-                },
                 "repliesInterested": {
                   "type": "number"
                 },
@@ -861,7 +1036,6 @@
                 "emailsOpened",
                 "emailsClicked",
                 "emailsBounced",
-                "emailsReplied",
                 "repliesInterested",
                 "repliesMeetingBooked",
                 "repliesClosed",
@@ -5016,9 +5190,6 @@
           "emailsBounced": {
             "type": "number"
           },
-          "emailsReplied": {
-            "type": "number"
-          },
           "repliesInterested": {
             "type": "number"
           },
@@ -5048,7 +5219,6 @@
           "emailsOpened",
           "emailsClicked",
           "emailsBounced",
-          "emailsReplied",
           "repliesInterested",
           "repliesMeetingBooked",
           "repliesClosed",
@@ -5112,82 +5282,6 @@
       "ScrapeResultResponse": {
         "type": "object",
         "properties": {}
-      },
-      "WorkflowMetadata": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Workflow ID"
-          },
-          "slug": {
-            "type": "string",
-            "description": "Unique technical identifier. Use this to execute via /workflows/by-slug/{slug}/execute"
-          },
-          "name": {
-            "type": "string",
-            "description": "Workflow name"
-          },
-          "displayName": {
-            "type": "string",
-            "nullable": true,
-            "description": "Stable display name for the workflow family"
-          },
-          "dynastyName": {
-            "type": "string",
-            "description": "Stable name for the lineage. Constant across all versions of a dynasty"
-          },
-          "dynastySlug": {
-            "type": "string",
-            "description": "Stable slug for the lineage. Use as key for dynasty-level lookups and stats grouping"
-          },
-          "version": {
-            "type": "integer",
-            "description": "Version number within the dynasty. Starts at 1"
-          },
-          "createdForBrandId": {
-            "type": "string",
-            "nullable": true,
-            "description": "Brand ID that created this workflow"
-          },
-          "category": {
-            "type": "string",
-            "description": "Workflow category (e.g. 'sales', 'pr')"
-          },
-          "channel": {
-            "type": "string",
-            "description": "Communication channel (e.g. 'email')"
-          },
-          "audienceType": {
-            "type": "string",
-            "description": "Audience type (e.g. 'cold-outreach')"
-          },
-          "featureSlug": {
-            "type": "string",
-            "description": "Feature slug this workflow belongs to (e.g. 'pr-cold-email-outreach')"
-          },
-          "signature": {
-            "type": "string",
-            "description": "SHA-256 hash of the canonical DAG"
-          },
-          "signatureName": {
-            "type": "string",
-            "description": "Human-readable name for this DAG variant"
-          }
-        },
-        "required": [
-          "id",
-          "slug",
-          "name",
-          "displayName",
-          "dynastyName",
-          "dynastySlug",
-          "version",
-          "createdForBrandId",
-          "featureSlug",
-          "signature",
-          "signatureName"
-        ]
       },
       "ListWorkflowsResponse": {
         "type": "object",
@@ -8315,11 +8409,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Pass-through from features-service GET /public/stats/ranked. Shape depends on groupBy (workflow or brand). See features-service OpenAPI spec for full schema.",
+            "description": "Ranked workflows with stats (from features-service)",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RankedResponse"
+                  "$ref": "#/components/schemas/RankedWorkflowResponse"
                 }
               }
             }
@@ -8374,11 +8468,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Pass-through from features-service GET /public/stats/best. See features-service OpenAPI spec for full schema.",
+            "description": "Hero records — best cost-per-outcome for each dynamic metric. Metrics are resolved from the feature's declared outputs.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BestResponse"
+                  "$ref": "#/components/schemas/BestWorkflowResponse"
                 }
               }
             }
@@ -8525,11 +8619,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Pass-through from features-service GET /public/stats/ranked. Shape depends on groupBy (workflow or brand). See features-service OpenAPI spec for full schema.",
+            "description": "Ranked workflows with stats (from features-service)",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RankedResponse"
+                  "$ref": "#/components/schemas/RankedWorkflowResponse"
                 }
               }
             }
@@ -8654,11 +8748,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Pass-through from features-service GET /public/stats/best. See features-service OpenAPI spec for full schema.",
+            "description": "Hero records — best cost-per-outcome for each dynamic metric. Metrics are resolved from the feature's declared outputs.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BestResponse"
+                  "$ref": "#/components/schemas/BestWorkflowResponse"
                 }
               }
             }

@@ -261,7 +261,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
     const [deliveryGroups, leadGroups, emailgenGroups, costGroups] = await Promise.all([
       callExternalService<{ groups: Array<{ key: string; broadcast: {
         emailsContacted: number; emailsSent: number; emailsDelivered: number;
-        emailsOpened: number; emailsClicked: number; emailsReplied: number; emailsBounced: number;
+        emailsOpened: number; emailsClicked: number; emailsBounced: number;
         repliesInterested: number; repliesMeetingBooked: number; repliesClosed: number;
         repliesNotInterested: number; repliesNeutral: number; repliesOutOfOffice: number;
         repliesUnsubscribe: number; recipients: number;
@@ -315,7 +315,6 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
       s.emailsDelivered = b?.emailsDelivered ?? 0;
       s.emailsOpened = b?.emailsOpened ?? 0;
       s.emailsClicked = b?.emailsClicked ?? 0;
-      s.emailsReplied = b?.emailsReplied ?? 0;
       s.emailsBounced = b?.emailsBounced ?? 0;
       s.repliesInterested = b?.repliesInterested ?? 0;
       s.repliesMeetingBooked = b?.repliesMeetingBooked ?? 0;
@@ -355,7 +354,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
       leadsServed: 0, leadsContacted: 0, leadsBuffered: 0, leadsSkipped: 0,
       emailsGenerated: 0,
       emailsContacted: 0, emailsSent: 0, emailsDelivered: 0, emailsOpened: 0, emailsClicked: 0,
-      emailsBounced: 0, emailsReplied: 0,
+      emailsBounced: 0,
       repliesInterested: 0, repliesMeetingBooked: 0, repliesClosed: 0,
       repliesNotInterested: 0, repliesNeutral: 0, repliesOutOfOffice: 0,
       repliesUnsubscribe: 0,
