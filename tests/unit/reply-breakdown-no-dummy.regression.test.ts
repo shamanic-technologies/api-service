@@ -64,7 +64,17 @@ function createApp() {
   return app;
 }
 
-const zeroDetail = { interested: 0, meetingBooked: 0, closed: 0, notInterested: 0, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 };
+/** Helper: build a valid email-gateway Stats object */
+function makeStats(overrides: Record<string, number> = {}) {
+  return {
+    emailsContacted: 0, emailsSent: 0, emailsDelivered: 0, emailsOpened: 0,
+    emailsClicked: 0, emailsReplied: 0, emailsBounced: 0,
+    repliesInterested: 0, repliesMeetingBooked: 0, repliesClosed: 0,
+    repliesNotInterested: 0, repliesNeutral: 0, repliesOutOfOffice: 0,
+    repliesUnsubscribe: 0, recipients: 0,
+    ...overrides,
+  };
+}
 
 describe("Reply breakdown: no dummy data when 0 replies", () => {
   beforeEach(() => {
@@ -82,12 +92,12 @@ describe("Reply breakdown: no dummy data when 0 replies", () => {
       // Email-gateway: GET /stats?orgId=...&campaignId=...
       if (service.url === "http://mock-email" && path.startsWith("/orgs/stats?")) {
         return Promise.resolve({
-          transactional: { emailsSent: 10, emailsDelivered: 8, emailsOpened: 3, emailsClicked: 1, emailsBounced: 0, repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0, repliesDetail: zeroDetail, recipients: 10 },
-          broadcast: { emailsSent: 5, emailsDelivered: 4, emailsOpened: 2, emailsClicked: 0, emailsBounced: 0, repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0, repliesDetail: zeroDetail, recipients: 5 },
+          transactional: makeStats({ emailsSent: 10, emailsDelivered: 8, emailsOpened: 3, emailsClicked: 1, recipients: 10 }),
+          broadcast: makeStats({ emailsSent: 5, emailsDelivered: 4, emailsOpened: 2, recipients: 5 }),
         });
       }
       // Lead-service
-      if (service.url === "http://mock-lead" && path.startsWith("/stats?campaignId=")) {
+      if (service.url === "http://mock-lead" && path.startsWith("/orgs/stats?")) {
         return Promise.resolve({ served: 10, buffered: 0, skipped: 0 });
       }
       // Emailgen
@@ -108,28 +118,31 @@ describe("Reply breakdown: no dummy data when 0 replies", () => {
     const res = await request(app).get("/v1/campaigns/test-campaign-123/stats");
 
     expect(res.status).toBe(200);
-    expect(res.body.repliesPositive).toBe(0);
-    expect(res.body.repliesNegative).toBe(0);
+    expect(res.body.repliesInterested).toBe(0);
+    expect(res.body.repliesMeetingBooked).toBe(0);
+    expect(res.body.repliesClosed).toBe(0);
+    expect(res.body.repliesNotInterested).toBe(0);
     expect(res.body.repliesNeutral).toBe(0);
-    expect(res.body.repliesAutoReply).toBe(0);
-    expect(res.body.repliesDetail).toEqual(zeroDetail);
+    expect(res.body.repliesOutOfOffice).toBe(0);
+    expect(res.body.repliesUnsubscribe).toBe(0);
   });
 
   it("should return reply classifications when replies exist", async () => {
     const app = createApp();
 
-    const broadcastDetail = { interested: 1, meetingBooked: 2, closed: 0, notInterested: 1, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 1 };
-
     mockCallExternalService.mockImplementation((service: any, path: string) => {
       // Email-gateway: GET /stats?orgId=...&campaignId=...
       if (service.url === "http://mock-email" && path.startsWith("/orgs/stats?")) {
         return Promise.resolve({
-          transactional: { emailsSent: 10, emailsDelivered: 8, emailsOpened: 3, emailsClicked: 1, emailsBounced: 0, repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0, repliesDetail: zeroDetail, recipients: 10 },
-          broadcast: { emailsSent: 5, emailsDelivered: 4, emailsOpened: 2, emailsClicked: 0, emailsBounced: 0, repliesPositive: 3, repliesNegative: 1, repliesNeutral: 0, repliesAutoReply: 1, repliesDetail: broadcastDetail, recipients: 5 },
+          transactional: makeStats({ emailsSent: 10, emailsDelivered: 8, emailsOpened: 3, emailsClicked: 1, recipients: 10 }),
+          broadcast: makeStats({
+            emailsSent: 5, emailsDelivered: 4, emailsOpened: 2, emailsReplied: 5, recipients: 5,
+            repliesInterested: 1, repliesMeetingBooked: 2, repliesNotInterested: 1, repliesOutOfOffice: 1,
+          }),
         });
       }
       // Lead-service
-      if (service.url === "http://mock-lead" && path.startsWith("/stats?campaignId=")) {
+      if (service.url === "http://mock-lead" && path.startsWith("/orgs/stats?")) {
         return Promise.resolve({ served: 10, buffered: 0, skipped: 0 });
       }
       // Emailgen
@@ -150,9 +163,9 @@ describe("Reply breakdown: no dummy data when 0 replies", () => {
     const res = await request(app).get("/v1/campaigns/test-campaign-123/stats");
 
     expect(res.status).toBe(200);
-    expect(res.body.repliesPositive).toBe(3);
-    expect(res.body.repliesNegative).toBe(1);
-    expect(res.body.repliesAutoReply).toBe(1);
-    expect(res.body.repliesDetail).toEqual(broadcastDetail);
+    expect(res.body.repliesInterested).toBe(1);
+    expect(res.body.repliesMeetingBooked).toBe(2);
+    expect(res.body.repliesNotInterested).toBe(1);
+    expect(res.body.repliesOutOfOffice).toBe(1);
   });
 });

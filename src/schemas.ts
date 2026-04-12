@@ -135,7 +135,7 @@ registry.registerPath({
 // All ranked/best endpoints now proxy to features-service
 const rankedQueryParams = z.object({
   featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature dynasty slug (required). Resolves to all versioned slugs in the lineage."),
-  objective: z.string().openapi({ example: "repliesPositive" }).describe("Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'."),
+  objective: z.string().openapi({ example: "repliesInterested" }).describe("Stats key to rank by (required). e.g. 'repliesInterested', 'leadsServed'."),
   groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
   limit: z.string().optional().openapi({ example: "10" }).describe("Max results (default 10, max 100)"),
 });
@@ -211,11 +211,11 @@ const bestResponse = {
     content: {
       "application/json": {
         schema: z.object({
-          best: z.record(z.string(), BestWorkflowRecordSchema.nullable()).describe("Map of metric key (e.g. 'repliesPositive', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."),
+          best: z.record(z.string(), BestWorkflowRecordSchema.nullable()).describe("Map of metric key (e.g. 'repliesInterested', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."),
         }).openapi("BestWorkflowResponse", {
           example: {
             best: {
-              repliesPositive: { workflowSlug: "sales-email-cold-outreach-sienna-v3", workflowName: "Sales Cold Outreach (Sienna)", createdForBrandId: "brand-uuid-456", value: 42 },
+              repliesInterested: { workflowSlug: "sales-email-cold-outreach-sienna-v3", workflowName: "Sales Cold Outreach (Sienna)", createdForBrandId: "brand-uuid-456", value: 42 },
               leadsServed: null,
             },
           },
@@ -645,15 +645,14 @@ registry.registerPath({
               emailsOpened: z.number(),
               emailsClicked: z.number(),
               emailsBounced: z.number(),
-              repliesPositive: z.number().optional(),
-              repliesNegative: z.number().optional(),
+              emailsReplied: z.number().optional(),
+              repliesInterested: z.number().optional(),
+              repliesMeetingBooked: z.number().optional(),
+              repliesClosed: z.number().optional(),
+              repliesNotInterested: z.number().optional(),
               repliesNeutral: z.number().optional(),
-              repliesAutoReply: z.number().optional(),
-              repliesDetail: z.object({
-                interested: z.number(), meetingBooked: z.number(), closed: z.number(),
-                notInterested: z.number(), wrongPerson: z.number(), unsubscribe: z.number(),
-                neutral: z.number(), autoReply: z.number(), outOfOffice: z.number(),
-              }).optional(),
+              repliesOutOfOffice: z.number().optional(),
+              repliesUnsubscribe: z.number().optional(),
               totalCostInUsdCents: z.string().nullable().optional().describe("Total cost from campaign-service budget tracking"),
               costBreakdown: z.array(z.object({
                 costName: z.string(),
@@ -713,15 +712,14 @@ registry.registerPath({
                   emailsOpened: z.number(),
                   emailsClicked: z.number(),
                   emailsBounced: z.number(),
-                  repliesPositive: z.number(),
-                  repliesNegative: z.number(),
+                  emailsReplied: z.number(),
+                  repliesInterested: z.number(),
+                  repliesMeetingBooked: z.number(),
+                  repliesClosed: z.number(),
+                  repliesNotInterested: z.number(),
                   repliesNeutral: z.number(),
-                  repliesAutoReply: z.number(),
-                  repliesDetail: z.object({
-                    interested: z.number(), meetingBooked: z.number(), closed: z.number(),
-                    notInterested: z.number(), wrongPerson: z.number(), unsubscribe: z.number(),
-                    neutral: z.number(), autoReply: z.number(), outOfOffice: z.number(),
-                  }),
+                  repliesOutOfOffice: z.number(),
+                  repliesUnsubscribe: z.number(),
                   totalCostInUsdCents: z.string().nullable(),
                   runCount: z.number(),
                 }),
@@ -3563,15 +3561,14 @@ registry.registerPath({
               emailsOpened: z.number(),
               emailsClicked: z.number(),
               emailsBounced: z.number(),
-              repliesPositive: z.number(),
-              repliesNegative: z.number(),
+              emailsReplied: z.number(),
+              repliesInterested: z.number(),
+              repliesMeetingBooked: z.number(),
+              repliesClosed: z.number(),
+              repliesNotInterested: z.number(),
               repliesNeutral: z.number(),
-              repliesAutoReply: z.number(),
-              repliesDetail: z.object({
-                interested: z.number(), meetingBooked: z.number(), closed: z.number(),
-                notInterested: z.number(), wrongPerson: z.number(), unsubscribe: z.number(),
-                neutral: z.number(), autoReply: z.number(), outOfOffice: z.number(),
-              }),
+              repliesOutOfOffice: z.number(),
+              repliesUnsubscribe: z.number(),
             })
             .openapi("EmailGatewayStatsResponse"),
         },
