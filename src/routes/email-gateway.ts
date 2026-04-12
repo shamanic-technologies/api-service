@@ -26,9 +26,11 @@ router.get("/email-gateway/stats", authenticate, requireOrg, requireUser, async 
       emailsClicked: 0,
       emailsReplied: 0,
       emailsBounced: 0,
-      repliesWillingToMeet: 0,
       repliesInterested: 0,
+      repliesMeetingBooked: 0,
+      repliesClosed: 0,
       repliesNotInterested: 0,
+      repliesNeutral: 0,
       repliesOutOfOffice: 0,
       repliesUnsubscribe: 0,
     });

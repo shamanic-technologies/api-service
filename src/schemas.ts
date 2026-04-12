@@ -135,7 +135,7 @@ registry.registerPath({
 // All ranked/best endpoints now proxy to features-service
 const rankedQueryParams = z.object({
   featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature dynasty slug (required). Resolves to all versioned slugs in the lineage."),
-  objective: z.string().openapi({ example: "emailsReplied" }).describe("Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'."),
+  objective: z.string().openapi({ example: "repliesInterested" }).describe("Stats key to rank by (required). e.g. 'repliesInterested', 'leadsServed'."),
   groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
   limit: z.string().optional().openapi({ example: "10" }).describe("Max results (default 10, max 100)"),
 });
@@ -211,11 +211,11 @@ const bestResponse = {
     content: {
       "application/json": {
         schema: z.object({
-          best: z.record(z.string(), BestWorkflowRecordSchema.nullable()).describe("Map of metric key (e.g. 'emailsReplied', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."),
+          best: z.record(z.string(), BestWorkflowRecordSchema.nullable()).describe("Map of metric key (e.g. 'repliesInterested', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."),
         }).openapi("BestWorkflowResponse", {
           example: {
             best: {
-              emailsReplied: { workflowSlug: "sales-email-cold-outreach-sienna-v3", workflowName: "Sales Cold Outreach (Sienna)", createdForBrandId: "brand-uuid-456", value: 42 },
+              repliesInterested: { workflowSlug: "sales-email-cold-outreach-sienna-v3", workflowName: "Sales Cold Outreach (Sienna)", createdForBrandId: "brand-uuid-456", value: 42 },
               leadsServed: null,
             },
           },
@@ -644,11 +644,13 @@ registry.registerPath({
               emailsDelivered: z.number().optional().describe("Emails confirmed delivered (from webhook)"),
               emailsOpened: z.number(),
               emailsClicked: z.number(),
-              emailsReplied: z.number(),
               emailsBounced: z.number(),
-              repliesWillingToMeet: z.number().optional(),
+              emailsReplied: z.number().optional(),
               repliesInterested: z.number().optional(),
+              repliesMeetingBooked: z.number().optional(),
+              repliesClosed: z.number().optional(),
               repliesNotInterested: z.number().optional(),
+              repliesNeutral: z.number().optional(),
               repliesOutOfOffice: z.number().optional(),
               repliesUnsubscribe: z.number().optional(),
               totalCostInUsdCents: z.string().nullable().optional().describe("Total cost from campaign-service budget tracking"),
@@ -709,11 +711,13 @@ registry.registerPath({
                   emailsDelivered: z.number().describe("Emails confirmed delivered (from webhook)"),
                   emailsOpened: z.number(),
                   emailsClicked: z.number(),
-                  emailsReplied: z.number(),
                   emailsBounced: z.number(),
-                  repliesWillingToMeet: z.number(),
+                  emailsReplied: z.number(),
                   repliesInterested: z.number(),
+                  repliesMeetingBooked: z.number(),
+                  repliesClosed: z.number(),
                   repliesNotInterested: z.number(),
+                  repliesNeutral: z.number(),
                   repliesOutOfOffice: z.number(),
                   repliesUnsubscribe: z.number(),
                   totalCostInUsdCents: z.string().nullable(),
@@ -1046,6 +1050,7 @@ registry.registerPath({
                 }).openapi("OutletWithCampaigns"),
               ),
               total: z.number().int().describe("Total number of distinct outlets matching filters"),
+              byOutreachStatus: z.record(z.number()).describe("Map of outreach status to outlet count across ALL outlets (not affected by pagination). Statuses: open, ended, denied, served, contacted, delivered, replied, skipped."),
             })
             .openapi("ListOutletsResponse"),
         },
@@ -1737,7 +1742,7 @@ registry.registerPath({
   tags: ["Journalists"],
   summary: "Get journalist stats with dynasty-aware filtering and grouping",
   description:
-    "Returns journalist counts grouped by outreach status (buffered, claimed, served, skipped, contacted, delivered, replied, bounced). " +
+    "Returns journalist counts grouped by outreach status (buffered, claimed, served, skipped, contacted, delivered, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply). " +
     "Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. " +
     "Optional groupBy returns per-slug breakdowns.",
   security: authed,
@@ -1749,7 +1754,7 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             totalJournalists: z.number(),
-            byOutreachStatus: z.record(z.number()).describe("Map of outreach status to count. Statuses: buffered, claimed, served, skipped, contacted, delivered, replied, bounced."),
+            byOutreachStatus: z.record(z.number()).describe("Map of outreach status to count. Statuses: buffered, claimed, served, skipped, contacted, delivered, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply."),
             groupedBy: z.record(z.object({
               totalJournalists: z.number(),
               byOutreachStatus: z.record(z.number()).describe("Map of outreach status to count for this group"),
@@ -3272,6 +3277,7 @@ registry.registerPath({
               brandId: z.string().describe("Internal brand UUID"),
               domain: z.string().describe("Brand domain (e.g. acme.com)"),
               name: z.string().describe("Brand display name"),
+              brandUrl: z.string().nullable().describe("Full brand website URL (e.g. https://acme.com)"),
             })).describe("Metadata for each brand included in the extraction"),
             fields: z.record(z.string(), z.object({
               value: z.union([
@@ -3376,6 +3382,7 @@ registry.registerPath({
               brandId: z.string().describe("Internal brand UUID"),
               domain: z.string().describe("Brand domain"),
               name: z.string().describe("Brand display name"),
+              brandUrl: z.string().nullable().describe("Full brand website URL (e.g. https://acme.com)"),
             })).describe("Metadata for each brand"),
             results: z.array(z.object({
               category: z.string().describe("Image category"),
@@ -3553,11 +3560,13 @@ registry.registerPath({
               emailsDelivered: z.number().describe("Emails confirmed delivered (from webhook)"),
               emailsOpened: z.number(),
               emailsClicked: z.number(),
-              emailsReplied: z.number(),
               emailsBounced: z.number(),
-              repliesWillingToMeet: z.number(),
+              emailsReplied: z.number(),
               repliesInterested: z.number(),
+              repliesMeetingBooked: z.number(),
+              repliesClosed: z.number(),
               repliesNotInterested: z.number(),
+              repliesNeutral: z.number(),
               repliesOutOfOffice: z.number(),
               repliesUnsubscribe: z.number(),
             })

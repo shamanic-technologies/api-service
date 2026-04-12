@@ -308,7 +308,7 @@
             "additionalProperties": {
               "$ref": "#/components/schemas/BestWorkflowRecord"
             },
-            "description": "Map of metric key (e.g. 'emailsReplied', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."
+            "description": "Map of metric key (e.g. 'repliesInterested', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."
           }
         },
         "required": [
@@ -316,7 +316,7 @@
         ],
         "example": {
           "best": {
-            "emailsReplied": {
+            "repliesInterested": {
               "workflowSlug": "sales-email-cold-outreach-sienna-v3",
               "workflowName": "Sales Cold Outreach (Sienna)",
               "createdForBrandId": "brand-uuid-456",
@@ -871,19 +871,25 @@
           "emailsClicked": {
             "type": "number"
           },
-          "emailsReplied": {
-            "type": "number"
-          },
           "emailsBounced": {
             "type": "number"
           },
-          "repliesWillingToMeet": {
+          "emailsReplied": {
             "type": "number"
           },
           "repliesInterested": {
             "type": "number"
           },
+          "repliesMeetingBooked": {
+            "type": "number"
+          },
+          "repliesClosed": {
+            "type": "number"
+          },
           "repliesNotInterested": {
+            "type": "number"
+          },
+          "repliesNeutral": {
             "type": "number"
           },
           "repliesOutOfOffice": {
@@ -940,7 +946,6 @@
           "emailsSent",
           "emailsOpened",
           "emailsClicked",
-          "emailsReplied",
           "emailsBounced"
         ]
       },
@@ -989,19 +994,25 @@
                 "emailsClicked": {
                   "type": "number"
                 },
-                "emailsReplied": {
-                  "type": "number"
-                },
                 "emailsBounced": {
                   "type": "number"
                 },
-                "repliesWillingToMeet": {
+                "emailsReplied": {
                   "type": "number"
                 },
                 "repliesInterested": {
                   "type": "number"
                 },
+                "repliesMeetingBooked": {
+                  "type": "number"
+                },
+                "repliesClosed": {
+                  "type": "number"
+                },
                 "repliesNotInterested": {
+                  "type": "number"
+                },
+                "repliesNeutral": {
                   "type": "number"
                 },
                 "repliesOutOfOffice": {
@@ -1030,11 +1041,13 @@
                 "emailsDelivered",
                 "emailsOpened",
                 "emailsClicked",
-                "emailsReplied",
                 "emailsBounced",
-                "repliesWillingToMeet",
+                "emailsReplied",
                 "repliesInterested",
+                "repliesMeetingBooked",
+                "repliesClosed",
                 "repliesNotInterested",
+                "repliesNeutral",
                 "repliesOutOfOffice",
                 "repliesUnsubscribe",
                 "totalCostInUsdCents",
@@ -1549,11 +1562,19 @@
           "total": {
             "type": "integer",
             "description": "Total number of distinct outlets matching filters"
+          },
+          "byOutreachStatus": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number"
+            },
+            "description": "Map of outreach status to outlet count across ALL outlets (not affected by pagination). Statuses: open, ended, denied, served, contacted, delivered, replied, skipped."
           }
         },
         "required": [
           "outlets",
-          "total"
+          "total",
+          "byOutreachStatus"
         ]
       },
       "CreateOutletRequest": {
@@ -2627,7 +2648,7 @@
             "additionalProperties": {
               "type": "number"
             },
-            "description": "Map of outreach status to count. Statuses: buffered, claimed, served, skipped, contacted, delivered, replied, bounced."
+            "description": "Map of outreach status to count. Statuses: buffered, claimed, served, skipped, contacted, delivered, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply."
           },
           "groupedBy": {
             "type": "object",
@@ -4633,12 +4654,18 @@
                 "name": {
                   "type": "string",
                   "description": "Brand display name"
+                },
+                "brandUrl": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Full brand website URL (e.g. https://acme.com)"
                 }
               },
               "required": [
                 "brandId",
                 "domain",
-                "name"
+                "name",
+                "brandUrl"
               ]
             },
             "description": "Metadata for each brand included in the extraction"
@@ -4916,12 +4943,18 @@
                 "name": {
                   "type": "string",
                   "description": "Brand display name"
+                },
+                "brandUrl": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Full brand website URL (e.g. https://acme.com)"
                 }
               },
               "required": [
                 "brandId",
                 "domain",
-                "name"
+                "name",
+                "brandUrl"
               ]
             },
             "description": "Metadata for each brand"
@@ -5161,19 +5194,25 @@
           "emailsClicked": {
             "type": "number"
           },
-          "emailsReplied": {
-            "type": "number"
-          },
           "emailsBounced": {
             "type": "number"
           },
-          "repliesWillingToMeet": {
+          "emailsReplied": {
             "type": "number"
           },
           "repliesInterested": {
             "type": "number"
           },
+          "repliesMeetingBooked": {
+            "type": "number"
+          },
+          "repliesClosed": {
+            "type": "number"
+          },
           "repliesNotInterested": {
+            "type": "number"
+          },
+          "repliesNeutral": {
             "type": "number"
           },
           "repliesOutOfOffice": {
@@ -5189,11 +5228,13 @@
           "emailsDelivered",
           "emailsOpened",
           "emailsClicked",
-          "emailsReplied",
           "emailsBounced",
-          "repliesWillingToMeet",
+          "emailsReplied",
           "repliesInterested",
+          "repliesMeetingBooked",
+          "repliesClosed",
           "repliesNotInterested",
+          "repliesNeutral",
           "repliesOutOfOffice",
           "repliesUnsubscribe"
         ]
@@ -8342,11 +8383,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'.",
-              "example": "emailsReplied"
+              "description": "Stats key to rank by (required). e.g. 'repliesInterested', 'leadsServed'.",
+              "example": "repliesInterested"
             },
             "required": true,
-            "description": "Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'.",
+            "description": "Stats key to rank by (required). e.g. 'repliesInterested', 'leadsServed'.",
             "name": "objective",
             "in": "query"
           },
@@ -8497,11 +8538,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'.",
-              "example": "emailsReplied"
+              "description": "Stats key to rank by (required). e.g. 'repliesInterested', 'leadsServed'.",
+              "example": "repliesInterested"
             },
             "required": true,
-            "description": "Stats key to rank by (required). e.g. 'emailsReplied', 'leadsServed'.",
+            "description": "Stats key to rank by (required). e.g. 'repliesInterested', 'leadsServed'.",
             "name": "objective",
             "in": "query"
           },
@@ -13329,7 +13370,7 @@
           "Journalists"
         ],
         "summary": "Get journalist stats with dynasty-aware filtering and grouping",
-        "description": "Returns journalist counts grouped by outreach status (buffered, claimed, served, skipped, contacted, delivered, replied, bounced). Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. Optional groupBy returns per-slug breakdowns.",
+        "description": "Returns journalist counts grouped by outreach status (buffered, claimed, served, skipped, contacted, delivered, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply). Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. Optional groupBy returns per-slug breakdowns.",
         "security": [
           {
             "bearerAuth": []

@@ -259,7 +259,13 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
 
     // 4 parallel calls
     const [deliveryGroups, leadGroups, emailgenGroups, costGroups] = await Promise.all([
-      callExternalService<{ groups: Array<{ key: string; broadcast: Record<string, number> | null; transactional: Record<string, number> | null }> }>(
+      callExternalService<{ groups: Array<{ key: string; broadcast: {
+        emailsContacted: number; emailsSent: number; emailsDelivered: number;
+        emailsOpened: number; emailsClicked: number; emailsReplied: number; emailsBounced: number;
+        repliesInterested: number; repliesMeetingBooked: number; repliesClosed: number;
+        repliesNotInterested: number; repliesNeutral: number; repliesOutOfOffice: number;
+        repliesUnsubscribe: number; recipients: number;
+      } | null; transactional: Record<string, number> | null }> }>(
         externalServices.emailGateway,
         `/orgs/stats?${deliveryParams}`,
         { headers: internalHeaders },
@@ -311,9 +317,11 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
       s.emailsClicked = b?.emailsClicked ?? 0;
       s.emailsReplied = b?.emailsReplied ?? 0;
       s.emailsBounced = b?.emailsBounced ?? 0;
-      s.repliesWillingToMeet = b?.repliesWillingToMeet ?? 0;
       s.repliesInterested = b?.repliesInterested ?? 0;
+      s.repliesMeetingBooked = b?.repliesMeetingBooked ?? 0;
+      s.repliesClosed = b?.repliesClosed ?? 0;
       s.repliesNotInterested = b?.repliesNotInterested ?? 0;
+      s.repliesNeutral = b?.repliesNeutral ?? 0;
       s.repliesOutOfOffice = b?.repliesOutOfOffice ?? 0;
       s.repliesUnsubscribe = b?.repliesUnsubscribe ?? 0;
     }
@@ -347,9 +355,10 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
       leadsServed: 0, leadsContacted: 0, leadsBuffered: 0, leadsSkipped: 0,
       emailsGenerated: 0,
       emailsContacted: 0, emailsSent: 0, emailsDelivered: 0, emailsOpened: 0, emailsClicked: 0,
-      emailsReplied: 0, emailsBounced: 0,
-      repliesWillingToMeet: 0, repliesInterested: 0, repliesNotInterested: 0,
-      repliesOutOfOffice: 0, repliesUnsubscribe: 0,
+      emailsBounced: 0, emailsReplied: 0,
+      repliesInterested: 0, repliesMeetingBooked: 0, repliesClosed: 0,
+      repliesNotInterested: 0, repliesNeutral: 0, repliesOutOfOffice: 0,
+      repliesUnsubscribe: 0,
       totalCostInUsdCents: null, runCount: 0,
     };
     for (const stats of merged.values()) {
@@ -524,7 +533,6 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
       stats.emailsSent = 0;
       stats.emailsOpened = 0;
       stats.emailsClicked = 0;
-      stats.emailsReplied = 0;
       stats.emailsBounced = 0;
     }
 
@@ -691,7 +699,7 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
           emailsGenerated: currentEmails,
           emailsSent: (delivery as any)?.emailsSent ?? 0,
           emailsOpened: (delivery as any)?.emailsOpened ?? 0,
-          emailsReplied: (delivery as any)?.emailsReplied ?? 0,
+          repliesInterested: (delivery as any)?.repliesInterested ?? 0,
         };
 
         res.write(`event: update\ndata: ${JSON.stringify(payload)}\n\n`);
