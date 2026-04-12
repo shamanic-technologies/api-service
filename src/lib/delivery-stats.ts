@@ -4,7 +4,7 @@ import { buildInternalHeaders } from "./internal-headers.js";
 
 interface EmailGatewayStats {
   emailsContacted: number; emailsSent: number; emailsDelivered: number; emailsOpened: number;
-  emailsClicked: number; emailsReplied: number; emailsBounced: number;
+  emailsClicked: number; emailsBounced: number;
   repliesInterested: number; repliesMeetingBooked: number; repliesClosed: number;
   repliesNotInterested: number; repliesNeutral: number; repliesOutOfOffice: number;
   repliesUnsubscribe: number; recipients: number;
@@ -42,7 +42,6 @@ export async function fetchDeliveryStats(
     emailsDelivered: b.emailsDelivered || 0,
     emailsOpened: b.emailsOpened || 0,
     emailsClicked: b.emailsClicked || 0,
-    emailsReplied: b.emailsReplied || 0,
     emailsBounced: b.emailsBounced || 0,
     repliesInterested: b.repliesInterested || 0,
     repliesMeetingBooked: b.repliesMeetingBooked || 0,

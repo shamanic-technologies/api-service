@@ -83,14 +83,14 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
         return Promise.resolve({
           transactional: {
             emailsContacted: 50, emailsSent: 50, emailsDelivered: 48, emailsOpened: 30,
-            emailsClicked: 5, emailsReplied: 10, emailsBounced: 2,
+            emailsClicked: 5, emailsBounced: 2,
             repliesInterested: 2, repliesMeetingBooked: 3, repliesClosed: 0,
             repliesNotInterested: 1, repliesNeutral: 1, repliesOutOfOffice: 1,
             repliesUnsubscribe: 0, recipients: 50,
           },
           broadcast: {
             emailsContacted: 6, emailsSent: 6, emailsDelivered: 6, emailsOpened: 4,
-            emailsClicked: 0, emailsReplied: 1, emailsBounced: 0,
+            emailsClicked: 0, emailsBounced: 0,
             repliesInterested: 0, repliesMeetingBooked: 0, repliesClosed: 0,
             repliesNotInterested: 1, repliesNeutral: 0, repliesOutOfOffice: 0,
             repliesUnsubscribe: 0, recipients: 6,
@@ -131,7 +131,7 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
     mockCallExternalService.mockResolvedValue({
       transactional: {
         emailsContacted: 50, emailsSent: 50, emailsDelivered: 48, emailsOpened: 30,
-        emailsClicked: 5, emailsReplied: 10, emailsBounced: 2,
+        emailsClicked: 5, emailsBounced: 2,
         repliesInterested: 2, repliesMeetingBooked: 3, repliesClosed: 0,
         repliesNotInterested: 1, repliesNeutral: 1, repliesOutOfOffice: 1,
         repliesUnsubscribe: 0, recipients: 50,
@@ -155,7 +155,7 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
       transactional: null,
       broadcast: {
         emailsContacted: 3, emailsSent: 3, emailsDelivered: 3, emailsOpened: 1,
-        emailsClicked: 0, emailsReplied: 0, emailsBounced: 0,
+        emailsClicked: 0, emailsBounced: 0,
         repliesInterested: 0, repliesMeetingBooked: 0, repliesClosed: 0,
         repliesNotInterested: 0, repliesNeutral: 0, repliesOutOfOffice: 0,
         repliesUnsubscribe: 0, recipients: 3,

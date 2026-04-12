@@ -24,7 +24,6 @@ router.get("/email-gateway/stats", authenticate, requireOrg, requireUser, async 
       emailsDelivered: 0,
       emailsOpened: 0,
       emailsClicked: 0,
-      emailsReplied: 0,
       emailsBounced: 0,
       repliesInterested: 0,
       repliesMeetingBooked: 0,

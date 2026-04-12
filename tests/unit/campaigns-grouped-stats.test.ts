@@ -59,7 +59,7 @@ function createApp() {
 function makeStats(overrides: Record<string, number> = {}) {
   return {
     emailsContacted: 0, emailsSent: 0, emailsDelivered: 0, emailsOpened: 0,
-    emailsClicked: 0, emailsReplied: 0, emailsBounced: 0,
+    emailsClicked: 0, emailsBounced: 0,
     repliesInterested: 0, repliesMeetingBooked: 0, repliesClosed: 0,
     repliesNotInterested: 0, repliesNeutral: 0, repliesOutOfOffice: 0,
     repliesUnsubscribe: 0, recipients: 0,

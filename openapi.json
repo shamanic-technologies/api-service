@@ -874,9 +874,6 @@
           "emailsBounced": {
             "type": "number"
           },
-          "emailsReplied": {
-            "type": "number"
-          },
           "repliesInterested": {
             "type": "number"
           },
@@ -997,9 +994,6 @@
                 "emailsBounced": {
                   "type": "number"
                 },
-                "emailsReplied": {
-                  "type": "number"
-                },
                 "repliesInterested": {
                   "type": "number"
                 },
@@ -1042,7 +1036,6 @@
                 "emailsOpened",
                 "emailsClicked",
                 "emailsBounced",
-                "emailsReplied",
                 "repliesInterested",
                 "repliesMeetingBooked",
                 "repliesClosed",
@@ -5197,9 +5190,6 @@
           "emailsBounced": {
             "type": "number"
           },
-          "emailsReplied": {
-            "type": "number"
-          },
           "repliesInterested": {
             "type": "number"
           },
@@ -5229,7 +5219,6 @@
           "emailsOpened",
           "emailsClicked",
           "emailsBounced",
-          "emailsReplied",
           "repliesInterested",
           "repliesMeetingBooked",
           "repliesClosed",
