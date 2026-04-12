@@ -145,8 +145,6 @@ const bestQueryParams = z.object({
   groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
 });
 
-// -- Workflow response schemas (mirroring workflow-service) --
-
 const WorkflowMetadataSchema = z
   .object({
     id: z.string().describe("Workflow ID"),
@@ -166,39 +164,15 @@ const WorkflowMetadataSchema = z
   })
   .openapi("WorkflowMetadata");
 
-const WorkflowStatsSchema = z
-  .object({
-    totalCostInUsdCents: z.number().describe("Total cost across all completed runs"),
-    totalOutcomes: z.number().describe("Total outcome count for the ranked metric (dynamic per feature — e.g. replies, leads found, outlets found)"),
-    costPerOutcome: z.number().nullable().describe("Cost per outcome in USD cents, null if no outcomes"),
-    completedRuns: z.number().describe("Number of completed runs"),
-  })
-  .openapi("WorkflowStats");
-
-const RankedWorkflowItemSchema = z
-  .object({
-    workflow: WorkflowMetadataSchema,
-    stats: WorkflowStatsSchema,
-  })
-  .openapi("RankedWorkflowItem");
-
-const BestWorkflowRecordSchema = z
-  .object({
-    workflowSlug: z.string().describe("Slug of the workflow"),
-    workflowName: z.string().describe("Display name of the workflow"),
-    createdForBrandId: z.string().nullable().describe("Brand ID that created this workflow"),
-    value: z.number().describe("The record value (cost per outcome in USD cents)"),
-  })
-  .openapi("BestWorkflowRecord");
+// Ranked & best responses are pass-through from features-service.
+// Do NOT define typed response schemas here — features-service owns the shape.
 
 const rankedResponse = {
   200: {
-    description: "Ranked workflows with stats (from features-service)",
+    description: "Pass-through from features-service GET /public/stats/ranked. Shape depends on groupBy (workflow or brand). See features-service OpenAPI spec for full schema.",
     content: {
       "application/json": {
-        schema: z.object({
-          results: z.array(RankedWorkflowItemSchema).describe("Workflows ranked by performance, best first"),
-        }).openapi("RankedWorkflowResponse"),
+        schema: z.object({}).passthrough().openapi("RankedResponse"),
       },
     },
   },
@@ -207,19 +181,10 @@ const rankedResponse = {
 
 const bestResponse = {
   200: {
-    description: "Hero records — best cost-per-outcome for each dynamic metric. Metrics are resolved from the feature's declared outputs.",
+    description: "Pass-through from features-service GET /public/stats/best. See features-service OpenAPI spec for full schema.",
     content: {
       "application/json": {
-        schema: z.object({
-          best: z.record(z.string(), BestWorkflowRecordSchema.nullable()).describe("Map of metric key (e.g. 'repliesInterested', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."),
-        }).openapi("BestWorkflowResponse", {
-          example: {
-            best: {
-              repliesInterested: { workflowSlug: "sales-email-cold-outreach-sienna-v3", workflowName: "Sales Cold Outreach (Sienna)", createdForBrandId: "brand-uuid-456", value: 42 },
-              leadsServed: null,
-            },
-          },
-        }),
+        schema: z.object({}).passthrough().openapi("BestResponse"),
       },
     },
   },
