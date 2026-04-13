@@ -60,9 +60,13 @@ function makeStats(overrides: Record<string, number> = {}) {
   return {
     emailsContacted: 0, emailsSent: 0, emailsDelivered: 0, emailsOpened: 0,
     emailsClicked: 0, emailsBounced: 0,
-    repliesInterested: 0, repliesMeetingBooked: 0, repliesClosed: 0,
-    repliesNotInterested: 0, repliesNeutral: 0, repliesOutOfOffice: 0,
-    repliesUnsubscribe: 0, recipients: 0,
+    repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
+    repliesDetail: {
+      interested: 0, meetingBooked: 0, closed: 0,
+      notInterested: 0, wrongPerson: 0, unsubscribe: 0,
+      neutral: 0, autoReply: 0, outOfOffice: 0,
+    },
+    recipients: 0,
     ...overrides,
   };
 }
@@ -81,12 +85,12 @@ describe("GET /v1/campaigns/stats", () => {
           groups: [
             {
               key: "c1",
-              broadcast: makeStats({ emailsContacted: 15, emailsSent: 10, emailsDelivered: 9, emailsOpened: 5, emailsClicked: 2, emailsBounced: 1, repliesInterested: 1 }),
+              broadcast: makeStats({ emailsContacted: 15, emailsSent: 10, emailsDelivered: 9, emailsOpened: 5, emailsClicked: 2, emailsBounced: 1, repliesPositive: 1 } as any),
               transactional: null,
             },
             {
               key: "c2",
-              broadcast: makeStats({ emailsContacted: 25, emailsSent: 20, emailsDelivered: 18, emailsOpened: 12, emailsClicked: 3, emailsBounced: 2, repliesNotInterested: 1 }),
+              broadcast: makeStats({ emailsContacted: 25, emailsSent: 20, emailsDelivered: 18, emailsOpened: 12, emailsClicked: 3, emailsBounced: 2, repliesNegative: 1 } as any),
               transactional: null,
             },
           ],
@@ -137,7 +141,7 @@ describe("GET /v1/campaigns/stats", () => {
     expect(c1.emailsContacted).toBe(15);
     expect(c1.emailsSent).toBe(10);
     expect(c1.emailsOpened).toBe(5);
-    expect(c1.repliesInterested).toBe(1);
+    expect(c1.repliesPositive).toBe(1);
     expect(c1.totalCostInUsdCents).toBe("500");
     expect(c1.runCount).toBe(15);
 
@@ -263,7 +267,7 @@ describe("GET /v1/campaigns/stats", () => {
     expect(c1.emailsContacted).toBe(8);
     expect(c1.emailsSent).toBe(5);
     expect(c1.emailsOpened).toBe(3);
-    expect(c1.repliesInterested).toBe(0);
+    expect(c1.repliesPositive).toBe(0);
   });
 });
 

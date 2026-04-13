@@ -308,7 +308,7 @@
             "additionalProperties": {
               "$ref": "#/components/schemas/BestWorkflowRecord"
             },
-            "description": "Map of metric key (e.g. 'repliesInterested', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."
+            "description": "Map of metric key (e.g. 'repliesPositive', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."
           }
         },
         "required": [
@@ -316,7 +316,7 @@
         ],
         "example": {
           "best": {
-            "repliesInterested": {
+            "repliesPositive": {
               "workflowSlug": "sales-email-cold-outreach-sienna-v3",
               "workflowName": "Sales Cold Outreach (Sienna)",
               "createdForBrandId": "brand-uuid-456",
@@ -805,6 +805,49 @@
           "offset"
         ]
       },
+      "RepliesDetail": {
+        "type": "object",
+        "properties": {
+          "interested": {
+            "type": "number"
+          },
+          "meetingBooked": {
+            "type": "number"
+          },
+          "closed": {
+            "type": "number"
+          },
+          "notInterested": {
+            "type": "number"
+          },
+          "wrongPerson": {
+            "type": "number"
+          },
+          "unsubscribe": {
+            "type": "number"
+          },
+          "neutral": {
+            "type": "number"
+          },
+          "autoReply": {
+            "type": "number"
+          },
+          "outOfOffice": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "interested",
+          "meetingBooked",
+          "closed",
+          "notInterested",
+          "wrongPerson",
+          "unsubscribe",
+          "neutral",
+          "autoReply",
+          "outOfOffice"
+        ]
+      },
       "CampaignStatsResponse": {
         "type": "object",
         "properties": {
@@ -874,26 +917,20 @@
           "emailsBounced": {
             "type": "number"
           },
-          "repliesInterested": {
+          "repliesPositive": {
             "type": "number"
           },
-          "repliesMeetingBooked": {
-            "type": "number"
-          },
-          "repliesClosed": {
-            "type": "number"
-          },
-          "repliesNotInterested": {
+          "repliesNegative": {
             "type": "number"
           },
           "repliesNeutral": {
             "type": "number"
           },
-          "repliesOutOfOffice": {
+          "repliesAutoReply": {
             "type": "number"
           },
-          "repliesUnsubscribe": {
-            "type": "number"
+          "repliesDetail": {
+            "$ref": "#/components/schemas/RepliesDetail"
           },
           "totalCostInUsdCents": {
             "type": "string",
@@ -994,26 +1031,20 @@
                 "emailsBounced": {
                   "type": "number"
                 },
-                "repliesInterested": {
+                "repliesPositive": {
                   "type": "number"
                 },
-                "repliesMeetingBooked": {
-                  "type": "number"
-                },
-                "repliesClosed": {
-                  "type": "number"
-                },
-                "repliesNotInterested": {
+                "repliesNegative": {
                   "type": "number"
                 },
                 "repliesNeutral": {
                   "type": "number"
                 },
-                "repliesOutOfOffice": {
+                "repliesAutoReply": {
                   "type": "number"
                 },
-                "repliesUnsubscribe": {
-                  "type": "number"
+                "repliesDetail": {
+                  "$ref": "#/components/schemas/RepliesDetail"
                 },
                 "totalCostInUsdCents": {
                   "type": "string",
@@ -1036,13 +1067,11 @@
                 "emailsOpened",
                 "emailsClicked",
                 "emailsBounced",
-                "repliesInterested",
-                "repliesMeetingBooked",
-                "repliesClosed",
-                "repliesNotInterested",
+                "repliesPositive",
+                "repliesNegative",
                 "repliesNeutral",
-                "repliesOutOfOffice",
-                "repliesUnsubscribe",
+                "repliesAutoReply",
+                "repliesDetail",
                 "totalCostInUsdCents",
                 "runCount"
               ]
@@ -1561,7 +1590,7 @@
             "additionalProperties": {
               "type": "number"
             },
-            "description": "Map of outreach status to outlet count across ALL outlets (not affected by pagination). Statuses: open, ended, denied, served, contacted, delivered, replied, skipped."
+            "description": "Map of outreach status to outlet count across ALL outlets (not affected by pagination). Statuses: open, ended, denied, served, contacted, delivered, bounced, skipped."
           }
         },
         "required": [
@@ -5190,26 +5219,20 @@
           "emailsBounced": {
             "type": "number"
           },
-          "repliesInterested": {
+          "repliesPositive": {
             "type": "number"
           },
-          "repliesMeetingBooked": {
-            "type": "number"
-          },
-          "repliesClosed": {
-            "type": "number"
-          },
-          "repliesNotInterested": {
+          "repliesNegative": {
             "type": "number"
           },
           "repliesNeutral": {
             "type": "number"
           },
-          "repliesOutOfOffice": {
+          "repliesAutoReply": {
             "type": "number"
           },
-          "repliesUnsubscribe": {
-            "type": "number"
+          "repliesDetail": {
+            "$ref": "#/components/schemas/RepliesDetail"
           }
         },
         "required": [
@@ -5219,13 +5242,11 @@
           "emailsOpened",
           "emailsClicked",
           "emailsBounced",
-          "repliesInterested",
-          "repliesMeetingBooked",
-          "repliesClosed",
-          "repliesNotInterested",
+          "repliesPositive",
+          "repliesNegative",
           "repliesNeutral",
-          "repliesOutOfOffice",
-          "repliesUnsubscribe"
+          "repliesAutoReply",
+          "repliesDetail"
         ]
       },
       "RunsCostStatsResponse": {
@@ -8372,11 +8393,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by (required). e.g. 'repliesInterested', 'leadsServed'.",
-              "example": "repliesInterested"
+              "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
+              "example": "repliesPositive"
             },
             "required": true,
-            "description": "Stats key to rank by (required). e.g. 'repliesInterested', 'leadsServed'.",
+            "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
             "name": "objective",
             "in": "query"
           },
@@ -8527,11 +8548,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by (required). e.g. 'repliesInterested', 'leadsServed'.",
-              "example": "repliesInterested"
+              "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
+              "example": "repliesPositive"
             },
             "required": true,
-            "description": "Stats key to rank by (required). e.g. 'repliesInterested', 'leadsServed'.",
+            "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
             "name": "objective",
             "in": "query"
           },
@@ -9734,7 +9755,7 @@
           "Campaigns"
         ],
         "summary": "Get campaign stats",
-        "description": "Get campaign statistics (leads served/buffered/skipped, apollo metrics, emails sent/opened/clicked/replied, etc.)",
+        "description": "Get campaign statistics (leads served/buffered/skipped, apollo metrics, emails sent/opened/clicked, reply aggregates, etc.)",
         "security": [
           {
             "bearerAuth": []
