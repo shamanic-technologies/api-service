@@ -631,7 +631,7 @@ registry.registerPath({
   tags: ["Campaigns"],
   summary: "Get campaign stats",
   description:
-    "Get campaign statistics (leads served/buffered/skipped, apollo metrics, emails sent/opened/clicked/replied, etc.)",
+    "Get campaign statistics (leads served/buffered/skipped, apollo metrics, emails sent/opened/clicked, reply aggregates, etc.)",
   security: authed,
   request: { params: CampaignIdParam },
   responses: {
@@ -1059,7 +1059,7 @@ registry.registerPath({
                 }).openapi("OutletWithCampaigns"),
               ),
               total: z.number().int().describe("Total number of distinct outlets matching filters"),
-              byOutreachStatus: z.record(z.number()).describe("Map of outreach status to outlet count across ALL outlets (not affected by pagination). Statuses: open, ended, denied, served, contacted, delivered, replied, skipped."),
+              byOutreachStatus: z.record(z.number()).describe("Map of outreach status to outlet count across ALL outlets (not affected by pagination). Statuses: open, ended, denied, served, contacted, delivered, bounced, skipped."),
             })
             .openapi("ListOutletsResponse"),
         },

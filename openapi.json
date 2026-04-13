@@ -1590,7 +1590,7 @@
             "additionalProperties": {
               "type": "number"
             },
-            "description": "Map of outreach status to outlet count across ALL outlets (not affected by pagination). Statuses: open, ended, denied, served, contacted, delivered, replied, skipped."
+            "description": "Map of outreach status to outlet count across ALL outlets (not affected by pagination). Statuses: open, ended, denied, served, contacted, delivered, bounced, skipped."
           }
         },
         "required": [
@@ -9755,7 +9755,7 @@
           "Campaigns"
         ],
         "summary": "Get campaign stats",
-        "description": "Get campaign statistics (leads served/buffered/skipped, apollo metrics, emails sent/opened/clicked/replied, etc.)",
+        "description": "Get campaign statistics (leads served/buffered/skipped, apollo metrics, emails sent/opened/clicked, reply aggregates, etc.)",
         "security": [
           {
             "bearerAuth": []
