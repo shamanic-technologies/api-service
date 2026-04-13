@@ -180,39 +180,28 @@ const WorkflowMetadataSchema = z
   })
   .openapi("WorkflowMetadata");
 
-const WorkflowStatsSchema = z
-  .object({
-    totalCostInUsdCents: z.number().describe("Total cost across all completed runs"),
-    totalOutcomes: z.number().describe("Total outcome count for the ranked metric (dynamic per feature — e.g. replies, leads found, outlets found)"),
-    costPerOutcome: z.number().nullable().describe("Cost per outcome in USD cents, null if no outcomes"),
-    completedRuns: z.number().describe("Number of completed runs"),
-  })
-  .openapi("WorkflowStats");
-
-const RankedWorkflowItemSchema = z
-  .object({
-    workflow: WorkflowMetadataSchema,
-    stats: WorkflowStatsSchema,
-  })
-  .openapi("RankedWorkflowItem");
-
-const BestWorkflowRecordSchema = z
-  .object({
-    workflowSlug: z.string().describe("Slug of the workflow"),
-    workflowName: z.string().describe("Display name of the workflow"),
-    createdForBrandId: z.string().nullable().describe("Brand ID that created this workflow"),
-    value: z.number().describe("The record value (cost per outcome in USD cents)"),
-  })
-  .openapi("BestWorkflowRecord");
+// Ranked & best responses are pass-through from features-service.
+// stats is a dynamic map — keys depend on the feature's output definitions.
+// Do NOT define typed stats schemas here — features-service owns the shape.
 
 const rankedResponse = {
   200: {
-    description: "Ranked workflows with stats (from features-service)",
+    description: "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. emailsSent, repliesPositive, positiveReplyRate). Always includes totalCostInUsdCents and completedRuns.",
     content: {
       "application/json": {
         schema: z.object({
-          results: z.array(RankedWorkflowItemSchema).describe("Workflows ranked by performance, best first"),
-        }).openapi("RankedWorkflowResponse"),
+          objective: z.string().describe("The stats key used for sorting"),
+          sortDirection: z.enum(["asc", "desc"]).describe("Sort direction applied"),
+          results: z.array(z.object({
+            workflow: WorkflowMetadataSchema.optional(),
+            brand: z.object({
+              id: z.string(),
+              name: z.string().nullable(),
+              domain: z.string().nullable(),
+            }).optional(),
+            stats: z.record(z.number().nullable()).describe("All output stats for the feature (raw counts + derived rates). Keys are dynamic per feature. Always includes totalCostInUsdCents and completedRuns."),
+          })).describe("Results ranked by the objective metric"),
+        }).openapi("RankedResponse"),
       },
     },
   },
@@ -221,19 +210,10 @@ const rankedResponse = {
 
 const bestResponse = {
   200: {
-    description: "Hero records — best cost-per-outcome for each dynamic metric. Metrics are resolved from the feature's declared outputs.",
+    description: "Pass-through from features-service. Best cost-per-outcome records per metric.",
     content: {
       "application/json": {
-        schema: z.object({
-          best: z.record(z.string(), BestWorkflowRecordSchema.nullable()).describe("Map of metric key (e.g. 'repliesPositive', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."),
-        }).openapi("BestWorkflowResponse", {
-          example: {
-            best: {
-              repliesPositive: { workflowSlug: "sales-email-cold-outreach-sienna-v3", workflowName: "Sales Cold Outreach (Sienna)", createdForBrandId: "brand-uuid-456", value: 42 },
-              leadsServed: null,
-            },
-          },
-        }),
+        schema: z.object({}).passthrough().openapi("BestResponse"),
       },
     },
   },

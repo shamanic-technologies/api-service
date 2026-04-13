@@ -213,118 +213,75 @@
           "signatureName"
         ]
       },
-      "WorkflowStats": {
+      "RankedResponse": {
         "type": "object",
         "properties": {
-          "totalCostInUsdCents": {
-            "type": "number",
-            "description": "Total cost across all completed runs"
+          "objective": {
+            "type": "string",
+            "description": "The stats key used for sorting"
           },
-          "totalOutcomes": {
-            "type": "number",
-            "description": "Total outcome count for the ranked metric (dynamic per feature — e.g. replies, leads found, outlets found)"
+          "sortDirection": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction applied"
           },
-          "costPerOutcome": {
-            "type": "number",
-            "nullable": true,
-            "description": "Cost per outcome in USD cents, null if no outcomes"
-          },
-          "completedRuns": {
-            "type": "number",
-            "description": "Number of completed runs"
-          }
-        },
-        "required": [
-          "totalCostInUsdCents",
-          "totalOutcomes",
-          "costPerOutcome",
-          "completedRuns"
-        ]
-      },
-      "RankedWorkflowItem": {
-        "type": "object",
-        "properties": {
-          "workflow": {
-            "$ref": "#/components/schemas/WorkflowMetadata"
-          },
-          "stats": {
-            "$ref": "#/components/schemas/WorkflowStats"
-          }
-        },
-        "required": [
-          "workflow",
-          "stats"
-        ]
-      },
-      "RankedWorkflowResponse": {
-        "type": "object",
-        "properties": {
           "results": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/RankedWorkflowItem"
+              "type": "object",
+              "properties": {
+                "workflow": {
+                  "$ref": "#/components/schemas/WorkflowMetadata"
+                },
+                "brand": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "domain": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "domain"
+                  ]
+                },
+                "stats": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "description": "All output stats for the feature (raw counts + derived rates). Keys are dynamic per feature. Always includes totalCostInUsdCents and completedRuns."
+                }
+              },
+              "required": [
+                "stats"
+              ]
             },
-            "description": "Workflows ranked by performance, best first"
+            "description": "Results ranked by the objective metric"
           }
         },
         "required": [
+          "objective",
+          "sortDirection",
           "results"
         ]
       },
-      "BestWorkflowRecord": {
+      "BestResponse": {
         "type": "object",
-        "nullable": true,
-        "properties": {
-          "workflowSlug": {
-            "type": "string",
-            "description": "Slug of the workflow"
-          },
-          "workflowName": {
-            "type": "string",
-            "description": "Display name of the workflow"
-          },
-          "createdForBrandId": {
-            "type": "string",
-            "nullable": true,
-            "description": "Brand ID that created this workflow"
-          },
-          "value": {
-            "type": "number",
-            "description": "The record value (cost per outcome in USD cents)"
-          }
-        },
-        "required": [
-          "workflowSlug",
-          "workflowName",
-          "createdForBrandId",
-          "value"
-        ]
-      },
-      "BestWorkflowResponse": {
-        "type": "object",
-        "properties": {
-          "best": {
-            "type": "object",
-            "additionalProperties": {
-              "$ref": "#/components/schemas/BestWorkflowRecord"
-            },
-            "description": "Map of metric key (e.g. 'repliesPositive', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."
-          }
-        },
-        "required": [
-          "best"
-        ],
-        "example": {
-          "best": {
-            "repliesPositive": {
-              "workflowSlug": "sales-email-cold-outreach-sienna-v3",
-              "workflowName": "Sales Cold Outreach (Sienna)",
-              "createdForBrandId": "brand-uuid-456",
-              "value": 42
-            },
-            "leadsServed": null
-          }
-        }
+        "properties": {}
       },
       "MeResponse": {
         "type": "object",
@@ -8841,11 +8798,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Ranked workflows with stats (from features-service)",
+            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. emailsSent, repliesPositive, positiveReplyRate). Always includes totalCostInUsdCents and completedRuns.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RankedWorkflowResponse"
+                  "$ref": "#/components/schemas/RankedResponse"
                 }
               }
             }
@@ -8900,11 +8857,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Hero records — best cost-per-outcome for each dynamic metric. Metrics are resolved from the feature's declared outputs.",
+            "description": "Pass-through from features-service. Best cost-per-outcome records per metric.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BestWorkflowResponse"
+                  "$ref": "#/components/schemas/BestResponse"
                 }
               }
             }
@@ -9051,11 +9008,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Ranked workflows with stats (from features-service)",
+            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. emailsSent, repliesPositive, positiveReplyRate). Always includes totalCostInUsdCents and completedRuns.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RankedWorkflowResponse"
+                  "$ref": "#/components/schemas/RankedResponse"
                 }
               }
             }
@@ -9180,11 +9137,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Hero records — best cost-per-outcome for each dynamic metric. Metrics are resolved from the feature's declared outputs.",
+            "description": "Pass-through from features-service. Best cost-per-outcome records per metric.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BestWorkflowResponse"
+                  "$ref": "#/components/schemas/BestResponse"
                 }
               }
             }

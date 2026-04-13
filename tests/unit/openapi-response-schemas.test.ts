@@ -65,9 +65,9 @@ describe("OpenAPI spec — response schemas", () => {
     );
     expect(schemas.WorkflowMetadata.properties).not.toHaveProperty("brandId");
 
-    // Ranked & best responses — typed schemas matching features-service shape
-    expect(schemas).toHaveProperty("RankedWorkflowResponse");
-    expect(schemas).toHaveProperty("BestWorkflowResponse");
+    // Ranked & best responses — pass-through from features-service
+    expect(schemas).toHaveProperty("RankedResponse");
+    expect(schemas).toHaveProperty("BestResponse");
   });
 
   it("should define campaign response schema with all key fields", () => {
