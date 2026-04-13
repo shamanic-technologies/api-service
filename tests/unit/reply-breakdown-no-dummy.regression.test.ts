@@ -69,9 +69,13 @@ function makeStats(overrides: Record<string, number> = {}) {
   return {
     emailsContacted: 0, emailsSent: 0, emailsDelivered: 0, emailsOpened: 0,
     emailsClicked: 0, emailsBounced: 0,
-    repliesInterested: 0, repliesMeetingBooked: 0, repliesClosed: 0,
-    repliesNotInterested: 0, repliesNeutral: 0, repliesOutOfOffice: 0,
-    repliesUnsubscribe: 0, recipients: 0,
+    repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
+    repliesDetail: {
+      interested: 0, meetingBooked: 0, closed: 0,
+      notInterested: 0, wrongPerson: 0, unsubscribe: 0,
+      neutral: 0, autoReply: 0, outOfOffice: 0,
+    },
+    recipients: 0,
     ...overrides,
   };
 }
@@ -118,13 +122,15 @@ describe("Reply breakdown: no dummy data when 0 replies", () => {
     const res = await request(app).get("/v1/campaigns/test-campaign-123/stats");
 
     expect(res.status).toBe(200);
-    expect(res.body.repliesInterested).toBe(0);
-    expect(res.body.repliesMeetingBooked).toBe(0);
-    expect(res.body.repliesClosed).toBe(0);
-    expect(res.body.repliesNotInterested).toBe(0);
+    expect(res.body.repliesPositive).toBe(0);
+    expect(res.body.repliesNegative).toBe(0);
     expect(res.body.repliesNeutral).toBe(0);
-    expect(res.body.repliesOutOfOffice).toBe(0);
-    expect(res.body.repliesUnsubscribe).toBe(0);
+    expect(res.body.repliesAutoReply).toBe(0);
+    expect(res.body.repliesDetail).toEqual({
+      interested: 0, meetingBooked: 0, closed: 0,
+      notInterested: 0, wrongPerson: 0, unsubscribe: 0,
+      neutral: 0, autoReply: 0, outOfOffice: 0,
+    });
   });
 
   it("should return reply classifications when replies exist", async () => {
@@ -137,8 +143,13 @@ describe("Reply breakdown: no dummy data when 0 replies", () => {
           transactional: makeStats({ emailsSent: 10, emailsDelivered: 8, emailsOpened: 3, emailsClicked: 1, recipients: 10 }),
           broadcast: makeStats({
             emailsSent: 5, emailsDelivered: 4, emailsOpened: 2, recipients: 5,
-            repliesInterested: 1, repliesMeetingBooked: 2, repliesNotInterested: 1, repliesOutOfOffice: 1,
-          }),
+            repliesPositive: 3, repliesNegative: 1, repliesAutoReply: 1,
+            repliesDetail: {
+              interested: 1, meetingBooked: 2, closed: 0,
+              notInterested: 1, wrongPerson: 0, unsubscribe: 0,
+              neutral: 0, autoReply: 0, outOfOffice: 1,
+            },
+          } as any),
         });
       }
       // Lead-service
@@ -163,9 +174,12 @@ describe("Reply breakdown: no dummy data when 0 replies", () => {
     const res = await request(app).get("/v1/campaigns/test-campaign-123/stats");
 
     expect(res.status).toBe(200);
-    expect(res.body.repliesInterested).toBe(1);
-    expect(res.body.repliesMeetingBooked).toBe(2);
-    expect(res.body.repliesNotInterested).toBe(1);
-    expect(res.body.repliesOutOfOffice).toBe(1);
+    expect(res.body.repliesPositive).toBe(3);
+    expect(res.body.repliesNegative).toBe(1);
+    expect(res.body.repliesAutoReply).toBe(1);
+    expect(res.body.repliesDetail.interested).toBe(1);
+    expect(res.body.repliesDetail.meetingBooked).toBe(2);
+    expect(res.body.repliesDetail.notInterested).toBe(1);
+    expect(res.body.repliesDetail.outOfOffice).toBe(1);
   });
 });
