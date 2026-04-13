@@ -285,17 +285,21 @@ describe("Journalists OpenAPI schemas", () => {
     expect(block).toContain("campaignId:");
   });
 
-  it("should have outreachStatus in ListJournalistsResponse (replaces consolidatedStatus/localStatus/emailGatewayStatus)", () => {
+  it("should have structured status object in ListJournalistsResponse (replaces outreachStatus string)", () => {
     const start = schemaContent.indexOf("ListJournalistsResponse");
     const block = schemaContent.slice(Math.max(0, start - 800), start);
-    expect(block).toContain("outreachStatus:");
+    expect(block).toContain("status: JournalistStatusBooleansSchema");
     expect(block).not.toContain("consolidatedStatus:");
     expect(block).not.toContain("localStatus:");
     expect(block).not.toContain("emailGatewayStatus:");
-    expect(block).toContain('"buffered"');
-    expect(block).toContain('"delivered"');
-    expect(block).toContain('"replied"');
-    expect(block).toContain('"bounced"');
+    // Verify the shared schema defines all boolean status fields
+    expect(schemaContent).toContain("JournalistStatusBooleansSchema");
+    const schemaStart = schemaContent.indexOf("const JournalistStatusBooleansSchema");
+    const schemaBlock = schemaContent.slice(schemaStart, schemaStart + 600);
+    expect(schemaBlock).toContain("buffered: z.boolean()");
+    expect(schemaBlock).toContain("delivered: z.boolean()");
+    expect(schemaBlock).toContain("replied: z.boolean()");
+    expect(schemaBlock).toContain("bounced: z.boolean()");
   });
 
   it("should register GET /v1/journalists/stats", () => {
