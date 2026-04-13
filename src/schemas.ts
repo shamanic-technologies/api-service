@@ -994,6 +994,50 @@ const outletsRequiredHeaders = z.object({
   "x-workflow-slug": z.string().describe("Workflow slug — required by outlets-service"),
 });
 
+// Shared sub-schemas for journalist/outlet status (structured objects since journalists-service PR #122 / outlets-service v6.0.0)
+
+/** Boolean status for a single journalist (used by campaign-outlet-journalists and journalists/list per-journalist scopes) */
+const JournalistStatusBooleansSchema = z.object({
+  buffered: z.boolean(),
+  claimed: z.boolean(),
+  served: z.boolean(),
+  skipped: z.boolean(),
+  contacted: z.boolean(),
+  sent: z.boolean(),
+  delivered: z.boolean(),
+  opened: z.boolean(),
+  clicked: z.boolean(),
+  replied: z.boolean(),
+  replyClassification: z.enum(["positive", "negative", "neutral"]).nullable(),
+  bounced: z.boolean(),
+  unsubscribed: z.boolean(),
+  lastDeliveredAt: z.string().nullable(),
+}).describe("Cumulative status booleans merging DB statuses and email-gateway data.");
+
+/** Numeric status counts (used by outlets list/stats byOutreachStatus, journalists/list byOutreachStatus, and outlets/status aggregation) */
+const JournalistStatusCountsSchema = z.object({
+  buffered: z.number(),
+  claimed: z.number(),
+  served: z.number(),
+  skipped: z.number(),
+  contacted: z.number(),
+  sent: z.number(),
+  delivered: z.number(),
+  opened: z.number(),
+  clicked: z.number(),
+  replied: z.number(),
+  repliesPositive: z.number(),
+  repliesNegative: z.number(),
+  repliesNeutral: z.number(),
+  bounced: z.number(),
+  unsubscribed: z.number(),
+}).describe("Cumulative status counts across ALL journalists matching filters.");
+
+const JournalistGlobalSchema = z.object({
+  bounced: z.boolean().describe("Whether this email has bounced anywhere"),
+  unsubscribed: z.boolean().describe("Whether this email has unsubscribed anywhere"),
+}).nullable().describe("Global email signals (bounced/unsubscribed). Null if no email-gateway data.");
+
 const OutletIdParam = z.object({
   id: z.string().uuid().openapi({ description: "Outlet ID" }),
 });
@@ -1014,7 +1058,7 @@ registry.registerPath({
     query: z.object({
       campaignId: z.string().uuid().optional(),
       brandId: z.string().uuid().optional(),
-      status: z.enum(["open", "ended", "denied", "served", "skipped"]).optional(),
+      status: z.enum(["open", "served", "skipped"]).optional(),
       runId: z.string().optional().openapi({ description: "Filter by run ID (from discover endpoint)" }),
       featureSlugs: z.string().optional().describe("Filter by feature slugs (comma-separated). Use a single slug or multiple."),
       featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs via features-service). Takes priority over featureSlugs."),
@@ -1036,9 +1080,17 @@ registry.registerPath({
                   outletUrl: z.string(),
                   outletDomain: z.string(),
                   createdAt: z.string().datetime(),
-                  outreachStatus: z.enum(["open", "ended", "denied", "served", "contacted", "delivered", "replied", "skipped"]).describe("High watermark outreach status from journalists-service at the query's scope (campaign or brand). Falls back to most advanced DB status when no journalist data exists."),
-                  replyClassification: z.enum(["positive", "negative", "neutral"]).nullable().describe("Best reply classification when outreachStatus is 'replied'. Null otherwise."),
-                  relevanceScore: z.number().describe("Max relevance score across all per-campaign scores for this outlet (same high watermark logic as outreachStatus)."),
+                  status: z.object({
+                    totalJournalists: z.number(),
+                    brand: JournalistStatusCountsSchema.nullable().describe("Cumulative counts at brand scope. Present in brand mode, null in campaign mode."),
+                    byCampaign: z.record(JournalistStatusCountsSchema).nullable().describe("Per-campaign counts. Present in brand mode, null in campaign mode."),
+                    campaign: JournalistStatusCountsSchema.nullable().describe("Cumulative counts at campaign scope. Present in campaign mode, null in brand mode."),
+                    global: z.object({
+                      bounced: z.number(),
+                      unsubscribed: z.number(),
+                    }).describe("Global email signals (bounced/unsubscribed counts)."),
+                  }).nullable().describe("Structured status from journalists-service. Null when no journalist data exists for this outlet."),
+                  relevanceScore: z.number().describe("Max relevance score across all per-campaign scores for this outlet."),
                   campaigns: z.array(
                     z.object({
                       campaignId: z.string().uuid(),
@@ -1047,8 +1099,6 @@ registry.registerPath({
                       whyRelevant: z.string().optional(),
                       whyNotRelevant: z.string().optional(),
                       relevanceScore: z.number(),
-                      outreachStatus: z.enum(["open", "ended", "denied", "served", "contacted", "delivered", "replied", "skipped"]).describe("Outreach status scoped to this specific campaign."),
-                      replyClassification: z.enum(["positive", "negative", "neutral"]).nullable().describe("Reply classification when outreachStatus is 'replied'. Null otherwise."),
                       overallRelevance: z.string().nullable().optional(),
                       relevanceRationale: z.string().nullable().optional(),
                       runId: z.string().nullable().optional(),
@@ -1058,7 +1108,7 @@ registry.registerPath({
                 }).openapi("OutletWithCampaigns"),
               ),
               total: z.number().int().describe("Total number of distinct outlets matching filters"),
-              byOutreachStatus: z.record(z.number()).describe("Map of outreach status to outlet count across ALL outlets (not affected by pagination). Statuses: open, ended, denied, served, contacted, delivered, bounced, skipped."),
+              byOutreachStatus: JournalistStatusCountsSchema.describe("Cumulative status counts across ALL outlets (not affected by pagination)."),
             })
             .openapi("ListOutletsResponse"),
         },
@@ -1140,7 +1190,7 @@ registry.registerPath({
             outletsDiscovered: z.number().describe("Total outlets discovered matching the filters"),
             avgRelevanceScore: z.number().describe("Average relevance score across matching outlets"),
             searchQueriesUsed: z.number().describe("Number of distinct search queries used"),
-            byOutreachStatus: z.record(z.number()).optional().describe("Map of outreach status to outlet count. Enriched from journalists-service with DB status fallback."),
+            byOutreachStatus: JournalistStatusCountsSchema.optional().describe("Cumulative status counts across matching outlets. Enriched from journalists-service."),
             groups: z.array(z.object({
               key: z.string(),
               outletsDiscovered: z.number(),
@@ -1412,7 +1462,7 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              status: z.enum(["open", "ended", "denied"]),
+              status: z.enum(["open", "served", "skipped"]),
               reason: z.string().optional(),
             })
             .openapi("UpdateOutletStatusRequest"),
@@ -1451,50 +1501,6 @@ const journalistsStatsOptionalHeaders = z.object({
   "x-feature-slug": z.string().optional().describe("Feature slug — optional for stats endpoints"),
   "x-workflow-slug": z.string().optional().describe("Workflow slug — optional for stats endpoints"),
 });
-
-// Shared sub-schemas for journalist status (structured objects since journalists-service PR #122)
-
-/** Boolean status for a single journalist (used by campaign-outlet-journalists and journalists/list per-journalist scopes) */
-const JournalistStatusBooleansSchema = z.object({
-  buffered: z.boolean(),
-  claimed: z.boolean(),
-  served: z.boolean(),
-  skipped: z.boolean(),
-  contacted: z.boolean(),
-  sent: z.boolean(),
-  delivered: z.boolean(),
-  opened: z.boolean(),
-  clicked: z.boolean(),
-  replied: z.boolean(),
-  replyClassification: z.enum(["positive", "negative", "neutral"]).nullable(),
-  bounced: z.boolean(),
-  unsubscribed: z.boolean(),
-  lastDeliveredAt: z.string().nullable(),
-}).describe("Cumulative status booleans merging DB statuses and email-gateway data.");
-
-/** Numeric status counts (used by journalists/list byOutreachStatus and outlets/status aggregation) */
-const JournalistStatusCountsSchema = z.object({
-  buffered: z.number(),
-  claimed: z.number(),
-  served: z.number(),
-  skipped: z.number(),
-  contacted: z.number(),
-  sent: z.number(),
-  delivered: z.number(),
-  opened: z.number(),
-  clicked: z.number(),
-  replied: z.number(),
-  repliesPositive: z.number(),
-  repliesNegative: z.number(),
-  repliesNeutral: z.number(),
-  bounced: z.number(),
-  unsubscribed: z.number(),
-}).describe("Cumulative status counts across ALL journalists matching filters.");
-
-const JournalistGlobalSchema = z.object({
-  bounced: z.boolean().describe("Whether this email has bounced anywhere"),
-  unsubscribed: z.boolean().describe("Whether this email has unsubscribed anywhere"),
-}).nullable().describe("Global email signals (bounced/unsubscribed). Null if no email-gateway data.");
 
 registry.registerPath({
   method: "get",
