@@ -238,7 +238,6 @@ const bestResponse = {
     },
   },
   400: { description: "Bad request — featureDynastySlug is required", content: errorContent },
-  400: { description: "Bad request — featureDynastySlug is required", content: errorContent },
   502: { description: "Upstream service error", content: errorContent },
 };
 
