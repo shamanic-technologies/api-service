@@ -3279,6 +3279,7 @@ registry.registerPath({
           schema: z.object({
             brandIds: z.array(z.string()).min(1).describe("Brand UUIDs to extract fields for"),
             fields: z.array(ExtractFieldRequestSchema).describe("Fields to extract"),
+            resetCache: z.boolean().optional().describe("When true, bypass all cache layers (URL maps, page scrapes, field extractions, consolidated fields) and force a full re-extraction"),
           }).openapi("ExtractFieldsFromHeaderRequest"),
         },
       },
