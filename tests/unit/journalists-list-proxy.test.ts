@@ -85,8 +85,9 @@ describe("GET /journalists/list OpenAPI schema", () => {
     expect(schemaContent).toContain("JournalistListResponse");
   });
 
-  it("should define JournalistEmailStatusSchema", () => {
-    expect(schemaContent).toContain("JournalistEmailStatusSchema");
+  it("should define JournalistStatusBooleansSchema and JournalistStatusCountsSchema", () => {
+    expect(schemaContent).toContain("JournalistStatusBooleansSchema");
+    expect(schemaContent).toContain("JournalistStatusCountsSchema");
   });
 
   it("should define JournalistCostSchema", () => {
@@ -157,7 +158,7 @@ describe("GET /journalists/list OpenAPI schema", () => {
     expect(op.responses["401"]).toBeDefined();
   });
 
-  it("should include outreachStatus, emailStatus, cost, and campaigns[] in response schema", () => {
+  it("should include structured status scopes (brand, byCampaign, campaign, global), cost, and campaigns[] in response schema", () => {
     const ref =
       openapi.paths["/v1/journalists/list"]?.get?.responses?.["200"]?.content?.["application/json"]?.schema?.$ref;
     expect(ref).toBe("#/components/schemas/JournalistListResponse");
@@ -165,8 +166,10 @@ describe("GET /journalists/list OpenAPI schema", () => {
     expect(schema).toBeDefined();
     const journalistProps = schema.properties?.journalists?.items?.properties;
     expect(journalistProps).toBeDefined();
-    expect(journalistProps.outreachStatus).toBeDefined();
-    expect(journalistProps.emailStatus).toBeDefined();
+    expect(journalistProps.brand).toBeDefined();
+    expect(journalistProps.byCampaign).toBeDefined();
+    expect(journalistProps.campaign).toBeDefined();
+    expect(journalistProps.global).toBeDefined();
     expect(journalistProps.cost).toBeDefined();
     expect(journalistProps.campaigns).toBeDefined();
     // campaigns[] items use a $ref to JournalistCampaignEntry
@@ -174,17 +177,17 @@ describe("GET /journalists/list OpenAPI schema", () => {
     expect(campaignEntryRef).toBe("#/components/schemas/JournalistCampaignEntry");
     const campaignEntry = openapi.components?.schemas?.JournalistCampaignEntry;
     expect(campaignEntry).toBeDefined();
-    expect(campaignEntry.properties.outreachStatus).toBeDefined();
-    expect(campaignEntry.properties.consolidatedStatus).toBeUndefined();
-    expect(campaignEntry.properties.localStatus).toBeUndefined();
-    expect(campaignEntry.properties.emailGatewayStatus).toBeUndefined();
+    expect(campaignEntry.properties.outreachStatus).toBeUndefined();
     expect(campaignEntry.properties.relevanceScore).toBeDefined();
     expect(campaignEntry.properties.campaignId).toBeDefined();
+    // byOutreachStatus at top level
+    expect(schema.properties?.byOutreachStatus).toBeDefined();
+    expect(schema.properties?.total).toBeDefined();
   });
 
-  it("campaign entries should NOT have old status fields (replaced by outreachStatus)", () => {
+  it("campaign entries should NOT have old status fields (replaced by structured scopes)", () => {
     const campaignEntry = openapi.components?.schemas?.JournalistCampaignEntry;
-    expect(campaignEntry.properties.status).toBeUndefined();
+    expect(campaignEntry.properties.outreachStatus).toBeUndefined();
     expect(campaignEntry.properties.consolidatedStatus).toBeUndefined();
     expect(campaignEntry.properties.localStatus).toBeUndefined();
     expect(campaignEntry.properties.emailGatewayStatus).toBeUndefined();

@@ -129,13 +129,29 @@ registry.registerPath({
 });
 
 // ===================================================================
+// SHARED REPLY SCHEMAS (email-gateway aggregate buckets + granular detail)
+// ===================================================================
+
+const RepliesDetailSchema = z.object({
+  interested: z.number(),
+  meetingBooked: z.number(),
+  closed: z.number(),
+  notInterested: z.number(),
+  wrongPerson: z.number(),
+  unsubscribe: z.number(),
+  neutral: z.number(),
+  autoReply: z.number(),
+  outOfOffice: z.number(),
+}).openapi("RepliesDetail");
+
+// ===================================================================
 // WORKFLOW RANKED & BEST (public + authenticated)
 // ===================================================================
 
 // All ranked/best endpoints now proxy to features-service
 const rankedQueryParams = z.object({
   featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature dynasty slug (required). Resolves to all versioned slugs in the lineage."),
-  objective: z.string().openapi({ example: "repliesInterested" }).describe("Stats key to rank by (required). e.g. 'repliesInterested', 'leadsServed'."),
+  objective: z.string().openapi({ example: "repliesPositive" }).describe("Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'."),
   groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
   limit: z.string().optional().openapi({ example: "10" }).describe("Max results (default 10, max 100)"),
 });
@@ -144,8 +160,6 @@ const bestQueryParams = z.object({
   featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature dynasty slug (required). Resolves to all versioned slugs in the lineage."),
   groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
 });
-
-// -- Workflow response schemas (mirroring workflow-service) --
 
 const WorkflowMetadataSchema = z
   .object({
@@ -166,39 +180,28 @@ const WorkflowMetadataSchema = z
   })
   .openapi("WorkflowMetadata");
 
-const WorkflowStatsSchema = z
-  .object({
-    totalCostInUsdCents: z.number().describe("Total cost across all completed runs"),
-    totalOutcomes: z.number().describe("Total outcome count for the ranked metric (dynamic per feature — e.g. replies, leads found, outlets found)"),
-    costPerOutcome: z.number().nullable().describe("Cost per outcome in USD cents, null if no outcomes"),
-    completedRuns: z.number().describe("Number of completed runs"),
-  })
-  .openapi("WorkflowStats");
-
-const RankedWorkflowItemSchema = z
-  .object({
-    workflow: WorkflowMetadataSchema,
-    stats: WorkflowStatsSchema,
-  })
-  .openapi("RankedWorkflowItem");
-
-const BestWorkflowRecordSchema = z
-  .object({
-    workflowSlug: z.string().describe("Slug of the workflow"),
-    workflowName: z.string().describe("Display name of the workflow"),
-    createdForBrandId: z.string().nullable().describe("Brand ID that created this workflow"),
-    value: z.number().describe("The record value (cost per outcome in USD cents)"),
-  })
-  .openapi("BestWorkflowRecord");
+// Ranked & best responses are pass-through from features-service.
+// stats is a dynamic map — keys depend on the feature's output definitions.
+// Do NOT define typed stats schemas here — features-service owns the shape.
 
 const rankedResponse = {
   200: {
-    description: "Ranked workflows with stats (from features-service)",
+    description: "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. emailsSent, repliesPositive, positiveReplyRate). Always includes totalCostInUsdCents and completedRuns.",
     content: {
       "application/json": {
         schema: z.object({
-          results: z.array(RankedWorkflowItemSchema).describe("Workflows ranked by performance, best first"),
-        }).openapi("RankedWorkflowResponse"),
+          objective: z.string().describe("The stats key used for sorting"),
+          sortDirection: z.enum(["asc", "desc"]).describe("Sort direction applied"),
+          results: z.array(z.object({
+            workflow: WorkflowMetadataSchema.optional(),
+            brand: z.object({
+              id: z.string(),
+              name: z.string().nullable(),
+              domain: z.string().nullable(),
+            }).optional(),
+            stats: z.record(z.number().nullable()).describe("All output stats for the feature (raw counts + derived rates). Keys are dynamic per feature. Always includes totalCostInUsdCents and completedRuns."),
+          })).describe("Results ranked by the objective metric"),
+        }).openapi("RankedResponse"),
       },
     },
   },
@@ -207,19 +210,10 @@ const rankedResponse = {
 
 const bestResponse = {
   200: {
-    description: "Hero records — best cost-per-outcome for each dynamic metric. Metrics are resolved from the feature's declared outputs.",
+    description: "Pass-through from features-service. Best cost-per-outcome records per metric.",
     content: {
       "application/json": {
-        schema: z.object({
-          best: z.record(z.string(), BestWorkflowRecordSchema.nullable()).describe("Map of metric key (e.g. 'repliesInterested', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."),
-        }).openapi("BestWorkflowResponse", {
-          example: {
-            best: {
-              repliesInterested: { workflowSlug: "sales-email-cold-outreach-sienna-v3", workflowName: "Sales Cold Outreach (Sienna)", createdForBrandId: "brand-uuid-456", value: 42 },
-              leadsServed: null,
-            },
-          },
-        }),
+        schema: z.object({}).passthrough().openapi("BestResponse"),
       },
     },
   },
@@ -616,7 +610,7 @@ registry.registerPath({
   tags: ["Campaigns"],
   summary: "Get campaign stats",
   description:
-    "Get campaign statistics (leads served/buffered/skipped, apollo metrics, emails sent/opened/clicked/replied, etc.)",
+    "Get campaign statistics (leads served/buffered/skipped, apollo metrics, emails sent/opened/clicked, reply aggregates, etc.)",
   security: authed,
   request: { params: CampaignIdParam },
   responses: {
@@ -645,14 +639,11 @@ registry.registerPath({
               emailsOpened: z.number(),
               emailsClicked: z.number(),
               emailsBounced: z.number(),
-              emailsReplied: z.number().optional(),
-              repliesInterested: z.number().optional(),
-              repliesMeetingBooked: z.number().optional(),
-              repliesClosed: z.number().optional(),
-              repliesNotInterested: z.number().optional(),
+              repliesPositive: z.number().optional(),
+              repliesNegative: z.number().optional(),
               repliesNeutral: z.number().optional(),
-              repliesOutOfOffice: z.number().optional(),
-              repliesUnsubscribe: z.number().optional(),
+              repliesAutoReply: z.number().optional(),
+              repliesDetail: RepliesDetailSchema.optional(),
               totalCostInUsdCents: z.string().nullable().optional().describe("Total cost from campaign-service budget tracking"),
               costBreakdown: z.array(z.object({
                 costName: z.string(),
@@ -712,14 +703,11 @@ registry.registerPath({
                   emailsOpened: z.number(),
                   emailsClicked: z.number(),
                   emailsBounced: z.number(),
-                  emailsReplied: z.number(),
-                  repliesInterested: z.number(),
-                  repliesMeetingBooked: z.number(),
-                  repliesClosed: z.number(),
-                  repliesNotInterested: z.number(),
+                  repliesPositive: z.number(),
+                  repliesNegative: z.number(),
                   repliesNeutral: z.number(),
-                  repliesOutOfOffice: z.number(),
-                  repliesUnsubscribe: z.number(),
+                  repliesAutoReply: z.number(),
+                  repliesDetail: RepliesDetailSchema,
                   totalCostInUsdCents: z.string().nullable(),
                   runCount: z.number(),
                 }),
@@ -986,6 +974,50 @@ const outletsRequiredHeaders = z.object({
   "x-workflow-slug": z.string().describe("Workflow slug — required by outlets-service"),
 });
 
+// Shared sub-schemas for journalist/outlet status (structured objects since journalists-service PR #122 / outlets-service v6.0.0)
+
+/** Boolean status for a single journalist (used by campaign-outlet-journalists and journalists/list per-journalist scopes) */
+const JournalistStatusBooleansSchema = z.object({
+  buffered: z.boolean(),
+  claimed: z.boolean(),
+  served: z.boolean(),
+  skipped: z.boolean(),
+  contacted: z.boolean(),
+  sent: z.boolean(),
+  delivered: z.boolean(),
+  opened: z.boolean(),
+  clicked: z.boolean(),
+  replied: z.boolean(),
+  replyClassification: z.enum(["positive", "negative", "neutral"]).nullable(),
+  bounced: z.boolean(),
+  unsubscribed: z.boolean(),
+  lastDeliveredAt: z.string().nullable(),
+}).describe("Cumulative status booleans merging DB statuses and email-gateway data.");
+
+/** Numeric status counts (used by outlets list/stats byOutreachStatus, journalists/list byOutreachStatus, and outlets/status aggregation) */
+const JournalistStatusCountsSchema = z.object({
+  buffered: z.number(),
+  claimed: z.number(),
+  served: z.number(),
+  skipped: z.number(),
+  contacted: z.number(),
+  sent: z.number(),
+  delivered: z.number(),
+  opened: z.number(),
+  clicked: z.number(),
+  replied: z.number(),
+  repliesPositive: z.number(),
+  repliesNegative: z.number(),
+  repliesNeutral: z.number(),
+  bounced: z.number(),
+  unsubscribed: z.number(),
+}).describe("Cumulative status counts across ALL journalists matching filters.");
+
+const JournalistGlobalSchema = z.object({
+  bounced: z.boolean().describe("Whether this email has bounced anywhere"),
+  unsubscribed: z.boolean().describe("Whether this email has unsubscribed anywhere"),
+}).nullable().describe("Global email signals (bounced/unsubscribed). Null if no email-gateway data.");
+
 const OutletIdParam = z.object({
   id: z.string().uuid().openapi({ description: "Outlet ID" }),
 });
@@ -1006,7 +1038,7 @@ registry.registerPath({
     query: z.object({
       campaignId: z.string().uuid().optional(),
       brandId: z.string().uuid().optional(),
-      status: z.enum(["open", "ended", "denied", "served", "skipped"]).optional(),
+      status: z.enum(["open", "served", "skipped"]).optional(),
       runId: z.string().optional().openapi({ description: "Filter by run ID (from discover endpoint)" }),
       featureSlugs: z.string().optional().describe("Filter by feature slugs (comma-separated). Use a single slug or multiple."),
       featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs via features-service). Takes priority over featureSlugs."),
@@ -1028,9 +1060,17 @@ registry.registerPath({
                   outletUrl: z.string(),
                   outletDomain: z.string(),
                   createdAt: z.string().datetime(),
-                  outreachStatus: z.enum(["open", "ended", "denied", "served", "contacted", "delivered", "replied", "skipped"]).describe("High watermark outreach status from journalists-service at the query's scope (campaign or brand). Falls back to most advanced DB status when no journalist data exists."),
-                  replyClassification: z.enum(["positive", "negative", "neutral"]).nullable().describe("Best reply classification when outreachStatus is 'replied'. Null otherwise."),
-                  relevanceScore: z.number().describe("Max relevance score across all per-campaign scores for this outlet (same high watermark logic as outreachStatus)."),
+                  status: z.object({
+                    totalJournalists: z.number(),
+                    brand: JournalistStatusCountsSchema.nullable().describe("Cumulative counts at brand scope. Present in brand mode, null in campaign mode."),
+                    byCampaign: z.record(JournalistStatusCountsSchema).nullable().describe("Per-campaign counts. Present in brand mode, null in campaign mode."),
+                    campaign: JournalistStatusCountsSchema.nullable().describe("Cumulative counts at campaign scope. Present in campaign mode, null in brand mode."),
+                    global: z.object({
+                      bounced: z.number(),
+                      unsubscribed: z.number(),
+                    }).describe("Global email signals (bounced/unsubscribed counts)."),
+                  }).nullable().describe("Structured status from journalists-service. Null when no journalist data exists for this outlet."),
+                  relevanceScore: z.number().describe("Max relevance score across all per-campaign scores for this outlet."),
                   campaigns: z.array(
                     z.object({
                       campaignId: z.string().uuid(),
@@ -1039,8 +1079,6 @@ registry.registerPath({
                       whyRelevant: z.string().optional(),
                       whyNotRelevant: z.string().optional(),
                       relevanceScore: z.number(),
-                      outreachStatus: z.enum(["open", "ended", "denied", "served", "contacted", "delivered", "replied", "skipped"]).describe("Outreach status scoped to this specific campaign."),
-                      replyClassification: z.enum(["positive", "negative", "neutral"]).nullable().describe("Reply classification when outreachStatus is 'replied'. Null otherwise."),
                       overallRelevance: z.string().nullable().optional(),
                       relevanceRationale: z.string().nullable().optional(),
                       runId: z.string().nullable().optional(),
@@ -1050,7 +1088,7 @@ registry.registerPath({
                 }).openapi("OutletWithCampaigns"),
               ),
               total: z.number().int().describe("Total number of distinct outlets matching filters"),
-              byOutreachStatus: z.record(z.number()).describe("Map of outreach status to outlet count across ALL outlets (not affected by pagination). Statuses: open, ended, denied, served, contacted, delivered, replied, skipped."),
+              byOutreachStatus: JournalistStatusCountsSchema.describe("Cumulative status counts across ALL outlets (not affected by pagination)."),
             })
             .openapi("ListOutletsResponse"),
         },
@@ -1132,7 +1170,7 @@ registry.registerPath({
             outletsDiscovered: z.number().describe("Total outlets discovered matching the filters"),
             avgRelevanceScore: z.number().describe("Average relevance score across matching outlets"),
             searchQueriesUsed: z.number().describe("Number of distinct search queries used"),
-            byOutreachStatus: z.record(z.number()).optional().describe("Map of outreach status to outlet count. Enriched from journalists-service with DB status fallback."),
+            byOutreachStatus: JournalistStatusCountsSchema.optional().describe("Cumulative status counts across matching outlets. Enriched from journalists-service."),
             groups: z.array(z.object({
               key: z.string(),
               outletsDiscovered: z.number(),
@@ -1404,7 +1442,7 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              status: z.enum(["open", "ended", "denied"]),
+              status: z.enum(["open", "served", "skipped"]),
               reason: z.string().optional(),
             })
             .openapi("UpdateOutletStatusRequest"),
@@ -1479,7 +1517,7 @@ registry.registerPath({
                   whyRelevant: z.string().nullable(),
                   whyNotRelevant: z.string().nullable(),
                   articleUrls: z.array(z.string()).nullable(),
-                  outreachStatus: z.enum(["buffered", "claimed", "served", "contacted", "delivered", "replied", "bounced", "skipped"]).describe("Outreach status: email-gateway status when available, otherwise local DB status"),
+                  status: JournalistStatusBooleansSchema,
                   runId: z.string().uuid().nullable().describe("The discovery run that created this journalist entry"),
                 }).passthrough(),
               ),
@@ -1493,33 +1531,6 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
   },
 });
-
-// Shared sub-schemas for journalist email delivery statuses (flat format since journalists-service PR #76)
-const JournalistScopeDeliverySchema = z.object({
-  contacted: z.boolean(),
-  delivered: z.boolean(),
-  opened: z.boolean(),
-  replied: z.boolean(),
-  replyClassification: z.enum(["positive", "negative", "neutral"]).nullable(),
-  bounced: z.boolean(),
-  unsubscribed: z.boolean(),
-  lastDeliveredAt: z.string().nullable(),
-}).nullable();
-
-const JournalistGlobalDeliverySchema = z.object({
-  email: z.object({ bounced: z.boolean(), unsubscribed: z.boolean() }),
-});
-
-const JournalistChannelStatusSchema = z.object({
-  campaign: JournalistScopeDeliverySchema,
-  brand: JournalistScopeDeliverySchema,
-  global: JournalistGlobalDeliverySchema,
-});
-
-const JournalistEmailStatusSchema = z.object({
-  broadcast: JournalistChannelStatusSchema,
-  transactional: JournalistChannelStatusSchema,
-}).nullable().describe("Email delivery statuses from email-gateway. Null if journalist has no email.");
 
 const JournalistCostSchema = z.object({
   totalCostInUsdCents: z.number(),
@@ -1564,10 +1575,12 @@ registry.registerPath({
                   lastName: z.string().nullable().openapi({ example: "Perez" }),
                   entityType: z.enum(["individual", "organization"]).openapi({ example: "individual" }),
                   outletId: z.string().uuid().openapi({ example: "f7e6d5c4-b3a2-4190-8877-665544332211" }),
-                  outreachStatus: z.enum(["buffered", "claimed", "served", "contacted", "delivered", "replied", "bounced", "skipped"]).openapi({ example: "contacted" }).describe("High watermark outreach status across all campaigns for this journalist. Represents the most advanced status reached in any campaign (e.g. if campaign A is 'served' and campaign B is 'replied', this will be 'replied')."),
                   email: z.string().nullable().describe("Global email (from journalists table apollo_email, fallback to best campaign email)"),
                   apolloPersonId: z.string().nullable(),
-                  emailStatus: JournalistEmailStatusSchema,
+                  brand: JournalistStatusBooleansSchema.nullable().describe("Cumulative status at brand scope (aggregate across campaigns). Present in brand mode, null in campaign mode."),
+                  byCampaign: z.record(JournalistStatusBooleansSchema).nullable().describe("Per-campaign status breakdown. Present in brand mode, null in campaign mode."),
+                  campaign: JournalistStatusBooleansSchema.nullable().describe("Cumulative status at campaign scope. Present in campaign mode, null in brand mode."),
+                  global: JournalistGlobalSchema,
                   cost: JournalistCostSchema,
                   campaigns: z.array(
                     z.object({
@@ -1575,7 +1588,6 @@ registry.registerPath({
                       campaignId: z.string().uuid(),
                       featureSlug: z.string().nullable(),
                       workflowSlug: z.string().nullable(),
-                      outreachStatus: z.enum(["buffered", "claimed", "served", "contacted", "delivered", "replied", "bounced", "skipped"]).openapi({ example: "served" }).describe("Outreach status for this specific campaign. Email-gateway status when available, otherwise local DB status."),
                       relevanceScore: z.string(),
                       whyRelevant: z.string(),
                       whyNotRelevant: z.string(),
@@ -1588,6 +1600,8 @@ registry.registerPath({
                   ).describe("Per-campaign entries for this journalist"),
                 }),
               ),
+              total: z.number().int().describe("Total journalists matching filters (not affected by pagination)"),
+              byOutreachStatus: JournalistStatusCountsSchema.describe("Cumulative status counts across ALL journalists matching filters."),
             })
             .openapi("JournalistListResponse"),
         },
@@ -1742,7 +1756,8 @@ registry.registerPath({
   tags: ["Journalists"],
   summary: "Get journalist stats with dynasty-aware filtering and grouping",
   description:
-    "Returns journalist counts grouped by outreach status (buffered, claimed, served, skipped, contacted, delivered, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply). " +
+    "Returns journalist counts with cumulative DB statuses (buffered, claimed, served, skipped) and full email-gateway passthrough " +
+    "(contacted, sent, delivered, opened, clicked, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply, recipients). " +
     "Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. " +
     "Optional groupBy returns per-slug breakdowns.",
   security: authed,
@@ -1754,10 +1769,12 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             totalJournalists: z.number(),
-            byOutreachStatus: z.record(z.number()).describe("Map of outreach status to count. Statuses: buffered, claimed, served, skipped, contacted, delivered, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply."),
+            byOutreachStatus: z.record(z.number()).describe("Cumulative status counts. DB statuses (buffered, claimed, served, skipped) are cumulative. Email-gateway fields (contacted, sent, delivered, opened, clicked, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply, recipients) are passed through."),
+            repliesDetail: RepliesDetailSchema.optional().describe("Granular reply breakdown from email-gateway. Present when reply data exists."),
             groupedBy: z.record(z.object({
               totalJournalists: z.number(),
-              byOutreachStatus: z.record(z.number()).describe("Map of outreach status to count for this group"),
+              byOutreachStatus: z.record(z.number()).describe("Cumulative status counts for this group"),
+              repliesDetail: RepliesDetailSchema.optional().describe("Granular reply breakdown for this group"),
             })).optional().describe("Per-slug breakdown when groupBy is specified. Keys are slug values (or dynasty slugs for dynasty grouping)."),
           }).openapi("JournalistStatsResponse"),
         },
@@ -3561,14 +3578,11 @@ registry.registerPath({
               emailsOpened: z.number(),
               emailsClicked: z.number(),
               emailsBounced: z.number(),
-              emailsReplied: z.number(),
-              repliesInterested: z.number(),
-              repliesMeetingBooked: z.number(),
-              repliesClosed: z.number(),
-              repliesNotInterested: z.number(),
+              repliesPositive: z.number(),
+              repliesNegative: z.number(),
               repliesNeutral: z.number(),
-              repliesOutOfOffice: z.number(),
-              repliesUnsubscribe: z.number(),
+              repliesAutoReply: z.number(),
+              repliesDetail: RepliesDetailSchema,
             })
             .openapi("EmailGatewayStatsResponse"),
         },

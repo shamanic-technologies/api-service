@@ -213,118 +213,75 @@
           "signatureName"
         ]
       },
-      "WorkflowStats": {
+      "RankedResponse": {
         "type": "object",
         "properties": {
-          "totalCostInUsdCents": {
-            "type": "number",
-            "description": "Total cost across all completed runs"
+          "objective": {
+            "type": "string",
+            "description": "The stats key used for sorting"
           },
-          "totalOutcomes": {
-            "type": "number",
-            "description": "Total outcome count for the ranked metric (dynamic per feature — e.g. replies, leads found, outlets found)"
+          "sortDirection": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction applied"
           },
-          "costPerOutcome": {
-            "type": "number",
-            "nullable": true,
-            "description": "Cost per outcome in USD cents, null if no outcomes"
-          },
-          "completedRuns": {
-            "type": "number",
-            "description": "Number of completed runs"
-          }
-        },
-        "required": [
-          "totalCostInUsdCents",
-          "totalOutcomes",
-          "costPerOutcome",
-          "completedRuns"
-        ]
-      },
-      "RankedWorkflowItem": {
-        "type": "object",
-        "properties": {
-          "workflow": {
-            "$ref": "#/components/schemas/WorkflowMetadata"
-          },
-          "stats": {
-            "$ref": "#/components/schemas/WorkflowStats"
-          }
-        },
-        "required": [
-          "workflow",
-          "stats"
-        ]
-      },
-      "RankedWorkflowResponse": {
-        "type": "object",
-        "properties": {
           "results": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/RankedWorkflowItem"
+              "type": "object",
+              "properties": {
+                "workflow": {
+                  "$ref": "#/components/schemas/WorkflowMetadata"
+                },
+                "brand": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "domain": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "domain"
+                  ]
+                },
+                "stats": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "description": "All output stats for the feature (raw counts + derived rates). Keys are dynamic per feature. Always includes totalCostInUsdCents and completedRuns."
+                }
+              },
+              "required": [
+                "stats"
+              ]
             },
-            "description": "Workflows ranked by performance, best first"
+            "description": "Results ranked by the objective metric"
           }
         },
         "required": [
+          "objective",
+          "sortDirection",
           "results"
         ]
       },
-      "BestWorkflowRecord": {
+      "BestResponse": {
         "type": "object",
-        "nullable": true,
-        "properties": {
-          "workflowSlug": {
-            "type": "string",
-            "description": "Slug of the workflow"
-          },
-          "workflowName": {
-            "type": "string",
-            "description": "Display name of the workflow"
-          },
-          "createdForBrandId": {
-            "type": "string",
-            "nullable": true,
-            "description": "Brand ID that created this workflow"
-          },
-          "value": {
-            "type": "number",
-            "description": "The record value (cost per outcome in USD cents)"
-          }
-        },
-        "required": [
-          "workflowSlug",
-          "workflowName",
-          "createdForBrandId",
-          "value"
-        ]
-      },
-      "BestWorkflowResponse": {
-        "type": "object",
-        "properties": {
-          "best": {
-            "type": "object",
-            "additionalProperties": {
-              "$ref": "#/components/schemas/BestWorkflowRecord"
-            },
-            "description": "Map of metric key (e.g. 'repliesInterested', 'leadsServed') to the workflow holding the best cost-per-outcome record for that metric. Null if no data."
-          }
-        },
-        "required": [
-          "best"
-        ],
-        "example": {
-          "best": {
-            "repliesInterested": {
-              "workflowSlug": "sales-email-cold-outreach-sienna-v3",
-              "workflowName": "Sales Cold Outreach (Sienna)",
-              "createdForBrandId": "brand-uuid-456",
-              "value": 42
-            },
-            "leadsServed": null
-          }
-        }
+        "properties": {}
       },
       "MeResponse": {
         "type": "object",
@@ -805,6 +762,49 @@
           "offset"
         ]
       },
+      "RepliesDetail": {
+        "type": "object",
+        "properties": {
+          "interested": {
+            "type": "number"
+          },
+          "meetingBooked": {
+            "type": "number"
+          },
+          "closed": {
+            "type": "number"
+          },
+          "notInterested": {
+            "type": "number"
+          },
+          "wrongPerson": {
+            "type": "number"
+          },
+          "unsubscribe": {
+            "type": "number"
+          },
+          "neutral": {
+            "type": "number"
+          },
+          "autoReply": {
+            "type": "number"
+          },
+          "outOfOffice": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "interested",
+          "meetingBooked",
+          "closed",
+          "notInterested",
+          "wrongPerson",
+          "unsubscribe",
+          "neutral",
+          "autoReply",
+          "outOfOffice"
+        ]
+      },
       "CampaignStatsResponse": {
         "type": "object",
         "properties": {
@@ -874,29 +874,20 @@
           "emailsBounced": {
             "type": "number"
           },
-          "emailsReplied": {
+          "repliesPositive": {
             "type": "number"
           },
-          "repliesInterested": {
-            "type": "number"
-          },
-          "repliesMeetingBooked": {
-            "type": "number"
-          },
-          "repliesClosed": {
-            "type": "number"
-          },
-          "repliesNotInterested": {
+          "repliesNegative": {
             "type": "number"
           },
           "repliesNeutral": {
             "type": "number"
           },
-          "repliesOutOfOffice": {
+          "repliesAutoReply": {
             "type": "number"
           },
-          "repliesUnsubscribe": {
-            "type": "number"
+          "repliesDetail": {
+            "$ref": "#/components/schemas/RepliesDetail"
           },
           "totalCostInUsdCents": {
             "type": "string",
@@ -997,29 +988,20 @@
                 "emailsBounced": {
                   "type": "number"
                 },
-                "emailsReplied": {
+                "repliesPositive": {
                   "type": "number"
                 },
-                "repliesInterested": {
-                  "type": "number"
-                },
-                "repliesMeetingBooked": {
-                  "type": "number"
-                },
-                "repliesClosed": {
-                  "type": "number"
-                },
-                "repliesNotInterested": {
+                "repliesNegative": {
                   "type": "number"
                 },
                 "repliesNeutral": {
                   "type": "number"
                 },
-                "repliesOutOfOffice": {
+                "repliesAutoReply": {
                   "type": "number"
                 },
-                "repliesUnsubscribe": {
-                  "type": "number"
+                "repliesDetail": {
+                  "$ref": "#/components/schemas/RepliesDetail"
                 },
                 "totalCostInUsdCents": {
                   "type": "string",
@@ -1042,14 +1024,11 @@
                 "emailsOpened",
                 "emailsClicked",
                 "emailsBounced",
-                "emailsReplied",
-                "repliesInterested",
-                "repliesMeetingBooked",
-                "repliesClosed",
-                "repliesNotInterested",
+                "repliesPositive",
+                "repliesNegative",
                 "repliesNeutral",
-                "repliesOutOfOffice",
-                "repliesUnsubscribe",
+                "repliesAutoReply",
+                "repliesDetail",
                 "totalCostInUsdCents",
                 "runCount"
               ]
@@ -1431,30 +1410,6 @@
           "relevanceScore": {
             "type": "number"
           },
-          "outreachStatus": {
-            "type": "string",
-            "enum": [
-              "open",
-              "ended",
-              "denied",
-              "served",
-              "contacted",
-              "delivered",
-              "replied",
-              "skipped"
-            ],
-            "description": "Outreach status scoped to this specific campaign."
-          },
-          "replyClassification": {
-            "type": "string",
-            "nullable": true,
-            "enum": [
-              "positive",
-              "negative",
-              "neutral"
-            ],
-            "description": "Reply classification when outreachStatus is 'replied'. Null otherwise."
-          },
           "overallRelevance": {
             "type": "string",
             "nullable": true
@@ -1477,8 +1432,6 @@
           "featureSlug",
           "brandIds",
           "relevanceScore",
-          "outreachStatus",
-          "replyClassification",
           "updatedAt"
         ]
       },
@@ -1502,33 +1455,253 @@
             "type": "string",
             "format": "date-time"
           },
-          "outreachStatus": {
-            "type": "string",
-            "enum": [
-              "open",
-              "ended",
-              "denied",
-              "served",
-              "contacted",
-              "delivered",
-              "replied",
-              "skipped"
-            ],
-            "description": "High watermark outreach status from journalists-service at the query's scope (campaign or brand). Falls back to most advanced DB status when no journalist data exists."
-          },
-          "replyClassification": {
-            "type": "string",
+          "status": {
+            "type": "object",
             "nullable": true,
-            "enum": [
-              "positive",
-              "negative",
-              "neutral"
+            "properties": {
+              "totalJournalists": {
+                "type": "number"
+              },
+              "brand": {
+                "type": "object",
+                "nullable": true,
+                "properties": {
+                  "buffered": {
+                    "type": "number"
+                  },
+                  "claimed": {
+                    "type": "number"
+                  },
+                  "served": {
+                    "type": "number"
+                  },
+                  "skipped": {
+                    "type": "number"
+                  },
+                  "contacted": {
+                    "type": "number"
+                  },
+                  "sent": {
+                    "type": "number"
+                  },
+                  "delivered": {
+                    "type": "number"
+                  },
+                  "opened": {
+                    "type": "number"
+                  },
+                  "clicked": {
+                    "type": "number"
+                  },
+                  "replied": {
+                    "type": "number"
+                  },
+                  "repliesPositive": {
+                    "type": "number"
+                  },
+                  "repliesNegative": {
+                    "type": "number"
+                  },
+                  "repliesNeutral": {
+                    "type": "number"
+                  },
+                  "bounced": {
+                    "type": "number"
+                  },
+                  "unsubscribed": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "buffered",
+                  "claimed",
+                  "served",
+                  "skipped",
+                  "contacted",
+                  "sent",
+                  "delivered",
+                  "opened",
+                  "clicked",
+                  "replied",
+                  "repliesPositive",
+                  "repliesNegative",
+                  "repliesNeutral",
+                  "bounced",
+                  "unsubscribed"
+                ],
+                "description": "Cumulative counts at brand scope. Present in brand mode, null in campaign mode."
+              },
+              "byCampaign": {
+                "type": "object",
+                "nullable": true,
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "buffered": {
+                      "type": "number"
+                    },
+                    "claimed": {
+                      "type": "number"
+                    },
+                    "served": {
+                      "type": "number"
+                    },
+                    "skipped": {
+                      "type": "number"
+                    },
+                    "contacted": {
+                      "type": "number"
+                    },
+                    "sent": {
+                      "type": "number"
+                    },
+                    "delivered": {
+                      "type": "number"
+                    },
+                    "opened": {
+                      "type": "number"
+                    },
+                    "clicked": {
+                      "type": "number"
+                    },
+                    "replied": {
+                      "type": "number"
+                    },
+                    "repliesPositive": {
+                      "type": "number"
+                    },
+                    "repliesNegative": {
+                      "type": "number"
+                    },
+                    "repliesNeutral": {
+                      "type": "number"
+                    },
+                    "bounced": {
+                      "type": "number"
+                    },
+                    "unsubscribed": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "buffered",
+                    "claimed",
+                    "served",
+                    "skipped",
+                    "contacted",
+                    "sent",
+                    "delivered",
+                    "opened",
+                    "clicked",
+                    "replied",
+                    "repliesPositive",
+                    "repliesNegative",
+                    "repliesNeutral",
+                    "bounced",
+                    "unsubscribed"
+                  ],
+                  "description": "Cumulative status counts across ALL journalists matching filters."
+                },
+                "description": "Per-campaign counts. Present in brand mode, null in campaign mode."
+              },
+              "campaign": {
+                "type": "object",
+                "nullable": true,
+                "properties": {
+                  "buffered": {
+                    "type": "number"
+                  },
+                  "claimed": {
+                    "type": "number"
+                  },
+                  "served": {
+                    "type": "number"
+                  },
+                  "skipped": {
+                    "type": "number"
+                  },
+                  "contacted": {
+                    "type": "number"
+                  },
+                  "sent": {
+                    "type": "number"
+                  },
+                  "delivered": {
+                    "type": "number"
+                  },
+                  "opened": {
+                    "type": "number"
+                  },
+                  "clicked": {
+                    "type": "number"
+                  },
+                  "replied": {
+                    "type": "number"
+                  },
+                  "repliesPositive": {
+                    "type": "number"
+                  },
+                  "repliesNegative": {
+                    "type": "number"
+                  },
+                  "repliesNeutral": {
+                    "type": "number"
+                  },
+                  "bounced": {
+                    "type": "number"
+                  },
+                  "unsubscribed": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "buffered",
+                  "claimed",
+                  "served",
+                  "skipped",
+                  "contacted",
+                  "sent",
+                  "delivered",
+                  "opened",
+                  "clicked",
+                  "replied",
+                  "repliesPositive",
+                  "repliesNegative",
+                  "repliesNeutral",
+                  "bounced",
+                  "unsubscribed"
+                ],
+                "description": "Cumulative counts at campaign scope. Present in campaign mode, null in brand mode."
+              },
+              "global": {
+                "type": "object",
+                "properties": {
+                  "bounced": {
+                    "type": "number"
+                  },
+                  "unsubscribed": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "bounced",
+                  "unsubscribed"
+                ],
+                "description": "Global email signals (bounced/unsubscribed counts)."
+              }
+            },
+            "required": [
+              "totalJournalists",
+              "brand",
+              "byCampaign",
+              "campaign",
+              "global"
             ],
-            "description": "Best reply classification when outreachStatus is 'replied'. Null otherwise."
+            "description": "Structured status from journalists-service. Null when no journalist data exists for this outlet."
           },
           "relevanceScore": {
             "type": "number",
-            "description": "Max relevance score across all per-campaign scores for this outlet (same high watermark logic as outreachStatus)."
+            "description": "Max relevance score across all per-campaign scores for this outlet."
           },
           "campaigns": {
             "type": "array",
@@ -1544,8 +1717,7 @@
           "outletUrl",
           "outletDomain",
           "createdAt",
-          "outreachStatus",
-          "replyClassification",
+          "status",
           "relevanceScore",
           "campaigns"
         ]
@@ -1565,10 +1737,71 @@
           },
           "byOutreachStatus": {
             "type": "object",
-            "additionalProperties": {
-              "type": "number"
+            "properties": {
+              "buffered": {
+                "type": "number"
+              },
+              "claimed": {
+                "type": "number"
+              },
+              "served": {
+                "type": "number"
+              },
+              "skipped": {
+                "type": "number"
+              },
+              "contacted": {
+                "type": "number"
+              },
+              "sent": {
+                "type": "number"
+              },
+              "delivered": {
+                "type": "number"
+              },
+              "opened": {
+                "type": "number"
+              },
+              "clicked": {
+                "type": "number"
+              },
+              "replied": {
+                "type": "number"
+              },
+              "repliesPositive": {
+                "type": "number"
+              },
+              "repliesNegative": {
+                "type": "number"
+              },
+              "repliesNeutral": {
+                "type": "number"
+              },
+              "bounced": {
+                "type": "number"
+              },
+              "unsubscribed": {
+                "type": "number"
+              }
             },
-            "description": "Map of outreach status to outlet count across ALL outlets (not affected by pagination). Statuses: open, ended, denied, served, contacted, delivered, replied, skipped."
+            "required": [
+              "buffered",
+              "claimed",
+              "served",
+              "skipped",
+              "contacted",
+              "sent",
+              "delivered",
+              "opened",
+              "clicked",
+              "replied",
+              "repliesPositive",
+              "repliesNegative",
+              "repliesNeutral",
+              "bounced",
+              "unsubscribed"
+            ],
+            "description": "Cumulative status counts across ALL outlets (not affected by pagination)."
           }
         },
         "required": [
@@ -1658,10 +1891,71 @@
           },
           "byOutreachStatus": {
             "type": "object",
-            "additionalProperties": {
-              "type": "number"
+            "properties": {
+              "buffered": {
+                "type": "number"
+              },
+              "claimed": {
+                "type": "number"
+              },
+              "served": {
+                "type": "number"
+              },
+              "skipped": {
+                "type": "number"
+              },
+              "contacted": {
+                "type": "number"
+              },
+              "sent": {
+                "type": "number"
+              },
+              "delivered": {
+                "type": "number"
+              },
+              "opened": {
+                "type": "number"
+              },
+              "clicked": {
+                "type": "number"
+              },
+              "replied": {
+                "type": "number"
+              },
+              "repliesPositive": {
+                "type": "number"
+              },
+              "repliesNegative": {
+                "type": "number"
+              },
+              "repliesNeutral": {
+                "type": "number"
+              },
+              "bounced": {
+                "type": "number"
+              },
+              "unsubscribed": {
+                "type": "number"
+              }
             },
-            "description": "Map of outreach status to outlet count. Enriched from journalists-service with DB status fallback."
+            "required": [
+              "buffered",
+              "claimed",
+              "served",
+              "skipped",
+              "contacted",
+              "sent",
+              "delivered",
+              "opened",
+              "clicked",
+              "replied",
+              "repliesPositive",
+              "repliesNegative",
+              "repliesNeutral",
+              "bounced",
+              "unsubscribed"
+            ],
+            "description": "Cumulative status counts across matching outlets. Enriched from journalists-service."
           },
           "groups": {
             "type": "array",
@@ -1922,8 +2216,8 @@
             "type": "string",
             "enum": [
               "open",
-              "ended",
-              "denied"
+              "served",
+              "skipped"
             ]
           },
           "reason": {
@@ -1985,19 +2279,76 @@
                     "type": "string"
                   }
                 },
-                "outreachStatus": {
-                  "type": "string",
-                  "enum": [
+                "status": {
+                  "type": "object",
+                  "properties": {
+                    "buffered": {
+                      "type": "boolean"
+                    },
+                    "claimed": {
+                      "type": "boolean"
+                    },
+                    "served": {
+                      "type": "boolean"
+                    },
+                    "skipped": {
+                      "type": "boolean"
+                    },
+                    "contacted": {
+                      "type": "boolean"
+                    },
+                    "sent": {
+                      "type": "boolean"
+                    },
+                    "delivered": {
+                      "type": "boolean"
+                    },
+                    "opened": {
+                      "type": "boolean"
+                    },
+                    "clicked": {
+                      "type": "boolean"
+                    },
+                    "replied": {
+                      "type": "boolean"
+                    },
+                    "replyClassification": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "positive",
+                        "negative",
+                        "neutral"
+                      ]
+                    },
+                    "bounced": {
+                      "type": "boolean"
+                    },
+                    "unsubscribed": {
+                      "type": "boolean"
+                    },
+                    "lastDeliveredAt": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
                     "buffered",
                     "claimed",
                     "served",
+                    "skipped",
                     "contacted",
+                    "sent",
                     "delivered",
+                    "opened",
+                    "clicked",
                     "replied",
+                    "replyClassification",
                     "bounced",
-                    "skipped"
+                    "unsubscribed",
+                    "lastDeliveredAt"
                   ],
-                  "description": "Outreach status: email-gateway status when available, otherwise local DB status"
+                  "description": "Cumulative status booleans merging DB statuses and email-gateway data."
                 },
                 "runId": {
                   "type": "string",
@@ -2017,7 +2368,7 @@
                 "whyRelevant",
                 "whyNotRelevant",
                 "articleUrls",
-                "outreachStatus",
+                "status",
                 "runId"
               ]
             }
@@ -2046,21 +2397,6 @@
           "workflowSlug": {
             "type": "string",
             "nullable": true
-          },
-          "outreachStatus": {
-            "type": "string",
-            "enum": [
-              "buffered",
-              "claimed",
-              "served",
-              "contacted",
-              "delivered",
-              "replied",
-              "bounced",
-              "skipped"
-            ],
-            "description": "Outreach status for this specific campaign. Email-gateway status when available, otherwise local DB status.",
-            "example": "served"
           },
           "relevanceScore": {
             "type": "string"
@@ -2101,7 +2437,6 @@
           "campaignId",
           "featureSlug",
           "workflowSlug",
-          "outreachStatus",
           "relevanceScore",
           "whyRelevant",
           "whyNotRelevant",
@@ -2153,21 +2488,6 @@
                   "format": "uuid",
                   "example": "f7e6d5c4-b3a2-4190-8877-665544332211"
                 },
-                "outreachStatus": {
-                  "type": "string",
-                  "enum": [
-                    "buffered",
-                    "claimed",
-                    "served",
-                    "contacted",
-                    "delivered",
-                    "replied",
-                    "bounced",
-                    "skipped"
-                  ],
-                  "description": "High watermark outreach status across all campaigns for this journalist. Represents the most advanced status reached in any campaign (e.g. if campaign A is 'served' and campaign B is 'replied', this will be 'replied').",
-                  "example": "contacted"
-                },
                 "email": {
                   "type": "string",
                   "nullable": true,
@@ -2177,270 +2497,244 @@
                   "type": "string",
                   "nullable": true
                 },
-                "emailStatus": {
+                "brand": {
                   "type": "object",
                   "nullable": true,
                   "properties": {
-                    "broadcast": {
-                      "type": "object",
-                      "properties": {
-                        "campaign": {
-                          "type": "object",
-                          "nullable": true,
-                          "properties": {
-                            "contacted": {
-                              "type": "boolean"
-                            },
-                            "delivered": {
-                              "type": "boolean"
-                            },
-                            "opened": {
-                              "type": "boolean"
-                            },
-                            "replied": {
-                              "type": "boolean"
-                            },
-                            "replyClassification": {
-                              "type": "string",
-                              "nullable": true,
-                              "enum": [
-                                "positive",
-                                "negative",
-                                "neutral"
-                              ]
-                            },
-                            "bounced": {
-                              "type": "boolean"
-                            },
-                            "unsubscribed": {
-                              "type": "boolean"
-                            },
-                            "lastDeliveredAt": {
-                              "type": "string",
-                              "nullable": true
-                            }
-                          },
-                          "required": [
-                            "contacted",
-                            "delivered",
-                            "opened",
-                            "replied",
-                            "replyClassification",
-                            "bounced",
-                            "unsubscribed",
-                            "lastDeliveredAt"
-                          ]
-                        },
-                        "brand": {
-                          "type": "object",
-                          "nullable": true,
-                          "properties": {
-                            "contacted": {
-                              "type": "boolean"
-                            },
-                            "delivered": {
-                              "type": "boolean"
-                            },
-                            "opened": {
-                              "type": "boolean"
-                            },
-                            "replied": {
-                              "type": "boolean"
-                            },
-                            "replyClassification": {
-                              "type": "string",
-                              "nullable": true,
-                              "enum": [
-                                "positive",
-                                "negative",
-                                "neutral"
-                              ]
-                            },
-                            "bounced": {
-                              "type": "boolean"
-                            },
-                            "unsubscribed": {
-                              "type": "boolean"
-                            },
-                            "lastDeliveredAt": {
-                              "type": "string",
-                              "nullable": true
-                            }
-                          },
-                          "required": [
-                            "contacted",
-                            "delivered",
-                            "opened",
-                            "replied",
-                            "replyClassification",
-                            "bounced",
-                            "unsubscribed",
-                            "lastDeliveredAt"
-                          ]
-                        },
-                        "global": {
-                          "type": "object",
-                          "properties": {
-                            "email": {
-                              "type": "object",
-                              "properties": {
-                                "bounced": {
-                                  "type": "boolean"
-                                },
-                                "unsubscribed": {
-                                  "type": "boolean"
-                                }
-                              },
-                              "required": [
-                                "bounced",
-                                "unsubscribed"
-                              ]
-                            }
-                          },
-                          "required": [
-                            "email"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "campaign",
-                        "brand",
-                        "global"
+                    "buffered": {
+                      "type": "boolean"
+                    },
+                    "claimed": {
+                      "type": "boolean"
+                    },
+                    "served": {
+                      "type": "boolean"
+                    },
+                    "skipped": {
+                      "type": "boolean"
+                    },
+                    "contacted": {
+                      "type": "boolean"
+                    },
+                    "sent": {
+                      "type": "boolean"
+                    },
+                    "delivered": {
+                      "type": "boolean"
+                    },
+                    "opened": {
+                      "type": "boolean"
+                    },
+                    "clicked": {
+                      "type": "boolean"
+                    },
+                    "replied": {
+                      "type": "boolean"
+                    },
+                    "replyClassification": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "positive",
+                        "negative",
+                        "neutral"
                       ]
                     },
-                    "transactional": {
-                      "type": "object",
-                      "properties": {
-                        "campaign": {
-                          "type": "object",
-                          "nullable": true,
-                          "properties": {
-                            "contacted": {
-                              "type": "boolean"
-                            },
-                            "delivered": {
-                              "type": "boolean"
-                            },
-                            "opened": {
-                              "type": "boolean"
-                            },
-                            "replied": {
-                              "type": "boolean"
-                            },
-                            "replyClassification": {
-                              "type": "string",
-                              "nullable": true,
-                              "enum": [
-                                "positive",
-                                "negative",
-                                "neutral"
-                              ]
-                            },
-                            "bounced": {
-                              "type": "boolean"
-                            },
-                            "unsubscribed": {
-                              "type": "boolean"
-                            },
-                            "lastDeliveredAt": {
-                              "type": "string",
-                              "nullable": true
-                            }
-                          },
-                          "required": [
-                            "contacted",
-                            "delivered",
-                            "opened",
-                            "replied",
-                            "replyClassification",
-                            "bounced",
-                            "unsubscribed",
-                            "lastDeliveredAt"
-                          ]
-                        },
-                        "brand": {
-                          "type": "object",
-                          "nullable": true,
-                          "properties": {
-                            "contacted": {
-                              "type": "boolean"
-                            },
-                            "delivered": {
-                              "type": "boolean"
-                            },
-                            "opened": {
-                              "type": "boolean"
-                            },
-                            "replied": {
-                              "type": "boolean"
-                            },
-                            "replyClassification": {
-                              "type": "string",
-                              "nullable": true,
-                              "enum": [
-                                "positive",
-                                "negative",
-                                "neutral"
-                              ]
-                            },
-                            "bounced": {
-                              "type": "boolean"
-                            },
-                            "unsubscribed": {
-                              "type": "boolean"
-                            },
-                            "lastDeliveredAt": {
-                              "type": "string",
-                              "nullable": true
-                            }
-                          },
-                          "required": [
-                            "contacted",
-                            "delivered",
-                            "opened",
-                            "replied",
-                            "replyClassification",
-                            "bounced",
-                            "unsubscribed",
-                            "lastDeliveredAt"
-                          ]
-                        },
-                        "global": {
-                          "type": "object",
-                          "properties": {
-                            "email": {
-                              "type": "object",
-                              "properties": {
-                                "bounced": {
-                                  "type": "boolean"
-                                },
-                                "unsubscribed": {
-                                  "type": "boolean"
-                                }
-                              },
-                              "required": [
-                                "bounced",
-                                "unsubscribed"
-                              ]
-                            }
-                          },
-                          "required": [
-                            "email"
-                          ]
-                        }
-                      },
-                      "required": [
-                        "campaign",
-                        "brand",
-                        "global"
-                      ]
+                    "bounced": {
+                      "type": "boolean"
+                    },
+                    "unsubscribed": {
+                      "type": "boolean"
+                    },
+                    "lastDeliveredAt": {
+                      "type": "string",
+                      "nullable": true
                     }
                   },
                   "required": [
-                    "broadcast",
-                    "transactional"
+                    "buffered",
+                    "claimed",
+                    "served",
+                    "skipped",
+                    "contacted",
+                    "sent",
+                    "delivered",
+                    "opened",
+                    "clicked",
+                    "replied",
+                    "replyClassification",
+                    "bounced",
+                    "unsubscribed",
+                    "lastDeliveredAt"
                   ],
-                  "description": "Email delivery statuses from email-gateway. Null if journalist has no email."
+                  "description": "Cumulative status at brand scope (aggregate across campaigns). Present in brand mode, null in campaign mode."
+                },
+                "byCampaign": {
+                  "type": "object",
+                  "nullable": true,
+                  "additionalProperties": {
+                    "type": "object",
+                    "properties": {
+                      "buffered": {
+                        "type": "boolean"
+                      },
+                      "claimed": {
+                        "type": "boolean"
+                      },
+                      "served": {
+                        "type": "boolean"
+                      },
+                      "skipped": {
+                        "type": "boolean"
+                      },
+                      "contacted": {
+                        "type": "boolean"
+                      },
+                      "sent": {
+                        "type": "boolean"
+                      },
+                      "delivered": {
+                        "type": "boolean"
+                      },
+                      "opened": {
+                        "type": "boolean"
+                      },
+                      "clicked": {
+                        "type": "boolean"
+                      },
+                      "replied": {
+                        "type": "boolean"
+                      },
+                      "replyClassification": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          "positive",
+                          "negative",
+                          "neutral"
+                        ]
+                      },
+                      "bounced": {
+                        "type": "boolean"
+                      },
+                      "unsubscribed": {
+                        "type": "boolean"
+                      },
+                      "lastDeliveredAt": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    },
+                    "required": [
+                      "buffered",
+                      "claimed",
+                      "served",
+                      "skipped",
+                      "contacted",
+                      "sent",
+                      "delivered",
+                      "opened",
+                      "clicked",
+                      "replied",
+                      "replyClassification",
+                      "bounced",
+                      "unsubscribed",
+                      "lastDeliveredAt"
+                    ],
+                    "description": "Cumulative status booleans merging DB statuses and email-gateway data."
+                  },
+                  "description": "Per-campaign status breakdown. Present in brand mode, null in campaign mode."
+                },
+                "campaign": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "buffered": {
+                      "type": "boolean"
+                    },
+                    "claimed": {
+                      "type": "boolean"
+                    },
+                    "served": {
+                      "type": "boolean"
+                    },
+                    "skipped": {
+                      "type": "boolean"
+                    },
+                    "contacted": {
+                      "type": "boolean"
+                    },
+                    "sent": {
+                      "type": "boolean"
+                    },
+                    "delivered": {
+                      "type": "boolean"
+                    },
+                    "opened": {
+                      "type": "boolean"
+                    },
+                    "clicked": {
+                      "type": "boolean"
+                    },
+                    "replied": {
+                      "type": "boolean"
+                    },
+                    "replyClassification": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "positive",
+                        "negative",
+                        "neutral"
+                      ]
+                    },
+                    "bounced": {
+                      "type": "boolean"
+                    },
+                    "unsubscribed": {
+                      "type": "boolean"
+                    },
+                    "lastDeliveredAt": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "buffered",
+                    "claimed",
+                    "served",
+                    "skipped",
+                    "contacted",
+                    "sent",
+                    "delivered",
+                    "opened",
+                    "clicked",
+                    "replied",
+                    "replyClassification",
+                    "bounced",
+                    "unsubscribed",
+                    "lastDeliveredAt"
+                  ],
+                  "description": "Cumulative status at campaign scope. Present in campaign mode, null in brand mode."
+                },
+                "global": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "bounced": {
+                      "type": "boolean",
+                      "description": "Whether this email has bounced anywhere"
+                    },
+                    "unsubscribed": {
+                      "type": "boolean",
+                      "description": "Whether this email has unsubscribed anywhere"
+                    }
+                  },
+                  "required": [
+                    "bounced",
+                    "unsubscribed"
+                  ],
+                  "description": "Global email signals (bounced/unsubscribed). Null if no email-gateway data."
                 },
                 "cost": {
                   "type": "object",
@@ -2482,18 +2776,94 @@
                 "lastName",
                 "entityType",
                 "outletId",
-                "outreachStatus",
                 "email",
                 "apolloPersonId",
-                "emailStatus",
+                "brand",
+                "byCampaign",
+                "campaign",
+                "global",
                 "cost",
                 "campaigns"
               ]
             }
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total journalists matching filters (not affected by pagination)"
+          },
+          "byOutreachStatus": {
+            "type": "object",
+            "properties": {
+              "buffered": {
+                "type": "number"
+              },
+              "claimed": {
+                "type": "number"
+              },
+              "served": {
+                "type": "number"
+              },
+              "skipped": {
+                "type": "number"
+              },
+              "contacted": {
+                "type": "number"
+              },
+              "sent": {
+                "type": "number"
+              },
+              "delivered": {
+                "type": "number"
+              },
+              "opened": {
+                "type": "number"
+              },
+              "clicked": {
+                "type": "number"
+              },
+              "replied": {
+                "type": "number"
+              },
+              "repliesPositive": {
+                "type": "number"
+              },
+              "repliesNegative": {
+                "type": "number"
+              },
+              "repliesNeutral": {
+                "type": "number"
+              },
+              "bounced": {
+                "type": "number"
+              },
+              "unsubscribed": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "buffered",
+              "claimed",
+              "served",
+              "skipped",
+              "contacted",
+              "sent",
+              "delivered",
+              "opened",
+              "clicked",
+              "replied",
+              "repliesPositive",
+              "repliesNegative",
+              "repliesNeutral",
+              "bounced",
+              "unsubscribed"
+            ],
+            "description": "Cumulative status counts across ALL journalists matching filters."
           }
         },
         "required": [
-          "journalists"
+          "journalists",
+          "total",
+          "byOutreachStatus"
         ]
       },
       "DiscoverJournalistsResponse": {
@@ -2648,7 +3018,17 @@
             "additionalProperties": {
               "type": "number"
             },
-            "description": "Map of outreach status to count. Statuses: buffered, claimed, served, skipped, contacted, delivered, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply."
+            "description": "Cumulative status counts. DB statuses (buffered, claimed, served, skipped) are cumulative. Email-gateway fields (contacted, sent, delivered, opened, clicked, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply, recipients) are passed through."
+          },
+          "repliesDetail": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RepliesDetail"
+              },
+              {
+                "description": "Granular reply breakdown from email-gateway. Present when reply data exists."
+              }
+            ]
           },
           "groupedBy": {
             "type": "object",
@@ -2663,7 +3043,17 @@
                   "additionalProperties": {
                     "type": "number"
                   },
-                  "description": "Map of outreach status to count for this group"
+                  "description": "Cumulative status counts for this group"
+                },
+                "repliesDetail": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/RepliesDetail"
+                    },
+                    {
+                      "description": "Granular reply breakdown for this group"
+                    }
+                  ]
                 }
               },
               "required": [
@@ -5197,29 +5587,20 @@
           "emailsBounced": {
             "type": "number"
           },
-          "emailsReplied": {
+          "repliesPositive": {
             "type": "number"
           },
-          "repliesInterested": {
-            "type": "number"
-          },
-          "repliesMeetingBooked": {
-            "type": "number"
-          },
-          "repliesClosed": {
-            "type": "number"
-          },
-          "repliesNotInterested": {
+          "repliesNegative": {
             "type": "number"
           },
           "repliesNeutral": {
             "type": "number"
           },
-          "repliesOutOfOffice": {
+          "repliesAutoReply": {
             "type": "number"
           },
-          "repliesUnsubscribe": {
-            "type": "number"
+          "repliesDetail": {
+            "$ref": "#/components/schemas/RepliesDetail"
           }
         },
         "required": [
@@ -5229,14 +5610,11 @@
           "emailsOpened",
           "emailsClicked",
           "emailsBounced",
-          "emailsReplied",
-          "repliesInterested",
-          "repliesMeetingBooked",
-          "repliesClosed",
-          "repliesNotInterested",
+          "repliesPositive",
+          "repliesNegative",
           "repliesNeutral",
-          "repliesOutOfOffice",
-          "repliesUnsubscribe"
+          "repliesAutoReply",
+          "repliesDetail"
         ]
       },
       "RunsCostStatsResponse": {
@@ -8383,11 +8761,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by (required). e.g. 'repliesInterested', 'leadsServed'.",
-              "example": "repliesInterested"
+              "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
+              "example": "repliesPositive"
             },
             "required": true,
-            "description": "Stats key to rank by (required). e.g. 'repliesInterested', 'leadsServed'.",
+            "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
             "name": "objective",
             "in": "query"
           },
@@ -8420,11 +8798,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Ranked workflows with stats (from features-service)",
+            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. emailsSent, repliesPositive, positiveReplyRate). Always includes totalCostInUsdCents and completedRuns.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RankedWorkflowResponse"
+                  "$ref": "#/components/schemas/RankedResponse"
                 }
               }
             }
@@ -8479,11 +8857,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Hero records — best cost-per-outcome for each dynamic metric. Metrics are resolved from the feature's declared outputs.",
+            "description": "Pass-through from features-service. Best cost-per-outcome records per metric.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BestWorkflowResponse"
+                  "$ref": "#/components/schemas/BestResponse"
                 }
               }
             }
@@ -8538,11 +8916,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by (required). e.g. 'repliesInterested', 'leadsServed'.",
-              "example": "repliesInterested"
+              "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
+              "example": "repliesPositive"
             },
             "required": true,
-            "description": "Stats key to rank by (required). e.g. 'repliesInterested', 'leadsServed'.",
+            "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
             "name": "objective",
             "in": "query"
           },
@@ -8630,11 +9008,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Ranked workflows with stats (from features-service)",
+            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. emailsSent, repliesPositive, positiveReplyRate). Always includes totalCostInUsdCents and completedRuns.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RankedWorkflowResponse"
+                  "$ref": "#/components/schemas/RankedResponse"
                 }
               }
             }
@@ -8759,11 +9137,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Hero records — best cost-per-outcome for each dynamic metric. Metrics are resolved from the feature's declared outputs.",
+            "description": "Pass-through from features-service. Best cost-per-outcome records per metric.",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/BestWorkflowResponse"
+                  "$ref": "#/components/schemas/BestResponse"
                 }
               }
             }
@@ -9745,7 +10123,7 @@
           "Campaigns"
         ],
         "summary": "Get campaign stats",
-        "description": "Get campaign statistics (leads served/buffered/skipped, apollo metrics, emails sent/opened/clicked/replied, etc.)",
+        "description": "Get campaign statistics (leads served/buffered/skipped, apollo metrics, emails sent/opened/clicked, reply aggregates, etc.)",
         "security": [
           {
             "bearerAuth": []
@@ -10748,8 +11126,6 @@
               "type": "string",
               "enum": [
                 "open",
-                "ended",
-                "denied",
                 "served",
                 "skipped"
               ]
@@ -13370,7 +13746,7 @@
           "Journalists"
         ],
         "summary": "Get journalist stats with dynasty-aware filtering and grouping",
-        "description": "Returns journalist counts grouped by outreach status (buffered, claimed, served, skipped, contacted, delivered, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply). Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. Optional groupBy returns per-slug breakdowns.",
+        "description": "Returns journalist counts with cumulative DB statuses (buffered, claimed, served, skipped) and full email-gateway passthrough (contacted, sent, delivered, opened, clicked, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply, recipients). Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. Optional groupBy returns per-slug breakdowns.",
         "security": [
           {
             "bearerAuth": []
