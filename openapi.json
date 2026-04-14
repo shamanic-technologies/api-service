@@ -5205,6 +5205,10 @@
               "$ref": "#/components/schemas/ExtractFieldRequest"
             },
             "description": "Fields to extract"
+          },
+          "resetCache": {
+            "type": "boolean",
+            "description": "When true, bypass all cache layers (URL maps, page scrapes, field extractions, consolidated fields) and force a full re-extraction"
           }
         },
         "required": [
