@@ -67,7 +67,7 @@ describe("POST /v1/api-keys — identity forwarding via headers", () => {
     app = createApp();
   });
 
-  it("should pass createdBy and name in body, orgId/userId only in headers", async () => {
+  it("should pass userId, createdBy and name in body, orgId only in headers", async () => {
     const res = await request(app)
       .post("/v1/api-keys")
       .send({ name: "Polarity Course" });
@@ -80,12 +80,12 @@ describe("POST /v1/api-keys — identity forwarding via headers", () => {
     );
     expect(createCall).toBeDefined();
     expect(createCall!.body).toEqual({
+      userId: "user_test123",
       createdBy: "user_test123",
       name: "Polarity Course",
     });
-    // orgId and userId should NOT be in the body
+    // orgId should NOT be in the body — it goes via x-org-id header
     expect(createCall!.body).not.toHaveProperty("orgId");
-    expect(createCall!.body).not.toHaveProperty("userId");
   });
 });
 

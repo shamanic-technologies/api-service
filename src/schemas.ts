@@ -2742,7 +2742,7 @@ export const CreateApiKeyRequestSchema = z
   .object({
     name: z
       .string()
-      .optional()
+      .min(1)
       .describe("Human-readable name for the API key"),
   })
   .openapi("CreateApiKeyRequest");
