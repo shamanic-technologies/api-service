@@ -214,6 +214,7 @@ router.post("/api-keys", authenticate, requireOrg, requireUser, async (req: Auth
       {
         method: "POST",
         body: {
+          userId: req.userId,
           createdBy: req.userId,
           name,
         },

@@ -4455,9 +4455,13 @@
         "properties": {
           "name": {
             "type": "string",
+            "minLength": 1,
             "description": "Human-readable name for the API key"
           }
-        }
+        },
+        "required": [
+          "name"
+        ]
       },
       "RevokeApiKeyResponse": {
         "type": "object",
