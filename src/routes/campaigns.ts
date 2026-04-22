@@ -387,6 +387,7 @@ router.get("/campaigns/:id", authenticate, requireOrg, requireUser, async (req: 
     const { id } = req.params;
     const internalHeaders = buildInternalHeaders(req);
 
+    console.log("[api-service] GET /campaigns/:id — calling campaign-service", { campaignId: id, orgId: req.orgId });
     const result = await callExternalService<{ campaign: Record<string, unknown> }>(
       externalServices.campaign,
       `/campaigns/${id}`,
@@ -396,7 +397,7 @@ router.get("/campaigns/:id", authenticate, requireOrg, requireUser, async (req: 
     const enriched = await enrichCampaignBrandUrls(result.campaign, internalHeaders);
     res.json({ ...result, campaign: enriched });
   } catch (error: any) {
-    console.error("[api-service] Get campaign error:", error);
+    console.error("[api-service] Get campaign error:", error, { campaignId: req.params.id, orgId: req.orgId });
     res.status(500).json({ error: error.message || "Failed to get campaign" });
   }
 });
@@ -749,6 +750,7 @@ router.get("/campaigns/:id/outlets", authenticate, requireOrg, requireUser, asyn
     const baseHeaders = buildInternalHeaders(req);
 
     // Fetch campaign to enrich headers with campaign metadata for downstream calls
+    console.log("[api-service] GET /campaigns/:id/outlets — calling campaign-service", { campaignId: id, orgId: req.orgId, authType: req.authType });
     const campaignResult = await callExternalService<{
       campaign: { brandIds?: string[]; featureSlug?: string; workflowSlug?: string };
     }>(externalServices.campaign, `/campaigns/${encodeURIComponent(id)}`, { headers: baseHeaders });
@@ -770,7 +772,7 @@ router.get("/campaigns/:id/outlets", authenticate, requireOrg, requireUser, asyn
     );
     res.json(result);
   } catch (error: any) {
-    console.error("[api-service] Get campaign outlets error:", error);
+    console.error("[api-service] Get campaign outlets error:", error, { campaignId: req.params.id, orgId: req.orgId, authType: req.authType });
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get campaign outlets" });
   }
 });
@@ -786,6 +788,7 @@ router.get("/campaigns/:id/journalists", authenticate, requireOrg, requireUser, 
     const baseHeaders = buildInternalHeaders(req);
 
     // Fetch campaign to get brandIds/featureSlug/workflowSlug for downstream headers
+    console.log("[api-service] GET /campaigns/:id/journalists — calling campaign-service", { campaignId: id, orgId: req.orgId, authType: req.authType });
     const campaignResult = await callExternalService<{
       campaign: { brandIds?: string[]; featureSlug?: string; workflowSlug?: string };
     }>(externalServices.campaign, `/campaigns/${encodeURIComponent(id)}`, { headers: baseHeaders });
