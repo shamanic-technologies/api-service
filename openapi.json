@@ -8559,6 +8559,10 @@
         "type": "object",
         "properties": {}
       },
+      "DynastyStatsResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "GlobalStatsResponse": {
         "type": "object",
         "properties": {}
@@ -28809,6 +28813,173 @@
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
           }
         ]
+      }
+    },
+    "/v1/features/stats/dynasty": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Dynasty stats (aggregated across all versions)",
+        "description": "Aggregated stats across the full upgrade chain of a feature dynasty (BFS lineage traversal). Use this when you need dynasty-wide stats instead of per-slug stats. Requires x-org-id. Proxied from features-service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The stable dynasty slug (unversioned)",
+              "example": "sales-cold-email-outreach"
+            },
+            "required": true,
+            "description": "The stable dynasty slug (unversioned)",
+            "name": "dynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Group dimension: workflowSlug | workflowDynastySlug | brandId | campaignId",
+              "example": "campaignId"
+            },
+            "required": false,
+            "description": "Group dimension: workflowSlug | workflowDynastySlug | brandId | campaignId",
+            "name": "groupBy",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by brand UUID",
+              "example": "brand-uuid-123"
+            },
+            "required": false,
+            "description": "Filter by brand UUID",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by campaign UUID",
+              "example": "campaign-uuid-456"
+            },
+            "required": false,
+            "description": "Filter by campaign UUID",
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by exact workflow slug"
+            },
+            "required": false,
+            "description": "Filter by exact workflow slug",
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow dynasty slug"
+            },
+            "required": false,
+            "description": "Filter by workflow dynasty slug",
+            "name": "workflowDynastySlug",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dynasty stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DynastyStatsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/features/stats": {

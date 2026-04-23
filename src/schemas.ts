@@ -6461,6 +6461,31 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/stats/dynasty",
+  tags: ["Features"],
+  summary: "Dynasty stats (aggregated across all versions)",
+  description:
+    "Aggregated stats across the full upgrade chain of a feature dynasty (BFS lineage traversal). Use this when you need dynasty-wide stats instead of per-slug stats. Requires x-org-id. Proxied from features-service.",
+  security: authed,
+  request: {
+    query: z.object({
+      dynastySlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("The stable dynasty slug (unversioned)"),
+      groupBy: z.string().optional().openapi({ example: "campaignId" }).describe("Group dimension: workflowSlug | workflowDynastySlug | brandId | campaignId"),
+      brandId: z.string().optional().openapi({ example: "brand-uuid-123" }).describe("Filter by brand UUID"),
+      campaignId: z.string().optional().openapi({ example: "campaign-uuid-456" }).describe("Filter by campaign UUID"),
+      workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug"),
+    }),
+  },
+  responses: {
+    200: { description: "Dynasty stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("DynastyStatsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/features/stats",
   tags: ["Features"],
   summary: "Global stats cross-features",
