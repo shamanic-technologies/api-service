@@ -159,6 +159,29 @@ router.get("/features/stats/registry", authenticate, requireOrg, requireUser, as
 });
 
 /**
+ * GET /v1/features/stats/dynasty
+ * Aggregated stats across all versions of a dynasty. Proxied to features-service GET /stats/dynasty.
+ */
+router.get("/features/stats/dynasty", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["dynastySlug", "groupBy", "brandId", "campaignId", "workflowSlug", "workflowDynastySlug"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.features,
+      `/stats/dynasty${qs}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Dynasty stats error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get dynasty stats" });
+  }
+});
+
+/**
  * GET /v1/features/stats
  * Global stats cross-features, groupable by featureSlug/workflowSlug/brandId/campaignId
  */
