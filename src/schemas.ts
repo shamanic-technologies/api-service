@@ -3544,6 +3544,57 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/transfer",
+  tags: ["Brand"],
+  summary: "Transfer a brand to another org",
+  description:
+    "Transfer a brand and all its associated solo-brand data to a different organization. " +
+    "The requesting user must be a member of both the source and target orgs. " +
+    "Brand-service orchestrates the transfer across all services. " +
+    "Co-branding rows (multiple brand IDs) are not transferred.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            targetOrgId: z.string().describe("Clerk org ID (e.g. org_xxx) of the target organization — resolved to internal UUID server-side"),
+          }).openapi("TransferBrandRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Transfer completed",
+      content: {
+        "application/json": {
+          schema: z.object({
+            brandId: z.string().describe("Brand ID that was transferred"),
+            sourceOrgId: z.string().describe("Original organization ID"),
+            targetOrgId: z.string().describe("New organization ID"),
+            serviceResults: z.record(
+              z.string(),
+              z.union([
+                z.object({ updatedTables: z.record(z.string(), z.number()) }),
+                z.object({ error: z.string() }),
+              ]),
+            ).describe("Per-service transfer results: updated table counts or error"),
+          }).openapi("TransferBrandResponse"),
+        },
+      },
+    },
+    400: { description: "Missing targetOrgId", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "User is not a member of the target org", content: errorContent },
+    404: { description: "Brand not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // EMAIL-GATEWAY (delivery stats)
 // ===================================================================

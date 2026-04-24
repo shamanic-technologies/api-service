@@ -288,4 +288,69 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
   }
 });
 
+/**
+ * POST /v1/brands/:id/transfer
+ * Transfer a brand to a different org. Resolves the Clerk org ID to an internal UUID,
+ * then proxies to brand-service which orchestrates the full transfer.
+ */
+router.post("/brands/:id/transfer", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { targetOrgId } = req.body as { targetOrgId?: string };
+    if (!targetOrgId) {
+      return res.status(400).json({ error: "targetOrgId is required" });
+    }
+
+    // Resolve Clerk org ID → internal UUID via client-service
+    const externalUserId = req.headers["x-external-user-id"] as string | undefined;
+    if (!externalUserId) {
+      return res.status(400).json({ error: "x-external-user-id header required for brand transfer" });
+    }
+
+    const resolved = await callExternalService<{ orgId: string; userId: string }>(
+      externalServices.client,
+      "/resolve",
+      {
+        method: "POST",
+        body: { externalOrgId: targetOrgId, externalUserId },
+      },
+    );
+
+    if (!resolved.orgId) {
+      return res.status(400).json({ error: "Failed to resolve target org" });
+    }
+
+    if (resolved.orgId === req.orgId) {
+      return res.status(400).json({ error: "Target org is the same as the source org" });
+    }
+
+    // Verify user is a member of the target org
+    try {
+      await callExternalService(
+        externalServices.client,
+        `/orgs/${resolved.orgId}/members/${req.userId}`,
+      );
+    } catch (membershipError: any) {
+      if (membershipError.statusCode === 404) {
+        return res.status(403).json({ error: "User is not a member of the target org" });
+      }
+      throw membershipError;
+    }
+
+    const result = await callExternalService(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/transfer`,
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body: { targetOrgId: resolved.orgId },
+      },
+    );
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Brand transfer error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to transfer brand" });
+  }
+});
+
 export default router;
