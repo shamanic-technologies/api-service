@@ -195,7 +195,7 @@ async function resolveExternalIds(
       userId: string;
     }>(
       externalServices.client,
-      "/resolve",
+      "/internal/resolve",
       {
         method: "POST",
         body,

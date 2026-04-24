@@ -83,7 +83,7 @@ describe("Auth middleware — admin key via X-API-Key", () => {
     expect(mockCall).toHaveBeenCalledTimes(1);
     expect(mockCall).toHaveBeenCalledWith(
       expect.objectContaining({ url: "http://client-service" }),
-      "/resolve",
+      "/internal/resolve",
       {
         method: "POST",
         body: {
@@ -112,7 +112,7 @@ describe("Auth middleware — admin key via X-API-Key", () => {
     expect(res.status).toBe(200);
     expect(mockCall).toHaveBeenCalledWith(
       expect.objectContaining({ url: "http://client-service" }),
-      "/resolve",
+      "/internal/resolve",
       {
         method: "POST",
         body: {
@@ -141,7 +141,7 @@ describe("Auth middleware — admin key via X-API-Key", () => {
     expect(res.status).toBe(200);
     expect(mockCall).toHaveBeenCalledWith(
       expect.objectContaining({ url: "http://client-service" }),
-      "/resolve",
+      "/internal/resolve",
       {
         method: "POST",
         body: {

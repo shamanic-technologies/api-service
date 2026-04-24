@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { authenticate, requireOrg, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
-import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { ResolveUserRequestSchema, ListUsersQuerySchema } from "../schemas.js";
 
 const router = Router();
@@ -20,11 +19,10 @@ router.post("/users/resolve", authenticate, requireOrg, async (req: Authenticate
 
     const result = await callExternalService(
       externalServices.client,
-      "/resolve",
+      "/internal/resolve",
       {
         method: "POST",
         body: parsed.data,
-        headers: buildInternalHeaders(req),
       }
     );
     res.json(result);
@@ -53,8 +51,7 @@ router.get("/users", authenticate, requireOrg, async (req: AuthenticatedRequest,
 
     const result = await callExternalService(
       externalServices.client,
-      `/users?${params.toString()}`,
-      { headers: buildInternalHeaders(req) },
+      `/internal/users?${params.toString()}`,
     );
     res.json(result);
   } catch (error: any) {
