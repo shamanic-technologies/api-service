@@ -59,7 +59,7 @@ describe("Auth middleware — admin auth requires both external ID headers", () 
 
 describe("Auth middleware — identity resolution via POST /resolve", () => {
   it("should resolve external IDs via client-service POST /resolve", () => {
-    expect(content).toContain('"/resolve"');
+    expect(content).toContain('"/internal/resolve"');
     expect(content).toContain("externalServices.client");
     expect(content).toContain('method: "POST"');
   });
