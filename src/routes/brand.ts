@@ -290,7 +290,8 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
 
 /**
  * POST /v1/brands/:id/transfer
- * Transfer a brand to a different org. Proxied to brand-service which orchestrates the full transfer.
+ * Transfer a brand to a different org. Resolves the Clerk org ID to an internal UUID,
+ * then proxies to brand-service which orchestrates the full transfer.
  */
 router.post("/brands/:id/transfer", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
@@ -299,13 +300,39 @@ router.post("/brands/:id/transfer", authenticate, requireOrg, requireUser, async
       return res.status(400).json({ error: "targetOrgId is required" });
     }
 
+    // Resolve Clerk org ID → internal UUID via client-service
+    const externalUserId = req.headers["x-external-user-id"] as string | undefined;
+    if (!externalUserId) {
+      return res.status(400).json({ error: "x-external-user-id header required for brand transfer" });
+    }
+
+    const resolved = await callExternalService<{ orgId: string; userId: string }>(
+      externalServices.client,
+      "/resolve",
+      {
+        method: "POST",
+        body: { externalOrgId: targetOrgId, externalUserId },
+      },
+    );
+
+    if (!resolved.orgId) {
+      return res.status(400).json({ error: "Failed to resolve target org" });
+    }
+
+    if (resolved.orgId === req.orgId) {
+      return res.status(400).json({ error: "Target org is the same as the source org" });
+    }
+
+    // TODO: verify user membership in target org via client-service
+    // GET /orgs/{resolved.orgId}/members/{req.userId} — pending client-service endpoint
+
     const result = await callExternalService(
       externalServices.brand,
       `/orgs/brands/${req.params.id}/transfer`,
       {
         method: "POST",
         headers: buildInternalHeaders(req),
-        body: { targetOrgId },
+        body: { targetOrgId: resolved.orgId },
       },
     );
 
