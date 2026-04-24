@@ -308,7 +308,7 @@ router.post("/brands/:id/transfer", authenticate, requireOrg, requireUser, async
 
     const resolved = await callExternalService<{ orgId: string; userId: string }>(
       externalServices.client,
-      "/resolve",
+      "/internal/resolve",
       {
         method: "POST",
         body: { externalOrgId: targetOrgId, externalUserId },
@@ -327,8 +327,7 @@ router.post("/brands/:id/transfer", authenticate, requireOrg, requireUser, async
     try {
       await callExternalService(
         externalServices.client,
-        `/orgs/${resolved.orgId}/members/${req.userId}`,
-        { headers: buildInternalHeaders(req) },
+        `/internal/orgs/${resolved.orgId}/members/${req.userId}`,
       );
     } catch (membershipError: any) {
       if (membershipError.statusCode === 404) {

@@ -51,8 +51,8 @@ function mockFetchResolveAndTransfer() {
   let brandServiceHeaders: Record<string, string> = {};
 
   global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-    // client-service /resolve call (match the exact path, not substring)
-    if (String(url).endsWith("/resolve")) {
+    // client-service /internal/resolve call
+    if (String(url).includes("/internal/resolve")) {
       return {
         ok: true,
         json: () => Promise.resolve({ orgId: RESOLVED_TARGET_ORG_ID, userId: "user_test123", orgCreated: false, userCreated: false }),
@@ -145,7 +145,7 @@ describe("POST /v1/brands/:id/transfer", () => {
 
   it("should return 400 when target org resolves to same as source org", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (String(url).endsWith("/resolve")) {
+      if (String(url).includes("/internal/resolve")) {
         return {
           ok: true,
           json: () => Promise.resolve({ orgId: "org_test456", userId: "user_test123", orgCreated: false, userCreated: false }),
@@ -165,7 +165,7 @@ describe("POST /v1/brands/:id/transfer", () => {
 
   it("should return 403 when user is not a member of target org", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (String(url).endsWith("/resolve")) {
+      if (String(url).includes("/internal/resolve")) {
         return {
           ok: true,
           json: () => Promise.resolve({ orgId: RESOLVED_TARGET_ORG_ID, userId: "user_test123", orgCreated: false, userCreated: false }),
@@ -190,20 +190,18 @@ describe("POST /v1/brands/:id/transfer", () => {
     expect(res.body.error).toContain("not a member of the target org");
   });
 
-  it("should forward identity headers to client-service membership check (regression: missing x-run-id)", async () => {
-    let membershipHeaders: Record<string, string> = {};
+  it("should call client-service membership check at /internal/ path", async () => {
+    let membershipUrl = "";
 
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-      if (String(url).endsWith("/resolve")) {
+      if (String(url).includes("/internal/resolve")) {
         return {
           ok: true,
           json: () => Promise.resolve({ orgId: RESOLVED_TARGET_ORG_ID, userId: "user_test123", orgCreated: false, userCreated: false }),
         };
       }
       if (String(url).includes("/members/")) {
-        membershipHeaders = Object.fromEntries(
-          Object.entries(init?.headers || {}).map(([k, v]) => [k.toLowerCase(), v]),
-        ) as Record<string, string>;
+        membershipUrl = url;
         return { ok: true, json: () => Promise.resolve({}) };
       }
       return { ok: true, json: () => Promise.resolve(transferResult) };
@@ -215,14 +213,13 @@ describe("POST /v1/brands/:id/transfer", () => {
       .send({ targetOrgId: "org_clerk_target" });
 
     expect(res.status).toBe(200);
-    expect(membershipHeaders["x-org-id"]).toBe("org_test456");
-    expect(membershipHeaders["x-user-id"]).toBe("user_test123");
-    expect(membershipHeaders["x-run-id"]).toBe("run_test789");
+    expect(membershipUrl).toContain("/internal/orgs/");
+    expect(membershipUrl).toContain(`/members/user_test123`);
   });
 
   it("should forward upstream error status from brand-service", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (String(url).endsWith("/resolve")) {
+      if (String(url).includes("/internal/resolve")) {
         return {
           ok: true,
           json: () => Promise.resolve({ orgId: RESOLVED_TARGET_ORG_ID, userId: "user_test123", orgCreated: false, userCreated: false }),
