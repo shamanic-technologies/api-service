@@ -51,7 +51,7 @@ function mockFetchResolveAndTransfer() {
 
   global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
     // client-service /resolve call (match the exact path, not substring)
-    if (String(url).endsWith("/resolve")) {
+    if (String(url).includes("/internal/resolve")) {
       return {
         ok: true,
         json: () => Promise.resolve({ orgId: RESOLVED_TARGET_ORG_ID, userId: "user_test123", orgCreated: false, userCreated: false }),
@@ -144,7 +144,7 @@ describe("POST /v1/brands/:id/transfer", () => {
 
   it("should return 400 when target org resolves to same as source org", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (String(url).endsWith("/resolve")) {
+      if (String(url).includes("/internal/resolve")) {
         return {
           ok: true,
           json: () => Promise.resolve({ orgId: "org_test456", userId: "user_test123", orgCreated: false, userCreated: false }),
@@ -164,7 +164,7 @@ describe("POST /v1/brands/:id/transfer", () => {
 
   it("should return 403 when user is not a member of target org", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (String(url).endsWith("/resolve")) {
+      if (String(url).includes("/internal/resolve")) {
         return {
           ok: true,
           json: () => Promise.resolve({ orgId: RESOLVED_TARGET_ORG_ID, userId: "user_test123", orgCreated: false, userCreated: false }),
@@ -191,7 +191,7 @@ describe("POST /v1/brands/:id/transfer", () => {
 
   it("should forward upstream error status from brand-service", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (String(url).endsWith("/resolve")) {
+      if (String(url).includes("/internal/resolve")) {
         return {
           ok: true,
           json: () => Promise.resolve({ orgId: RESOLVED_TARGET_ORG_ID, userId: "user_test123", orgCreated: false, userCreated: false }),

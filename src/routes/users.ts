@@ -20,7 +20,7 @@ router.post("/users/resolve", authenticate, requireOrg, async (req: Authenticate
 
     const result = await callExternalService(
       externalServices.client,
-      "/resolve",
+      "/internal/resolve",
       {
         method: "POST",
         body: parsed.data,
@@ -53,7 +53,7 @@ router.get("/users", authenticate, requireOrg, async (req: AuthenticatedRequest,
 
     const result = await callExternalService(
       externalServices.client,
-      `/users?${params.toString()}`,
+      `/internal/users?${params.toString()}`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
