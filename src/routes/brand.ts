@@ -328,6 +328,7 @@ router.post("/brands/:id/transfer", authenticate, requireOrg, requireUser, async
       await callExternalService(
         externalServices.client,
         `/orgs/${resolved.orgId}/members/${req.userId}`,
+        { headers: buildInternalHeaders(req) },
       );
     } catch (membershipError: any) {
       if (membershipError.statusCode === 404) {
