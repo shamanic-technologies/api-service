@@ -288,4 +288,32 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
   }
 });
 
+/**
+ * POST /v1/brands/:id/transfer
+ * Transfer a brand to a different org. Proxied to brand-service which orchestrates the full transfer.
+ */
+router.post("/brands/:id/transfer", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { targetOrgId } = req.body as { targetOrgId?: string };
+    if (!targetOrgId) {
+      return res.status(400).json({ error: "targetOrgId is required" });
+    }
+
+    const result = await callExternalService(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/transfer`,
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body: { targetOrgId },
+      },
+    );
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Brand transfer error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to transfer brand" });
+  }
+});
+
 export default router;
