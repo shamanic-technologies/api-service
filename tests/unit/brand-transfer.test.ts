@@ -4,7 +4,7 @@ import express from "express";
 
 /**
  * POST /v1/brands/:id/transfer
- * Resolves Clerk org ID → internal UUID, then proxies to brand-service POST /orgs/brands/:id/transfer
+ * Resolves Clerk org ID → internal UUID, verifies membership, then proxies to brand-service
  */
 
 vi.mock("../../src/middleware/auth.js", () => ({
@@ -50,17 +50,21 @@ function mockFetchResolveAndTransfer() {
   let brandServiceHeaders: Record<string, string> = {};
 
   global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-    const body = init?.body ? JSON.parse(init.body as string) : {};
-
-    // client-service /resolve call
-    if (String(url).includes("/resolve")) {
+    // client-service /resolve call (match the exact path, not substring)
+    if (String(url).endsWith("/resolve")) {
       return {
         ok: true,
         json: () => Promise.resolve({ orgId: RESOLVED_TARGET_ORG_ID, userId: "user_test123", orgCreated: false, userCreated: false }),
       };
     }
 
+    // client-service /members/ membership check
+    if (String(url).includes("/members/")) {
+      return { ok: true, json: () => Promise.resolve({}) };
+    }
+
     // brand-service /transfer call
+    const body = init?.body ? JSON.parse(init.body as string) : {};
     brandServiceUrl = url;
     brandServiceBody = body;
     brandServiceHeaders = Object.fromEntries(
@@ -140,7 +144,7 @@ describe("POST /v1/brands/:id/transfer", () => {
 
   it("should return 400 when target org resolves to same as source org", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (String(url).includes("/resolve")) {
+      if (String(url).endsWith("/resolve")) {
         return {
           ok: true,
           json: () => Promise.resolve({ orgId: "org_test456", userId: "user_test123", orgCreated: false, userCreated: false }),
@@ -158,19 +162,22 @@ describe("POST /v1/brands/:id/transfer", () => {
     expect(res.body.error).toContain("same as the source");
   });
 
-  it("should forward upstream error status from brand-service", async () => {
+  it("should return 403 when user is not a member of target org", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
-      if (String(url).includes("/resolve")) {
+      if (String(url).endsWith("/resolve")) {
         return {
           ok: true,
           json: () => Promise.resolve({ orgId: RESOLVED_TARGET_ORG_ID, userId: "user_test123", orgCreated: false, userCreated: false }),
         };
       }
-      return {
-        ok: false,
-        status: 403,
-        text: () => Promise.resolve('{"error":"User is not a member of the target org"}'),
-      };
+      if (String(url).includes("/members/")) {
+        return {
+          ok: false,
+          status: 404,
+          text: () => Promise.resolve('{"error":"Not found"}'),
+        };
+      }
+      return { ok: true, json: () => Promise.resolve({}) };
     });
 
     const res = await request(app)
@@ -179,6 +186,33 @@ describe("POST /v1/brands/:id/transfer", () => {
       .send({ targetOrgId: "org_clerk_target" });
 
     expect(res.status).toBe(403);
-    expect(res.body.error).toContain("not a member");
+    expect(res.body.error).toContain("not a member of the target org");
+  });
+
+  it("should forward upstream error status from brand-service", async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (String(url).endsWith("/resolve")) {
+        return {
+          ok: true,
+          json: () => Promise.resolve({ orgId: RESOLVED_TARGET_ORG_ID, userId: "user_test123", orgCreated: false, userCreated: false }),
+        };
+      }
+      if (String(url).includes("/members/")) {
+        return { ok: true, json: () => Promise.resolve({}) };
+      }
+      return {
+        ok: false,
+        status: 500,
+        text: () => Promise.resolve('{"error":"Brand-service internal error"}'),
+      };
+    });
+
+    const res = await request(app)
+      .post("/v1/brands/brand-abc/transfer")
+      .set("x-external-user-id", "clerk_user_ext")
+      .send({ targetOrgId: "org_clerk_target" });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toContain("Brand-service internal error");
   });
 });

@@ -323,8 +323,18 @@ router.post("/brands/:id/transfer", authenticate, requireOrg, requireUser, async
       return res.status(400).json({ error: "Target org is the same as the source org" });
     }
 
-    // TODO: verify user membership in target org via client-service
-    // GET /orgs/{resolved.orgId}/members/{req.userId} — pending client-service endpoint
+    // Verify user is a member of the target org
+    try {
+      await callExternalService(
+        externalServices.client,
+        `/orgs/${resolved.orgId}/members/${req.userId}`,
+      );
+    } catch (membershipError: any) {
+      if (membershipError.statusCode === 404) {
+        return res.status(403).json({ error: "User is not a member of the target org" });
+      }
+      throw membershipError;
+    }
 
     const result = await callExternalService(
       externalServices.brand,
