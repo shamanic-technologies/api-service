@@ -11,6 +11,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
+    req.runId = "run_test789";
     req.authType = "admin";
     next();
   },
@@ -187,6 +188,36 @@ describe("POST /v1/brands/:id/transfer", () => {
 
     expect(res.status).toBe(403);
     expect(res.body.error).toContain("not a member of the target org");
+  });
+
+  it("should forward identity headers to client-service membership check (regression: missing x-run-id)", async () => {
+    let membershipHeaders: Record<string, string> = {};
+
+    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (String(url).endsWith("/resolve")) {
+        return {
+          ok: true,
+          json: () => Promise.resolve({ orgId: RESOLVED_TARGET_ORG_ID, userId: "user_test123", orgCreated: false, userCreated: false }),
+        };
+      }
+      if (String(url).includes("/members/")) {
+        membershipHeaders = Object.fromEntries(
+          Object.entries(init?.headers || {}).map(([k, v]) => [k.toLowerCase(), v]),
+        ) as Record<string, string>;
+        return { ok: true, json: () => Promise.resolve({}) };
+      }
+      return { ok: true, json: () => Promise.resolve(transferResult) };
+    });
+
+    const res = await request(app)
+      .post("/v1/brands/brand-abc/transfer")
+      .set("x-external-user-id", "clerk_user_ext")
+      .send({ targetOrgId: "org_clerk_target" });
+
+    expect(res.status).toBe(200);
+    expect(membershipHeaders["x-org-id"]).toBe("org_test456");
+    expect(membershipHeaders["x-user-id"]).toBe("user_test123");
+    expect(membershipHeaders["x-run-id"]).toBe("run_test789");
   });
 
   it("should forward upstream error status from brand-service", async () => {
