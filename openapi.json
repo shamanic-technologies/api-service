@@ -5632,8 +5632,7 @@
         "properties": {
           "targetOrgId": {
             "type": "string",
-            "format": "uuid",
-            "description": "Internal UUID of the target organization"
+            "description": "Clerk org ID (e.g. org_xxx) of the target organization — resolved to internal UUID server-side"
           }
         },
         "required": [

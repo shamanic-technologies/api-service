@@ -3561,7 +3561,7 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z.object({
-            targetOrgId: z.string().uuid().describe("Internal UUID of the target organization"),
+            targetOrgId: z.string().describe("Clerk org ID (e.g. org_xxx) of the target organization — resolved to internal UUID server-side"),
           }).openapi("TransferBrandRequest"),
         },
       },
