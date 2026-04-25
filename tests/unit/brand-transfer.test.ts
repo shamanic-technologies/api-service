@@ -11,6 +11,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
+    req.runId = "run_test789";
     req.authType = "admin";
     next();
   },
@@ -187,6 +188,33 @@ describe("POST /v1/brands/:id/transfer", () => {
 
     expect(res.status).toBe(403);
     expect(res.body.error).toContain("not a member of the target org");
+  });
+
+  it("should call client-service membership check at /internal/ path", async () => {
+    let membershipUrl = "";
+
+    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      if (String(url).includes("/internal/resolve")) {
+        return {
+          ok: true,
+          json: () => Promise.resolve({ orgId: RESOLVED_TARGET_ORG_ID, userId: "user_test123", orgCreated: false, userCreated: false }),
+        };
+      }
+      if (String(url).includes("/members/")) {
+        membershipUrl = url;
+        return { ok: true, json: () => Promise.resolve({}) };
+      }
+      return { ok: true, json: () => Promise.resolve(transferResult) };
+    });
+
+    const res = await request(app)
+      .post("/v1/brands/brand-abc/transfer")
+      .set("x-external-user-id", "clerk_user_ext")
+      .send({ targetOrgId: "org_clerk_target" });
+
+    expect(res.status).toBe(200);
+    expect(membershipUrl).toContain("/internal/orgs/");
+    expect(membershipUrl).toContain(`/members/user_test123`);
   });
 
   it("should forward upstream error status from brand-service", async () => {
