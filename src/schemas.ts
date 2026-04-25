@@ -3595,6 +3595,49 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/transfers",
+  tags: ["Brand"],
+  summary: "Get transfer history for a brand",
+  description: "Returns the audit log of all transfers for a given brand, including per-service results.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+  },
+  responses: {
+    200: {
+      description: "Transfer history",
+      content: {
+        "application/json": {
+          schema: z.object({
+            transfers: z.array(
+              z.object({
+                id: z.string().uuid(),
+                brandId: z.string().uuid(),
+                sourceOrgId: z.string().uuid(),
+                targetOrgId: z.string().uuid(),
+                initiatedByUserId: z.string().uuid(),
+                serviceResults: z.record(
+                  z.string(),
+                  z.union([
+                    z.object({ updatedTables: z.array(z.object({ tableName: z.string(), count: z.number() })) }),
+                    z.object({ error: z.string() }),
+                    z.object({ skipped: z.literal(true) }),
+                  ]),
+                ),
+                createdAt: z.string(),
+              }),
+            ),
+          }).openapi("BrandTransferHistoryResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // EMAIL-GATEWAY (delivery stats)
 // ===================================================================

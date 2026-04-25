@@ -244,3 +244,62 @@ describe("POST /v1/brands/:id/transfer", () => {
     expect(res.body.error).toContain("Brand-service internal error");
   });
 });
+
+describe("GET /v1/brands/:id/transfers", () => {
+  let app: express.Express;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    app = buildApp();
+  });
+
+  const transferHistory = {
+    transfers: [
+      {
+        id: "transfer-uuid-1",
+        brandId: "brand-abc",
+        sourceOrgId: "org-old",
+        targetOrgId: "org-new",
+        initiatedByUserId: "user_test123",
+        serviceResults: {
+          "campaign-service": { updatedTables: [{ tableName: "campaigns", count: 3 }] },
+        },
+        createdAt: "2026-04-25T00:00:00.000Z",
+      },
+    ],
+  };
+
+  it("should proxy to brand-service and return transfer history", async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (String(url).includes("/internal/brand-transfers")) {
+        return { ok: true, json: () => Promise.resolve(transferHistory) };
+      }
+      return { ok: true, json: () => Promise.resolve({}) };
+    });
+
+    const res = await request(app)
+      .get("/v1/brands/brand-abc/transfers");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(transferHistory);
+
+    const fetchCall = (global.fetch as any).mock.calls[0];
+    expect(fetchCall[0]).toContain("/internal/brand-transfers?brandId=brand-abc");
+  });
+
+  it("should forward upstream errors from brand-service", async () => {
+    global.fetch = vi.fn().mockImplementation(async () => {
+      return {
+        ok: false,
+        status: 500,
+        text: () => Promise.resolve('{"error":"DB error"}'),
+      };
+    });
+
+    const res = await request(app)
+      .get("/v1/brands/brand-abc/transfers");
+
+    expect(res.status).toBe(500);
+    expect(res.body.error).toContain("DB error");
+  });
+});

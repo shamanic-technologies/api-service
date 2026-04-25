@@ -353,4 +353,25 @@ router.post("/brands/:id/transfer", authenticate, requireOrg, requireUser, async
   }
 });
 
+/**
+ * GET /v1/brands/:id/transfers
+ * Get transfer history for a brand.
+ */
+router.get("/brands/:id/transfers", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.brand,
+      `/internal/brand-transfers?brandId=${req.params.id}`,
+      {
+        headers: buildInternalHeaders(req),
+      },
+    );
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Brand transfer history error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get transfer history" });
+  }
+});
+
 export default router;
