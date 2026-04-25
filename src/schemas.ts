@@ -3638,6 +3638,79 @@ registry.registerPath({
   },
 });
 
+const brandTransferHistorySchema = z.object({
+  transfers: z.array(
+    z.object({
+      id: z.string().uuid(),
+      brandId: z.string().uuid(),
+      sourceOrgId: z.string().uuid(),
+      targetOrgId: z.string().uuid(),
+      initiatedByUserId: z.string().uuid(),
+      serviceResults: z.record(
+        z.string(),
+        z.union([
+          z.object({ updatedTables: z.array(z.object({ tableName: z.string(), count: z.number() })) }),
+          z.object({ error: z.string() }),
+          z.object({ skipped: z.literal(true) }),
+        ]),
+      ),
+      createdAt: z.string(),
+    }),
+  ),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brand-transfers/outgoing",
+  tags: ["Brand"],
+  summary: "Get outgoing brand transfers for the current org",
+  description: "Returns transfers where the current org is the source (brand was transferred out).",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().optional().describe("Filter by brand ID"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Outgoing transfer history",
+      content: {
+        "application/json": {
+          schema: brandTransferHistorySchema.openapi("OutgoingBrandTransferResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brand-transfers/incoming",
+  tags: ["Brand"],
+  summary: "Get incoming brand transfers for the current org",
+  description: "Returns transfers where the current org is the target (brand was transferred in).",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().optional().describe("Filter by brand ID"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Incoming transfer history",
+      content: {
+        "application/json": {
+          schema: brandTransferHistorySchema.openapi("IncomingBrandTransferResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // EMAIL-GATEWAY (delivery stats)
 // ===================================================================

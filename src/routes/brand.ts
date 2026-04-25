@@ -374,4 +374,50 @@ router.get("/brands/:id/transfers", authenticate, requireOrg, async (req: Authen
   }
 });
 
+/**
+ * GET /v1/brand-transfers/outgoing
+ * Transfers where the current org is the source.
+ */
+router.get("/brand-transfers/outgoing", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const brandId = req.query.brandId as string | undefined;
+    const qs = brandId ? `?brandId=${brandId}` : "";
+    const result = await callExternalService(
+      externalServices.brand,
+      `/orgs/brand-transfers/outgoing${qs}`,
+      {
+        headers: buildInternalHeaders(req),
+      },
+    );
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Outgoing transfer history error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get outgoing transfers" });
+  }
+});
+
+/**
+ * GET /v1/brand-transfers/incoming
+ * Transfers where the current org is the target.
+ */
+router.get("/brand-transfers/incoming", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const brandId = req.query.brandId as string | undefined;
+    const qs = brandId ? `?brandId=${brandId}` : "";
+    const result = await callExternalService(
+      externalServices.brand,
+      `/orgs/brand-transfers/incoming${qs}`,
+      {
+        headers: buildInternalHeaders(req),
+      },
+    );
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Incoming transfer history error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get incoming transfers" });
+  }
+});
+
 export default router;
