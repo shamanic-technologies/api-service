@@ -303,3 +303,91 @@ describe("GET /v1/brands/:id/transfers", () => {
     expect(res.body.error).toContain("DB error");
   });
 });
+
+const orgTransferHistory = {
+  transfers: [
+    {
+      id: "transfer-uuid-2",
+      brandId: "brand-xyz",
+      sourceOrgId: "org_test456",
+      targetOrgId: "org-target",
+      initiatedByUserId: "user_test123",
+      serviceResults: {
+        "lead-service": { updatedTables: [{ tableName: "leads", count: 5 }] },
+      },
+      createdAt: "2026-04-25T12:00:00.000Z",
+    },
+  ],
+};
+
+describe("GET /v1/brand-transfers/outgoing", () => {
+  let app: express.Express;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    app = buildApp();
+  });
+
+  it("should proxy to brand-service outgoing endpoint", async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (String(url).includes("/orgs/brand-transfers/outgoing")) {
+        return { ok: true, json: () => Promise.resolve(orgTransferHistory) };
+      }
+      return { ok: true, json: () => Promise.resolve({}) };
+    });
+
+    const res = await request(app).get("/v1/brand-transfers/outgoing");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(orgTransferHistory);
+    const fetchCall = (global.fetch as any).mock.calls[0];
+    expect(fetchCall[0]).toContain("/orgs/brand-transfers/outgoing");
+  });
+
+  it("should forward brandId query param", async () => {
+    global.fetch = vi.fn().mockImplementation(async () => {
+      return { ok: true, json: () => Promise.resolve({ transfers: [] }) };
+    });
+
+    await request(app).get("/v1/brand-transfers/outgoing?brandId=brand-xyz");
+
+    const fetchCall = (global.fetch as any).mock.calls[0];
+    expect(fetchCall[0]).toContain("?brandId=brand-xyz");
+  });
+});
+
+describe("GET /v1/brand-transfers/incoming", () => {
+  let app: express.Express;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    app = buildApp();
+  });
+
+  it("should proxy to brand-service incoming endpoint", async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string) => {
+      if (String(url).includes("/orgs/brand-transfers/incoming")) {
+        return { ok: true, json: () => Promise.resolve(orgTransferHistory) };
+      }
+      return { ok: true, json: () => Promise.resolve({}) };
+    });
+
+    const res = await request(app).get("/v1/brand-transfers/incoming");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(orgTransferHistory);
+    const fetchCall = (global.fetch as any).mock.calls[0];
+    expect(fetchCall[0]).toContain("/orgs/brand-transfers/incoming");
+  });
+
+  it("should forward brandId query param", async () => {
+    global.fetch = vi.fn().mockImplementation(async () => {
+      return { ok: true, json: () => Promise.resolve({ transfers: [] }) };
+    });
+
+    await request(app).get("/v1/brand-transfers/incoming?brandId=brand-xyz");
+
+    const fetchCall = (global.fetch as any).mock.calls[0];
+    expect(fetchCall[0]).toContain("?brandId=brand-xyz");
+  });
+});
