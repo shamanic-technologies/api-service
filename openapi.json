@@ -3061,7 +3061,7 @@
                 "byOutreachStatus"
               ]
             },
-            "description": "Per-slug breakdown when groupBy is specified. Keys are slug values (or dynasty slugs for dynasty grouping)."
+            "description": "Per-dimension breakdown when groupBy is specified. Keys are the groupBy dimension values."
           }
         },
         "required": [
@@ -3630,7 +3630,7 @@
           "featureSlug": {
             "type": "string",
             "description": "Feature that triggered this discovery",
-            "example": "press-outreach-v3"
+            "example": "outlet-database-discovery"
           },
           "workflowSlug": {
             "type": "string",
@@ -9525,11 +9525,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact versioned feature slug",
-              "example": "pr-cold-email-outreach-v3"
+              "description": "Filter by feature slug",
+              "example": "pr-cold-email-outreach"
             },
             "required": false,
-            "description": "Filter by exact versioned feature slug",
+            "description": "Filter by feature slug",
             "name": "featureSlug",
             "in": "query"
           },
@@ -13312,16 +13312,6 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by feature dynasty slug (resolved to all versioned slugs via features-service). Takes priority over featureSlugs."
-            },
-            "required": false,
-            "description": "Filter by feature dynasty slug (resolved to all versioned slugs via features-service). Takes priority over featureSlugs.",
-            "name": "featureDynastySlug",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
               "description": "Optionally filter campaign rows by workflow slug"
             },
             "required": false,
@@ -13928,8 +13918,8 @@
         "tags": [
           "Journalists"
         ],
-        "summary": "Get journalist stats with dynasty-aware filtering and grouping",
-        "description": "Returns journalist counts with cumulative DB statuses (buffered, claimed, served, skipped) and full email-gateway passthrough (contacted, sent, delivered, opened, clicked, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply, recipients). Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. Optional groupBy returns per-slug breakdowns.",
+        "summary": "Get journalist stats with filtering and grouping",
+        "description": "Returns journalist counts with cumulative DB statuses (buffered, claimed, served, skipped) and full email-gateway passthrough (contacted, sent, delivered, opened, clicked, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply, recipients). Supports filtering by brand, campaign, outlet, and feature/workflow slugs. Optional groupBy returns per-dimension breakdowns.",
         "security": [
           {
             "bearerAuth": []
@@ -13993,6 +13983,16 @@
           {
             "schema": {
               "type": "string",
+              "description": "Comma-separated feature slugs"
+            },
+            "required": false,
+            "description": "Comma-separated feature slugs",
+            "name": "featureSlugs",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "description": "Filter by exact workflow slug"
             },
             "required": false,
@@ -14003,31 +14003,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Comma-separated list of workflow slugs to filter by"
+              "description": "Comma-separated workflow slugs"
             },
             "required": false,
-            "description": "Comma-separated list of workflow slugs to filter by",
+            "description": "Comma-separated workflow slugs",
             "name": "workflowSlugs",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by feature dynasty slug — resolves to all versioned slugs"
-            },
-            "required": false,
-            "description": "Filter by feature dynasty slug — resolves to all versioned slugs",
-            "name": "featureDynastySlug",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by workflow dynasty slug — resolves to all versioned slugs"
-            },
-            "required": false,
-            "description": "Filter by workflow dynasty slug — resolves to all versioned slugs",
-            "name": "workflowDynastySlug",
             "in": "query"
           },
           {
@@ -14036,8 +14016,8 @@
               "enum": [
                 "featureSlug",
                 "workflowSlug",
-                "featureDynastySlug",
-                "workflowDynastySlug"
+                "brandId",
+                "campaignId"
               ],
               "description": "Dimension to group results by"
             },
@@ -20122,11 +20102,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact versioned feature slug",
-              "example": "pr-cold-email-outreach-v3"
+              "description": "Filter by feature slug",
+              "example": "pr-cold-email-outreach"
             },
             "required": false,
-            "description": "Filter by exact versioned feature slug",
+            "description": "Filter by feature slug",
             "name": "featureSlug",
             "in": "query"
           },
@@ -21323,11 +21303,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Filter by exact versioned feature slug",
-              "example": "pr-cold-email-outreach-v3"
+              "description": "Filter by feature slug",
+              "example": "pr-cold-email-outreach"
             },
             "required": false,
-            "description": "Filter by exact versioned feature slug",
+            "description": "Filter by feature slug",
             "name": "featureSlug",
             "in": "query"
           },
@@ -28706,7 +28686,7 @@
             "schema": {
               "type": "string",
               "description": "Feature slug",
-              "example": "pr-cold-email-outreach-v3"
+              "example": "pr-cold-email-outreach"
             },
             "required": true,
             "description": "Feature slug",

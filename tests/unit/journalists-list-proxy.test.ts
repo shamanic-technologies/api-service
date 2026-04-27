@@ -30,7 +30,7 @@ describe("GET /journalists/list route", () => {
     expect(listSection).toContain('"Missing required query parameter: brandId"');
   });
 
-  it("should forward brandId, campaignId, featureSlugs, featureDynastySlug, and workflowSlug", () => {
+  it("should forward brandId, campaignId, featureSlugs, and workflowSlug", () => {
     const listSection = content.slice(
       content.indexOf('"/journalists/list"'),
       content.indexOf("// ── POST /v1/journalists/discover")
@@ -38,7 +38,6 @@ describe("GET /journalists/list route", () => {
     expect(listSection).toContain('params.set("brandId", brandId)');
     expect(listSection).toContain('"campaignId"');
     expect(listSection).toContain('"featureSlugs"');
-    expect(listSection).toContain('"featureDynastySlug"');
     expect(listSection).toContain('"workflowSlug"');
   });
 
@@ -130,14 +129,13 @@ describe("GET /journalists/list OpenAPI schema", () => {
     expect(param.required).toBeFalsy();
   });
 
-  it("should have optional featureDynastySlug in OpenAPI spec", () => {
+  it("should NOT have featureDynastySlug in OpenAPI spec (dynasty concept removed for features)", () => {
     const listPath = openapi.paths["/v1/journalists/list"];
     const params = listPath.get.parameters || [];
     const param = params.find(
       (p: { name: string; in: string }) => p.name === "featureDynastySlug" && p.in === "query"
     );
-    expect(param).toBeDefined();
-    expect(param.required).toBeFalsy();
+    expect(param).toBeUndefined();
   });
 
   it("should have optional workflowSlug in OpenAPI spec", () => {
