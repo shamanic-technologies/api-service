@@ -8,25 +8,55 @@ interface RepliesDetail {
   neutral: number; autoReply: number; outOfOffice: number;
 }
 
-interface EmailGatewayStats {
-  emailsContacted: number; emailsSent: number; emailsDelivered: number; emailsOpened: number;
-  emailsClicked: number; emailsBounced: number;
+interface RecipientStats {
+  contacted: number; sent: number; delivered: number; opened: number;
+  bounced: number; clicked: number; unsubscribed: number;
   repliesPositive: number; repliesNegative: number; repliesNeutral: number; repliesAutoReply: number;
   repliesDetail: RepliesDetail;
-  recipients: number;
 }
 
-/** Fetch delivery stats from email-gateway (aggregates transactional + broadcast). */
+interface EmailStats {
+  sent: number; delivered: number; opened: number; clicked: number;
+  bounced: number; unsubscribed: number;
+  stepStats: unknown[];
+}
+
+export interface DeliveryStats {
+  recipientStats: RecipientStats;
+  emailStats: EmailStats;
+}
+
+const EMPTY_REPLIES_DETAIL: RepliesDetail = {
+  interested: 0, meetingBooked: 0, closed: 0,
+  notInterested: 0, wrongPerson: 0, unsubscribe: 0,
+  neutral: 0, autoReply: 0, outOfOffice: 0,
+};
+
+export const EMPTY_DELIVERY_STATS: DeliveryStats = {
+  recipientStats: {
+    contacted: 0, sent: 0, delivered: 0, opened: 0,
+    bounced: 0, clicked: 0, unsubscribed: 0,
+    repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
+    repliesDetail: EMPTY_REPLIES_DETAIL,
+  },
+  emailStats: {
+    sent: 0, delivered: 0, opened: 0, clicked: 0,
+    bounced: 0, unsubscribed: 0,
+    stepStats: [],
+  },
+};
+
+/** Fetch delivery stats from email-gateway (broadcast only). */
 export async function fetchDeliveryStats(
   filters: { campaignId?: string; brandId?: string; workflowSlugs?: string; featureSlugs?: string; workflowDynastySlug?: string; featureDynastySlug?: string },
   req: AuthenticatedRequest,
-): Promise<Record<string, number> | null> {
+): Promise<DeliveryStats | null> {
   const orgId = req.orgId!;
   const params = new URLSearchParams({ orgId });
   for (const key of ["campaignId", "brandId", "workflowSlugs", "featureSlugs", "workflowDynastySlug", "featureDynastySlug"] as const) {
     if (filters[key]) params.set(key, filters[key]!);
   }
-  const deliveryResult = await callExternalService<{ transactional: EmailGatewayStats; broadcast: EmailGatewayStats }>(
+  const result = await callExternalService<{ transactional: unknown; broadcast: { recipientStats: RecipientStats; emailStats: EmailStats } | null }>(
     externalServices.emailGateway,
     `/orgs/stats?${params}`,
     {
@@ -37,26 +67,11 @@ export async function fetchDeliveryStats(
     return null;
   });
 
-  // Only use broadcast stats (outreach emails via Instantly).
-  // Transactional stats are transactional/test emails via Postmark — not relevant.
-  const b = (deliveryResult as any)?.broadcast;
+  const b = (result as any)?.broadcast;
   if (!b) return null;
 
   return {
-    emailsContacted: b.emailsContacted || 0,
-    emailsSent: b.emailsSent || 0,
-    emailsDelivered: b.emailsDelivered || 0,
-    emailsOpened: b.emailsOpened || 0,
-    emailsClicked: b.emailsClicked || 0,
-    emailsBounced: b.emailsBounced || 0,
-    repliesPositive: b.repliesPositive || 0,
-    repliesNegative: b.repliesNegative || 0,
-    repliesNeutral: b.repliesNeutral || 0,
-    repliesAutoReply: b.repliesAutoReply || 0,
-    repliesDetail: b.repliesDetail ?? {
-      interested: 0, meetingBooked: 0, closed: 0,
-      notInterested: 0, wrongPerson: 0, unsubscribe: 0,
-      neutral: 0, autoReply: 0, outOfOffice: 0,
-    },
+    recipientStats: b.recipientStats ?? EMPTY_DELIVERY_STATS.recipientStats,
+    emailStats: b.emailStats ?? EMPTY_DELIVERY_STATS.emailStats,
   };
 }

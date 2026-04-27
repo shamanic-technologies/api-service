@@ -64,19 +64,28 @@ function createApp() {
   return app;
 }
 
-/** Helper: build a valid email-gateway Stats object */
-function makeStats(overrides: Record<string, number> = {}) {
+const EMPTY_REPLIES_DETAIL = {
+  interested: 0, meetingBooked: 0, closed: 0,
+  notInterested: 0, wrongPerson: 0, unsubscribe: 0,
+  neutral: 0, autoReply: 0, outOfOffice: 0,
+};
+
+/** Helper: build a valid email-gateway broadcast stats object (new shape) */
+function makeBroadcast(recipientOverrides: Record<string, any> = {}, emailOverrides: Record<string, any> = {}) {
   return {
-    emailsContacted: 0, emailsSent: 0, emailsDelivered: 0, emailsOpened: 0,
-    emailsClicked: 0, emailsBounced: 0,
-    repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
-    repliesDetail: {
-      interested: 0, meetingBooked: 0, closed: 0,
-      notInterested: 0, wrongPerson: 0, unsubscribe: 0,
-      neutral: 0, autoReply: 0, outOfOffice: 0,
+    recipientStats: {
+      contacted: 0, sent: 0, delivered: 0, opened: 0,
+      bounced: 0, clicked: 0, unsubscribed: 0,
+      repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
+      repliesDetail: EMPTY_REPLIES_DETAIL,
+      ...recipientOverrides,
     },
-    recipients: 0,
-    ...overrides,
+    emailStats: {
+      sent: 0, delivered: 0, opened: 0, clicked: 0,
+      bounced: 0, unsubscribed: 0,
+      stepStats: [],
+      ...emailOverrides,
+    },
   };
 }
 
@@ -96,8 +105,8 @@ describe("Reply breakdown: no dummy data when 0 replies", () => {
       // Email-gateway: GET /stats?orgId=...&campaignId=...
       if (service.url === "http://mock-email" && path.startsWith("/orgs/stats?")) {
         return Promise.resolve({
-          transactional: makeStats({ emailsSent: 10, emailsDelivered: 8, emailsOpened: 3, emailsClicked: 1, recipients: 10 }),
-          broadcast: makeStats({ emailsSent: 5, emailsDelivered: 4, emailsOpened: 2, recipients: 5 }),
+          transactional: makeBroadcast({ sent: 10, delivered: 8, opened: 3, clicked: 1 }, { sent: 10, delivered: 8, opened: 3, clicked: 1 }),
+          broadcast: makeBroadcast({ sent: 5, delivered: 4, opened: 2 }, { sent: 5, delivered: 4, opened: 2 }),
         });
       }
       // Lead-service
@@ -122,15 +131,11 @@ describe("Reply breakdown: no dummy data when 0 replies", () => {
     const res = await request(app).get("/v1/campaigns/test-campaign-123/stats");
 
     expect(res.status).toBe(200);
-    expect(res.body.repliesPositive).toBe(0);
-    expect(res.body.repliesNegative).toBe(0);
-    expect(res.body.repliesNeutral).toBe(0);
-    expect(res.body.repliesAutoReply).toBe(0);
-    expect(res.body.repliesDetail).toEqual({
-      interested: 0, meetingBooked: 0, closed: 0,
-      notInterested: 0, wrongPerson: 0, unsubscribe: 0,
-      neutral: 0, autoReply: 0, outOfOffice: 0,
-    });
+    expect(res.body.recipientStats.repliesPositive).toBe(0);
+    expect(res.body.recipientStats.repliesNegative).toBe(0);
+    expect(res.body.recipientStats.repliesNeutral).toBe(0);
+    expect(res.body.recipientStats.repliesAutoReply).toBe(0);
+    expect(res.body.recipientStats.repliesDetail).toEqual(EMPTY_REPLIES_DETAIL);
   });
 
   it("should return reply classifications when replies exist", async () => {
@@ -140,16 +145,19 @@ describe("Reply breakdown: no dummy data when 0 replies", () => {
       // Email-gateway: GET /stats?orgId=...&campaignId=...
       if (service.url === "http://mock-email" && path.startsWith("/orgs/stats?")) {
         return Promise.resolve({
-          transactional: makeStats({ emailsSent: 10, emailsDelivered: 8, emailsOpened: 3, emailsClicked: 1, recipients: 10 }),
-          broadcast: makeStats({
-            emailsSent: 5, emailsDelivered: 4, emailsOpened: 2, recipients: 5,
-            repliesPositive: 3, repliesNegative: 1, repliesAutoReply: 1,
-            repliesDetail: {
-              interested: 1, meetingBooked: 2, closed: 0,
-              notInterested: 1, wrongPerson: 0, unsubscribe: 0,
-              neutral: 0, autoReply: 0, outOfOffice: 1,
+          transactional: makeBroadcast({ sent: 10, delivered: 8, opened: 3, clicked: 1 }, { sent: 10, delivered: 8, opened: 3, clicked: 1 }),
+          broadcast: makeBroadcast(
+            {
+              sent: 5, delivered: 4, opened: 2,
+              repliesPositive: 3, repliesNegative: 1, repliesAutoReply: 1,
+              repliesDetail: {
+                interested: 1, meetingBooked: 2, closed: 0,
+                notInterested: 1, wrongPerson: 0, unsubscribe: 0,
+                neutral: 0, autoReply: 0, outOfOffice: 1,
+              },
             },
-          } as any),
+            { sent: 5, delivered: 4, opened: 2 },
+          ),
         });
       }
       // Lead-service
@@ -174,12 +182,12 @@ describe("Reply breakdown: no dummy data when 0 replies", () => {
     const res = await request(app).get("/v1/campaigns/test-campaign-123/stats");
 
     expect(res.status).toBe(200);
-    expect(res.body.repliesPositive).toBe(3);
-    expect(res.body.repliesNegative).toBe(1);
-    expect(res.body.repliesAutoReply).toBe(1);
-    expect(res.body.repliesDetail.interested).toBe(1);
-    expect(res.body.repliesDetail.meetingBooked).toBe(2);
-    expect(res.body.repliesDetail.notInterested).toBe(1);
-    expect(res.body.repliesDetail.outOfOffice).toBe(1);
+    expect(res.body.recipientStats.repliesPositive).toBe(3);
+    expect(res.body.recipientStats.repliesNegative).toBe(1);
+    expect(res.body.recipientStats.repliesAutoReply).toBe(1);
+    expect(res.body.recipientStats.repliesDetail.interested).toBe(1);
+    expect(res.body.recipientStats.repliesDetail.meetingBooked).toBe(2);
+    expect(res.body.recipientStats.repliesDetail.notInterested).toBe(1);
+    expect(res.body.recipientStats.repliesDetail.outOfOffice).toBe(1);
   });
 });

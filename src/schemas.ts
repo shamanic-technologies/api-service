@@ -144,6 +144,31 @@ const RepliesDetailSchema = z.object({
   outOfOffice: z.number(),
 }).openapi("RepliesDetail");
 
+const RecipientStatsSchema = z.object({
+  contacted: z.number().describe("Leads submitted to email provider (COUNT DISTINCT by lead)"),
+  sent: z.number().describe("Recipients with at least one sent email"),
+  delivered: z.number().describe("Recipients with at least one delivered email"),
+  opened: z.number().describe("Recipients who opened at least one email"),
+  bounced: z.number().describe("Recipients who bounced"),
+  clicked: z.number().describe("Recipients who clicked"),
+  unsubscribed: z.number().describe("Recipients who unsubscribed"),
+  repliesPositive: z.number(),
+  repliesNegative: z.number(),
+  repliesNeutral: z.number(),
+  repliesAutoReply: z.number(),
+  repliesDetail: RepliesDetailSchema,
+}).openapi("RecipientStats");
+
+const EmailStatsSchema = z.object({
+  sent: z.number().describe("Total emails sent (COUNT *)"),
+  delivered: z.number().describe("Total emails delivered"),
+  opened: z.number().describe("Total email opens"),
+  clicked: z.number().describe("Total email clicks"),
+  bounced: z.number().describe("Total emails bounced"),
+  unsubscribed: z.number().describe("Total unsubscribes"),
+  stepStats: z.array(z.record(z.unknown())).describe("Per-step breakdown"),
+}).openapi("EmailStats");
+
 // ===================================================================
 // WORKFLOW RANKED & BEST (public + authenticated)
 // ===================================================================
@@ -633,17 +658,8 @@ registry.registerPath({
               }).optional(),
               emailsGenerated: z.number(),
               totalCostUsd: z.number().optional(),
-              emailsContacted: z.number().describe("Leads successfully submitted to email provider (immediate)"),
-              emailsSent: z.number().describe("Emails confirmed sent by provider (from webhook)"),
-              emailsDelivered: z.number().optional().describe("Emails confirmed delivered (from webhook)"),
-              emailsOpened: z.number(),
-              emailsClicked: z.number(),
-              emailsBounced: z.number(),
-              repliesPositive: z.number().optional(),
-              repliesNegative: z.number().optional(),
-              repliesNeutral: z.number().optional(),
-              repliesAutoReply: z.number().optional(),
-              repliesDetail: RepliesDetailSchema.optional(),
+              recipientStats: RecipientStatsSchema,
+              emailStats: EmailStatsSchema,
               totalCostInUsdCents: z.string().nullable().optional().describe("Total cost from campaign-service budget tracking"),
               costBreakdown: z.array(z.object({
                 costName: z.string(),
@@ -697,17 +713,8 @@ registry.registerPath({
                   leadsBuffered: z.number(),
                   leadsSkipped: z.number(),
                   emailsGenerated: z.number(),
-                  emailsContacted: z.number().describe("Leads successfully submitted to email provider (immediate)"),
-                  emailsSent: z.number().describe("Emails confirmed sent by provider (from webhook)"),
-                  emailsDelivered: z.number().describe("Emails confirmed delivered (from webhook)"),
-                  emailsOpened: z.number(),
-                  emailsClicked: z.number(),
-                  emailsBounced: z.number(),
-                  repliesPositive: z.number(),
-                  repliesNegative: z.number(),
-                  repliesNeutral: z.number(),
-                  repliesAutoReply: z.number(),
-                  repliesDetail: RepliesDetailSchema,
+                  recipientStats: RecipientStatsSchema,
+                  emailStats: EmailStatsSchema,
                   totalCostInUsdCents: z.string().nullable(),
                   runCount: z.number(),
                 }),
@@ -1757,7 +1764,7 @@ registry.registerPath({
   summary: "Get journalist stats with dynasty-aware filtering and grouping",
   description:
     "Returns journalist counts with cumulative DB statuses (buffered, claimed, served, skipped) and full email-gateway passthrough " +
-    "(contacted, sent, delivered, opened, clicked, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply, recipients). " +
+    "(recipientStats.contacted, recipientStats.sent, recipientStats.delivered, recipientStats.opened, recipientStats.clicked, recipientStats.bounced, recipientStats.repliesPositive, etc.). " +
     "Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. " +
     "Optional groupBy returns per-slug breakdowns.",
   security: authed,
@@ -1769,7 +1776,7 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             totalJournalists: z.number(),
-            byOutreachStatus: z.record(z.number()).describe("Cumulative status counts. DB statuses (buffered, claimed, served, skipped) are cumulative. Email-gateway fields (contacted, sent, delivered, opened, clicked, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply, recipients) are passed through."),
+            byOutreachStatus: z.record(z.number()).describe("Cumulative status counts. DB statuses (buffered, claimed, served, skipped) are cumulative. Email-gateway fields (recipientStats.*, emailStats.*) are passed through."),
             repliesDetail: RepliesDetailSchema.optional().describe("Granular reply breakdown from email-gateway. Present when reply data exists."),
             groupedBy: z.record(z.object({
               totalJournalists: z.number(),
@@ -3740,17 +3747,8 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              emailsContacted: z.number().describe("Leads successfully submitted to email provider (immediate)"),
-              emailsSent: z.number().describe("Emails confirmed sent by provider (from webhook)"),
-              emailsDelivered: z.number().describe("Emails confirmed delivered (from webhook)"),
-              emailsOpened: z.number(),
-              emailsClicked: z.number(),
-              emailsBounced: z.number(),
-              repliesPositive: z.number(),
-              repliesNegative: z.number(),
-              repliesNeutral: z.number(),
-              repliesAutoReply: z.number(),
-              repliesDetail: RepliesDetailSchema,
+              recipientStats: RecipientStatsSchema,
+              emailStats: EmailStatsSchema,
             })
             .openapi("EmailGatewayStatsResponse"),
         },
