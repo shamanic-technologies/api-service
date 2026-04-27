@@ -175,14 +175,14 @@ const EmailStatsSchema = z.object({
 
 // All ranked/best endpoints now proxy to features-service
 const rankedQueryParams = z.object({
-  featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature dynasty slug (required). Resolves to all versioned slugs in the lineage."),
+  featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature slug (required)."),
   objective: z.string().openapi({ example: "recipientsRepliesPositive" }).describe("Stats key to rank by (required). e.g. 'recipientsRepliesPositive', 'leadsServed'. Use GET /v1/features/stats/registry for the full list."),
   groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
-  limit: z.string().optional().openapi({ example: "10" }).describe("Max results (default 10, max 100)"),
+  limit: z.string().optional().openapi({ example: "10" }).describe("Max results (default 3)"),
 });
 
 const bestQueryParams = z.object({
-  featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature dynasty slug (required). Resolves to all versioned slugs in the lineage."),
+  featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature slug (required)."),
   groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
 });
 
@@ -242,7 +242,7 @@ const bestResponse = {
       },
     },
   },
-  400: { description: "Bad request — featureDynastySlug is required", content: errorContent },
+  400: { description: "Bad request — featureDynastySlug (feature slug) is required", content: errorContent },
   502: { description: "Upstream service error", content: errorContent },
 };
 
@@ -252,7 +252,7 @@ registry.registerPath({
   path: "/v1/public/features/ranked",
   tags: ["Features"],
   summary: "Ranked features (public)",
-  description: "Public ranked workflows by performance. Proxied to features-service. featureDynastySlug, objective, and groupBy are required. No authentication required.",
+  description: "Public ranked workflows by performance. Proxied to features-service. featureDynastySlug (feature slug) and groupBy are required. No authentication required.",
   request: { query: rankedQueryParams },
   responses: rankedResponse,
 });
@@ -262,7 +262,7 @@ registry.registerPath({
   path: "/v1/public/features/best",
   tags: ["Features"],
   summary: "Hero records (public)",
-  description: "Public hero records — best cost-per-outcome. Proxied to features-service. featureDynastySlug and groupBy are required. No authentication required.",
+  description: "Public hero records — best cost-per-outcome. Proxied to features-service. featureDynastySlug (feature slug) and groupBy are required. No authentication required.",
   request: { query: bestQueryParams },
   responses: bestResponse,
 });
@@ -273,7 +273,7 @@ registry.registerPath({
   path: "/v1/workflows/ranked",
   tags: ["Workflows"],
   summary: "Ranked workflows",
-  description: "Workflows ranked by performance, scoped to the authenticated org. Proxied to features-service. featureDynastySlug, objective, and groupBy are required.",
+  description: "Workflows ranked by performance, scoped to the authenticated org. Proxied to features-service. featureDynastySlug (feature slug) and groupBy are required.",
   security: authed,
   request: { query: rankedQueryParams },
   responses: { ...rankedResponse, 401: { description: "Unauthorized", content: errorContent } },
@@ -284,7 +284,7 @@ registry.registerPath({
   path: "/v1/workflows/best",
   tags: ["Workflows"],
   summary: "Hero records",
-  description: "Best cost-per-outcome records, scoped to the authenticated org. Proxied to features-service. featureDynastySlug and groupBy are required.",
+  description: "Best cost-per-outcome records, scoped to the authenticated org. Proxied to features-service. featureDynastySlug (feature slug) and groupBy are required.",
   security: authed,
   request: { query: bestQueryParams },
   responses: { ...bestResponse, 401: { description: "Unauthorized", content: errorContent } },
@@ -463,7 +463,7 @@ registry.registerPath({
       status: z.string().optional().openapi({ example: "active" }).describe("Filter by status (e.g. 'active', 'stopped', 'all')"),
       workflowSlug: z.string().optional().openapi({ example: "sales-email-cold-outreach-sienna-v3" }).describe("Filter by exact versioned workflow slug"),
       workflowDynastySlug: z.string().optional().openapi({ example: "sales-email-cold-outreach-sienna" }).describe("Filter by workflow dynasty slug (matches all versions in the lineage)"),
-      featureSlug: z.string().optional().openapi({ example: "pr-cold-email-outreach-v3" }).describe("Filter by exact versioned feature slug"),
+      featureSlug: z.string().optional().openapi({ example: "pr-cold-email-outreach" }).describe("Filter by feature slug"),
       featureDynastySlug: z.string().optional().openapi({ example: "pr-cold-email-outreach" }).describe("Filter by feature dynasty slug (matches all versions in the lineage)"),
     }),
   },
@@ -1563,7 +1563,6 @@ registry.registerPath({
       brandId: z.string().uuid().describe("Brand ID (required). Returns journalists whose brand_ids array contains this brand."),
       campaignId: z.string().uuid().optional().describe("Optionally narrow to a single campaign"),
       featureSlugs: z.string().optional().describe("Comma-separated feature slugs to filter campaign rows"),
-      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs via features-service). Takes priority over featureSlugs."),
       workflowSlug: z.string().optional().describe("Optionally filter campaign rows by workflow slug"),
     }),
   },
@@ -1750,23 +1749,22 @@ const journalistStatsQueryParams = z.object({
   outletId: z.string().uuid().optional().describe("Filter by outlet ID"),
   brandId: z.string().uuid().optional().describe("Filter by brand ID"),
   featureSlug: z.string().optional().describe("Filter by exact feature slug"),
+  featureSlugs: z.string().optional().describe("Comma-separated feature slugs"),
   workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
-  workflowSlugs: z.string().optional().describe("Comma-separated list of workflow slugs to filter by"),
-  featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug — resolves to all versioned slugs"),
-  workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug — resolves to all versioned slugs"),
-  groupBy: z.enum(["featureSlug", "workflowSlug", "featureDynastySlug", "workflowDynastySlug"]).optional().describe("Dimension to group results by"),
+  workflowSlugs: z.string().optional().describe("Comma-separated workflow slugs"),
+  groupBy: z.enum(["featureSlug", "workflowSlug", "brandId", "campaignId"]).optional().describe("Dimension to group results by"),
 });
 
 registry.registerPath({
   method: "get",
   path: "/v1/journalists/stats",
   tags: ["Journalists"],
-  summary: "Get journalist stats with dynasty-aware filtering and grouping",
+  summary: "Get journalist stats with filtering and grouping",
   description:
     "Returns journalist counts with cumulative DB statuses (buffered, claimed, served, skipped) and full email-gateway passthrough " +
     "(recipientStats.contacted, recipientStats.sent, recipientStats.delivered, recipientStats.opened, recipientStats.clicked, recipientStats.bounced, recipientStats.repliesPositive, etc.). " +
-    "Supports filtering by brand, campaign, outlet, feature/workflow slugs, and dynasty slugs. " +
-    "Optional groupBy returns per-slug breakdowns.",
+    "Supports filtering by brand, campaign, outlet, and feature/workflow slugs. " +
+    "Optional groupBy returns per-dimension breakdowns.",
   security: authed,
   request: { headers: journalistsStatsOptionalHeaders, query: journalistStatsQueryParams },
   responses: {
@@ -1782,7 +1780,7 @@ registry.registerPath({
               totalJournalists: z.number(),
               byOutreachStatus: z.record(z.number()).describe("Cumulative status counts for this group"),
               repliesDetail: RepliesDetailSchema.optional().describe("Granular reply breakdown for this group"),
-            })).optional().describe("Per-slug breakdown when groupBy is specified. Keys are slug values (or dynasty slugs for dynasty grouping)."),
+            })).optional().describe("Per-dimension breakdown when groupBy is specified. Keys are the groupBy dimension values."),
           }).openapi("JournalistStatsResponse"),
         },
       },
@@ -1910,7 +1908,7 @@ const ArticleDiscoverySchema = z
     articleId: z.string().uuid().openapi({ description: "ID of the discovered article" }),
     orgId: z.string().uuid().openapi({ description: "Organization that owns this discovery" }),
     brandId: z.string().uuid().openapi({ description: "Brand this discovery is scoped to" }),
-    featureSlug: z.string().openapi({ description: "Feature that triggered this discovery", example: "press-outreach-v3" }),
+    featureSlug: z.string().openapi({ description: "Feature that triggered this discovery", example: "outlet-database-discovery" }),
     workflowSlug: z.string().nullable().openapi({ description: "Workflow that triggered this discovery" }),
     campaignId: z.string().uuid().openapi({ description: "Campaign this discovery belongs to" }),
     outletId: z.string().uuid().nullable().openapi({ description: "Outlet linked to this discovery (if from outlet discovery)" }),
@@ -3850,7 +3848,7 @@ registry.registerPath({
   request: {
     query: z.object({
       humanId: z.string().optional().openapi({ example: "human-uuid-123" }).describe("Filter workflows by human expert ID"),
-      featureSlug: z.string().optional().openapi({ example: "pr-cold-email-outreach-v3" }).describe("Filter by exact versioned feature slug"),
+      featureSlug: z.string().optional().openapi({ example: "pr-cold-email-outreach" }).describe("Filter by feature slug"),
       featureDynastySlug: z.string().optional().openapi({ example: "pr-cold-email-outreach" }).describe("Filter by feature dynasty slug (resolves to all versioned slugs in the lineage)"),
       workflowSlug: z.string().optional().openapi({ example: "sales-email-cold-outreach-sienna-v3" }).describe("Filter by exact versioned workflow slug"),
       workflowDynastySlug: z.string().optional().openapi({ example: "sales-email-cold-outreach-sienna" }).describe("Filter by workflow dynasty slug (exact match on dynasty_slug column)"),
@@ -4371,7 +4369,7 @@ registry.registerPath({
     query: z.object({
       workflowId: z.string().optional().openapi({ example: "wf-uuid-123" }).describe("Filter by workflow ID"),
       campaignId: z.string().optional().openapi({ example: "campaign-uuid-456" }).describe("Filter by campaign ID"),
-      featureSlug: z.string().optional().openapi({ example: "pr-cold-email-outreach-v3" }).describe("Filter by exact versioned feature slug"),
+      featureSlug: z.string().optional().openapi({ example: "pr-cold-email-outreach" }).describe("Filter by feature slug"),
       featureDynastySlug: z.string().optional().openapi({ example: "pr-cold-email-outreach" }).describe("Filter by feature dynasty slug (resolves to all versioned slugs via features-service)"),
       workflowSlug: z.string().optional().openapi({ example: "sales-email-cold-outreach-sienna-v3" }).describe("Filter by exact versioned workflow slug"),
       workflowDynastySlug: z.string().optional().openapi({ example: "sales-email-cold-outreach-sienna" }).describe("Filter by workflow dynasty slug (subquery on workflows of the dynasty)"),
@@ -6388,36 +6386,6 @@ registry.registerPath({
 // FEATURES (proxy to features-service)
 // ===================================================================
 
-const FeaturePrefillRequestSchema = z
-  .object({
-    brandIds: z.array(z.string()).min(1).describe("Brand UUIDs to prefill from (CSV in x-brand-id header to features-service)"),
-  })
-  .openapi("FeaturePrefillRequest");
-
-const FeaturePrefillFullValueSchema = z
-  .object({
-    value: z.any().describe("The prefilled value (string, object, or null)"),
-    cached: z.boolean().describe("Whether this value was served from cache"),
-    sourceUrls: z.array(z.string()).nullable().describe("URLs used to extract this value, or null"),
-  })
-  .openapi("FeaturePrefillFullValue");
-
-const FeaturePrefillFullResponseSchema = z
-  .object({
-    prefilled: z
-      .record(z.string(), FeaturePrefillFullValueSchema)
-      .describe("Map of field name to rich prefill object with value, cached flag, and source URLs"),
-  })
-  .openapi("FeaturePrefillFullResponse");
-
-const FeaturePrefillTextResponseSchema = z
-  .object({
-    prefilled: z
-      .record(z.string(), z.string().nullable())
-      .describe("Map of field name to flat string value (or null)"),
-  })
-  .openapi("FeaturePrefillTextResponse");
-
 registry.registerPath({
   method: "get",
   path: "/v1/features",
@@ -6429,11 +6397,7 @@ registry.registerPath({
   security: authed,
   request: {
     query: z.object({
-      status: z.string().optional().describe("Filter by status"),
-      category: z.string().optional().describe("Filter by category"),
-      channel: z.string().optional().describe("Filter by channel"),
-      audienceType: z.string().optional().describe("Filter by audience type"),
-      implemented: z.string().optional().describe("Filter by implementation status ('true' or 'false')"),
+      status: z.string().optional().describe("Filter by status (defaults to 'active')"),
     }),
   },
   responses: {
@@ -6445,151 +6409,16 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/features/dynasty",
-  tags: ["Features"],
-  summary: "Resolve feature dynasty",
-  description:
-    "Returns stable, unversioned dynasty identifiers (dynasty name and slug) for a given versioned feature slug. " +
-    "Useful for composing workflow names. Proxied from features-service.",
-  security: authed,
-  request: {
-    query: z.object({
-      slug: z.string().describe("Versioned feature slug (e.g. 'pr-cold-email-outreach-v2')"),
-    }),
-  },
-  responses: {
-    200: {
-      description: "Dynasty identifiers",
-      content: {
-        "application/json": {
-          schema: z.object({
-            feature_dynasty_name: z.string().describe("Stable dynasty display name"),
-            feature_dynasty_slug: z.string().describe("Stable dynasty slug (unversioned)"),
-          }).openapi("FeatureDynastyResponse"),
-        },
-      },
-    },
-    400: { description: "Missing slug parameter", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Feature not found", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/features/by-dynasty/{dynastySlug}",
-  tags: ["Features"],
-  summary: "Get active feature by dynasty slug",
-  description:
-    "Returns the active feature definition for a dynasty slug (e.g. 'pr-cold-email-outreach'). " +
-    "Returns 404 if no active feature exists for that dynasty. " +
-    "Preferred over GET /features/{slug} when the dashboard works with dynasty slugs. Proxied from features-service.",
-  security: authed,
-  request: {
-    params: z.object({ dynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Dynasty slug (stable, unversioned — e.g. 'pr-cold-email-outreach')") }),
-  },
-  responses: {
-    200: { description: "Active feature for the dynasty", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureByDynastyResponse") } } },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "No active feature for this dynasty slug", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/v1/features/{slug}",
   tags: ["Features"],
   summary: "Get feature by versioned slug",
-  description: "Get a single feature definition by its exact versioned slug. Use GET /features/by-dynasty/{dynastySlug} when working with dynasty slugs. Proxied from features-service.",
+  description: "Get a single feature definition by its slug. Proxied from features-service.",
   security: authed,
   request: {
     params: z.object({ slug: z.string().describe("Exact versioned feature slug") }),
   },
   responses: {
     200: { description: "Feature details", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureResponse") } } },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Feature not found", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "put",
-  path: "/v1/features/{slug}",
-  tags: ["Features"],
-  summary: "Update feature by slug",
-  description: "Update a single feature definition by its slug. Metadata-only updates (description, icon, charts, etc.) apply in-place and return 200. If inputs or outputs change, a new feature is forked and the original is deprecated (fork-on-write) — returns 201 with forkedFrom details. Proxied from features-service.",
-  security: authed,
-  request: {
-    params: z.object({ slug: z.string().describe("Feature slug") }),
-    body: {
-      content: { "application/json": { schema: z.object({}).passthrough().openapi("UpdateFeatureRequest") } },
-    },
-  },
-  responses: {
-    200: { description: "In-place update (metadata only)", content: { "application/json": { schema: z.object({}).passthrough().openapi("UpdateFeatureResponse") } } },
-    201: { description: "Fork created (inputs/outputs changed). Response includes `forkedFrom` with the original feature's id, slug, and status.", content: { "application/json": { schema: z.object({}).passthrough().openapi("ForkedFeatureResponse") } } },
-    400: { description: "Validation error", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Feature not found", content: errorContent },
-    409: { description: "Conflict (e.g. slug collision)", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/features/{slug}/inputs",
-  tags: ["Features"],
-  summary: "Get feature input schema",
-  description:
-    "Get the input schema (required and optional fields) for a feature. " +
-    "The slug param accepts both dynasty slugs (e.g. 'pr-cold-email-outreach') and versioned slugs. " +
-    "Proxied from features-service.",
-  security: authed,
-  request: {
-    params: z.object({ slug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature slug (dynasty or versioned — both accepted)") }),
-  },
-  responses: {
-    200: { description: "Feature input schema", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureInputsResponse") } } },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Feature not found", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/features/{slug}/prefill",
-  tags: ["Features"],
-  summary: "Prefill feature form from brand",
-  description:
-    "Prefill the 'New Campaign' form for a feature using brand data. " +
-    "The slug param accepts both dynasty slugs (e.g. 'pr-cold-email-outreach') and versioned slugs. " +
-    "Features-service calls brand-service internally to extract values. Proxied from features-service. " +
-    "Use format=text for flat string values, format=full (default) for rich objects with cache/source metadata.",
-  security: authed,
-  request: {
-    params: z.object({ slug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature slug (dynasty or versioned — both accepted)") }),
-    query: z.object({
-      format: z
-        .enum(["text", "full"])
-        .optional()
-        .describe("Response format. 'full' (default) returns objects with value/cached/sourceUrls. 'text' returns flat string values."),
-    }),
-    body: { content: { "application/json": { schema: FeaturePrefillRequestSchema } } },
-  },
-  responses: {
-    200: {
-      description: "Prefilled feature inputs. Shape depends on `format` query param.",
-      content: {
-        "application/json": {
-          schema: z.union([FeaturePrefillFullResponseSchema, FeaturePrefillTextResponseSchema]).openapi("FeaturePrefillResponse"),
-        },
-      },
-    },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },
@@ -6626,46 +6455,21 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/features/stats/dynasty",
-  tags: ["Features"],
-  summary: "Dynasty stats (aggregated across all versions)",
-  description:
-    "Aggregated stats across the full upgrade chain of a feature dynasty (BFS lineage traversal). Use this when you need dynasty-wide stats instead of per-slug stats. Requires x-org-id. Proxied from features-service.",
-  security: authed,
-  request: {
-    query: z.object({
-      dynastySlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("The stable dynasty slug (unversioned)"),
-      groupBy: z.string().optional().openapi({ example: "campaignId" }).describe("Group dimension: workflowSlug | workflowDynastySlug | brandId | campaignId"),
-      brandId: z.string().optional().openapi({ example: "brand-uuid-123" }).describe("Filter by brand UUID"),
-      campaignId: z.string().optional().openapi({ example: "campaign-uuid-456" }).describe("Filter by campaign UUID"),
-      workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
-      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug"),
-    }),
-  },
-  responses: {
-    200: { description: "Dynasty stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("DynastyStatsResponse") } } },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/v1/features/stats",
   tags: ["Features"],
   summary: "Global stats cross-features",
   description:
-    "Aggregated stats across all features. Supports groupBy (featureSlug, workflowSlug, featureDynastySlug, brandId, campaignId — comma-separated combos allowed) and optional filters. Requires x-org-id. Proxied from features-service.",
+    "Aggregated stats across all features. Supports groupBy (featureSlug, featureDynastySlug, workflowSlug, workflowDynastySlug, brandId, campaignId) and optional filters. Proxied from features-service.",
   security: authed,
   request: {
     query: z.object({
-      groupBy: z.string().optional().openapi({ example: "featureDynastySlug" }).describe("Group dimension(s), comma-separated: featureSlug, workflowSlug, featureDynastySlug, brandId, campaignId"),
+      groupBy: z.string().optional().openapi({ example: "featureSlug" }).describe("Group dimension: featureSlug, featureDynastySlug, workflowSlug, workflowDynastySlug, brandId, campaignId"),
       brandId: z.string().optional().openapi({ example: "brand-uuid-123" }).describe("Filter by brand UUID"),
       campaignId: z.string().optional().describe("Filter by campaign UUID"),
-      featureSlug: z.string().optional().openapi({ example: "pr-cold-email-outreach-v3" }).describe("Filter by exact feature slug"),
+      featureSlug: z.string().optional().openapi({ example: "pr-cold-email-outreach" }).describe("Filter by feature slug"),
       workflowSlug: z.string().optional().openapi({ example: "sales-email-cold-outreach-sienna-v3" }).describe("Filter by exact workflow slug"),
-      featureDynastySlug: z.string().optional().openapi({ example: "pr-cold-email-outreach" }).describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
-      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
+      featureDynastySlug: z.string().optional().openapi({ example: "pr-cold-email-outreach" }).describe("Filter by feature slug (legacy param name)"),
+      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug"),
     }),
   },
   responses: {
@@ -6681,10 +6485,10 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Feature stats",
   description:
-    "Stats for a specific feature, groupable by workflowSlug, brandId, or campaignId. Supports optional filters including featureDynastySlug. Requires x-org-id. Proxied from features-service.",
+    "Stats for a specific feature, groupable by workflowSlug, workflowDynastySlug, brandId, or campaignId. Proxied from features-service.",
   security: authed,
   request: {
-    params: z.object({ featureSlug: z.string().openapi({ example: "pr-cold-email-outreach-v3" }).describe("Feature slug") }),
+    params: z.object({ featureSlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature slug") }),
     query: z.object({
       groupBy: z.string().optional().openapi({ example: "workflowSlug" }).describe("Group dimension: workflowSlug | brandId | campaignId"),
       brandId: z.string().optional().openapi({ example: "brand-uuid-123" }).describe("Filter by brand UUID"),
@@ -6701,56 +6505,9 @@ registry.registerPath({
   },
 });
 
-registry.registerPath({
-  method: "post",
-  path: "/v1/features",
-  tags: ["Features"],
-  summary: "Create a single feature",
-  description: "Create a new feature definition with inputs, outputs, charts, and entities. Proxied from features-service.",
-  security: authed,
-  request: {
-    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureCreateRequest") } } },
-  },
-  responses: {
-    201: { description: "Created feature", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureCreateResponse") } } },
-    400: { description: "Validation error", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    409: { description: "Conflict — feature with this name already exists", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "put",
-  path: "/v1/features",
-  tags: ["Features"],
-  summary: "Batch upsert features",
-  description: "Idempotent batch upsert of feature definitions. Used for cold-start registration. Proxied from features-service.",
-  security: authed,
-  request: {
-    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("FeaturesBatchUpsertRequest") } } },
-  },
-  responses: {
-    200: { description: "Upsert result", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeaturesBatchUpsertResponse") } } },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
 // ---------------------------------------------------------------------------
 // PUBLIC FEATURES (no auth — landing page endpoints)
 // ---------------------------------------------------------------------------
-
-const PublicFeatureItemSchema = z.object({
-  dynastyName: z.string().openapi({ example: "Sales Cold Email" }).describe("Stable dynasty display name"),
-  dynastySlug: z.string().openapi({ example: "sales-cold-email" }).describe("Stable dynasty slug (unversioned)"),
-  description: z.string().openapi({ example: "AI-powered cold email outreach campaigns" }),
-  icon: z.string().openapi({ example: "mail" }).describe("Lucide icon name"),
-  category: z.string().openapi({ example: "sales" }),
-  channel: z.string().openapi({ example: "email" }),
-  audienceType: z.string().openapi({ example: "cold-outreach" }),
-  displayOrder: z.number().int().openapi({ example: 0 }),
-}).openapi("PublicFeatureItem");
 
 registry.registerPath({
   method: "get",
@@ -6758,50 +6515,10 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List active features (public, no auth)",
   description:
-    "Returns all active features with display-safe fields only. " +
-    "Designed for landing pages and public-facing UIs. Sorted by displayOrder ascending. " +
+    "Returns all active features. " +
     "No authentication required. Proxied from features-service.",
   responses: {
-    200: {
-      description: "Active features",
-      content: {
-        "application/json": {
-          schema: z.object({
-            features: z.array(PublicFeatureItemSchema).describe("Active features sorted by displayOrder"),
-          }).openapi("PublicFeaturesListResponse"),
-        },
-      },
-    },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/public/features/dynasty/slugs",
-  tags: ["Features"],
-  summary: "List dynasty versioned slugs (public, no auth)",
-  description:
-    "Returns all versioned feature slugs (active + deprecated) belonging to a dynasty. " +
-    "No authentication required. Proxied from features-service.",
-  request: {
-    query: z.object({
-      dynastySlug: z.string().openapi({ example: "sales-cold-email" }).describe("The stable dynasty slug (unversioned)"),
-    }),
-  },
-  responses: {
-    200: {
-      description: "Dynasty slugs",
-      content: {
-        "application/json": {
-          schema: z.object({
-            slugs: z.array(z.string()).describe("All versioned slugs in the dynasty, sorted by version ascending"),
-          }).openapi("PublicDynastySlugsResponse"),
-        },
-      },
-    },
-    400: { description: "Missing dynastySlug parameter", content: errorContent },
-    404: { description: "No features found for this dynasty slug", content: errorContent },
+    200: { description: "Active features", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicFeaturesListResponse") } } },
     500: { description: "Internal error", content: errorContent },
   },
 });
