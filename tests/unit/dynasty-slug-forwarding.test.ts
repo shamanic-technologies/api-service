@@ -17,10 +17,10 @@ const dynastyParams = ["workflowDynastySlug", "featureDynastySlug"];
 const allSlugParams = ["workflowSlug", "featureSlug", "workflowDynastySlug", "featureDynastySlug"];
 
 describe("Dynasty slug forwarding — features/stats", () => {
-  it("should forward all dynasty slug params on GET /features/stats", () => {
+  it("should forward all slug params on GET /features/stats", () => {
     const statsSection = featuresRoute.slice(
       featuresRoute.indexOf('"/features/stats"'),
-      featuresRoute.indexOf('"/features/dynasty"'),
+      featuresRoute.indexOf('"/features/:slug"'),
     );
     expect(statsSection).toContain('"featureDynastySlug"');
     expect(statsSection).toContain('"workflowDynastySlug"');
@@ -28,7 +28,7 @@ describe("Dynasty slug forwarding — features/stats", () => {
     expect(statsSection).toContain('"workflowSlug"');
   });
 
-  it("should forward workflowDynastySlug on GET /features/:slug/stats (featureDynastySlug not needed — slug already specified)", () => {
+  it("should forward workflowDynastySlug on GET /features/:slug/stats", () => {
     const slugStatsSection = featuresRoute.slice(
       featuresRoute.indexOf('"/features/:slug/stats"'),
     );
@@ -129,10 +129,9 @@ describe("Dynasty slug OpenAPI schemas", () => {
     expect(featuresStatsSection).toContain("workflowSlug");
   });
 
-  it("should include all dynasty slug filters in /v1/features/{featureSlug}/stats query schema", () => {
+  it("should include workflowDynastySlug in /v1/features/{featureSlug}/stats query schema", () => {
     const start = schemaContent.indexOf('path: "/v1/features/{featureSlug}/stats"');
     const featureSlugStatsSection = schemaContent.slice(start, start + 1200);
-    expect(featureSlugStatsSection).toContain("featureDynastySlug");
     expect(featureSlugStatsSection).toContain("workflowDynastySlug");
   });
 
