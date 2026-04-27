@@ -17,7 +17,7 @@ router.get("/journalists", authenticate, requireOrg, requireUser, async (req: Au
     params.set("brand_id", brandId);
     if (runId) params.set("run_id", runId);
     if (campaignId) params.set("campaign_id", campaignId);
-    if (req.query.featureDynastySlug) params.set("feature_dynasty_slug", req.query.featureDynastySlug as string);
+    if (req.query.featureSlug) params.set("feature_slug", req.query.featureSlug as string);
 
     // Build headers, enriching with campaign metadata when workflow headers are missing
     const headers = buildInternalHeaders(req);
@@ -54,7 +54,7 @@ router.get("/journalists/list", authenticate, requireOrg, requireUser, async (re
 
     const params = new URLSearchParams();
     params.set("brandId", brandId);
-    for (const key of ["campaignId", "featureSlugs", "featureDynastySlug", "workflowSlug"]) {
+    for (const key of ["campaignId", "featureSlugs", "workflowSlug"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
 
@@ -98,11 +98,11 @@ router.post("/journalists/buffer/next", authenticate, requireOrg, requireUser, a
   }
 });
 
-// ── GET /v1/journalists/stats — journalist stats with dynasty-aware filtering ─
+// ── GET /v1/journalists/stats — journalist stats with filtering ──────────────
 router.get("/journalists/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["orgId", "campaignId", "outletId", "brandId", "featureSlug", "workflowSlug", "workflowSlugs", "featureDynastySlug", "workflowDynastySlug", "groupBy"]) {
+    for (const key of ["orgId", "campaignId", "outletId", "brandId", "featureSlug", "featureSlugs", "workflowSlug", "workflowSlugs", "groupBy"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";

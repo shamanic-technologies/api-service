@@ -34,13 +34,13 @@ describe("Journalists proxy routes", () => {
     expect(content).toContain("Missing required query parameter: brandId");
   });
 
-  it("should forward featureDynastySlug as feature_dynasty_slug on GET /journalists", () => {
+  it("should forward featureSlug as feature_slug on GET /journalists", () => {
     const getSection = content.slice(
       content.indexOf('"/journalists"'),
       content.indexOf('"/journalists/list"')
     );
-    expect(getSection).toContain("feature_dynasty_slug");
-    expect(getSection).toContain("featureDynastySlug");
+    expect(getSection).toContain("feature_slug");
+    expect(getSection).toContain("featureSlug");
   });
 
   it("should have POST /journalists/discover with auth + requireOrg + requireUser", () => {
@@ -161,7 +161,7 @@ describe("Journalists proxy routes", () => {
       content.indexOf('"/journalists/stats"'),
       content.indexOf('"/journalists/stats"') + 600
     );
-    for (const param of ["orgId", "campaignId", "outletId", "brandId", "featureSlug", "workflowSlug", "workflowSlugs", "featureDynastySlug", "workflowDynastySlug", "groupBy"]) {
+    for (const param of ["orgId", "campaignId", "outletId", "brandId", "featureSlug", "featureSlugs", "workflowSlug", "workflowSlugs", "groupBy"]) {
       expect(statsBlock).toContain(`"${param}"`);
     }
   });

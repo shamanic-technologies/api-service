@@ -57,11 +57,29 @@ vi.mock("@distribute/runs-client", () => ({
 
 vi.mock("../../src/lib/delivery-stats.js", () => ({
   fetchDeliveryStats: vi.fn().mockResolvedValue({
-    emailsContacted: 0, emailsSent: 4, emailsDelivered: 4, emailsOpened: 2,
-    emailsClicked: 0, emailsBounced: 0,
-    repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
-    repliesDetail: { interested: 0, meetingBooked: 0, closed: 0, notInterested: 0, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 },
+    recipientStats: {
+      contacted: 0, sent: 4, delivered: 4, opened: 2,
+      bounced: 0, clicked: 0, unsubscribed: 0,
+      repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
+      repliesDetail: { interested: 0, meetingBooked: 0, closed: 0, notInterested: 0, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 },
+    },
+    emailStats: {
+      sent: 4, delivered: 4, opened: 2, clicked: 0, bounced: 0, unsubscribed: 0,
+      stepStats: [],
+    },
   }),
+  EMPTY_DELIVERY_STATS: {
+    recipientStats: {
+      contacted: 0, sent: 0, delivered: 0, opened: 0,
+      bounced: 0, clicked: 0, unsubscribed: 0,
+      repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
+      repliesDetail: { interested: 0, meetingBooked: 0, closed: 0, notInterested: 0, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 },
+    },
+    emailStats: {
+      sent: 0, delivered: 0, opened: 0, clicked: 0, bounced: 0, unsubscribed: 0,
+      stepStats: [],
+    },
+  },
 }));
 
 import express from "express";
@@ -113,7 +131,7 @@ describe("Campaign stats: emailsGenerated from content-generation service", () =
     expect(res.status).toBe(200);
     expect(res.body.emailsGenerated).toBe(5);
     expect(res.body.leadsServed).toBe(3);
-    expect(res.body.emailsSent).toBe(4);
+    expect(res.body.emailStats.sent).toBe(4);
   });
 
   it("should call content-generation via externalServices (not internal services)", () => {
@@ -134,10 +152,16 @@ describe("Campaign stats: emailsGenerated from content-generation service", () =
 
     // Delivery stats return reduced set for this test
     vi.mocked(fetchDeliveryStats).mockResolvedValueOnce({
-      emailsContacted: 0, emailsSent: 1, emailsDelivered: 1, emailsOpened: 0,
-      emailsClicked: 0, emailsBounced: 0,
-      repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
-      repliesDetail: { interested: 0, meetingBooked: 0, closed: 0, notInterested: 0, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 },
+      recipientStats: {
+        contacted: 0, sent: 1, delivered: 1, opened: 0,
+        bounced: 0, clicked: 0, unsubscribed: 0,
+        repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
+        repliesDetail: { interested: 0, meetingBooked: 0, closed: 0, notInterested: 0, wrongPerson: 0, unsubscribe: 0, neutral: 0, autoReply: 0, outOfOffice: 0 },
+      },
+      emailStats: {
+        sent: 1, delivered: 1, opened: 0, clicked: 0, bounced: 0, unsubscribed: 0,
+        stepStats: [],
+      },
     });
 
     mockCallExternalService.mockImplementation((service: any, path: string) => {
@@ -163,7 +187,7 @@ describe("Campaign stats: emailsGenerated from content-generation service", () =
     expect(res.body.emailsGenerated).toBe(0);
     // Other stats still work
     expect(res.body.leadsServed).toBe(2);
-    expect(res.body.emailsSent).toBe(1);
+    expect(res.body.emailStats.sent).toBe(1);
   });
 
   it("should pass x-org-id header to content-generation", async () => {
