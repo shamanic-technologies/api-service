@@ -9158,11 +9158,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
-              "example": "repliesPositive"
+              "description": "Stats key to rank by (required). e.g. 'recipientsRepliesPositive', 'leadsServed'. Use GET /v1/features/stats/registry for the full list.",
+              "example": "recipientsRepliesPositive"
             },
             "required": true,
-            "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
+            "description": "Stats key to rank by (required). e.g. 'recipientsRepliesPositive', 'leadsServed'. Use GET /v1/features/stats/registry for the full list.",
             "name": "objective",
             "in": "query"
           },
@@ -9195,7 +9195,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. emailsSent, repliesPositive, positiveReplyRate). Always includes totalCostInUsdCents and completedRuns.",
+            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). Always includes totalCostInUsdCents and completedRuns. Use GET /v1/features/stats/registry for the canonical key list.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9313,11 +9313,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
-              "example": "repliesPositive"
+              "description": "Stats key to rank by (required). e.g. 'recipientsRepliesPositive', 'leadsServed'. Use GET /v1/features/stats/registry for the full list.",
+              "example": "recipientsRepliesPositive"
             },
             "required": true,
-            "description": "Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'.",
+            "description": "Stats key to rank by (required). e.g. 'recipientsRepliesPositive', 'leadsServed'. Use GET /v1/features/stats/registry for the full list.",
             "name": "objective",
             "in": "query"
           },
@@ -9405,7 +9405,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. emailsSent, repliesPositive, positiveReplyRate). Always includes totalCostInUsdCents and completedRuns.",
+            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). Always includes totalCostInUsdCents and completedRuns. Use GET /v1/features/stats/registry for the canonical key list.",
             "content": {
               "application/json": {
                 "schema": {

@@ -50,7 +50,7 @@ function createApp() {
 const MOCK_DYNASTY_STATS = {
   dynastySlug: "sales-cold-email-outreach",
   systemStats: { totalCostInUsdCents: 12000, completedRuns: 45, activeCampaigns: 5, firstRunAt: "2025-11-01T00:00:00Z", lastRunAt: "2026-03-28T00:00:00Z" },
-  stats: { emailsSent: 5400, repliesPositive: 216, positiveReplyRate: 0.04 },
+  stats: { recipientsSent: 5400, recipientsRepliesPositive: 216, recipientPositiveReplyRate: 0.04 },
 };
 
 describe("GET /v1/features/stats/dynasty", () => {

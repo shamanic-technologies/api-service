@@ -176,7 +176,7 @@ const EmailStatsSchema = z.object({
 // All ranked/best endpoints now proxy to features-service
 const rankedQueryParams = z.object({
   featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature dynasty slug (required). Resolves to all versioned slugs in the lineage."),
-  objective: z.string().openapi({ example: "repliesPositive" }).describe("Stats key to rank by (required). e.g. 'repliesPositive', 'leadsServed'."),
+  objective: z.string().openapi({ example: "recipientsRepliesPositive" }).describe("Stats key to rank by (required). e.g. 'recipientsRepliesPositive', 'leadsServed'. Use GET /v1/features/stats/registry for the full list."),
   groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
   limit: z.string().optional().openapi({ example: "10" }).describe("Max results (default 10, max 100)"),
 });
@@ -211,7 +211,7 @@ const WorkflowMetadataSchema = z
 
 const rankedResponse = {
   200: {
-    description: "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. emailsSent, repliesPositive, positiveReplyRate). Always includes totalCostInUsdCents and completedRuns.",
+    description: "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). Always includes totalCostInUsdCents and completedRuns. Use GET /v1/features/stats/registry for the canonical key list.",
     content: {
       "application/json": {
         schema: z.object({
