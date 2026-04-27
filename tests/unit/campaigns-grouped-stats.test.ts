@@ -55,19 +55,28 @@ function createApp() {
   return app;
 }
 
-/** Helper: build a valid email-gateway Stats object */
-function makeStats(overrides: Record<string, number> = {}) {
+const EMPTY_REPLIES_DETAIL = {
+  interested: 0, meetingBooked: 0, closed: 0,
+  notInterested: 0, wrongPerson: 0, unsubscribe: 0,
+  neutral: 0, autoReply: 0, outOfOffice: 0,
+};
+
+/** Helper: build a valid email-gateway broadcast stats object (new shape) */
+function makeBroadcast(recipientOverrides: Record<string, any> = {}, emailOverrides: Record<string, any> = {}) {
   return {
-    emailsContacted: 0, emailsSent: 0, emailsDelivered: 0, emailsOpened: 0,
-    emailsClicked: 0, emailsBounced: 0,
-    repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
-    repliesDetail: {
-      interested: 0, meetingBooked: 0, closed: 0,
-      notInterested: 0, wrongPerson: 0, unsubscribe: 0,
-      neutral: 0, autoReply: 0, outOfOffice: 0,
+    recipientStats: {
+      contacted: 0, sent: 0, delivered: 0, opened: 0,
+      bounced: 0, clicked: 0, unsubscribed: 0,
+      repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
+      repliesDetail: EMPTY_REPLIES_DETAIL,
+      ...recipientOverrides,
     },
-    recipients: 0,
-    ...overrides,
+    emailStats: {
+      sent: 0, delivered: 0, opened: 0, clicked: 0,
+      bounced: 0, unsubscribed: 0,
+      stepStats: [],
+      ...emailOverrides,
+    },
   };
 }
 
@@ -85,12 +94,18 @@ describe("GET /v1/campaigns/stats", () => {
           groups: [
             {
               key: "c1",
-              broadcast: makeStats({ emailsContacted: 15, emailsSent: 10, emailsDelivered: 9, emailsOpened: 5, emailsClicked: 2, emailsBounced: 1, repliesPositive: 1 } as any),
+              broadcast: makeBroadcast(
+                { contacted: 15, sent: 10, delivered: 9, opened: 5, clicked: 2, bounced: 1, repliesPositive: 1 },
+                { sent: 10, delivered: 9, opened: 5, clicked: 2, bounced: 1 },
+              ),
               transactional: null,
             },
             {
               key: "c2",
-              broadcast: makeStats({ emailsContacted: 25, emailsSent: 20, emailsDelivered: 18, emailsOpened: 12, emailsClicked: 3, emailsBounced: 2, repliesNegative: 1 } as any),
+              broadcast: makeBroadcast(
+                { contacted: 25, sent: 20, delivered: 18, opened: 12, clicked: 3, bounced: 2, repliesNegative: 1 },
+                { sent: 20, delivered: 18, opened: 12, clicked: 3, bounced: 2 },
+              ),
               transactional: null,
             },
           ],
@@ -138,10 +153,11 @@ describe("GET /v1/campaigns/stats", () => {
     expect(c1.leadsServed).toBe(15);
     expect(c1.leadsContacted).toBe(10);
     expect(c1.emailsGenerated).toBe(12);
-    expect(c1.emailsContacted).toBe(15);
-    expect(c1.emailsSent).toBe(10);
-    expect(c1.emailsOpened).toBe(5);
-    expect(c1.repliesPositive).toBe(1);
+    expect(c1.recipientStats.contacted).toBe(15);
+    expect(c1.recipientStats.sent).toBe(10);
+    expect(c1.recipientStats.opened).toBe(5);
+    expect(c1.recipientStats.repliesPositive).toBe(1);
+    expect(c1.emailStats.sent).toBe(10);
     expect(c1.totalCostInUsdCents).toBe("500");
     expect(c1.runCount).toBe(15);
 
@@ -149,8 +165,9 @@ describe("GET /v1/campaigns/stats", () => {
     expect(c2.leadsServed).toBe(30);
     expect(c2.leadsContacted).toBe(18);
     expect(c2.emailsGenerated).toBe(25);
-    expect(c2.emailsContacted).toBe(25);
-    expect(c2.emailsSent).toBe(20);
+    expect(c2.recipientStats.contacted).toBe(25);
+    expect(c2.recipientStats.sent).toBe(20);
+    expect(c2.emailStats.sent).toBe(20);
     expect(c2.totalCostInUsdCents).toBe("1200");
   });
 
@@ -213,8 +230,9 @@ describe("GET /v1/campaigns/stats", () => {
     expect(c1.leadsServed).toBe(5);
     expect(c1.leadsContacted).toBe(3);
     // Defaults for missing services
-    expect(c1.emailsContacted).toBe(0);
-    expect(c1.emailsSent).toBe(0);
+    expect(c1.recipientStats.contacted).toBe(0);
+    expect(c1.recipientStats.sent).toBe(0);
+    expect(c1.emailStats.sent).toBe(0);
     expect(c1.emailsGenerated).toBe(0);
     expect(c1.totalCostInUsdCents).toBeNull();
     expect(c1.runCount).toBe(0);
@@ -252,8 +270,14 @@ describe("GET /v1/campaigns/stats", () => {
         return Promise.resolve({
           groups: [{
             key: "c1",
-            broadcast: makeStats({ emailsContacted: 8, emailsSent: 5, emailsDelivered: 5, emailsOpened: 3 }),
-            transactional: makeStats({ emailsContacted: 200, emailsSent: 100, emailsDelivered: 95, emailsOpened: 60, emailsClicked: 10, emailsBounced: 5 }),
+            broadcast: makeBroadcast(
+              { contacted: 8, sent: 5, delivered: 5, opened: 3 },
+              { sent: 5, delivered: 5, opened: 3 },
+            ),
+            transactional: makeBroadcast(
+              { contacted: 200, sent: 100, delivered: 95, opened: 60, clicked: 10, bounced: 5 },
+              { sent: 100, delivered: 95, opened: 60, clicked: 10, bounced: 5 },
+            ),
           }],
         });
       }
@@ -264,10 +288,11 @@ describe("GET /v1/campaigns/stats", () => {
 
     const c1 = res.body.campaigns.find((c: any) => c.campaignId === "c1");
     // Must be broadcast only, NOT transactional or sum
-    expect(c1.emailsContacted).toBe(8);
-    expect(c1.emailsSent).toBe(5);
-    expect(c1.emailsOpened).toBe(3);
-    expect(c1.repliesPositive).toBe(0);
+    expect(c1.recipientStats.contacted).toBe(8);
+    expect(c1.recipientStats.sent).toBe(5);
+    expect(c1.recipientStats.opened).toBe(3);
+    expect(c1.recipientStats.repliesPositive).toBe(0);
+    expect(c1.emailStats.sent).toBe(5);
   });
 });
 

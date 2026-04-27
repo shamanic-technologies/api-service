@@ -82,26 +82,36 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
         expect(path).toContain("brandId=brand-123");
         return Promise.resolve({
           transactional: {
-            emailsContacted: 50, emailsSent: 50, emailsDelivered: 48, emailsOpened: 30,
-            emailsClicked: 5, emailsBounced: 2,
-            repliesPositive: 5, repliesNegative: 1, repliesNeutral: 1, repliesAutoReply: 1,
-            repliesDetail: {
-              interested: 2, meetingBooked: 3, closed: 0,
-              notInterested: 1, wrongPerson: 0, unsubscribe: 0,
-              neutral: 1, autoReply: 0, outOfOffice: 1,
+            recipientStats: {
+              contacted: 50, sent: 50, delivered: 48, opened: 30,
+              bounced: 2, clicked: 5, unsubscribed: 0,
+              repliesPositive: 5, repliesNegative: 1, repliesNeutral: 1, repliesAutoReply: 1,
+              repliesDetail: {
+                interested: 2, meetingBooked: 3, closed: 0,
+                notInterested: 1, wrongPerson: 0, unsubscribe: 0,
+                neutral: 1, autoReply: 0, outOfOffice: 1,
+              },
             },
-            recipients: 50,
+            emailStats: {
+              sent: 50, delivered: 48, opened: 30, clicked: 5, bounced: 2, unsubscribed: 0,
+              stepStats: [],
+            },
           },
           broadcast: {
-            emailsContacted: 6, emailsSent: 6, emailsDelivered: 6, emailsOpened: 4,
-            emailsClicked: 0, emailsBounced: 0,
-            repliesPositive: 0, repliesNegative: 1, repliesNeutral: 0, repliesAutoReply: 0,
-            repliesDetail: {
-              interested: 0, meetingBooked: 0, closed: 0,
-              notInterested: 1, wrongPerson: 0, unsubscribe: 0,
-              neutral: 0, autoReply: 0, outOfOffice: 0,
+            recipientStats: {
+              contacted: 6, sent: 6, delivered: 6, opened: 4,
+              bounced: 0, clicked: 0, unsubscribed: 0,
+              repliesPositive: 0, repliesNegative: 1, repliesNeutral: 0, repliesAutoReply: 0,
+              repliesDetail: {
+                interested: 0, meetingBooked: 0, closed: 0,
+                notInterested: 1, wrongPerson: 0, unsubscribe: 0,
+                neutral: 0, autoReply: 0, outOfOffice: 0,
+              },
             },
-            recipients: 6,
+            emailStats: {
+              sent: 6, delivered: 6, opened: 4, clicked: 0, bounced: 0, unsubscribed: 0,
+              stepStats: [],
+            },
           },
         });
       }
@@ -112,12 +122,13 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
 
     expect(res.status).toBe(200);
     // Should return ONLY broadcast stats, not transactional
-    expect(res.body.emailsSent).toBe(6);
-    expect(res.body.emailsOpened).toBe(4);
-    expect(res.body.repliesNegative).toBe(1);
+    expect(res.body.recipientStats.sent).toBe(6);
+    expect(res.body.recipientStats.opened).toBe(4);
+    expect(res.body.recipientStats.repliesNegative).toBe(1);
+    expect(res.body.emailStats.sent).toBe(6);
     // Transactional values (50, 30) must NOT appear
-    expect(res.body.emailsSent).not.toBe(56); // not 50+6
-    expect(res.body.emailsSent).not.toBe(50);
+    expect(res.body.recipientStats.sent).not.toBe(56); // not 50+6
+    expect(res.body.recipientStats.sent).not.toBe(50);
   });
 
   it("should return zeros when email-gateway fails", async () => {
@@ -128,9 +139,10 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
     const res = await request(app).get("/v1/email-gateway/stats?brandId=brand-123");
 
     expect(res.status).toBe(200);
-    expect(res.body.emailsSent).toBe(0);
-    expect(res.body.emailsOpened).toBe(0);
-    expect(res.body.repliesPositive).toBe(0);
+    expect(res.body.recipientStats.sent).toBe(0);
+    expect(res.body.recipientStats.opened).toBe(0);
+    expect(res.body.recipientStats.repliesPositive).toBe(0);
+    expect(res.body.emailStats.sent).toBe(0);
   });
 
   it("should return zeros when broadcast is null (only transactional exists)", async () => {
@@ -138,15 +150,20 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
 
     mockCallExternalService.mockResolvedValue({
       transactional: {
-        emailsContacted: 50, emailsSent: 50, emailsDelivered: 48, emailsOpened: 30,
-        emailsClicked: 5, emailsBounced: 2,
-        repliesPositive: 5, repliesNegative: 1, repliesNeutral: 1, repliesAutoReply: 1,
-        repliesDetail: {
-          interested: 2, meetingBooked: 3, closed: 0,
-          notInterested: 1, wrongPerson: 0, unsubscribe: 0,
-          neutral: 1, autoReply: 0, outOfOffice: 1,
+        recipientStats: {
+          contacted: 50, sent: 50, delivered: 48, opened: 30,
+          bounced: 2, clicked: 5, unsubscribed: 0,
+          repliesPositive: 5, repliesNegative: 1, repliesNeutral: 1, repliesAutoReply: 1,
+          repliesDetail: {
+            interested: 2, meetingBooked: 3, closed: 0,
+            notInterested: 1, wrongPerson: 0, unsubscribe: 0,
+            neutral: 1, autoReply: 0, outOfOffice: 1,
+          },
         },
-        recipients: 50,
+        emailStats: {
+          sent: 50, delivered: 48, opened: 30, clicked: 5, bounced: 2, unsubscribed: 0,
+          stepStats: [],
+        },
       },
       broadcast: null,
     });
@@ -155,9 +172,10 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
 
     expect(res.status).toBe(200);
     // No broadcast = no outreach stats, should be zeros
-    expect(res.body.emailsSent).toBe(0);
-    expect(res.body.emailsOpened).toBe(0);
-    expect(res.body.repliesPositive).toBe(0);
+    expect(res.body.recipientStats.sent).toBe(0);
+    expect(res.body.recipientStats.opened).toBe(0);
+    expect(res.body.recipientStats.repliesPositive).toBe(0);
+    expect(res.body.emailStats.sent).toBe(0);
   });
 
   it("should make exactly one email-gateway call", async () => {
@@ -166,15 +184,20 @@ describe("GET /v1/email-gateway/stats?brandId=brand-123", () => {
     mockCallExternalService.mockResolvedValue({
       transactional: null,
       broadcast: {
-        emailsContacted: 3, emailsSent: 3, emailsDelivered: 3, emailsOpened: 1,
-        emailsClicked: 0, emailsBounced: 0,
-        repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
-        repliesDetail: {
-          interested: 0, meetingBooked: 0, closed: 0,
-          notInterested: 0, wrongPerson: 0, unsubscribe: 0,
-          neutral: 0, autoReply: 0, outOfOffice: 0,
+        recipientStats: {
+          contacted: 3, sent: 3, delivered: 3, opened: 1,
+          bounced: 0, clicked: 0, unsubscribed: 0,
+          repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
+          repliesDetail: {
+            interested: 0, meetingBooked: 0, closed: 0,
+            notInterested: 0, wrongPerson: 0, unsubscribe: 0,
+            neutral: 0, autoReply: 0, outOfOffice: 0,
+          },
         },
-        recipients: 3,
+        emailStats: {
+          sent: 3, delivered: 3, opened: 1, clicked: 0, bounced: 0, unsubscribed: 0,
+          stepStats: [],
+        },
       },
     });
 
@@ -197,7 +220,7 @@ describe("Regression: fetchDeliveryStats must use broadcast only", () => {
     );
 
     // Should only use broadcast, not sum transactional + broadcast
-    expect(content).toContain("Only use broadcast stats");
+    expect(content).toContain("broadcast only");
     expect(content).not.toMatch(/sum\(t?\.emails/);
   });
 

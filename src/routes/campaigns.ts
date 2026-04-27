@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
-import { fetchDeliveryStats } from "../lib/delivery-stats.js";
+import { fetchDeliveryStats, EMPTY_DELIVERY_STATS } from "../lib/delivery-stats.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import {
   CreateCampaignRequestSchema,
@@ -260,12 +260,17 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
     // 4 parallel calls
     const [deliveryGroups, leadGroups, emailgenGroups, costGroups] = await Promise.all([
       callExternalService<{ groups: Array<{ key: string; broadcast: {
-        emailsContacted: number; emailsSent: number; emailsDelivered: number;
-        emailsOpened: number; emailsClicked: number; emailsBounced: number;
-        repliesPositive: number; repliesNegative: number; repliesNeutral: number; repliesAutoReply: number;
-        repliesDetail: Record<string, number>;
-        recipients: number;
-      } | null; transactional: Record<string, number> | null }> }>(
+        recipientStats: {
+          contacted: number; sent: number; delivered: number; opened: number;
+          bounced: number; clicked: number; unsubscribed: number;
+          repliesPositive: number; repliesNegative: number; repliesNeutral: number; repliesAutoReply: number;
+          repliesDetail: Record<string, number>;
+        };
+        emailStats: {
+          sent: number; delivered: number; opened: number; clicked: number;
+          bounced: number; unsubscribed: number; stepStats: unknown[];
+        };
+      } | null; transactional: unknown | null }> }>(
         externalServices.emailGateway,
         `/orgs/stats?${deliveryParams}`,
         { headers: internalHeaders },
@@ -310,21 +315,8 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
     for (const g of deliveryGroups?.groups ?? []) {
       const s = ensure(g.key);
       const b = g.broadcast;
-      s.emailsContacted = b?.emailsContacted ?? 0;
-      s.emailsSent = b?.emailsSent ?? 0;
-      s.emailsDelivered = b?.emailsDelivered ?? 0;
-      s.emailsOpened = b?.emailsOpened ?? 0;
-      s.emailsClicked = b?.emailsClicked ?? 0;
-      s.emailsBounced = b?.emailsBounced ?? 0;
-      s.repliesPositive = b?.repliesPositive ?? 0;
-      s.repliesNegative = b?.repliesNegative ?? 0;
-      s.repliesNeutral = b?.repliesNeutral ?? 0;
-      s.repliesAutoReply = b?.repliesAutoReply ?? 0;
-      s.repliesDetail = b?.repliesDetail ?? {
-        interested: 0, meetingBooked: 0, closed: 0,
-        notInterested: 0, wrongPerson: 0, unsubscribe: 0,
-        neutral: 0, autoReply: 0, outOfOffice: 0,
-      };
+      s.recipientStats = b?.recipientStats ?? EMPTY_DELIVERY_STATS.recipientStats;
+      s.emailStats = b?.emailStats ?? EMPTY_DELIVERY_STATS.emailStats;
     }
 
     // Lead stats
@@ -355,14 +347,8 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
     const defaults = {
       leadsServed: 0, leadsContacted: 0, leadsBuffered: 0, leadsSkipped: 0,
       emailsGenerated: 0,
-      emailsContacted: 0, emailsSent: 0, emailsDelivered: 0, emailsOpened: 0, emailsClicked: 0,
-      emailsBounced: 0,
-      repliesPositive: 0, repliesNegative: 0, repliesNeutral: 0, repliesAutoReply: 0,
-      repliesDetail: {
-        interested: 0, meetingBooked: 0, closed: 0,
-        notInterested: 0, wrongPerson: 0, unsubscribe: 0,
-        neutral: 0, autoReply: 0, outOfOffice: 0,
-      },
+      recipientStats: EMPTY_DELIVERY_STATS.recipientStats,
+      emailStats: EMPTY_DELIVERY_STATS.emailStats,
       totalCostInUsdCents: null, runCount: 0,
     };
     for (const stats of merged.values()) {
@@ -532,13 +518,11 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
 
     // Delivery stats from email-gateway
     if (delivery) {
-      Object.assign(stats, delivery);
+      stats.recipientStats = delivery.recipientStats;
+      stats.emailStats = delivery.emailStats;
     } else {
-      stats.emailsContacted = 0;
-      stats.emailsSent = 0;
-      stats.emailsOpened = 0;
-      stats.emailsClicked = 0;
-      stats.emailsBounced = 0;
+      stats.recipientStats = EMPTY_DELIVERY_STATS.recipientStats;
+      stats.emailStats = EMPTY_DELIVERY_STATS.emailStats;
     }
 
     // Budget usage from campaign-service
@@ -702,9 +686,8 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
           leadsBuffered: leadStats?.buffered ?? 0,
           leadsSkipped: leadStats?.skipped ?? 0,
           emailsGenerated: currentEmails,
-          emailsSent: (delivery as any)?.emailsSent ?? 0,
-          emailsOpened: (delivery as any)?.emailsOpened ?? 0,
-          repliesPositive: (delivery as any)?.repliesPositive ?? 0,
+          recipientStats: delivery?.recipientStats ?? EMPTY_DELIVERY_STATS.recipientStats,
+          emailStats: delivery?.emailStats ?? EMPTY_DELIVERY_STATS.emailStats,
         };
 
         res.write(`event: update\ndata: ${JSON.stringify(payload)}\n\n`);
