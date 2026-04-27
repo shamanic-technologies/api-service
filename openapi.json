@@ -805,6 +805,116 @@
           "outOfOffice"
         ]
       },
+      "RecipientStats": {
+        "type": "object",
+        "properties": {
+          "contacted": {
+            "type": "number",
+            "description": "Leads submitted to email provider (COUNT DISTINCT by lead)"
+          },
+          "sent": {
+            "type": "number",
+            "description": "Recipients with at least one sent email"
+          },
+          "delivered": {
+            "type": "number",
+            "description": "Recipients with at least one delivered email"
+          },
+          "opened": {
+            "type": "number",
+            "description": "Recipients who opened at least one email"
+          },
+          "bounced": {
+            "type": "number",
+            "description": "Recipients who bounced"
+          },
+          "clicked": {
+            "type": "number",
+            "description": "Recipients who clicked"
+          },
+          "unsubscribed": {
+            "type": "number",
+            "description": "Recipients who unsubscribed"
+          },
+          "repliesPositive": {
+            "type": "number"
+          },
+          "repliesNegative": {
+            "type": "number"
+          },
+          "repliesNeutral": {
+            "type": "number"
+          },
+          "repliesAutoReply": {
+            "type": "number"
+          },
+          "repliesDetail": {
+            "$ref": "#/components/schemas/RepliesDetail"
+          }
+        },
+        "required": [
+          "contacted",
+          "sent",
+          "delivered",
+          "opened",
+          "bounced",
+          "clicked",
+          "unsubscribed",
+          "repliesPositive",
+          "repliesNegative",
+          "repliesNeutral",
+          "repliesAutoReply",
+          "repliesDetail"
+        ]
+      },
+      "EmailStats": {
+        "type": "object",
+        "properties": {
+          "sent": {
+            "type": "number",
+            "description": "Total emails sent (COUNT *)"
+          },
+          "delivered": {
+            "type": "number",
+            "description": "Total emails delivered"
+          },
+          "opened": {
+            "type": "number",
+            "description": "Total email opens"
+          },
+          "clicked": {
+            "type": "number",
+            "description": "Total email clicks"
+          },
+          "bounced": {
+            "type": "number",
+            "description": "Total emails bounced"
+          },
+          "unsubscribed": {
+            "type": "number",
+            "description": "Total unsubscribes"
+          },
+          "stepStats": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {
+                "nullable": true
+              }
+            },
+            "description": "Per-step breakdown"
+          }
+        },
+        "required": [
+          "sent",
+          "delivered",
+          "opened",
+          "clicked",
+          "bounced",
+          "unsubscribed",
+          "stepStats"
+        ]
+      },
       "CampaignStatsResponse": {
         "type": "object",
         "properties": {
@@ -853,41 +963,11 @@
           "totalCostUsd": {
             "type": "number"
           },
-          "emailsContacted": {
-            "type": "number",
-            "description": "Leads successfully submitted to email provider (immediate)"
+          "recipientStats": {
+            "$ref": "#/components/schemas/RecipientStats"
           },
-          "emailsSent": {
-            "type": "number",
-            "description": "Emails confirmed sent by provider (from webhook)"
-          },
-          "emailsDelivered": {
-            "type": "number",
-            "description": "Emails confirmed delivered (from webhook)"
-          },
-          "emailsOpened": {
-            "type": "number"
-          },
-          "emailsClicked": {
-            "type": "number"
-          },
-          "emailsBounced": {
-            "type": "number"
-          },
-          "repliesPositive": {
-            "type": "number"
-          },
-          "repliesNegative": {
-            "type": "number"
-          },
-          "repliesNeutral": {
-            "type": "number"
-          },
-          "repliesAutoReply": {
-            "type": "number"
-          },
-          "repliesDetail": {
-            "$ref": "#/components/schemas/RepliesDetail"
+          "emailStats": {
+            "$ref": "#/components/schemas/EmailStats"
           },
           "totalCostInUsdCents": {
             "type": "string",
@@ -933,11 +1013,8 @@
           "leadsBuffered",
           "leadsSkipped",
           "emailsGenerated",
-          "emailsContacted",
-          "emailsSent",
-          "emailsOpened",
-          "emailsClicked",
-          "emailsBounced"
+          "recipientStats",
+          "emailStats"
         ]
       },
       "CampaignsBatchStatsResponse": {
@@ -967,41 +1044,11 @@
                 "emailsGenerated": {
                   "type": "number"
                 },
-                "emailsContacted": {
-                  "type": "number",
-                  "description": "Leads successfully submitted to email provider (immediate)"
+                "recipientStats": {
+                  "$ref": "#/components/schemas/RecipientStats"
                 },
-                "emailsSent": {
-                  "type": "number",
-                  "description": "Emails confirmed sent by provider (from webhook)"
-                },
-                "emailsDelivered": {
-                  "type": "number",
-                  "description": "Emails confirmed delivered (from webhook)"
-                },
-                "emailsOpened": {
-                  "type": "number"
-                },
-                "emailsClicked": {
-                  "type": "number"
-                },
-                "emailsBounced": {
-                  "type": "number"
-                },
-                "repliesPositive": {
-                  "type": "number"
-                },
-                "repliesNegative": {
-                  "type": "number"
-                },
-                "repliesNeutral": {
-                  "type": "number"
-                },
-                "repliesAutoReply": {
-                  "type": "number"
-                },
-                "repliesDetail": {
-                  "$ref": "#/components/schemas/RepliesDetail"
+                "emailStats": {
+                  "$ref": "#/components/schemas/EmailStats"
                 },
                 "totalCostInUsdCents": {
                   "type": "string",
@@ -1018,17 +1065,8 @@
                 "leadsBuffered",
                 "leadsSkipped",
                 "emailsGenerated",
-                "emailsContacted",
-                "emailsSent",
-                "emailsDelivered",
-                "emailsOpened",
-                "emailsClicked",
-                "emailsBounced",
-                "repliesPositive",
-                "repliesNegative",
-                "repliesNeutral",
-                "repliesAutoReply",
-                "repliesDetail",
+                "recipientStats",
+                "emailStats",
                 "totalCostInUsdCents",
                 "runCount"
               ]
@@ -3018,7 +3056,7 @@
             "additionalProperties": {
               "type": "number"
             },
-            "description": "Cumulative status counts. DB statuses (buffered, claimed, served, skipped) are cumulative. Email-gateway fields (contacted, sent, delivered, opened, clicked, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply, recipients) are passed through."
+            "description": "Cumulative status counts. DB statuses (buffered, claimed, served, skipped) are cumulative. Email-gateway fields (recipientStats.*, emailStats.*) are passed through."
           },
           "repliesDetail": {
             "allOf": [
@@ -5960,55 +5998,16 @@
       "EmailGatewayStatsResponse": {
         "type": "object",
         "properties": {
-          "emailsContacted": {
-            "type": "number",
-            "description": "Leads successfully submitted to email provider (immediate)"
+          "recipientStats": {
+            "$ref": "#/components/schemas/RecipientStats"
           },
-          "emailsSent": {
-            "type": "number",
-            "description": "Emails confirmed sent by provider (from webhook)"
-          },
-          "emailsDelivered": {
-            "type": "number",
-            "description": "Emails confirmed delivered (from webhook)"
-          },
-          "emailsOpened": {
-            "type": "number"
-          },
-          "emailsClicked": {
-            "type": "number"
-          },
-          "emailsBounced": {
-            "type": "number"
-          },
-          "repliesPositive": {
-            "type": "number"
-          },
-          "repliesNegative": {
-            "type": "number"
-          },
-          "repliesNeutral": {
-            "type": "number"
-          },
-          "repliesAutoReply": {
-            "type": "number"
-          },
-          "repliesDetail": {
-            "$ref": "#/components/schemas/RepliesDetail"
+          "emailStats": {
+            "$ref": "#/components/schemas/EmailStats"
           }
         },
         "required": [
-          "emailsContacted",
-          "emailsSent",
-          "emailsDelivered",
-          "emailsOpened",
-          "emailsClicked",
-          "emailsBounced",
-          "repliesPositive",
-          "repliesNegative",
-          "repliesNeutral",
-          "repliesAutoReply",
-          "repliesDetail"
+          "recipientStats",
+          "emailStats"
         ]
       },
       "RunsCostStatsResponse": {
@@ -8944,11 +8943,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by. Defaults to the feature's defaultSort output.",
-              "example": "repliesPositive"
+              "description": "Stats key to rank by (required). e.g. 'recipientsRepliesPositive', 'leadsServed'. Use GET /v1/features/stats/registry for the full list.",
+              "example": "recipientsRepliesPositive"
             },
             "required": true,
-            "description": "Stats key to rank by. Defaults to the feature's defaultSort output.",
+            "description": "Stats key to rank by (required). e.g. 'recipientsRepliesPositive', 'leadsServed'. Use GET /v1/features/stats/registry for the full list.",
             "name": "objective",
             "in": "query"
           },
@@ -8981,7 +8980,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. emailsSent, repliesPositive, positiveReplyRate). Always includes totalCostInUsdCents and completedRuns.",
+            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). Always includes totalCostInUsdCents and completedRuns. Use GET /v1/features/stats/registry for the canonical key list.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9099,11 +9098,11 @@
           {
             "schema": {
               "type": "string",
-              "description": "Stats key to rank by. Defaults to the feature's defaultSort output.",
-              "example": "repliesPositive"
+              "description": "Stats key to rank by (required). e.g. 'recipientsRepliesPositive', 'leadsServed'. Use GET /v1/features/stats/registry for the full list.",
+              "example": "recipientsRepliesPositive"
             },
             "required": true,
-            "description": "Stats key to rank by. Defaults to the feature's defaultSort output.",
+            "description": "Stats key to rank by (required). e.g. 'recipientsRepliesPositive', 'leadsServed'. Use GET /v1/features/stats/registry for the full list.",
             "name": "objective",
             "in": "query"
           },
@@ -9191,7 +9190,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. emailsSent, repliesPositive, positiveReplyRate). Always includes totalCostInUsdCents and completedRuns.",
+            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). Always includes totalCostInUsdCents and completedRuns. Use GET /v1/features/stats/registry for the canonical key list.",
             "content": {
               "application/json": {
                 "schema": {
@@ -13919,7 +13918,7 @@
           "Journalists"
         ],
         "summary": "Get journalist stats with filtering and grouping",
-        "description": "Returns journalist counts with cumulative DB statuses (buffered, claimed, served, skipped) and full email-gateway passthrough (contacted, sent, delivered, opened, clicked, bounced, repliesPositive, repliesNegative, repliesNeutral, repliesAutoReply, recipients). Supports filtering by brand, campaign, outlet, and feature/workflow slugs. Optional groupBy returns per-dimension breakdowns.",
+        "description": "Returns journalist counts with cumulative DB statuses (buffered, claimed, served, skipped) and full email-gateway passthrough (recipientStats.contacted, recipientStats.sent, recipientStats.delivered, recipientStats.opened, recipientStats.clicked, recipientStats.bounced, recipientStats.repliesPositive, etc.). Supports filtering by brand, campaign, outlet, and feature/workflow slugs. Optional groupBy returns per-dimension breakdowns.",
         "security": [
           {
             "bearerAuth": []
