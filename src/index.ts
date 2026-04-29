@@ -45,6 +45,7 @@ import outletsRoutes from "./routes/outlets.js";
 import journalistsRoutes from "./routes/journalists.js";
 import articlesRoutes from "./routes/articles.js";
 import featuresRoutes from "./routes/features.js";
+import publicStatsRoutes from "./routes/public-stats.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
@@ -162,6 +163,7 @@ app.use(
 app.use(healthRoutes);
 app.use(pressKitsRoutes); // public press-kit endpoints (no auth)
 app.use(featuresRoutes);  // public features endpoints (no auth)
+app.use(publicStatsRoutes); // public stats endpoints (no auth)
 
 // Internal platform routes (API key only, no identity)
 app.use("/internal", internalEmailsRoutes);
