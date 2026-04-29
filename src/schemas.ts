@@ -6552,6 +6552,51 @@ registry.registerPath({
 });
 
 // ---------------------------------------------------------------------------
+// PUBLIC STATS (no auth — landing page endpoints)
+// ---------------------------------------------------------------------------
+
+registry.registerPath({
+  method: "get",
+  path: "/public/stats/users",
+  tags: ["Public Stats"],
+  summary: "Public user/org stats (no auth)",
+  description:
+    "Returns total orgs, total users, and monthly growth breakdown. " +
+    "No authentication required. Proxied from client-service.",
+  responses: {
+    200: { description: "User/org stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicUserStatsResponse") } } },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/public/stats/billing",
+  tags: ["Public Stats"],
+  summary: "Public billing stats (no auth)",
+  description:
+    "Returns total accounts, accounts with payment method, and credit balance/usage aggregates. " +
+    "No authentication required. Proxied from billing-service.",
+  responses: {
+    200: { description: "Billing stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicBillingStatsResponse") } } },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/public/stats/runs",
+  tags: ["Public Stats"],
+  summary: "Public run stats (no auth)",
+  description:
+    "Returns run counts by status and monthly completed breakdown. " +
+    "No authentication required. Proxied from runs-service.",
+  responses: {
+    200: { description: "Run stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicRunStatsResponse") } } },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // PUBLIC FEATURES (no auth — landing page endpoints)
 // ---------------------------------------------------------------------------
 
