@@ -175,14 +175,14 @@ const EmailStatsSchema = z.object({
 
 // All ranked/best endpoints now proxy to features-service
 const rankedQueryParams = z.object({
-  featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature slug (required)."),
+  featureSlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature slug (required)."),
   objective: z.string().openapi({ example: "recipientsRepliesPositive" }).describe("Stats key to rank by (required). e.g. 'recipientsRepliesPositive', 'leadsServed'. Use GET /v1/features/stats/registry for the full list."),
   groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
   limit: z.string().optional().openapi({ example: "10" }).describe("Max results (default 3)"),
 });
 
 const bestQueryParams = z.object({
-  featureDynastySlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature slug (required)."),
+  featureSlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature slug (required)."),
   groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
 });
 
@@ -242,7 +242,7 @@ const bestResponse = {
       },
     },
   },
-  400: { description: "Bad request — featureDynastySlug (feature slug) is required", content: errorContent },
+  400: { description: "Bad request — featureSlug is required", content: errorContent },
   502: { description: "Upstream service error", content: errorContent },
 };
 
@@ -252,7 +252,7 @@ registry.registerPath({
   path: "/v1/public/features/ranked",
   tags: ["Features"],
   summary: "Ranked features (public)",
-  description: "Public ranked workflows by performance. Proxied to features-service. featureDynastySlug (feature slug) and groupBy are required. No authentication required.",
+  description: "Public ranked workflows by performance. Proxied to features-service. featureSlug and groupBy are required. No authentication required.",
   request: { query: rankedQueryParams },
   responses: rankedResponse,
 });
@@ -262,7 +262,7 @@ registry.registerPath({
   path: "/v1/public/features/best",
   tags: ["Features"],
   summary: "Hero records (public)",
-  description: "Public hero records — best cost-per-outcome. Proxied to features-service. featureDynastySlug (feature slug) and groupBy are required. No authentication required.",
+  description: "Public hero records — best cost-per-outcome. Proxied to features-service. featureSlug and groupBy are required. No authentication required.",
   request: { query: bestQueryParams },
   responses: bestResponse,
 });
@@ -273,7 +273,7 @@ registry.registerPath({
   path: "/v1/workflows/ranked",
   tags: ["Workflows"],
   summary: "Ranked workflows",
-  description: "Workflows ranked by performance, scoped to the authenticated org. Proxied to features-service. featureDynastySlug (feature slug) and groupBy are required.",
+  description: "Workflows ranked by performance, scoped to the authenticated org. Proxied to features-service. featureSlug and groupBy are required.",
   security: authed,
   request: { query: rankedQueryParams },
   responses: { ...rankedResponse, 401: { description: "Unauthorized", content: errorContent } },
@@ -284,7 +284,7 @@ registry.registerPath({
   path: "/v1/workflows/best",
   tags: ["Workflows"],
   summary: "Hero records",
-  description: "Best cost-per-outcome records, scoped to the authenticated org. Proxied to features-service. featureDynastySlug (feature slug) and groupBy are required.",
+  description: "Best cost-per-outcome records, scoped to the authenticated org. Proxied to features-service. featureSlug and groupBy are required.",
   security: authed,
   request: { query: bestQueryParams },
   responses: { ...bestResponse, 401: { description: "Unauthorized", content: errorContent } },
