@@ -189,11 +189,11 @@ const bestQueryParams = z.object({
 const WorkflowMetadataSchema = z
   .object({
     id: z.string().describe("Workflow ID"),
-    slug: z.string().describe("Unique technical identifier. Use this to execute via /workflows/by-slug/{slug}/execute"),
-    name: z.string().describe("Workflow name"),
+    workflowSlug: z.string().describe("Unique technical identifier. Use this to execute via /workflows/by-slug/{workflowSlug}/execute"),
+    workflowName: z.string().describe("Workflow name"),
     displayName: z.string().nullable().describe("Stable display name for the workflow family"),
-    dynastyName: z.string().describe("Stable name for the lineage. Constant across all versions of a dynasty"),
-    dynastySlug: z.string().describe("Stable slug for the lineage. Use as key for dynasty-level lookups and stats grouping"),
+    workflowDynastyName: z.string().describe("Stable name for the lineage. Constant across all versions of a dynasty"),
+    workflowDynastySlug: z.string().describe("Stable slug for the lineage. Use as key for dynasty-level lookups and stats grouping"),
     version: z.number().int().describe("Version number within the dynasty. Starts at 1"),
     createdForBrandId: z.string().nullable().describe("Brand ID that created this workflow"),
     category: z.string().optional().describe("Workflow category (e.g. 'sales', 'pr')"),
