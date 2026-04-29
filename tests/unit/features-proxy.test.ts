@@ -139,11 +139,37 @@ describe("Features proxy routes", () => {
     expect(content).not.toContain('"/features/stats/dynasty"');
   });
 
-  it("should NOT have removed endpoints (inputs, prefill, create, update, batch upsert)", () => {
+  it("should NOT have removed endpoints (inputs, create, update, batch upsert)", () => {
     expect(content).not.toContain('"/features/:slug/inputs"');
-    expect(content).not.toContain('"/features/:slug/prefill"');
-    expect(content).not.toContain("router.post");
     expect(content).not.toContain("router.put");
+  });
+
+  it("should have POST /features/:slug/prefill with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.post") && l.includes('"/features/:slug/prefill"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should validate brandIds in prefill body", () => {
+    expect(content).toContain("brandIds");
+    expect(content).toContain("brandIds (non-empty string array) is required");
+  });
+
+  it("should forward format query param on prefill", () => {
+    const prefillIdx = content.indexOf('"/features/:slug/prefill"');
+    const prefillBlock = content.slice(prefillIdx, prefillIdx + 600);
+    expect(prefillBlock).toContain("format");
+  });
+
+  it("should set x-brand-id header from brandIds body on prefill", () => {
+    const prefillIdx = content.indexOf('"/features/:slug/prefill"');
+    const prefillBlock = content.slice(prefillIdx, prefillIdx + 900);
+    expect(prefillBlock).toContain('"x-brand-id"');
+    expect(prefillBlock).toContain("brandIds.join");
   });
 });
 
@@ -188,12 +214,15 @@ describe("Features OpenAPI schemas", () => {
     expect(schemaContent).toContain('tags: ["Features"]');
   });
 
+  it("should register POST /v1/features/{featureSlug}/prefill", () => {
+    expect(schemaContent).toContain('path: "/v1/features/{featureSlug}/prefill"');
+  });
+
   it("should NOT register removed dynasty/write endpoints", () => {
     expect(schemaContent).not.toContain('path: "/v1/features/dynasty"');
     expect(schemaContent).not.toContain('path: "/v1/features/by-dynasty/');
     expect(schemaContent).not.toContain('path: "/v1/features/stats/dynasty"');
     expect(schemaContent).not.toContain('path: "/v1/features/{slug}/inputs"');
-    expect(schemaContent).not.toContain('path: "/v1/features/{slug}/prefill"');
     expect(schemaContent).not.toContain('path: "/public/features/dynasty/slugs"');
   });
 });
