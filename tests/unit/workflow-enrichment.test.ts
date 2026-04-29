@@ -86,7 +86,7 @@ describe("GET /v1/workflows — enrichment with requiredProviders", () => {
     expect(res.body.workflows[1].requiredProviders).toEqual([{ name: "apollo", domain: "apollo.io" }, { name: "anthropic", domain: "anthropic.com" }]);
   });
 
-  it("should pass through dynastySlug, dynastyName, version, and slug from workflow-service", async () => {
+  it("should pass through workflowDynastySlug, workflowDynastyName, version, and workflowSlug from workflow-service", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
       if (url.includes("/required-providers")) {
         return { ok: true, json: () => Promise.resolve({ providers: [] }) };
@@ -99,10 +99,10 @@ describe("GET /v1/workflows — enrichment with requiredProviders", () => {
               workflows: [
                 {
                   id: "00000000-0000-4000-8000-000000000001",
-                  name: "cold-outreach-v3",
-                  slug: "cold-outreach-hormozi-v3",
-                  dynastyName: "Cold Outreach Hormozi",
-                  dynastySlug: "cold-outreach-hormozi",
+                  workflowName: "cold-outreach-v3",
+                  workflowSlug: "cold-outreach-hormozi-v3",
+                  workflowDynastyName: "Cold Outreach Hormozi",
+                  workflowDynastySlug: "cold-outreach-hormozi",
                   version: 3,
                   category: "sales",
                 },
@@ -118,10 +118,10 @@ describe("GET /v1/workflows — enrichment with requiredProviders", () => {
 
     expect(res.status).toBe(200);
     const wf = res.body.workflows[0];
-    expect(wf.dynastySlug).toBe("cold-outreach-hormozi");
-    expect(wf.dynastyName).toBe("Cold Outreach Hormozi");
+    expect(wf.workflowDynastySlug).toBe("cold-outreach-hormozi");
+    expect(wf.workflowDynastyName).toBe("Cold Outreach Hormozi");
     expect(wf.version).toBe(3);
-    expect(wf.slug).toBe("cold-outreach-hormozi-v3");
+    expect(wf.workflowSlug).toBe("cold-outreach-hormozi-v3");
   });
 
   it("should call required-providers for each workflow", async () => {
@@ -226,8 +226,8 @@ describe("GET /v1/workflows/:id/summary", () => {
           json: () =>
             Promise.resolve({
               id: "00000000-0000-4000-8000-000000000001",
-              name: "Sales Email Cold Outreach V1",
-              slug: "sales-email-cold-outreach-v1",
+              workflowName: "Sales Email Cold Outreach V1",
+              workflowSlug: "sales-email-cold-outreach-v1",
               dag: {
                 nodes: [
                   { id: "find-leads", type: "http.call", config: { service: "apollo", method: "POST", path: "/search" }, inputMapping: {} },
@@ -276,8 +276,8 @@ describe("GET /v1/workflows/:id/summary", () => {
         json: () =>
           Promise.resolve({
             id: "00000000-0000-4000-8000-000000000099",
-            name: "Regression Flow",
-            slug: "regression-flow",
+            workflowName: "Regression Flow",
+            workflowSlug: "regression-flow",
             dag: {
               nodes: [{ id: "step-1", type: "http.call", config: { service: "apollo", method: "GET", path: "/test" } }],
               edges: [],
@@ -295,8 +295,8 @@ describe("GET /v1/workflows/:id/summary", () => {
   });
 
   it("should return slug not name as workflowSlug (regression: campaign creation bug)", async () => {
-    // Regression: workflowSlug was returning workflow.name (with spaces/caps)
-    // instead of workflow.slug (kebab-case), causing campaign-service 404s
+    // Regression: workflowSlug was returning workflowName (with spaces/caps)
+    // instead of workflowSlug (kebab-case), causing campaign-service 404s
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
       if (url.includes("/required-providers")) {
         return { ok: true, json: () => Promise.resolve({ providers: [] }) };
@@ -306,8 +306,8 @@ describe("GET /v1/workflows/:id/summary", () => {
         json: () =>
           Promise.resolve({
             id: "00000000-0000-4000-8000-000000000001",
-            name: "Hiring Cold Email Outreach Harmony",
-            slug: "hiring-cold-email-outreach-harmony",
+            workflowName: "Hiring Cold Email Outreach Harmony",
+            workflowSlug: "hiring-cold-email-outreach-harmony",
             dag: {
               nodes: [{ id: "step-1", type: "http.call", config: { service: "apollo", method: "GET", path: "/test" } }],
               edges: [],
@@ -332,7 +332,7 @@ describe("GET /v1/workflows/:id/summary", () => {
       }
       return {
         ok: true,
-        json: () => Promise.resolve({ id: "00000000-0000-4000-8000-000000000001", name: "Empty Flow", slug: "empty-flow", dag: null }),
+        json: () => Promise.resolve({ id: "00000000-0000-4000-8000-000000000001", workflowName: "Empty Flow", workflowSlug: "empty-flow", dag: null }),
       };
     });
     app = createApp();
@@ -381,7 +381,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
         return { ok: true, json: () => Promise.resolve({ keys: orgKeys }) };
       }
       if (url.match(/\/workflows\/00000000-0000-4000-8000-000000000001$/)) {
-        return { ok: true, json: () => Promise.resolve({ slug: workflowSlug }) };
+        return { ok: true, json: () => Promise.resolve({ workflowSlug }) };
       }
       return { ok: true, json: () => Promise.resolve({}) };
     });
@@ -502,7 +502,7 @@ describe("GET /v1/workflows/:id/key-status", () => {
         return { ok: true, json: () => Promise.resolve({ keys: [] }) };
       }
       if (url.match(/\/workflows\/00000000-0000-4000-8000-000000000001$/)) {
-        return { ok: true, json: () => Promise.resolve({ workflow: { name: "test-flow" } }) };
+        return { ok: true, json: () => Promise.resolve({ workflowSlug: "test-flow" }) };
       }
       return { ok: true, json: () => Promise.resolve({}) };
     });
