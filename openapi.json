@@ -8927,7 +8927,7 @@
           "Features"
         ],
         "summary": "Ranked features (public)",
-        "description": "Public ranked workflows by performance. Proxied to features-service. featureDynastySlug (feature slug) and groupBy are required. No authentication required.",
+        "description": "Public ranked workflows by performance. Proxied to features-service. featureSlug and groupBy are required. No authentication required.",
         "parameters": [
           {
             "schema": {
@@ -8937,7 +8937,7 @@
             },
             "required": true,
             "description": "Feature slug (required).",
-            "name": "featureDynastySlug",
+            "name": "featureSlug",
             "in": "query"
           },
           {
@@ -9008,7 +9008,7 @@
           "Features"
         ],
         "summary": "Hero records (public)",
-        "description": "Public hero records — best cost-per-outcome. Proxied to features-service. featureDynastySlug (feature slug) and groupBy are required. No authentication required.",
+        "description": "Public hero records — best cost-per-outcome. Proxied to features-service. featureSlug and groupBy are required. No authentication required.",
         "parameters": [
           {
             "schema": {
@@ -9018,7 +9018,7 @@
             },
             "required": true,
             "description": "Feature slug (required).",
-            "name": "featureDynastySlug",
+            "name": "featureSlug",
             "in": "query"
           },
           {
@@ -9049,7 +9049,7 @@
             }
           },
           "400": {
-            "description": "Bad request — featureDynastySlug (feature slug) is required",
+            "description": "Bad request — featureSlug is required",
             "content": {
               "application/json": {
                 "schema": {
@@ -9077,7 +9077,7 @@
           "Workflows"
         ],
         "summary": "Ranked workflows",
-        "description": "Workflows ranked by performance, scoped to the authenticated org. Proxied to features-service. featureDynastySlug (feature slug) and groupBy are required.",
+        "description": "Workflows ranked by performance, scoped to the authenticated org. Proxied to features-service. featureSlug and groupBy are required.",
         "security": [
           {
             "bearerAuth": []
@@ -9092,7 +9092,7 @@
             },
             "required": true,
             "description": "Feature slug (required).",
-            "name": "featureDynastySlug",
+            "name": "featureSlug",
             "in": "query"
           },
           {
@@ -9228,7 +9228,7 @@
           "Workflows"
         ],
         "summary": "Hero records",
-        "description": "Best cost-per-outcome records, scoped to the authenticated org. Proxied to features-service. featureDynastySlug (feature slug) and groupBy are required.",
+        "description": "Best cost-per-outcome records, scoped to the authenticated org. Proxied to features-service. featureSlug and groupBy are required.",
         "security": [
           {
             "bearerAuth": []
@@ -9243,7 +9243,7 @@
             },
             "required": true,
             "description": "Feature slug (required).",
-            "name": "featureDynastySlug",
+            "name": "featureSlug",
             "in": "query"
           },
           {
@@ -9329,7 +9329,7 @@
             }
           },
           "400": {
-            "description": "Bad request — featureDynastySlug (feature slug) is required",
+            "description": "Bad request — featureSlug is required",
             "content": {
               "application/json": {
                 "schema": {

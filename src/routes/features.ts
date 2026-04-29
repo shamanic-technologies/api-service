@@ -15,8 +15,8 @@ function buildParams(query: Record<string, unknown>, keys: string[]): URLSearchP
   return params;
 }
 
-const PUBLIC_RANKED_PARAMS = ["featureDynastySlug", "objective", "groupBy", "limit"];
-const PUBLIC_BEST_PARAMS = ["featureDynastySlug", "groupBy"];
+const PUBLIC_RANKED_PARAMS = ["featureSlug", "objective", "groupBy", "limit"];
+const PUBLIC_BEST_PARAMS = ["featureSlug", "groupBy"];
 
 // ── Public routes (no auth) ─────────────────────────────────────────────────
 
