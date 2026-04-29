@@ -6480,6 +6480,52 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/features/{featureSlug}/prefill",
+  tags: ["Features"],
+  summary: "Prefill feature inputs from brand data",
+  description:
+    "Calls brand-service to extract field values for the feature's inputs. Returns pre-filled values keyed by input key. " +
+    "Requires brandIds in the request body. Use ?format=text for flattened strings, ?format=full for structured values with per-brand breakdown. " +
+    "Proxied from features-service.",
+  security: authed,
+  request: {
+    params: z.object({ featureSlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature slug") }),
+    query: z.object({
+      format: z.enum(["text", "full"]).optional().describe("Response format: 'text' returns flattened strings, 'full' returns structured values with per-brand breakdown"),
+    }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            brandIds: z.array(z.string()).openapi({ example: ["brand-uuid-123"] }).describe("Non-empty array of brand UUIDs to prefill from"),
+          }).openapi("PrefillFeatureRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Pre-filled input values",
+      content: {
+        "application/json": {
+          schema: z.object({
+            slug: z.string(),
+            brandId: z.string(),
+            format: z.enum(["text", "full"]),
+            prefilled: z.record(z.unknown()),
+          }).openapi("PrefillFeatureResponse"),
+        },
+      },
+    },
+    400: { description: "Missing or invalid brandIds", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "get",
   path: "/v1/features/{featureSlug}/stats",
   tags: ["Features"],

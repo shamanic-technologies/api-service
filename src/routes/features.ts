@@ -161,6 +161,39 @@ router.get("/features/stats", authenticate, requireOrg, requireUser, async (req:
 });
 
 /**
+ * POST /v1/features/:slug/prefill
+ * Prefill feature form using brand data. Called by dashboard for "New Campaign".
+ */
+router.post("/features/:slug/prefill", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { brandIds, ...restBody } = req.body as { brandIds?: string[]; [k: string]: unknown };
+    if (!brandIds || !Array.isArray(brandIds) || brandIds.length === 0) {
+      return res.status(400).json({ error: "brandIds (non-empty string array) is required in the request body" });
+    }
+
+    const format = req.query.format;
+    const qs = format ? `?format=${encodeURIComponent(format as string)}` : "";
+    const headers: Record<string, string> = {
+      ...buildInternalHeaders(req),
+      "x-brand-id": brandIds.join(","),
+    };
+    const result = await callExternalService(
+      externalServices.features,
+      `/features/${encodeURIComponent(req.params.slug)}/prefill${qs}`,
+      {
+        method: "POST",
+        headers,
+        body: restBody,
+      },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Prefill feature error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to prefill feature" });
+  }
+});
+
+/**
  * GET /v1/features/:slug
  * Get a single feature by slug
  */
