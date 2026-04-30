@@ -46,6 +46,7 @@ import journalistsRoutes from "./routes/journalists.js";
 import articlesRoutes from "./routes/articles.js";
 import featuresRoutes from "./routes/features.js";
 import publicStatsRoutes from "./routes/public-stats.js";
+import adminRoutes from "./routes/admin.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
@@ -166,6 +167,7 @@ app.use(featuresRoutes);  // public features endpoints (no auth)
 app.use(publicStatsRoutes); // public stats endpoints (no auth)
 
 // Internal platform routes (API key only, no identity)
+app.use("/internal", adminRoutes);
 app.use("/internal", internalEmailsRoutes);
 app.use("/platform-chat", platformChatRoutes);
 app.use("/platform-keys", platformKeysRoutes);
