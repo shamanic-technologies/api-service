@@ -33,7 +33,7 @@ describe("leadsServed uses lead-service as source of truth (not runs-service)", 
     const statsStart = content.indexOf("GET /v1/campaigns/:id/stats");
     expect(statsStart).toBeGreaterThan(-1);
     const statsSection = content.slice(statsStart, statsStart + 5000);
-    expect(statsSection).toContain("stats.leadsServed = ls.served");
+    expect(statsSection).toContain("stats.leadsServed = ls.totalLeads");
   });
 
   it("batch-stats endpoint should no longer exist", () => {

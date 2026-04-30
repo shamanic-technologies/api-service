@@ -4777,10 +4777,22 @@
                 "contacted": {
                   "type": "boolean"
                 },
+                "sent": {
+                  "type": "boolean"
+                },
                 "delivered": {
                   "type": "boolean"
                 },
+                "opened": {
+                  "type": "boolean"
+                },
+                "clicked": {
+                  "type": "boolean"
+                },
                 "bounced": {
+                  "type": "boolean"
+                },
+                "unsubscribed": {
                   "type": "boolean"
                 },
                 "replied": {
@@ -4794,6 +4806,18 @@
                     "negative",
                     "neutral"
                   ]
+                },
+                "global": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "bounced": {
+                      "type": "boolean"
+                    },
+                    "unsubscribed": {
+                      "type": "boolean"
+                    }
+                  }
                 },
                 "createdAt": {
                   "type": "string",
@@ -4834,10 +4858,15 @@
                 "linkedinUrl",
                 "status",
                 "contacted",
+                "sent",
                 "delivered",
+                "opened",
+                "clicked",
                 "bounced",
+                "unsubscribed",
                 "replied",
                 "replyClassification",
+                "global",
                 "createdAt",
                 "enrichmentRunId",
                 "enrichmentRun"

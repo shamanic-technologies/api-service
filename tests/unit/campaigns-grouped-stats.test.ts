@@ -115,8 +115,8 @@ describe("GET /v1/campaigns/stats", () => {
       if (service.url === "http://mock-lead") {
         return Promise.resolve({
           groups: [
-            { key: "c1", served: 15, contacted: 10, buffered: 3, skipped: 1 },
-            { key: "c2", served: 30, contacted: 18, buffered: 5, skipped: 2 },
+            { key: "c1", totalLeads: 15, byOutreachStatus: { contacted: 10 }, buffered: 3, skipped: 1 },
+            { key: "c2", totalLeads: 30, byOutreachStatus: { contacted: 18 }, buffered: 5, skipped: 2 },
           ],
         });
       }
@@ -214,7 +214,7 @@ describe("GET /v1/campaigns/stats", () => {
       // Only lead-service responds
       if (service.url === "http://mock-lead") {
         return Promise.resolve({
-          groups: [{ key: "c1", served: 5, contacted: 3, buffered: 1, skipped: 0 }],
+          groups: [{ key: "c1", totalLeads: 5, byOutreachStatus: { contacted: 3 }, buffered: 1, skipped: 0 }],
         });
       }
       return Promise.reject(new Error("service down"));
