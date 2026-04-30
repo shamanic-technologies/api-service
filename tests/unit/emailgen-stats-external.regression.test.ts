@@ -113,7 +113,7 @@ describe("Campaign stats: emailsGenerated from content-generation service", () =
       }
       // Lead-service /orgs/stats
       if (service.url === "http://mock-lead" && path.startsWith("/orgs/stats")) {
-        return Promise.resolve({ served: 3, buffered: 0, skipped: 0 });
+        return Promise.resolve({ totalLeads: 3, byOutreachStatus: { contacted: 0 }, buffered: 0, skipped: 0 });
       }
       // Campaign-service budget
       if (path === "/stats/batch-budget") {
@@ -169,7 +169,7 @@ describe("Campaign stats: emailsGenerated from content-generation service", () =
         return Promise.reject(new Error("service unavailable"));
       }
       if (service.url === "http://mock-lead" && path.startsWith("/orgs/stats")) {
-        return Promise.resolve({ served: 2, buffered: 0, skipped: 0 });
+        return Promise.resolve({ totalLeads: 2, byOutreachStatus: { contacted: 0 }, buffered: 0, skipped: 0 });
       }
       if (path === "/stats/batch-budget") {
         return Promise.resolve({ results: {} });
