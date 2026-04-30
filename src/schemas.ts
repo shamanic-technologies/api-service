@@ -6569,16 +6569,39 @@ registry.registerPath({
   },
 });
 
+const BillingGrowthRowSchema = z.object({
+  period: z.string().describe("Period label (e.g. '2026-03' or '2026-W14')"),
+  credited_cents: z.number().int().describe("Total credits added in this period"),
+  consumed_cents: z.number().int().describe("Total credits consumed in this period"),
+  revenue_cents: z.number().int().describe("Actual Stripe payments (source=reload only, excludes welcome/promo credits)"),
+});
+
 registry.registerPath({
   method: "get",
   path: "/public/stats/billing",
   tags: ["Public Stats"],
   summary: "Public billing stats (no auth)",
   description:
-    "Returns total accounts, accounts with payment method, and credit balance/usage aggregates. " +
+    "Returns total accounts, accounts with payment method, credit balance/usage aggregates, " +
+    "and monthly/weekly growth breakdowns. " +
     "No authentication required. Proxied from billing-service.",
   responses: {
-    200: { description: "Billing stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicBillingStatsResponse") } } },
+    200: {
+      description: "Billing stats",
+      content: {
+        "application/json": {
+          schema: z.object({
+            totalAccounts: z.number().int(),
+            accountsWithPaymentMethod: z.number().int(),
+            totalCreditBalanceCents: z.number().int(),
+            totalCreditedCents: z.number().int(),
+            totalConsumedCents: z.number().int(),
+            monthlyGrowth: z.array(BillingGrowthRowSchema).describe("Monthly growth breakdown"),
+            weeklyGrowth: z.array(BillingGrowthRowSchema).describe("Weekly growth breakdown"),
+          }).openapi("PublicBillingStatsResponse"),
+        },
+      },
+    },
     502: { description: "Upstream error", content: errorContent },
   },
 });

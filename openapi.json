@@ -8887,7 +8887,94 @@
       },
       "PublicBillingStatsResponse": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "totalAccounts": {
+            "type": "integer"
+          },
+          "accountsWithPaymentMethod": {
+            "type": "integer"
+          },
+          "totalCreditBalanceCents": {
+            "type": "integer"
+          },
+          "totalCreditedCents": {
+            "type": "integer"
+          },
+          "totalConsumedCents": {
+            "type": "integer"
+          },
+          "monthlyGrowth": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "period": {
+                  "type": "string",
+                  "description": "Period label (e.g. '2026-03' or '2026-W14')"
+                },
+                "credited_cents": {
+                  "type": "integer",
+                  "description": "Total credits added in this period"
+                },
+                "consumed_cents": {
+                  "type": "integer",
+                  "description": "Total credits consumed in this period"
+                },
+                "revenue_cents": {
+                  "type": "integer",
+                  "description": "Actual Stripe payments (source=reload only, excludes welcome/promo credits)"
+                }
+              },
+              "required": [
+                "period",
+                "credited_cents",
+                "consumed_cents",
+                "revenue_cents"
+              ]
+            },
+            "description": "Monthly growth breakdown"
+          },
+          "weeklyGrowth": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "period": {
+                  "type": "string",
+                  "description": "Period label (e.g. '2026-03' or '2026-W14')"
+                },
+                "credited_cents": {
+                  "type": "integer",
+                  "description": "Total credits added in this period"
+                },
+                "consumed_cents": {
+                  "type": "integer",
+                  "description": "Total credits consumed in this period"
+                },
+                "revenue_cents": {
+                  "type": "integer",
+                  "description": "Actual Stripe payments (source=reload only, excludes welcome/promo credits)"
+                }
+              },
+              "required": [
+                "period",
+                "credited_cents",
+                "consumed_cents",
+                "revenue_cents"
+              ]
+            },
+            "description": "Weekly growth breakdown"
+          }
+        },
+        "required": [
+          "totalAccounts",
+          "accountsWithPaymentMethod",
+          "totalCreditBalanceCents",
+          "totalCreditedCents",
+          "totalConsumedCents",
+          "monthlyGrowth",
+          "weeklyGrowth"
+        ]
       },
       "PublicRunStatsResponse": {
         "type": "object",
@@ -29100,7 +29187,7 @@
           "Public Stats"
         ],
         "summary": "Public billing stats (no auth)",
-        "description": "Returns total accounts, accounts with payment method, and credit balance/usage aggregates. No authentication required. Proxied from billing-service.",
+        "description": "Returns total accounts, accounts with payment method, credit balance/usage aggregates, and monthly/weekly growth breakdowns. No authentication required. Proxied from billing-service.",
         "responses": {
           "200": {
             "description": "Billing stats",
