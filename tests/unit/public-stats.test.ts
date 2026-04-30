@@ -64,6 +64,14 @@ const MOCK_BILLING_STATS = {
   totalCreditBalanceCents: 450000,
   totalCreditedCents: 1200000,
   totalConsumedCents: 750000,
+  monthlyGrowth: [
+    { period: "2026-01", credited_cents: 200000, consumed_cents: 120000, revenue_cents: 80000 },
+    { period: "2026-02", credited_cents: 350000, consumed_cents: 210000, revenue_cents: 150000 },
+  ],
+  weeklyGrowth: [
+    { period: "2026-W14", credited_cents: 50000, consumed_cents: 30000, revenue_cents: 20000 },
+    { period: "2026-W15", credited_cents: 75000, consumed_cents: 48000, revenue_cents: 35000 },
+  ],
 };
 
 const MOCK_RUN_STATS = {
@@ -111,6 +119,22 @@ describe("GET /public/stats/billing", () => {
       { url: "http://mock-billing", apiKey: "k" },
       "/public/stats/billing",
     );
+  });
+
+  it("passes through monthlyGrowth and weeklyGrowth arrays", async () => {
+    mockCallExternalService.mockResolvedValueOnce(MOCK_BILLING_STATS);
+    const app = createApp();
+    const res = await request(app).get("/public/stats/billing");
+    expect(res.status).toBe(200);
+    expect(res.body.monthlyGrowth).toEqual(MOCK_BILLING_STATS.monthlyGrowth);
+    expect(res.body.weeklyGrowth).toEqual(MOCK_BILLING_STATS.weeklyGrowth);
+    expect(res.body.monthlyGrowth[0]).toEqual({
+      period: "2026-01",
+      credited_cents: 200000,
+      consumed_cents: 120000,
+      revenue_cents: 80000,
+    });
+    expect(res.body.weeklyGrowth).toHaveLength(2);
   });
 
   it("returns 502 when billing-service is down", async () => {
