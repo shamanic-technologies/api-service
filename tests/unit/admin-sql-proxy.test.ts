@@ -39,8 +39,8 @@ function createApp() {
 beforeEach(() => {
   vi.clearAllMocks();
   process.env.ADMIN_DISTRIBUTE_API_KEY = VALID_API_KEY;
-  process.env.ADMIN_DB_BRAND_SERVICE = "postgres://localhost/brand";
-  process.env.ADMIN_DB_RUNS_SERVICE = "postgres://localhost/runs";
+  process.env.BRAND_SERVICE_DATABASE_URL = "postgres://localhost/brand";
+  process.env.RUNS_SERVICE_DATABASE_URL = "postgres://localhost/runs";
 });
 
 describe("GET /internal/admin/services", () => {
