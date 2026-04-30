@@ -49,10 +49,16 @@ describe("Brand-level GET /leads route", () => {
 
   it("should read status fields directly from each lead object", () => {
     expect(content).toContain("raw.contacted");
+    expect(content).toContain("raw.sent");
     expect(content).toContain("raw.delivered");
+    expect(content).toContain("raw.opened");
+    expect(content).toContain("raw.clicked");
     expect(content).toContain("raw.bounced");
+    expect(content).toContain("raw.unsubscribed");
     expect(content).toContain("raw.replied");
     expect(content).toContain("raw.replyClassification");
+    expect(content).toContain("raw.emailStatus");
+    expect(content).toContain("raw.global");
   });
 
   it("should flatten enrichment data into each lead", () => {

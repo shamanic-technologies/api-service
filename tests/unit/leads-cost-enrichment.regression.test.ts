@@ -29,11 +29,11 @@ describe("leads endpoint cost enrichment", () => {
       costs: [{ costName: "apollo-enrichment-credit", quantity: "1", unitCostInUsdCents: "5", totalCostInUsdCents: "5" }],
     });
 
-    // Raw lead-service response shape (with inline delivery status fields)
+    // Raw lead-service response shape (with inline delivery status fields + new fields)
     const rawLeads = [
-      { id: "lead-1", email: "john@example.com", apolloPersonId: "5f2a1234", journalistId: null, outletId: null, runId: "run-1", servedAt: "2025-01-01T00:00:00Z", contacted: true, delivered: true, bounced: false, replied: false, replyClassification: null, enrichment: { firstName: "John", lastName: "Doe", title: "CTO", linkedinUrl: null, organizationName: "Acme", organizationDomain: "acme.com", organizationIndustry: "Tech", organizationSize: "50", emailStatus: "verified" } },
-      { id: "lead-2", email: "jane@example.com", apolloPersonId: null, journalistId: "journalist-uuid-1", outletId: "outlet-uuid-1", runId: null, servedAt: "2025-01-02T00:00:00Z", contacted: false, delivered: false, bounced: false, replied: false, replyClassification: null, enrichment: null },
-      { id: "lead-3", email: "bob@example.com", apolloPersonId: "5f2b5678", journalistId: null, outletId: null, runId: "run-missing", servedAt: "2025-01-03T00:00:00Z", contacted: false, delivered: false, bounced: false, replied: false, replyClassification: null, enrichment: { firstName: "Bob", lastName: "Smith", title: null, linkedinUrl: null, organizationName: null, organizationDomain: null, organizationIndustry: null, organizationSize: null, emailStatus: null } },
+      { id: "lead-1", email: "john@example.com", apolloPersonId: "5f2a1234", journalistId: null, outletId: null, runId: "run-1", servedAt: "2025-01-01T00:00:00Z", emailStatus: "verified", contacted: true, sent: true, delivered: true, opened: true, clicked: false, bounced: false, unsubscribed: false, replied: false, replyClassification: null, global: { bounced: false, unsubscribed: false }, enrichment: { firstName: "John", lastName: "Doe", title: "CTO", linkedinUrl: null, organizationName: "Acme", organizationDomain: "acme.com", organizationIndustry: "Tech", organizationSize: "50" } },
+      { id: "lead-2", email: "jane@example.com", apolloPersonId: null, journalistId: "journalist-uuid-1", outletId: "outlet-uuid-1", runId: null, servedAt: "2025-01-02T00:00:00Z", emailStatus: null, contacted: false, sent: false, delivered: false, opened: false, clicked: false, bounced: false, unsubscribed: false, replied: false, replyClassification: null, global: null, enrichment: null },
+      { id: "lead-3", email: "bob@example.com", apolloPersonId: "5f2b5678", journalistId: null, outletId: null, runId: "run-missing", servedAt: "2025-01-03T00:00:00Z", emailStatus: null, contacted: false, sent: false, delivered: false, opened: false, clicked: false, bounced: false, unsubscribed: false, replied: false, replyClassification: null, global: null, enrichment: { firstName: "Bob", lastName: "Smith", title: null, linkedinUrl: null, organizationName: null, organizationDomain: null, organizationIndustry: null, organizationSize: null } },
     ];
 
     // Step 1: Flatten enrichment + read delivery status directly (mirrors leads.ts logic)
@@ -47,7 +47,7 @@ describe("leads endpoint cost enrichment", () => {
         outletId: raw.outletId ?? null,
         firstName: enrichment.firstName ?? null,
         lastName: enrichment.lastName ?? null,
-        emailStatus: enrichment.emailStatus ?? null,
+        emailStatus: (raw.emailStatus as string) ?? null,
         title: enrichment.title ?? null,
         organizationName: enrichment.organizationName ?? null,
         organizationDomain: enrichment.organizationDomain ?? null,
@@ -56,10 +56,15 @@ describe("leads endpoint cost enrichment", () => {
         linkedinUrl: enrichment.linkedinUrl ?? null,
         status: raw.contacted ? "contacted" : "served",
         contacted: raw.contacted as boolean,
+        sent: raw.sent as boolean,
         delivered: raw.delivered as boolean,
+        opened: raw.opened as boolean,
+        clicked: raw.clicked as boolean,
         bounced: raw.bounced as boolean,
+        unsubscribed: raw.unsubscribed as boolean,
         replied: raw.replied as boolean,
         replyClassification: (raw.replyClassification as string) ?? null,
+        global: (raw.global as { bounced?: boolean; unsubscribed?: boolean }) ?? null,
         createdAt: raw.servedAt ?? null,
         enrichmentRunId: raw.runId ?? null,
       };

@@ -278,7 +278,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
         console.warn("[campaigns/stats] email-gateway groupBy failed:", (err as Error).message);
         return null;
       }),
-      callExternalService<{ groups: Array<{ key: string; served: number; contacted?: number; buffered: number; skipped: number }> }>(
+      callExternalService<{ groups: Array<{ key: string; totalLeads: number; byOutreachStatus?: { contacted?: number }; buffered: number; skipped: number }> }>(
         externalServices.lead,
         `/orgs/stats?${leadParams}`,
         { headers: internalHeaders },
@@ -319,11 +319,11 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
       s.emailStats = b?.emailStats ?? EMPTY_DELIVERY_STATS.emailStats;
     }
 
-    // Lead stats
+    // Lead stats (new shape: totalLeads, byOutreachStatus.contacted, buffered, skipped)
     for (const g of leadGroups?.groups ?? []) {
       const s = ensure(g.key);
-      s.leadsServed = g.served;
-      s.leadsContacted = g.contacted ?? 0;
+      s.leadsServed = g.totalLeads;
+      s.leadsContacted = g.byOutreachStatus?.contacted ?? 0;
       s.leadsBuffered = g.buffered;
       s.leadsSkipped = g.skipped;
     }
@@ -488,14 +488,13 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
 
     const stats: Record<string, any> = { campaignId: id };
 
-    // Lead stats from lead-service: { served, contacted, buffered, skipped, apollo }
+    // Lead stats from lead-service (new shape): { totalLeads, byOutreachStatus, buffered, skipped, claimed }
     if (leadStats) {
-      const ls = leadStats as { served: number; contacted: number; buffered: number; skipped: number; apollo?: { enrichedLeadsCount: number; searchCount: number; fetchedPeopleCount: number; totalMatchingPeople: number } };
-      stats.leadsServed = ls.served;
-      stats.leadsContacted = ls.contacted ?? 0;
+      const ls = leadStats as { totalLeads: number; byOutreachStatus?: { contacted?: number }; buffered: number; skipped: number };
+      stats.leadsServed = ls.totalLeads;
+      stats.leadsContacted = ls.byOutreachStatus?.contacted ?? 0;
       stats.leadsBuffered = ls.buffered;
       stats.leadsSkipped = ls.skipped;
-      if (ls.apollo) stats.apollo = ls.apollo;
     } else {
       stats.leadsServed = 0;
       stats.leadsContacted = 0;
@@ -652,7 +651,7 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
           `/campaigns/${id}`,
           { headers: internalHeaders }
         ).catch(() => null),
-        callExternalService<{ served: number; buffered: number; skipped: number }>(
+        callExternalService<{ totalLeads: number; buffered: number; skipped: number }>(
           externalServices.lead,
           `/orgs/stats?campaignId=${id}`,
           { headers: internalHeaders }
@@ -668,7 +667,7 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
       if (closed) return;
 
       const currentStatus = campaign?.campaign?.status ?? "";
-      const currentLeads = leadStats?.served ?? 0;
+      const currentLeads = leadStats?.totalLeads ?? 0;
       const eg = (emailgenStats as any)?.stats || emailgenStats;
       const currentEmails = eg?.emailsGenerated ?? 0;
 
