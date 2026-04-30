@@ -6613,3 +6613,83 @@ registry.registerPath({
     500: { description: "Internal error", content: errorContent },
   },
 });
+
+// ADMIN — read-only SQL proxy
+// ---------------------------------------------------------------------------
+
+const AdminServiceSchema = z.object({
+  name: z.string().describe("Service name"),
+  available: z.boolean().describe("Whether the DB connection string is configured"),
+}).openapi("AdminService");
+
+const AdminColumnSchema = z.object({
+  name: z.string().describe("Column name"),
+  type: z.string().describe("PostgreSQL data type"),
+  nullable: z.boolean().describe("Whether the column allows NULL"),
+  default: z.string().nullable().describe("Default value expression"),
+}).openapi("AdminColumn");
+
+registry.registerPath({
+  method: "get",
+  path: "/internal/admin/services",
+  tags: ["Internal"],
+  summary: "List available admin DB services",
+  description: "Returns the list of backend services whose databases can be queried.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Service list", content: { "application/json": { schema: z.object({ services: z.array(AdminServiceSchema) }).openapi("AdminServicesResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/internal/admin/services/{name}/tables",
+  tags: ["Internal"],
+  summary: "List tables for a service DB",
+  description: "Returns public schema table names from information_schema.",
+  security: platformAuth,
+  request: { params: z.object({ name: z.string().describe("Service name") }) },
+  responses: {
+    200: { description: "Table list", content: { "application/json": { schema: z.object({ tables: z.array(z.string()) }).openapi("AdminTablesResponse") } } },
+    404: { description: "Service not found or DB not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/internal/admin/services/{name}/tables/{table}/schema",
+  tags: ["Internal"],
+  summary: "Get table column schema",
+  description: "Returns column names, types, nullability, and defaults from information_schema.",
+  security: platformAuth,
+  request: { params: z.object({ name: z.string().describe("Service name"), table: z.string().describe("Table name") }) },
+  responses: {
+    200: { description: "Column schema", content: { "application/json": { schema: z.object({ table: z.string(), columns: z.array(AdminColumnSchema) }).openapi("AdminTableSchemaResponse") } } },
+    404: { description: "Service or table not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/internal/admin/services/{name}/tables/{table}/rows",
+  tags: ["Internal"],
+  summary: "Get paginated table rows",
+  description: "Returns rows with sorting and optional ILIKE search across text columns.",
+  security: platformAuth,
+  request: {
+    params: z.object({ name: z.string().describe("Service name"), table: z.string().describe("Table name") }),
+    query: z.object({
+      limit: z.string().optional().describe("Max rows to return (default 50)"),
+      offset: z.string().optional().describe("Rows to skip (default 0)"),
+      sort: z.string().optional().describe("Column name to sort by (default created_at)"),
+      order: z.enum(["asc", "desc"]).optional().describe("Sort order (default desc)"),
+      search: z.string().optional().describe("ILIKE search across all text columns"),
+    }),
+  },
+  responses: {
+    200: { description: "Paginated rows", content: { "application/json": { schema: z.object({ rows: z.array(z.object({}).passthrough()), total: z.number(), limit: z.number(), offset: z.number() }).openapi("AdminTableRowsResponse") } } },
+    400: { description: "Invalid sort column or order", content: errorContent },
+    404: { description: "Service or table not found", content: errorContent },
+  },
+});
