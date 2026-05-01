@@ -71,9 +71,12 @@ describe("GET /internal/admin/services", () => {
 });
 
 describe("GET /internal/admin/services/:name/tables", () => {
-  it("returns table names for a valid service", async () => {
+  it("returns table objects with name and rowCount", async () => {
     mockQuery.mockResolvedValueOnce({
-      rows: [{ table_name: "brands" }, { table_name: "extractions" }],
+      rows: [
+        { table_name: "brands", row_count: "42" },
+        { table_name: "extractions", row_count: "7" },
+      ],
     });
 
     const app = createApp();
@@ -82,7 +85,10 @@ describe("GET /internal/admin/services/:name/tables", () => {
       .set("X-API-Key", VALID_API_KEY);
 
     expect(res.status).toBe(200);
-    expect(res.body.tables).toEqual(["brands", "extractions"]);
+    expect(res.body.tables).toEqual([
+      { name: "brands", rowCount: 42 },
+      { name: "extractions", rowCount: 7 },
+    ]);
   });
 
   it("returns 404 for non-existent service", async () => {
@@ -97,12 +103,12 @@ describe("GET /internal/admin/services/:name/tables", () => {
 });
 
 describe("GET /internal/admin/services/:name/tables/:table/schema", () => {
-  it("returns column schema for a valid table", async () => {
+  it("returns column schema with isPrimaryKey", async () => {
     mockQuery.mockResolvedValueOnce({ rowCount: 1, rows: [{ "?column?": 1 }] });
     mockQuery.mockResolvedValueOnce({
       rows: [
-        { column_name: "id", data_type: "uuid", is_nullable: "NO", column_default: "gen_random_uuid()" },
-        { column_name: "name", data_type: "text", is_nullable: "YES", column_default: null },
+        { column_name: "id", data_type: "uuid", is_nullable: "NO", is_primary_key: true },
+        { column_name: "name", data_type: "text", is_nullable: "YES", is_primary_key: false },
       ],
     });
 
@@ -112,13 +118,18 @@ describe("GET /internal/admin/services/:name/tables/:table/schema", () => {
       .set("X-API-Key", VALID_API_KEY);
 
     expect(res.status).toBe(200);
-    expect(res.body.table).toBe("brands");
     expect(res.body.columns).toHaveLength(2);
     expect(res.body.columns[0]).toEqual({
       name: "id",
       type: "uuid",
       nullable: false,
-      default: "gen_random_uuid()",
+      isPrimaryKey: true,
+    });
+    expect(res.body.columns[1]).toEqual({
+      name: "name",
+      type: "text",
+      nullable: true,
+      isPrimaryKey: false,
     });
   });
 
