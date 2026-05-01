@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, externalServices } from "../lib/service-client.js";
+import { authenticate, requireOrg, requireUser, AuthenticatedRequest, authenticatePlatform } from "../middleware/auth.js";
+import { callExternalService, externalServices, streamExternalService } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
@@ -67,6 +67,85 @@ router.get("/runs/stats/costs", authenticate, requireOrg, requireUser, async (re
   } catch (error: any) {
     console.error("Get runs stats costs error:", error);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get runs stats" });
+  }
+});
+
+/**
+ * GET /v1/events
+ * Cross-run event listing from runs-service. Admin-only (authenticatePlatform).
+ * Query params forwarded: service, orgId, brandId, campaignId, limit, offset
+ */
+router.get("/events", authenticatePlatform, async (req: AuthenticatedRequest, res) => {
+  try {
+    const qs = new URLSearchParams();
+    for (const [key, val] of Object.entries(req.query)) {
+      if (val != null) qs.set(key, String(val));
+    }
+
+    const result = await callExternalService(
+      externalServices.runs,
+      `/v1/events?${qs.toString()}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] List events error:", error);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to list events" });
+  }
+});
+
+/**
+ * GET /v1/runs/:id/events
+ * List events for a specific run. Admin-only.
+ */
+router.get("/runs/:id/events", authenticatePlatform, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.runs,
+      `/v1/runs/${req.params.id}/events`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Get run events error:", error);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get run events" });
+  }
+});
+
+/**
+ * GET /v1/runs/:id/events/stream
+ * SSE stream for run events. Admin-only.
+ */
+router.get("/runs/:id/events/stream", authenticatePlatform, async (req: AuthenticatedRequest, res) => {
+  try {
+    await streamExternalService(externalServices.runs, `/v1/runs/${req.params.id}/events/stream`, {
+      method: "GET",
+      headers: buildInternalHeaders(req),
+      expressRes: res,
+    });
+  } catch (error: any) {
+    console.error("[api-service] Stream run events error:", error);
+    if (!res.headersSent) {
+      res.status(error.statusCode || 500).json({ error: error.message || "Failed to stream events" });
+    }
+  }
+});
+
+/**
+ * POST /v1/runs/:id/events
+ * Create an event for a run. Service-to-service (API key auth).
+ */
+router.post("/runs/:id/events", authenticate, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.runs,
+      `/v1/runs/${req.params.id}/events`,
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) },
+    );
+    res.status(201).json(result);
+  } catch (error: any) {
+    console.error("[api-service] Create run event error:", error);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to create event" });
   }
 });
 
