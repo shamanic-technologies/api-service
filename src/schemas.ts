@@ -4931,25 +4931,31 @@ registry.registerPath({
 // BILLING
 // ===================================================================
 
+// billing-service stores cents as numeric(16,10) and returns full-precision
+// decimal strings (e.g. "100.4200000000"). Inbound endpoints accept either
+// integer or decimal string. See billing-service PR #83.
+const DECIMAL_CENTS_REGEX = /^\d+(\.\d+)?$/;
+const decimalCentsString = z.string().regex(DECIMAL_CENTS_REGEX);
+const inboundCents = z.union([z.number(), decimalCentsString]);
+
 export const ConfigureAutoReloadRequestSchema = z
   .object({
-    reload_amount_cents: z
-      .number()
-      .int()
-      .positive()
-      .describe("Auto-reload amount in cents"),
-    reload_threshold_cents: z
-      .number()
-      .int()
-      .min(0)
+    reload_amount_cents: inboundCents.describe(
+      "Auto-reload amount in cents (integer or decimal string)",
+    ),
+    reload_threshold_cents: inboundCents
       .optional()
-      .describe("Balance threshold in cents that triggers auto-reload"),
+      .describe(
+        "Balance threshold in cents that triggers auto-reload (integer or decimal string)",
+      ),
   })
   .openapi("ConfigureAutoReloadRequest");
 
 export const DeductCreditsRequestSchema = z
   .object({
-    amount_cents: z.number().int().positive().describe("Amount to deduct in cents"),
+    amount_cents: inboundCents.describe(
+      "Amount to deduct in cents (integer or decimal string for fractional cents)",
+    ),
     description: z.string().min(1).describe("Reason for the deduction"),
     user_id: z.string().uuid().optional().describe("User ID"),
   })
@@ -4959,11 +4965,9 @@ export const CreateCheckoutSessionRequestSchema = z
   .object({
     success_url: z.string().url().describe("URL to redirect after successful payment"),
     cancel_url: z.string().url().describe("URL to redirect on cancellation"),
-    reload_amount_cents: z
-      .number()
-      .int()
-      .positive()
-      .describe("Amount to reload in cents"),
+    reload_amount_cents: inboundCents.describe(
+      "Amount to reload in cents (integer or decimal string)",
+    ),
   })
   .openapi("CreateCheckoutSessionRequest");
 
@@ -4988,11 +4992,11 @@ registry.registerPath({
           schema: z.object({
             id: z.string().describe("Account ID"),
             orgId: z.string().describe("Organization ID"),
-            creditBalanceCents: z.number().describe("Current credit balance in cents"),
+            creditBalanceCents: decimalCentsString.describe("Current credit balance in cents (decimal string, full precision)"),
             hasAutoReload: z.boolean().describe("Whether auto-reload is enabled (true when payment method + reload config are both set)"),
             hasPaymentMethod: z.boolean().describe("Whether a payment method is on file"),
-            reloadAmountCents: z.number().nullable().describe("Auto-reload amount in cents (null if not configured)"),
-            reloadThresholdCents: z.number().nullable().describe("Balance threshold in cents that triggers auto-reload (null if not configured)"),
+            reloadAmountCents: decimalCentsString.nullable().describe("Auto-reload amount in cents (decimal string, null if not configured)"),
+            reloadThresholdCents: decimalCentsString.nullable().describe("Balance threshold in cents that triggers auto-reload (decimal string, null if not configured)"),
             createdAt: z.string().describe("ISO timestamp"),
           }).openapi("BillingAccountResponse"),
         },
@@ -5017,7 +5021,7 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z.object({
-            balance_cents: z.number().describe("Current balance in cents"),
+            balance_cents: decimalCentsString.describe("Current balance in cents (decimal string, full precision)"),
             depleted: z.boolean().describe("True if balance is zero or negative"),
           }).openapi("BalanceResponse"),
         },
@@ -5044,7 +5048,7 @@ registry.registerPath({
             transactions: z.array(z.object({
               id: z.string().describe("Transaction ID"),
               type: z.string().describe("Transaction type (e.g. 'credit', 'debit')"),
-              amountCents: z.number().describe("Amount in cents"),
+              amountCents: decimalCentsString.describe("Amount in cents (decimal string, full precision)"),
               description: z.string().describe("Transaction description"),
               createdAt: z.string().describe("ISO timestamp"),
             })),
@@ -5079,11 +5083,11 @@ registry.registerPath({
           schema: z.object({
             id: z.string().describe("Account ID"),
             orgId: z.string().describe("Organization ID"),
-            creditBalanceCents: z.number().describe("Current credit balance in cents"),
+            creditBalanceCents: decimalCentsString.describe("Current credit balance in cents (decimal string, full precision)"),
             hasAutoReload: z.boolean().describe("Whether auto-reload is enabled"),
             hasPaymentMethod: z.boolean().describe("Whether a payment method is on file"),
-            reloadAmountCents: z.number().nullable().describe("Auto-reload amount in cents"),
-            reloadThresholdCents: z.number().nullable().describe("Balance threshold in cents that triggers auto-reload"),
+            reloadAmountCents: decimalCentsString.nullable().describe("Auto-reload amount in cents (decimal string)"),
+            reloadThresholdCents: decimalCentsString.nullable().describe("Balance threshold in cents that triggers auto-reload (decimal string)"),
             createdAt: z.string().describe("ISO timestamp"),
           }).openapi("ConfigureAutoReloadResponse"),
         },
@@ -5110,11 +5114,11 @@ registry.registerPath({
           schema: z.object({
             id: z.string().describe("Account ID"),
             orgId: z.string().describe("Organization ID"),
-            creditBalanceCents: z.number().describe("Current credit balance in cents"),
+            creditBalanceCents: decimalCentsString.describe("Current credit balance in cents (decimal string, full precision)"),
             hasAutoReload: z.boolean().describe("Whether auto-reload is enabled"),
             hasPaymentMethod: z.boolean().describe("Whether a payment method is on file"),
-            reloadAmountCents: z.number().nullable().describe("Auto-reload amount in cents"),
-            reloadThresholdCents: z.number().nullable().describe("Balance threshold in cents that triggers auto-reload"),
+            reloadAmountCents: decimalCentsString.nullable().describe("Auto-reload amount in cents (decimal string)"),
+            reloadThresholdCents: decimalCentsString.nullable().describe("Balance threshold in cents that triggers auto-reload (decimal string)"),
             createdAt: z.string().describe("ISO timestamp"),
           }).openapi("DisableAutoReloadResponse"),
         },
@@ -5146,7 +5150,7 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             success: z.boolean().describe("Whether the deduction succeeded"),
-            balance_cents: z.number().describe("Balance after deduction"),
+            balance_cents: decimalCentsString.describe("Balance after deduction (decimal string, full precision)"),
             depleted: z.boolean().describe("True if balance is zero or negative after deduction"),
           }).openapi("DeductCreditsResponse"),
         },
@@ -6579,9 +6583,9 @@ registry.registerPath({
 
 const BillingGrowthRowSchema = z.object({
   period: z.string().describe("Period label (e.g. '2026-03' or '2026-W14')"),
-  credited_cents: z.number().int().describe("Total credits added in this period"),
-  consumed_cents: z.number().int().describe("Total credits consumed in this period"),
-  revenue_cents: z.number().int().describe("Actual Stripe payments (source=reload only, excludes welcome/promo credits)"),
+  credited_cents: decimalCentsString.describe("Total credits added in this period (decimal string, full precision)"),
+  consumed_cents: decimalCentsString.describe("Total credits consumed in this period (decimal string, full precision)"),
+  revenue_cents: decimalCentsString.describe("Actual Stripe payments (source=reload only, excludes welcome/promo credits) (decimal string, full precision)"),
 });
 
 registry.registerPath({
@@ -6601,9 +6605,9 @@ registry.registerPath({
           schema: z.object({
             totalAccounts: z.number().int(),
             accountsWithPaymentMethod: z.number().int(),
-            totalCreditBalanceCents: z.number().int(),
-            totalCreditedCents: z.number().int(),
-            totalConsumedCents: z.number().int(),
+            totalCreditBalanceCents: decimalCentsString.describe("Total credit balance across all accounts (decimal string, full precision)"),
+            totalCreditedCents: decimalCentsString.describe("Total credits added across all accounts (decimal string, full precision)"),
+            totalConsumedCents: decimalCentsString.describe("Total credits consumed across all accounts (decimal string, full precision)"),
             monthlyGrowth: z.array(BillingGrowthRowSchema).describe("Monthly growth breakdown"),
             weeklyGrowth: z.array(BillingGrowthRowSchema).describe("Weekly growth breakdown"),
           }).openapi("PublicBillingStatsResponse"),

@@ -7242,8 +7242,9 @@
             "description": "Organization ID"
           },
           "creditBalanceCents": {
-            "type": "number",
-            "description": "Current credit balance in cents"
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Current credit balance in cents (decimal string, full precision)"
           },
           "hasAutoReload": {
             "type": "boolean",
@@ -7254,14 +7255,16 @@
             "description": "Whether a payment method is on file"
           },
           "reloadAmountCents": {
-            "type": "number",
+            "type": "string",
             "nullable": true,
-            "description": "Auto-reload amount in cents (null if not configured)"
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Auto-reload amount in cents (decimal string, null if not configured)"
           },
           "reloadThresholdCents": {
-            "type": "number",
+            "type": "string",
             "nullable": true,
-            "description": "Balance threshold in cents that triggers auto-reload (null if not configured)"
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Balance threshold in cents that triggers auto-reload (decimal string, null if not configured)"
           },
           "createdAt": {
             "type": "string",
@@ -7283,8 +7286,9 @@
         "type": "object",
         "properties": {
           "balance_cents": {
-            "type": "number",
-            "description": "Current balance in cents"
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Current balance in cents (decimal string, full precision)"
           },
           "depleted": {
             "type": "boolean",
@@ -7313,8 +7317,9 @@
                   "description": "Transaction type (e.g. 'credit', 'debit')"
                 },
                 "amountCents": {
-                  "type": "number",
-                  "description": "Amount in cents"
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+)?$",
+                  "description": "Amount in cents (decimal string, full precision)"
                 },
                 "description": {
                   "type": "string",
@@ -7351,8 +7356,9 @@
             "description": "Organization ID"
           },
           "creditBalanceCents": {
-            "type": "number",
-            "description": "Current credit balance in cents"
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Current credit balance in cents (decimal string, full precision)"
           },
           "hasAutoReload": {
             "type": "boolean",
@@ -7363,14 +7369,16 @@
             "description": "Whether a payment method is on file"
           },
           "reloadAmountCents": {
-            "type": "number",
+            "type": "string",
             "nullable": true,
-            "description": "Auto-reload amount in cents"
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Auto-reload amount in cents (decimal string)"
           },
           "reloadThresholdCents": {
-            "type": "number",
+            "type": "string",
             "nullable": true,
-            "description": "Balance threshold in cents that triggers auto-reload"
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Balance threshold in cents that triggers auto-reload (decimal string)"
           },
           "createdAt": {
             "type": "string",
@@ -7392,15 +7400,28 @@
         "type": "object",
         "properties": {
           "reload_amount_cents": {
-            "type": "integer",
-            "minimum": 0,
-            "exclusiveMinimum": true,
-            "description": "Auto-reload amount in cents"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              }
+            ],
+            "description": "Auto-reload amount in cents (integer or decimal string)"
           },
           "reload_threshold_cents": {
-            "type": "integer",
-            "minimum": 0,
-            "description": "Balance threshold in cents that triggers auto-reload"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              }
+            ],
+            "description": "Balance threshold in cents that triggers auto-reload (integer or decimal string)"
           }
         },
         "required": [
@@ -7419,8 +7440,9 @@
             "description": "Organization ID"
           },
           "creditBalanceCents": {
-            "type": "number",
-            "description": "Current credit balance in cents"
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Current credit balance in cents (decimal string, full precision)"
           },
           "hasAutoReload": {
             "type": "boolean",
@@ -7431,14 +7453,16 @@
             "description": "Whether a payment method is on file"
           },
           "reloadAmountCents": {
-            "type": "number",
+            "type": "string",
             "nullable": true,
-            "description": "Auto-reload amount in cents"
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Auto-reload amount in cents (decimal string)"
           },
           "reloadThresholdCents": {
-            "type": "number",
+            "type": "string",
             "nullable": true,
-            "description": "Balance threshold in cents that triggers auto-reload"
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Balance threshold in cents that triggers auto-reload (decimal string)"
           },
           "createdAt": {
             "type": "string",
@@ -7464,8 +7488,9 @@
             "description": "Whether the deduction succeeded"
           },
           "balance_cents": {
-            "type": "number",
-            "description": "Balance after deduction"
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Balance after deduction (decimal string, full precision)"
           },
           "depleted": {
             "type": "boolean",
@@ -7482,10 +7507,16 @@
         "type": "object",
         "properties": {
           "amount_cents": {
-            "type": "integer",
-            "minimum": 0,
-            "exclusiveMinimum": true,
-            "description": "Amount to deduct in cents"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              }
+            ],
+            "description": "Amount to deduct in cents (integer or decimal string for fractional cents)"
           },
           "description": {
             "type": "string",
@@ -7534,10 +7565,16 @@
             "description": "URL to redirect on cancellation"
           },
           "reload_amount_cents": {
-            "type": "integer",
-            "minimum": 0,
-            "exclusiveMinimum": true,
-            "description": "Amount to reload in cents"
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              }
+            ],
+            "description": "Amount to reload in cents (integer or decimal string)"
           }
         },
         "required": [
@@ -8924,13 +8961,19 @@
             "type": "integer"
           },
           "totalCreditBalanceCents": {
-            "type": "integer"
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Total credit balance across all accounts (decimal string, full precision)"
           },
           "totalCreditedCents": {
-            "type": "integer"
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Total credits added across all accounts (decimal string, full precision)"
           },
           "totalConsumedCents": {
-            "type": "integer"
+            "type": "string",
+            "pattern": "^\\d+(\\.\\d+)?$",
+            "description": "Total credits consumed across all accounts (decimal string, full precision)"
           },
           "monthlyGrowth": {
             "type": "array",
@@ -8942,16 +8985,19 @@
                   "description": "Period label (e.g. '2026-03' or '2026-W14')"
                 },
                 "credited_cents": {
-                  "type": "integer",
-                  "description": "Total credits added in this period"
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+)?$",
+                  "description": "Total credits added in this period (decimal string, full precision)"
                 },
                 "consumed_cents": {
-                  "type": "integer",
-                  "description": "Total credits consumed in this period"
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+)?$",
+                  "description": "Total credits consumed in this period (decimal string, full precision)"
                 },
                 "revenue_cents": {
-                  "type": "integer",
-                  "description": "Actual Stripe payments (source=reload only, excludes welcome/promo credits)"
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+)?$",
+                  "description": "Actual Stripe payments (source=reload only, excludes welcome/promo credits) (decimal string, full precision)"
                 }
               },
               "required": [
@@ -8973,16 +9019,19 @@
                   "description": "Period label (e.g. '2026-03' or '2026-W14')"
                 },
                 "credited_cents": {
-                  "type": "integer",
-                  "description": "Total credits added in this period"
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+)?$",
+                  "description": "Total credits added in this period (decimal string, full precision)"
                 },
                 "consumed_cents": {
-                  "type": "integer",
-                  "description": "Total credits consumed in this period"
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+)?$",
+                  "description": "Total credits consumed in this period (decimal string, full precision)"
                 },
                 "revenue_cents": {
-                  "type": "integer",
-                  "description": "Actual Stripe payments (source=reload only, excludes welcome/promo credits)"
+                  "type": "string",
+                  "pattern": "^\\d+(\\.\\d+)?$",
+                  "description": "Actual Stripe payments (source=reload only, excludes welcome/promo credits) (decimal string, full precision)"
                 }
               },
               "required": [
