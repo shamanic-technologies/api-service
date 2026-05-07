@@ -3931,7 +3931,7 @@ export const WorkflowStyleSchema = z
   })
   .openapi("WorkflowStyle");
 
-export const GenerateWorkflowRequestSchema = z
+export const CreateWorkflowRequestSchema = z
   .object({
     featureSlug: z
       .string()
@@ -3958,52 +3958,107 @@ export const GenerateWorkflowRequestSchema = z
       "Optional style configuration. When provided, the workflow is generated in the style of an industry expert or brand."
     ),
   })
-  .openapi("GenerateWorkflowRequest");
+  .openapi("CreateWorkflowRequest");
+
+export const UpgradeWorkflowRequestSchema = z
+  .object({
+    workflowSlug: z
+      .string()
+      .min(1)
+      .describe("Slug of the existing workflow to upgrade. Upgrade stays within the same dynasty."),
+    description: z
+      .string()
+      .min(10)
+      .describe(
+        "Natural language description of the upgrade. Describe what should change relative to the current workflow."
+      ),
+    hints: z
+      .array(z.string())
+      .optional()
+      .describe("Optional free-form hints to guide the upgrade."),
+  })
+  .openapi("UpgradeWorkflowRequest");
+
+const generateWorkflowResponse = z
+  .object({
+    workflow: z.object({
+      id: z.string().describe("Workflow ID"),
+      name: z.string().describe("Auto-generated workflow slug"),
+      featureSlug: z.string().describe("Feature slug this workflow belongs to"),
+      signature: z.string().describe("SHA-256 hash of the canonical DAG"),
+      signatureName: z.string().describe("Human-readable name for this DAG variant"),
+      action: z.enum(["created", "updated"]).describe("Whether the workflow was created or updated"),
+      humanId: z.string().nullable().describe("Human ID if styled after an expert"),
+      styleName: z.string().nullable().describe("Base style name for versioning (e.g. 'hormozi')"),
+    }),
+    dag: z.object({
+      nodes: z.array(z.any()).describe("DAG nodes"),
+      edges: z.array(z.any()).describe("DAG edges"),
+    }),
+    generatedDescription: z.string().describe("AI-generated description of the workflow"),
+  });
 
 registry.registerPath({
   method: "post",
-  path: "/v1/workflows/generate",
+  path: "/v1/workflows/create",
   tags: ["Workflows"],
-  summary: "Generate a workflow DAG",
+  summary: "Create a workflow dynasty",
   description:
-    "Uses AI to generate a workflow DAG from a natural language description. The generated workflow is validated and deployed automatically.",
+    "Uses AI to generate a new workflow DAG from a natural language description. The generated workflow is validated and deployed as a new dynasty.",
   security: authed,
   request: {
     body: {
       content: {
-        "application/json": { schema: GenerateWorkflowRequestSchema },
+        "application/json": { schema: CreateWorkflowRequestSchema },
       },
     },
   },
   responses: {
     200: {
-      description: "Generated and deployed workflow",
+      description: "Created and deployed workflow",
       content: {
         "application/json": {
-          schema: z
-            .object({
-              workflow: z.object({
-                id: z.string().describe("Workflow ID"),
-                name: z.string().describe("Auto-generated workflow slug"),
-                featureSlug: z.string().describe("Feature slug this workflow belongs to"),
-                signature: z.string().describe("SHA-256 hash of the canonical DAG"),
-                signatureName: z.string().describe("Human-readable name for this DAG variant"),
-                action: z.enum(["created", "updated"]).describe("Whether the workflow was created or updated"),
-                humanId: z.string().nullable().describe("Human ID if styled after an expert"),
-                styleName: z.string().nullable().describe("Base style name for versioning (e.g. 'hormozi')"),
-              }),
-              dag: z.object({
-                nodes: z.array(z.any()).describe("DAG nodes"),
-                edges: z.array(z.any()).describe("DAG edges"),
-              }),
-              generatedDescription: z.string().describe("AI-generated description of the workflow"),
-            })
-            .openapi("GenerateWorkflowResponse"),
+          schema: generateWorkflowResponse.openapi("CreateWorkflowResponse"),
         },
       },
     },
     400: { description: "Invalid request", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
+    422: {
+      description: "Could not generate a valid DAG",
+      content: errorContent,
+    },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/workflows/upgrade",
+  tags: ["Workflows"],
+  summary: "Upgrade a workflow within its dynasty",
+  description:
+    "Uses AI to upgrade an existing workflow identified by workflowSlug. The upgrade is validated and deployed as a new revision within the same dynasty.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: UpgradeWorkflowRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Upgraded workflow",
+      content: {
+        "application/json": {
+          schema: generateWorkflowResponse.openapi("UpgradeWorkflowResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid request", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Workflow slug not found", content: errorContent },
     422: {
       description: "Could not generate a valid DAG",
       content: errorContent,

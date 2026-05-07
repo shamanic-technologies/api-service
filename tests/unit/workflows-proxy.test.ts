@@ -132,10 +132,16 @@ describe("Workflow proxy routes", () => {
     expect(rankedLine).not.toContain('"audienceType"');
   });
 
-  it("should forward featureSlug in POST /workflows/generate body", () => {
-    const genStart = content.indexOf('"/workflows/generate"');
+  it("should forward featureSlug in POST /workflows/create body", () => {
+    const genStart = content.indexOf('"/workflows/create"');
     const genBlock = content.slice(genStart, genStart + 500);
     expect(genBlock).toContain("featureSlug");
+  });
+
+  it("should forward workflowSlug in POST /workflows/upgrade body", () => {
+    const upStart = content.indexOf('"/workflows/upgrade"');
+    const upBlock = content.slice(upStart, upStart + 500);
+    expect(upBlock).toContain("workflowSlug");
   });
 });
 
@@ -290,18 +296,18 @@ describe("Workflow schemas — ranked and best endpoints", () => {
     expect(listSection).not.toContain("audienceType");
   });
 
-  it("should require featureSlug in GenerateWorkflowRequestSchema", () => {
-    const start = content.indexOf("GenerateWorkflowRequestSchema");
-    const end = content.indexOf(".openapi(\"GenerateWorkflowRequest\")", start);
+  it("should require featureSlug in CreateWorkflowRequestSchema", () => {
+    const start = content.indexOf("CreateWorkflowRequestSchema");
+    const end = content.indexOf(".openapi(\"CreateWorkflowRequest\")", start);
     const genSchema = content.slice(start, end);
     expect(genSchema).toContain("featureSlug");
     expect(genSchema).toContain(".min(1)");
   });
 
-  it("should include featureSlug in GenerateWorkflowResponse instead of category/channel/audienceType", () => {
+  it("should include featureSlug in CreateWorkflowResponse instead of category/channel/audienceType", () => {
     const genSection = content.slice(
-      content.indexOf("GenerateWorkflowResponse"),
-      content.indexOf("GenerateWorkflowResponse") + 500
+      content.indexOf("CreateWorkflowResponse"),
+      content.indexOf("CreateWorkflowResponse") + 500
     );
     expect(genSection).not.toContain("category");
     expect(genSection).not.toContain("channel");
