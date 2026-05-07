@@ -3816,6 +3816,67 @@ registry.registerPath({
   },
 });
 
+// ===================================================================
+// RUN EVENTS
+// ===================================================================
+
+const RunEventSchema = z
+  .object({
+    id: z.string().uuid(),
+    runId: z.string().uuid(),
+    service: z.string(),
+    event: z.string(),
+    detail: z.string().nullable(),
+    level: z.enum(["info", "warn", "error"]),
+    data: z.unknown().nullable().optional(),
+    orgId: z.string().uuid().nullable(),
+    userId: z.string().uuid().nullable(),
+    brandIds: z.string().nullable(),
+    campaignId: z.string().uuid().nullable(),
+    workflowSlug: z.string().nullable(),
+    featureSlug: z.string().nullable(),
+    createdAt: z.string(),
+  })
+  .openapi("RunEvent");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/events",
+  tags: ["Runs"],
+  summary: "List run events for the authenticated org",
+  description:
+    "Transparent proxy to runs-service GET /v1/events. orgId is injected from the auth context — never trusted from client query. " +
+    "Use this endpoint to render per-campaign log views in the dashboard. Events are ordered by createdAt DESC.",
+  security: authed,
+  request: {
+    query: z.object({
+      campaignId: z.string().uuid().optional().describe("Filter to a single campaign"),
+      brandId: z.string().optional().describe("Filter by brand ID (single UUID)"),
+      level: z.enum(["info", "warn", "error"]).optional().describe("Filter by event severity"),
+      service: z.string().optional().describe("Filter by emitting service name"),
+      workflowSlug: z.string().optional().describe("Filter by workflow slug"),
+      featureSlug: z.string().optional().describe("Filter by feature slug"),
+      limit: z.string().optional().describe("Page size — forwarded as-is to runs-service"),
+      offset: z.string().optional().describe("Page offset — forwarded as-is to runs-service"),
+    }).openapi("ListEventsQuery"),
+  },
+  responses: {
+    200: {
+      description: "List of run events for the org, newest first",
+      content: {
+        "application/json": {
+          schema: z.object({
+            events: z.array(RunEventSchema),
+          }).openapi("ListEventsResponse"),
+        },
+      },
+    },
+    400: { description: "Organization context required", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/scraping/scrape/{id}",
