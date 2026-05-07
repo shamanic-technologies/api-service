@@ -46,6 +46,7 @@ import journalistsRoutes from "./routes/journalists.js";
 import articlesRoutes from "./routes/articles.js";
 import featuresRoutes from "./routes/features.js";
 import publicStatsRoutes from "./routes/public-stats.js";
+import pricingRoutes from "./routes/pricing.js";
 import adminRoutes from "./routes/admin.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { readFileSync, existsSync } from "fs";
@@ -58,12 +59,14 @@ const __dirname = dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// CORS - allow dashboard and MCP clients
+// CORS - allow dashboard, MCP clients, and public landing pages
 app.use(cors({
   origin: [
     "https://dashboard.distribute.you",
     "https://distribute.you",
     "https://performance.distribute.you",
+    "https://landing.distribute.you",
+    "https://sales-cold-emails.distribute.you",
     "http://localhost:3000",
     "http://localhost:3001",
     "http://localhost:3007",
@@ -165,6 +168,7 @@ app.use(healthRoutes);
 app.use(pressKitsRoutes); // public press-kit endpoints (no auth)
 app.use(featuresRoutes);  // public features endpoints (no auth)
 app.use(publicStatsRoutes); // public stats endpoints (no auth)
+app.use(pricingRoutes); // public pricing endpoints (no auth) — declares full /v1/pricing/* paths
 
 // Internal platform routes (API key only, no identity)
 app.use("/internal", adminRoutes);

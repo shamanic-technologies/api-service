@@ -28,6 +28,10 @@
       "description": "Public performance leaderboard"
     },
     {
+      "name": "Public Pricing",
+      "description": "Public pricing/unit-cost endpoints (no auth, used by landing pages)"
+    },
+    {
       "name": "User",
       "description": "Current user information"
     },
@@ -9061,6 +9065,60 @@
       "PublicFeaturesListResponse": {
         "type": "object",
         "properties": {}
+      },
+      "PricingUnitCost": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Platform price row id"
+          },
+          "name": {
+            "type": "string",
+            "description": "Stable identifier (e.g. 'input_tokens_sonnet_4_6')"
+          },
+          "provider": {
+            "type": "string",
+            "description": "Provider name (e.g. 'anthropic', 'openai')"
+          },
+          "providerDomain": {
+            "type": "string",
+            "nullable": true,
+            "description": "Provider domain for logo.dev rendering, nullable"
+          },
+          "type": {
+            "type": "string",
+            "description": "Human-readable cost type (e.g. 'Input tokens (Sonnet 4.6)')"
+          },
+          "unit": {
+            "type": "string",
+            "description": "Billing unit (e.g. '1M tokens', '1 request')"
+          },
+          "costPerUnitInUsdCents": {
+            "type": "string",
+            "description": "Cost per unit, decimal-string USD cents (full precision)"
+          },
+          "effectiveFrom": {
+            "type": "string",
+            "description": "ISO timestamp the price became effective"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "provider",
+          "providerDomain",
+          "type",
+          "unit",
+          "costPerUnitInUsdCents",
+          "effectiveFrom"
+        ]
+      },
+      "PricingUnitCostsResponse": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/PricingUnitCost"
+        }
       }
     },
     "parameters": {}
@@ -29341,6 +29399,37 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/pricing/unit-costs": {
+      "get": {
+        "tags": [
+          "Public Pricing"
+        ],
+        "summary": "List refacturation unit costs (public, no auth)",
+        "description": "Returns the live list of platform unit costs grouped by provider. No authentication required. Proxied as-is from costs-service GET /v1/platform-prices. Each row includes provider/providerDomain (for logo.dev), type, unit, and decimal-string USD cents.",
+        "responses": {
+          "200": {
+            "description": "Unit costs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PricingUnitCostsResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream costs-service unreachable or returned non-2xx",
             "content": {
               "application/json": {
                 "schema": {

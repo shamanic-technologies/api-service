@@ -92,6 +92,10 @@ export const externalServices = {
     url: process.env.FEATURES_SERVICE_URL || "http://localhost:3032",
     apiKey: process.env.FEATURES_SERVICE_API_KEY || "",
   },
+  costs: {
+    url: process.env.COSTS_SERVICE_URL || "http://localhost:3025",
+    apiKey: process.env.COSTS_SERVICE_API_KEY || "",
+  },
 };
 
 interface ServiceCallOptions {
