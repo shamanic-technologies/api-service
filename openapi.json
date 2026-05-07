@@ -28,8 +28,8 @@
       "description": "Public performance leaderboard"
     },
     {
-      "name": "Public Pricing",
-      "description": "Public pricing/unit-cost endpoints (no auth, used by landing pages)"
+      "name": "Public Costs",
+      "description": "Public costs/pricing endpoints (no auth, used by landing pages)"
     },
     {
       "name": "User",
@@ -9066,7 +9066,7 @@
         "type": "object",
         "properties": {}
       },
-      "PricingUnitCost": {
+      "PlatformPrice": {
         "type": "object",
         "properties": {
           "id": {
@@ -9114,10 +9114,10 @@
           "effectiveFrom"
         ]
       },
-      "PricingUnitCostsResponse": {
+      "PlatformPricesResponse": {
         "type": "array",
         "items": {
-          "$ref": "#/components/schemas/PricingUnitCost"
+          "$ref": "#/components/schemas/PlatformPrice"
         }
       }
     },
@@ -29410,20 +29410,20 @@
         }
       }
     },
-    "/v1/pricing/unit-costs": {
+    "/v1/costs/platform-prices": {
       "get": {
         "tags": [
-          "Public Pricing"
+          "Public Costs"
         ],
-        "summary": "List refacturation unit costs (public, no auth)",
-        "description": "Returns the live list of platform unit costs grouped by provider. No authentication required. Proxied as-is from costs-service GET /v1/platform-prices. Each row includes provider/providerDomain (for logo.dev), type, unit, and decimal-string USD cents.",
+        "summary": "List platform prices (public, no auth)",
+        "description": "Returns the live list of platform unit costs grouped by provider. No authentication required. Pure pass-through to costs-service GET /v1/platform-prices. Each row includes provider/providerDomain (for logo.dev), type, unit, and decimal-string USD cents.",
         "responses": {
           "200": {
-            "description": "Unit costs",
+            "description": "Platform prices",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PricingUnitCostsResponse"
+                  "$ref": "#/components/schemas/PlatformPricesResponse"
                 }
               }
             }

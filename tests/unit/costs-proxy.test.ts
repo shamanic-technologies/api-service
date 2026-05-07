@@ -14,16 +14,16 @@ vi.mock("../../src/lib/service-client.js", () => ({
 
 import express from "express";
 import request from "supertest";
-import pricingRouter from "../../src/routes/pricing.js";
+import costsRouter from "../../src/routes/costs.js";
 
 function createApp() {
   const app = express();
   app.use(express.json());
-  app.use(pricingRouter);
+  app.use(costsRouter);
   return app;
 }
 
-const MOCK_UNIT_COSTS = [
+const MOCK_PLATFORM_PRICES = [
   {
     id: "pp_1",
     name: "input_tokens_sonnet_4_6",
@@ -50,13 +50,13 @@ beforeEach(() => {
   mockCallExternalService.mockReset();
 });
 
-describe("GET /v1/pricing/unit-costs", () => {
+describe("GET /v1/costs/platform-prices", () => {
   it("proxies to costs-service /v1/platform-prices and returns array passthrough", async () => {
-    mockCallExternalService.mockResolvedValueOnce(MOCK_UNIT_COSTS);
+    mockCallExternalService.mockResolvedValueOnce(MOCK_PLATFORM_PRICES);
     const app = createApp();
-    const res = await request(app).get("/v1/pricing/unit-costs");
+    const res = await request(app).get("/v1/costs/platform-prices");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual(MOCK_UNIT_COSTS);
+    expect(res.body).toEqual(MOCK_PLATFORM_PRICES);
     expect(mockCallExternalService).toHaveBeenCalledWith(
       { url: "http://mock-costs", apiKey: "k" },
       "/v1/platform-prices",
@@ -66,7 +66,7 @@ describe("GET /v1/pricing/unit-costs", () => {
   it("returns 502 when costs-service is unreachable", async () => {
     mockCallExternalService.mockRejectedValueOnce(new Error("ECONNREFUSED"));
     const app = createApp();
-    const res = await request(app).get("/v1/pricing/unit-costs");
+    const res = await request(app).get("/v1/costs/platform-prices");
     expect(res.status).toBe(502);
     expect(res.body.error).toBeTruthy();
     expect(res.body.error).toContain("ECONNREFUSED");
@@ -77,7 +77,7 @@ describe("GET /v1/pricing/unit-costs", () => {
     err.statusCode = 500;
     mockCallExternalService.mockRejectedValueOnce(err);
     const app = createApp();
-    const res = await request(app).get("/v1/pricing/unit-costs");
+    const res = await request(app).get("/v1/costs/platform-prices");
     expect(res.status).toBe(502);
     expect(res.body.error).toContain("Service call failed");
   });
@@ -85,7 +85,7 @@ describe("GET /v1/pricing/unit-costs", () => {
   it("does NOT swallow errors with an empty array", async () => {
     mockCallExternalService.mockRejectedValueOnce(new Error("boom"));
     const app = createApp();
-    const res = await request(app).get("/v1/pricing/unit-costs");
+    const res = await request(app).get("/v1/costs/platform-prices");
     expect(res.status).not.toBe(200);
     expect(res.body).not.toEqual([]);
   });
@@ -93,8 +93,8 @@ describe("GET /v1/pricing/unit-costs", () => {
 
 // ── Static checks: route file shape ──────────────────────────────────────────
 
-const pricingRoutePath = path.join(__dirname, "../../src/routes/pricing.ts");
-const routeContent = fs.readFileSync(pricingRoutePath, "utf-8");
+const costsRoutePath = path.join(__dirname, "../../src/routes/costs.ts");
+const routeContent = fs.readFileSync(costsRoutePath, "utf-8");
 
 const indexPath = path.join(__dirname, "../../src/index.ts");
 const indexContent = fs.readFileSync(indexPath, "utf-8");
@@ -105,9 +105,14 @@ const serviceClientContent = fs.readFileSync(serviceClientPath, "utf-8");
 const schemaPath = path.join(__dirname, "../../src/schemas.ts");
 const schemaContent = fs.readFileSync(schemaPath, "utf-8");
 
-describe("Pricing route file shape", () => {
-  it("declares the full path /v1/pricing/unit-costs (no /v1 prefix added at mount)", () => {
-    expect(routeContent).toContain('"/v1/pricing/unit-costs"');
+describe("Costs route file shape", () => {
+  it("declares the full path /v1/costs/platform-prices (no /v1 prefix added at mount)", () => {
+    expect(routeContent).toContain('"/v1/costs/platform-prices"');
+  });
+
+  it("does not rename the downstream path (stays /v1/platform-prices on costs-service)", () => {
+    expect(routeContent).not.toContain('"/v1/pricing/unit-costs"');
+    expect(routeContent).toContain('"/v1/platform-prices"');
   });
 
   it("does NOT use authenticate / requireOrg / requireUser middleware (public)", () => {
@@ -120,12 +125,7 @@ describe("Pricing route file shape", () => {
     expect(routeContent).toContain("externalServices.costs");
   });
 
-  it("calls /v1/platform-prices on costs-service", () => {
-    expect(routeContent).toContain('"/v1/platform-prices"');
-  });
-
   it("forces 502 on any failure (does not forward upstream status)", () => {
-    // Should not pattern `error.statusCode || 502` — DOD: always 502 on failure.
     expect(routeContent).not.toContain("error.statusCode || 502");
     expect(routeContent).not.toContain("error.statusCode ?? 502");
   });
@@ -139,11 +139,11 @@ describe("costs service entry in service-client", () => {
   });
 });
 
-describe("Pricing routes mounted in index.ts", () => {
-  it("imports and mounts pricingRoutes at root (public, no /v1 prefix)", () => {
-    expect(indexContent).toContain("pricingRoutes");
-    expect(indexContent).toContain("./routes/pricing");
-    expect(indexContent).toContain("app.use(pricingRoutes)");
+describe("Costs routes mounted in index.ts", () => {
+  it("imports and mounts costsRoutes at root (public, no /v1 prefix)", () => {
+    expect(indexContent).toContain("costsRoutes");
+    expect(indexContent).toContain("./routes/costs");
+    expect(indexContent).toContain("app.use(costsRoutes)");
   });
 });
 
@@ -157,19 +157,19 @@ describe("CORS allowlist includes public landing origins", () => {
   });
 });
 
-describe("Pricing OpenAPI schema", () => {
-  it("registers GET /v1/pricing/unit-costs", () => {
-    expect(schemaContent).toContain('path: "/v1/pricing/unit-costs"');
+describe("Costs OpenAPI schema", () => {
+  it("registers GET /v1/costs/platform-prices", () => {
+    expect(schemaContent).toContain('path: "/v1/costs/platform-prices"');
   });
 
-  it("uses Public Pricing tag", () => {
-    expect(schemaContent).toContain('tags: ["Public Pricing"]');
+  it("uses Public Costs tag", () => {
+    expect(schemaContent).toContain('tags: ["Public Costs"]');
   });
 
   it("declares 200 and 502 responses", () => {
     const block = schemaContent.slice(
-      schemaContent.indexOf('path: "/v1/pricing/unit-costs"'),
-      schemaContent.indexOf('path: "/v1/pricing/unit-costs"') + 2000,
+      schemaContent.indexOf('path: "/v1/costs/platform-prices"'),
+      schemaContent.indexOf('path: "/v1/costs/platform-prices"') + 2000,
     );
     expect(block).toContain("200:");
     expect(block).toContain("502:");
