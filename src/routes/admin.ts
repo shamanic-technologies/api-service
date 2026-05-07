@@ -83,12 +83,21 @@ router.get("/admin/services/:name/tables", authenticatePlatform, async (req: Req
   }
 
   const result = await pool.query(
-    `SELECT table_name FROM information_schema.tables
-     WHERE table_schema = 'public'
-     ORDER BY table_name`
+    `SELECT t.table_name,
+            COALESCE(s.n_live_tup, 0) AS row_count
+     FROM information_schema.tables t
+     LEFT JOIN pg_stat_user_tables s
+       ON s.schemaname = t.table_schema AND s.relname = t.table_name
+     WHERE t.table_schema = 'public'
+     ORDER BY t.table_name`
   );
 
-  res.json({ tables: result.rows.map((r) => r.table_name) });
+  res.json({
+    tables: result.rows.map((r) => ({
+      name: r.table_name,
+      rowCount: parseInt(r.row_count, 10),
+    })),
+  });
 });
 
 // ── GET /admin/services/:name/tables/:table/schema ──────────────────────────
@@ -110,20 +119,30 @@ router.get("/admin/services/:name/tables/:table/schema", authenticatePlatform, a
   }
 
   const result = await pool.query(
-    `SELECT column_name, data_type, is_nullable, column_default
-     FROM information_schema.columns
-     WHERE table_schema = 'public' AND table_name = $1
-     ORDER BY ordinal_position`,
+    `SELECT c.column_name, c.data_type, c.is_nullable,
+            CASE WHEN pk.column_name IS NOT NULL THEN true ELSE false END AS is_primary_key
+     FROM information_schema.columns c
+     LEFT JOIN (
+       SELECT kcu.column_name
+       FROM information_schema.table_constraints tc
+       JOIN information_schema.key_column_usage kcu
+         ON tc.constraint_name = kcu.constraint_name
+         AND tc.table_schema = kcu.table_schema
+       WHERE tc.table_schema = 'public'
+         AND tc.table_name = $1
+         AND tc.constraint_type = 'PRIMARY KEY'
+     ) pk ON pk.column_name = c.column_name
+     WHERE c.table_schema = 'public' AND c.table_name = $1
+     ORDER BY c.ordinal_position`,
     [table]
   );
 
   res.json({
-    table,
     columns: result.rows.map((r) => ({
       name: r.column_name,
       type: r.data_type,
       nullable: r.is_nullable === "YES",
-      default: r.column_default,
+      isPrimaryKey: r.is_primary_key,
     })),
   });
 });

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
-import { GenerateWorkflowRequestSchema, UpdateWorkflowRequestSchema } from "../schemas.js";
+import { CreateWorkflowRequestSchema, UpgradeWorkflowRequestSchema, UpdateWorkflowRequestSchema } from "../schemas.js";
 
 const router = Router();
 
@@ -543,12 +543,12 @@ router.post("/workflow-runs/:id/cancel", authenticate, requireOrg, requireUser, 
 });
 
 /**
- * POST /v1/workflows/generate
- * Generate a workflow DAG from natural language via workflow-service
+ * POST /v1/workflows/create
+ * Create a new workflow dynasty from natural language via workflow-service
  */
-router.post("/workflows/generate", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/create", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const parsed = GenerateWorkflowRequestSchema.safeParse(req.body);
+    const parsed = CreateWorkflowRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({
         error: "Invalid request",
@@ -560,7 +560,7 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
 
     const result = await callExternalService(
       externalServices.workflow,
-      "/workflows/generate",
+      "/workflows/create",
       {
         method: "POST",
         headers: buildInternalHeaders(req),
@@ -577,9 +577,49 @@ router.post("/workflows/generate", authenticate, requireOrg, requireUser, async 
 
     res.json(result);
   } catch (error: any) {
-    console.error("Generate workflow error:", error.message);
+    console.error("[api-service] Create workflow error:", error.message);
     const status = error.statusCode === 422 || error.message?.includes("422") ? 422 : 500;
-    res.status(status).json({ error: error.message || "Failed to generate workflow" });
+    res.status(status).json({ error: error.message || "Failed to create workflow" });
+  }
+});
+
+/**
+ * POST /v1/workflows/upgrade
+ * Upgrade an existing workflow within its dynasty via workflow-service
+ */
+router.post("/workflows/upgrade", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const parsed = UpgradeWorkflowRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Invalid request",
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const { workflowSlug, description, hints } = parsed.data;
+
+    const result = await callExternalService(
+      externalServices.workflow,
+      "/workflows/upgrade",
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body: {
+          orgId: req.orgId,
+          userId: req.userId,
+          workflowSlug,
+          description,
+          hints,
+        },
+      }
+    );
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Upgrade workflow error:", error.message);
+    const status = error.statusCode === 422 || error.message?.includes("422") ? 422 : 500;
+    res.status(status).json({ error: error.message || "Failed to upgrade workflow" });
   }
 });
 

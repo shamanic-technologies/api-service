@@ -3,10 +3,11 @@ import request from "supertest";
 import express from "express";
 
 /**
- * Regression: POST /v1/brand/icp-suggestion and POST /v1/workflows/generate
- * called callExternalService without buildInternalHeaders(req), so x-org-id
- * and x-user-id were never sent to brand-service / workflow-service.
- * Downstream services that call key-service need these headers to resolve keys.
+ * Regression: POST /v1/brand/icp-suggestion, POST /v1/workflows/create, and
+ * POST /v1/workflows/upgrade called callExternalService without
+ * buildInternalHeaders(req), so x-org-id and x-user-id were never sent to
+ * brand-service / workflow-service. Downstream services that call key-service
+ * need these headers to resolve keys.
  */
 
 vi.mock("../../src/middleware/auth.js", () => ({
@@ -67,18 +68,34 @@ describe("internal headers on downstream calls", () => {
     expect(capturedHeaders!["x-user-id"]).toBe("user_test123");
   });
 
-  it("workflows/generate route should include buildInternalHeaders", () => {
+  it("workflows/create route should include buildInternalHeaders", () => {
     const src = fs.readFileSync(
       path.join(__dirname, "../../src/routes/workflows.ts"),
       "utf-8"
     );
 
-    const generateIdx = src.indexOf('router.post("/workflows/generate"');
-    expect(generateIdx).toBeGreaterThan(-1);
+    const createIdx = src.indexOf('router.post("/workflows/create"');
+    expect(createIdx).toBeGreaterThan(-1);
 
-    const afterGenerate = src.slice(generateIdx);
-    const callIdx = afterGenerate.indexOf("callExternalService");
-    const callBlock = afterGenerate.slice(callIdx, callIdx + 300);
+    const afterCreate = src.slice(createIdx);
+    const callIdx = afterCreate.indexOf("callExternalService");
+    const callBlock = afterCreate.slice(callIdx, callIdx + 300);
+
+    expect(callBlock).toContain("headers: buildInternalHeaders(req)");
+  });
+
+  it("workflows/upgrade route should include buildInternalHeaders", () => {
+    const src = fs.readFileSync(
+      path.join(__dirname, "../../src/routes/workflows.ts"),
+      "utf-8"
+    );
+
+    const upgradeIdx = src.indexOf('router.post("/workflows/upgrade"');
+    expect(upgradeIdx).toBeGreaterThan(-1);
+
+    const afterUpgrade = src.slice(upgradeIdx);
+    const callIdx = afterUpgrade.indexOf("callExternalService");
+    const callBlock = afterUpgrade.slice(callIdx, callIdx + 300);
 
     expect(callBlock).toContain("headers: buildInternalHeaders(req)");
   });
