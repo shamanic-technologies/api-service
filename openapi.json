@@ -6090,6 +6090,99 @@
           "groups"
         ]
       },
+      "RunEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "runId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "service": {
+            "type": "string"
+          },
+          "event": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "level": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warn",
+              "error"
+            ]
+          },
+          "data": {
+            "nullable": true
+          },
+          "orgId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "brandIds": {
+            "type": "string",
+            "nullable": true
+          },
+          "campaignId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "workflowSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "featureSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "runId",
+          "service",
+          "event",
+          "detail",
+          "level",
+          "orgId",
+          "userId",
+          "brandIds",
+          "campaignId",
+          "workflowSlug",
+          "featureSlug",
+          "createdAt"
+        ]
+      },
+      "ListEventsResponse": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RunEvent"
+            }
+          }
+        },
+        "required": [
+          "events"
+        ]
+      },
       "ScrapeResultResponse": {
         "type": "object",
         "properties": {}
@@ -6200,7 +6293,7 @@
           }
         ]
       },
-      "GenerateWorkflowResponse": {
+      "CreateWorkflowResponse": {
         "type": "object",
         "properties": {
           "workflow": {
@@ -6321,7 +6414,7 @@
         ],
         "description": "Optional style configuration. When provided, the workflow is generated in the style of an industry expert or brand."
       },
-      "GenerateWorkflowRequest": {
+      "CreateWorkflowRequest": {
         "type": "object",
         "properties": {
           "featureSlug": {
@@ -6367,6 +6460,122 @@
         },
         "required": [
           "featureSlug",
+          "description"
+        ]
+      },
+      "UpgradeWorkflowResponse": {
+        "type": "object",
+        "properties": {
+          "workflow": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Workflow ID"
+              },
+              "name": {
+                "type": "string",
+                "description": "Auto-generated workflow slug"
+              },
+              "featureSlug": {
+                "type": "string",
+                "description": "Feature slug this workflow belongs to"
+              },
+              "signature": {
+                "type": "string",
+                "description": "SHA-256 hash of the canonical DAG"
+              },
+              "signatureName": {
+                "type": "string",
+                "description": "Human-readable name for this DAG variant"
+              },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "created",
+                  "updated"
+                ],
+                "description": "Whether the workflow was created or updated"
+              },
+              "humanId": {
+                "type": "string",
+                "nullable": true,
+                "description": "Human ID if styled after an expert"
+              },
+              "styleName": {
+                "type": "string",
+                "nullable": true,
+                "description": "Base style name for versioning (e.g. 'hormozi')"
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "featureSlug",
+              "signature",
+              "signatureName",
+              "action",
+              "humanId",
+              "styleName"
+            ]
+          },
+          "dag": {
+            "type": "object",
+            "properties": {
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "nullable": true
+                },
+                "description": "DAG nodes"
+              },
+              "edges": {
+                "type": "array",
+                "items": {
+                  "nullable": true
+                },
+                "description": "DAG edges"
+              }
+            },
+            "required": [
+              "nodes",
+              "edges"
+            ]
+          },
+          "generatedDescription": {
+            "type": "string",
+            "description": "AI-generated description of the workflow"
+          }
+        },
+        "required": [
+          "workflow",
+          "dag",
+          "generatedDescription"
+        ]
+      },
+      "UpgradeWorkflowRequest": {
+        "type": "object",
+        "properties": {
+          "workflowSlug": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Slug of the existing workflow to upgrade. Upgrade stays within the same dynasty."
+          },
+          "description": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Natural language description of the upgrade. Describe what should change relative to the current workflow."
+          },
+          "hints": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Optional free-form hints to guide the upgrade."
+          }
+        },
+        "required": [
+          "workflowSlug",
           "description"
         ]
       },
@@ -6884,14 +7093,6 @@
             ]
           }
         }
-      },
-      "CreateWorkflowResponse": {
-        "type": "object",
-        "properties": {}
-      },
-      "CreateWorkflowRequest": {
-        "type": "object",
-        "properties": {}
       },
       "WorkflowRunResponse": {
         "type": "object",
@@ -20186,6 +20387,205 @@
         }
       }
     },
+    "/v1/events": {
+      "get": {
+        "tags": [
+          "Runs"
+        ],
+        "summary": "List run events for the authenticated org",
+        "description": "Transparent proxy to runs-service GET /v1/events. orgId is injected from the auth context — never trusted from client query. Use this endpoint to render per-campaign log views in the dashboard. Events are ordered by createdAt DESC.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Filter to a single campaign"
+            },
+            "required": false,
+            "description": "Filter to a single campaign",
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by brand ID (single UUID)"
+            },
+            "required": false,
+            "description": "Filter by brand ID (single UUID)",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "info",
+                "warn",
+                "error"
+              ],
+              "description": "Filter by event severity"
+            },
+            "required": false,
+            "description": "Filter by event severity",
+            "name": "level",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by emitting service name"
+            },
+            "required": false,
+            "description": "Filter by emitting service name",
+            "name": "service",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by workflow slug"
+            },
+            "required": false,
+            "description": "Filter by workflow slug",
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by feature slug"
+            },
+            "required": false,
+            "description": "Filter by feature slug",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Page size — forwarded as-is to runs-service"
+            },
+            "required": false,
+            "description": "Page size — forwarded as-is to runs-service",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Page offset — forwarded as-is to runs-service"
+            },
+            "required": false,
+            "description": "Page offset — forwarded as-is to runs-service",
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of run events for the org, newest first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListEventsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Organization context required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/scraping/scrape/{id}": {
       "get": {
         "tags": [
@@ -20471,7 +20871,14 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateWorkflowRequest"
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/CreateWorkflowRequest"
+                  },
+                  {
+                    "properties": {}
+                  }
+                ]
               }
             }
           }
@@ -20482,7 +20889,14 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateWorkflowResponse"
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/CreateWorkflowResponse"
+                    },
+                    {
+                      "properties": {}
+                    }
+                  ]
                 }
               }
             }
@@ -20852,13 +21266,13 @@
         }
       }
     },
-    "/v1/workflows/generate": {
+    "/v1/workflows/create": {
       "post": {
         "tags": [
           "Workflows"
         ],
-        "summary": "Generate a workflow DAG",
-        "description": "Uses AI to generate a workflow DAG from a natural language description. The generated workflow is validated and deployed automatically.",
+        "summary": "Create a workflow dynasty",
+        "description": "Uses AI to generate a new workflow DAG from a natural language description. The generated workflow is validated and deployed as a new dynasty.",
         "security": [
           {
             "bearerAuth": []
@@ -20868,18 +21282,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/GenerateWorkflowRequest"
+                "$ref": "#/components/schemas/CreateWorkflowRequest"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Generated and deployed workflow",
+            "description": "Created and deployed workflow",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GenerateWorkflowResponse"
+                  "$ref": "#/components/schemas/CreateWorkflowResponse"
                 }
               }
             }
@@ -20896,6 +21310,148 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Could not generate a valid DAG",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
+      }
+    },
+    "/v1/workflows/upgrade": {
+      "post": {
+        "tags": [
+          "Workflows"
+        ],
+        "summary": "Upgrade a workflow within its dynasty",
+        "description": "Uses AI to upgrade an existing workflow identified by workflowSlug. The upgrade is validated and deployed as a new revision within the same dynasty.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpgradeWorkflowRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upgraded workflow",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpgradeWorkflowResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workflow slug not found",
             "content": {
               "application/json": {
                 "schema": {
