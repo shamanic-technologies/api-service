@@ -6764,3 +6764,40 @@ registry.registerPath({
     500: { description: "Internal error", content: errorContent },
   },
 });
+
+// ---------------------------------------------------------------------------
+// PUBLIC COSTS (no auth — landing page endpoints)
+// ---------------------------------------------------------------------------
+
+const PlatformPriceSchema = z.object({
+  id: z.string().describe("Platform price row id"),
+  name: z.string().describe("Stable identifier (e.g. 'input_tokens_sonnet_4_6')"),
+  provider: z.string().describe("Provider name (e.g. 'anthropic', 'openai')"),
+  providerDomain: z.string().nullable().describe("Provider domain for logo.dev rendering, nullable"),
+  type: z.string().describe("Human-readable cost type (e.g. 'Input tokens (Sonnet 4.6)')"),
+  unit: z.string().describe("Billing unit (e.g. '1M tokens', '1 request')"),
+  costPerUnitInUsdCents: z.string().describe("Cost per unit, decimal-string USD cents (full precision)"),
+  effectiveFrom: z.string().describe("ISO timestamp the price became effective"),
+}).passthrough().openapi("PlatformPrice");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/costs/platform-prices",
+  tags: ["Public Costs"],
+  summary: "List platform prices (public, no auth)",
+  description:
+    "Returns the live list of platform unit costs grouped by provider. " +
+    "No authentication required. Pure pass-through to costs-service GET /v1/platform-prices. " +
+    "Each row includes provider/providerDomain (for logo.dev), type, unit, and decimal-string USD cents.",
+  responses: {
+    200: {
+      description: "Platform prices",
+      content: {
+        "application/json": {
+          schema: z.array(PlatformPriceSchema).openapi("PlatformPricesResponse"),
+        },
+      },
+    },
+    502: { description: "Upstream costs-service unreachable or returned non-2xx", content: errorContent },
+  },
+});

@@ -59,6 +59,7 @@ Authorization: Bearer distrib.usr_abc123...
     { name: "Authentication", description: "Create and manage your API keys" },
     { name: "Keys", description: "Provider key management" },
     { name: "Performance", description: "Public performance leaderboard" },
+    { name: "Public Costs", description: "Public costs/pricing endpoints (no auth, used by landing pages)" },
     { name: "User", description: "Current user information" },
     { name: "Campaigns", description: "Campaign management" },
     { name: "Leads", description: "Lead search" },
