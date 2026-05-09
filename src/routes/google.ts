@@ -52,6 +52,21 @@ router.post("/orgs/google/sync", authenticate, requireOrg, requireUser, async (r
   }
 });
 
+// GET /v1/orgs/google/sync/:jobId — poll status of an async Google sync job
+router.get("/orgs/google/sync/:jobId", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const jobId = req.params.jobId;
+    const result = await callExternalService(
+      externalServices.google,
+      `/orgs/google/sync/${jobId}`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to fetch Google sync job status" });
+  }
+});
+
 // GET /v1/orgs/google/messages — list raw Gmail messages (bronze)
 router.get("/orgs/google/messages", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
