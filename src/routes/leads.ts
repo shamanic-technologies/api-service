@@ -3,14 +3,12 @@ import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { LeadSearchRequestSchema } from "../schemas.js";
-import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 
 const router = Router();
 
 /**
- * GET /v1/leads — list leads with filters (brand-level)
- * Proxies to lead-service GET /orgs/leads with brandId query param.
- * Returns the same enriched shape as GET /campaigns/:id/leads.
+ * GET /v1/leads — pass-through to lead-service GET /orgs/leads.
+ * No body transform, no aggregation. Response shape is whatever lead-service returns.
  */
 router.get("/leads", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
@@ -24,96 +22,19 @@ router.get("/leads", authenticate, requireOrg, requireUser, async (req: Authenti
       return res.status(400).json({ error: "Missing required query parameter: brandId or campaignId" });
     }
 
-    const headers = buildInternalHeaders(req);
-
     const params = new URLSearchParams();
     if (brandId) params.set("brandId", brandId);
     if (campaignId) params.set("campaignId", campaignId);
     if (limit) params.set("limit", limit);
     if (offset) params.set("offset", offset);
 
-    // Single call to lead-service — delivery status fields are included directly on each lead (PR #171)
-    const leadsResult = await callExternalService(
+    const result = await callExternalService(
       externalServices.lead,
       `/orgs/leads?${params}`,
-      { headers }
-    ) as { leads: Array<Record<string, unknown>> };
+      { headers: buildInternalHeaders(req) }
+    );
 
-    const rawLeads = leadsResult.leads || [];
-
-    // Flatten enrichment data into each lead to match dashboard expectations.
-    const leads = rawLeads.map((raw) => {
-      const enrichment = (raw.enrichment as Record<string, unknown>) || {};
-      const email = raw.email as string;
-      return {
-        id: raw.id,
-        leadId: raw.leadId ?? null,
-        email,
-        namespace: raw.namespace ?? null,
-        apolloPersonId: raw.apolloPersonId ?? null,
-        journalistId: raw.journalistId ?? null,
-        outletId: raw.outletId ?? null,
-        firstName: enrichment.firstName ?? null,
-        lastName: enrichment.lastName ?? null,
-        emailStatus: (raw.emailStatus as string) ?? null,
-        title: enrichment.title ?? null,
-        organizationName: enrichment.organizationName ?? null,
-        organizationDomain: enrichment.organizationDomain ?? null,
-        organizationLogoUrl: enrichment.organizationLogoUrl ?? null,
-        organizationIndustry: enrichment.organizationIndustry ?? null,
-        organizationSize: enrichment.organizationSize ?? null,
-        linkedinUrl: enrichment.linkedinUrl ?? null,
-        status: raw.contacted ? "contacted" : "served",
-        contacted: raw.contacted as boolean,
-        sent: raw.sent as boolean,
-        delivered: raw.delivered as boolean,
-        opened: raw.opened as boolean,
-        clicked: raw.clicked as boolean,
-        bounced: raw.bounced as boolean,
-        unsubscribed: raw.unsubscribed as boolean,
-        replied: raw.replied as boolean,
-        replyClassification: (raw.replyClassification as string) ?? null,
-        global: (raw.global as { bounced?: boolean; unsubscribed?: boolean }) ?? null,
-        createdAt: raw.servedAt ?? null,
-        enrichmentRunId: raw.runId ?? null,
-      };
-    });
-
-    // Batch-fetch enrichment run costs from runs-service
-    const enrichmentRunIds = leads
-      .map((l) => l.enrichmentRunId as string | undefined)
-      .filter((id): id is string => !!id);
-
-    let runMap = new Map<string, RunWithCosts>();
-    if (enrichmentRunIds.length > 0) {
-      try {
-        runMap = await getRunsBatch(enrichmentRunIds, req.orgId, buildInternalHeaders(req));
-      } catch (err) {
-        console.warn("[api-service] Failed to fetch lead enrichment run costs:", err);
-      }
-    }
-
-    // Attach run data to each lead
-    const leadsWithRuns = leads.map((lead) => {
-      const run = lead.enrichmentRunId ? runMap.get(lead.enrichmentRunId as string) : undefined;
-      return {
-        ...lead,
-        enrichmentRun: run
-          ? {
-              status: run.status,
-              startedAt: run.startedAt,
-              completedAt: run.completedAt,
-              totalCostInUsdCents: run.totalCostInUsdCents,
-              costs: run.costs,
-              serviceName: run.serviceName,
-              taskName: run.taskName,
-              descendantRuns: run.descendantRuns ?? [],
-            }
-          : null,
-      };
-    });
-
-    res.json({ leads: leadsWithRuns });
+    res.json(result);
   } catch (error: any) {
     console.error("[api-service] Get brand leads error:", error);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get leads" });

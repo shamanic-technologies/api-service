@@ -2964,8 +2964,9 @@ registry.registerPath({
   tags: ["Leads"],
   summary: "List leads",
   description:
-    "List leads filtered by brandId and/or campaignId, with enrichment and delivery status data. " +
-    "At least one of brandId or campaignId is required. Proxies to lead-service GET /orgs/leads.",
+    "Pass-through to lead-service GET /orgs/leads. Filter by brandId and/or campaignId (at least one required). " +
+    "Each lead is a LeadDetail with the canonical FullLead payload under `lead` (lead-service v0.13.4+). " +
+    "Refer to lead-service openapi.json for the exact response shape — api-service forwards it untransformed.",
   security: authed,
   request: {
     query: z.object({
@@ -2977,48 +2978,17 @@ registry.registerPath({
   },
   responses: {
     200: {
-      description: "Leads with enrichment and delivery status data",
+      description: "Leads as returned by lead-service GET /orgs/leads (LeadDetail[] under `leads`).",
       content: {
         "application/json": {
           schema: z
             .object({
-              leads: z.array(
-                z.object({
-                  id: z.string(),
-                  leadId: z.string().nullable(),
-                  email: z.string(),
-                  namespace: z.string().nullable(),
-                  apolloPersonId: z.string().nullable(),
-                  journalistId: z.string().nullable(),
-                  outletId: z.string().nullable(),
-                  firstName: z.string().nullable(),
-                  lastName: z.string().nullable(),
-                  emailStatus: z.string().nullable(),
-                  title: z.string().nullable(),
-                  organizationName: z.string().nullable(),
-                  organizationDomain: z.string().nullable(),
-                  organizationLogoUrl: z.string().nullable(),
-                  organizationIndustry: z.string().nullable(),
-                  organizationSize: z.string().nullable(),
-                  linkedinUrl: z.string().nullable(),
-                  status: z.enum(["contacted", "served"]),
-                  contacted: z.boolean(),
-                  sent: z.boolean(),
-                  delivered: z.boolean(),
-                  opened: z.boolean(),
-                  clicked: z.boolean(),
-                  bounced: z.boolean(),
-                  unsubscribed: z.boolean(),
-                  replied: z.boolean(),
-                  replyClassification: z.enum(["positive", "negative", "neutral"]).nullable(),
-                  global: z.object({
-                    bounced: z.boolean().optional(),
-                    unsubscribed: z.boolean().optional(),
-                  }).nullable(),
-                  createdAt: z.string().nullable(),
-                  enrichmentRunId: z.string().nullable(),
-                  enrichmentRun: RunCostDataSchema.nullable(),
-                }),
+              leads: z.array(z.record(z.unknown())).describe(
+                "Array of LeadDetail objects from lead-service. Each item includes top-level fields " +
+                "(id, leadId, email, namespace, apolloPersonId, emailStatus, status, statusReason, statusDetails, " +
+                "parentRunId, runId, brandIds, campaignId, orgId, userId, workflowSlug, featureSlug, servedAt, " +
+                "contacted, sent, delivered, opened, clicked, bounced, unsubscribed, replied, replyClassification, " +
+                "lastDeliveredAt, global) plus a canonical `lead: FullLead | null` payload."
               ),
             })
             .openapi("BrandLeadsResponse"),
