@@ -94,16 +94,26 @@ describe("Google CRM proxy routes", () => {
     }
   });
 
+  it("should have GET /orgs/google/accounts with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/orgs/google/accounts"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
   it("should call externalServices.google for every endpoint", () => {
     const matches = content.match(/externalServices\.google/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(5);
+    expect(matches!.length).toBe(6);
   });
 
   it("should use buildInternalHeaders for every endpoint", () => {
     const matches = content.match(/buildInternalHeaders\(req\)/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(5);
+    expect(matches!.length).toBe(6);
   });
 
   it("should preserve downstream paths (no path renaming)", () => {
@@ -112,6 +122,7 @@ describe("Google CRM proxy routes", () => {
     expect(content).toContain('"/orgs/google/sync"');
     expect(content).toContain('/orgs/google/messages');
     expect(content).toContain('/orgs/google/contacts');
+    expect(content).toContain('"/orgs/google/accounts"');
   });
 });
 
@@ -181,8 +192,24 @@ describe("Google CRM OpenAPI schemas", () => {
     expect(schemaContent).toContain("GoogleContactsResponse");
   });
 
+  it("should register GET /v1/orgs/google/accounts", () => {
+    expect(schemaContent).toContain('path: "/v1/orgs/google/accounts"');
+    expect(schemaContent).toContain("GoogleAccountsListResponse");
+    expect(schemaContent).toContain("GoogleAccountSummary");
+  });
+
   it("should use Google CRM tag", () => {
     expect(schemaContent).toContain('tags: ["Google CRM"]');
+  });
+});
+
+describe("Google CRM accounts endpoint in openapi.json", () => {
+  it("should include /v1/orgs/google/accounts in committed openapi.json", () => {
+    const openapiPath = path.join(__dirname, "../../openapi.json");
+    const openapi = JSON.parse(fs.readFileSync(openapiPath, "utf-8"));
+    expect(openapi.paths).toBeDefined();
+    expect(openapi.paths["/v1/orgs/google/accounts"]).toBeDefined();
+    expect(openapi.paths["/v1/orgs/google/accounts"].get).toBeDefined();
   });
 });
 
