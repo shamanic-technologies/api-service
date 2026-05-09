@@ -71,6 +71,7 @@ Authorization: Bearer distrib.usr_abc123...
     { name: "Billing", description: "Billing, credits, and checkout" },
     { name: "Internal", description: "Platform-level operations (API key auth, no identity headers)" },
     { name: "Platform", description: "Service discovery and platform configuration" },
+    { name: "Google CRM", description: "Google CRM (Gmail + People bronze) ingestion" },
   ],
 });
 

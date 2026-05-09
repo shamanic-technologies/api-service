@@ -6801,3 +6801,182 @@ registry.registerPath({
     502: { description: "Upstream costs-service unreachable or returned non-2xx", content: errorContent },
   },
 });
+
+// ===================================================================
+// GOOGLE CRM (Gmail + People bronze ingestion)
+// ===================================================================
+
+const GoogleAuthStartRequestSchema = z
+  .object({
+    redirectUri: z.string().url().openapi({
+      description: "OAuth redirect URI registered with Google. The callback at this URI must POST/GET back to /v1/orgs/google/auth/callback.",
+      example: "https://app.distribute.you/services/crm/oauth/callback",
+    }),
+  })
+  .openapi("GoogleAuthStartRequest");
+
+const GoogleAuthStartResponseSchema = z
+  .object({
+    url: z.string().url().openapi({ description: "Google authorize URL — redirect the user here" }),
+    state: z.string().openapi({ description: "Opaque state token (PKCE). Verified on callback." }),
+  })
+  .openapi("GoogleAuthStartResponse");
+
+const GoogleAuthCallbackResponseSchema = z
+  .object({
+    success: z.boolean(),
+    googleAccountId: z.string().uuid(),
+    googleAccountEmail: z.string(),
+  })
+  .openapi("GoogleAuthCallbackResponse");
+
+const GoogleSyncResponseSchema = z
+  .object({
+    accounts: z.number().int(),
+    gmail: z.object({
+      inserted: z.number().int(),
+      updated: z.number().int(),
+      unchanged: z.number().int(),
+    }),
+    contacts: z.object({
+      inserted: z.number().int(),
+      updated: z.number().int(),
+      unchanged: z.number().int(),
+      deleted: z.number().int(),
+    }),
+  })
+  .openapi("GoogleSyncResponse");
+
+const GoogleMessageSchema = z
+  .object({
+    id: z.string().uuid(),
+    googleAccountId: z.string().uuid(),
+    gmailMessageId: z.string(),
+    threadId: z.string(),
+    historyId: z.string(),
+    payload: z.unknown().optional(),
+    fetchedAt: z.string(),
+  })
+  .openapi("GoogleMessage");
+
+const GoogleMessagesResponseSchema = z
+  .object({
+    items: z.array(GoogleMessageSchema),
+    nextCursor: z.string().nullable(),
+  })
+  .openapi("GoogleMessagesResponse");
+
+const GoogleContactSchema = z
+  .object({
+    id: z.string().uuid(),
+    googleAccountId: z.string().uuid(),
+    resourceName: z.string(),
+    etag: z.string().nullable(),
+    payload: z.unknown().optional(),
+    fetchedAt: z.string(),
+  })
+  .openapi("GoogleContact");
+
+const GoogleContactsResponseSchema = z
+  .object({
+    items: z.array(GoogleContactSchema),
+    nextCursor: z.string().nullable(),
+  })
+  .openapi("GoogleContactsResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/google/auth/start",
+  tags: ["Google CRM"],
+  summary: "Start Google CRM OAuth (Gmail + People readonly)",
+  description:
+    "Generates a Google authorize URL with PKCE for the Gmail readonly + Contacts readonly scopes. " +
+    "Persists state + verifier server-side (10 minute TTL).",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: GoogleAuthStartRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Authorize URL", content: { "application/json": { schema: GoogleAuthStartResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/google/auth/callback",
+  tags: ["Google CRM"],
+  summary: "Google CRM OAuth callback",
+  description:
+    "Exchanges code+PKCE for tokens, stores refresh token (one row per (org, google account email)).",
+  security: authed,
+  request: {
+    query: z.object({
+      code: z.string(),
+      state: z.string(),
+    }),
+  },
+  responses: {
+    200: { description: "Token stored", content: { "application/json": { schema: GoogleAuthCallbackResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/google/sync",
+  tags: ["Google CRM"],
+  summary: "Sync Gmail messages + People contacts for the org",
+  description:
+    "Backfill on first sync, delta thereafter using Gmail historyId and People syncToken. " +
+    "Idempotent. Synchronous in v1.",
+  security: authed,
+  responses: {
+    200: { description: "Sync summary", content: { "application/json": { schema: GoogleSyncResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/google/messages",
+  tags: ["Google CRM"],
+  summary: "List raw Gmail messages (bronze)",
+  security: authed,
+  request: {
+    query: z.object({
+      limit: z.coerce.number().int().optional(),
+      cursor: z.string().optional(),
+      account_id: z.string().uuid().optional(),
+      thread_id: z.string().optional(),
+    }),
+  },
+  responses: {
+    200: { description: "Paginated raw Gmail messages", content: { "application/json": { schema: GoogleMessagesResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/google/contacts",
+  tags: ["Google CRM"],
+  summary: "List raw Google contacts (bronze)",
+  security: authed,
+  request: {
+    query: z.object({
+      limit: z.coerce.number().int().optional(),
+      cursor: z.string().optional(),
+      account_id: z.string().uuid().optional(),
+      query: z.string().optional(),
+    }),
+  },
+  responses: {
+    200: { description: "Paginated raw Google contacts", content: { "application/json": { schema: GoogleContactsResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});

@@ -27,6 +27,8 @@ process.env.BILLING_SERVICE_URL = "http://localhost:3020";
 process.env.BILLING_SERVICE_API_KEY = "test-billing-service-api-key";
 process.env.STRIPE_SERVICE_URL = "http://localhost:3022";
 process.env.STRIPE_SERVICE_API_KEY = "test-stripe-service-api-key";
+process.env.GOOGLE_SERVICE_URL = "http://localhost:3033";
+process.env.GOOGLE_SERVICE_API_KEY = "test-google-service-api-key";
 
 beforeAll(() => console.log("Test suite starting..."));
 afterAll(() => console.log("Test suite complete."));

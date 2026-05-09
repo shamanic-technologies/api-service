@@ -96,6 +96,18 @@ export const externalServices = {
     url: process.env.COSTS_SERVICE_URL || "http://localhost:3025",
     apiKey: process.env.COSTS_SERVICE_API_KEY || "",
   },
+  google: {
+    get url(): string {
+      const v = process.env.GOOGLE_SERVICE_URL;
+      if (!v) throw new Error("GOOGLE_SERVICE_URL env var is required");
+      return v;
+    },
+    get apiKey(): string {
+      const v = process.env.GOOGLE_SERVICE_API_KEY;
+      if (!v) throw new Error("GOOGLE_SERVICE_API_KEY env var is required");
+      return v;
+    },
+  },
 };
 
 interface ServiceCallOptions {
