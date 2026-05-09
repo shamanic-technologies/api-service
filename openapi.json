@@ -9265,6 +9265,106 @@
           "contacts"
         ]
       },
+      "GoogleSyncJobSummary": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "accounts": {
+            "type": "integer"
+          },
+          "gmail": {
+            "type": "object",
+            "properties": {
+              "inserted": {
+                "type": "integer"
+              },
+              "updated": {
+                "type": "integer"
+              },
+              "unchanged": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "inserted",
+              "updated",
+              "unchanged"
+            ]
+          },
+          "contacts": {
+            "type": "object",
+            "properties": {
+              "inserted": {
+                "type": "integer"
+              },
+              "updated": {
+                "type": "integer"
+              },
+              "unchanged": {
+                "type": "integer"
+              },
+              "deleted": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "inserted",
+              "updated",
+              "unchanged",
+              "deleted"
+            ]
+          }
+        },
+        "required": [
+          "accounts",
+          "gmail",
+          "contacts"
+        ],
+        "description": "Sync result summary, present only when status='succeeded'."
+      },
+      "GoogleSyncJobStatusResponse": {
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "succeeded",
+              "failed"
+            ],
+            "description": "Job lifecycle state. Poll until status != 'running'."
+          },
+          "summary": {
+            "$ref": "#/components/schemas/GoogleSyncJobSummary"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true,
+            "description": "Error message, present only when status='failed'."
+          },
+          "startedAt": {
+            "type": "string",
+            "description": "ISO 8601 timestamp the job was claimed."
+          },
+          "finishedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO 8601 timestamp the job finished, null while running."
+          }
+        },
+        "required": [
+          "jobId",
+          "status",
+          "summary",
+          "error",
+          "startedAt",
+          "finishedAt"
+        ]
+      },
       "GoogleMessage": {
         "type": "object",
         "properties": {
@@ -30397,6 +30497,119 @@
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
           }
         ]
+      }
+    },
+    "/v1/orgs/google/sync/{jobId}": {
+      "get": {
+        "tags": [
+          "Google CRM"
+        ],
+        "summary": "Poll Google sync job status",
+        "description": "Returns the current status of an async Google sync job started via POST /v1/orgs/google/sync. Poll every few seconds until status is 'succeeded' or 'failed'.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Sync job id returned by POST /v1/orgs/google/sync"
+            },
+            "required": true,
+            "name": "jobId",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sync job status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoogleSyncJobStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Sync job not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/orgs/google/messages": {

@@ -6817,6 +6817,42 @@ const GoogleSyncResponseSchema = z
   })
   .openapi("GoogleSyncResponse");
 
+const GoogleSyncJobSummarySchema = z
+  .object({
+    accounts: z.number().int(),
+    gmail: z.object({
+      inserted: z.number().int(),
+      updated: z.number().int(),
+      unchanged: z.number().int(),
+    }),
+    contacts: z.object({
+      inserted: z.number().int(),
+      updated: z.number().int(),
+      unchanged: z.number().int(),
+      deleted: z.number().int(),
+    }),
+  })
+  .openapi("GoogleSyncJobSummary");
+
+const GoogleSyncJobStatusResponseSchema = z
+  .object({
+    jobId: z.string().uuid(),
+    status: z.enum(["running", "succeeded", "failed"]).openapi({
+      description: "Job lifecycle state. Poll until status != 'running'.",
+    }),
+    summary: GoogleSyncJobSummarySchema.nullable().openapi({
+      description: "Sync result summary, present only when status='succeeded'.",
+    }),
+    error: z.string().nullable().openapi({
+      description: "Error message, present only when status='failed'.",
+    }),
+    startedAt: z.string().openapi({ description: "ISO 8601 timestamp the job was claimed." }),
+    finishedAt: z.string().nullable().openapi({
+      description: "ISO 8601 timestamp the job finished, null while running.",
+    }),
+  })
+  .openapi("GoogleSyncJobStatusResponse");
+
 const GoogleMessageSchema = z
   .object({
     id: z.string().uuid(),
@@ -6923,6 +6959,30 @@ registry.registerPath({
   responses: {
     200: { description: "Sync summary", content: { "application/json": { schema: GoogleSyncResponseSchema } } },
     401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/google/sync/{jobId}",
+  tags: ["Google CRM"],
+  summary: "Poll Google sync job status",
+  description:
+    "Returns the current status of an async Google sync job started via POST /v1/orgs/google/sync. " +
+    "Poll every few seconds until status is 'succeeded' or 'failed'.",
+  security: authed,
+  request: {
+    params: z.object({
+      jobId: z.string().uuid().openapi({ description: "Sync job id returned by POST /v1/orgs/google/sync" }),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Sync job status",
+      content: { "application/json": { schema: GoogleSyncJobStatusResponseSchema } },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Sync job not found", content: errorContent },
   },
 });
 

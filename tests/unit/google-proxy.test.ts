@@ -54,6 +54,24 @@ describe("Google CRM proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
+  it("should have GET /orgs/google/sync/:jobId with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/orgs/google/sync/:jobId"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should forward jobId param into downstream path on GET /orgs/google/sync/:jobId", () => {
+    const idx = content.indexOf('"/orgs/google/sync/:jobId"');
+    expect(idx).toBeGreaterThan(-1);
+    const section = content.slice(idx, idx + 600);
+    expect(section).toContain("req.params.jobId");
+    expect(section).toMatch(/\/orgs\/google\/sync\/\$\{[^}]*jobId[^}]*\}/);
+  });
+
   it("should have GET /orgs/google/messages with auth + requireOrg + requireUser", () => {
     const line = content.split("\n").find((l) =>
       l.includes("router.get") && l.includes('"/orgs/google/messages"')
@@ -107,19 +125,20 @@ describe("Google CRM proxy routes", () => {
   it("should call externalServices.google for every endpoint", () => {
     const matches = content.match(/externalServices\.google/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(6);
+    expect(matches!.length).toBe(7);
   });
 
   it("should use buildInternalHeaders for every endpoint", () => {
     const matches = content.match(/buildInternalHeaders\(req\)/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(6);
+    expect(matches!.length).toBe(7);
   });
 
   it("should preserve downstream paths (no path renaming)", () => {
     expect(content).toContain('"/orgs/google/auth/start"');
     expect(content).toContain('/orgs/google/auth/callback');
     expect(content).toContain('"/orgs/google/sync"');
+    expect(content).toContain('"/orgs/google/sync/:jobId"');
     expect(content).toContain('/orgs/google/messages');
     expect(content).toContain('/orgs/google/contacts');
     expect(content).toContain('"/orgs/google/accounts"');
@@ -182,6 +201,20 @@ describe("Google CRM OpenAPI schemas", () => {
     expect(schemaContent).toContain("GoogleSyncResponse");
   });
 
+  it("should register GET /v1/orgs/google/sync/{jobId}", () => {
+    expect(schemaContent).toContain('path: "/v1/orgs/google/sync/{jobId}"');
+    expect(schemaContent).toContain("GoogleSyncJobStatusResponse");
+  });
+
+  it("should declare status enum running/succeeded/failed on GoogleSyncJobStatusResponse", () => {
+    const idx = schemaContent.indexOf("GoogleSyncJobStatusResponseSchema");
+    expect(idx).toBeGreaterThan(-1);
+    const section = schemaContent.slice(idx, idx + 1500);
+    expect(section).toContain('"running"');
+    expect(section).toContain('"succeeded"');
+    expect(section).toContain('"failed"');
+  });
+
   it("should register GET /v1/orgs/google/messages", () => {
     expect(schemaContent).toContain('path: "/v1/orgs/google/messages"');
     expect(schemaContent).toContain("GoogleMessagesResponse");
@@ -210,6 +243,16 @@ describe("Google CRM accounts endpoint in openapi.json", () => {
     expect(openapi.paths).toBeDefined();
     expect(openapi.paths["/v1/orgs/google/accounts"]).toBeDefined();
     expect(openapi.paths["/v1/orgs/google/accounts"].get).toBeDefined();
+  });
+});
+
+describe("Google CRM sync job poll endpoint in openapi.json", () => {
+  it("should include /v1/orgs/google/sync/{jobId} GET in committed openapi.json", () => {
+    const openapiPath = path.join(__dirname, "../../openapi.json");
+    const openapi = JSON.parse(fs.readFileSync(openapiPath, "utf-8"));
+    expect(openapi.paths).toBeDefined();
+    expect(openapi.paths["/v1/orgs/google/sync/{jobId}"]).toBeDefined();
+    expect(openapi.paths["/v1/orgs/google/sync/{jobId}"].get).toBeDefined();
   });
 });
 
