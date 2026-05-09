@@ -4708,178 +4708,11 @@
             "type": "array",
             "items": {
               "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "leadId": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "email": {
-                  "type": "string"
-                },
-                "namespace": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "apolloPersonId": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "journalistId": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "outletId": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "firstName": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "lastName": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "emailStatus": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "title": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "organizationName": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "organizationDomain": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "organizationLogoUrl": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "organizationIndustry": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "organizationSize": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "linkedinUrl": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "status": {
-                  "type": "string",
-                  "enum": [
-                    "contacted",
-                    "served"
-                  ]
-                },
-                "contacted": {
-                  "type": "boolean"
-                },
-                "sent": {
-                  "type": "boolean"
-                },
-                "delivered": {
-                  "type": "boolean"
-                },
-                "opened": {
-                  "type": "boolean"
-                },
-                "clicked": {
-                  "type": "boolean"
-                },
-                "bounced": {
-                  "type": "boolean"
-                },
-                "unsubscribed": {
-                  "type": "boolean"
-                },
-                "replied": {
-                  "type": "boolean"
-                },
-                "replyClassification": {
-                  "type": "string",
-                  "nullable": true,
-                  "enum": [
-                    "positive",
-                    "negative",
-                    "neutral"
-                  ]
-                },
-                "global": {
-                  "type": "object",
-                  "nullable": true,
-                  "properties": {
-                    "bounced": {
-                      "type": "boolean"
-                    },
-                    "unsubscribed": {
-                      "type": "boolean"
-                    }
-                  }
-                },
-                "createdAt": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "enrichmentRunId": {
-                  "type": "string",
-                  "nullable": true
-                },
-                "enrichmentRun": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/RunCostData"
-                    },
-                    {
-                      "nullable": true
-                    }
-                  ]
-                }
-              },
-              "required": [
-                "id",
-                "leadId",
-                "email",
-                "namespace",
-                "apolloPersonId",
-                "journalistId",
-                "outletId",
-                "firstName",
-                "lastName",
-                "emailStatus",
-                "title",
-                "organizationName",
-                "organizationDomain",
-                "organizationLogoUrl",
-                "organizationIndustry",
-                "organizationSize",
-                "linkedinUrl",
-                "status",
-                "contacted",
-                "sent",
-                "delivered",
-                "opened",
-                "clicked",
-                "bounced",
-                "unsubscribed",
-                "replied",
-                "replyClassification",
-                "global",
-                "createdAt",
-                "enrichmentRunId",
-                "enrichmentRun"
-              ]
-            }
+              "additionalProperties": {
+                "nullable": true
+              }
+            },
+            "description": "Array of LeadDetail objects from lead-service. Each item includes top-level fields (id, leadId, email, namespace, apolloPersonId, emailStatus, status, statusReason, statusDetails, parentRunId, runId, brandIds, campaignId, orgId, userId, workflowSlug, featureSlug, servedAt, contacted, sent, delivered, opened, clicked, bounced, unsubscribed, replied, replyClassification, lastDeliveredAt, global) plus a canonical `lead: FullLead | null` payload."
           }
         },
         "required": [
@@ -18229,7 +18062,7 @@
           "Leads"
         ],
         "summary": "List leads",
-        "description": "List leads filtered by brandId and/or campaignId, with enrichment and delivery status data. At least one of brandId or campaignId is required. Proxies to lead-service GET /orgs/leads.",
+        "description": "Pass-through to lead-service GET /orgs/leads. Filter by brandId and/or campaignId (at least one required). Each lead is a LeadDetail with the canonical FullLead payload under `lead` (lead-service v0.13.4+). Refer to lead-service openapi.json for the exact response shape — api-service forwards it untransformed.",
         "security": [
           {
             "bearerAuth": []
@@ -18334,7 +18167,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Leads with enrichment and delivery status data",
+            "description": "Leads as returned by lead-service GET /orgs/leads (LeadDetail[] under `leads`).",
             "content": {
               "application/json": {
                 "schema": {

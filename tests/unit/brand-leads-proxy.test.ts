@@ -37,42 +37,18 @@ describe("Brand-level GET /leads route", () => {
     expect(content).not.toContain("/orgs/leads/status");
   });
 
-  it("should NOT use Promise.all to merge two endpoints", () => {
-    // After lead-service PR #171, status fields are on the lead object directly
+  it("should be pure pass-through: no field mapping, no enrichment flattening, no runs aggregation", () => {
     const leadsRoute = content.slice(
       content.indexOf('router.get("/leads"'),
       content.indexOf('router.post("/leads/search"')
     );
-    expect(leadsRoute).not.toContain("Promise.all");
-    expect(leadsRoute).not.toContain("statusByEmail");
-  });
-
-  it("should read status fields directly from each lead object", () => {
-    expect(content).toContain("raw.contacted");
-    expect(content).toContain("raw.sent");
-    expect(content).toContain("raw.delivered");
-    expect(content).toContain("raw.opened");
-    expect(content).toContain("raw.clicked");
-    expect(content).toContain("raw.bounced");
-    expect(content).toContain("raw.unsubscribed");
-    expect(content).toContain("raw.replied");
-    expect(content).toContain("raw.replyClassification");
-    expect(content).toContain("raw.emailStatus");
-    expect(content).toContain("raw.global");
-  });
-
-  it("should flatten enrichment data into each lead", () => {
-    expect(content).toContain("enrichment.firstName");
-    expect(content).toContain("enrichment.lastName");
-    expect(content).toContain("enrichment.title");
-  });
-
-  it("should compute contacted status from delivery data", () => {
-    expect(content).toContain('raw.contacted ? "contacted" : "served"');
-  });
-
-  it("should batch-fetch run costs via getRunsBatch", () => {
-    expect(content).toContain("getRunsBatch");
+    expect(leadsRoute).not.toContain("enrichment.firstName");
+    expect(leadsRoute).not.toContain("enrichment.lastName");
+    expect(leadsRoute).not.toContain("raw.enrichment");
+    expect(leadsRoute).not.toContain("raw.metadata");
+    expect(leadsRoute).not.toContain("getRunsBatch");
+    expect(leadsRoute).not.toContain("enrichmentRun");
+    expect(leadsRoute).not.toContain("rawLeads.map");
   });
 
   it("should use buildInternalHeaders", () => {
@@ -85,6 +61,11 @@ describe("Brand-level GET /leads route", () => {
       content.indexOf('router.post("/leads/search"')
     );
     expect(brandIdCheckSection).toContain("res.status(400)");
+  });
+
+  it("should not import @distribute/runs-client (no aggregation)", () => {
+    expect(content).not.toContain("@distribute/runs-client");
+    expect(content).not.toContain("RunWithCosts");
   });
 });
 
@@ -107,10 +88,6 @@ describe("Brand-level GET /leads OpenAPI schema", () => {
       (p: { name: string; in: string }) => p.name === "campaignId" && p.in === "query"
     );
     expect(campaignIdParam).toBeDefined();
-  });
-
-  it("should use BrandLeadsResponse schema name", () => {
-    expect(schemaContent).toContain("BrandLeadsResponse");
   });
 
   it("should have 200, 400, 401, 500 responses", () => {
