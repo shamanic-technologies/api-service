@@ -405,10 +405,10 @@
             "type": "string",
             "description": "Campaign status (e.g. 'active', 'stopped')"
           },
-          "toResumeAt": {
+          "nextRunAt": {
             "type": "string",
             "nullable": true,
-            "description": "Scheduled resume time"
+            "description": "Scheduled next run time for a gate-blocked campaign"
           },
           "notifyFrequency": {
             "type": "string",
@@ -454,7 +454,7 @@
           "startDate",
           "endDate",
           "status",
-          "toResumeAt",
+          "nextRunAt",
           "notifyFrequency",
           "notifyChannel",
           "notifyDestination",
