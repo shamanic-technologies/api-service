@@ -26,6 +26,10 @@ api-service is a **transparent proxy**. It authenticates, applies middleware, an
 - `/orgs/brands/*` (no ID in path) = org-scoped operations using `x-org-id` / `x-brand-id` headers (list, extract-fields, extract-images)
 - `/internal/brands/{id}/*` = by-ID lookups (get brand, extracted-fields, extracted-images, runs)
 
+### Pagination params on list endpoints
+
+Never add `.default()` or `.max()` on `limit` / `pageSize` / `per_page` / `count` query/body Zod schemas at the api-service layer. Callers get whatever the downstream service returns. Silent caps caused truncated-result bugs (outlets-service hotfix v0.2.1). Enforced by `tests/unit/no-limit-defaults.regression.test.ts` — it WILL fail your build if you add one.
+
 ### Future direction
 
 New proxy routes should follow the pattern `/v1/{service-name}/{original-downstream-path}` to make the mapping obvious and mechanical. Existing routes keep their current shape to avoid breaking clients.

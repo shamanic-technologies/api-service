@@ -45,6 +45,7 @@ import outletsRoutes from "./routes/outlets.js";
 import journalistsRoutes from "./routes/journalists.js";
 import articlesRoutes from "./routes/articles.js";
 import featuresRoutes from "./routes/features.js";
+import googleRoutes from "./routes/google.js";
 import publicStatsRoutes from "./routes/public-stats.js";
 import costsRoutes from "./routes/costs.js";
 import adminRoutes from "./routes/admin.js";
@@ -203,6 +204,7 @@ app.use("/v1", outletsRoutes);
 app.use("/v1", journalistsRoutes);
 app.use("/v1", articlesRoutes);
 app.use("/v1", featuresRoutes);
+app.use("/v1", googleRoutes);
 
 // 404 handler
 app.use((req, res) => {
