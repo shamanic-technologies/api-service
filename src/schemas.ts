@@ -6854,6 +6854,21 @@ const GoogleContactsResponseSchema = z
   })
   .openapi("GoogleContactsResponse");
 
+const GoogleAccountSummarySchema = z
+  .object({
+    email: z.string().openapi({ description: "Google account email" }),
+    status: z.literal("active").openapi({ description: "Connection status" }),
+    scopes: z.array(z.string()).openapi({ description: "OAuth scopes granted" }),
+    connectedAt: z.string().openapi({ description: "ISO 8601 timestamp the account was connected" }),
+  })
+  .openapi("GoogleAccountSummary");
+
+const GoogleAccountsListResponseSchema = z
+  .object({
+    accounts: z.array(GoogleAccountSummarySchema),
+  })
+  .openapi("GoogleAccountsListResponse");
+
 registry.registerPath({
   method: "post",
   path: "/v1/orgs/google/auth/start",
@@ -6927,6 +6942,21 @@ registry.registerPath({
   },
   responses: {
     200: { description: "Paginated raw Gmail messages", content: { "application/json": { schema: GoogleMessagesResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/google/accounts",
+  tags: ["Google CRM"],
+  summary: "List connected Google accounts for the org",
+  description:
+    "Returns one entry per Google account connected to the org (Gmail + People readonly). " +
+    "Used by the dashboard CRM page to show which Google identity is linked.",
+  security: authed,
+  responses: {
+    200: { description: "Connected Google accounts", content: { "application/json": { schema: GoogleAccountsListResponseSchema } } },
     401: { description: "Unauthorized", content: errorContent },
   },
 });
