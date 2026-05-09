@@ -72,6 +72,20 @@ router.get("/orgs/google/messages", authenticate, requireOrg, requireUser, async
   }
 });
 
+// GET /v1/orgs/google/accounts — list connected Google accounts for the org
+router.get("/orgs/google/accounts", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.google,
+      "/orgs/google/accounts",
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to list Google accounts" });
+  }
+});
+
 // GET /v1/orgs/google/contacts — list raw Google contacts (bronze)
 router.get("/orgs/google/contacts", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
