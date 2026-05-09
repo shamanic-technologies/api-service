@@ -437,7 +437,7 @@ const CampaignSchema = z
     startDate: z.string().nullable().describe("Campaign start date"),
     endDate: z.string().nullable().describe("Campaign end date"),
     status: z.string().describe("Campaign status (e.g. 'active', 'stopped')"),
-    toResumeAt: z.string().nullable().describe("Scheduled resume time"),
+    nextRunAt: z.string().nullable().describe("Scheduled next run time for a gate-blocked campaign"),
     notifyFrequency: z.string().nullable().describe("Notification frequency"),
     notifyChannel: z.string().nullable().describe("Notification channel"),
     notifyDestination: z.string().nullable().describe("Notification destination"),
