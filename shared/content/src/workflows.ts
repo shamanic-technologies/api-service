@@ -63,7 +63,7 @@ export interface ParsedWorkflowName {
   category: WorkflowCategory;
   channel: WorkflowChannel;
   audienceType: WorkflowAudienceType;
-  signatureName: string;
+  workflowDynastySignatureName: string;
   sectionKey: string;
 }
 
@@ -109,7 +109,7 @@ export function parseWorkflowSlug(slug: string): ParsedWorkflowName | null {
           category,
           channel,
           audienceType: twoWord as WorkflowAudienceType,
-          signatureName,
+          workflowDynastySignatureName: signatureName,
           sectionKey: `${category}-${channel}-${twoWord}`,
         };
       }
@@ -126,7 +126,7 @@ export function getSectionKey(workflowSlug: string): string | null {
 
 /** Extract signatureName from a workflow slug. Returns null if slug doesn't match expected format. */
 export function getSignatureName(workflowSlug: string): string | null {
-  return parseWorkflowSlug(workflowSlug)?.signatureName ?? null;
+  return parseWorkflowSlug(workflowSlug)?.workflowDynastySignatureName ?? null;
 }
 
 /** Resolve category for a workflow slug. Returns null if slug doesn't match expected format. */
@@ -138,7 +138,7 @@ export function getWorkflowCategory(workflowSlug: string): WorkflowCategory | nu
 export function getWorkflowDisplayName(workflowSlug: string): string {
   const parsed = parseWorkflowSlug(workflowSlug);
   if (parsed) {
-    return parsed.signatureName.charAt(0).toUpperCase() + parsed.signatureName.slice(1);
+    return parsed.workflowDynastySignatureName.charAt(0).toUpperCase() + parsed.workflowDynastySignatureName.slice(1);
   }
   return workflowSlug
     .split("-")

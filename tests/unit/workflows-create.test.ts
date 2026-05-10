@@ -42,13 +42,12 @@ describe("POST /v1/workflows/create route", () => {
     expect(block).toContain("userId: req.userId");
   });
 
-  it("should forward featureSlug, description, hints, and style from request body", () => {
+  it("should forward featureSlug, description, and hints from request body", () => {
     const createIdx = content.indexOf('router.post("/workflows/create"');
     const block = content.slice(createIdx, createIdx + 1000);
     expect(block).toContain("featureSlug");
     expect(block).toContain("description");
     expect(block).toContain("hints");
-    expect(block).toContain("style");
   });
 
   it("should return 400 on invalid request", () => {
@@ -97,13 +96,6 @@ describe("CreateWorkflowRequestSchema", () => {
     expect(schemaSection).toContain("services");
     expect(schemaSection).toContain("nodeTypes");
     expect(schemaSection).toContain("expectedInputs");
-  });
-
-  it("should have optional style referencing WorkflowStyleSchema", () => {
-    const start = content.indexOf("CreateWorkflowRequestSchema");
-    const end = content.indexOf('.openapi("CreateWorkflowRequest")', start);
-    const schemaSection = content.slice(start, end);
-    expect(schemaSection).toContain("WorkflowStyleSchema");
   });
 
   it("should register POST /v1/workflows/create path in OpenAPI", () => {
