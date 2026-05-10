@@ -108,6 +108,30 @@ export const externalServices = {
       return v;
     },
   },
+  journalistsQuotes: {
+    get url(): string {
+      const v = process.env.JOURNALISTS_QUOTES_SERVICE_URL;
+      if (!v) throw new Error("JOURNALISTS_QUOTES_SERVICE_URL env var is required");
+      return v;
+    },
+    get apiKey(): string {
+      const v = process.env.JOURNALISTS_QUOTES_SERVICE_API_KEY;
+      if (!v) throw new Error("JOURNALISTS_QUOTES_SERVICE_API_KEY env var is required");
+      return v;
+    },
+  },
+  aiVisibility: {
+    get url(): string {
+      const v = process.env.AI_VISIBILITY_SERVICE_URL;
+      if (!v) throw new Error("AI_VISIBILITY_SERVICE_URL env var is required");
+      return v;
+    },
+    get apiKey(): string {
+      const v = process.env.AI_VISIBILITY_SERVICE_API_KEY;
+      if (!v) throw new Error("AI_VISIBILITY_SERVICE_API_KEY env var is required");
+      return v;
+    },
+  },
 };
 
 interface ServiceCallOptions {
