@@ -556,7 +556,7 @@ router.post("/workflows/create", authenticate, requireOrg, requireUser, async (r
       });
     }
 
-    const { featureSlug, description, hints, style } = parsed.data;
+    const { featureSlug, description, hints } = parsed.data;
 
     const result = await callExternalService(
       externalServices.workflow,
@@ -570,7 +570,6 @@ router.post("/workflows/create", authenticate, requireOrg, requireUser, async (r
           featureSlug,
           description,
           hints,
-          ...(style && { style }),
         },
       }
     );

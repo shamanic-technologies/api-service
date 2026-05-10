@@ -111,7 +111,7 @@ describe("GET /v1/brands/:id/extracted-images", () => {
     const res = await request(app).get("/v1/brands/nonexistent/extracted-images");
 
     expect(res.status).toBe(404);
-    expect(res.body.error).toContain("Brand not found");
+    expect(res.body.error).toContain("Service call failed: 404");
   });
 
   it("should return 500 when brand-service fails", async () => {
@@ -124,6 +124,6 @@ describe("GET /v1/brands/:id/extracted-images", () => {
     const res = await request(app).get("/v1/brands/brand-abc/extracted-images");
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toContain("Internal error");
+    expect(res.body.error).toContain("Service call failed: 500");
   });
 });

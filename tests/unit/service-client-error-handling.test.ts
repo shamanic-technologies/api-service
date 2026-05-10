@@ -8,7 +8,7 @@ describe("callExternalService error handling", () => {
     vi.restoreAllMocks();
   });
 
-  it("should extract error message from JSON error response", async () => {
+  it("should return generic error message (not upstream details) for JSON error response", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -19,15 +19,15 @@ describe("callExternalService error handling", () => {
     );
 
     await expect(callExternalService(service, "/validate")).rejects.toThrow(
-      "Invalid API key format",
-    );
-    // Must NOT contain the raw JSON wrapper
-    await expect(callExternalService(service, "/validate")).rejects.not.toThrow(
       "Service call failed: 401",
+    );
+    // Must NOT leak upstream error details
+    await expect(callExternalService(service, "/validate")).rejects.not.toThrow(
+      "Invalid API key format",
     );
   });
 
-  it("should fall back to raw text when response is not JSON", async () => {
+  it("should return generic error message (not upstream details) for non-JSON response", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -38,7 +38,11 @@ describe("callExternalService error handling", () => {
     );
 
     await expect(callExternalService(service, "/health")).rejects.toThrow(
-      "Service call failed: 500 - Internal Server Error",
+      "Service call failed: 500",
+    );
+    // Must NOT leak upstream error text
+    await expect(callExternalService(service, "/health")).rejects.not.toThrow(
+      "Internal Server Error",
     );
   });
 

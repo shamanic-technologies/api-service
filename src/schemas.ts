@@ -107,17 +107,6 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/debug/config",
-  tags: ["Health"],
-  summary: "Debug configuration",
-  description: "Returns debug info about external service configuration",
-  responses: {
-    200: { description: "Debug configuration data" },
-  },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/openapi.json",
   tags: ["Health"],
   summary: "OpenAPI specification",
@@ -201,7 +190,7 @@ const WorkflowMetadataSchema = z
     audienceType: z.string().optional().describe("Audience type (e.g. 'cold-outreach')"),
     featureSlug: z.string().describe("Feature slug this workflow belongs to (e.g. 'pr-cold-email-outreach')"),
     signature: z.string().describe("SHA-256 hash of the canonical DAG"),
-    signatureName: z.string().describe("Human-readable name for this DAG variant"),
+    workflowDynastySignatureName: z.string().describe("Human-readable name for this DAG variant within the dynasty"),
   })
   .openapi("WorkflowMetadata");
 
@@ -3947,21 +3936,6 @@ registry.registerPath({
   },
 });
 
-export const WorkflowStyleSchema = z
-  .object({
-    type: z.enum(["human", "brand"]).describe("Style source type"),
-    humanId: z
-      .string()
-      .optional()
-      .describe("Human ID from human-service. Required when type is 'human'."),
-    brandId: z
-      .string()
-      .optional()
-      .describe("Brand ID from brand-service. Required when type is 'brand'."),
-    name: z.string().min(1).describe("Display name of the human or brand (e.g. 'Hormozi', 'My Brand')"),
-  })
-  .openapi("WorkflowStyle");
-
 export const CreateWorkflowRequestSchema = z
   .object({
     featureSlug: z
@@ -3985,9 +3959,6 @@ export const CreateWorkflowRequestSchema = z
       })
       .optional()
       .describe("Optional hints to guide DAG generation"),
-    style: WorkflowStyleSchema.optional().describe(
-      "Optional style configuration. When provided, the workflow is generated in the style of an industry expert or brand."
-    ),
   })
   .openapi("CreateWorkflowRequest");
 
@@ -4017,10 +3988,9 @@ const generateWorkflowResponse = z
       name: z.string().describe("Auto-generated workflow slug"),
       featureSlug: z.string().describe("Feature slug this workflow belongs to"),
       signature: z.string().describe("SHA-256 hash of the canonical DAG"),
-      signatureName: z.string().describe("Human-readable name for this DAG variant"),
+      workflowDynastySignatureName: z.string().describe("Human-readable name for this DAG variant within the dynasty"),
       action: z.enum(["created", "updated"]).describe("Whether the workflow was created or updated"),
       humanId: z.string().nullable().describe("Human ID if styled after an expert"),
-      styleName: z.string().nullable().describe("Base style name for versioning (e.g. 'hormozi')"),
     }),
     dag: z.object({
       nodes: z.array(z.any()).describe("DAG nodes"),

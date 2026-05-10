@@ -61,17 +61,18 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // CORS - allow dashboard, MCP clients, and public landing pages
+const corsOrigins: string[] = [
+  "https://dashboard.distribute.you",
+  "https://distribute.you",
+  "https://performance.distribute.you",
+  "https://landing.distribute.you",
+  "https://sales-cold-emails.distribute.you",
+];
+if (process.env.NODE_ENV !== "production") {
+  corsOrigins.push("http://localhost:3000", "http://localhost:3001", "http://localhost:3007");
+}
 app.use(cors({
-  origin: [
-    "https://dashboard.distribute.you",
-    "https://distribute.you",
-    "https://performance.distribute.you",
-    "https://landing.distribute.you",
-    "https://sales-cold-emails.distribute.you",
-    "http://localhost:3000",
-    "http://localhost:3001",
-    "http://localhost:3007",
-  ],
+  origin: corsOrigins,
   credentials: true,
 }));
 

@@ -65,6 +65,19 @@ function getPool(serviceName: string): pg.Pool | null {
   return pool;
 }
 
+// Graceful shutdown: close all PG pools
+const shutdownPools = async () => {
+  const entries = [...pools.entries()];
+  if (entries.length === 0) return;
+  console.log(`[admin] Closing ${entries.length} PG pool(s)...`);
+  await Promise.allSettled(entries.map(([name, pool]) =>
+    pool.end().catch((err) => console.error(`[admin] Failed to close pool "${name}":`, err.message))
+  ));
+  console.log("[admin] All PG pools closed.");
+};
+process.on("SIGTERM", shutdownPools);
+process.on("SIGINT", shutdownPools);
+
 // ── GET /admin/services ─────────────────────────────────────────────────────
 router.get("/admin/services", authenticatePlatform, (_req: Request, res: Response) => {
   const services = Object.keys(SERVICE_DB_REGISTRY).map((name) => ({
@@ -167,7 +180,23 @@ router.get("/admin/services/:name/tables/:table/rows", authenticatePlatform, asy
     return res.status(404).json({ error: `Table "${table}" not found` });
   }
 
+  // Strict identifier regex — reject anything that isn't a valid PostgreSQL identifier
+  const IDENTIFIER_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+
   const validColumns = columnsResult.rows.map((r) => r.column_name);
+
+  // S7: Validate all column names from information_schema before use in SQL
+  for (const col of validColumns) {
+    if (!IDENTIFIER_RE.test(col)) {
+      return res.status(500).json({ error: "Invalid column name detected in schema" });
+    }
+  }
+
+  // S1: Validate table name against strict identifier regex
+  if (!IDENTIFIER_RE.test(table)) {
+    return res.status(400).json({ error: "Invalid table name" });
+  }
+
   const textColumns = columnsResult.rows
     .filter((r) => ["character varying", "text", "varchar", "char", "character"].includes(r.data_type))
     .map((r) => r.column_name);
@@ -203,7 +232,7 @@ router.get("/admin/services/:name/tables/:table/rows", authenticatePlatform, asy
     whereClause = `WHERE ${conditions.join(" OR ")}`;
   }
 
-  // Sort column is validated above — safe to interpolate
+  // Sort column and table name are validated above — safe to interpolate
   const query = `SELECT * FROM "${table}" ${whereClause} ORDER BY "${sort}" ${order} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
   params.push(limit, offset);
 

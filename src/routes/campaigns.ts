@@ -275,7 +275,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
         `/orgs/stats?${deliveryParams}`,
         { headers: internalHeaders },
       ).catch((err) => {
-        console.warn("[campaigns/stats] email-gateway groupBy failed:", (err as Error).message);
+        console.error("[campaigns/stats] email-gateway groupBy failed:", (err as Error).message);
         return null;
       }),
       callExternalService<{ groups: Array<{ key: string; totalLeads: number; byOutreachStatus?: { contacted?: number }; buffered: number; skipped: number }> }>(
@@ -283,7 +283,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
         `/orgs/stats?${leadParams}`,
         { headers: internalHeaders },
       ).catch((err) => {
-        console.warn("[campaigns/stats] lead-service groupBy failed:", (err as Error).message);
+        console.error("[campaigns/stats] lead-service groupBy failed:", (err as Error).message);
         return null;
       }),
       callExternalService<{ groups: Array<{ key: string; stats: { emailsGenerated: number } }> }>(
@@ -291,7 +291,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
         `/stats?${emailgenParams}`,
         { headers: internalHeaders },
       ).catch((err) => {
-        console.warn("[campaigns/stats] content-generation groupBy failed:", (err as Error).message);
+        console.error("[campaigns/stats] content-generation groupBy failed:", (err as Error).message);
         return null;
       }),
       callExternalService<{ groups: Array<{ dimensions: Record<string, string | null>; totalCostInUsdCents: string; runCount: number }> }>(
@@ -299,7 +299,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
         `/v1/stats/costs?${runsParams}`,
         { headers: internalHeaders },
       ).catch((err) => {
-        console.warn("[campaigns/stats] runs-service groupBy failed:", (err as Error).message);
+        console.error("[campaigns/stats] runs-service groupBy failed:", (err as Error).message);
         return null;
       }),
     ]);
@@ -313,6 +313,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
 
     // Delivery stats (broadcast only)
     for (const g of deliveryGroups?.groups ?? []) {
+      if (!g.key) continue;
       const s = ensure(g.key);
       const b = g.broadcast;
       s.recipientStats = b?.recipientStats ?? EMPTY_DELIVERY_STATS.recipientStats;
@@ -321,6 +322,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
 
     // Lead stats (new shape: totalLeads, byOutreachStatus.contacted, buffered, skipped)
     for (const g of leadGroups?.groups ?? []) {
+      if (!g.key) continue;
       const s = ensure(g.key);
       s.leadsServed = g.totalLeads;
       s.leadsContacted = g.byOutreachStatus?.contacted ?? 0;
@@ -330,6 +332,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
 
     // Emailgen stats
     for (const g of emailgenGroups?.groups ?? []) {
+      if (!g.key) continue;
       const s = ensure(g.key);
       s.emailsGenerated = g.stats.emailsGenerated;
     }
@@ -650,17 +653,17 @@ router.get("/campaigns/:id/stream", authenticate, requireOrg, requireUser, async
           externalServices.campaign,
           `/campaigns/${id}`,
           { headers: internalHeaders }
-        ).catch(() => null),
+        ).catch((err) => { console.error("[campaigns/sse] Failed to fetch campaign-service status:", (err as Error).message); return null; }),
         callExternalService<{ totalLeads: number; buffered: number; skipped: number }>(
           externalServices.lead,
           `/orgs/stats?campaignId=${id}`,
           { headers: internalHeaders }
-        ).catch(() => null),
+        ).catch((err) => { console.error("[campaigns/sse] Failed to fetch lead-service stats:", (err as Error).message); return null; }),
         callExternalService<{ stats?: { emailsGenerated?: number } }>(
           externalServices.emailgen,
           `/stats?campaignId=${encodeURIComponent(id)}`,
           { headers: internalHeaders }
-        ).catch(() => null),
+        ).catch((err) => { console.error("[campaigns/sse] Failed to fetch emailgen-service stats:", (err as Error).message); return null; }),
         fetchDeliveryStats({ campaignId: id }, req),
       ]);
 

@@ -58,7 +58,7 @@ router.get("/orgs/google/sync/:jobId", authenticate, requireOrg, requireUser, as
     const jobId = req.params.jobId;
     const result = await callExternalService(
       externalServices.google,
-      `/orgs/google/sync/${jobId}`,
+      `/orgs/google/sync/${encodeURIComponent(jobId)}`,
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);

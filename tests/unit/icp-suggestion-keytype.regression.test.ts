@@ -93,8 +93,7 @@ describe("POST /v1/brand/icp-suggestion", () => {
       .send({ brandUrl: "https://example.com" });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain("Anthropic API key not configured");
-    expect(res.body.error).toContain("API Keys");
+    expect(res.body.error).toContain("Service call failed: 400");
   });
 
   it("should return 400 when brandUrl is missing", async () => {

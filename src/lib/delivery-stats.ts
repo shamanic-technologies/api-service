@@ -63,7 +63,7 @@ export async function fetchDeliveryStats(
       headers: buildInternalHeaders(req),
     }
   ).catch((err) => {
-    console.warn("[delivery-stats] Email-gateway stats failed:", (err as Error).message);
+    console.error("[delivery-stats] Email-gateway stats failed:", (err as Error).message);
     return null;
   });
 
