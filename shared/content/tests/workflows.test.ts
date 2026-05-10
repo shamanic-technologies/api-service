@@ -72,7 +72,7 @@ describe("parseWorkflowSlug", () => {
       category: "sales",
       channel: "email",
       audienceType: "cold-outreach",
-      signatureName: "sienna",
+      workflowDynastySignatureName: "sienna",
       sectionKey: "sales-email-cold-outreach",
     });
   });
@@ -83,7 +83,7 @@ describe("parseWorkflowSlug", () => {
       category: "pr",
       channel: "email",
       audienceType: "cold-outreach",
-      signatureName: "sequoia",
+      workflowDynastySignatureName: "sequoia",
       sectionKey: "pr-email-cold-outreach",
     });
   });

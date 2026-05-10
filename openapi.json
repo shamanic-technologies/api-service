@@ -202,9 +202,9 @@
             "type": "string",
             "description": "SHA-256 hash of the canonical DAG"
           },
-          "signatureName": {
+          "workflowDynastySignatureName": {
             "type": "string",
-            "description": "Human-readable name for this DAG variant"
+            "description": "Human-readable name for this DAG variant within the dynasty"
           }
         },
         "required": [
@@ -218,7 +218,7 @@
           "createdForBrandId",
           "featureSlug",
           "signature",
-          "signatureName"
+          "workflowDynastySignatureName"
         ]
       },
       "RankedResponse": {
@@ -6156,9 +6156,9 @@
                 "type": "string",
                 "description": "SHA-256 hash of the canonical DAG"
               },
-              "signatureName": {
+              "workflowDynastySignatureName": {
                 "type": "string",
-                "description": "Human-readable name for this DAG variant"
+                "description": "Human-readable name for this DAG variant within the dynasty"
               },
               "action": {
                 "type": "string",
@@ -6172,11 +6172,6 @@
                 "type": "string",
                 "nullable": true,
                 "description": "Human ID if styled after an expert"
-              },
-              "styleName": {
-                "type": "string",
-                "nullable": true,
-                "description": "Base style name for versioning (e.g. 'hormozi')"
               }
             },
             "required": [
@@ -6184,10 +6179,9 @@
               "name",
               "featureSlug",
               "signature",
-              "signatureName",
+              "workflowDynastySignatureName",
               "action",
-              "humanId",
-              "styleName"
+              "humanId"
             ]
           },
           "dag": {
@@ -6223,37 +6217,6 @@
           "dag",
           "generatedDescription"
         ]
-      },
-      "WorkflowStyle": {
-        "type": "object",
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "human",
-              "brand"
-            ],
-            "description": "Style source type"
-          },
-          "humanId": {
-            "type": "string",
-            "description": "Human ID from human-service. Required when type is 'human'."
-          },
-          "brandId": {
-            "type": "string",
-            "description": "Brand ID from brand-service. Required when type is 'brand'."
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Display name of the human or brand (e.g. 'Hormozi', 'My Brand')"
-          }
-        },
-        "required": [
-          "type",
-          "name"
-        ],
-        "description": "Optional style configuration. When provided, the workflow is generated in the style of an industry expert or brand."
       },
       "CreateWorkflowRequest": {
         "type": "object",
@@ -6294,9 +6257,6 @@
               }
             },
             "description": "Optional hints to guide DAG generation"
-          },
-          "style": {
-            "$ref": "#/components/schemas/WorkflowStyle"
           }
         },
         "required": [
@@ -6326,9 +6286,9 @@
                 "type": "string",
                 "description": "SHA-256 hash of the canonical DAG"
               },
-              "signatureName": {
+              "workflowDynastySignatureName": {
                 "type": "string",
-                "description": "Human-readable name for this DAG variant"
+                "description": "Human-readable name for this DAG variant within the dynasty"
               },
               "action": {
                 "type": "string",
@@ -6342,11 +6302,6 @@
                 "type": "string",
                 "nullable": true,
                 "description": "Human ID if styled after an expert"
-              },
-              "styleName": {
-                "type": "string",
-                "nullable": true,
-                "description": "Base style name for versioning (e.g. 'hormozi')"
               }
             },
             "required": [
@@ -6354,10 +6309,9 @@
               "name",
               "featureSlug",
               "signature",
-              "signatureName",
+              "workflowDynastySignatureName",
               "action",
-              "humanId",
-              "styleName"
+              "humanId"
             ]
           },
           "dag": {
