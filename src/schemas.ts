@@ -107,17 +107,6 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/debug/config",
-  tags: ["Health"],
-  summary: "Debug configuration",
-  description: "Returns debug info about external service configuration",
-  responses: {
-    200: { description: "Debug configuration data" },
-  },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/openapi.json",
   tags: ["Health"],
   summary: "OpenAPI specification",

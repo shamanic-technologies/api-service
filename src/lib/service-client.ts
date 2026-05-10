@@ -149,14 +149,10 @@ export async function callExternalServiceWithStatus<T>(
 
     if (!response.ok) {
       const errorText = await response.text();
-      let errorMessage: string;
-      try {
-        const errorJson = JSON.parse(errorText);
-        errorMessage = errorJson.error || `Service call failed: ${response.status}`;
-      } catch {
-        errorMessage = `Service call failed: ${response.status} - ${errorText}`;
-      }
-      const err = new Error(errorMessage) as Error & { statusCode: number };
+      // Log full upstream error server-side for debugging
+      console.error(`[callExternalService] ${method} ${url} upstream error ${response.status}:`, errorText);
+      // Return generic message to client — never leak upstream details
+      const err = new Error(`Service call failed: ${response.status}`) as Error & { statusCode: number };
       err.statusCode = response.status;
       throw err;
     }
