@@ -9565,20 +9565,6 @@
         }
       }
     },
-    "/debug/config": {
-      "get": {
-        "tags": [
-          "Health"
-        ],
-        "summary": "Debug configuration",
-        "description": "Returns debug info about external service configuration",
-        "responses": {
-          "200": {
-            "description": "Debug configuration data"
-          }
-        }
-      }
-    },
     "/openapi.json": {
       "get": {
         "tags": [

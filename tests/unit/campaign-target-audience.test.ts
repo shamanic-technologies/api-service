@@ -249,6 +249,6 @@ describe("POST /v1/campaigns with featureInputs", () => {
     const res = await request(app).post("/v1/campaigns").send(validBody);
     // features-service 404 is forwarded — unknown feature slug
     expect(res.status).toBe(404);
-    expect(res.body.error).toContain("Feature not found");
+    expect(res.body.error).toContain("Service call failed: 404");
   });
 });

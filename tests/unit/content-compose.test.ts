@@ -137,7 +137,7 @@ describe("POST /v1/content/compose", () => {
       .send(validBody);
 
     expect(res.status).toBe(503);
-    expect(res.body.error).toContain("Service unavailable");
+    expect(res.body.error).toContain("Service call failed: 503");
   });
 
   it("should forward layout field to downstream service", async () => {

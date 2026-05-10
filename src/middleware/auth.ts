@@ -1,6 +1,22 @@
 import { Request, Response, NextFunction } from "express";
+import { timingSafeEqual } from "crypto";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { createRun, updateRun } from "@distribute/runs-client";
+
+/**
+ * Timing-safe comparison of two strings.
+ * Returns false for length mismatch without leaking timing info.
+ */
+function safeCompare(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) {
+    // Compare against self to consume constant time, then return false
+    timingSafeEqual(bufA, bufA);
+    return false;
+  }
+  return timingSafeEqual(bufA, bufB);
+}
 
 export interface AuthenticatedRequest extends Request {
   userId?: string;
@@ -36,7 +52,8 @@ export async function authenticate(
 
     if (apiKey) {
       // ── Path 1: Admin auth via X-API-Key ──
-      if (apiKey !== process.env.ADMIN_DISTRIBUTE_API_KEY) {
+      const expectedKey = process.env.ADMIN_DISTRIBUTE_API_KEY;
+      if (!expectedKey || !safeCompare(apiKey, expectedKey)) {
         return res.status(401).json({ error: "Invalid admin key" });
       }
       req.authType = "admin";
@@ -219,7 +236,8 @@ export async function authenticatePlatform(
   next: NextFunction
 ) {
   const apiKey = req.headers["x-api-key"] as string | undefined;
-  if (!apiKey || apiKey !== process.env.ADMIN_DISTRIBUTE_API_KEY) {
+  const expectedKey = process.env.ADMIN_DISTRIBUTE_API_KEY;
+  if (!apiKey || !expectedKey || !safeCompare(apiKey, expectedKey)) {
     return res.status(401).json({ error: "Invalid or missing platform API key" });
   }
   req.authType = "admin";

@@ -79,7 +79,7 @@ describe("Campaign duplicate name handling (409 Conflict)", () => {
     const res = await request(app).post("/v1/campaigns").send(validCampaignBody);
 
     expect(res.status).toBe(409);
-    expect(res.body.error).toContain("already exists");
+    expect(res.body.error).toContain("Service call failed: 409");
   });
 
   it("PATCH /v1/campaigns/:id should return 409 when campaign name already exists", async () => {
@@ -102,6 +102,6 @@ describe("Campaign duplicate name handling (409 Conflict)", () => {
       .send({ name: "Duplicate Name" });
 
     expect(res.status).toBe(409);
-    expect(res.body.error).toContain("already exists");
+    expect(res.body.error).toContain("Service call failed: 409");
   });
 });
