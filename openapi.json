@@ -78,6 +78,14 @@
     {
       "name": "Google CRM",
       "description": "Google CRM (Gmail + People bronze) ingestion"
+    },
+    {
+      "name": "Expert Quotes",
+      "description": "Expert quote outreach (journalists-quotes-service proxy)"
+    },
+    {
+      "name": "AI Visibility",
+      "description": "AI visibility-score audits (ai-visibility-score-service proxy)"
     }
   ],
   "components": {
@@ -9471,6 +9479,677 @@
         "required": [
           "items",
           "nextCursor"
+        ]
+      },
+      "QuoteRequest": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "featuredQuestionId": {
+            "type": "integer"
+          },
+          "source": {
+            "type": "string"
+          },
+          "mediaOutlet": {
+            "type": "string",
+            "nullable": true
+          },
+          "opportunityText": {
+            "type": "string"
+          },
+          "pitchUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "deadline": {
+            "type": "string",
+            "nullable": true
+          },
+          "fetchedAt": {
+            "type": "string"
+          },
+          "orgId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "featuredQuestionId",
+          "source",
+          "mediaOutlet",
+          "opportunityText",
+          "pitchUrl",
+          "deadline",
+          "fetchedAt",
+          "orgId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "QuoteRequestsListResponse": {
+        "type": "object",
+        "properties": {
+          "quoteRequests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuoteRequest"
+            }
+          }
+        },
+        "required": [
+          "quoteRequests"
+        ]
+      },
+      "QuoteRequestsStatsResponse": {
+        "type": "object",
+        "properties": {
+          "totalRequests": {
+            "type": "integer"
+          },
+          "totalPitched": {
+            "type": "integer"
+          },
+          "totalSelected": {
+            "type": "integer"
+          },
+          "totalPublished": {
+            "type": "integer"
+          },
+          "totalNotSelected": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "totalRequests",
+          "totalPitched",
+          "totalSelected",
+          "totalPublished",
+          "totalNotSelected"
+        ]
+      },
+      "QuoteRequestResponse": {
+        "type": "object",
+        "properties": {
+          "quoteRequest": {
+            "$ref": "#/components/schemas/QuoteRequest"
+          }
+        },
+        "required": [
+          "quoteRequest"
+        ]
+      },
+      "QuotePitch": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quoteRequestId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "featuredQuestionId": {
+            "type": "integer"
+          },
+          "featuredProfileId": {
+            "type": "integer"
+          },
+          "campaignId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "draft": {
+            "type": "string"
+          },
+          "submittedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "drafted",
+              "submitted",
+              "selected",
+              "published",
+              "not_selected",
+              "error"
+            ]
+          },
+          "featuredArticleUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          },
+          "parentRunId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "runId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "orgId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "quoteRequestId",
+          "featuredQuestionId",
+          "featuredProfileId",
+          "campaignId",
+          "brandId",
+          "draft",
+          "submittedAt",
+          "status",
+          "featuredArticleUrl",
+          "error",
+          "parentRunId",
+          "runId",
+          "orgId",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "QuotePitchesListResponse": {
+        "type": "object",
+        "properties": {
+          "quotePitches": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuotePitch"
+            }
+          }
+        },
+        "required": [
+          "quotePitches"
+        ]
+      },
+      "QuotePitchResponse": {
+        "type": "object",
+        "properties": {
+          "quotePitch": {
+            "$ref": "#/components/schemas/QuotePitch"
+          }
+        },
+        "required": [
+          "quotePitch"
+        ]
+      },
+      "VisibilityScoreWeights": {
+        "type": "object",
+        "properties": {
+          "brandMentionRate": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "citationRate": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "positionScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "shareOfVoice": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "sentiment": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "brandAndUrlRate": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "brandMentionRate",
+          "citationRate",
+          "positionScore",
+          "shareOfVoice",
+          "sentiment",
+          "brandAndUrlRate"
+        ]
+      },
+      "VisibilityScoreRun": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orgId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "parentRunId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "runId": {
+            "type": "string",
+            "nullable": true,
+            "format": "uuid"
+          },
+          "domain": {
+            "type": "string"
+          },
+          "brandName": {
+            "type": "string"
+          },
+          "llmProvider": {
+            "type": "string"
+          },
+          "llmModel": {
+            "type": "string"
+          },
+          "promptGenModel": {
+            "type": "string"
+          },
+          "extractionProvider": {
+            "type": "string"
+          },
+          "extractionModel": {
+            "type": "string"
+          },
+          "nPrompts": {
+            "type": "number"
+          },
+          "weights": {
+            "$ref": "#/components/schemas/VisibilityScoreWeights"
+          },
+          "visibilityScore": {
+            "type": "string",
+            "nullable": true
+          },
+          "brandMentionRate": {
+            "type": "string",
+            "nullable": true
+          },
+          "shareOfVoice": {
+            "type": "string",
+            "nullable": true
+          },
+          "netSentiment": {
+            "type": "string",
+            "nullable": true
+          },
+          "citationRate": {
+            "type": "string",
+            "nullable": true
+          },
+          "avgPosition": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string"
+          },
+          "startedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "completedAt": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "orgId",
+          "brandId",
+          "parentRunId",
+          "runId",
+          "domain",
+          "brandName",
+          "llmProvider",
+          "llmModel",
+          "promptGenModel",
+          "extractionProvider",
+          "extractionModel",
+          "nPrompts",
+          "weights",
+          "visibilityScore",
+          "brandMentionRate",
+          "shareOfVoice",
+          "netSentiment",
+          "citationRate",
+          "avgPosition",
+          "status",
+          "startedAt",
+          "completedAt",
+          "createdAt"
+        ]
+      },
+      "VisibilityScoreRunWithDelta": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/VisibilityScoreRun"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "visibility_score_delta": {
+                "type": "string",
+                "nullable": true
+              },
+              "share_of_voice_delta": {
+                "type": "string",
+                "nullable": true
+              },
+              "net_sentiment_delta": {
+                "type": "string",
+                "nullable": true
+              },
+              "position_delta": {
+                "type": "string",
+                "nullable": true
+              }
+            },
+            "required": [
+              "visibility_score_delta",
+              "share_of_voice_delta",
+              "net_sentiment_delta",
+              "position_delta"
+            ]
+          }
+        ]
+      },
+      "VisibilityScoreRunsListResponse": {
+        "type": "object",
+        "properties": {
+          "runs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VisibilityScoreRunWithDelta"
+            }
+          },
+          "limit": {
+            "type": "number"
+          },
+          "offset": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "runs",
+          "limit",
+          "offset"
+        ]
+      },
+      "VisibilityScorePrompt": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "promptIndex": {
+            "type": "number"
+          },
+          "promptText": {
+            "type": "string"
+          },
+          "responseText": {
+            "type": "string"
+          },
+          "responseLengthChars": {
+            "type": "number",
+            "nullable": true
+          },
+          "brandFound": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "brandCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "brandPosition": {
+            "type": "number",
+            "nullable": true
+          },
+          "urlFound": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "urlCount": {
+            "type": "number",
+            "nullable": true
+          },
+          "brandAndUrlCoOccurrence": {
+            "type": "boolean",
+            "nullable": true
+          },
+          "maxBrandsInResponse": {
+            "type": "number",
+            "nullable": true
+          },
+          "sentiment": {
+            "type": "string",
+            "nullable": true
+          },
+          "sentimentScore": {
+            "type": "string",
+            "nullable": true
+          },
+          "citationUrls": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "latencyMs": {
+            "type": "number",
+            "nullable": true
+          },
+          "tokensInput": {
+            "type": "number",
+            "nullable": true
+          },
+          "tokensOutput": {
+            "type": "number",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "promptIndex",
+          "promptText",
+          "responseText",
+          "responseLengthChars",
+          "brandFound",
+          "brandCount",
+          "brandPosition",
+          "urlFound",
+          "urlCount",
+          "brandAndUrlCoOccurrence",
+          "maxBrandsInResponse",
+          "sentiment",
+          "sentimentScore",
+          "citationUrls",
+          "latencyMs",
+          "tokensInput",
+          "tokensOutput"
+        ]
+      },
+      "VisibilityScoreCompetitor": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "promptIdFk": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "competitorName": {
+            "type": "string"
+          },
+          "competitorUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "position": {
+            "type": "number",
+            "nullable": true
+          },
+          "sentiment": {
+            "type": "string",
+            "nullable": true
+          },
+          "sentimentScore": {
+            "type": "string",
+            "nullable": true
+          },
+          "citationUrl": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "required": [
+          "id",
+          "promptIdFk",
+          "competitorName",
+          "competitorUrl",
+          "position",
+          "sentiment",
+          "sentimentScore",
+          "citationUrl"
+        ]
+      },
+      "VisibilityScoreTopCompetitor": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "nullable": true
+          },
+          "mention_count": {
+            "type": "number"
+          },
+          "avg_position": {
+            "type": "number",
+            "nullable": true
+          },
+          "share_of_voice": {
+            "type": "number"
+          },
+          "net_sentiment": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "name",
+          "url",
+          "mention_count",
+          "avg_position",
+          "share_of_voice",
+          "net_sentiment"
+        ]
+      },
+      "VisibilityScoreCitationOpportunity": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "count": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "domain",
+          "count"
+        ]
+      },
+      "VisibilityScoreRunDetailResponse": {
+        "type": "object",
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/VisibilityScoreRun"
+          },
+          "prompts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VisibilityScorePrompt"
+            }
+          },
+          "competitors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VisibilityScoreCompetitor"
+            }
+          },
+          "top_competitors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VisibilityScoreTopCompetitor"
+            }
+          },
+          "citation_opportunities": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VisibilityScoreCitationOpportunity"
+            }
+          }
+        },
+        "required": [
+          "run",
+          "prompts",
+          "competitors",
+          "top_competitors",
+          "citation_opportunities"
         ]
       }
     },
@@ -30886,6 +31565,851 @@
           },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/quote-requests": {
+      "get": {
+        "tags": [
+          "Expert Quotes"
+        ],
+        "summary": "List quote requests for the org",
+        "description": "Pure pass-through to journalists-quotes-service GET /orgs/quote-requests. Filter by campaign_id and/or source. Caller controls pagination via limit/offset.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "campaign_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "source",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of quote requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteRequestsListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/quote-requests/stats": {
+      "get": {
+        "tags": [
+          "Expert Quotes"
+        ],
+        "summary": "Aggregate stats for quote requests + pitches",
+        "description": "Pass-through to journalists-quotes-service GET /orgs/quote-requests/stats.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "campaign_id",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Quote request stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteRequestsStatsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/quote-requests/{id}": {
+      "get": {
+        "tags": [
+          "Expert Quotes"
+        ],
+        "summary": "Get a single quote request",
+        "description": "Pass-through to journalists-quotes-service GET /orgs/quote-requests/{id}.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Quote request id"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Quote request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteRequestResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Quote request not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/quote-pitches": {
+      "get": {
+        "tags": [
+          "Expert Quotes"
+        ],
+        "summary": "List quote pitches for the org",
+        "description": "Pure pass-through to journalists-quotes-service GET /orgs/quote-pitches. Filter by campaign_id and/or status. Caller controls pagination via limit/offset.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "campaign_id",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "drafted",
+                "submitted",
+                "selected",
+                "published",
+                "not_selected",
+                "error"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of quote pitches",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotePitchesListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/quote-pitches/{id}": {
+      "get": {
+        "tags": [
+          "Expert Quotes"
+        ],
+        "summary": "Get a single quote pitch",
+        "description": "Pass-through to journalists-quotes-service GET /orgs/quote-pitches/{id}.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Quote pitch id"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Quote pitch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuotePitchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Quote pitch not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/visibility-score-runs": {
+      "get": {
+        "tags": [
+          "AI Visibility"
+        ],
+        "summary": "List visibility-score runs with deltas",
+        "description": "Pure pass-through to ai-visibility-score-service GET /orgs/visibility-score-runs. Each row includes a delta block vs. the immediately previous run for the same brand. Filter by brandId, domain, or date range (from/to).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "domain",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            },
+            "required": false,
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of visibility-score runs",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisibilityScoreRunsListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/visibility-score-runs/{id}": {
+      "get": {
+        "tags": [
+          "AI Visibility"
+        ],
+        "summary": "Get a single visibility-score run",
+        "description": "Pass-through to ai-visibility-score-service GET /orgs/visibility-score-runs/{id}. Returns run + prompts[] + competitors[] + top_competitors[] + citation_opportunities[].",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Visibility-score run id"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Visibility-score run bundle",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisibilityScoreRunDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Run not found",
             "content": {
               "application/json": {
                 "schema": {

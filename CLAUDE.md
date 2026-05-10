@@ -6,6 +6,10 @@ API gateway that sits between the dashboard (frontend) and all backend microserv
 
 api-service is a **transparent proxy**. It authenticates, applies middleware, and forwards requests — it does NOT redefine, rename, or transform downstream routes.
 
+**"Transparent" does NOT mean "generic catch-all".** Every downstream endpoint requires its own explicit Express handler in `src/routes/<service>.ts`, its own Zod schema in `src/schemas.ts`, and a re-generated `openapi.json`. There is no `app.use("/v1/*", genericProxy)` and adding one is out of scope for any normal feature PR — it would break OpenAPI auto-generation, per-route auth-tier enforcement, query-param whitelisting, and ~30 existing `*-proxy.test.ts` files. If you think you need a generic catch-all, that is a standalone architectural proposal, not a "while we're here" tweak.
+
+"Transparent" means: no path rename, no aggregation, no body transform, no field stripping, no header injection beyond the standard identity headers. It does NOT mean fewer files.
+
 ### Rules
 
 1. **No path renaming.** The path sent to the downstream service must match the actual route on that service. Always check the API registry (`mcp__api-registry__list_service_endpoints`) for the correct path before writing a proxy route.

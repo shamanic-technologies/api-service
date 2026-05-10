@@ -7010,3 +7010,354 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
   },
 });
+
+// ===================================================================
+// EXPERT QUOTES (journalists-quotes-service proxy)
+// ===================================================================
+
+const QuoteRequestSchema = z
+  .object({
+    id: z.string().uuid(),
+    featuredQuestionId: z.number().int(),
+    source: z.string(),
+    mediaOutlet: z.string().nullable(),
+    opportunityText: z.string(),
+    pitchUrl: z.string().nullable(),
+    deadline: z.string().nullable(),
+    fetchedAt: z.string(),
+    orgId: z.string().uuid(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .openapi("QuoteRequest");
+
+const QuoteRequestsListResponseSchema = z
+  .object({ quoteRequests: z.array(QuoteRequestSchema) })
+  .openapi("QuoteRequestsListResponse");
+
+const QuoteRequestResponseSchema = z
+  .object({ quoteRequest: QuoteRequestSchema })
+  .openapi("QuoteRequestResponse");
+
+const QuoteRequestsStatsResponseSchema = z
+  .object({
+    totalRequests: z.number().int(),
+    totalPitched: z.number().int(),
+    totalSelected: z.number().int(),
+    totalPublished: z.number().int(),
+    totalNotSelected: z.number().int(),
+  })
+  .openapi("QuoteRequestsStatsResponse");
+
+const QuotePitchStatusEnum = z.enum([
+  "drafted",
+  "submitted",
+  "selected",
+  "published",
+  "not_selected",
+  "error",
+]);
+
+const QuotePitchSchema = z
+  .object({
+    id: z.string().uuid(),
+    quoteRequestId: z.string().uuid(),
+    featuredQuestionId: z.number().int(),
+    featuredProfileId: z.number().int(),
+    campaignId: z.string().uuid(),
+    brandId: z.string().uuid(),
+    draft: z.string(),
+    submittedAt: z.string().nullable(),
+    status: QuotePitchStatusEnum,
+    featuredArticleUrl: z.string().nullable(),
+    error: z.string().nullable(),
+    parentRunId: z.string().uuid().nullable(),
+    runId: z.string().uuid().nullable(),
+    orgId: z.string().uuid(),
+    createdAt: z.string(),
+    updatedAt: z.string(),
+  })
+  .openapi("QuotePitch");
+
+const QuotePitchesListResponseSchema = z
+  .object({ quotePitches: z.array(QuotePitchSchema) })
+  .openapi("QuotePitchesListResponse");
+
+const QuotePitchResponseSchema = z
+  .object({ quotePitch: QuotePitchSchema })
+  .openapi("QuotePitchResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/quote-requests",
+  tags: ["Expert Quotes"],
+  summary: "List quote requests for the org",
+  description:
+    "Pure pass-through to journalists-quotes-service GET /orgs/quote-requests. " +
+    "Filter by campaign_id and/or source. Caller controls pagination via limit/offset.",
+  security: authed,
+  request: {
+    query: z.object({
+      campaign_id: z.string().uuid().optional(),
+      source: z.string().optional(),
+      limit: z.string().optional(),
+      offset: z.string().optional(),
+    }),
+  },
+  responses: {
+    200: { description: "List of quote requests", content: { "application/json": { schema: QuoteRequestsListResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/quote-requests/stats",
+  tags: ["Expert Quotes"],
+  summary: "Aggregate stats for quote requests + pitches",
+  description: "Pass-through to journalists-quotes-service GET /orgs/quote-requests/stats.",
+  security: authed,
+  request: {
+    query: z.object({
+      campaign_id: z.string().uuid().optional(),
+    }),
+  },
+  responses: {
+    200: { description: "Quote request stats", content: { "application/json": { schema: QuoteRequestsStatsResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/quote-requests/{id}",
+  tags: ["Expert Quotes"],
+  summary: "Get a single quote request",
+  description: "Pass-through to journalists-quotes-service GET /orgs/quote-requests/{id}.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().uuid().openapi({ description: "Quote request id" }),
+    }),
+  },
+  responses: {
+    200: { description: "Quote request", content: { "application/json": { schema: QuoteRequestResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Quote request not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/quote-pitches",
+  tags: ["Expert Quotes"],
+  summary: "List quote pitches for the org",
+  description:
+    "Pure pass-through to journalists-quotes-service GET /orgs/quote-pitches. " +
+    "Filter by campaign_id and/or status. Caller controls pagination via limit/offset.",
+  security: authed,
+  request: {
+    query: z.object({
+      campaign_id: z.string().uuid().optional(),
+      status: QuotePitchStatusEnum.optional(),
+      limit: z.string().optional(),
+      offset: z.string().optional(),
+    }),
+  },
+  responses: {
+    200: { description: "List of quote pitches", content: { "application/json": { schema: QuotePitchesListResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/quote-pitches/{id}",
+  tags: ["Expert Quotes"],
+  summary: "Get a single quote pitch",
+  description: "Pass-through to journalists-quotes-service GET /orgs/quote-pitches/{id}.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().uuid().openapi({ description: "Quote pitch id" }),
+    }),
+  },
+  responses: {
+    200: { description: "Quote pitch", content: { "application/json": { schema: QuotePitchResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Quote pitch not found", content: errorContent },
+  },
+});
+
+// ===================================================================
+// AI VISIBILITY (ai-visibility-score-service proxy)
+// ===================================================================
+
+const VisibilityScoreWeightsSchema = z
+  .object({
+    brandMentionRate: z.number().min(0).max(1),
+    citationRate: z.number().min(0).max(1),
+    positionScore: z.number().min(0).max(1),
+    shareOfVoice: z.number().min(0).max(1),
+    sentiment: z.number().min(0).max(1),
+    brandAndUrlRate: z.number().min(0).max(1),
+  })
+  .openapi("VisibilityScoreWeights");
+
+const VisibilityScoreRunBaseSchema = z
+  .object({
+    id: z.string().uuid(),
+    orgId: z.string().uuid(),
+    brandId: z.string().uuid(),
+    parentRunId: z.string().uuid().nullable(),
+    runId: z.string().uuid().nullable(),
+    domain: z.string(),
+    brandName: z.string(),
+    llmProvider: z.string(),
+    llmModel: z.string(),
+    promptGenModel: z.string(),
+    extractionProvider: z.string(),
+    extractionModel: z.string(),
+    nPrompts: z.number(),
+    weights: VisibilityScoreWeightsSchema,
+    visibilityScore: z.string().nullable(),
+    brandMentionRate: z.string().nullable(),
+    shareOfVoice: z.string().nullable(),
+    netSentiment: z.string().nullable(),
+    citationRate: z.string().nullable(),
+    avgPosition: z.string().nullable(),
+    status: z.string(),
+    startedAt: z.string().nullable(),
+    completedAt: z.string().nullable(),
+    createdAt: z.string(),
+  })
+  .passthrough()
+  .openapi("VisibilityScoreRun");
+
+const VisibilityScoreRunWithDeltaSchema = VisibilityScoreRunBaseSchema.extend({
+  visibility_score_delta: z.string().nullable(),
+  share_of_voice_delta: z.string().nullable(),
+  net_sentiment_delta: z.string().nullable(),
+  position_delta: z.string().nullable(),
+})
+  .passthrough()
+  .openapi("VisibilityScoreRunWithDelta");
+
+const VisibilityScoreRunsListResponseSchema = z
+  .object({
+    runs: z.array(VisibilityScoreRunWithDeltaSchema),
+    limit: z.number(),
+    offset: z.number(),
+  })
+  .openapi("VisibilityScoreRunsListResponse");
+
+const VisibilityScorePromptSchema = z
+  .object({
+    id: z.string().uuid(),
+    promptIndex: z.number(),
+    promptText: z.string(),
+    responseText: z.string(),
+    responseLengthChars: z.number().nullable(),
+    brandFound: z.boolean().nullable(),
+    brandCount: z.number().nullable(),
+    brandPosition: z.number().nullable(),
+    urlFound: z.boolean().nullable(),
+    urlCount: z.number().nullable(),
+    brandAndUrlCoOccurrence: z.boolean().nullable(),
+    maxBrandsInResponse: z.number().nullable(),
+    sentiment: z.string().nullable(),
+    sentimentScore: z.string().nullable(),
+    citationUrls: z.array(z.string()).nullable(),
+    latencyMs: z.number().nullable(),
+    tokensInput: z.number().nullable(),
+    tokensOutput: z.number().nullable(),
+  })
+  .openapi("VisibilityScorePrompt");
+
+const VisibilityScoreCompetitorSchema = z
+  .object({
+    id: z.string().uuid(),
+    promptIdFk: z.string().uuid(),
+    competitorName: z.string(),
+    competitorUrl: z.string().nullable(),
+    position: z.number().nullable(),
+    sentiment: z.string().nullable(),
+    sentimentScore: z.string().nullable(),
+    citationUrl: z.string().nullable(),
+  })
+  .openapi("VisibilityScoreCompetitor");
+
+const VisibilityScoreTopCompetitorSchema = z
+  .object({
+    name: z.string(),
+    url: z.string().nullable(),
+    mention_count: z.number(),
+    avg_position: z.number().nullable(),
+    share_of_voice: z.number(),
+    net_sentiment: z.number(),
+  })
+  .openapi("VisibilityScoreTopCompetitor");
+
+const VisibilityScoreCitationOpportunitySchema = z
+  .object({
+    domain: z.string(),
+    count: z.number(),
+  })
+  .openapi("VisibilityScoreCitationOpportunity");
+
+const VisibilityScoreRunDetailResponseSchema = z
+  .object({
+    run: VisibilityScoreRunBaseSchema,
+    prompts: z.array(VisibilityScorePromptSchema),
+    competitors: z.array(VisibilityScoreCompetitorSchema),
+    top_competitors: z.array(VisibilityScoreTopCompetitorSchema),
+    citation_opportunities: z.array(VisibilityScoreCitationOpportunitySchema),
+  })
+  .openapi("VisibilityScoreRunDetailResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/visibility-score-runs",
+  tags: ["AI Visibility"],
+  summary: "List visibility-score runs with deltas",
+  description:
+    "Pure pass-through to ai-visibility-score-service GET /orgs/visibility-score-runs. " +
+    "Each row includes a delta block vs. the immediately previous run for the same brand. " +
+    "Filter by brandId, domain, or date range (from/to).",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().optional(),
+      domain: z.string().optional(),
+      from: z.string().optional(),
+      to: z.string().optional(),
+      limit: z.coerce.number().int().optional(),
+      offset: z.coerce.number().int().optional(),
+    }),
+  },
+  responses: {
+    200: { description: "List of visibility-score runs", content: { "application/json": { schema: VisibilityScoreRunsListResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/visibility-score-runs/{id}",
+  tags: ["AI Visibility"],
+  summary: "Get a single visibility-score run",
+  description:
+    "Pass-through to ai-visibility-score-service GET /orgs/visibility-score-runs/{id}. " +
+    "Returns run + prompts[] + competitors[] + top_competitors[] + citation_opportunities[].",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().uuid().openapi({ description: "Visibility-score run id" }),
+    }),
+  },
+  responses: {
+    200: { description: "Visibility-score run bundle", content: { "application/json": { schema: VisibilityScoreRunDetailResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Run not found", content: errorContent },
+  },
+});
