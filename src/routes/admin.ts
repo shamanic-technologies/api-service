@@ -65,6 +65,19 @@ function getPool(serviceName: string): pg.Pool | null {
   return pool;
 }
 
+// Graceful shutdown: close all PG pools
+const shutdownPools = async () => {
+  const entries = [...pools.entries()];
+  if (entries.length === 0) return;
+  console.log(`[admin] Closing ${entries.length} PG pool(s)...`);
+  await Promise.allSettled(entries.map(([name, pool]) =>
+    pool.end().catch((err) => console.error(`[admin] Failed to close pool "${name}":`, err.message))
+  ));
+  console.log("[admin] All PG pools closed.");
+};
+process.on("SIGTERM", shutdownPools);
+process.on("SIGINT", shutdownPools);
+
 // ── GET /admin/services ─────────────────────────────────────────────────────
 router.get("/admin/services", authenticatePlatform, (_req: Request, res: Response) => {
   const services = Object.keys(SERVICE_DB_REGISTRY).map((name) => ({
