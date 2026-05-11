@@ -73,35 +73,35 @@ describe("aiVisibility service client", () => {
     expect(serviceClientContent).toContain("aiVisibility: {");
   });
 
-  it("should read AI_VISIBILITY_SERVICE_URL with no fallback", () => {
-    expect(serviceClientContent).toContain("AI_VISIBILITY_SERVICE_URL");
-    expect(serviceClientContent).toContain("AI_VISIBILITY_SERVICE_URL env var is required");
+  it("should read AI_VISIBILITY_SCORE_SERVICE_URL with no fallback", () => {
+    expect(serviceClientContent).toContain("AI_VISIBILITY_SCORE_SERVICE_URL");
+    expect(serviceClientContent).toContain("AI_VISIBILITY_SCORE_SERVICE_URL env var is required");
   });
 
-  it("should read AI_VISIBILITY_SERVICE_API_KEY with no fallback", () => {
-    expect(serviceClientContent).toContain("AI_VISIBILITY_SERVICE_API_KEY");
-    expect(serviceClientContent).toContain("AI_VISIBILITY_SERVICE_API_KEY env var is required");
+  it("should read AI_VISIBILITY_SCORE_SERVICE_API_KEY with no fallback", () => {
+    expect(serviceClientContent).toContain("AI_VISIBILITY_SCORE_SERVICE_API_KEY");
+    expect(serviceClientContent).toContain("AI_VISIBILITY_SCORE_SERVICE_API_KEY env var is required");
   });
 
-  it("should throw when AI_VISIBILITY_SERVICE_URL is unset", async () => {
-    const original = process.env.AI_VISIBILITY_SERVICE_URL;
-    delete process.env.AI_VISIBILITY_SERVICE_URL;
+  it("should throw when AI_VISIBILITY_SCORE_SERVICE_URL is unset", async () => {
+    const original = process.env.AI_VISIBILITY_SCORE_SERVICE_URL;
+    delete process.env.AI_VISIBILITY_SCORE_SERVICE_URL;
     try {
       const { externalServices } = await import("../../src/lib/service-client.js");
-      expect(() => externalServices.aiVisibility.url).toThrow(/AI_VISIBILITY_SERVICE_URL/);
+      expect(() => externalServices.aiVisibility.url).toThrow(/AI_VISIBILITY_SCORE_SERVICE_URL/);
     } finally {
-      if (original !== undefined) process.env.AI_VISIBILITY_SERVICE_URL = original;
+      if (original !== undefined) process.env.AI_VISIBILITY_SCORE_SERVICE_URL = original;
     }
   });
 
-  it("should throw when AI_VISIBILITY_SERVICE_API_KEY is unset", async () => {
-    const original = process.env.AI_VISIBILITY_SERVICE_API_KEY;
-    delete process.env.AI_VISIBILITY_SERVICE_API_KEY;
+  it("should throw when AI_VISIBILITY_SCORE_SERVICE_API_KEY is unset", async () => {
+    const original = process.env.AI_VISIBILITY_SCORE_SERVICE_API_KEY;
+    delete process.env.AI_VISIBILITY_SCORE_SERVICE_API_KEY;
     try {
       const { externalServices } = await import("../../src/lib/service-client.js");
-      expect(() => externalServices.aiVisibility.apiKey).toThrow(/AI_VISIBILITY_SERVICE_API_KEY/);
+      expect(() => externalServices.aiVisibility.apiKey).toThrow(/AI_VISIBILITY_SCORE_SERVICE_API_KEY/);
     } finally {
-      if (original !== undefined) process.env.AI_VISIBILITY_SERVICE_API_KEY = original;
+      if (original !== undefined) process.env.AI_VISIBILITY_SCORE_SERVICE_API_KEY = original;
     }
   });
 });
