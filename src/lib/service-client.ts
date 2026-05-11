@@ -122,13 +122,13 @@ export const externalServices = {
   },
   aiVisibility: {
     get url(): string {
-      const v = process.env.AI_VISIBILITY_SERVICE_URL;
-      if (!v) throw new Error("AI_VISIBILITY_SERVICE_URL env var is required");
+      const v = process.env.AI_VISIBILITY_SCORE_SERVICE_URL;
+      if (!v) throw new Error("AI_VISIBILITY_SCORE_SERVICE_URL env var is required");
       return v;
     },
     get apiKey(): string {
-      const v = process.env.AI_VISIBILITY_SERVICE_API_KEY;
-      if (!v) throw new Error("AI_VISIBILITY_SERVICE_API_KEY env var is required");
+      const v = process.env.AI_VISIBILITY_SCORE_SERVICE_API_KEY;
+      if (!v) throw new Error("AI_VISIBILITY_SCORE_SERVICE_API_KEY env var is required");
       return v;
     },
   },
