@@ -185,6 +185,34 @@ describe("AI visibility endpoints in openapi.json", () => {
     const found = params.find((p) => p.name === "campaignId" && p.in === "query");
     expect(found).toBeDefined();
   });
+
+  it("should expose 4 new debug fields on VisibilityScorePrompt schema", () => {
+    const props = openapi.components.schemas.VisibilityScorePrompt.properties;
+    expect(props.judgeSystemPrompt).toBeDefined();
+    expect(props.judgeUserMessage).toBeDefined();
+    expect(props.extractorSystemPrompt).toBeDefined();
+    expect(props.extractorUserMessage).toBeDefined();
+  });
+
+  it("should expose 2 new debug fields on VisibilityScoreRun schema", () => {
+    const props = openapi.components.schemas.VisibilityScoreRun.properties;
+    expect(props.promptGenSystemPrompt).toBeDefined();
+    expect(props.promptGenUserMessage).toBeDefined();
+  });
+});
+
+describe("AI visibility debug fields in schemas.ts", () => {
+  it("should declare 4 new prompt-level debug fields", () => {
+    expect(schemaContent).toMatch(/judgeSystemPrompt:\s*z\.string\(\)\.nullable\(\)/);
+    expect(schemaContent).toMatch(/judgeUserMessage:\s*z\.string\(\)\.nullable\(\)/);
+    expect(schemaContent).toMatch(/extractorSystemPrompt:\s*z\.string\(\)\.nullable\(\)/);
+    expect(schemaContent).toMatch(/extractorUserMessage:\s*z\.string\(\)\.nullable\(\)/);
+  });
+
+  it("should declare 2 new run-level prompt-gen debug fields", () => {
+    expect(schemaContent).toMatch(/promptGenSystemPrompt:\s*z\.string\(\)\.nullable\(\)\.optional\(\)/);
+    expect(schemaContent).toMatch(/promptGenUserMessage:\s*z\.string\(\)\.nullable\(\)\.optional\(\)/);
+  });
 });
 
 describe("Visibility routes are mounted in index.ts", () => {
