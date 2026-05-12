@@ -42,24 +42,42 @@ describe("AI visibility proxy routes", () => {
     expect(section).toMatch(/\/orgs\/visibility-score-runs\/\$\{[^}]*encodeURIComponent[^}]*\}/);
   });
 
-  it("should forward brandId/domain/from/to/limit/offset on GET /orgs/visibility-score-runs", () => {
+  it("should forward brandId/domain/from/to/limit/offset/campaignId on GET /orgs/visibility-score-runs", () => {
     const idx = content.indexOf('"/orgs/visibility-score-runs"');
     const section = content.slice(idx, idx + 800);
-    for (const param of ["brandId", "domain", "from", "to", "limit", "offset"]) {
+    for (const param of ["brandId", "domain", "from", "to", "limit", "offset", "campaignId"]) {
       expect(section).toContain(`"${param}"`);
     }
   });
 
-  it("should call externalServices.aiVisibility for every endpoint (2x)", () => {
-    const matches = content.match(/externalServices\.aiVisibility/g);
-    expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(2);
+  it("should have POST /orgs/visibility-score-runs with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.post") && l.includes('"/orgs/visibility-score-runs"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
   });
 
-  it("should use buildInternalHeaders for every endpoint (2x)", () => {
+  it("should forward req.body on POST /orgs/visibility-score-runs", () => {
+    const idx = content.indexOf('router.post("/orgs/visibility-score-runs"');
+    expect(idx).toBeGreaterThan(-1);
+    const section = content.slice(idx, idx + 900);
+    expect(section).toContain('method: "POST"');
+    expect(section).toContain("body: req.body");
+  });
+
+  it("should call externalServices.aiVisibility for every endpoint (3x)", () => {
+    const matches = content.match(/externalServices\.aiVisibility/g);
+    expect(matches).not.toBeNull();
+    expect(matches!.length).toBe(3);
+  });
+
+  it("should use buildInternalHeaders for every endpoint (3x)", () => {
     const matches = content.match(/buildInternalHeaders\(req\)/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(2);
+    expect(matches!.length).toBe(3);
   });
 
   it("should preserve downstream paths (no path renaming)", () => {
@@ -117,6 +135,27 @@ describe("AI visibility OpenAPI schemas", () => {
     expect(schemaContent).toContain("VisibilityScoreRunDetailResponse");
   });
 
+  it("should expose campaignId on GET /v1/orgs/visibility-score-runs query", () => {
+    const idx = schemaContent.indexOf('path: "/v1/orgs/visibility-score-runs"');
+    const section = schemaContent.slice(idx, idx + 1200);
+    expect(section).toMatch(/campaignId:\s*z\.string\(\)\.uuid\(\)\.optional\(\)/);
+  });
+
+  it("should register POST /v1/orgs/visibility-score-runs", () => {
+    const idx = schemaContent.indexOf('path: "/v1/orgs/visibility-score-runs"');
+    const next = schemaContent.indexOf('path: "/v1/orgs/visibility-score-runs"', idx + 1);
+    // Two registrations of that exact path expected: one GET, one POST.
+    expect(idx).toBeGreaterThan(-1);
+    expect(next).toBeGreaterThan(-1);
+  });
+
+  it("should accept optional campaignId in POST body schema", () => {
+    expect(schemaContent).toMatch(/VisibilityScoreRunCreateRequest/);
+    const reqIdx = schemaContent.indexOf("VisibilityScoreRunCreateRequest");
+    const section = schemaContent.slice(Math.max(0, reqIdx - 400), reqIdx + 400);
+    expect(section).toMatch(/campaignId:\s*z\.string\(\)\.uuid\(\)\.optional\(\)/);
+  });
+
   it("should use AI Visibility tag", () => {
     expect(schemaContent).toContain('tags: ["AI Visibility"]');
   });
@@ -134,6 +173,17 @@ describe("AI visibility endpoints in openapi.json", () => {
   it("should include /v1/orgs/visibility-score-runs/{id} GET in committed openapi.json", () => {
     expect(openapi.paths["/v1/orgs/visibility-score-runs/{id}"]).toBeDefined();
     expect(openapi.paths["/v1/orgs/visibility-score-runs/{id}"].get).toBeDefined();
+  });
+
+  it("should include /v1/orgs/visibility-score-runs POST in committed openapi.json", () => {
+    expect(openapi.paths["/v1/orgs/visibility-score-runs"].post).toBeDefined();
+  });
+
+  it("should list campaignId as a query parameter on GET /v1/orgs/visibility-score-runs", () => {
+    const get = openapi.paths["/v1/orgs/visibility-score-runs"].get;
+    const params = (get.parameters ?? []) as Array<{ name: string; in: string }>;
+    const found = params.find((p) => p.name === "campaignId" && p.in === "query");
+    expect(found).toBeDefined();
   });
 });
 
