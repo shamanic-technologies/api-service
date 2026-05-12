@@ -7315,6 +7315,18 @@ const VisibilityScoreRunDetailResponseSchema = z
   })
   .openapi("VisibilityScoreRunDetailResponse");
 
+const VisibilityScoreRunCreateRequestSchema = z
+  .object({
+    campaignId: z.string().uuid().optional(),
+  })
+  .openapi("VisibilityScoreRunCreateRequest");
+
+const VisibilityScoreRunCreateResponseSchema = z
+  .object({
+    results: z.array(z.object({}).passthrough()),
+  })
+  .openapi("VisibilityScoreRunCreateResponse");
+
 registry.registerPath({
   method: "get",
   path: "/v1/orgs/visibility-score-runs",
@@ -7323,12 +7335,13 @@ registry.registerPath({
   description:
     "Pure pass-through to ai-visibility-score-service GET /orgs/visibility-score-runs. " +
     "Each row includes a delta block vs. the immediately previous run for the same brand. " +
-    "Filter by brandId, domain, or date range (from/to).",
+    "Filter by brandId, domain, campaignId, or date range (from/to).",
   security: authed,
   request: {
     query: z.object({
       brandId: z.string().uuid().optional(),
       domain: z.string().optional(),
+      campaignId: z.string().uuid().optional(),
       from: z.string().optional(),
       to: z.string().optional(),
       limit: z.coerce.number().int().optional(),
@@ -7337,6 +7350,27 @@ registry.registerPath({
   },
   responses: {
     200: { description: "List of visibility-score runs", content: { "application/json": { schema: VisibilityScoreRunsListResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/visibility-score-runs",
+  tags: ["AI Visibility"],
+  summary: "Run a visibility-score audit for a single brand",
+  description:
+    "Pass-through to ai-visibility-score-service POST /orgs/visibility-score-runs. " +
+    "Runs an N-prompt LLM audit against the brand identified by `x-brand-id`. " +
+    "Optional `campaignId` in the body associates the run with a campaign.",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: VisibilityScoreRunCreateRequestSchema } },
+    },
+  },
+  responses: {
+    200: { description: "Run results", content: { "application/json": { schema: VisibilityScoreRunCreateResponseSchema } } },
     401: { description: "Unauthorized", content: errorContent },
   },
 });

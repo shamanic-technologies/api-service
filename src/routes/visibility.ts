@@ -9,7 +9,7 @@ const router = Router();
 router.get("/orgs/visibility-score-runs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["brandId", "domain", "from", "to", "limit", "offset"]) {
+    for (const key of ["brandId", "domain", "from", "to", "limit", "offset", "campaignId"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";
@@ -22,6 +22,20 @@ router.get("/orgs/visibility-score-runs", authenticate, requireOrg, requireUser,
     res.json(result);
   } catch (error: any) {
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to list visibility-score runs" });
+  }
+});
+
+// POST /v1/orgs/visibility-score-runs — start a visibility-score audit
+router.post("/orgs/visibility-score-runs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.aiVisibility,
+      `/orgs/visibility-score-runs`,
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to start visibility-score run" });
   }
 });
 
