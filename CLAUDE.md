@@ -30,6 +30,12 @@ api-service is a **transparent proxy**. It authenticates, applies middleware, an
 - `/orgs/brands/*` (no ID in path) = org-scoped operations using `x-org-id` / `x-brand-id` headers (list, extract-fields, extract-images)
 - `/internal/brands/{id}/*` = by-ID lookups (get brand, extracted-fields, extracted-images, runs)
 
+### Service-client env var names must match Railway
+
+When adding a new entry to `externalServices` in `src/lib/service-client.ts`, the env var name MUST be `<SERVICE>_SERVICE_URL` / `<SERVICE>_SERVICE_API_KEY` where `<SERVICE>` matches the actual Railway service / repo name in screaming snake case (e.g. `ai-visibility-score-service` → `AI_VISIBILITY_SCORE_SERVICE_URL`, NOT `AI_VISIBILITY_SERVICE_URL`).
+
+Verify with `mcp__railway__list-variables` BEFORE shipping. Unit tests pass either way (they assert what the source contains, not what Railway has) — only a runtime call exposes the mismatch as a 500. Hotfix v0.36.1 fixed this for `ai-visibility-score-service` after dashboard 500s.
+
 ### Pagination params on list endpoints
 
 Never add `.default()` or `.max()` on `limit` / `pageSize` / `per_page` / `count` query/body Zod schemas at the api-service layer. Callers get whatever the downstream service returns. Silent caps caused truncated-result bugs (outlets-service hotfix v0.2.1). Enforced by `tests/unit/no-limit-defaults.regression.test.ts` — it WILL fail your build if you add one.
