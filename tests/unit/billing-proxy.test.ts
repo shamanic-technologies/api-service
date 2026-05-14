@@ -123,8 +123,16 @@ describe("Billing OpenAPI schemas", () => {
     expect(schemaContent).not.toContain('"byok", "payg"');
   });
 
-  it("should have hasAutoReload in BillingAccountResponse", () => {
-    expect(schemaContent).toContain("hasAutoReload");
+  it("billing response schemas are passthrough (transparent proxy contract)", () => {
+    // Post-billing-service-#107: api-service no longer redeclares billing
+    // response field shapes. Each billing response schema collapses to
+    // z.object({}).passthrough() so downstream renames flow through without
+    // a coordinated api-service edit. See PR for rationale.
+    expect(schemaContent).toContain('z.object({}).passthrough().openapi("BillingAccountResponse")');
+    expect(schemaContent).toContain('z.object({}).passthrough().openapi("TransactionListResponse")');
+    expect(schemaContent).toContain('z.object({}).passthrough().openapi("ConfigureAutoReloadResponse")');
+    expect(schemaContent).toContain('z.object({}).passthrough().openapi("DisableAutoReloadResponse")');
+    expect(schemaContent).toContain('z.object({}).passthrough().openapi("PublicBillingStatsResponse")');
   });
 });
 

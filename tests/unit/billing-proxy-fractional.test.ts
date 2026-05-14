@@ -49,11 +49,13 @@ describe("billing proxy — fractional cents (decimal-string contract)", () => {
     expect(res.body.balance_cents).toBe("100.4200000000");
   });
 
-  it("GET /billing/accounts returns decimal-string credit/reload fields untouched", async () => {
+  it("GET /billing/accounts returns decimal-string grant/spent/available/reload fields untouched", async () => {
     const upstream = {
       id: "acc_1",
       orgId: "org-test",
-      creditBalanceCents: "12345.6789012345",
+      grantsCents: "12345.6789012345",
+      runsSpentCents: "2345.6789012345",
+      availableCents: "10000.0000000000",
       hasAutoReload: true,
       hasPaymentMethod: true,
       reloadAmountCents: "500000.0000000000",
@@ -66,7 +68,9 @@ describe("billing proxy — fractional cents (decimal-string contract)", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(upstream);
-    expect(typeof res.body.creditBalanceCents).toBe("string");
+    expect(typeof res.body.grantsCents).toBe("string");
+    expect(typeof res.body.runsSpentCents).toBe("string");
+    expect(typeof res.body.availableCents).toBe("string");
     expect(typeof res.body.reloadAmountCents).toBe("string");
     expect(typeof res.body.reloadThresholdCents).toBe("string");
   });
@@ -75,7 +79,9 @@ describe("billing proxy — fractional cents (decimal-string contract)", () => {
     const upstream = {
       id: "acc_2",
       orgId: "org-test",
-      creditBalanceCents: "0.0000000000",
+      grantsCents: "0.0000000000",
+      runsSpentCents: "0.0000000000",
+      availableCents: "0.0000000000",
       hasAutoReload: false,
       hasPaymentMethod: false,
       reloadAmountCents: null,
@@ -139,7 +145,9 @@ describe("billing proxy — fractional cents (decimal-string contract)", () => {
     const upstream = {
       id: "acc_3",
       orgId: "org-test",
-      creditBalanceCents: "100.0000000000",
+      grantsCents: "100.0000000000",
+      runsSpentCents: "10.0000000000",
+      availableCents: "90.0000000000",
       hasAutoReload: true,
       hasPaymentMethod: true,
       reloadAmountCents: "1000.5000000000",
