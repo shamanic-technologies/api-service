@@ -58,20 +58,20 @@ const MOCK_USER_STATS = {
   ],
 };
 
-// Fractional decimal-string cents — billing-service v2 contract (PR #83).
+// Fractional decimal-string cents — billing-service contract post-#107
+// (creditBalance/consumed fields removed; grants is the accurate label).
 const MOCK_BILLING_STATS = {
   totalAccounts: 35,
   accountsWithPaymentMethod: 12,
-  totalCreditBalanceCents: "450000.4200000000",
+  totalGrantsCents: "450000.4200000000",
   totalCreditedCents: "1200000.0000000000",
-  totalConsumedCents: "750000.5800000000",
   monthlyGrowth: [
-    { period: "2026-01", credited_cents: "200000.0000000000", consumed_cents: "120000.4200000000", revenue_cents: "80000.0000000000" },
-    { period: "2026-02", credited_cents: "350000.0000000000", consumed_cents: "210000.0000000000", revenue_cents: "150000.0000000000" },
+    { period: "2026-01", credited_cents: "200000.0000000000", revenue_cents: "80000.0000000000" },
+    { period: "2026-02", credited_cents: "350000.0000000000", revenue_cents: "150000.0000000000" },
   ],
   weeklyGrowth: [
-    { period: "2026-W14", credited_cents: "50000.0000000000", consumed_cents: "30000.0000000000", revenue_cents: "20000.0000000000" },
-    { period: "2026-W15", credited_cents: "75000.0000000000", consumed_cents: "48000.0000000000", revenue_cents: "35000.0000000000" },
+    { period: "2026-W14", credited_cents: "50000.0000000000", revenue_cents: "20000.0000000000" },
+    { period: "2026-W15", credited_cents: "75000.0000000000", revenue_cents: "35000.0000000000" },
   ],
 };
 
@@ -132,12 +132,11 @@ describe("GET /public/stats/billing", () => {
     expect(res.body.monthlyGrowth[0]).toEqual({
       period: "2026-01",
       credited_cents: "200000.0000000000",
-      consumed_cents: "120000.4200000000",
       revenue_cents: "80000.0000000000",
     });
     // precision preserved as string, not coerced to number
-    expect(typeof res.body.monthlyGrowth[0].consumed_cents).toBe("string");
-    expect(typeof res.body.totalCreditBalanceCents).toBe("string");
+    expect(typeof res.body.monthlyGrowth[0].credited_cents).toBe("string");
+    expect(typeof res.body.totalGrantsCents).toBe("string");
     expect(res.body.weeklyGrowth).toHaveLength(2);
   });
 

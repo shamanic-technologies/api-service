@@ -7132,55 +7132,7 @@
       },
       "BillingAccountResponse": {
         "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Account ID"
-          },
-          "orgId": {
-            "type": "string",
-            "description": "Organization ID"
-          },
-          "creditBalanceCents": {
-            "type": "string",
-            "pattern": "^\\d+(\\.\\d+)?$",
-            "description": "Current credit balance in cents (decimal string, full precision)"
-          },
-          "hasAutoReload": {
-            "type": "boolean",
-            "description": "Whether auto-reload is enabled (true when payment method + reload config are both set)"
-          },
-          "hasPaymentMethod": {
-            "type": "boolean",
-            "description": "Whether a payment method is on file"
-          },
-          "reloadAmountCents": {
-            "type": "string",
-            "nullable": true,
-            "pattern": "^\\d+(\\.\\d+)?$",
-            "description": "Auto-reload amount in cents (decimal string, null if not configured)"
-          },
-          "reloadThresholdCents": {
-            "type": "string",
-            "nullable": true,
-            "pattern": "^\\d+(\\.\\d+)?$",
-            "description": "Balance threshold in cents that triggers auto-reload (decimal string, null if not configured)"
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "ISO timestamp"
-          }
-        },
-        "required": [
-          "id",
-          "orgId",
-          "creditBalanceCents",
-          "hasAutoReload",
-          "hasPaymentMethod",
-          "reloadAmountCents",
-          "reloadThresholdCents",
-          "createdAt"
-        ]
+        "properties": {}
       },
       "BalanceResponse": {
         "type": "object",
@@ -7202,99 +7154,11 @@
       },
       "TransactionListResponse": {
         "type": "object",
-        "properties": {
-          "transactions": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": {
-                  "type": "string",
-                  "description": "Transaction ID"
-                },
-                "type": {
-                  "type": "string",
-                  "description": "Transaction type (e.g. 'credit', 'debit')"
-                },
-                "amountCents": {
-                  "type": "string",
-                  "pattern": "^\\d+(\\.\\d+)?$",
-                  "description": "Amount in cents (decimal string, full precision)"
-                },
-                "description": {
-                  "type": "string",
-                  "description": "Transaction description"
-                },
-                "createdAt": {
-                  "type": "string",
-                  "description": "ISO timestamp"
-                }
-              },
-              "required": [
-                "id",
-                "type",
-                "amountCents",
-                "description",
-                "createdAt"
-              ]
-            }
-          }
-        },
-        "required": [
-          "transactions"
-        ]
+        "properties": {}
       },
       "ConfigureAutoReloadResponse": {
         "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Account ID"
-          },
-          "orgId": {
-            "type": "string",
-            "description": "Organization ID"
-          },
-          "creditBalanceCents": {
-            "type": "string",
-            "pattern": "^\\d+(\\.\\d+)?$",
-            "description": "Current credit balance in cents (decimal string, full precision)"
-          },
-          "hasAutoReload": {
-            "type": "boolean",
-            "description": "Whether auto-reload is enabled"
-          },
-          "hasPaymentMethod": {
-            "type": "boolean",
-            "description": "Whether a payment method is on file"
-          },
-          "reloadAmountCents": {
-            "type": "string",
-            "nullable": true,
-            "pattern": "^\\d+(\\.\\d+)?$",
-            "description": "Auto-reload amount in cents (decimal string)"
-          },
-          "reloadThresholdCents": {
-            "type": "string",
-            "nullable": true,
-            "pattern": "^\\d+(\\.\\d+)?$",
-            "description": "Balance threshold in cents that triggers auto-reload (decimal string)"
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "ISO timestamp"
-          }
-        },
-        "required": [
-          "id",
-          "orgId",
-          "creditBalanceCents",
-          "hasAutoReload",
-          "hasPaymentMethod",
-          "reloadAmountCents",
-          "reloadThresholdCents",
-          "createdAt"
-        ]
+        "properties": {}
       },
       "ConfigureAutoReloadRequest": {
         "type": "object",
@@ -7330,55 +7194,7 @@
       },
       "DisableAutoReloadResponse": {
         "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Account ID"
-          },
-          "orgId": {
-            "type": "string",
-            "description": "Organization ID"
-          },
-          "creditBalanceCents": {
-            "type": "string",
-            "pattern": "^\\d+(\\.\\d+)?$",
-            "description": "Current credit balance in cents (decimal string, full precision)"
-          },
-          "hasAutoReload": {
-            "type": "boolean",
-            "description": "Whether auto-reload is enabled"
-          },
-          "hasPaymentMethod": {
-            "type": "boolean",
-            "description": "Whether a payment method is on file"
-          },
-          "reloadAmountCents": {
-            "type": "string",
-            "nullable": true,
-            "pattern": "^\\d+(\\.\\d+)?$",
-            "description": "Auto-reload amount in cents (decimal string)"
-          },
-          "reloadThresholdCents": {
-            "type": "string",
-            "nullable": true,
-            "pattern": "^\\d+(\\.\\d+)?$",
-            "description": "Balance threshold in cents that triggers auto-reload (decimal string)"
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "ISO timestamp"
-          }
-        },
-        "required": [
-          "id",
-          "orgId",
-          "creditBalanceCents",
-          "hasAutoReload",
-          "hasPaymentMethod",
-          "reloadAmountCents",
-          "reloadThresholdCents",
-          "createdAt"
-        ]
+        "properties": {}
       },
       "DeductCreditsResponse": {
         "type": "object",
@@ -8853,106 +8669,7 @@
       },
       "PublicBillingStatsResponse": {
         "type": "object",
-        "properties": {
-          "totalAccounts": {
-            "type": "integer"
-          },
-          "accountsWithPaymentMethod": {
-            "type": "integer"
-          },
-          "totalCreditBalanceCents": {
-            "type": "string",
-            "pattern": "^\\d+(\\.\\d+)?$",
-            "description": "Total credit balance across all accounts (decimal string, full precision)"
-          },
-          "totalCreditedCents": {
-            "type": "string",
-            "pattern": "^\\d+(\\.\\d+)?$",
-            "description": "Total credits added across all accounts (decimal string, full precision)"
-          },
-          "totalConsumedCents": {
-            "type": "string",
-            "pattern": "^\\d+(\\.\\d+)?$",
-            "description": "Total credits consumed across all accounts (decimal string, full precision)"
-          },
-          "monthlyGrowth": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "period": {
-                  "type": "string",
-                  "description": "Period label (e.g. '2026-03' or '2026-W14')"
-                },
-                "credited_cents": {
-                  "type": "string",
-                  "pattern": "^\\d+(\\.\\d+)?$",
-                  "description": "Total credits added in this period (decimal string, full precision)"
-                },
-                "consumed_cents": {
-                  "type": "string",
-                  "pattern": "^\\d+(\\.\\d+)?$",
-                  "description": "Total credits consumed in this period (decimal string, full precision)"
-                },
-                "revenue_cents": {
-                  "type": "string",
-                  "pattern": "^\\d+(\\.\\d+)?$",
-                  "description": "Actual Stripe payments (source=reload only, excludes welcome/promo credits) (decimal string, full precision)"
-                }
-              },
-              "required": [
-                "period",
-                "credited_cents",
-                "consumed_cents",
-                "revenue_cents"
-              ]
-            },
-            "description": "Monthly growth breakdown"
-          },
-          "weeklyGrowth": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "period": {
-                  "type": "string",
-                  "description": "Period label (e.g. '2026-03' or '2026-W14')"
-                },
-                "credited_cents": {
-                  "type": "string",
-                  "pattern": "^\\d+(\\.\\d+)?$",
-                  "description": "Total credits added in this period (decimal string, full precision)"
-                },
-                "consumed_cents": {
-                  "type": "string",
-                  "pattern": "^\\d+(\\.\\d+)?$",
-                  "description": "Total credits consumed in this period (decimal string, full precision)"
-                },
-                "revenue_cents": {
-                  "type": "string",
-                  "pattern": "^\\d+(\\.\\d+)?$",
-                  "description": "Actual Stripe payments (source=reload only, excludes welcome/promo credits) (decimal string, full precision)"
-                }
-              },
-              "required": [
-                "period",
-                "credited_cents",
-                "consumed_cents",
-                "revenue_cents"
-              ]
-            },
-            "description": "Weekly growth breakdown"
-          }
-        },
-        "required": [
-          "totalAccounts",
-          "accountsWithPaymentMethod",
-          "totalCreditBalanceCents",
-          "totalCreditedCents",
-          "totalConsumedCents",
-          "monthlyGrowth",
-          "weeklyGrowth"
-        ]
+        "properties": {}
       },
       "PublicRunStatsResponse": {
         "type": "object",
@@ -24047,7 +23764,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Billing account data",
+            "description": "Billing account data — pass-through from billing-service",
             "content": {
               "application/json": {
                 "schema": {
@@ -24253,7 +23970,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Transaction list",
+            "description": "Transaction list — pass-through from billing-service",
             "content": {
               "application/json": {
                 "schema": {
@@ -24365,7 +24082,7 @@
         },
         "responses": {
           "200": {
-            "description": "Auto-reload configured",
+            "description": "Auto-reload configured — pass-through from billing-service",
             "content": {
               "application/json": {
                 "schema": {
@@ -24476,7 +24193,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Auto-reload disabled",
+            "description": "Auto-reload disabled — pass-through from billing-service",
             "content": {
               "application/json": {
                 "schema": {
@@ -30282,10 +29999,10 @@
           "Public Stats"
         ],
         "summary": "Public billing stats (no auth)",
-        "description": "Returns total accounts, accounts with payment method, credit balance/usage aggregates, and monthly/weekly growth breakdowns. No authentication required. Proxied from billing-service.",
+        "description": "Returns total accounts, payment-method coverage, grant/credit aggregates, and monthly/weekly growth breakdowns. No authentication required. Proxied from billing-service.",
         "responses": {
           "200": {
-            "description": "Billing stats",
+            "description": "Billing stats — pass-through from billing-service",
             "content": {
               "application/json": {
                 "schema": {

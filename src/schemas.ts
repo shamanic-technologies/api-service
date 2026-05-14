@@ -4933,19 +4933,10 @@ registry.registerPath({
   security: authed,
   responses: {
     200: {
-      description: "Billing account data",
+      description: "Billing account data — pass-through from billing-service",
       content: {
         "application/json": {
-          schema: z.object({
-            id: z.string().describe("Account ID"),
-            orgId: z.string().describe("Organization ID"),
-            creditBalanceCents: decimalCentsString.describe("Current credit balance in cents (decimal string, full precision)"),
-            hasAutoReload: z.boolean().describe("Whether auto-reload is enabled (true when payment method + reload config are both set)"),
-            hasPaymentMethod: z.boolean().describe("Whether a payment method is on file"),
-            reloadAmountCents: decimalCentsString.nullable().describe("Auto-reload amount in cents (decimal string, null if not configured)"),
-            reloadThresholdCents: decimalCentsString.nullable().describe("Balance threshold in cents that triggers auto-reload (decimal string, null if not configured)"),
-            createdAt: z.string().describe("ISO timestamp"),
-          }).openapi("BillingAccountResponse"),
+          schema: z.object({}).passthrough().openapi("BillingAccountResponse"),
         },
       },
     },
@@ -4988,18 +4979,10 @@ registry.registerPath({
   security: authed,
   responses: {
     200: {
-      description: "Transaction list",
+      description: "Transaction list — pass-through from billing-service",
       content: {
         "application/json": {
-          schema: z.object({
-            transactions: z.array(z.object({
-              id: z.string().describe("Transaction ID"),
-              type: z.string().describe("Transaction type (e.g. 'credit', 'debit')"),
-              amountCents: decimalCentsString.describe("Amount in cents (decimal string, full precision)"),
-              description: z.string().describe("Transaction description"),
-              createdAt: z.string().describe("ISO timestamp"),
-            })),
-          }).openapi("TransactionListResponse"),
+          schema: z.object({}).passthrough().openapi("TransactionListResponse"),
         },
       },
     },
@@ -5024,19 +5007,10 @@ registry.registerPath({
   },
   responses: {
     200: {
-      description: "Auto-reload configured",
+      description: "Auto-reload configured — pass-through from billing-service",
       content: {
         "application/json": {
-          schema: z.object({
-            id: z.string().describe("Account ID"),
-            orgId: z.string().describe("Organization ID"),
-            creditBalanceCents: decimalCentsString.describe("Current credit balance in cents (decimal string, full precision)"),
-            hasAutoReload: z.boolean().describe("Whether auto-reload is enabled"),
-            hasPaymentMethod: z.boolean().describe("Whether a payment method is on file"),
-            reloadAmountCents: decimalCentsString.nullable().describe("Auto-reload amount in cents (decimal string)"),
-            reloadThresholdCents: decimalCentsString.nullable().describe("Balance threshold in cents that triggers auto-reload (decimal string)"),
-            createdAt: z.string().describe("ISO timestamp"),
-          }).openapi("ConfigureAutoReloadResponse"),
+          schema: z.object({}).passthrough().openapi("ConfigureAutoReloadResponse"),
         },
       },
     },
@@ -5055,19 +5029,10 @@ registry.registerPath({
   security: authed,
   responses: {
     200: {
-      description: "Auto-reload disabled",
+      description: "Auto-reload disabled — pass-through from billing-service",
       content: {
         "application/json": {
-          schema: z.object({
-            id: z.string().describe("Account ID"),
-            orgId: z.string().describe("Organization ID"),
-            creditBalanceCents: decimalCentsString.describe("Current credit balance in cents (decimal string, full precision)"),
-            hasAutoReload: z.boolean().describe("Whether auto-reload is enabled"),
-            hasPaymentMethod: z.boolean().describe("Whether a payment method is on file"),
-            reloadAmountCents: decimalCentsString.nullable().describe("Auto-reload amount in cents (decimal string)"),
-            reloadThresholdCents: decimalCentsString.nullable().describe("Balance threshold in cents that triggers auto-reload (decimal string)"),
-            createdAt: z.string().describe("ISO timestamp"),
-          }).openapi("DisableAutoReloadResponse"),
+          schema: z.object({}).passthrough().openapi("DisableAutoReloadResponse"),
         },
       },
     },
@@ -6528,36 +6493,21 @@ registry.registerPath({
   },
 });
 
-const BillingGrowthRowSchema = z.object({
-  period: z.string().describe("Period label (e.g. '2026-03' or '2026-W14')"),
-  credited_cents: decimalCentsString.describe("Total credits added in this period (decimal string, full precision)"),
-  consumed_cents: decimalCentsString.describe("Total credits consumed in this period (decimal string, full precision)"),
-  revenue_cents: decimalCentsString.describe("Actual Stripe payments (source=reload only, excludes welcome/promo credits) (decimal string, full precision)"),
-});
-
 registry.registerPath({
   method: "get",
   path: "/public/stats/billing",
   tags: ["Public Stats"],
   summary: "Public billing stats (no auth)",
   description:
-    "Returns total accounts, accounts with payment method, credit balance/usage aggregates, " +
+    "Returns total accounts, payment-method coverage, grant/credit aggregates, " +
     "and monthly/weekly growth breakdowns. " +
     "No authentication required. Proxied from billing-service.",
   responses: {
     200: {
-      description: "Billing stats",
+      description: "Billing stats — pass-through from billing-service",
       content: {
         "application/json": {
-          schema: z.object({
-            totalAccounts: z.number().int(),
-            accountsWithPaymentMethod: z.number().int(),
-            totalCreditBalanceCents: decimalCentsString.describe("Total credit balance across all accounts (decimal string, full precision)"),
-            totalCreditedCents: decimalCentsString.describe("Total credits added across all accounts (decimal string, full precision)"),
-            totalConsumedCents: decimalCentsString.describe("Total credits consumed across all accounts (decimal string, full precision)"),
-            monthlyGrowth: z.array(BillingGrowthRowSchema).describe("Monthly growth breakdown"),
-            weeklyGrowth: z.array(BillingGrowthRowSchema).describe("Weekly growth breakdown"),
-          }).openapi("PublicBillingStatsResponse"),
+          schema: z.object({}).passthrough().openapi("PublicBillingStatsResponse"),
         },
       },
     },
