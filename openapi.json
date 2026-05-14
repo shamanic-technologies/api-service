@@ -647,114 +647,109 @@
           "campaign"
         ]
       },
-      "ErrorSummary": {
+      "RunWithOwnCost": {
         "type": "object",
         "properties": {
-          "failedStep": {
+          "id": {
             "type": "string",
-            "description": "Which DAG step failed (e.g. 'fetch_lead', 'generate_email')"
+            "format": "uuid",
+            "description": "Run ID"
           },
-          "message": {
+          "organizationId": {
             "type": "string",
-            "description": "Cleaned error message without stack traces"
+            "nullable": true,
+            "format": "uuid"
           },
-          "rootCause": {
+          "userId": {
             "type": "string",
-            "description": "User-friendly root cause (e.g. 'billing-service unavailable')"
-          }
-        },
-        "required": [
-          "failedStep",
-          "message",
-          "rootCause"
-        ],
-        "description": "Structured error summary for failed runs. Contains a user-friendly rootCause, the failedStep, and a cleaned message. Only present when status is 'failed'."
-      },
-      "RunCostData": {
-        "type": "object",
-        "properties": {
+            "nullable": true,
+            "format": "uuid"
+          },
+          "brandIds": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            }
+          },
+          "campaignId": {
+            "type": "string",
+            "nullable": true
+          },
+          "workflowSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "featureSlug": {
+            "type": "string",
+            "nullable": true
+          },
+          "serviceName": {
+            "type": "string"
+          },
+          "taskName": {
+            "type": "string"
+          },
           "status": {
             "type": "string",
             "description": "Run status (e.g. completed, failed)"
           },
-          "startedAt": {
+          "parentRunId": {
             "type": "string",
             "nullable": true,
+            "format": "uuid"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
             "description": "ISO timestamp when the run started"
           },
           "completedAt": {
             "type": "string",
             "nullable": true,
+            "format": "date-time",
             "description": "ISO timestamp when the run completed"
           },
-          "totalCostInUsdCents": {
+          "createdAt": {
             "type": "string",
-            "nullable": true,
-            "description": "Total cost in USD cents"
+            "format": "date-time"
           },
-          "costs": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "costName": {
-                  "type": "string"
-                },
-                "totalCostInUsdCents": {
-                  "type": "string"
-                },
-                "actualCostInUsdCents": {
-                  "type": "string"
-                },
-                "provisionedCostInUsdCents": {
-                  "type": "string"
-                },
-                "quantity": {
-                  "type": "number"
-                }
-              },
-              "required": [
-                "costName",
-                "totalCostInUsdCents",
-                "actualCostInUsdCents",
-                "provisionedCostInUsdCents",
-                "quantity"
-              ]
-            },
-            "description": "Per-cost-name breakdown"
-          },
-          "serviceName": {
+          "updatedAt": {
             "type": "string",
-            "nullable": true
+            "format": "date-time"
           },
-          "taskName": {
+          "ownCostInUsdCents": {
             "type": "string",
-            "nullable": true
+            "description": "Sum of this run's own costs (excludes descendants)"
           },
-          "error": {
+          "ownActualCostInUsdCents": {
             "type": "string",
-            "description": "Raw error message (for debugging). Only present on failed runs."
+            "description": "Sum of this run's own costs with status='actual'"
           },
-          "errorSummary": {
-            "$ref": "#/components/schemas/ErrorSummary"
-          },
-          "descendantRuns": {
-            "type": "array",
-            "items": {
-              "nullable": true
-            },
-            "description": "Child runs"
+          "ownProvisionedCostInUsdCents": {
+            "type": "string",
+            "description": "Sum of this run's own costs with status='provisioned'"
           }
         },
         "required": [
-          "status",
-          "startedAt",
-          "completedAt",
-          "totalCostInUsdCents",
-          "costs",
+          "id",
+          "organizationId",
+          "userId",
+          "brandIds",
+          "campaignId",
+          "workflowSlug",
+          "featureSlug",
           "serviceName",
           "taskName",
-          "descendantRuns"
+          "status",
+          "parentRunId",
+          "startedAt",
+          "completedAt",
+          "createdAt",
+          "updatedAt",
+          "ownCostInUsdCents",
+          "ownActualCostInUsdCents",
+          "ownProvisionedCostInUsdCents"
         ]
       },
       "ListRunsResponse": {
@@ -763,7 +758,7 @@
           "runs": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/RunCostData"
+              "$ref": "#/components/schemas/RunWithOwnCost"
             }
           },
           "offset": {
@@ -1093,6 +1088,118 @@
           "campaigns"
         ]
       },
+      "ErrorSummary": {
+        "type": "object",
+        "properties": {
+          "failedStep": {
+            "type": "string",
+            "description": "Which DAG step failed (e.g. 'fetch_lead', 'generate_email')"
+          },
+          "message": {
+            "type": "string",
+            "description": "Cleaned error message without stack traces"
+          },
+          "rootCause": {
+            "type": "string",
+            "description": "User-friendly root cause (e.g. 'billing-service unavailable')"
+          }
+        },
+        "required": [
+          "failedStep",
+          "message",
+          "rootCause"
+        ],
+        "description": "Structured error summary for failed runs. Contains a user-friendly rootCause, the failedStep, and a cleaned message. Only present when status is 'failed'."
+      },
+      "RunCostData": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Run status (e.g. completed, failed)"
+          },
+          "startedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO timestamp when the run started"
+          },
+          "completedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO timestamp when the run completed"
+          },
+          "totalCostInUsdCents": {
+            "type": "string",
+            "nullable": true,
+            "description": "Total cost in USD cents"
+          },
+          "costs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "costName": {
+                  "type": "string"
+                },
+                "totalCostInUsdCents": {
+                  "type": "string"
+                },
+                "actualCostInUsdCents": {
+                  "type": "string"
+                },
+                "provisionedCostInUsdCents": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "costName",
+                "totalCostInUsdCents",
+                "actualCostInUsdCents",
+                "provisionedCostInUsdCents",
+                "quantity"
+              ]
+            },
+            "description": "Per-cost-name breakdown"
+          },
+          "serviceName": {
+            "type": "string",
+            "nullable": true
+          },
+          "taskName": {
+            "type": "string",
+            "nullable": true
+          },
+          "error": {
+            "type": "string",
+            "description": "Raw error message (for debugging). Only present on failed runs."
+          },
+          "errorSummary": {
+            "$ref": "#/components/schemas/ErrorSummary"
+          },
+          "descendantRuns": {
+            "type": "array",
+            "items": {
+              "nullable": true
+            },
+            "description": "Child runs"
+          }
+        },
+        "required": [
+          "status",
+          "startedAt",
+          "completedAt",
+          "totalCostInUsdCents",
+          "costs",
+          "serviceName",
+          "taskName",
+          "descendantRuns"
+        ],
+        "description": "Generation run cost data, null if no run"
+      },
       "CampaignEmailsResponse": {
         "type": "object",
         "properties": {
@@ -1166,15 +1273,7 @@
                   "description": "ISO timestamp"
                 },
                 "generationRun": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/RunCostData"
-                    },
-                    {
-                      "nullable": true,
-                      "description": "Generation run cost data, null if no run"
-                    }
-                  ]
+                  "$ref": "#/components/schemas/RunCostData"
                 }
               },
               "required": [
@@ -7391,14 +7490,7 @@
                   "type": "string"
                 },
                 "generationRun": {
-                  "allOf": [
-                    {
-                      "$ref": "#/components/schemas/RunCostData"
-                    },
-                    {
-                      "nullable": true
-                    }
-                  ]
+                  "$ref": "#/components/schemas/RunCostData"
                 }
               },
               "required": [
@@ -11068,7 +11160,7 @@
           "Runs"
         ],
         "summary": "List runs",
-        "description": "Transparent proxy to runs-service GET /v1/runs. Supports all runs-service query params: campaignId, brandId, userId, workflowSlug, featureSlug, serviceName, taskName, status, parentRunId, startedAfter, startedBefore, limit, offset.",
+        "description": "Transparent proxy to runs-service GET /v1/runs. Supports all runs-service query params: campaignId, brandId, userId, workflowSlug, featureSlug, serviceName, taskName, status, parentRunId, startedAfter, startedBefore, limit, offset. Results are sorted by startedAt DESC (most recent first). Each item is a run with own-cost totals only; for the per-cost-name breakdown of a single run, call GET /v1/runs/{id}.",
         "security": [
           {
             "bearerAuth": []
@@ -11239,7 +11331,7 @@
         ],
         "responses": {
           "200": {
-            "description": "List of runs with cost totals",
+            "description": "List of runs with own-cost totals. One item per run; per-cost-name breakdown is on GET /v1/runs/{id}.",
             "content": {
               "application/json": {
                 "schema": {

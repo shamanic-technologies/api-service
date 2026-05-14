@@ -403,6 +403,32 @@ const RunCostDataSchema = z
   })
   .openapi("RunCostData");
 
+// Mirror of runs-service `RunWithOwnCost` (RunSchema + own-cost totals).
+// Used by GET /v1/runs (list). One item per run, own-cost totals only;
+// per-cost-name breakdown lives on GET /v1/runs/{id}.
+const RunWithOwnCostSchema = z
+  .object({
+    id: z.string().uuid().describe("Run ID"),
+    organizationId: z.string().uuid().nullable(),
+    userId: z.string().uuid().nullable(),
+    brandIds: z.array(z.string()).nullable(),
+    campaignId: z.string().nullable(),
+    workflowSlug: z.string().nullable(),
+    featureSlug: z.string().nullable(),
+    serviceName: z.string(),
+    taskName: z.string(),
+    status: z.string().describe("Run status (e.g. completed, failed)"),
+    parentRunId: z.string().uuid().nullable(),
+    startedAt: z.string().datetime().describe("ISO timestamp when the run started"),
+    completedAt: z.string().datetime().nullable().describe("ISO timestamp when the run completed"),
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime(),
+    ownCostInUsdCents: z.string().describe("Sum of this run's own costs (excludes descendants)"),
+    ownActualCostInUsdCents: z.string().describe("Sum of this run's own costs with status='actual'"),
+    ownProvisionedCostInUsdCents: z.string().describe("Sum of this run's own costs with status='provisioned'"),
+  })
+  .openapi("RunWithOwnCost");
+
 // -- Response schemas --
 
 const CampaignSchema = z
@@ -581,7 +607,10 @@ registry.registerPath({
     "Transparent proxy to runs-service GET /v1/runs. " +
     "Supports all runs-service query params: campaignId, brandId, userId, " +
     "workflowSlug, featureSlug, serviceName, taskName, status, parentRunId, " +
-    "startedAfter, startedBefore, limit, offset.",
+    "startedAfter, startedBefore, limit, offset. " +
+    "Results are sorted by startedAt DESC (most recent first). " +
+    "Each item is a run with own-cost totals only; for the per-cost-name " +
+    "breakdown of a single run, call GET /v1/runs/{id}.",
   security: authed,
   request: {
     query: z.object({
@@ -602,11 +631,13 @@ registry.registerPath({
   },
   responses: {
     200: {
-      description: "List of runs with cost totals",
+      description:
+        "List of runs with own-cost totals. One item per run; " +
+        "per-cost-name breakdown is on GET /v1/runs/{id}.",
       content: {
         "application/json": {
           schema: z.object({
-            runs: z.array(RunCostDataSchema),
+            runs: z.array(RunWithOwnCostSchema),
             offset: z.number(),
             limit: z.number().optional(),
           }).openapi("ListRunsResponse"),
