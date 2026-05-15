@@ -12,7 +12,7 @@ api-service is a **transparent proxy**. It authenticates, applies middleware, an
 
 ### Rules
 
-1. **No path renaming.** The path sent to the downstream service must match the actual route on that service. Always check the API registry (`mcp__api-registry__list_service_endpoints`) for the correct path before writing a proxy route.
+1. **No path renaming.** The path sent to the downstream service must match the actual route on that service. Always check the API registry (`mcp__api-registry__list_service_endpoints`) for the correct path before writing a proxy route. When a downstream path is renamed (e.g. `auto-reload` → `auto_topup`), the api-service-facing path must be renamed in lockstep — do NOT keep a legacy client alias pointing at the new downstream path. The dashboard PR catches up; cross-repo coordination is mandatory, not optional.
 
 2. **No aggregation logic.** If a response needs enrichment from multiple services, that logic belongs in the backend service, not here. Do NOT build ad-hoc enrichment functions that call multiple services and stitch results together.
 
@@ -24,6 +24,8 @@ api-service is a **transparent proxy**. It authenticates, applies middleware, an
 4. **No body transforms.** Don't strip fields from the body or inject fields from headers. Just proxy the request as-is.
 
 5. **No path invention.** If a downstream service doesn't have the route, api-service must NOT invent it. If a route was deprecated upstream, remove the proxy route here too.
+
+6. **No shape assertions on pass-through responses.** Billing and any other endpoint whose response schema is `z.object({}).passthrough()` is owned by the downstream service. Do NOT write api-service unit tests that assert specific field names or types on those responses — they only re-encode the downstream contract here and force coordinated edits on every downstream rename. Tests must assert (a) the proxy forwarded to the correct downstream path, and (b) the upstream body was forwarded byte-identical. That is the entire contract.
 
 ### Brand-service path convention
 
