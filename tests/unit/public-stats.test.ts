@@ -49,51 +49,17 @@ function createApp() {
   return app;
 }
 
-const MOCK_USER_STATS = {
-  totalOrgs: 38,
-  totalUsers: 142,
-  monthlyGrowth: [
-    { month: "2026-01", newOrgs: 8, newUsers: 15 },
-    { month: "2026-02", newOrgs: 12, newUsers: 28 },
-  ],
-};
-
-// Fractional decimal-string cents — billing-service contract post-#107
-// (creditBalance/consumed fields removed; grants is the accurate label).
-const MOCK_BILLING_STATS = {
-  totalAccounts: 35,
-  accountsWithPaymentMethod: 12,
-  totalGrantsCents: "450000.4200000000",
-  totalCreditedCents: "1200000.0000000000",
-  monthlyGrowth: [
-    { period: "2026-01", credited_cents: "200000.0000000000", revenue_cents: "80000.0000000000" },
-    { period: "2026-02", credited_cents: "350000.0000000000", revenue_cents: "150000.0000000000" },
-  ],
-  weeklyGrowth: [
-    { period: "2026-W14", credited_cents: "50000.0000000000", revenue_cents: "20000.0000000000" },
-    { period: "2026-W15", credited_cents: "75000.0000000000", revenue_cents: "35000.0000000000" },
-  ],
-};
-
-const MOCK_RUN_STATS = {
-  byStatus: { completed: 8420, failed: 310, running: 5 },
-  monthly: [
-    { month: "2026-01", completed: 1200, failed: 50, running: 0 },
-    { month: "2026-02", completed: 2100, failed: 80, running: 0 },
-  ],
-};
-
 beforeEach(() => {
   mockCallExternalService.mockReset();
 });
 
 describe("GET /public/stats/users", () => {
-  it("proxies to client-service and returns user stats", async () => {
-    mockCallExternalService.mockResolvedValueOnce(MOCK_USER_STATS);
-    const app = createApp();
-    const res = await request(app).get("/public/stats/users");
+  it("proxies to client-service", async () => {
+    const upstream = { foo: "bar" };
+    mockCallExternalService.mockResolvedValueOnce(upstream);
+    const res = await request(createApp()).get("/public/stats/users");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual(MOCK_USER_STATS);
+    expect(res.body).toEqual(upstream);
     expect(mockCallExternalService).toHaveBeenCalledWith(
       { url: "http://mock-client", apiKey: "k" },
       "/public/stats/users",
@@ -102,60 +68,48 @@ describe("GET /public/stats/users", () => {
 
   it("returns 502 when client-service is down", async () => {
     mockCallExternalService.mockRejectedValueOnce(new Error("connection refused"));
-    const app = createApp();
-    const res = await request(app).get("/public/stats/users");
+    const res = await request(createApp()).get("/public/stats/users");
     expect(res.status).toBe(502);
     expect(res.body.error).toBe("connection refused");
   });
 });
 
 describe("GET /public/stats/billing", () => {
-  it("proxies to billing-service and returns billing stats", async () => {
-    mockCallExternalService.mockResolvedValueOnce(MOCK_BILLING_STATS);
-    const app = createApp();
-    const res = await request(app).get("/public/stats/billing");
+  it("proxies to billing-service (passthrough — body forwarded unchanged)", async () => {
+    const upstream = {
+      total_accounts: 35,
+      accounts_with_payment_method: 12,
+      total_credited_cents: "1200000.0000000000",
+      total_paid_cents: "900000.0000000000",
+      total_local_credits_cents: "300000.0000000000",
+      monthly_growth: [],
+      weekly_growth: [],
+    };
+    mockCallExternalService.mockResolvedValueOnce(upstream);
+    const res = await request(createApp()).get("/public/stats/billing");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual(MOCK_BILLING_STATS);
+    expect(res.body).toEqual(upstream);
     expect(mockCallExternalService).toHaveBeenCalledWith(
       { url: "http://mock-billing", apiKey: "k" },
       "/public/stats/billing",
     );
   });
 
-  it("passes through monthlyGrowth and weeklyGrowth arrays", async () => {
-    mockCallExternalService.mockResolvedValueOnce(MOCK_BILLING_STATS);
-    const app = createApp();
-    const res = await request(app).get("/public/stats/billing");
-    expect(res.status).toBe(200);
-    expect(res.body.monthlyGrowth).toEqual(MOCK_BILLING_STATS.monthlyGrowth);
-    expect(res.body.weeklyGrowth).toEqual(MOCK_BILLING_STATS.weeklyGrowth);
-    expect(res.body.monthlyGrowth[0]).toEqual({
-      period: "2026-01",
-      credited_cents: "200000.0000000000",
-      revenue_cents: "80000.0000000000",
-    });
-    // precision preserved as string, not coerced to number
-    expect(typeof res.body.monthlyGrowth[0].credited_cents).toBe("string");
-    expect(typeof res.body.totalGrantsCents).toBe("string");
-    expect(res.body.weeklyGrowth).toHaveLength(2);
-  });
-
   it("returns 502 when billing-service is down", async () => {
     mockCallExternalService.mockRejectedValueOnce(new Error("timeout"));
-    const app = createApp();
-    const res = await request(app).get("/public/stats/billing");
+    const res = await request(createApp()).get("/public/stats/billing");
     expect(res.status).toBe(502);
     expect(res.body.error).toBe("timeout");
   });
 });
 
 describe("GET /public/stats/runs", () => {
-  it("proxies to runs-service and returns run stats", async () => {
-    mockCallExternalService.mockResolvedValueOnce(MOCK_RUN_STATS);
-    const app = createApp();
-    const res = await request(app).get("/public/stats/runs");
+  it("proxies to runs-service", async () => {
+    const upstream = { byStatus: { completed: 1 } };
+    mockCallExternalService.mockResolvedValueOnce(upstream);
+    const res = await request(createApp()).get("/public/stats/runs");
     expect(res.status).toBe(200);
-    expect(res.body).toEqual(MOCK_RUN_STATS);
+    expect(res.body).toEqual(upstream);
     expect(mockCallExternalService).toHaveBeenCalledWith(
       { url: "http://mock-runs", apiKey: "k" },
       "/public/stats/runs",
@@ -164,8 +118,7 @@ describe("GET /public/stats/runs", () => {
 
   it("returns 502 when runs-service is down", async () => {
     mockCallExternalService.mockRejectedValueOnce(new Error("ECONNREFUSED"));
-    const app = createApp();
-    const res = await request(app).get("/public/stats/runs");
+    const res = await request(createApp()).get("/public/stats/runs");
     expect(res.status).toBe(502);
     expect(res.body.error).toBe("ECONNREFUSED");
   });
@@ -174,8 +127,7 @@ describe("GET /public/stats/runs", () => {
     const err = new Error("Not found") as Error & { statusCode: number };
     err.statusCode = 404;
     mockCallExternalService.mockRejectedValueOnce(err);
-    const app = createApp();
-    const res = await request(app).get("/public/stats/runs");
+    const res = await request(createApp()).get("/public/stats/runs");
     expect(res.status).toBe(404);
   });
 });
