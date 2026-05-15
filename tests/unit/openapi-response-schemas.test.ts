@@ -91,8 +91,14 @@ describe("OpenAPI spec — response schemas", () => {
 
   it("should define billing response schemas", () => {
     const schemas = spec.components.schemas;
+    // All billing response schemas are pass-through (z.object({}).passthrough()) —
+    // downstream owns the shape. Assert presence only, not properties.
     expect(schemas).toHaveProperty("BillingAccountResponse");
     expect(schemas).toHaveProperty("BalanceResponse");
-    expect(schemas.BalanceResponse.properties).toHaveProperty("depleted");
+    expect(schemas).toHaveProperty("ConfigureAutoTopupResponse");
+    expect(schemas).toHaveProperty("DisableAutoTopupResponse");
+    expect(schemas).toHaveProperty("BillingCheckoutResponse");
+    expect(schemas).toHaveProperty("BillingPortalSessionResponse");
+    expect(schemas).toHaveProperty("PublicBillingStatsResponse");
   });
 });

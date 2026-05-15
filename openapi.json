@@ -7235,34 +7235,16 @@
       },
       "BalanceResponse": {
         "type": "object",
-        "properties": {
-          "balance_cents": {
-            "type": "string",
-            "pattern": "^\\d+(\\.\\d+)?$",
-            "description": "Current balance in cents (decimal string, full precision)"
-          },
-          "depleted": {
-            "type": "boolean",
-            "description": "True if balance is zero or negative"
-          }
-        },
-        "required": [
-          "balance_cents",
-          "depleted"
-        ]
+        "properties": {}
       },
-      "TransactionListResponse": {
+      "ConfigureAutoTopupResponse": {
         "type": "object",
         "properties": {}
       },
-      "ConfigureAutoReloadResponse": {
-        "type": "object",
-        "properties": {}
-      },
-      "ConfigureAutoReloadRequest": {
+      "ConfigureAutoTopupRequest": {
         "type": "object",
         "properties": {
-          "reload_amount_cents": {
+          "topup_amount_cents": {
             "anyOf": [
               {
                 "type": "number"
@@ -7272,9 +7254,9 @@
                 "pattern": "^\\d+(\\.\\d+)?$"
               }
             ],
-            "description": "Auto-reload amount in cents (integer or decimal string)"
+            "description": "Auto-topup amount in cents (integer or decimal string)"
           },
-          "reload_threshold_cents": {
+          "topup_threshold_cents": {
             "anyOf": [
               {
                 "type": "number"
@@ -7284,87 +7266,20 @@
                 "pattern": "^\\d+(\\.\\d+)?$"
               }
             ],
-            "description": "Balance threshold in cents that triggers auto-reload (integer or decimal string)"
+            "description": "Balance threshold in cents that triggers auto-topup (integer or decimal string)"
           }
         },
         "required": [
-          "reload_amount_cents"
+          "topup_amount_cents"
         ]
       },
-      "DisableAutoReloadResponse": {
+      "DisableAutoTopupResponse": {
         "type": "object",
         "properties": {}
-      },
-      "DeductCreditsResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "description": "Whether the deduction succeeded"
-          },
-          "balance_cents": {
-            "type": "string",
-            "pattern": "^\\d+(\\.\\d+)?$",
-            "description": "Balance after deduction (decimal string, full precision)"
-          },
-          "depleted": {
-            "type": "boolean",
-            "description": "True if balance is zero or negative after deduction"
-          }
-        },
-        "required": [
-          "success",
-          "balance_cents",
-          "depleted"
-        ]
-      },
-      "DeductCreditsRequest": {
-        "type": "object",
-        "properties": {
-          "amount_cents": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "pattern": "^\\d+(\\.\\d+)?$"
-              }
-            ],
-            "description": "Amount to deduct in cents (integer or decimal string for fractional cents)"
-          },
-          "description": {
-            "type": "string",
-            "minLength": 1,
-            "description": "Reason for the deduction"
-          },
-          "user_id": {
-            "type": "string",
-            "format": "uuid",
-            "description": "User ID"
-          }
-        },
-        "required": [
-          "amount_cents",
-          "description"
-        ]
       },
       "BillingCheckoutResponse": {
         "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "description": "Stripe Checkout URL to redirect the user to"
-          },
-          "sessionId": {
-            "type": "string",
-            "description": "Stripe Checkout session ID"
-          }
-        },
-        "required": [
-          "url",
-          "sessionId"
-        ]
+        "properties": {}
       },
       "CreateCheckoutSessionRequest": {
         "type": "object",
@@ -7379,7 +7294,7 @@
             "format": "uri",
             "description": "URL to redirect on cancellation"
           },
-          "reload_amount_cents": {
+          "topup_amount_cents": {
             "anyOf": [
               {
                 "type": "number"
@@ -7389,26 +7304,18 @@
                 "pattern": "^\\d+(\\.\\d+)?$"
               }
             ],
-            "description": "Amount to reload in cents (integer or decimal string)"
+            "description": "Amount to top up in cents (integer or decimal string)"
           }
         },
         "required": [
           "success_url",
           "cancel_url",
-          "reload_amount_cents"
+          "topup_amount_cents"
         ]
       },
       "BillingPortalSessionResponse": {
         "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "description": "Stripe portal URL to redirect the user to"
-          }
-        },
-        "required": [
-          "url"
-        ]
+        "properties": {}
       },
       "CreatePortalSessionRequest": {
         "type": "object",
@@ -23951,7 +23858,7 @@
           "Billing"
         ],
         "summary": "Get account balance",
-        "description": "Quick check of current balance and depletion status. Auto-creates billing account if none exists.",
+        "description": "Quick check of available funds and depletion status — pass-through from billing-service.",
         "security": [
           {
             "bearerAuth": []
@@ -23959,7 +23866,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Balance info",
+            "description": "Balance info — pass-through from billing-service",
             "content": {
               "application/json": {
                 "schema": {
@@ -24048,116 +23955,13 @@
         ]
       }
     },
-    "/v1/billing/accounts/transactions": {
-      "get": {
-        "tags": [
-          "Billing"
-        ],
-        "summary": "Get transaction history",
-        "description": "List billing transactions for the organization",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Transaction list — pass-through from billing-service",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/TransactionListResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "example": "uuid1,uuid2,uuid3"
-            },
-            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-feature-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
-          }
-        ]
-      }
-    },
-    "/v1/billing/accounts/auto-reload": {
+    "/v1/billing/accounts/auto_topup": {
       "patch": {
         "tags": [
           "Billing"
         ],
-        "summary": "Configure auto-reload",
-        "description": "Enable or update auto-reload settings for the billing account. Requires a payment method on file.",
+        "summary": "Configure auto-topup",
+        "description": "Enable or update auto-topup settings for the billing account. Requires a payment method on file.",
         "security": [
           {
             "bearerAuth": []
@@ -24167,18 +23971,18 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ConfigureAutoReloadRequest"
+                "$ref": "#/components/schemas/ConfigureAutoTopupRequest"
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "Auto-reload configured — pass-through from billing-service",
+            "description": "Auto-topup configured — pass-through from billing-service",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConfigureAutoReloadResponse"
+                  "$ref": "#/components/schemas/ConfigureAutoTopupResponse"
                 }
               }
             }
@@ -24276,8 +24080,8 @@
         "tags": [
           "Billing"
         ],
-        "summary": "Disable auto-reload",
-        "description": "Disable auto-reload for the billing account",
+        "summary": "Disable auto-topup",
+        "description": "Disable auto-topup for the billing account",
         "security": [
           {
             "bearerAuth": []
@@ -24285,123 +24089,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Auto-reload disabled — pass-through from billing-service",
+            "description": "Auto-topup disabled — pass-through from billing-service",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DisableAutoReloadResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "example": "uuid1,uuid2,uuid3"
-            },
-            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-feature-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
-          }
-        ]
-      }
-    },
-    "/v1/billing/credits/deduct": {
-      "post": {
-        "tags": [
-          "Billing"
-        ],
-        "summary": "Deduct credits",
-        "description": "Deduct credits from the organization's billing account. Accepts negative balances — if insufficient and auto-reload fails, the deduction still goes through. Auto-creates billing account if none exists.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeductCreditsRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Credits deducted",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeductCreditsResponse"
+                  "$ref": "#/components/schemas/DisableAutoTopupResponse"
                 }
               }
             }
@@ -24509,7 +24201,7 @@
         },
         "responses": {
           "200": {
-            "description": "Checkout session created with URL",
+            "description": "Checkout session created — pass-through from billing-service",
             "content": {
               "application/json": {
                 "schema": {
@@ -24621,7 +24313,7 @@
         },
         "responses": {
           "200": {
-            "description": "Portal session created with URL",
+            "description": "Portal session created — pass-through from billing-service",
             "content": {
               "application/json": {
                 "schema": {

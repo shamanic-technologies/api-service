@@ -4916,35 +4916,25 @@ const DECIMAL_CENTS_REGEX = /^\d+(\.\d+)?$/;
 const decimalCentsString = z.string().regex(DECIMAL_CENTS_REGEX);
 const inboundCents = z.union([z.number(), decimalCentsString]);
 
-export const ConfigureAutoReloadRequestSchema = z
+export const ConfigureAutoTopupRequestSchema = z
   .object({
-    reload_amount_cents: inboundCents.describe(
-      "Auto-reload amount in cents (integer or decimal string)",
+    topup_amount_cents: inboundCents.describe(
+      "Auto-topup amount in cents (integer or decimal string)",
     ),
-    reload_threshold_cents: inboundCents
+    topup_threshold_cents: inboundCents
       .optional()
       .describe(
-        "Balance threshold in cents that triggers auto-reload (integer or decimal string)",
+        "Balance threshold in cents that triggers auto-topup (integer or decimal string)",
       ),
   })
-  .openapi("ConfigureAutoReloadRequest");
-
-export const DeductCreditsRequestSchema = z
-  .object({
-    amount_cents: inboundCents.describe(
-      "Amount to deduct in cents (integer or decimal string for fractional cents)",
-    ),
-    description: z.string().min(1).describe("Reason for the deduction"),
-    user_id: z.string().uuid().optional().describe("User ID"),
-  })
-  .openapi("DeductCreditsRequest");
+  .openapi("ConfigureAutoTopupRequest");
 
 export const CreateCheckoutSessionRequestSchema = z
   .object({
     success_url: z.string().url().describe("URL to redirect after successful payment"),
     cancel_url: z.string().url().describe("URL to redirect on cancellation"),
-    reload_amount_cents: inboundCents.describe(
-      "Amount to reload in cents (integer or decimal string)",
+    topup_amount_cents: inboundCents.describe(
+      "Amount to top up in cents (integer or decimal string)",
     ),
   })
   .openapi("CreateCheckoutSessionRequest");
@@ -4982,38 +4972,14 @@ registry.registerPath({
   tags: ["Billing"],
   summary: "Get account balance",
   description:
-    "Quick check of current balance and depletion status. Auto-creates billing account if none exists.",
+    "Quick check of available funds and depletion status — pass-through from billing-service.",
   security: authed,
   responses: {
     200: {
-      description: "Balance info",
+      description: "Balance info — pass-through from billing-service",
       content: {
         "application/json": {
-          schema: z.object({
-            balance_cents: decimalCentsString.describe("Current balance in cents (decimal string, full precision)"),
-            depleted: z.boolean().describe("True if balance is zero or negative"),
-          }).openapi("BalanceResponse"),
-        },
-      },
-    },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/billing/accounts/transactions",
-  tags: ["Billing"],
-  summary: "Get transaction history",
-  description: "List billing transactions for the organization",
-  security: authed,
-  responses: {
-    200: {
-      description: "Transaction list — pass-through from billing-service",
-      content: {
-        "application/json": {
-          schema: z.object({}).passthrough().openapi("TransactionListResponse"),
+          schema: z.object({}).passthrough().openapi("BalanceResponse"),
         },
       },
     },
@@ -5024,24 +4990,24 @@ registry.registerPath({
 
 registry.registerPath({
   method: "patch",
-  path: "/v1/billing/accounts/auto-reload",
+  path: "/v1/billing/accounts/auto_topup",
   tags: ["Billing"],
-  summary: "Configure auto-reload",
-  description: "Enable or update auto-reload settings for the billing account. Requires a payment method on file.",
+  summary: "Configure auto-topup",
+  description: "Enable or update auto-topup settings for the billing account. Requires a payment method on file.",
   security: authed,
   request: {
     body: {
       content: {
-        "application/json": { schema: ConfigureAutoReloadRequestSchema },
+        "application/json": { schema: ConfigureAutoTopupRequestSchema },
       },
     },
   },
   responses: {
     200: {
-      description: "Auto-reload configured — pass-through from billing-service",
+      description: "Auto-topup configured — pass-through from billing-service",
       content: {
         "application/json": {
-          schema: z.object({}).passthrough().openapi("ConfigureAutoReloadResponse"),
+          schema: z.object({}).passthrough().openapi("ConfigureAutoTopupResponse"),
         },
       },
     },
@@ -5053,49 +5019,17 @@ registry.registerPath({
 
 registry.registerPath({
   method: "delete",
-  path: "/v1/billing/accounts/auto-reload",
+  path: "/v1/billing/accounts/auto_topup",
   tags: ["Billing"],
-  summary: "Disable auto-reload",
-  description: "Disable auto-reload for the billing account",
+  summary: "Disable auto-topup",
+  description: "Disable auto-topup for the billing account",
   security: authed,
   responses: {
     200: {
-      description: "Auto-reload disabled — pass-through from billing-service",
+      description: "Auto-topup disabled — pass-through from billing-service",
       content: {
         "application/json": {
-          schema: z.object({}).passthrough().openapi("DisableAutoReloadResponse"),
-        },
-      },
-    },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/billing/credits/deduct",
-  tags: ["Billing"],
-  summary: "Deduct credits",
-  description: "Deduct credits from the organization's billing account. Accepts negative balances — if insufficient and auto-reload fails, the deduction still goes through. Auto-creates billing account if none exists.",
-  security: authed,
-  request: {
-    body: {
-      content: {
-        "application/json": { schema: DeductCreditsRequestSchema },
-      },
-    },
-  },
-  responses: {
-    200: {
-      description: "Credits deducted",
-      content: {
-        "application/json": {
-          schema: z.object({
-            success: z.boolean().describe("Whether the deduction succeeded"),
-            balance_cents: decimalCentsString.describe("Balance after deduction (decimal string, full precision)"),
-            depleted: z.boolean().describe("True if balance is zero or negative after deduction"),
-          }).openapi("DeductCreditsResponse"),
+          schema: z.object({}).passthrough().openapi("DisableAutoTopupResponse"),
         },
       },
     },
@@ -5120,13 +5054,10 @@ registry.registerPath({
   },
   responses: {
     200: {
-      description: "Checkout session created with URL",
+      description: "Checkout session created — pass-through from billing-service",
       content: {
         "application/json": {
-          schema: z.object({
-            url: z.string().describe("Stripe Checkout URL to redirect the user to"),
-            sessionId: z.string().describe("Stripe Checkout session ID"),
-          }).openapi("BillingCheckoutResponse"),
+          schema: z.object({}).passthrough().openapi("BillingCheckoutResponse"),
         },
       },
     },
@@ -5151,12 +5082,10 @@ registry.registerPath({
   },
   responses: {
     200: {
-      description: "Portal session created with URL",
+      description: "Portal session created — pass-through from billing-service",
       content: {
         "application/json": {
-          schema: z.object({
-            url: z.string().describe("Stripe portal URL to redirect the user to"),
-          }).openapi("BillingPortalSessionResponse"),
+          schema: z.object({}).passthrough().openapi("BillingPortalSessionResponse"),
         },
       },
     },
