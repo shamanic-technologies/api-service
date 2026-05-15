@@ -36,31 +36,31 @@ beforeEach(() => {
   mockCallExternalService.mockReset();
 });
 
-describe("billing proxy — fractional cents (decimal-string contract)", () => {
-  it("GET /billing/accounts/balance returns decimal string balance_cents untouched", async () => {
-    const upstream = { balance_cents: "100.4200000000", depleted: false };
+describe("billing proxy — passthrough contract", () => {
+  it("GET /billing/accounts/balance forwards upstream body unchanged", async () => {
+    const upstream = { available_cents: "100.4200000000", depleted: false };
     mockCallExternalService.mockResolvedValue(upstream);
 
     const res = await request(createApp()).get("/billing/accounts/balance");
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(upstream);
-    expect(typeof res.body.balance_cents).toBe("string");
-    expect(res.body.balance_cents).toBe("100.4200000000");
+    expect(typeof res.body.available_cents).toBe("string");
   });
 
-  it("GET /billing/accounts returns decimal-string grant/spent/available/reload fields untouched", async () => {
+  it("GET /billing/accounts forwards decimal-string fields untouched", async () => {
     const upstream = {
       id: "acc_1",
-      orgId: "org-test",
-      grantsCents: "12345.6789012345",
-      runsSpentCents: "2345.6789012345",
-      availableCents: "10000.0000000000",
-      hasAutoReload: true,
-      hasPaymentMethod: true,
-      reloadAmountCents: "500000.0000000000",
-      reloadThresholdCents: "100.0000000000",
-      createdAt: "2026-01-01T00:00:00Z",
+      org_id: "org-test",
+      balance_cents: "12345.6789012345",
+      usage_cents: "2345.6789012345",
+      available_cents: "10000.0000000000",
+      has_auto_topup: true,
+      has_payment_method: true,
+      topup_amount_cents: 500000,
+      topup_threshold_cents: 100,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
     };
     mockCallExternalService.mockResolvedValue(upstream);
 
@@ -68,109 +68,97 @@ describe("billing proxy — fractional cents (decimal-string contract)", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(upstream);
-    expect(typeof res.body.grantsCents).toBe("string");
-    expect(typeof res.body.runsSpentCents).toBe("string");
-    expect(typeof res.body.availableCents).toBe("string");
-    expect(typeof res.body.reloadAmountCents).toBe("string");
-    expect(typeof res.body.reloadThresholdCents).toBe("string");
+    expect(typeof res.body.balance_cents).toBe("string");
+    expect(typeof res.body.usage_cents).toBe("string");
+    expect(typeof res.body.available_cents).toBe("string");
   });
 
-  it("GET /billing/accounts handles null reload fields", async () => {
+  it("GET /billing/accounts handles null topup fields", async () => {
     const upstream = {
       id: "acc_2",
-      orgId: "org-test",
-      grantsCents: "0.0000000000",
-      runsSpentCents: "0.0000000000",
-      availableCents: "0.0000000000",
-      hasAutoReload: false,
-      hasPaymentMethod: false,
-      reloadAmountCents: null,
-      reloadThresholdCents: null,
-      createdAt: "2026-01-01T00:00:00Z",
+      org_id: "org-test",
+      balance_cents: "0.0000000000",
+      usage_cents: "0.0000000000",
+      available_cents: "0.0000000000",
+      has_auto_topup: false,
+      has_payment_method: false,
+      topup_amount_cents: null,
+      topup_threshold_cents: null,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
     };
     mockCallExternalService.mockResolvedValue(upstream);
 
     const res = await request(createApp()).get("/billing/accounts");
 
     expect(res.status).toBe(200);
-    expect(res.body.reloadAmountCents).toBeNull();
-    expect(res.body.reloadThresholdCents).toBeNull();
+    expect(res.body.topup_amount_cents).toBeNull();
+    expect(res.body.topup_threshold_cents).toBeNull();
   });
 
-  it("POST /billing/credits/deduct forwards decimal-string amount_cents byte-identical", async () => {
-    const upstream = { success: true, balance_cents: "99.5800000000", depleted: false };
-    mockCallExternalService.mockResolvedValue(upstream);
-
-    const reqBody = { amount_cents: "0.42", description: "test deduction" };
-    const res = await request(createApp())
-      .post("/billing/credits/deduct")
-      .send(reqBody);
-
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual(upstream);
-
-    // Inspect the call to service-client and assert the body forwarded as-is
-    expect(mockCallExternalService).toHaveBeenCalled();
-    const [, , opts] = mockCallExternalService.mock.calls[0] as [
-      unknown,
-      unknown,
-      { method?: string; body?: unknown },
-    ];
-    expect(opts?.method).toBe("POST");
-    expect(opts?.body).toEqual(reqBody);
-    expect((opts?.body as any).amount_cents).toBe("0.42");
-  });
-
-  it("POST /billing/credits/deduct forwards integer amount_cents (legacy) byte-identical", async () => {
-    const upstream = { success: true, balance_cents: "900.0000000000", depleted: false };
-    mockCallExternalService.mockResolvedValue(upstream);
-
-    const reqBody = { amount_cents: 100, description: "legacy integer call" };
-    const res = await request(createApp())
-      .post("/billing/credits/deduct")
-      .send(reqBody);
-
-    expect(res.status).toBe(200);
-    const [, , opts] = mockCallExternalService.mock.calls[0] as [
-      unknown,
-      unknown,
-      { body?: unknown },
-    ];
-    expect(opts?.body).toEqual(reqBody);
-    expect((opts?.body as any).amount_cents).toBe(100);
-    expect(typeof (opts?.body as any).amount_cents).toBe("number");
-  });
-
-  it("PATCH /billing/accounts/auto-reload forwards decimal-string fields untouched", async () => {
+  it("PATCH /billing/accounts/auto_topup forwards body byte-identical to /v1/accounts/auto_topup", async () => {
     const upstream = {
       id: "acc_3",
-      orgId: "org-test",
-      grantsCents: "100.0000000000",
-      runsSpentCents: "10.0000000000",
-      availableCents: "90.0000000000",
-      hasAutoReload: true,
-      hasPaymentMethod: true,
-      reloadAmountCents: "1000.5000000000",
-      reloadThresholdCents: "50.2500000000",
-      createdAt: "2026-01-01T00:00:00Z",
+      org_id: "org-test",
+      balance_cents: "100.0000000000",
+      usage_cents: "10.0000000000",
+      available_cents: "90.0000000000",
+      has_auto_topup: true,
+      has_payment_method: true,
+      topup_amount_cents: 1000,
+      topup_threshold_cents: 50,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
     };
     mockCallExternalService.mockResolvedValue(upstream);
 
     const reqBody = {
-      reload_amount_cents: "1000.5",
-      reload_threshold_cents: "50.25",
+      topup_amount_cents: 1000,
+      topup_threshold_cents: 50,
     };
     const res = await request(createApp())
-      .patch("/billing/accounts/auto-reload")
+      .patch("/billing/accounts/auto_topup")
       .send(reqBody);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(upstream);
-    const [, , opts] = mockCallExternalService.mock.calls[0] as [
+    const [service, downstreamPath, opts] = mockCallExternalService.mock.calls[0] as [
       unknown,
-      unknown,
-      { body?: unknown },
+      string,
+      { method?: string; body?: unknown },
     ];
+    expect(service).toEqual({ url: "http://mock-billing", apiKey: "k" });
+    expect(downstreamPath).toBe("/v1/accounts/auto_topup");
+    expect(opts?.method).toBe("PATCH");
     expect(opts?.body).toEqual(reqBody);
+  });
+
+  it("DELETE /billing/accounts/auto_topup forwards to /v1/accounts/auto_topup", async () => {
+    const upstream = {
+      id: "acc_4",
+      org_id: "org-test",
+      balance_cents: "0.0000000000",
+      usage_cents: "0.0000000000",
+      available_cents: "0.0000000000",
+      has_auto_topup: false,
+      has_payment_method: true,
+      topup_amount_cents: null,
+      topup_threshold_cents: null,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    };
+    mockCallExternalService.mockResolvedValue(upstream);
+
+    const res = await request(createApp()).delete("/billing/accounts/auto_topup");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(upstream);
+    const [, downstreamPath, opts] = mockCallExternalService.mock.calls[0] as [
+      unknown,
+      string,
+      { method?: string },
+    ];
+    expect(downstreamPath).toBe("/v1/accounts/auto_topup");
+    expect(opts?.method).toBe("DELETE");
   });
 });

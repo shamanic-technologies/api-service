@@ -37,60 +37,32 @@ router.get("/billing/accounts/balance", authenticate, requireOrg, async (req: Au
   }
 });
 
-// GET /v1/billing/accounts/transactions — transaction history
-router.get("/billing/accounts/transactions", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// PATCH /v1/billing/accounts/auto_topup — configure auto-topup
+router.patch("/billing/accounts/auto_topup", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.billing,
-      "/v1/accounts/transactions",
-      { headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || "Failed to get transactions" });
-  }
-});
-
-// PATCH /v1/billing/accounts/auto-reload — configure auto-reload
-router.patch("/billing/accounts/auto-reload", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.billing,
-      "/v1/accounts/auto-reload",
+      "/v1/accounts/auto_topup",
       { method: "PATCH", body: req.body, headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
     const status = error.statusCode || 500;
-    res.status(status).json({ error: error.message || "Failed to configure auto-reload" });
+    res.status(status).json({ error: error.message || "Failed to configure auto-topup" });
   }
 });
 
-// DELETE /v1/billing/accounts/auto-reload — disable auto-reload
-router.delete("/billing/accounts/auto-reload", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+// DELETE /v1/billing/accounts/auto_topup — disable auto-topup
+router.delete("/billing/accounts/auto_topup", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.billing,
-      "/v1/accounts/auto-reload",
+      "/v1/accounts/auto_topup",
       { method: "DELETE", headers: buildInternalHeaders(req) }
     );
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message || "Failed to disable auto-reload" });
-  }
-});
-
-// POST /v1/billing/credits/deduct — deduct credits
-router.post("/billing/credits/deduct", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.billing,
-      "/v1/credits/deduct",
-      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    res.status(500).json({ error: error.message || "Failed to deduct credits" });
+    res.status(500).json({ error: error.message || "Failed to disable auto-topup" });
   }
 });
 
