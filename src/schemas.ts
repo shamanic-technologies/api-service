@@ -3897,9 +3897,12 @@ export const UpgradeWorkflowRequestSchema = z
         "Natural language description of the upgrade. Describe what should change relative to the current workflow."
       ),
     hints: z
-      .array(z.string())
+      .object({})
+      .passthrough()
       .optional()
-      .describe("Optional free-form hints to guide the upgrade."),
+      .describe(
+        "Optional hints to guide the upgrade. Shape owned by workflow-service (see its OpenAPI for known keys)."
+      ),
   })
   .openapi("UpgradeWorkflowRequest");
 
