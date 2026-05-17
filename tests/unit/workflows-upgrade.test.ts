@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
+import { UpgradeWorkflowRequestSchema } from "../../src/schemas";
 
 describe("POST /v1/workflows/upgrade route", () => {
   const routePath = path.join(__dirname, "../../src/routes/workflows.ts");
@@ -96,5 +97,54 @@ describe("UpgradeWorkflowRequestSchema", () => {
 
   it("should document the UpgradeWorkflowResponse schema", () => {
     expect(content).toContain('"UpgradeWorkflowResponse"');
+  });
+});
+
+describe("UpgradeWorkflowRequestSchema parsing", () => {
+  it("accepts hints as an object (matches workflow-service contract)", () => {
+    const result = UpgradeWorkflowRequestSchema.safeParse({
+      workflowSlug: "pr-cold-email-outreach",
+      description: "Add a wait step before sending the email",
+      hints: { services: ["lead-service"], nodeTypes: ["wait"] },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects hints as an array (the prod-breaking shape)", () => {
+    const result = UpgradeWorkflowRequestSchema.safeParse({
+      workflowSlug: "pr-cold-email-outreach",
+      description: "Add a wait step before sending the email",
+      hints: ["lead-service"],
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts an empty hints object", () => {
+    const result = UpgradeWorkflowRequestSchema.safeParse({
+      workflowSlug: "pr-cold-email-outreach",
+      description: "Add a wait step before sending the email",
+      hints: {},
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts missing hints (field is optional)", () => {
+    const result = UpgradeWorkflowRequestSchema.safeParse({
+      workflowSlug: "pr-cold-email-outreach",
+      description: "Add a wait step before sending the email",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("passes through unknown hint keys (downstream owns the shape)", () => {
+    const result = UpgradeWorkflowRequestSchema.safeParse({
+      workflowSlug: "pr-cold-email-outreach",
+      description: "Add a wait step before sending the email",
+      hints: { futureKey: "value", services: ["x"] },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.hints).toEqual({ futureKey: "value", services: ["x"] });
+    }
   });
 });

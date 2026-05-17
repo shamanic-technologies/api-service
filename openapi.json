@@ -6365,11 +6365,9 @@
             "description": "Natural language description of the upgrade. Describe what should change relative to the current workflow."
           },
           "hints": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Optional free-form hints to guide the upgrade."
+            "type": "object",
+            "properties": {},
+            "description": "Optional hints to guide the upgrade. Shape owned by workflow-service (see its OpenAPI for known keys)."
           }
         },
         "required": [
