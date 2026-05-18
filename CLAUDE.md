@@ -27,6 +27,8 @@ api-service is a **transparent proxy**. It authenticates, applies middleware, an
 
 6. **No shape assertions on pass-through responses.** Billing and any other endpoint whose response schema is `z.object({}).passthrough()` is owned by the downstream service. Do NOT write api-service unit tests that assert specific field names or types on those responses — they only re-encode the downstream contract here and force coordinated edits on every downstream rename. Tests must assert (a) the proxy forwarded to the correct downstream path, and (b) the upstream body was forwarded byte-identical. That is the entire contract.
 
+7. **No sanitizing upstream error bodies.** `callExternalService` (`src/lib/service-client.ts`) throws `Error.message = <upstream body verbatim>` on non-2xx; routes surface it to the client via `res.json({ error: err.message })`. Do NOT re-introduce a generic `Service call failed: <status>` mask, do NOT JSON-extract only the `error` field, do NOT truncate. Downstream services are ours, behind the same trust boundary as the gateway — PII / stack-trace hygiene is enforced at the downstream layer, not by double-masking here. LLM/MCP callers (dashboard agent, MCP tool callers) cannot debug without the real upstream message. This rule supersedes PR #437 finding S5; the security audit was over-cautious for an internal microservice mesh. Hotfix v0.41.2 (PR #462) restored passthrough after agents hit opaque `{"error":"Service call failed: 500"}` from `/workflows/upgrade`.
+
 ### Brand-service path convention
 
 - `/orgs/brands/*` (no ID in path) = org-scoped operations using `x-org-id` / `x-brand-id` headers (list, extract-fields, extract-images)
