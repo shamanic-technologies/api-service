@@ -8,45 +8,91 @@ describe("callExternalService error handling", () => {
     vi.restoreAllMocks();
   });
 
-  it("should return generic error message (not upstream details) for JSON error response", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 401,
-        text: () => Promise.resolve(JSON.stringify({ error: "Invalid API key format" })),
-      }),
-    );
-
-    await expect(callExternalService(service, "/validate")).rejects.toThrow(
-      "Service call failed: 401",
-    );
-    // Must NOT leak upstream error details
-    await expect(callExternalService(service, "/validate")).rejects.not.toThrow(
-      "Invalid API key format",
-    );
-  });
-
-  it("should return generic error message (not upstream details) for non-JSON response", async () => {
+  it("propagates upstream JSON error body verbatim in Error.message", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
         ok: false,
         status: 500,
-        text: () => Promise.resolve("Internal Server Error"),
+        text: () => Promise.resolve(JSON.stringify({ error: "chat-service unreachable" })),
+      }),
+    );
+
+    await expect(callExternalService(service, "/complete")).rejects.toThrow(
+      "chat-service unreachable",
+    );
+  });
+
+  it("propagates plain-text upstream body in Error.message", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 502,
+        text: () => Promise.resolve("upstream gateway timeout"),
       }),
     );
 
     await expect(callExternalService(service, "/health")).rejects.toThrow(
-      "Service call failed: 500",
-    );
-    // Must NOT leak upstream error text
-    await expect(callExternalService(service, "/health")).rejects.not.toThrow(
-      "Internal Server Error",
+      "upstream gateway timeout",
     );
   });
 
-  it("should log fetch cause when fetch itself fails (e.g. DNS/network)", async () => {
+  it("falls back to `Service call failed: <status>` when upstream body is empty", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        text: () => Promise.resolve(""),
+      }),
+    );
+
+    await expect(callExternalService(service, "/x")).rejects.toThrow(
+      "Service call failed: 500",
+    );
+  });
+
+  it("preserves statusCode on thrown Error", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 422,
+        text: () => Promise.resolve(JSON.stringify({ error: "invalid input" })),
+      }),
+    );
+
+    try {
+      await callExternalService(service, "/x");
+      throw new Error("expected throw");
+    } catch (err) {
+      expect((err as Error & { statusCode: number }).statusCode).toBe(422);
+      expect((err as Error).message).toContain("invalid input");
+    }
+  });
+
+  it("logs full upstream body server-side via console.error", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const upstreamBody = JSON.stringify({ error: "boom", stack: "lots of detail here" });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        text: () => Promise.resolve(upstreamBody),
+      }),
+    );
+
+    await expect(callExternalService(service, "/x")).rejects.toThrow("boom");
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("upstream error 500"),
+      upstreamBody,
+    );
+  });
+
+  it("logs fetch cause when fetch itself fails (e.g. DNS/network)", async () => {
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const networkError = new TypeError("fetch failed");
     (networkError as any).cause = { code: "ENOTFOUND", message: "getaddrinfo ENOTFOUND badhost" };
@@ -58,24 +104,8 @@ describe("callExternalService error handling", () => {
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining("(cause: ENOTFOUND)"),
     );
-    // Should log the full URL, not just the path
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining("http://localhost:9999/resolve"),
-    );
-  });
-
-  it("should use status code when JSON has no error field", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 403,
-        text: () => Promise.resolve(JSON.stringify({ message: "Forbidden" })),
-      }),
-    );
-
-    await expect(callExternalService(service, "/resource")).rejects.toThrow(
-      "Service call failed: 403",
     );
   });
 });

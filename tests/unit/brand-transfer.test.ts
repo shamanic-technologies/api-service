@@ -241,7 +241,7 @@ describe("POST /v1/brands/:id/transfer", () => {
       .send({ targetOrgId: "org_clerk_target" });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toContain("Service call failed: 500");
+    expect(res.body.error).toContain("Brand-service internal error");
   });
 });
 
@@ -300,7 +300,7 @@ describe("GET /v1/brands/:id/transfers", () => {
       .get("/v1/brands/brand-abc/transfers");
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toContain("Service call failed: 500");
+    expect(res.body.error).toContain("DB error");
   });
 });
 

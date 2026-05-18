@@ -89,6 +89,6 @@ describe("POST /v1/brands – upsert brand", () => {
       .send({ url: "https://example.com" });
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toContain("Service call failed: 500");
+    expect(res.body.error).toContain("Connection refused");
   });
 });

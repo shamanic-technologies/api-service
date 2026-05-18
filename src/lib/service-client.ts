@@ -173,10 +173,11 @@ export async function callExternalServiceWithStatus<T>(
 
     if (!response.ok) {
       const errorText = await response.text();
-      // Log full upstream error server-side for debugging
       console.error(`[callExternalService] ${method} ${url} upstream error ${response.status}:`, errorText);
-      // Return generic message to client — never leak upstream details
-      const err = new Error(`Service call failed: ${response.status}`) as Error & { statusCode: number };
+      // Passthrough upstream body verbatim — gateway is transparent (CLAUDE.md rule #6).
+      // LLM/MCP callers need the real root cause; generic "Service call failed" is undebuggable.
+      const message = errorText || `Service call failed: ${response.status}`;
+      const err = new Error(message) as Error & { statusCode: number };
       err.statusCode = response.status;
       throw err;
     }
