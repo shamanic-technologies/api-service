@@ -12,40 +12,6 @@ import {
 const router = Router();
 
 /**
- * Resolve brandIds → brandUrls via brand-service.
- * Calls GET /internal/brands/:id for each brand in parallel and extracts the URL.
- */
-async function resolveBrandUrls(
-  brandIds: string[],
-  headers: Record<string, string>,
-): Promise<string[]> {
-  if (brandIds.length === 0) return [];
-  const results = await Promise.all(
-    brandIds.map((id) =>
-      callExternalService<{ brand: { url: string | null } }>(
-        externalServices.brand,
-        `/internal/brands/${encodeURIComponent(id)}`,
-        { headers },
-      ),
-    ),
-  );
-  return results.map((r) => r.brand.url).filter((url): url is string => url != null);
-}
-
-/**
- * Enrich a campaign object by resolving brandUrls from brandIds.
- */
-async function enrichCampaignBrandUrls(
-  campaign: Record<string, unknown>,
-  headers: Record<string, string>,
-): Promise<Record<string, unknown>> {
-  const brandIds = campaign.brandIds as string[] | undefined;
-  if (!brandIds || brandIds.length === 0) return { ...campaign, brandUrls: [] };
-  const brandUrls = await resolveBrandUrls(brandIds, headers);
-  return { ...campaign, brandUrls };
-}
-
-/**
  * GET /v1/campaigns
  * List campaigns for the organization
  * Query params:
@@ -60,16 +26,12 @@ router.get("/campaigns", authenticate, requireOrg, requireUser, async (req: Auth
     const queryString = params.toString() ? `?${params.toString()}` : "";
 
     const internalHeaders = buildInternalHeaders(req);
-    const result = await callExternalService<{ campaigns: Record<string, unknown>[] }>(
+    const result = await callExternalService(
       externalServices.campaign,
       `/campaigns${queryString}`,
       { headers: internalHeaders },
     );
-
-    const enriched = await Promise.all(
-      result.campaigns.map((c) => enrichCampaignBrandUrls(c, internalHeaders)),
-    );
-    res.json({ ...result, campaigns: enriched });
+    res.json(result);
   } catch (error: any) {
     console.error("[api-service] List campaigns error:", error);
     res.status(500).json({ error: error.message || "Failed to list campaigns" });
@@ -376,14 +338,12 @@ router.get("/campaigns/:id", authenticate, requireOrg, requireUser, async (req: 
     const internalHeaders = buildInternalHeaders(req);
 
     console.log("[api-service] GET /campaigns/:id — calling campaign-service", { campaignId: id, orgId: req.orgId });
-    const result = await callExternalService<{ campaign: Record<string, unknown> }>(
+    const result = await callExternalService(
       externalServices.campaign,
       `/campaigns/${id}`,
       { headers: internalHeaders },
     );
-
-    const enriched = await enrichCampaignBrandUrls(result.campaign, internalHeaders);
-    res.json({ ...result, campaign: enriched });
+    res.json(result);
   } catch (error: any) {
     console.error("[api-service] Get campaign error:", error, { campaignId: req.params.id, orgId: req.orgId });
     res.status(500).json({ error: error.message || "Failed to get campaign" });

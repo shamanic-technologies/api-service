@@ -60,6 +60,30 @@ router.get("/brands", authenticate, requireOrg, requireUser, async (req: Authent
 });
 
 /**
+ * GET /v1/brands/by-ids?ids=uuid1,uuid2,...
+ * Batch lookup by id. Proxies to brand-service GET /internal/brands?ids=...
+ * Caller is responsible for staying within the brand-service per-request cap
+ * (the upstream will return 400 if exceeded — propagated verbatim).
+ */
+router.get("/brands/by-ids", authenticate, async (req: AuthenticatedRequest, res) => {
+  try {
+    const ids = req.query.ids as string | undefined;
+    if (!ids || ids.length === 0) {
+      return res.status(400).json({ error: "ids query param (comma-separated UUIDs) is required" });
+    }
+    const result = await callExternalService(
+      externalServices.brand,
+      `/internal/brands?ids=${encodeURIComponent(ids)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Get brands batch error:", error);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brands batch" });
+  }
+});
+
+/**
  * GET /v1/brands/:id
  * Get a single brand by ID from brand-service
  */
