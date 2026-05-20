@@ -81,12 +81,15 @@ describe("OpenAPI spec — response schemas", () => {
 
   it("should define brand response schemas", () => {
     const schemas = spec.components.schemas;
+    // All brand response schemas are pass-through (z.object({}).passthrough()) —
+    // brand-service owns the shape. Assert presence only, not properties.
     expect(schemas).toHaveProperty("BrandSummary");
-    expect(schemas).toHaveProperty("BrandDetail");
-    // BrandDetail extends BrandSummary via allOf
-    const brandDetailStr = JSON.stringify(schemas.BrandDetail);
-    expect(brandDetailStr).toContain("bio");
-    expect(brandDetailStr).toContain("mission");
+    expect(schemas).toHaveProperty("UpsertBrandResponse");
+    expect(schemas).toHaveProperty("ExtractFieldsFromHeaderResponse");
+    expect(schemas).toHaveProperty("ExtractedFieldsResponse");
+    expect(schemas).toHaveProperty("ExtractImagesMultiBrandResponse");
+    expect(schemas).toHaveProperty("ExtractedImagesResponse");
+    expect(schemas).toHaveProperty("IcpSuggestionResponse");
   });
 
   it("should define billing response schemas", () => {

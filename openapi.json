@@ -4825,57 +4825,7 @@
       },
       "BrandSummary": {
         "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Brand ID"
-          },
-          "domain": {
-            "type": "string",
-            "nullable": true,
-            "description": "Brand domain"
-          },
-          "name": {
-            "type": "string",
-            "nullable": true,
-            "description": "Brand name"
-          },
-          "brandUrl": {
-            "type": "string",
-            "nullable": true,
-            "description": "Brand website URL"
-          },
-          "createdAt": {
-            "type": "string",
-            "nullable": true,
-            "description": "ISO timestamp"
-          },
-          "updatedAt": {
-            "type": "string",
-            "nullable": true,
-            "description": "ISO timestamp"
-          },
-          "logoUrl": {
-            "type": "string",
-            "nullable": true,
-            "description": "Logo URL"
-          },
-          "elevatorPitch": {
-            "type": "string",
-            "nullable": true,
-            "description": "Short brand description"
-          }
-        },
-        "required": [
-          "id",
-          "domain",
-          "name",
-          "brandUrl",
-          "createdAt",
-          "updatedAt",
-          "logoUrl",
-          "elevatorPitch"
-        ]
+        "properties": {}
       },
       "ListBrandsResponse": {
         "type": "object",
@@ -4891,49 +4841,11 @@
           "brands"
         ]
       },
-      "BrandDetail": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/BrandSummary"
-          },
-          {
-            "type": "object",
-            "properties": {
-              "bio": {
-                "type": "string",
-                "nullable": true,
-                "description": "Brand biography"
-              },
-              "mission": {
-                "type": "string",
-                "nullable": true,
-                "description": "Brand mission statement"
-              },
-              "location": {
-                "type": "string",
-                "nullable": true,
-                "description": "Brand location"
-              },
-              "categories": {
-                "type": "string",
-                "nullable": true,
-                "description": "Brand categories"
-              }
-            },
-            "required": [
-              "bio",
-              "mission",
-              "location",
-              "categories"
-            ]
-          }
-        ]
-      },
       "GetBrandResponse": {
         "type": "object",
         "properties": {
           "brand": {
-            "$ref": "#/components/schemas/BrandDetail"
+            "$ref": "#/components/schemas/BrandSummary"
           }
         },
         "required": [
@@ -4942,145 +4854,7 @@
       },
       "ExtractFieldsFromHeaderResponse": {
         "type": "object",
-        "properties": {
-          "brands": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "brandId": {
-                  "type": "string",
-                  "description": "Internal brand UUID"
-                },
-                "domain": {
-                  "type": "string",
-                  "description": "Brand domain (e.g. acme.com)"
-                },
-                "name": {
-                  "type": "string",
-                  "description": "Brand display name"
-                },
-                "brandUrl": {
-                  "type": "string",
-                  "nullable": true,
-                  "description": "Full brand website URL (e.g. https://acme.com)"
-                }
-              },
-              "required": [
-                "brandId",
-                "domain",
-                "name",
-                "brandUrl"
-              ]
-            },
-            "description": "Metadata for each brand included in the extraction"
-          },
-          "fields": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "object",
-              "properties": {
-                "value": {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "array",
-                      "items": {
-                        "nullable": true
-                      }
-                    },
-                    {
-                      "type": "object",
-                      "additionalProperties": {
-                        "nullable": true
-                      }
-                    },
-                    {
-                      "nullable": true
-                    },
-                    {
-                      "nullable": true
-                    }
-                  ],
-                  "description": "Merged/primary extracted value across all brands"
-                },
-                "byBrand": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "object",
-                    "properties": {
-                      "value": {
-                        "anyOf": [
-                          {
-                            "type": "string"
-                          },
-                          {
-                            "type": "array",
-                            "items": {
-                              "nullable": true
-                            }
-                          },
-                          {
-                            "type": "object",
-                            "additionalProperties": {
-                              "nullable": true
-                            }
-                          },
-                          {
-                            "nullable": true
-                          },
-                          {
-                            "nullable": true
-                          }
-                        ],
-                        "description": "Extracted value for this brand"
-                      },
-                      "cached": {
-                        "type": "boolean",
-                        "description": "Whether this result was served from cache"
-                      },
-                      "extractedAt": {
-                        "type": "string",
-                        "description": "ISO timestamp of extraction"
-                      },
-                      "expiresAt": {
-                        "type": "string",
-                        "description": "ISO timestamp when cached result expires"
-                      },
-                      "sourceUrls": {
-                        "type": "array",
-                        "nullable": true,
-                        "items": {
-                          "type": "string"
-                        },
-                        "description": "URLs scraped to extract this field"
-                      }
-                    },
-                    "required": [
-                      "value",
-                      "cached",
-                      "extractedAt",
-                      "expiresAt",
-                      "sourceUrls"
-                    ]
-                  },
-                  "description": "Per-brand extraction details keyed by domain"
-                }
-              },
-              "required": [
-                "value",
-                "byBrand"
-              ]
-            },
-            "description": "Extraction results keyed by field name"
-          }
-        },
-        "required": [
-          "brands",
-          "fields"
-        ]
+        "properties": {}
       },
       "ExtractFieldRequest": {
         "type": "object",
@@ -5127,187 +4901,13 @@
           "fields"
         ]
       },
-      "CachedField": {
-        "type": "object",
-        "properties": {
-          "key": {
-            "type": "string",
-            "description": "Field key"
-          },
-          "value": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "array",
-                "items": {
-                  "nullable": true
-                }
-              },
-              {
-                "type": "object",
-                "additionalProperties": {
-                  "nullable": true
-                }
-              },
-              {
-                "nullable": true
-              },
-              {
-                "nullable": true
-              }
-            ],
-            "description": "Extracted value. Type depends on the field key: string, array, object, or null when not found."
-          },
-          "sourceUrls": {
-            "type": "array",
-            "nullable": true,
-            "items": {
-              "type": "string"
-            },
-            "description": "URLs scraped to extract this field. Null for pre-existing extractions."
-          },
-          "extractedAt": {
-            "type": "string",
-            "description": "ISO timestamp of extraction"
-          },
-          "expiresAt": {
-            "type": "string",
-            "description": "ISO timestamp when cached result expires"
-          }
-        },
-        "required": [
-          "key",
-          "value",
-          "sourceUrls",
-          "extractedAt",
-          "expiresAt"
-        ]
-      },
       "ExtractedFieldsResponse": {
         "type": "object",
-        "properties": {
-          "brandId": {
-            "type": "string",
-            "description": "Brand ID"
-          },
-          "fields": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/CachedField"
-            },
-            "description": "Previously extracted and cached fields"
-          }
-        },
-        "required": [
-          "brandId",
-          "fields"
-        ]
-      },
-      "ExtractedImage": {
-        "type": "object",
-        "properties": {
-          "url": {
-            "type": "string",
-            "description": "Permanent R2 URL of the extracted image"
-          },
-          "category": {
-            "type": "string",
-            "description": "Image category key"
-          },
-          "sourceUrl": {
-            "type": "string",
-            "nullable": true,
-            "description": "Original source URL where the image was found"
-          },
-          "extractedAt": {
-            "type": "string",
-            "description": "ISO timestamp of extraction"
-          }
-        },
-        "required": [
-          "url",
-          "category",
-          "sourceUrl",
-          "extractedAt"
-        ]
+        "properties": {}
       },
       "ExtractImagesMultiBrandResponse": {
         "type": "object",
-        "properties": {
-          "brands": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "brandId": {
-                  "type": "string",
-                  "description": "Internal brand UUID"
-                },
-                "domain": {
-                  "type": "string",
-                  "description": "Brand domain"
-                },
-                "name": {
-                  "type": "string",
-                  "description": "Brand display name"
-                },
-                "brandUrl": {
-                  "type": "string",
-                  "nullable": true,
-                  "description": "Full brand website URL (e.g. https://acme.com)"
-                }
-              },
-              "required": [
-                "brandId",
-                "domain",
-                "name",
-                "brandUrl"
-              ]
-            },
-            "description": "Metadata for each brand"
-          },
-          "results": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "category": {
-                  "type": "string",
-                  "description": "Image category"
-                },
-                "images": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/ExtractedImage"
-                  },
-                  "description": "Consolidated images"
-                },
-                "byBrand": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "array",
-                    "items": {
-                      "$ref": "#/components/schemas/ExtractedImage"
-                    }
-                  },
-                  "description": "Per-brand images, keyed by domain"
-                }
-              },
-              "required": [
-                "category",
-                "images",
-                "byBrand"
-              ]
-            },
-            "description": "Extracted images by category"
-          }
-        },
-        "required": [
-          "brands",
-          "results"
-        ]
+        "properties": {}
       },
       "ExtractImageCategory": {
         "type": "object",
@@ -5359,59 +4959,11 @@
       },
       "ExtractedImagesResponse": {
         "type": "object",
-        "properties": {
-          "brandId": {
-            "type": "string",
-            "description": "Brand ID"
-          },
-          "images": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ExtractedImage"
-            },
-            "description": "Previously extracted and cached images"
-          }
-        },
-        "required": [
-          "brandId",
-          "images"
-        ]
+        "properties": {}
       },
       "IcpSuggestionResponse": {
         "type": "object",
-        "properties": {
-          "person_titles": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Suggested job titles"
-          },
-          "organization_locations": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Suggested locations"
-          },
-          "organization_industries": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Suggested industries"
-          },
-          "organization_num_employees_ranges": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Suggested company sizes"
-          }
-        },
-        "required": [
-          "person_titles"
-        ]
+        "properties": {}
       },
       "IcpSuggestionRequest": {
         "type": "object",
@@ -5428,32 +4980,7 @@
       },
       "UpsertBrandResponse": {
         "type": "object",
-        "properties": {
-          "brandId": {
-            "type": "string",
-            "description": "Brand ID"
-          },
-          "domain": {
-            "type": "string",
-            "nullable": true,
-            "description": "Extracted domain"
-          },
-          "name": {
-            "type": "string",
-            "nullable": true,
-            "description": "Brand name"
-          },
-          "created": {
-            "type": "boolean",
-            "description": "True if newly created, false if already existed"
-          }
-        },
-        "required": [
-          "brandId",
-          "domain",
-          "name",
-          "created"
-        ]
+        "properties": {}
       },
       "BrandUpsertRequest": {
         "type": "object",
