@@ -22,14 +22,14 @@ async function resolveBrandUrls(
   if (brandIds.length === 0) return [];
   const results = await Promise.all(
     brandIds.map((id) =>
-      callExternalService<{ brand: { brandUrl: string | null } }>(
+      callExternalService<{ brand: { url: string | null } }>(
         externalServices.brand,
         `/internal/brands/${encodeURIComponent(id)}`,
         { headers },
       ),
     ),
   );
-  return results.map((r) => r.brand.brandUrl).filter((url): url is string => url != null);
+  return results.map((r) => r.brand.url).filter((url): url is string => url != null);
 }
 
 /**

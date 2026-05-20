@@ -49,12 +49,12 @@ describe("Campaign brandUrls resolution", () => {
     vi.restoreAllMocks();
 
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
-      // GET /brands/:id — return brand with brandUrl
+      // GET /brands/:id — return brand with url (canonical brand-service contract)
       for (const [brandId, brandUrl] of Object.entries(BRAND_LOOKUP)) {
         if (url.includes(`/brands/${brandId}`) && !url.includes("/campaigns")) {
           return {
             ok: true,
-            json: () => Promise.resolve({ brand: { id: brandId, brandUrl, domain: brandUrl.replace(/https?:\/\//, "") } }),
+            json: () => Promise.resolve({ brand: { id: brandId, url: brandUrl, domain: brandUrl.replace(/https?:\/\//, "") } }),
           };
         }
       }
