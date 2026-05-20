@@ -2996,56 +2996,14 @@ export const IcpSuggestionRequestSchema = z
   })
   .openapi("IcpSuggestionRequest");
 
-const BrandSummarySchema = z
-  .object({
-    id: z.string().describe("Brand ID"),
-    domain: z.string().nullable().describe("Brand domain"),
-    name: z.string().nullable().describe("Brand name"),
-    brandUrl: z.string().nullable().describe("Brand website URL"),
-    createdAt: z.string().nullable().describe("ISO timestamp"),
-    updatedAt: z.string().nullable().describe("ISO timestamp"),
-    logoUrl: z.string().nullable().describe("Logo URL"),
-    elevatorPitch: z.string().nullable().describe("Short brand description"),
-  })
-  .openapi("BrandSummary");
-
-const BrandDetailSchema = BrandSummarySchema.extend({
-  bio: z.string().nullable().describe("Brand biography"),
-  mission: z.string().nullable().describe("Brand mission statement"),
-  location: z.string().nullable().describe("Brand location"),
-  categories: z.string().nullable().describe("Brand categories"),
-}).openapi("BrandDetail");
+// Passthrough — brand-service owns this shape. Per CLAUDE.md "Response schema policy",
+// no field re-declaration here. Field renames downstream do not require an api-service edit.
+const BrandSummarySchema = z.object({}).passthrough().openapi("BrandSummary");
 
 const ExtractFieldRequestSchema = z.object({
   key: z.string().describe("Field key (e.g. 'industry', 'valueProposition')"),
   description: z.string().describe("Description of what to extract"),
 }).openapi("ExtractFieldRequest");
-
-const ExtractFieldResultSchema = z.object({
-  value: z.union([
-    z.string(),
-    z.array(z.unknown()),
-    z.record(z.unknown()),
-    z.null(),
-  ]).describe("Extracted value. Type depends on the field key: string (companyOverview, valueProposition, callToAction), array (targetAudience, keyFeatures, customerPainPoints, productDifferentiators), object (socialProof, funding, additionalContext, riskReversal, scarcity, urgency), or null when the field was not found on the site (e.g. competitors, leadership)."),
-  cached: z.boolean().describe("Whether this result was served from cache"),
-  extractedAt: z.string().describe("ISO timestamp of extraction"),
-  expiresAt: z.string().describe("ISO timestamp when cached result expires"),
-  sourceUrls: z.array(z.string()).nullable().describe("URLs scraped to extract this field. Null for pre-existing extractions."),
-}).openapi("ExtractFieldResult");
-
-const CachedFieldSchema = z.object({
-  key: z.string().describe("Field key"),
-  value: z.union([
-    z.string(),
-    z.array(z.unknown()),
-    z.record(z.unknown()),
-    z.null(),
-  ]).describe("Extracted value. Type depends on the field key: string, array, object, or null when not found."),
-  sourceUrls: z.array(z.string()).nullable().describe("URLs scraped to extract this field. Null for pre-existing extractions."),
-  extractedAt: z.string().describe("ISO timestamp of extraction"),
-  expiresAt: z.string().describe("ISO timestamp when cached result expires"),
-}).openapi("CachedField");
 
 registry.registerPath({
   method: "post",
@@ -3146,7 +3104,7 @@ registry.registerPath({
       description: "Brand data",
       content: {
         "application/json": {
-          schema: z.object({ brand: BrandDetailSchema }).openapi("GetBrandResponse"),
+          schema: z.object({ brand: BrandSummarySchema }).openapi("GetBrandResponse"),
         },
       },
     },
@@ -3184,34 +3142,7 @@ registry.registerPath({
       description: "Extracted field results",
       content: {
         "application/json": {
-          schema: z.object({
-            brands: z.array(z.object({
-              brandId: z.string().describe("Internal brand UUID"),
-              domain: z.string().describe("Brand domain (e.g. acme.com)"),
-              name: z.string().describe("Brand display name"),
-              brandUrl: z.string().nullable().describe("Full brand website URL (e.g. https://acme.com)"),
-            })).describe("Metadata for each brand included in the extraction"),
-            fields: z.record(z.string(), z.object({
-              value: z.union([
-                z.string(),
-                z.array(z.unknown()),
-                z.record(z.unknown()),
-                z.null(),
-              ]).describe("Merged/primary extracted value across all brands"),
-              byBrand: z.record(z.string(), z.object({
-                value: z.union([
-                  z.string(),
-                  z.array(z.unknown()),
-                  z.record(z.unknown()),
-                  z.null(),
-                ]).describe("Extracted value for this brand"),
-                cached: z.boolean().describe("Whether this result was served from cache"),
-                extractedAt: z.string().describe("ISO timestamp of extraction"),
-                expiresAt: z.string().describe("ISO timestamp when cached result expires"),
-                sourceUrls: z.array(z.string()).nullable().describe("URLs scraped to extract this field"),
-              })).describe("Per-brand extraction details keyed by domain"),
-            })).describe("Extraction results keyed by field name"),
-          }).openapi("ExtractFieldsFromHeaderResponse"),
+          schema: z.object({}).passthrough().openapi("ExtractFieldsFromHeaderResponse"),
         },
       },
     },
@@ -3237,10 +3168,7 @@ registry.registerPath({
       description: "Cached extracted fields",
       content: {
         "application/json": {
-          schema: z.object({
-            brandId: z.string().describe("Brand ID"),
-            fields: z.array(CachedFieldSchema).describe("Previously extracted and cached fields"),
-          }).openapi("ExtractedFieldsResponse"),
+          schema: z.object({}).passthrough().openapi("ExtractedFieldsResponse"),
         },
       },
     },
@@ -3255,13 +3183,6 @@ const ExtractImageCategorySchema = z.object({
   description: z.string().describe("Description of what kind of image to extract"),
   maxCount: z.number().int().positive().describe("Maximum number of images to extract for this category"),
 }).openapi("ExtractImageCategory");
-
-const ExtractedImageSchema = z.object({
-  url: z.string().describe("Permanent R2 URL of the extracted image"),
-  category: z.string().describe("Image category key"),
-  sourceUrl: z.string().nullable().describe("Original source URL where the image was found"),
-  extractedAt: z.string().describe("ISO timestamp of extraction"),
-}).openapi("ExtractedImage");
 
 registry.registerPath({
   method: "post",
@@ -3289,19 +3210,7 @@ registry.registerPath({
       description: "Extracted image results",
       content: {
         "application/json": {
-          schema: z.object({
-            brands: z.array(z.object({
-              brandId: z.string().describe("Internal brand UUID"),
-              domain: z.string().describe("Brand domain"),
-              name: z.string().describe("Brand display name"),
-              brandUrl: z.string().nullable().describe("Full brand website URL (e.g. https://acme.com)"),
-            })).describe("Metadata for each brand"),
-            results: z.array(z.object({
-              category: z.string().describe("Image category"),
-              images: z.array(ExtractedImageSchema).describe("Consolidated images"),
-              byBrand: z.record(z.string(), z.array(ExtractedImageSchema)).describe("Per-brand images, keyed by domain"),
-            })).describe("Extracted images by category"),
-          }).openapi("ExtractImagesMultiBrandResponse"),
+          schema: z.object({}).passthrough().openapi("ExtractImagesMultiBrandResponse"),
         },
       },
     },
@@ -3330,10 +3239,7 @@ registry.registerPath({
       description: "Cached extracted images",
       content: {
         "application/json": {
-          schema: z.object({
-            brandId: z.string().describe("Brand ID"),
-            images: z.array(ExtractedImageSchema).describe("Previously extracted and cached images"),
-          }).openapi("ExtractedImagesResponse"),
+          schema: z.object({}).passthrough().openapi("ExtractedImagesResponse"),
         },
       },
     },
@@ -3363,12 +3269,7 @@ registry.registerPath({
       description: "ICP suggestion (Apollo-compatible search params)",
       content: {
         "application/json": {
-          schema: z.object({
-            person_titles: z.array(z.string()).describe("Suggested job titles"),
-            organization_locations: z.array(z.string()).optional().describe("Suggested locations"),
-            organization_industries: z.array(z.string()).optional().describe("Suggested industries"),
-            organization_num_employees_ranges: z.array(z.string()).optional().describe("Suggested company sizes"),
-          }).openapi("IcpSuggestionResponse"),
+          schema: z.object({}).passthrough().openapi("IcpSuggestionResponse"),
         },
       },
     },
@@ -3398,12 +3299,7 @@ registry.registerPath({
       description: "Brand upserted",
       content: {
         "application/json": {
-          schema: z.object({
-            brandId: z.string().describe("Brand ID"),
-            domain: z.string().nullable().describe("Extracted domain"),
-            name: z.string().nullable().describe("Brand name"),
-            created: z.boolean().describe("True if newly created, false if already existed"),
-          }).openapi("UpsertBrandResponse"),
+          schema: z.object({}).passthrough().openapi("UpsertBrandResponse"),
         },
       },
     },

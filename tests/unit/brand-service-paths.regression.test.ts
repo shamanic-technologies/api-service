@@ -57,7 +57,7 @@ describe("brand-service path correctness", () => {
         return { ok: true, json: () => Promise.resolve({ runs: [] }) };
       }
       if (url.includes("/internal/brands/")) {
-        return { ok: true, json: () => Promise.resolve({ brand: { id: "brand-abc", brandUrl: "https://acme.com" } }) };
+        return { ok: true, json: () => Promise.resolve({ brand: { id: "brand-abc", url: "https://acme.com" } }) };
       }
       if (url.includes("/orgs/brands")) {
         return { ok: true, json: () => Promise.resolve({ brands: [] }) };
