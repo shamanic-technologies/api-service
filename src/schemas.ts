@@ -3093,6 +3093,36 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/brands/by-ids",
+  tags: ["Brand"],
+  summary: "Batch lookup brands by ID",
+  description:
+    "Resolve multiple brands in a single round-trip. Pass UUIDs as a comma-separated list in the `ids` query param. " +
+    "Proxies to brand-service `GET /internal/brands?ids=...`. Missing ids are silently omitted from the response. " +
+    "If the caller exceeds the upstream per-request cap, brand-service returns 400 and the error is propagated verbatim.",
+  security: authed,
+  request: {
+    query: z.object({
+      ids: z.string().min(1).describe("Comma-separated UUIDs"),
+    }).openapi("BatchBrandsByIdsQuery"),
+  },
+  responses: {
+    200: {
+      description: "Batch brand lookup result (passthrough — brand-service owns the shape)",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("BatchBrandsByIdsResponse"),
+        },
+      },
+    },
+    400: { description: "Missing ids query param or upstream cap exceeded", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/brands/{id}",
   tags: ["Brand"],
   summary: "Get a brand",

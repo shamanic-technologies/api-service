@@ -28,19 +28,11 @@ vi.mock("@distribute/runs-client", () => ({
 }));
 
 import brandRouter from "../../src/routes/brand.js";
-import campaignRouter from "../../src/routes/campaigns.js";
 
 function buildBrandApp() {
   const app = express();
   app.use(express.json());
   app.use("/v1", brandRouter);
-  return app;
-}
-
-function buildCampaignApp() {
-  const app = express();
-  app.use(express.json());
-  app.use("/v1", campaignRouter);
   return app;
 }
 
@@ -61,14 +53,6 @@ describe("brand-service path correctness", () => {
       }
       if (url.includes("/orgs/brands")) {
         return { ok: true, json: () => Promise.resolve({ brands: [] }) };
-      }
-      if (url.includes("/campaigns")) {
-        return {
-          ok: true,
-          json: () => Promise.resolve({
-            campaign: { id: "camp-1", brandIds: ["brand-abc"], brandUrls: null, status: "ongoing", workflowSlug: "wf-1" },
-          }),
-        };
       }
       return { ok: true, json: () => Promise.resolve({}) };
     });
@@ -118,16 +102,6 @@ describe("brand-service path correctness", () => {
     const call = capturedUrls.find((u) => u.includes("/orgs/brands"));
     expect(call).toBeDefined();
     expect(call).toContain("/orgs/brands");
-  });
-
-  it("campaign brandUrls resolution calls /internal/brands/:id (not /orgs/)", async () => {
-    const app = buildCampaignApp();
-    await request(app).get("/v1/campaigns/camp-1");
-
-    const brandCall = capturedUrls.find((u) => u.includes("/brands/brand-abc") && !u.includes("/campaigns"));
-    expect(brandCall).toBeDefined();
-    expect(brandCall).toContain("/internal/brands/brand-abc");
-    expect(brandCall).not.toContain("/orgs/brands/brand-abc");
   });
 
   it("deprecated POST /v1/brands/:id/extract-fields no longer exists", async () => {

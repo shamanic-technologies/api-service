@@ -34,7 +34,8 @@ api-service is a **transparent proxy**. It authenticates, applies middleware, an
 ### Brand-service path convention
 
 - `/orgs/brands/*` (no ID in path) = org-scoped operations using `x-org-id` / `x-brand-id` headers (list, extract-fields, extract-images)
-- `/internal/brands/{id}/*` = by-ID lookups (get brand, extracted-fields, extracted-images, runs)
+- `/internal/brands/{id}/*` = single-brand by-ID lookups (get brand, extracted-fields, extracted-images, runs)
+- `/internal/brands?ids=csv` = batch by-ID lookup (proxied here as `GET /v1/brands/by-ids?ids=csv`). Preferred over fan-out `Promise.all` against the single-brand endpoint. Caller is responsible for staying within brand-service's per-request cap — if exceeded, brand-service returns 400 and the error is propagated verbatim. Do NOT add chunking, retry, or aggregation logic at this layer (rule #2). The dashboard owns batching across multiple requests when it has >cap brands to resolve.
 
 ### Service-client env var names must match Railway
 
