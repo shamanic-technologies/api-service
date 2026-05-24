@@ -224,9 +224,11 @@ export async function listRuns(
   );
 }
 
+const BATCH_MAX = 10000;
+
 /**
- * Fetch multiple runs with costs in parallel.
- * Returns a Map of runId → RunWithCosts.
+ * Batch-fetch runs with costs via POST /v1/runs/batch.
+ * Single HTTP call per BATCH_MAX-sized chunk; out-of-org / missing IDs are silently omitted from the Map.
  */
 export async function getRunsBatch(
   runIds: string[],
@@ -234,8 +236,27 @@ export async function getRunsBatch(
   headers?: Record<string, string>
 ): Promise<Map<string, RunWithCosts>> {
   if (runIds.length === 0) return new Map();
-  const results = await Promise.all(runIds.map((id) => getRun(id, orgId, headers)));
-  return new Map(results.map((r) => [r.id, r]));
+
+  const chunks: string[][] = [];
+  for (let i = 0; i < runIds.length; i += BATCH_MAX) {
+    chunks.push(runIds.slice(i, i + BATCH_MAX));
+  }
+
+  const responses = await Promise.all(
+    chunks.map((chunk) =>
+      runsRequest<{ runs: RunWithCosts[] }>("/v1/runs/batch", {
+        method: "POST",
+        body: { runIds: chunk },
+        headers: { ...identityHeaders({ orgId }), ...headers },
+      })
+    )
+  );
+
+  const map = new Map<string, RunWithCosts>();
+  for (const { runs } of responses) {
+    for (const r of runs) map.set(r.id, r);
+  }
+  return map;
 }
 
 /**
