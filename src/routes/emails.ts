@@ -142,6 +142,68 @@ router.get("/emails/stats", authenticate, requireOrg, async (req: AuthenticatedR
 });
 
 /**
+ * POST /v1/emails/manual-qualifications
+ * Record a manual reply qualification for a (campaign, lead) pair.
+ * Transparent proxy to email-gateway → instantly-service. Body forwarded byte-identical.
+ */
+router.post(
+  "/emails/manual-qualifications",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.emailGateway,
+        "/orgs/manual-qualifications",
+        {
+          method: "POST",
+          headers: buildInternalHeaders(req),
+          body: req.body,
+        },
+      );
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Manual qualification create error:", error.message);
+      res.status(error.statusCode || 500).json({ error: error.message || "Failed to record manual qualification" });
+    }
+  },
+);
+
+/**
+ * GET /v1/emails/manual-qualifications
+ * List manual reply qualifications for the caller's org.
+ * Transparent proxy to email-gateway → instantly-service.
+ */
+router.get(
+  "/emails/manual-qualifications",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const params = new URLSearchParams();
+      for (const key of ["campaign_id", "email", "limit"]) {
+        const v = req.query[key];
+        if (typeof v === "string" && v.length > 0) params.set(key, v);
+      }
+      const qs = params.toString();
+      const path = qs ? `/orgs/manual-qualifications?${qs}` : "/orgs/manual-qualifications";
+
+      const result = await callExternalService(
+        externalServices.emailGateway,
+        path,
+        { headers: buildInternalHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Manual qualification list error:", error.message);
+      res.status(error.statusCode || 500).json({ error: error.message || "Failed to list manual qualifications" });
+    }
+  },
+);
+
+/**
  * PUT /v1/emails/templates
  * Deploy (upsert) email templates — idempotent, safe to call on every cold start
  */
