@@ -5060,6 +5060,32 @@ export const DeployEmailTemplatesRequestSchema = z
   })
   .openapi("DeployEmailTemplatesRequest");
 
+// ───────────────────────────────────────────────────────────────────────────
+// Manual reply qualifications (forwarded to email-gateway → instantly-service)
+// ───────────────────────────────────────────────────────────────────────────
+
+const ManualQualificationStatusEnum = z.enum([
+  "lead_interested",
+  "lead_meeting_booked",
+  "lead_closed",
+  "lead_not_interested",
+  "lead_wrong_person",
+  "lead_neutral",
+  "lead_out_of_office",
+  "auto_reply_received",
+]);
+
+export const ManualQualificationCreateRequestSchema = z
+  .object({
+    campaign_id: z.string().min(1).describe("Logical campaign id (groups sub-campaigns for the same workflow run)"),
+    email: z.string().email().describe("Lead email address"),
+    status: ManualQualificationStatusEnum.describe(
+      "Manual reply qualification status — mirrors Instantly webhook reply event_type values exactly. Set by a human via the dashboard when Instantly fails to detect a reply (e.g. reply received on a non-leurre email account).",
+    ),
+    notes: z.string().max(2000).optional().describe("Optional free-text human note for audit"),
+  })
+  .openapi("ManualQualificationCreateRequest");
+
 registry.registerPath({
   method: "get",
   path: "/v1/emails",
@@ -5178,6 +5204,69 @@ registry.registerPath({
               }),
             })
             .openapi("TransactionalEmailStatsResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/emails/manual-qualifications",
+  tags: ["Emails"],
+  summary: "Set a manual reply qualification for a (campaign, lead) pair",
+  description:
+    "Record a human-set reply classification for a lead in a campaign. Used when Instantly's automatic webhook reply " +
+    "classification fails to detect a reply (e.g. the reply was sent to a non-leurre account that Instantly does not monitor). " +
+    "Idempotent: re-POSTing the same status for the same (campaign, lead) returns `idempotent: true` with the existing row. " +
+    "Transparent proxy to email-gateway → instantly-service; the response shape is owned upstream.",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: ManualQualificationCreateRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: "Manual qualification recorded (or idempotent no-op)",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("ManualQualificationCreateResponse"),
+        },
+      },
+    },
+    400: { description: "Validation error from upstream", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "(campaign, lead) not found in caller's org", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/emails/manual-qualifications",
+  tags: ["Emails"],
+  summary: "List manual reply qualifications (org-scoped audit history)",
+  description:
+    "Returns the caller-org's manual qualification history, sorted by `qualifiedAt` DESC. Optionally filter by " +
+    "`campaign_id` and/or `email`. Cross-org rows are blocked at the instantly-service layer. " +
+    "Transparent proxy to email-gateway → instantly-service; the response shape is owned upstream.",
+  security: authed,
+  request: {
+    query: z.object({
+      campaign_id: z.string().min(1).optional().describe("Filter by logical campaign id"),
+      email: z.string().email().optional().describe("Filter by lead email"),
+      limit: z.coerce.number().int().optional().describe("Max rows to return (upstream default 200, max 500)"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "List of manual qualifications",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("ManualQualificationListResponse"),
         },
       },
     },
