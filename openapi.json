@@ -20030,7 +20030,7 @@
           "Runs"
         ],
         "summary": "Get cost stats from runs-service",
-        "description": "Get cost statistics grouped by a dimension. Supports groupBy=brandId, costName, campaignId, serviceName, workflowDynastySlug, featureDynastySlug. Filter by brandId, campaignId, taskName, workflowSlug, featureSlug, workflowDynastySlug, featureDynastySlug.",
+        "description": "Get cost statistics grouped by a dimension. Supports groupBy=brandId, costName, campaignId, serviceName, workflowDynastySlug. Filter by brandId, campaignId, taskName, workflowSlug, featureSlug, workflowDynastySlug.",
         "security": [
           {
             "bearerAuth": []
@@ -20040,10 +20040,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Grouping dimension: brandId, costName, campaignId, serviceName, workflowDynastySlug, featureDynastySlug"
+              "description": "Grouping dimension: brandId, costName, campaignId, serviceName, workflowDynastySlug"
             },
             "required": true,
-            "description": "Grouping dimension: brandId, costName, campaignId, serviceName, workflowDynastySlug, featureDynastySlug",
+            "description": "Grouping dimension: brandId, costName, campaignId, serviceName, workflowDynastySlug",
             "name": "groupBy",
             "in": "query"
           },
@@ -20105,16 +20105,6 @@
             "required": false,
             "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)",
             "name": "workflowDynastySlug",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Filter by feature dynasty slug (resolved to all versioned slugs)"
-            },
-            "required": false,
-            "description": "Filter by feature dynasty slug (resolved to all versioned slugs)",
-            "name": "featureDynastySlug",
             "in": "query"
           },
           {
