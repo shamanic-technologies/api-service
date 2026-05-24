@@ -49,10 +49,15 @@ describe("Dynasty slug forwarding — outlets/stats", () => {
 });
 
 describe("Dynasty slug forwarding — runs/stats/costs", () => {
-  it("should forward dynasty slug filters on GET /runs/stats/costs", () => {
-    for (const param of [...dynastyParams, "workflowSlug", "featureSlug"]) {
-      expect(runsRoute).toContain(`"${param}"`);
+  it("should forward supported slug filters on GET /runs/stats/costs (no featureDynastySlug — runs-service v0.31.3 dropped it)", () => {
+    const runsStatsSection = runsRoute.slice(
+      runsRoute.indexOf('"/runs/stats/costs"'),
+      runsRoute.indexOf('"/events"'),
+    );
+    for (const param of ["workflowDynastySlug", "workflowSlug", "featureSlug"]) {
+      expect(runsStatsSection).toContain(`"${param}"`);
     }
+    expect(runsStatsSection).not.toContain(`"featureDynastySlug"`);
   });
 });
 
@@ -135,15 +140,15 @@ describe("Dynasty slug OpenAPI schemas", () => {
     expect(featureSlugStatsSection).toContain("workflowDynastySlug");
   });
 
-  it("should include dynasty slug filters in /v1/runs/stats/costs query schema", () => {
+  it("should include supported slug filters in /v1/runs/stats/costs query schema (no featureDynastySlug — runs-service v0.31.3 dropped it)", () => {
     const runsStatsSection = schemaContent.slice(
       schemaContent.indexOf('path: "/v1/runs/stats/costs"'),
       schemaContent.indexOf('path: "/v1/runs/stats/costs"') + 1200,
     );
-    expect(runsStatsSection).toContain("featureDynastySlug");
     expect(runsStatsSection).toContain("workflowDynastySlug");
     expect(runsStatsSection).toContain("featureSlug");
     expect(runsStatsSection).toContain("workflowSlug");
+    expect(runsStatsSection).not.toContain("featureDynastySlug");
   });
 
   it("should include dynasty slug filters in /v1/email-gateway/stats query schema", () => {
@@ -220,13 +225,13 @@ describe("Dynasty slug params in generated openapi.json", () => {
     expect(paramNames).toContain("workflowDynastySlug");
   });
 
-  it("should have dynasty query params on /v1/runs/stats/costs", () => {
+  it("should have supported slug query params on /v1/runs/stats/costs (no featureDynastySlug — runs-service v0.31.3 dropped it)", () => {
     const params = openapiSpec.paths["/v1/runs/stats/costs"]?.get?.parameters ?? [];
     const paramNames = params.map((p: { name: string }) => p.name);
     expect(paramNames).toContain("workflowDynastySlug");
-    expect(paramNames).toContain("featureDynastySlug");
     expect(paramNames).toContain("workflowSlug");
     expect(paramNames).toContain("featureSlug");
+    expect(paramNames).not.toContain("featureDynastySlug");
   });
 
   it("should have dynasty query params on /v1/email-gateway/stats (plural workflowSlugs/featureSlugs)", () => {

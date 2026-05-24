@@ -262,6 +262,31 @@ describe("GET /v1/campaigns/stats", () => {
     }
   });
 
+  it("should NOT forward featureDynastySlug to runs-service (runs-service v0.31.3 dropped it), but should still forward to other services", async () => {
+    const app = createApp();
+
+    mockCallExternalService.mockResolvedValue({ groups: [] });
+
+    await request(app).get("/v1/campaigns/stats?brandId=brand-1&featureDynastySlug=pr-cold-email-outreach");
+
+    const callsByService = (url: string) =>
+      mockCallExternalService.mock.calls.filter(
+        (call: any[]) => (call[0] as any).url === url,
+      );
+
+    // runs-service: featureDynastySlug MUST NOT appear
+    const runsCalls = callsByService("http://mock-runs");
+    expect(runsCalls).toHaveLength(1);
+    expect(runsCalls[0][1] as string).not.toContain("featureDynastySlug=");
+
+    // email-gateway / lead-service / content-generation: featureDynastySlug still forwarded
+    for (const url of ["http://mock-email-gw", "http://mock-lead", "http://mock-emailgen"]) {
+      const calls = callsByService(url);
+      expect(calls).toHaveLength(1);
+      expect(calls[0][1] as string).toContain("featureDynastySlug=pr-cold-email-outreach");
+    }
+  });
+
   it("should use only broadcast stats from email-gateway, not transactional", async () => {
     const app = createApp();
 

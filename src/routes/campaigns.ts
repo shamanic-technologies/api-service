@@ -216,7 +216,12 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
 
     const runsParams = new URLSearchParams({ orgId, groupBy: "campaignId" });
     if (brandId) runsParams.set("brandId", brandId);
-    for (const [k, v] of Object.entries(slugFilters)) runsParams.set(k, v);
+    // featureDynastySlug intentionally skipped for runs-service (v0.31.3 dropped it).
+    // Other downstream services in this aggregator still accept it.
+    for (const [k, v] of Object.entries(slugFilters)) {
+      if (k === "featureDynastySlug") continue;
+      runsParams.set(k, v);
+    }
 
     // 4 parallel calls
     const [deliveryGroups, leadGroups, emailgenGroups, costGroups] = await Promise.all([

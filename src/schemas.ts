@@ -3582,18 +3582,17 @@ registry.registerPath({
   tags: ["Runs"],
   summary: "Get cost stats from runs-service",
   description:
-    "Get cost statistics grouped by a dimension. Supports groupBy=brandId, costName, campaignId, serviceName, workflowDynastySlug, featureDynastySlug. Filter by brandId, campaignId, taskName, workflowSlug, featureSlug, workflowDynastySlug, featureDynastySlug.",
+    "Get cost statistics grouped by a dimension. Supports groupBy=brandId, costName, campaignId, serviceName, workflowDynastySlug. Filter by brandId, campaignId, taskName, workflowSlug, featureSlug, workflowDynastySlug.",
   security: authed,
   request: {
     query: z.object({
-      groupBy: z.string().describe("Grouping dimension: brandId, costName, campaignId, serviceName, workflowDynastySlug, featureDynastySlug"),
+      groupBy: z.string().describe("Grouping dimension: brandId, costName, campaignId, serviceName, workflowDynastySlug"),
       brandId: z.string().optional().describe("Filter by brand ID"),
       campaignId: z.string().optional().describe("Filter by campaign ID"),
       taskName: z.string().optional().describe("Filter by task name (e.g. lead-serve)"),
       workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
       featureSlug: z.string().optional().describe("Filter by exact feature slug"),
       workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
-      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
     }),
   },
   responses: {
