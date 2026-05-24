@@ -51,7 +51,9 @@ router.get("/runs/stats/costs", authenticate, requireOrg, requireUser, async (re
       orgId,
       groupBy,
     });
-    for (const key of ["brandId", "campaignId", "taskName", "workflowSlug", "featureSlug", "workflowDynastySlug", "featureDynastySlug"]) {
+    // featureDynastySlug intentionally omitted — runs-service v0.31.3 (DIS-14) dropped the param.
+    // Inbound callers (e.g. dashboard) may still send it; we accept it silently and don't forward.
+    for (const key of ["brandId", "campaignId", "taskName", "workflowSlug", "featureSlug", "workflowDynastySlug"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
 
