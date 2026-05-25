@@ -3818,16 +3818,30 @@ export const UpgradeWorkflowRequestSchema = z
     description: z
       .string()
       .min(10)
+      .optional()
       .describe(
-        "Natural language description of the upgrade. Describe what should change relative to the current workflow."
+        "Natural language description of the upgrade. Required when `dag` is not provided (LLM regenerates the DAG from this description). Optional when `dag` is provided; if present, replaces the stored description on the resulting row."
+      ),
+    dag: z
+      .object({
+        nodes: z.array(z.unknown()).min(1).describe("DAG nodes — at least one required. Full shape owned by workflow-service."),
+        edges: z.array(z.unknown()).describe("DAG edges. Full shape owned by workflow-service."),
+      })
+      .passthrough()
+      .optional()
+      .describe(
+        "Optional client-supplied DAG. When provided, workflow-service skips the LLM and applies the same in-place / new-version branching as the LLM path. Full node/edge shape owned by workflow-service (see its OpenAPI). Use for surgical fixes (e.g. patch a single script node) without re-running generation."
       ),
     hints: z
       .object({})
       .passthrough()
       .optional()
       .describe(
-        "Optional hints to guide the upgrade. Shape owned by workflow-service (see its OpenAPI for known keys)."
+        "Optional hints to guide the upgrade. Shape owned by workflow-service (see its OpenAPI for known keys). Ignored when `dag` is provided."
       ),
+  })
+  .refine((data) => data.dag !== undefined || data.description !== undefined, {
+    message: "Either 'dag' or 'description' must be provided",
   })
   .openapi("UpgradeWorkflowRequest");
 

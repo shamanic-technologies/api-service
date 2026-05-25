@@ -596,7 +596,7 @@ router.post("/workflows/upgrade", authenticate, requireOrg, requireUser, async (
       });
     }
 
-    const { workflowSlug, description, hints } = parsed.data;
+    const { workflowSlug, description, hints, dag } = parsed.data;
 
     const result = await callExternalService(
       externalServices.workflow,
@@ -610,6 +610,7 @@ router.post("/workflows/upgrade", authenticate, requireOrg, requireUser, async (
           workflowSlug,
           description,
           hints,
+          dag,
         },
       }
     );
