@@ -5885,10 +5885,10 @@
       "UpgradeWorkflowRequest": {
         "type": "object",
         "properties": {
-          "workflowSlug": {
+          "workflowDynastySlug": {
             "type": "string",
             "minLength": 1,
-            "description": "Slug of the existing workflow to upgrade. Upgrade stays within the same dynasty."
+            "description": "Stable dynasty slug (constant across all versions of the dynasty). The route resolves it to the currently-active row, so callers do not need to track which version is active after prior upgrades."
           },
           "description": {
             "type": "string",
@@ -5927,7 +5927,7 @@
           }
         },
         "required": [
-          "workflowSlug"
+          "workflowDynastySlug"
         ]
       },
       "ProviderInfo": {

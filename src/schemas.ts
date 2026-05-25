@@ -3811,10 +3811,10 @@ export const CreateWorkflowRequestSchema = z
 
 export const UpgradeWorkflowRequestSchema = z
   .object({
-    workflowSlug: z
+    workflowDynastySlug: z
       .string()
       .min(1)
-      .describe("Slug of the existing workflow to upgrade. Upgrade stays within the same dynasty."),
+      .describe("Stable dynasty slug (constant across all versions of the dynasty). The route resolves it to the currently-active row, so callers do not need to track which version is active after prior upgrades."),
     description: z
       .string()
       .min(10)

@@ -44,13 +44,19 @@ describe("POST /v1/workflows/upgrade route", () => {
     expect(block).toContain("userId: req.userId");
   });
 
-  it("should forward workflowSlug, description, hints, and dag from request body", () => {
+  it("should forward workflowDynastySlug, description, hints, and dag from request body", () => {
     const upgradeIdx = content.indexOf('router.post("/workflows/upgrade"');
     const block = content.slice(upgradeIdx, upgradeIdx + 1000);
-    expect(block).toContain("workflowSlug");
+    expect(block).toContain("workflowDynastySlug");
     expect(block).toContain("description");
     expect(block).toContain("hints");
     expect(block).toContain("dag");
+  });
+
+  it("should not forward the old workflowSlug key (workflow-service v0.30.0 rename — no soft-accept)", () => {
+    const upgradeIdx = content.indexOf('router.post("/workflows/upgrade"');
+    const block = content.slice(upgradeIdx, upgradeIdx + 1000);
+    expect(block).not.toContain("workflowSlug");
   });
 
   it("should return 400 on invalid request", () => {
@@ -70,11 +76,18 @@ describe("UpgradeWorkflowRequestSchema", () => {
     expect(content).toContain('"UpgradeWorkflowRequest"');
   });
 
-  it("should require workflowSlug", () => {
+  it("should require workflowDynastySlug", () => {
     const start = content.indexOf("UpgradeWorkflowRequestSchema");
     const end = content.indexOf('.openapi("UpgradeWorkflowRequest")', start);
     const schemaSection = content.slice(start, end);
-    expect(schemaSection).toContain("workflowSlug");
+    expect(schemaSection).toContain("workflowDynastySlug");
+  });
+
+  it("should not declare the old workflowSlug key (workflow-service v0.30.0 rename — no soft-accept)", () => {
+    const start = content.indexOf("UpgradeWorkflowRequestSchema");
+    const end = content.indexOf('.openapi("UpgradeWorkflowRequest")', start);
+    const schemaSection = content.slice(start, end);
+    expect(schemaSection).not.toContain("workflowSlug");
   });
 
   it("should declare description and dag fields (both optional, at least one required via refine)", () => {
@@ -106,7 +119,7 @@ describe("UpgradeWorkflowRequestSchema", () => {
 describe("UpgradeWorkflowRequestSchema parsing", () => {
   it("accepts hints as an object (matches workflow-service contract)", () => {
     const result = UpgradeWorkflowRequestSchema.safeParse({
-      workflowSlug: "pr-cold-email-outreach",
+      workflowDynastySlug: "pr-cold-email-outreach",
       description: "Add a wait step before sending the email",
       hints: { services: ["lead-service"], nodeTypes: ["wait"] },
     });
@@ -115,7 +128,7 @@ describe("UpgradeWorkflowRequestSchema parsing", () => {
 
   it("rejects hints as an array (the prod-breaking shape)", () => {
     const result = UpgradeWorkflowRequestSchema.safeParse({
-      workflowSlug: "pr-cold-email-outreach",
+      workflowDynastySlug: "pr-cold-email-outreach",
       description: "Add a wait step before sending the email",
       hints: ["lead-service"],
     });
@@ -124,7 +137,7 @@ describe("UpgradeWorkflowRequestSchema parsing", () => {
 
   it("accepts an empty hints object", () => {
     const result = UpgradeWorkflowRequestSchema.safeParse({
-      workflowSlug: "pr-cold-email-outreach",
+      workflowDynastySlug: "pr-cold-email-outreach",
       description: "Add a wait step before sending the email",
       hints: {},
     });
@@ -133,7 +146,7 @@ describe("UpgradeWorkflowRequestSchema parsing", () => {
 
   it("accepts missing hints (field is optional)", () => {
     const result = UpgradeWorkflowRequestSchema.safeParse({
-      workflowSlug: "pr-cold-email-outreach",
+      workflowDynastySlug: "pr-cold-email-outreach",
       description: "Add a wait step before sending the email",
     });
     expect(result.success).toBe(true);
@@ -141,7 +154,7 @@ describe("UpgradeWorkflowRequestSchema parsing", () => {
 
   it("passes through unknown hint keys (downstream owns the shape)", () => {
     const result = UpgradeWorkflowRequestSchema.safeParse({
-      workflowSlug: "pr-cold-email-outreach",
+      workflowDynastySlug: "pr-cold-email-outreach",
       description: "Add a wait step before sending the email",
       hints: { futureKey: "value", services: ["x"] },
     });
@@ -153,7 +166,7 @@ describe("UpgradeWorkflowRequestSchema parsing", () => {
 
   it("accepts a dag-only body (no description, LLM is skipped downstream)", () => {
     const result = UpgradeWorkflowRequestSchema.safeParse({
-      workflowSlug: "pr-cold-email-outreach",
+      workflowDynastySlug: "pr-cold-email-outreach",
       dag: {
         nodes: [{ id: "n1", type: "http.call", config: { service: "lead", method: "POST", path: "/x" } }],
         edges: [],
@@ -168,7 +181,7 @@ describe("UpgradeWorkflowRequestSchema parsing", () => {
 
   it("accepts both dag and description in the same body", () => {
     const result = UpgradeWorkflowRequestSchema.safeParse({
-      workflowSlug: "pr-cold-email-outreach",
+      workflowDynastySlug: "pr-cold-email-outreach",
       description: "Patch the serialize-brand-fields script node",
       dag: {
         nodes: [{ id: "n1", type: "script", config: { code: "return {}" } }],
@@ -184,14 +197,14 @@ describe("UpgradeWorkflowRequestSchema parsing", () => {
 
   it("rejects a body with neither dag nor description (refine)", () => {
     const result = UpgradeWorkflowRequestSchema.safeParse({
-      workflowSlug: "pr-cold-email-outreach",
+      workflowDynastySlug: "pr-cold-email-outreach",
     });
     expect(result.success).toBe(false);
   });
 
   it("rejects a dag with empty nodes array (downstream requires at least one node)", () => {
     const result = UpgradeWorkflowRequestSchema.safeParse({
-      workflowSlug: "pr-cold-email-outreach",
+      workflowDynastySlug: "pr-cold-email-outreach",
       dag: { nodes: [], edges: [] },
     });
     expect(result.success).toBe(false);
@@ -199,7 +212,7 @@ describe("UpgradeWorkflowRequestSchema parsing", () => {
 
   it("passes through unknown dag keys like onError (downstream owns the shape)", () => {
     const result = UpgradeWorkflowRequestSchema.safeParse({
-      workflowSlug: "pr-cold-email-outreach",
+      workflowDynastySlug: "pr-cold-email-outreach",
       dag: {
         nodes: [{ id: "n1", type: "script", config: { code: "return {}" } }],
         edges: [],
@@ -214,7 +227,7 @@ describe("UpgradeWorkflowRequestSchema parsing", () => {
 
   it("rejects description shorter than 10 chars when provided", () => {
     const result = UpgradeWorkflowRequestSchema.safeParse({
-      workflowSlug: "pr-cold-email-outreach",
+      workflowDynastySlug: "pr-cold-email-outreach",
       description: "short",
     });
     expect(result.success).toBe(false);
