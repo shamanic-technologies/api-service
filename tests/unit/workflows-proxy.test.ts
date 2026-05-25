@@ -138,10 +138,10 @@ describe("Workflow proxy routes", () => {
     expect(genBlock).toContain("featureSlug");
   });
 
-  it("should forward workflowSlug in POST /workflows/upgrade body", () => {
+  it("should forward workflowDynastySlug in POST /workflows/upgrade body", () => {
     const upStart = content.indexOf('"/workflows/upgrade"');
     const upBlock = content.slice(upStart, upStart + 500);
-    expect(upBlock).toContain("workflowSlug");
+    expect(upBlock).toContain("workflowDynastySlug");
   });
 });
 
