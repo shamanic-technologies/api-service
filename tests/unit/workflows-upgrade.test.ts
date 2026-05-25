@@ -44,12 +44,13 @@ describe("POST /v1/workflows/upgrade route", () => {
     expect(block).toContain("userId: req.userId");
   });
 
-  it("should forward workflowSlug, description, and hints from request body", () => {
+  it("should forward workflowSlug, description, hints, and dag from request body", () => {
     const upgradeIdx = content.indexOf('router.post("/workflows/upgrade"');
     const block = content.slice(upgradeIdx, upgradeIdx + 1000);
     expect(block).toContain("workflowSlug");
     expect(block).toContain("description");
     expect(block).toContain("hints");
+    expect(block).toContain("dag");
   });
 
   it("should return 400 on invalid request", () => {
@@ -76,11 +77,13 @@ describe("UpgradeWorkflowRequestSchema", () => {
     expect(schemaSection).toContain("workflowSlug");
   });
 
-  it("should require description", () => {
+  it("should declare description and dag fields (both optional, at least one required via refine)", () => {
     const start = content.indexOf("UpgradeWorkflowRequestSchema");
     const end = content.indexOf('.openapi("UpgradeWorkflowRequest")', start);
     const schemaSection = content.slice(start, end);
     expect(schemaSection).toContain("description");
+    expect(schemaSection).toContain("dag");
+    expect(schemaSection).toContain(".refine(");
   });
 
   it("should have optional hints", () => {
@@ -146,5 +149,74 @@ describe("UpgradeWorkflowRequestSchema parsing", () => {
     if (result.success) {
       expect(result.data.hints).toEqual({ futureKey: "value", services: ["x"] });
     }
+  });
+
+  it("accepts a dag-only body (no description, LLM is skipped downstream)", () => {
+    const result = UpgradeWorkflowRequestSchema.safeParse({
+      workflowSlug: "pr-cold-email-outreach",
+      dag: {
+        nodes: [{ id: "n1", type: "http.call", config: { service: "lead", method: "POST", path: "/x" } }],
+        edges: [],
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.dag).toBeDefined();
+      expect(result.data.dag?.nodes).toHaveLength(1);
+    }
+  });
+
+  it("accepts both dag and description in the same body", () => {
+    const result = UpgradeWorkflowRequestSchema.safeParse({
+      workflowSlug: "pr-cold-email-outreach",
+      description: "Patch the serialize-brand-fields script node",
+      dag: {
+        nodes: [{ id: "n1", type: "script", config: { code: "return {}" } }],
+        edges: [],
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.dag).toBeDefined();
+      expect(result.data.description).toBe("Patch the serialize-brand-fields script node");
+    }
+  });
+
+  it("rejects a body with neither dag nor description (refine)", () => {
+    const result = UpgradeWorkflowRequestSchema.safeParse({
+      workflowSlug: "pr-cold-email-outreach",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a dag with empty nodes array (downstream requires at least one node)", () => {
+    const result = UpgradeWorkflowRequestSchema.safeParse({
+      workflowSlug: "pr-cold-email-outreach",
+      dag: { nodes: [], edges: [] },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("passes through unknown dag keys like onError (downstream owns the shape)", () => {
+    const result = UpgradeWorkflowRequestSchema.safeParse({
+      workflowSlug: "pr-cold-email-outreach",
+      dag: {
+        nodes: [{ id: "n1", type: "script", config: { code: "return {}" } }],
+        edges: [],
+        onError: "n1",
+      },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect((result.data.dag as { onError?: string }).onError).toBe("n1");
+    }
+  });
+
+  it("rejects description shorter than 10 chars when provided", () => {
+    const result = UpgradeWorkflowRequestSchema.safeParse({
+      workflowSlug: "pr-cold-email-outreach",
+      description: "short",
+    });
+    expect(result.success).toBe(false);
   });
 });
