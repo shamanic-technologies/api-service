@@ -5893,17 +5893,41 @@
           "description": {
             "type": "string",
             "minLength": 10,
-            "description": "Natural language description of the upgrade. Describe what should change relative to the current workflow."
+            "description": "Natural language description of the upgrade. Required when `dag` is not provided (LLM regenerates the DAG from this description). Optional when `dag` is provided; if present, replaces the stored description on the resulting row."
+          },
+          "dag": {
+            "type": "object",
+            "properties": {
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "nullable": true
+                },
+                "minItems": 1,
+                "description": "DAG nodes — at least one required. Full shape owned by workflow-service."
+              },
+              "edges": {
+                "type": "array",
+                "items": {
+                  "nullable": true
+                },
+                "description": "DAG edges. Full shape owned by workflow-service."
+              }
+            },
+            "required": [
+              "nodes",
+              "edges"
+            ],
+            "description": "Optional client-supplied DAG. When provided, workflow-service skips the LLM and applies the same in-place / new-version branching as the LLM path. Full node/edge shape owned by workflow-service (see its OpenAPI). Use for surgical fixes (e.g. patch a single script node) without re-running generation."
           },
           "hints": {
             "type": "object",
             "properties": {},
-            "description": "Optional hints to guide the upgrade. Shape owned by workflow-service (see its OpenAPI for known keys)."
+            "description": "Optional hints to guide the upgrade. Shape owned by workflow-service (see its OpenAPI for known keys). Ignored when `dag` is provided."
           }
         },
         "required": [
-          "workflowSlug",
-          "description"
+          "workflowSlug"
         ]
       },
       "ProviderInfo": {
