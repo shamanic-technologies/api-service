@@ -6683,14 +6683,7 @@
       },
       "PlatformPromptResponse": {
         "type": "object",
-        "properties": {
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "message"
-        ]
+        "properties": {}
       },
       "PlatformPromptRequest": {
         "type": "object",
@@ -6708,9 +6701,23 @@
           "variables": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Variable name as referenced in the prompt body via {{name}}."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Free-form description of what the caller should put for this variable. Caller decides the JSON shape — string, array, object, whatever fits the template."
+                }
+              },
+              "required": [
+                "name",
+                "description"
+              ]
             },
-            "description": "Template variable names (e.g. ['leadFirstName', 'leadLastName'])"
+            "description": "Inputs the template expects. Each entry is { name, description }; the caller decides the JSON shape per name."
           }
         },
         "required": [
