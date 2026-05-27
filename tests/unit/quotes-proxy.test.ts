@@ -128,8 +128,12 @@ describe("Expert quotes proxy routes", () => {
     expect(content).toContain('"/orgs/quote-pitches"');
     expect(content).toContain('"/orgs/quote-pitches/:id"');
     expect(content).toContain('"/orgs/opportunities/ranked"');
-    expect(content).toContain('"/orgs/quote-requests/:id/draft"');
+    expect(content).toContain('"/orgs/opportunities/next"');
     expect(content).toContain('"/orgs/opportunities/:id/reply"');
+  });
+
+  it("should NOT define the legacy POST /orgs/quote-requests/:id/draft proxy (removed in DIS-66)", () => {
+    expect(content).not.toContain('"/orgs/quote-requests/:id/draft"');
   });
 
   it("should have POST /orgs/opportunities/ranked with auth + requireOrg + requireUser", () => {
@@ -149,9 +153,9 @@ describe("Expert quotes proxy routes", () => {
     expect(section).toContain("body: req.body");
   });
 
-  it("should have POST /orgs/quote-requests/:id/draft with auth + requireOrg + requireUser", () => {
+  it("should have POST /orgs/opportunities/next with auth + requireOrg + requireUser", () => {
     const line = content.split("\n").find((l) =>
-      l.includes("router.post") && l.includes('"/orgs/quote-requests/:id/draft"')
+      l.includes("router.post") && l.includes('"/orgs/opportunities/next"')
     );
     expect(line).toBeDefined();
     expect(line).toContain("authenticate");
@@ -159,11 +163,9 @@ describe("Expert quotes proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should URL-encode :id and forward body verbatim on POST /orgs/quote-requests/:id/draft", () => {
-    const idx = content.indexOf('"/orgs/quote-requests/:id/draft"');
+  it("should forward body verbatim on POST /orgs/opportunities/next", () => {
+    const idx = content.indexOf('"/orgs/opportunities/next"');
     const section = content.slice(idx, idx + 800);
-    expect(section).toContain("req.params.id");
-    expect(section).toMatch(/\/orgs\/quote-requests\/\$\{[^}]*encodeURIComponent[^}]*\}\/draft/);
     expect(section).toMatch(/method:\s*"POST"/);
     expect(section).toContain("body: req.body");
   });
@@ -262,10 +264,16 @@ describe("Expert quotes OpenAPI schemas", () => {
     expect(schemaContent).toContain("OpportunitiesRankedResponse");
   });
 
-  it("should register POST /v1/orgs/quote-requests/{id}/draft with passthrough body + response", () => {
-    expect(schemaContent).toContain('path: "/v1/orgs/quote-requests/{id}/draft"');
-    expect(schemaContent).toContain("QuoteRequestDraftRequest");
-    expect(schemaContent).toContain("QuoteRequestDraftResponse");
+  it("should register POST /v1/orgs/opportunities/next with passthrough body + response", () => {
+    expect(schemaContent).toContain('path: "/v1/orgs/opportunities/next"');
+    expect(schemaContent).toContain("OpportunityNextRequest");
+    expect(schemaContent).toContain("OpportunityNextResponse");
+  });
+
+  it("should NOT register the legacy POST /v1/orgs/quote-requests/{id}/draft path (removed in DIS-66)", () => {
+    expect(schemaContent).not.toContain('path: "/v1/orgs/quote-requests/{id}/draft"');
+    expect(schemaContent).not.toContain("QuoteRequestDraftRequest");
+    expect(schemaContent).not.toContain("QuoteRequestDraftResponse");
   });
 
   it("should register POST /v1/orgs/opportunities/{id}/reply with passthrough body + response", () => {
@@ -309,9 +317,13 @@ describe("Expert quotes endpoints in openapi.json", () => {
     expect(openapi.paths["/v1/orgs/opportunities/ranked"].post).toBeDefined();
   });
 
-  it("should include /v1/orgs/quote-requests/{id}/draft POST in committed openapi.json", () => {
-    expect(openapi.paths["/v1/orgs/quote-requests/{id}/draft"]).toBeDefined();
-    expect(openapi.paths["/v1/orgs/quote-requests/{id}/draft"].post).toBeDefined();
+  it("should include /v1/orgs/opportunities/next POST in committed openapi.json", () => {
+    expect(openapi.paths["/v1/orgs/opportunities/next"]).toBeDefined();
+    expect(openapi.paths["/v1/orgs/opportunities/next"].post).toBeDefined();
+  });
+
+  it("should NOT include the legacy /v1/orgs/quote-requests/{id}/draft POST (removed in DIS-66)", () => {
+    expect(openapi.paths["/v1/orgs/quote-requests/{id}/draft"]).toBeUndefined();
   });
 
   it("should include /v1/orgs/opportunities/{id}/reply POST in committed openapi.json", () => {

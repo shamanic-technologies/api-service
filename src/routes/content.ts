@@ -29,8 +29,30 @@ router.post("/content/compose", authenticate, requireOrg, requireUser, async (re
 
     res.json(result);
   } catch (error: any) {
-    console.error("Content compose error:", error.message);
+    console.error("[api-service] Content compose error:", error.message);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to compose content" });
+  }
+});
+
+/**
+ * POST /v1/content/generate-expert-quote-pitch
+ * Proxy to content-generation-service POST /generate-expert-quote-pitch.
+ * Body + response shapes are owned by the downstream service — passthrough only.
+ */
+router.post("/content/generate-expert-quote-pitch", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.emailgen,
+      "/generate-expert-quote-pitch",
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+      },
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to generate expert quote pitch" });
   }
 });
 

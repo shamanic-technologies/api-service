@@ -8053,6 +8053,14 @@
           "outputBlobToken"
         ]
       },
+      "GenerateExpertQuotePitchResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "GenerateExpertQuotePitchRequest": {
+        "type": "object",
+        "properties": {}
+      },
       "LlmServiceOverview": {
         "type": "object",
         "properties": {
@@ -8940,11 +8948,11 @@
         "type": "object",
         "properties": {}
       },
-      "QuoteRequestDraftResponse": {
+      "OpportunityNextResponse": {
         "type": "object",
         "properties": {}
       },
-      "QuoteRequestDraftRequest": {
+      "OpportunityNextRequest": {
         "type": "object",
         "properties": {}
       },
@@ -28586,6 +28594,128 @@
         ]
       }
     },
+    "/v1/content/generate-expert-quote-pitch": {
+      "post": {
+        "tags": [
+          "Content"
+        ],
+        "summary": "Generate a journalist-quote pitch",
+        "description": "Proxy to content-generation-service POST /generate-expert-quote-pitch. Generates a Featured.com-compliant pitch (100-2500 char constraint) for an expert journalist quote opportunity. Body + response shapes are owned by the downstream service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateExpertQuotePitchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Pitch generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateExpertQuotePitchResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Content-generation length error (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
+      }
+    },
     "/v1/platform/llm-context": {
       "get": {
         "tags": [
@@ -31307,8 +31437,8 @@
         "tags": [
           "Expert Quotes"
         ],
-        "summary": "RAG-ranked opportunities for the (campaign, brand)",
-        "description": "Pass-through to journalists-quotes-service POST /orgs/opportunities/ranked. Body: { campaignId, brandId, limit?, offset? }. Response carries opportunities[] with score + whyRelevant. Body + response shapes are owned by the downstream service.",
+        "summary": "RAG-ranked opportunities for the (campaign, brand-set)",
+        "description": "Pass-through to journalists-quotes-service POST /orgs/opportunities/ranked. Brand identity flows via the x-brand-id header (CSV when plural). Returns Gold-cluster opportunity IDs with score + latest pitchStatus annotation. Body + response shapes are owned by the downstream service.",
         "security": [
           {
             "bearerAuth": []
@@ -31414,29 +31544,60 @@
         ]
       }
     },
-    "/v1/orgs/quote-requests/{id}/draft": {
+    "/v1/orgs/opportunities/next": {
       "post": {
         "tags": [
           "Expert Quotes"
         ],
-        "summary": "Generate a pitch draft for the given quote request",
-        "description": "Pass-through to journalists-quotes-service POST /orgs/quote-requests/{id}/draft. Body: { brandId, campaignId, spokesperson, expertiseTopics, responseStyle, companyContext, valueProposition, additionalContext? }. Response: { pitch, charCount, attempts, tokensInput, tokensOutput }. Body + response shapes are owned by the downstream service.",
+        "summary": "Single highest-scored Gold-cluster opportunity for the brand-set",
+        "description": "Pass-through to journalists-quotes-service POST /orgs/opportunities/next. Mirrors lead-service POST /orgs/buffer/next semantics. Brand identity via x-brand-id header (CSV when plural). Excludes opportunities with a non-retryable pitch (drafted/submitted/selected/published/not_selected) on the exact brand-set. Returns { found: false } when nothing eligible remains. Body + response shapes are owned by the downstream service.",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "Quote request id"
-            },
-            "required": true,
-            "name": "id",
-            "in": "path"
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpportunityNextRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Next opportunity (or { found: false })",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpportunityNextResponse"
+                }
+              }
+            }
           },
+          "400": {
+            "description": "Bad request (forwarded verbatim from downstream)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
           {
             "name": "x-org-id",
             "in": "header",
@@ -31492,58 +31653,7 @@
             },
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
           }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/QuoteRequestDraftRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Pitch draft",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/QuoteRequestDraftResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Content-generation length error (forwarded verbatim)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Quote request not found",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
+        ]
       }
     },
     "/v1/orgs/opportunities/{id}/reply": {
@@ -31551,8 +31661,8 @@
         "tags": [
           "Expert Quotes"
         ],
-        "summary": "Submit a HITL pitch reply for the given opportunity",
-        "description": "Pass-through to journalists-quotes-service POST /orgs/opportunities/{id}/reply. Dispatches via Featured submitAnswer (provider=featured) or email-gateway-service /orgs/send (other providers, e.g. haro). Body + response shapes are owned by the downstream service.",
+        "summary": "Submit a HITL pitch reply for the given Gold-cluster opportunity",
+        "description": "Pass-through to journalists-quotes-service POST /orgs/opportunities/{id}/reply. `id` = quote_opportunities.id (Gold cluster). Brand identity via x-brand-id header (CSV when plural). The downstream service picks a representative silver row (Featured-API preferred, else most recent email) and dispatches via Featured submitAnswer or email-gateway-service /orgs/send. Idempotency: exact-match on (quote_opportunity_id, sorted brand_ids[]) — co-branded [A,B] is distinct from solo [A]. Body + response shapes are owned by the downstream service.",
         "security": [
           {
             "bearerAuth": []
@@ -31563,7 +31673,7 @@
             "schema": {
               "type": "string",
               "format": "uuid",
-              "description": "Opportunity id"
+              "description": "Gold-cluster opportunity id (quote_opportunities.id)"
             },
             "required": true,
             "name": "id",

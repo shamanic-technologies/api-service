@@ -94,7 +94,7 @@ router.get("/orgs/quote-pitches/:id", authenticate, requireOrg, requireUser, asy
   }
 });
 
-// POST /v1/orgs/opportunities/ranked — RAG-ranked opportunities for (campaign, brand)
+// POST /v1/orgs/opportunities/ranked — RAG-ranked opportunities for (campaign, brand-set)
 router.post("/orgs/opportunities/ranked", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
@@ -112,13 +112,12 @@ router.post("/orgs/opportunities/ranked", authenticate, requireOrg, requireUser,
   }
 });
 
-// POST /v1/orgs/quote-requests/:id/draft — generate a pitch draft for the given quote request
-router.post("/orgs/quote-requests/:id/draft", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+// POST /v1/orgs/opportunities/next — single highest-scored Gold-cluster opportunity for the brand-set
+router.post("/orgs/opportunities/next", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const id = req.params.id;
     const result = await callExternalService(
       externalServices.journalistsQuotes,
-      `/orgs/quote-requests/${encodeURIComponent(id)}/draft`,
+      "/orgs/opportunities/next",
       {
         method: "POST",
         body: req.body,
@@ -127,7 +126,7 @@ router.post("/orgs/quote-requests/:id/draft", authenticate, requireOrg, requireU
     );
     res.json(result);
   } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to generate quote draft" });
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to fetch next opportunity" });
   }
 });
 
