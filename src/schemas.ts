@@ -6938,6 +6938,8 @@ const OpportunitiesRankedRequestSchema = z.object({}).passthrough().openapi("Opp
 const OpportunitiesRankedResponseSchema = z.object({}).passthrough().openapi("OpportunitiesRankedResponse");
 const QuoteRequestDraftRequestSchema = z.object({}).passthrough().openapi("QuoteRequestDraftRequest");
 const QuoteRequestDraftResponseSchema = z.object({}).passthrough().openapi("QuoteRequestDraftResponse");
+const OpportunityReplyRequestSchema = z.object({}).passthrough().openapi("OpportunityReplyRequest");
+const OpportunityReplyResponseSchema = z.object({}).passthrough().openapi("OpportunityReplyResponse");
 
 registry.registerPath({
   method: "get",
@@ -7083,6 +7085,30 @@ registry.registerPath({
     400: { description: "Content-generation length error (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Quote request not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/opportunities/{id}/reply",
+  tags: ["Expert Quotes"],
+  summary: "Submit a HITL pitch reply for the given opportunity",
+  description:
+    "Pass-through to journalists-quotes-service POST /orgs/opportunities/{id}/reply. " +
+    "Dispatches via Featured submitAnswer (provider=featured) or email-gateway-service /orgs/send (other providers, e.g. haro). " +
+    "Body + response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().uuid().openapi({ description: "Opportunity id" }),
+    }),
+    body: { content: { "application/json": { schema: OpportunityReplyRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Reply submitted", content: { "application/json": { schema: OpportunityReplyResponseSchema } } },
+    400: { description: "Bad request (forwarded verbatim from downstream)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Opportunity not found", content: errorContent },
   },
 });
 
@@ -7312,5 +7338,141 @@ registry.registerPath({
     200: { description: "Visibility-score run bundle", content: { "application/json": { schema: VisibilityScoreRunDetailResponseSchema } } },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Run not found", content: errorContent },
+  },
+});
+
+// ===================================================================
+// INVITES + WAITLIST (Wave 0.5 — DIS-64)
+// ===================================================================
+// api-service is a transparent proxy here per CLAUDE.md #2. The downstream
+// client-service owns the entire invite/waitlist domain, including the
+// claim orchestration (billing-service credit grants + transactional-email
+// confirmations). All response shapes collapse to passthrough so downstream
+// renames flow through without coordinated api-service edits (CLAUDE.md #8).
+// ===================================================================
+
+const InviteValidateRequestSchema = z.object({}).passthrough().openapi("InviteValidateRequest");
+const InviteValidateResponseSchema = z.object({}).passthrough().openapi("InviteValidateResponse");
+const WaitlistRequestAccessRequestSchema = z.object({}).passthrough().openapi("WaitlistRequestAccessRequest");
+const WaitlistRequestAccessResponseSchema = z.object({}).passthrough().openapi("WaitlistRequestAccessResponse");
+const WaitlistPositionResponseSchema = z.object({}).passthrough().openapi("WaitlistPositionResponse");
+const OrgInvitesStatusResponseSchema = z.object({}).passthrough().openapi("OrgInvitesStatusResponse");
+const OrgInvitesClaimRequestSchema = z.object({}).passthrough().openapi("OrgInvitesClaimRequest");
+const OrgInvitesClaimResponseSchema = z.object({}).passthrough().openapi("OrgInvitesClaimResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/invites/validate",
+  tags: ["Invites"],
+  summary: "Validate an invite code (no auth)",
+  description:
+    "Public pass-through to client-service POST /public/invites/validate. " +
+    "Returns whether the supplied invite code is currently redeemable. " +
+    "Body + response shapes are owned by the downstream service.",
+  request: {
+    body: { content: { "application/json": { schema: InviteValidateRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Validation result", content: { "application/json": { schema: InviteValidateResponseSchema } } },
+    400: { description: "Bad request (forwarded verbatim from downstream)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/waitlist/request-access",
+  tags: ["Waitlist"],
+  summary: "Request waitlist access (no auth)",
+  description:
+    "Public pass-through to client-service POST /public/waitlist/request-access. " +
+    "Downstream inserts the waitlist row and fires the confirmation email. " +
+    "Body + response shapes are owned by the downstream service.",
+  request: {
+    body: { content: { "application/json": { schema: WaitlistRequestAccessRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Waitlist position", content: { "application/json": { schema: WaitlistRequestAccessResponseSchema } } },
+    400: { description: "Bad request (forwarded verbatim from downstream)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/waitlist/position",
+  tags: ["Waitlist"],
+  summary: "Look up waitlist position by email (no auth)",
+  description:
+    "Public pass-through to client-service GET /public/waitlist/position. " +
+    "Response shape is owned by the downstream service.",
+  request: {
+    query: z.object({
+      email: z
+        .string()
+        .email()
+        .openapi({ description: "Email that signed up to the waitlist" }),
+    }),
+  },
+  responses: {
+    200: { description: "Waitlist position", content: { "application/json": { schema: WaitlistPositionResponseSchema } } },
+    404: { description: "Email not on waitlist (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/{orgId}/invites/status",
+  tags: ["Invites"],
+  summary: "Get invite quota status for an org",
+  description:
+    "Pass-through to client-service GET /internal/orgs/{orgId}/invites/status. " +
+    "Returns used / total quota and the org's invite code. " +
+    "The {orgId} path segment MUST match the authenticated x-org-id; mismatch returns 403. " +
+    "Response shape is owned by the downstream service.",
+  security: authed,
+  request: {
+    params: z.object({
+      orgId: z
+        .string()
+        .uuid()
+        .openapi({ description: "Org UUID (must match authenticated org)" }),
+    }),
+  },
+  responses: {
+    200: { description: "Invite status", content: { "application/json": { schema: OrgInvitesStatusResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "orgId path does not match authenticated org", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/{orgId}/invites/claim",
+  tags: ["Invites"],
+  summary: "Claim an invite code for the authenticated org",
+  description:
+    "Pass-through to client-service POST /internal/orgs/{orgId}/invites/claim. " +
+    "Downstream orchestrates: record claim row -> grant $25 to inviter + $25 to invitee via " +
+    "billing-service -> send invite-claimed-welcome + invite-success-notification via " +
+    "transactional-email-service. Idempotent on (code, inviteeOrgId). " +
+    "The {orgId} path segment MUST match the authenticated x-org-id; mismatch returns 403. " +
+    "Body + response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    params: z.object({
+      orgId: z
+        .string()
+        .uuid()
+        .openapi({ description: "Org UUID (must match authenticated org)" }),
+    }),
+    body: { content: { "application/json": { schema: OrgInvitesClaimRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Claim result", content: { "application/json": { schema: OrgInvitesClaimResponseSchema } } },
+    400: { description: "Invalid code (forwarded verbatim from downstream)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "orgId path does not match authenticated org", content: errorContent },
   },
 });

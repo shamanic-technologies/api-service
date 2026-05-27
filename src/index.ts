@@ -48,6 +48,8 @@ import featuresRoutes from "./routes/features.js";
 import googleRoutes from "./routes/google.js";
 import quotesRoutes from "./routes/quotes.js";
 import visibilityRoutes from "./routes/visibility.js";
+import invitesRoutes from "./routes/invites.js";
+import waitlistRoutes from "./routes/waitlist.js";
 import publicStatsRoutes from "./routes/public-stats.js";
 import costsRoutes from "./routes/costs.js";
 import adminRoutes from "./routes/admin.js";
@@ -210,6 +212,8 @@ app.use("/v1", featuresRoutes);
 app.use("/v1", googleRoutes);
 app.use("/v1", quotesRoutes);
 app.use("/v1", visibilityRoutes);
+app.use("/v1", invitesRoutes);
+app.use("/v1", waitlistRoutes);
 
 // 404 handler
 app.use((req, res) => {

@@ -109,16 +109,16 @@ describe("Expert quotes proxy routes", () => {
     }
   });
 
-  it("should call externalServices.journalistsQuotes for every endpoint (7x)", () => {
+  it("should call externalServices.journalistsQuotes for every endpoint (8x)", () => {
     const matches = content.match(/externalServices\.journalistsQuotes/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(7);
+    expect(matches!.length).toBe(8);
   });
 
-  it("should use buildInternalHeaders for every endpoint (7x)", () => {
+  it("should use buildInternalHeaders for every endpoint (8x)", () => {
     const matches = content.match(/buildInternalHeaders\(req\)/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(7);
+    expect(matches!.length).toBe(8);
   });
 
   it("should preserve downstream paths (no path renaming)", () => {
@@ -129,6 +129,7 @@ describe("Expert quotes proxy routes", () => {
     expect(content).toContain('"/orgs/quote-pitches/:id"');
     expect(content).toContain('"/orgs/opportunities/ranked"');
     expect(content).toContain('"/orgs/quote-requests/:id/draft"');
+    expect(content).toContain('"/orgs/opportunities/:id/reply"');
   });
 
   it("should have POST /orgs/opportunities/ranked with auth + requireOrg + requireUser", () => {
@@ -163,6 +164,25 @@ describe("Expert quotes proxy routes", () => {
     const section = content.slice(idx, idx + 800);
     expect(section).toContain("req.params.id");
     expect(section).toMatch(/\/orgs\/quote-requests\/\$\{[^}]*encodeURIComponent[^}]*\}\/draft/);
+    expect(section).toMatch(/method:\s*"POST"/);
+    expect(section).toContain("body: req.body");
+  });
+
+  it("should have POST /orgs/opportunities/:id/reply with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.post") && l.includes('"/orgs/opportunities/:id/reply"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should URL-encode :id and forward body verbatim on POST /orgs/opportunities/:id/reply", () => {
+    const idx = content.indexOf('"/orgs/opportunities/:id/reply"');
+    const section = content.slice(idx, idx + 800);
+    expect(section).toContain("req.params.id");
+    expect(section).toMatch(/\/orgs\/opportunities\/\$\{[^}]*encodeURIComponent[^}]*\}\/reply/);
     expect(section).toMatch(/method:\s*"POST"/);
     expect(section).toContain("body: req.body");
   });
@@ -247,6 +267,12 @@ describe("Expert quotes OpenAPI schemas", () => {
     expect(schemaContent).toContain("QuoteRequestDraftRequest");
     expect(schemaContent).toContain("QuoteRequestDraftResponse");
   });
+
+  it("should register POST /v1/orgs/opportunities/{id}/reply with passthrough body + response", () => {
+    expect(schemaContent).toContain('path: "/v1/orgs/opportunities/{id}/reply"');
+    expect(schemaContent).toContain("OpportunityReplyRequest");
+    expect(schemaContent).toContain("OpportunityReplyResponse");
+  });
 });
 
 describe("Expert quotes endpoints in openapi.json", () => {
@@ -286,6 +312,11 @@ describe("Expert quotes endpoints in openapi.json", () => {
   it("should include /v1/orgs/quote-requests/{id}/draft POST in committed openapi.json", () => {
     expect(openapi.paths["/v1/orgs/quote-requests/{id}/draft"]).toBeDefined();
     expect(openapi.paths["/v1/orgs/quote-requests/{id}/draft"].post).toBeDefined();
+  });
+
+  it("should include /v1/orgs/opportunities/{id}/reply POST in committed openapi.json", () => {
+    expect(openapi.paths["/v1/orgs/opportunities/{id}/reply"]).toBeDefined();
+    expect(openapi.paths["/v1/orgs/opportunities/{id}/reply"].post).toBeDefined();
   });
 });
 

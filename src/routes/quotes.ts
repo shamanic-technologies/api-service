@@ -131,4 +131,23 @@ router.post("/orgs/quote-requests/:id/draft", authenticate, requireOrg, requireU
   }
 });
 
+// POST /v1/orgs/opportunities/:id/reply — submit a HITL pitch reply for the given opportunity
+router.post("/orgs/opportunities/:id/reply", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const id = req.params.id;
+    const result = await callExternalService(
+      externalServices.journalistsQuotes,
+      `/orgs/opportunities/${encodeURIComponent(id)}/reply`,
+      {
+        method: "POST",
+        body: req.body,
+        headers: buildInternalHeaders(req),
+      }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to submit opportunity reply" });
+  }
+});
+
 export default router;
