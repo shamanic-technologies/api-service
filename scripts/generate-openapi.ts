@@ -74,6 +74,8 @@ Authorization: Bearer distrib.usr_abc123...
     { name: "Google CRM", description: "Google CRM (Gmail + People bronze) ingestion" },
     { name: "Expert Quotes", description: "Expert quote outreach (journalists-quotes-service proxy)" },
     { name: "AI Visibility", description: "AI visibility-score audits (ai-visibility-score-service proxy)" },
+    { name: "Invites", description: "Invite-only gate (Wave 0.5): validate codes, query org quota, claim rewards" },
+    { name: "Waitlist", description: "Waitlist for users without an invite code" },
   ],
 });
 
