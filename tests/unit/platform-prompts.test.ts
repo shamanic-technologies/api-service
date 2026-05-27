@@ -59,13 +59,17 @@ describe("PUT /platform-prompts", () => {
   });
 
   it("should deploy a platform prompt with valid API key and no identity headers", async () => {
+    const variables = [
+      { name: "leadFirstName", description: "Lead first name (string)." },
+      { name: "leadLastName", description: "Lead last name (string)." },
+    ];
     const res = await request(app)
       .put("/platform-prompts")
       .set("X-API-Key", VALID_API_KEY)
       .send({
         type: "cold-email",
         prompt: "You are writing cold emails...",
-        variables: ["leadFirstName", "leadLastName"],
+        variables,
       });
 
     expect(res.status).toBe(200);
@@ -77,12 +81,56 @@ describe("PUT /platform-prompts", () => {
     expect(call!.body).toMatchObject({
       type: "cold-email",
       prompt: "You are writing cold emails...",
-      variables: ["leadFirstName", "leadLastName"],
+      variables,
     });
     // No identity headers forwarded
     expect(call!.headers!["x-org-id"]).toBeUndefined();
     expect(call!.headers!["x-user-id"]).toBeUndefined();
     expect(call!.headers!["x-run-id"]).toBeUndefined();
+  });
+
+  it("should return 400 when variables is a string array (legacy shape)", async () => {
+    const res = await request(app)
+      .put("/platform-prompts")
+      .set("X-API-Key", VALID_API_KEY)
+      .send({
+        type: "cold-email",
+        prompt: "test",
+        variables: ["leadFirstName", "leadLastName"],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Invalid request");
+    // Downstream MUST NOT be called
+    expect(fetchCalls.find((c) => c.url.includes("/platform-prompts"))).toBeUndefined();
+  });
+
+  it("should return 400 when a variable entry is missing description", async () => {
+    const res = await request(app)
+      .put("/platform-prompts")
+      .set("X-API-Key", VALID_API_KEY)
+      .send({
+        type: "cold-email",
+        prompt: "test",
+        variables: [{ name: "leadFirstName" }],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Invalid request");
+  });
+
+  it("should return 400 when a variable entry is missing name", async () => {
+    const res = await request(app)
+      .put("/platform-prompts")
+      .set("X-API-Key", VALID_API_KEY)
+      .send({
+        type: "cold-email",
+        prompt: "test",
+        variables: [{ description: "Lead first name." }],
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Invalid request");
   });
 
   it("should return 401 without API key", async () => {

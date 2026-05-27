@@ -4765,7 +4765,20 @@ export const PlatformPromptRequestSchema = z
   .object({
     type: z.string().min(1).describe("Prompt type (e.g. 'cold-email')"),
     prompt: z.string().min(1).describe("The prompt template text"),
-    variables: z.array(z.string()).describe("Template variable names (e.g. ['leadFirstName', 'leadLastName'])"),
+    variables: z
+      .array(
+        z.object({
+          name: z.string().describe("Variable name as referenced in the prompt body via {{name}}."),
+          description: z
+            .string()
+            .describe(
+              "Free-form description of what the caller should put for this variable. Caller decides the JSON shape — string, array, object, whatever fits the template."
+            ),
+        })
+      )
+      .describe(
+        "Inputs the template expects. Each entry is { name, description }; the caller decides the JSON shape per name."
+      ),
   })
   .openapi("PlatformPromptRequest");
 
@@ -4789,7 +4802,7 @@ registry.registerPath({
       description: "Prompt deployed",
       content: {
         "application/json": {
-          schema: z.object({ message: z.string() }).openapi("PlatformPromptResponse"),
+          schema: z.object({}).passthrough().openapi("PlatformPromptResponse"),
         },
       },
     },
