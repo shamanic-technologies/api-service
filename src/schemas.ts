@@ -6919,6 +6919,13 @@ const QuotePitchResponseSchema = z
   .object({ quotePitch: QuotePitchSchema })
   .openapi("QuotePitchResponse");
 
+// Passthrough schemas for new HITL PR Expert Quote Opportunities routes.
+// Downstream (journalists-quotes-service) owns body + response shapes — api-service forwards bytes.
+const OpportunitiesRankedRequestSchema = z.object({}).passthrough().openapi("OpportunitiesRankedRequest");
+const OpportunitiesRankedResponseSchema = z.object({}).passthrough().openapi("OpportunitiesRankedResponse");
+const QuoteRequestDraftRequestSchema = z.object({}).passthrough().openapi("QuoteRequestDraftRequest");
+const QuoteRequestDraftResponseSchema = z.object({}).passthrough().openapi("QuoteRequestDraftResponse");
+
 registry.registerPath({
   method: "get",
   path: "/v1/orgs/quote-requests",
@@ -7018,6 +7025,51 @@ registry.registerPath({
     200: { description: "Quote pitch", content: { "application/json": { schema: QuotePitchResponseSchema } } },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Quote pitch not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/opportunities/ranked",
+  tags: ["Expert Quotes"],
+  summary: "RAG-ranked opportunities for the (campaign, brand)",
+  description:
+    "Pass-through to journalists-quotes-service POST /orgs/opportunities/ranked. " +
+    "Body: { campaignId, brandId, limit?, offset? }. Response carries opportunities[] with score + whyRelevant. " +
+    "Body + response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: OpportunitiesRankedRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Ranked opportunities", content: { "application/json": { schema: OpportunitiesRankedResponseSchema } } },
+    400: { description: "Bad request (forwarded verbatim from downstream)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/quote-requests/{id}/draft",
+  tags: ["Expert Quotes"],
+  summary: "Generate a pitch draft for the given quote request",
+  description:
+    "Pass-through to journalists-quotes-service POST /orgs/quote-requests/{id}/draft. " +
+    "Body: { brandId, campaignId, spokesperson, expertiseTopics, responseStyle, companyContext, valueProposition, additionalContext? }. " +
+    "Response: { pitch, charCount, attempts, tokensInput, tokensOutput }. " +
+    "Body + response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().uuid().openapi({ description: "Quote request id" }),
+    }),
+    body: { content: { "application/json": { schema: QuoteRequestDraftRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Pitch draft", content: { "application/json": { schema: QuoteRequestDraftResponseSchema } } },
+    400: { description: "Content-generation length error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Quote request not found", content: errorContent },
   },
 });
 
