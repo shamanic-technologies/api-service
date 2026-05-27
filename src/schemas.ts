@@ -6261,6 +6261,32 @@ registry.registerPath({
   },
 });
 
+// Content – Generate Expert Quote Pitch (proxy to content-generation-service)
+// Downstream owns body + response shapes — passthrough only.
+const GenerateExpertQuotePitchRequestSchema = z.object({}).passthrough().openapi("GenerateExpertQuotePitchRequest");
+const GenerateExpertQuotePitchResponseSchema = z.object({}).passthrough().openapi("GenerateExpertQuotePitchResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/content/generate-expert-quote-pitch",
+  tags: ["Content"],
+  summary: "Generate a journalist-quote pitch",
+  description:
+    "Proxy to content-generation-service POST /generate-expert-quote-pitch. " +
+    "Generates a Featured.com-compliant pitch (100-2500 char constraint) for an expert journalist quote opportunity. " +
+    "Body + response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: GenerateExpertQuotePitchRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Pitch generated", content: { "application/json": { schema: GenerateExpertQuotePitchResponseSchema } } },
+    400: { description: "Content-generation length error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/platform/llm-context",
@@ -6932,12 +6958,12 @@ const QuotePitchResponseSchema = z
   .object({ quotePitch: QuotePitchSchema })
   .openapi("QuotePitchResponse");
 
-// Passthrough schemas for new HITL PR Expert Quote Opportunities routes.
+// Passthrough schemas for HITL PR Expert Quote Opportunities routes.
 // Downstream (journalists-quotes-service) owns body + response shapes — api-service forwards bytes.
 const OpportunitiesRankedRequestSchema = z.object({}).passthrough().openapi("OpportunitiesRankedRequest");
 const OpportunitiesRankedResponseSchema = z.object({}).passthrough().openapi("OpportunitiesRankedResponse");
-const QuoteRequestDraftRequestSchema = z.object({}).passthrough().openapi("QuoteRequestDraftRequest");
-const QuoteRequestDraftResponseSchema = z.object({}).passthrough().openapi("QuoteRequestDraftResponse");
+const OpportunityNextRequestSchema = z.object({}).passthrough().openapi("OpportunityNextRequest");
+const OpportunityNextResponseSchema = z.object({}).passthrough().openapi("OpportunityNextResponse");
 const OpportunityReplyRequestSchema = z.object({}).passthrough().openapi("OpportunityReplyRequest");
 const OpportunityReplyResponseSchema = z.object({}).passthrough().openapi("OpportunityReplyResponse");
 
@@ -7047,10 +7073,11 @@ registry.registerPath({
   method: "post",
   path: "/v1/orgs/opportunities/ranked",
   tags: ["Expert Quotes"],
-  summary: "RAG-ranked opportunities for the (campaign, brand)",
+  summary: "RAG-ranked opportunities for the (campaign, brand-set)",
   description:
     "Pass-through to journalists-quotes-service POST /orgs/opportunities/ranked. " +
-    "Body: { campaignId, brandId, limit?, offset? }. Response carries opportunities[] with score + whyRelevant. " +
+    "Brand identity flows via the x-brand-id header (CSV when plural). " +
+    "Returns Gold-cluster opportunity IDs with score + latest pitchStatus annotation. " +
     "Body + response shapes are owned by the downstream service.",
   security: authed,
   request: {
@@ -7065,26 +7092,24 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/v1/orgs/quote-requests/{id}/draft",
+  path: "/v1/orgs/opportunities/next",
   tags: ["Expert Quotes"],
-  summary: "Generate a pitch draft for the given quote request",
+  summary: "Single highest-scored Gold-cluster opportunity for the brand-set",
   description:
-    "Pass-through to journalists-quotes-service POST /orgs/quote-requests/{id}/draft. " +
-    "Body: { brandId, campaignId, spokesperson, expertiseTopics, responseStyle, companyContext, valueProposition, additionalContext? }. " +
-    "Response: { pitch, charCount, attempts, tokensInput, tokensOutput }. " +
+    "Pass-through to journalists-quotes-service POST /orgs/opportunities/next. " +
+    "Mirrors lead-service POST /orgs/buffer/next semantics. " +
+    "Brand identity via x-brand-id header (CSV when plural). " +
+    "Excludes opportunities with a non-retryable pitch (drafted/submitted/selected/published/not_selected) on the exact brand-set. " +
+    "Returns { found: false } when nothing eligible remains. " +
     "Body + response shapes are owned by the downstream service.",
   security: authed,
   request: {
-    params: z.object({
-      id: z.string().uuid().openapi({ description: "Quote request id" }),
-    }),
-    body: { content: { "application/json": { schema: QuoteRequestDraftRequestSchema } } },
+    body: { content: { "application/json": { schema: OpportunityNextRequestSchema } } },
   },
   responses: {
-    200: { description: "Pitch draft", content: { "application/json": { schema: QuoteRequestDraftResponseSchema } } },
-    400: { description: "Content-generation length error (forwarded verbatim)", content: errorContent },
+    200: { description: "Next opportunity (or { found: false })", content: { "application/json": { schema: OpportunityNextResponseSchema } } },
+    400: { description: "Bad request (forwarded verbatim from downstream)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Quote request not found", content: errorContent },
   },
 });
 
@@ -7092,15 +7117,18 @@ registry.registerPath({
   method: "post",
   path: "/v1/orgs/opportunities/{id}/reply",
   tags: ["Expert Quotes"],
-  summary: "Submit a HITL pitch reply for the given opportunity",
+  summary: "Submit a HITL pitch reply for the given Gold-cluster opportunity",
   description:
     "Pass-through to journalists-quotes-service POST /orgs/opportunities/{id}/reply. " +
-    "Dispatches via Featured submitAnswer (provider=featured) or email-gateway-service /orgs/send (other providers, e.g. haro). " +
+    "`id` = quote_opportunities.id (Gold cluster). Brand identity via x-brand-id header (CSV when plural). " +
+    "The downstream service picks a representative silver row (Featured-API preferred, else most recent email) and " +
+    "dispatches via Featured submitAnswer or email-gateway-service /orgs/send. " +
+    "Idempotency: exact-match on (quote_opportunity_id, sorted brand_ids[]) — co-branded [A,B] is distinct from solo [A]. " +
     "Body + response shapes are owned by the downstream service.",
   security: authed,
   request: {
     params: z.object({
-      id: z.string().uuid().openapi({ description: "Opportunity id" }),
+      id: z.string().uuid().openapi({ description: "Gold-cluster opportunity id (quote_opportunities.id)" }),
     }),
     body: { content: { "application/json": { schema: OpportunityReplyRequestSchema } } },
   },
