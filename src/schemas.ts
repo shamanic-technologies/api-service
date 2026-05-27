@@ -6938,6 +6938,8 @@ const OpportunitiesRankedRequestSchema = z.object({}).passthrough().openapi("Opp
 const OpportunitiesRankedResponseSchema = z.object({}).passthrough().openapi("OpportunitiesRankedResponse");
 const QuoteRequestDraftRequestSchema = z.object({}).passthrough().openapi("QuoteRequestDraftRequest");
 const QuoteRequestDraftResponseSchema = z.object({}).passthrough().openapi("QuoteRequestDraftResponse");
+const OpportunityReplyRequestSchema = z.object({}).passthrough().openapi("OpportunityReplyRequest");
+const OpportunityReplyResponseSchema = z.object({}).passthrough().openapi("OpportunityReplyResponse");
 
 registry.registerPath({
   method: "get",
@@ -7083,6 +7085,30 @@ registry.registerPath({
     400: { description: "Content-generation length error (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Quote request not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/opportunities/{id}/reply",
+  tags: ["Expert Quotes"],
+  summary: "Submit a HITL pitch reply for the given opportunity",
+  description:
+    "Pass-through to journalists-quotes-service POST /orgs/opportunities/{id}/reply. " +
+    "Dispatches via Featured submitAnswer (provider=featured) or email-gateway-service /orgs/send (other providers, e.g. haro). " +
+    "Body + response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().uuid().openapi({ description: "Opportunity id" }),
+    }),
+    body: { content: { "application/json": { schema: OpportunityReplyRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Reply submitted", content: { "application/json": { schema: OpportunityReplyResponseSchema } } },
+    400: { description: "Bad request (forwarded verbatim from downstream)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Opportunity not found", content: errorContent },
   },
 });
 
