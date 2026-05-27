@@ -94,4 +94,41 @@ router.get("/orgs/quote-pitches/:id", authenticate, requireOrg, requireUser, asy
   }
 });
 
+// POST /v1/orgs/opportunities/ranked — RAG-ranked opportunities for (campaign, brand)
+router.post("/orgs/opportunities/ranked", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.journalistsQuotes,
+      "/orgs/opportunities/ranked",
+      {
+        method: "POST",
+        body: req.body,
+        headers: buildInternalHeaders(req),
+      }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to fetch ranked opportunities" });
+  }
+});
+
+// POST /v1/orgs/quote-requests/:id/draft — generate a pitch draft for the given quote request
+router.post("/orgs/quote-requests/:id/draft", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const id = req.params.id;
+    const result = await callExternalService(
+      externalServices.journalistsQuotes,
+      `/orgs/quote-requests/${encodeURIComponent(id)}/draft`,
+      {
+        method: "POST",
+        body: req.body,
+        headers: buildInternalHeaders(req),
+      }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to generate quote draft" });
+  }
+});
+
 export default router;
