@@ -6287,6 +6287,32 @@ registry.registerPath({
   },
 });
 
+// Content – Get Platform Prompt (proxy to content-generation-service)
+// Downstream owns response shape — passthrough only.
+const PlatformPromptResponseSchema = z.object({}).passthrough().openapi("PlatformPromptResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/content/platform-prompts",
+  tags: ["Content"],
+  summary: "Get a prompt template by type",
+  description:
+    "Proxy to content-generation-service GET /platform-prompts?type=<type>. " +
+    "Returns the stored prompt template + its variable metadata so callers can collect inputs " +
+    "before invoking POST /v1/content/generate-expert-quote-pitch. " +
+    "Response shape is owned by the downstream service.",
+  security: authed,
+  request: {
+    query: z.object({ type: z.string().openapi({ description: "Prompt type to look up (e.g. expert-quote-pitch)" }) }),
+  },
+  responses: {
+    200: { description: "Prompt template", content: { "application/json": { schema: PlatformPromptResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Prompt type not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/platform/llm-context",
