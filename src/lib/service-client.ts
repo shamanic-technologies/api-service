@@ -2,6 +2,17 @@
  * Service client for calling other distribute services
  * All services require API key authentication via X-API-Key header
  */
+import { Agent, type Dispatcher } from "undici";
+
+// Shared undici dispatcher for journalists-quotes-service.
+// /orgs/opportunities/ranked runs heavy RAG ranking on large brand-sets and can
+// legitimately take 5–10 minutes. Node's default undici headersTimeout (300s)
+// surfaces as UND_ERR_HEADERS_TIMEOUT before the downstream finishes; this bumps
+// headers + body timeout to 10 minutes for that one service only.
+const JOURNALISTS_QUOTES_DISPATCHER: Dispatcher = new Agent({
+  headersTimeout: 600_000,
+  bodyTimeout: 600_000,
+});
 
 export const externalServices = {
   client: {
@@ -119,6 +130,7 @@ export const externalServices = {
       if (!v) throw new Error("JOURNALISTS_QUOTES_SERVICE_API_KEY env var is required");
       return v;
     },
+    dispatcher: JOURNALISTS_QUOTES_DISPATCHER,
   },
   aiVisibility: {
     get url(): string {
@@ -142,7 +154,7 @@ interface ServiceCallOptions {
 
 // Call external service (with API key)
 export async function callExternalService<T>(
-  service: { url: string; apiKey: string },
+  service: { url: string; apiKey: string; dispatcher?: Dispatcher },
   path: string,
   options: ServiceCallOptions = {}
 ): Promise<T> {
@@ -152,7 +164,7 @@ export async function callExternalService<T>(
 
 // Like callExternalService but also returns the upstream HTTP status code
 export async function callExternalServiceWithStatus<T>(
-  service: { url: string; apiKey: string },
+  service: { url: string; apiKey: string; dispatcher?: Dispatcher },
   path: string,
   options: ServiceCallOptions = {}
 ): Promise<{ status: number; data: T }> {
@@ -161,7 +173,7 @@ export async function callExternalServiceWithStatus<T>(
   const url = `${service.url}${path}`;
 
   try {
-    const response = await fetch(url, {
+    const init: RequestInit & { dispatcher?: Dispatcher } = {
       method,
       headers: {
         "Content-Type": "application/json",
@@ -169,7 +181,9 @@ export async function callExternalServiceWithStatus<T>(
         ...headers,
       },
       body: body ? JSON.stringify(body) : undefined,
-    });
+    };
+    if (service.dispatcher) init.dispatcher = service.dispatcher;
+    const response = await fetch(url, init);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -196,14 +210,14 @@ export async function callExternalServiceWithStatus<T>(
  * Does NOT buffer or parse — pipes chunks through for real-time streaming.
  */
 export async function streamExternalService(
-  service: { url: string; apiKey: string },
+  service: { url: string; apiKey: string; dispatcher?: Dispatcher },
   path: string,
   options: ServiceCallOptions & { expressRes: import("express").Response }
 ): Promise<void> {
   const { method = "POST", body, headers = {}, expressRes } = options;
   const url = `${service.url}${path}`;
 
-  const response = await fetch(url, {
+  const init: RequestInit & { dispatcher?: Dispatcher } = {
     method,
     headers: {
       "Content-Type": "application/json",
@@ -211,7 +225,9 @@ export async function streamExternalService(
       ...headers,
     },
     body: body ? JSON.stringify(body) : undefined,
-  });
+  };
+  if (service.dispatcher) init.dispatcher = service.dispatcher;
+  const response = await fetch(url, init);
 
   if (!response.ok) {
     const errorText = await response.text();
