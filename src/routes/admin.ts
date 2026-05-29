@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { authenticatePlatform } from "../middleware/auth.js";
+import { callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
 import pg from "pg";
 
 const { Pool } = pg;
@@ -251,6 +252,27 @@ router.get("/admin/services/:name/tables/:table/rows", authenticatePlatform, asy
     limit,
     offset,
   });
+});
+
+// ── DELETE /admin/orgs/:orgId ───────────────────────────────────────────────
+// Staff-only org cascade teardown. Pure proxy to client-service, which owns the
+// org-lifecycle orchestration: it deletes its own org data, the Clerk org
+// (online), and — via stripe-service — the org's Stripe customer (online).
+// The gateway adds no logic: it forwards the result + status and propagates any
+// upstream error body verbatim so a partial teardown fails loud (CLAUDE.md #7).
+router.delete("/admin/orgs/:orgId", authenticatePlatform, async (req: Request, res: Response) => {
+  const { orgId } = req.params;
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.client,
+      `/internal/orgs/${encodeURIComponent(orgId)}`,
+      { method: "DELETE" },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error(`[api-service] org teardown failed for ${orgId}:`, error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to tear down org" });
+  }
 });
 
 export default router;
