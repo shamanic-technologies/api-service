@@ -6313,6 +6313,55 @@ registry.registerPath({
   },
 });
 
+// Content – Prompt Assignments (proxy to content-generation-service)
+// Downstream owns body + response shapes — passthrough only. No gateway re-validation.
+const PromptAssignmentResponseSchema = z.object({}).passthrough().openapi("PromptAssignmentResponse");
+const PromptAssignmentRequestSchema = z.object({}).passthrough().openapi("PromptAssignmentRequest");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/content/prompt-assignments",
+  tags: ["Content"],
+  summary: "Get a feature's assigned generation prompt",
+  description:
+    "Proxy to content-generation-service GET /prompt-assignments?featureSlug=<slug>. " +
+    "Returns the prompt currently assigned to a feature + its variable metadata so the " +
+    "dashboard prompt editor can read the prompt the feature's GENERATE step uses. " +
+    "Response shape is owned by the downstream service.",
+  security: authed,
+  request: {
+    query: z.object({ featureSlug: z.string().openapi({ description: "Feature slug whose assigned prompt to fetch (e.g. pr-expert-quote-opportunities)" }) }),
+  },
+  responses: {
+    200: { description: "Assigned prompt", content: { "application/json": { schema: PromptAssignmentResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No assignment for featureSlug (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/content/prompt-assignments",
+  tags: ["Content"],
+  summary: "Save a feature's generation prompt",
+  description:
+    "Proxy to content-generation-service PUT /prompt-assignments. " +
+    "Saves the feature's generation prompt (forks + reassigns downstream). " +
+    "Body + response shapes are owned by the downstream service; its 400 variable-integrity " +
+    "errors propagate verbatim.",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: PromptAssignmentRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Prompt saved", content: { "application/json": { schema: PromptAssignmentResponseSchema } } },
+    400: { description: "Variable-integrity error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/platform/llm-context",
