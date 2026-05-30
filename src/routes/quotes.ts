@@ -94,6 +94,26 @@ router.get("/orgs/quote-pitches/:id", authenticate, requireOrg, requireUser, asy
   }
 });
 
+// GET /v1/orgs/opportunities — paginated read of scored Gold-cluster opportunities for the brand-set
+router.get("/orgs/opportunities", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["campaignId", "limit", "offset"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+
+    const result = await callExternalService(
+      externalServices.journalistsQuotes,
+      `/orgs/opportunities${qs}`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to list opportunities" });
+  }
+});
+
 // POST /v1/orgs/opportunities/ranked — RAG-ranked opportunities for (campaign, brand-set)
 router.post("/orgs/opportunities/ranked", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
@@ -127,6 +147,24 @@ router.post("/orgs/opportunities/next", authenticate, requireOrg, requireUser, a
     res.json(result);
   } catch (error: any) {
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to fetch next opportunity" });
+  }
+});
+
+// POST /v1/orgs/opportunities/discover — write-only batch scorer (ingest + score unscored opps for the brand-set)
+router.post("/orgs/opportunities/discover", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.journalistsQuotes,
+      "/orgs/opportunities/discover",
+      {
+        method: "POST",
+        body: req.body,
+        headers: buildInternalHeaders(req),
+      }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to discover opportunities" });
   }
 });
 
