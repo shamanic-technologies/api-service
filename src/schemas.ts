@@ -7041,6 +7041,9 @@ const OpportunityNextRequestSchema = z.object({}).passthrough().openapi("Opportu
 const OpportunityNextResponseSchema = z.object({}).passthrough().openapi("OpportunityNextResponse");
 const OpportunityReplyRequestSchema = z.object({}).passthrough().openapi("OpportunityReplyRequest");
 const OpportunityReplyResponseSchema = z.object({}).passthrough().openapi("OpportunityReplyResponse");
+const OpportunityDiscoverRequestSchema = z.object({}).passthrough().openapi("OpportunityDiscoverRequest");
+const OpportunityDiscoverResponseSchema = z.object({}).passthrough().openapi("OpportunityDiscoverResponse");
+const OpportunitiesListResponseSchema = z.object({}).passthrough().openapi("OpportunitiesListResponse");
 
 registry.registerPath({
   method: "get",
@@ -7145,6 +7148,30 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/opportunities",
+  tags: ["Expert Quotes"],
+  summary: "Paginated read of scored Gold-cluster opportunities for the brand-set",
+  description:
+    "Pure pass-through to journalists-quotes-service GET /orgs/opportunities. " +
+    "Brand identity flows via the x-brand-id header (CSV when plural). " +
+    "Filter by campaignId. Caller controls pagination via limit/offset. " +
+    "Response shape is owned by the downstream service.",
+  security: authed,
+  request: {
+    query: z.object({
+      campaignId: z.string().uuid().optional(),
+      limit: z.string().optional(),
+      offset: z.string().optional(),
+    }),
+  },
+  responses: {
+    200: { description: "Scored opportunities", content: { "application/json": { schema: OpportunitiesListResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/orgs/opportunities/ranked",
   tags: ["Expert Quotes"],
@@ -7183,6 +7210,27 @@ registry.registerPath({
   },
   responses: {
     200: { description: "Next opportunity (or { found: false })", content: { "application/json": { schema: OpportunityNextResponseSchema } } },
+    400: { description: "Bad request (forwarded verbatim from downstream)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/opportunities/discover",
+  tags: ["Expert Quotes"],
+  summary: "Write-only batch scorer — ingest + score unscored opportunities for the brand-set",
+  description:
+    "Pass-through to journalists-quotes-service POST /orgs/opportunities/discover. " +
+    "Brand identity flows via the x-brand-id header (CSV when plural). " +
+    "Empty request body. Ingests Featured + scores the next batch of unscored opportunities for the brand-set tuple. " +
+    "Body + response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: OpportunityDiscoverRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Discovery result ({ scored, exhausted, brandIds })", content: { "application/json": { schema: OpportunityDiscoverResponseSchema } } },
     400: { description: "Bad request (forwarded verbatim from downstream)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
   },
