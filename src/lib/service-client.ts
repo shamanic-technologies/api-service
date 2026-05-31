@@ -5,10 +5,10 @@
 import { Agent, type Dispatcher } from "undici";
 
 // Shared undici dispatcher for journalists-quotes-service.
-// /orgs/opportunities/ranked runs heavy RAG ranking on large brand-sets and can
-// legitimately take 5–10 minutes. Node's default undici headersTimeout (300s)
-// surfaces as UND_ERR_HEADERS_TIMEOUT before the downstream finishes; this bumps
-// headers + body timeout to 10 minutes for that one service only.
+// /orgs/opportunities/discover (batch scorer) and /next run heavy RAG scoring on
+// large brand-sets and can legitimately take 5–10 minutes. Node's default undici
+// headersTimeout (300s) surfaces as UND_ERR_HEADERS_TIMEOUT before the downstream
+// finishes; this bumps headers + body timeout to 10 minutes for that one service only.
 const JOURNALISTS_QUOTES_DISPATCHER: Dispatcher = new Agent({
   headersTimeout: 600_000,
   bodyTimeout: 600_000,

@@ -2,8 +2,9 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Agent } from "undici";
 
 /**
- * Regression test: journalists-quotes-service /orgs/opportunities/ranked runs
- * heavy RAG ranking that legitimately takes 5–10 minutes on large brand-sets.
+ * Regression test: journalists-quotes-service /orgs/opportunities/discover (batch
+ * scorer) and /next run heavy RAG scoring that legitimately takes 5–10 minutes on
+ * large brand-sets.
  *
  * `externalServices.journalistsQuotes` MUST carry a `dispatcher` (undici Agent
  * with bumped headers + body timeouts) and `callExternalServiceWithStatus`
@@ -53,7 +54,7 @@ describe("journalists-quotes dispatcher", () => {
 
     await callExternalServiceWithStatus(
       externalServices.journalistsQuotes,
-      "/orgs/opportunities/ranked",
+      "/orgs/opportunities/discover",
       { method: "POST", body: { brandIds: ["b1"] } }
     );
 
