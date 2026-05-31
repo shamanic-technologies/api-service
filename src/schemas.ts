@@ -7090,8 +7090,6 @@ const QuotePitchResponseSchema = z
 
 // Passthrough schemas for HITL PR Expert Quote Opportunities routes.
 // Downstream (journalists-quotes-service) owns body + response shapes — api-service forwards bytes.
-const OpportunitiesRankedRequestSchema = z.object({}).passthrough().openapi("OpportunitiesRankedRequest");
-const OpportunitiesRankedResponseSchema = z.object({}).passthrough().openapi("OpportunitiesRankedResponse");
 const OpportunityNextRequestSchema = z.object({}).passthrough().openapi("OpportunityNextRequest");
 const OpportunityNextResponseSchema = z.object({}).passthrough().openapi("OpportunityNextResponse");
 const OpportunityReplyRequestSchema = z.object({}).passthrough().openapi("OpportunityReplyRequest");
@@ -7222,27 +7220,6 @@ registry.registerPath({
   },
   responses: {
     200: { description: "Scored opportunities", content: { "application/json": { schema: OpportunitiesListResponseSchema } } },
-    401: { description: "Unauthorized", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/orgs/opportunities/ranked",
-  tags: ["Expert Quotes"],
-  summary: "RAG-ranked opportunities for the (campaign, brand-set)",
-  description:
-    "Pass-through to journalists-quotes-service POST /orgs/opportunities/ranked. " +
-    "Brand identity flows via the x-brand-id header (CSV when plural). " +
-    "Returns Gold-cluster opportunity IDs with score + latest pitchStatus annotation. " +
-    "Body + response shapes are owned by the downstream service.",
-  security: authed,
-  request: {
-    body: { content: { "application/json": { schema: OpportunitiesRankedRequestSchema } } },
-  },
-  responses: {
-    200: { description: "Ranked opportunities", content: { "application/json": { schema: OpportunitiesRankedResponseSchema } } },
-    400: { description: "Bad request (forwarded verbatim from downstream)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
   },
 });

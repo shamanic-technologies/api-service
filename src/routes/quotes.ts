@@ -114,24 +114,6 @@ router.get("/orgs/opportunities", authenticate, requireOrg, requireUser, async (
   }
 });
 
-// POST /v1/orgs/opportunities/ranked — RAG-ranked opportunities for (campaign, brand-set)
-router.post("/orgs/opportunities/ranked", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.journalistsQuotes,
-      "/orgs/opportunities/ranked",
-      {
-        method: "POST",
-        body: req.body,
-        headers: buildInternalHeaders(req),
-      }
-    );
-    res.json(result);
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to fetch ranked opportunities" });
-  }
-});
-
 // POST /v1/orgs/opportunities/next — single highest-scored Gold-cluster opportunity for the brand-set
 router.post("/orgs/opportunities/next", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
