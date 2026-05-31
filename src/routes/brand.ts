@@ -313,6 +313,52 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
 });
 
 /**
+ * GET /v1/brands/:id/sales-economics
+ * Proxy to brand-service GET /orgs/brands/:id/sales-economics.
+ * Returns the brand's sales conversion-economics metrics (5 numbers) or
+ * { salesEconomics: null } when unset. Response shape is owned by the
+ * downstream service — passthrough only.
+ */
+router.get("/brands/:id/sales-economics", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/sales-economics`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Get sales economics error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get sales economics" });
+  }
+});
+
+/**
+ * PUT /v1/brands/:id/sales-economics
+ * Proxy to brand-service PUT /orgs/brands/:id/sales-economics.
+ * Saves the brand's 5 sales conversion-economics metrics. Body + response
+ * shapes are owned by the downstream service; its 4xx validation errors
+ * propagate verbatim — passthrough only.
+ */
+router.put("/brands/:id/sales-economics", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/sales-economics`,
+      {
+        method: "PUT",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+      },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Save sales economics error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to save sales economics" });
+  }
+});
+
+/**
  * POST /v1/brands/:id/transfer
  * Transfer a brand to a different org. Resolves the Clerk org ID to an internal UUID,
  * then proxies to brand-service which orchestrates the full transfer.
