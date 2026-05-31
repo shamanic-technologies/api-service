@@ -3364,6 +3364,61 @@ registry.registerPath({
   },
 });
 
+// Brand – Sales Economics (proxy to brand-service /orgs/brands/:id/sales-economics)
+// Downstream owns body + response shapes — passthrough only. No gateway re-validation,
+// so brand-service's 4xx validation errors propagate verbatim.
+// PUT body carries 5 required metrics: lifetimeRevenueUsd, replyToMeetingPct,
+// visitToMeetingPct, meetingToClosePct, visitToClosePct (all integers).
+// GET response is { salesEconomics: null | { ...5 metrics, updatedAt } }.
+const SalesEconomicsResponseSchema = z.object({}).passthrough().openapi("SalesEconomicsResponse");
+const SalesEconomicsRequestSchema = z.object({}).passthrough().openapi("SalesEconomicsRequest");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/sales-economics",
+  tags: ["Brand"],
+  summary: "Get a brand's sales conversion-economics metrics",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{id}/sales-economics. " +
+    "Returns the brand's 5 sales conversion-economics metrics " +
+    "(lifetimeRevenueUsd, replyToMeetingPct, visitToMeetingPct, meetingToClosePct, " +
+    "visitToClosePct) plus updatedAt, or { salesEconomics: null } when unset. " +
+    "Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "Sales economics (or null when unset)", content: { "application/json": { schema: SalesEconomicsResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/sales-economics",
+  tags: ["Brand"],
+  summary: "Save a brand's sales conversion-economics metrics",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{id}/sales-economics. " +
+    "Saves the brand's 5 sales conversion-economics metrics (lifetimeRevenueUsd, " +
+    "replyToMeetingPct, visitToMeetingPct, meetingToClosePct, visitToClosePct — all required). " +
+    "Body + response shapes are owned by the downstream service; its 4xx validation " +
+    "errors propagate verbatim.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: { content: { "application/json": { schema: SalesEconomicsRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Sales economics saved", content: { "application/json": { schema: SalesEconomicsResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/v1/brands/{id}/transfer",
