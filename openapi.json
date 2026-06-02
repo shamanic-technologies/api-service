@@ -6491,43 +6491,7 @@
       },
       "PromptResponse": {
         "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Prompt ID"
-          },
-          "type": {
-            "type": "string",
-            "description": "Prompt type identifier (e.g. 'cold-email', 'cold-email-v2')"
-          },
-          "prompt": {
-            "type": "string",
-            "description": "Prompt template text with {{variable}} placeholders"
-          },
-          "variables": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "List of expected variable names used in the prompt"
-          },
-          "createdAt": {
-            "type": "string",
-            "description": "ISO 8601 creation timestamp"
-          },
-          "updatedAt": {
-            "type": "string",
-            "description": "ISO 8601 last-updated timestamp"
-          }
-        },
-        "required": [
-          "id",
-          "type",
-          "prompt",
-          "variables",
-          "createdAt",
-          "updatedAt"
-        ]
+        "properties": {}
       },
       "VersionPromptRequest": {
         "type": "object",
@@ -6545,10 +6509,23 @@
           "variables": {
             "type": "array",
             "items": {
-              "type": "string"
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Variable name as referenced in the prompt body via {{name}}."
+                },
+                "description": {
+                  "type": "string",
+                  "description": "Free-form description of what the caller should put for this variable. Caller decides the JSON shape — string, array, object, whatever fits the template."
+                }
+              },
+              "required": [
+                "name",
+                "description"
+              ]
             },
-            "minItems": 1,
-            "description": "List of expected variable names used in the prompt"
+            "description": "Inputs the template expects. Each entry is { name, description }; the caller decides the JSON shape per name."
           }
         },
         "required": [

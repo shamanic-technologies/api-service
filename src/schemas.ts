@@ -4412,16 +4412,10 @@ registry.registerPath({
 // PROMPTS (proxy to content-generation service)
 // ===================================================================
 
-export const PromptResponseSchema = z
-  .object({
-    id: z.string().describe("Prompt ID"),
-    type: z.string().describe("Prompt type identifier (e.g. 'cold-email', 'cold-email-v2')"),
-    prompt: z.string().describe("Prompt template text with {{variable}} placeholders"),
-    variables: z.array(z.string()).describe("List of expected variable names used in the prompt"),
-    createdAt: z.string().describe("ISO 8601 creation timestamp"),
-    updatedAt: z.string().describe("ISO 8601 last-updated timestamp"),
-  })
-  .openapi("PromptResponse");
+// Passthrough per CLAUDE.md rule #8 — content-generation owns the prompt response shape
+// (including variables: Array<{name, description}>); api-service forwards bytes via res.json().
+// Mirrors PlatformPromptResponseSchema (DIS-62).
+export const PromptResponseSchema = z.object({}).passthrough().openapi("PromptResponse");
 
 registry.registerPath({
   method: "get",
@@ -4453,7 +4447,22 @@ export const VersionPromptRequestSchema = z
   .object({
     sourceType: z.string().min(1).describe("The type of the prompt to create a new version from (e.g. 'cold-email')"),
     prompt: z.string().min(1).describe("New prompt template text with {{variable}} placeholders. Must NOT contain company-specific data."),
-    variables: z.array(z.string()).min(1).describe("List of expected variable names used in the prompt"),
+    // Mirrors content-generation PUT /prompts contract (DIS-52): variables are objects, not strings.
+    // Caller decides the JSON shape per variable name at render time.
+    variables: z
+      .array(
+        z.object({
+          name: z.string().describe("Variable name as referenced in the prompt body via {{name}}."),
+          description: z
+            .string()
+            .describe(
+              "Free-form description of what the caller should put for this variable. Caller decides the JSON shape — string, array, object, whatever fits the template."
+            ),
+        })
+      )
+      .describe(
+        "Inputs the template expects. Each entry is { name, description }; the caller decides the JSON shape per name."
+      ),
   })
   .openapi("VersionPromptRequest");
 
