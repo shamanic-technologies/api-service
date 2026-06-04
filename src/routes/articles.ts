@@ -246,4 +246,40 @@ router.post("/discover/journalist-publications", authenticate, requireOrg, requi
   }
 });
 
+// ── Mentions ──────────────────────────────────────────────────────────────────
+
+// GET /v1/mentions — list recorded journalist mentions, joined with article data
+router.get("/mentions", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["brandId", "campaignId", "outletId", "journalistId", "limit", "offset"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+
+    const result = await callExternalService(
+      externalServices.articles,
+      `/v1/mentions${qs}`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to list mentions" });
+  }
+});
+
+// POST /v1/mentions — record a journalist mention (earned-media placement) after outreach
+router.post("/mentions", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.articles,
+      "/v1/mentions",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to create mention" });
+  }
+});
+
 export default router;

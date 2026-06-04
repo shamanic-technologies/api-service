@@ -2281,6 +2281,68 @@ registry.registerPath({
   },
 });
 
+// ── Mentions ────────────────────────────────────────────────────────────────
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/mentions",
+  tags: ["Articles"],
+  summary: "List recorded journalist mentions, joined with article data",
+  description: "Lists mentions for the org (from x-org-id), optionally filtered by brandId, campaignId, outletId, journalistId. Each row includes the joined article (title, author, published date, word count). Proxied to articles-service GET /v1/mentions.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().optional().openapi({ description: "Filter by brand ID" }),
+      campaignId: z.string().uuid().optional().openapi({ description: "Filter by campaign ID" }),
+      outletId: z.string().uuid().optional().openapi({ description: "Filter by outlet ID" }),
+      journalistId: z.string().uuid().optional().openapi({ description: "Filter by journalist ID" }),
+      limit: z.coerce.number().int().optional(),
+      offset: z.coerce.number().int().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Mentions with joined article data",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("ListMentionsResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/mentions",
+  tags: ["Articles"],
+  summary: "Record a journalist mention (earned-media placement) after outreach",
+  description: "Logs that a journalist published an article mentioning a brand, with the placement's characteristics (mention/quote/link/dofollow, organic vs sponsored, paid vs free + spend). org/brand/campaign come from identity headers (x-org-id, x-brand-id, x-campaign-id required). Provide either articleId (already indexed) or articleUrl (scraped + extracted + upserted). Proxied to articles-service POST /v1/mentions.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("CreateMentionRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Mention recorded",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("MentionResponse"),
+        },
+      },
+    },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
 // ── Article stats ───────────────────────────────────────────────────────────
 
 registry.registerPath({
