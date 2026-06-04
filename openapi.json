@@ -2219,6 +2219,25 @@
           }
         }
       },
+      "PriceRequestOutletsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "PriceRequestOutletsRequest": {
+        "type": "object",
+        "properties": {
+          "outletIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Outlet IDs to request pricing for (downstream enforces 1–50 per request)"
+          }
+        },
+        "required": [
+          "outletIds"
+        ]
+      },
       "BufferNextOutletResponse": {
         "type": "object",
         "properties": {
@@ -12748,6 +12767,118 @@
             }
           }
         }
+      }
+    },
+    "/v1/outlets/price-requests": {
+      "post": {
+        "tags": [
+          "Outlets"
+        ],
+        "summary": "Request pay-per-publish rate cards for outlets",
+        "description": "For each owned outlet ID, outlets-service resolves the editorial email, emails the pay-per-publish rate-card request via email-gateway, and records it as awaiting a reply. Per-outlet failures are returned inline without aborting the batch. Proxied to outlets-service POST /orgs/outlets/price-requests.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PriceRequestOutletsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Per-outlet results. status='ongoing' when the request email was sent; status='error' with an error message otherwise.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PriceRequestOutletsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
       }
     },
     "/v1/outlets/buffer/next": {

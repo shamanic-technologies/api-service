@@ -101,6 +101,20 @@ router.post("/outlets/discover", authenticate, requireOrg, requireUser, async (r
   }
 });
 
+// ── POST /v1/outlets/price-requests — request pay-per-publish rate cards ─────
+router.post("/outlets/price-requests", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.outlet,
+      "/orgs/outlets/price-requests",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to request outlet prices" });
+  }
+});
+
 // ── POST /v1/outlets/buffer/next — get next buffered outlet ──────────────────
 router.post("/outlets/buffer/next", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {

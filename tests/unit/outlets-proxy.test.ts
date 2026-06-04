@@ -98,6 +98,20 @@ describe("Outlets proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
+  it("should have POST /outlets/price-requests with auth", () => {
+    const line = content.split("\n").find((l: string) =>
+      l.includes("router.post") && l.includes('"/outlets/price-requests"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should forward POST /outlets/price-requests to outlets-service /orgs/outlets/price-requests", () => {
+    expect(content).toContain('"/orgs/outlets/price-requests"');
+  });
+
   it("should have GET /outlets/:id with auth", () => {
     expect(content).toContain('"/outlets/:id"');
     const line = content.split("\n").find((l) =>
@@ -126,7 +140,7 @@ describe("Outlets proxy routes", () => {
   it("should use buildInternalHeaders for all endpoints", () => {
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(11);
+    expect(headerMatches!.length).toBe(12);
   });
 
   it("should proxy to externalServices.outlet", () => {
@@ -222,6 +236,18 @@ describe("Outlets OpenAPI schemas", () => {
   it("should register POST /v1/outlets/buffer/next", () => {
     expect(schemaContent).toContain('path: "/v1/outlets/buffer/next"');
     expect(schemaContent).toContain("BufferNextOutletResponse");
+  });
+
+  it("should register POST /v1/outlets/price-requests with passthrough response and uncapped outletIds", () => {
+    expect(schemaContent).toContain('path: "/v1/outlets/price-requests"');
+    expect(schemaContent).toContain("PriceRequestOutletsRequest");
+    expect(schemaContent).toContain("PriceRequestOutletsResponse");
+    // outletIds must NOT be capped here — downstream owns 1..50 validation
+    const start = schemaContent.indexOf("PriceRequestOutletsRequest");
+    const reqBlock = schemaContent.slice(Math.max(0, start - 400), start);
+    expect(reqBlock).toContain("outletIds:");
+    expect(reqBlock).not.toMatch(/outletIds[^)]*\.min\(/);
+    expect(reqBlock).not.toMatch(/outletIds[^)]*\.max\(/);
   });
 
   it("should include runId filter on GET /v1/outlets query params", () => {
@@ -377,6 +403,19 @@ describe("Outlets OpenAPI — required workflow headers", () => {
 
   it("schemas.ts should define outletsRequiredHeaders with all 4 headers", () => {
     expect(schemaContent).toContain("outletsRequiredHeaders");
+  });
+
+  it("POST /v1/outlets/price-requests should be registered in openapi.json (org-scoped — workflow headers optional, not required)", () => {
+    const op = openapi.paths["/v1/outlets/price-requests"]?.post;
+    expect(op).toBeDefined();
+    const params: Array<{ name: string; in: string; required?: boolean }> = op.parameters || [];
+    const headerParams = params.filter((p) => p.in === "header");
+    // Org-scoped by outletIds — unlike campaign-scoped siblings, the 4 workflow
+    // headers must NOT be marked required (they remain optional global params).
+    for (const header of requiredHeaders) {
+      const param = headerParams.find((p) => p.name === header);
+      expect(param?.required === true, `${header} should not be required on price-requests`).toBe(false);
+    }
   });
 });
 
