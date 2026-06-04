@@ -7568,6 +7568,61 @@ registry.registerPath({
 });
 
 // ===================================================================
+// AHREFS (domain authority + traffic — read proxy to ahref-service)
+// ===================================================================
+// api-service is a transparent proxy here per CLAUDE.md #2. ahref-service
+// owns the domain-keyed Ahrefs cache. Response shapes collapse to passthrough
+// so downstream renames flow through with zero api-service edits (CLAUDE.md #8).
+// Read-only: the POST scrape endpoints (dr-compute / traffic-compute /
+// ai-visibility) are NOT proxied — they trigger paid Ahrefs scrapes.
+// ===================================================================
+
+const DomainsTrafficHistoryResponseSchema = z.object({}).passthrough().openapi("DomainsTrafficHistoryResponse");
+const DomainsDrStatusResponseSchema = z.object({}).passthrough().openapi("DomainsDrStatusResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/domains/traffic-history",
+  tags: ["Ahrefs"],
+  summary: "Get Ahrefs traffic (latest snapshot + monthly organic series) for domains",
+  description:
+    "Pure pass-through to ahref-service GET /orgs/domains/traffic-history. " +
+    "Returns cached Ahrefs organic-traffic data (latest snapshot + monthly series) " +
+    "for the supplied comma-separated domains. Response shape is owned by ahref-service.",
+  security: authed,
+  request: {
+    query: z.object({
+      domains: z.string().openapi({ description: "Comma-separated list of domains" }),
+    }),
+  },
+  responses: {
+    200: { description: "Traffic history per domain", content: { "application/json": { schema: DomainsTrafficHistoryResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/domains/dr-status",
+  tags: ["Ahrefs"],
+  summary: "Get Ahrefs Domain Rating status for domains",
+  description:
+    "Pure pass-through to ahref-service GET /orgs/domains/dr-status. " +
+    "Returns cached Ahrefs Domain Rating status for the supplied comma-separated " +
+    "domains. Response shape is owned by ahref-service.",
+  security: authed,
+  request: {
+    query: z.object({
+      domains: z.string().openapi({ description: "Comma-separated list of domains" }),
+    }),
+  },
+  responses: {
+    200: { description: "DR status per domain", content: { "application/json": { schema: DomainsDrStatusResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+// ===================================================================
 // INVITES + WAITLIST (Wave 0.5 — DIS-64)
 // ===================================================================
 // api-service is a transparent proxy here per CLAUDE.md #2. The downstream
