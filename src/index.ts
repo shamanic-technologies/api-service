@@ -48,6 +48,7 @@ import featuresRoutes from "./routes/features.js";
 import googleRoutes from "./routes/google.js";
 import quotesRoutes from "./routes/quotes.js";
 import visibilityRoutes from "./routes/visibility.js";
+import ahrefRoutes from "./routes/ahref.js";
 import invitesRoutes from "./routes/invites.js";
 import waitlistRoutes from "./routes/waitlist.js";
 import publicStatsRoutes from "./routes/public-stats.js";
@@ -212,6 +213,7 @@ app.use("/v1", featuresRoutes);
 app.use("/v1", googleRoutes);
 app.use("/v1", quotesRoutes);
 app.use("/v1", visibilityRoutes);
+app.use("/v1", ahrefRoutes);
 app.use("/v1", invitesRoutes);
 app.use("/v1", waitlistRoutes);
 
