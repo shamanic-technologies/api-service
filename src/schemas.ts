@@ -1266,6 +1266,40 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
+  path: "/v1/outlets/price-requests",
+  tags: ["Outlets"],
+  summary: "Request pay-per-publish rate cards for outlets",
+  description: "For each owned outlet ID, outlets-service resolves the editorial email, emails the pay-per-publish rate-card request via email-gateway, and records it as awaiting a reply. Per-outlet failures are returned inline without aborting the batch. Proxied to outlets-service POST /orgs/outlets/price-requests.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              outletIds: z.array(z.string()).describe("Outlet IDs to request pricing for (downstream enforces 1–50 per request)"),
+            })
+            .openapi("PriceRequestOutletsRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Per-outlet results. status='ongoing' when the request email was sent; status='error' with an error message otherwise.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("PriceRequestOutletsResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
   path: "/v1/outlets/buffer/next",
   tags: ["Outlets"],
   summary: "Get next buffered outlet",
