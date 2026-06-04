@@ -6678,6 +6678,29 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/{featureSlug}/revenue",
+  tags: ["Features"],
+  summary: "Feature revenue overview",
+  description:
+    "Expected-pipeline-revenue overview for a specific feature: headline pipeline $, organizations, and leads. Scoped by brandId (+ optional campaignId). Proxied from features-service.",
+  security: authed,
+  request: {
+    params: z.object({ featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — scopes the revenue view to one brand"),
+      campaignId: z.string().optional().openapi({ example: "campaign-uuid-456" }).describe("Filter by campaign UUID"),
+    }),
+  },
+  responses: {
+    200: { description: "Feature revenue overview", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureRevenueResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ---------------------------------------------------------------------------
 // PUBLIC STATS (no auth — landing page endpoints)
 // ---------------------------------------------------------------------------
