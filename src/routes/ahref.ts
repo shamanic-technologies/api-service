@@ -45,6 +45,26 @@ router.get("/orgs/domains/dr-status", authenticate, requireOrg, requireUser, asy
   }
 });
 
+// GET /v1/orgs/domains/ai-visibility — read-only cached Brand-Radar AI-visibility snapshot for domains (no scrape, no cost)
+router.get("/orgs/domains/ai-visibility", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["domains"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+
+    const result = await callExternalService(
+      externalServices.ahref,
+      `/orgs/domains/ai-visibility${qs}`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to fetch AI-visibility cache" });
+  }
+});
+
 // POST /v1/orgs/domains/traffic-compute — on-demand Ahrefs traffic scrape (ahref-service declares cost + authorizes)
 router.post("/orgs/domains/traffic-compute", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {

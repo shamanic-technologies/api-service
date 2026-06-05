@@ -7673,6 +7673,7 @@ const DomainsDrComputeRequestSchema = z.object({}).passthrough().openapi("Domain
 const DomainsDrComputeResponseSchema = z.object({}).passthrough().openapi("DomainsDrComputeResponse");
 const DomainsAiVisibilityRequestSchema = z.object({}).passthrough().openapi("DomainsAiVisibilityRequest");
 const DomainsAiVisibilityResponseSchema = z.object({}).passthrough().openapi("DomainsAiVisibilityResponse");
+const DomainsAiVisibilityReadResponseSchema = z.object({}).passthrough().openapi("DomainsAiVisibilityReadResponse");
 
 registry.registerPath({
   method: "get",
@@ -7755,6 +7756,29 @@ registry.registerPath({
     200: { description: "DR status per domain after the scrape", content: { "application/json": { schema: DomainsDrComputeResponseSchema } } },
     401: { description: "Unauthorized", content: errorContent },
     502: { description: "Upstream error (forwarded verbatim from ahref-service)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/domains/ai-visibility",
+  tags: ["Ahrefs"],
+  summary: "Get the cached Ahrefs Brand-Radar AI-visibility snapshot for domains",
+  description:
+    "Pure pass-through to ahref-service GET /orgs/domains/ai-visibility. " +
+    "Read-only — returns the cached Brand-Radar AI-visibility snapshot for the " +
+    "supplied comma-separated domains without triggering a scrape or incurring " +
+    "cost (absent-shaped element when uncached, never 404). Response shape is " +
+    "owned by ahref-service. Use the POST sibling to refresh on demand.",
+  security: authed,
+  request: {
+    query: z.object({
+      domains: z.string().openapi({ description: "Comma-separated list of domains" }),
+    }),
+  },
+  responses: {
+    200: { description: "Cached AI-visibility snapshot per domain", content: { "application/json": { schema: DomainsAiVisibilityReadResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
   },
 });
 
