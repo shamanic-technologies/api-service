@@ -47,27 +47,60 @@ describe("Ahref proxy routes", () => {
     expect(section).toContain('"domains"');
   });
 
-  it("should call externalServices.ahref for every endpoint (2x)", () => {
-    const matches = content.match(/externalServices\.ahref/g);
-    expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(2);
+  it("should have POST /orgs/domains/traffic-compute with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.post") && l.includes('"/orgs/domains/traffic-compute"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
   });
 
-  it("should use buildInternalHeaders for every endpoint (2x)", () => {
+  it("should have POST /orgs/domains/dr-compute with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.post") && l.includes('"/orgs/domains/dr-compute"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should have POST /orgs/domains/ai-visibility with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.post") && l.includes('"/orgs/domains/ai-visibility"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should forward req.body on every POST compute endpoint (3x)", () => {
+    const matches = content.match(/body: req\.body/g);
+    expect(matches).not.toBeNull();
+    expect(matches!.length).toBe(3);
+  });
+
+  it("should call externalServices.ahref for every endpoint (5x)", () => {
+    const matches = content.match(/externalServices\.ahref/g);
+    expect(matches).not.toBeNull();
+    expect(matches!.length).toBe(5);
+  });
+
+  it("should use buildInternalHeaders for every endpoint (5x)", () => {
     const matches = content.match(/buildInternalHeaders\(req\)/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(2);
+    expect(matches!.length).toBe(5);
   });
 
   it("should preserve downstream paths (no path renaming)", () => {
     expect(content).toContain('"/orgs/domains/traffic-history"');
     expect(content).toContain('"/orgs/domains/dr-status"');
-  });
-
-  it("should NOT proxy any POST scrape endpoints (read-only)", () => {
-    expect(content).not.toContain("router.post");
-    expect(content).not.toContain("dr-compute");
-    expect(content).not.toContain("traffic-compute");
+    expect(content).toContain('"/orgs/domains/traffic-compute"');
+    expect(content).toContain('"/orgs/domains/dr-compute"');
+    expect(content).toContain('"/orgs/domains/ai-visibility"');
   });
 });
 
@@ -120,9 +153,30 @@ describe("Ahref OpenAPI schemas", () => {
     expect(schemaContent).toContain("DomainsDrStatusResponse");
   });
 
-  it("should declare both response schemas as passthrough (no field re-declaration)", () => {
+  it("should declare both GET response schemas as passthrough (no field re-declaration)", () => {
     expect(schemaContent).toMatch(/DomainsTrafficHistoryResponseSchema = z\.object\(\{\}\)\.passthrough\(\)/);
     expect(schemaContent).toMatch(/DomainsDrStatusResponseSchema = z\.object\(\{\}\)\.passthrough\(\)/);
+  });
+
+  it("should register the 3 POST compute paths", () => {
+    expect(schemaContent).toContain('path: "/v1/orgs/domains/traffic-compute"');
+    expect(schemaContent).toContain('path: "/v1/orgs/domains/dr-compute"');
+    expect(schemaContent).toContain('path: "/v1/orgs/domains/ai-visibility"');
+  });
+
+  it("should declare all POST request + response schemas as passthrough (no field re-declaration)", () => {
+    for (const name of [
+      "DomainsTrafficComputeRequest",
+      "DomainsTrafficComputeResponse",
+      "DomainsDrComputeRequest",
+      "DomainsDrComputeResponse",
+      "DomainsAiVisibilityRequest",
+      "DomainsAiVisibilityResponse",
+    ]) {
+      expect(schemaContent).toMatch(
+        new RegExp(`${name}Schema = z\\.object\\(\\{\\}\\)\\.passthrough\\(\\)`)
+      );
+    }
   });
 
   it("should use the Ahrefs tag", () => {
@@ -144,12 +198,23 @@ describe("Ahref endpoints in openapi.json", () => {
     expect(openapi.paths["/v1/orgs/domains/dr-status"].get).toBeDefined();
   });
 
-  it("should list domains as a query parameter on both endpoints", () => {
+  it("should list domains as a query parameter on both GET endpoints", () => {
     for (const p of ["/v1/orgs/domains/traffic-history", "/v1/orgs/domains/dr-status"]) {
       const get = openapi.paths[p].get;
       const params = (get.parameters ?? []) as Array<{ name: string; in: string }>;
       const found = params.find((x) => x.name === "domains" && x.in === "query");
       expect(found).toBeDefined();
+    }
+  });
+
+  it("should include the 3 POST compute endpoints in committed openapi.json", () => {
+    for (const p of [
+      "/v1/orgs/domains/traffic-compute",
+      "/v1/orgs/domains/dr-compute",
+      "/v1/orgs/domains/ai-visibility",
+    ]) {
+      expect(openapi.paths[p]).toBeDefined();
+      expect(openapi.paths[p].post).toBeDefined();
     }
   });
 });
