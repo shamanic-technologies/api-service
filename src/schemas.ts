@@ -7658,12 +7658,21 @@ registry.registerPath({
 // api-service is a transparent proxy here per CLAUDE.md #2. ahref-service
 // owns the domain-keyed Ahrefs cache. Response shapes collapse to passthrough
 // so downstream renames flow through with zero api-service edits (CLAUDE.md #8).
-// Read-only: the POST scrape endpoints (dr-compute / traffic-compute /
-// ai-visibility) are NOT proxied — they trigger paid Ahrefs scrapes.
+// Both the read (GET traffic-history / dr-status) and the on-demand compute
+// (POST traffic-compute / dr-compute / ai-visibility) endpoints are proxied.
+// The POST endpoints trigger paid Ahrefs scrapes; ahref-service declares the
+// cost + authorizes spend server-side, so the gateway stays pure passthrough
+// (no idempotency / cost / cache logic here).
 // ===================================================================
 
 const DomainsTrafficHistoryResponseSchema = z.object({}).passthrough().openapi("DomainsTrafficHistoryResponse");
 const DomainsDrStatusResponseSchema = z.object({}).passthrough().openapi("DomainsDrStatusResponse");
+const DomainsTrafficComputeRequestSchema = z.object({}).passthrough().openapi("DomainsTrafficComputeRequest");
+const DomainsTrafficComputeResponseSchema = z.object({}).passthrough().openapi("DomainsTrafficComputeResponse");
+const DomainsDrComputeRequestSchema = z.object({}).passthrough().openapi("DomainsDrComputeRequest");
+const DomainsDrComputeResponseSchema = z.object({}).passthrough().openapi("DomainsDrComputeResponse");
+const DomainsAiVisibilityRequestSchema = z.object({}).passthrough().openapi("DomainsAiVisibilityRequest");
+const DomainsAiVisibilityResponseSchema = z.object({}).passthrough().openapi("DomainsAiVisibilityResponse");
 
 registry.registerPath({
   method: "get",
@@ -7704,6 +7713,70 @@ registry.registerPath({
   responses: {
     200: { description: "DR status per domain", content: { "application/json": { schema: DomainsDrStatusResponseSchema } } },
     401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/domains/traffic-compute",
+  tags: ["Ahrefs"],
+  summary: "Trigger an on-demand Ahrefs traffic scrape for domains",
+  description:
+    "Pure pass-through to ahref-service POST /orgs/domains/traffic-compute. " +
+    "Triggers an on-demand Ahrefs organic-traffic scrape for the supplied domains. " +
+    "ahref-service declares the cost + authorizes spend server-side. " +
+    "Body + response shapes are owned by ahref-service.",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: DomainsTrafficComputeRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Traffic data per domain after the scrape", content: { "application/json": { schema: DomainsTrafficComputeResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream error (forwarded verbatim from ahref-service)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/domains/dr-compute",
+  tags: ["Ahrefs"],
+  summary: "Trigger an on-demand Ahrefs Domain Rating scrape for domains",
+  description:
+    "Pure pass-through to ahref-service POST /orgs/domains/dr-compute. " +
+    "Triggers an on-demand Ahrefs Domain Rating scrape for the supplied domains. " +
+    "ahref-service declares the cost + authorizes spend server-side. " +
+    "Body + response shapes are owned by ahref-service.",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: DomainsDrComputeRequestSchema } } },
+  },
+  responses: {
+    200: { description: "DR status per domain after the scrape", content: { "application/json": { schema: DomainsDrComputeResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream error (forwarded verbatim from ahref-service)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/domains/ai-visibility",
+  tags: ["Ahrefs"],
+  summary: "Get-or-refresh Ahrefs Brand-Radar AI-visibility stats for a domain",
+  description:
+    "Pure pass-through to ahref-service POST /orgs/domains/ai-visibility. " +
+    "Returns Ahrefs Brand-Radar AI-visibility stats for the supplied domain, " +
+    "refreshing from Ahrefs on demand when the cache is stale. ahref-service " +
+    "declares the cost + authorizes spend server-side on scrape. " +
+    "Body + response shapes are owned by ahref-service.",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: DomainsAiVisibilityRequestSchema } } },
+  },
+  responses: {
+    200: { description: "AI-visibility stats for the domain", content: { "application/json": { schema: DomainsAiVisibilityResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream error (forwarded verbatim from ahref-service)", content: errorContent },
   },
 });
 
