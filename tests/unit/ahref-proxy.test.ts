@@ -47,6 +47,26 @@ describe("Ahref proxy routes", () => {
     expect(section).toContain('"domains"');
   });
 
+  it("should have GET /orgs/domains/ai-visibility with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/orgs/domains/ai-visibility"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should forward the domains query param on ai-visibility GET", () => {
+    const lines = content.split("\n");
+    const idx = lines.findIndex((l) =>
+      l.includes("router.get") && l.includes('"/orgs/domains/ai-visibility"')
+    );
+    expect(idx).toBeGreaterThan(-1);
+    const section = lines.slice(idx, idx + 20).join("\n");
+    expect(section).toContain('"domains"');
+  });
+
   it("should have POST /orgs/domains/traffic-compute with auth + requireOrg + requireUser", () => {
     const line = content.split("\n").find((l) =>
       l.includes("router.post") && l.includes('"/orgs/domains/traffic-compute"')
@@ -83,16 +103,16 @@ describe("Ahref proxy routes", () => {
     expect(matches!.length).toBe(3);
   });
 
-  it("should call externalServices.ahref for every endpoint (5x)", () => {
+  it("should call externalServices.ahref for every endpoint (6x)", () => {
     const matches = content.match(/externalServices\.ahref/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(5);
+    expect(matches!.length).toBe(6);
   });
 
-  it("should use buildInternalHeaders for every endpoint (5x)", () => {
+  it("should use buildInternalHeaders for every endpoint (6x)", () => {
     const matches = content.match(/buildInternalHeaders\(req\)/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(5);
+    expect(matches!.length).toBe(6);
   });
 
   it("should preserve downstream paths (no path renaming)", () => {
@@ -158,6 +178,15 @@ describe("Ahref OpenAPI schemas", () => {
     expect(schemaContent).toMatch(/DomainsDrStatusResponseSchema = z\.object\(\{\}\)\.passthrough\(\)/);
   });
 
+  it("should register GET /v1/orgs/domains/ai-visibility (read cache) as passthrough", () => {
+    expect(schemaContent).toContain('path: "/v1/orgs/domains/ai-visibility"');
+    expect(schemaContent).toContain("DomainsAiVisibilityReadResponse");
+  });
+
+  it("should declare the GET ai-visibility read response schema as passthrough (no field re-declaration)", () => {
+    expect(schemaContent).toMatch(/DomainsAiVisibilityReadResponseSchema = z\.object\(\{\}\)\.passthrough\(\)/);
+  });
+
   it("should register the 3 POST compute paths", () => {
     expect(schemaContent).toContain('path: "/v1/orgs/domains/traffic-compute"');
     expect(schemaContent).toContain('path: "/v1/orgs/domains/dr-compute"');
@@ -198,13 +227,27 @@ describe("Ahref endpoints in openapi.json", () => {
     expect(openapi.paths["/v1/orgs/domains/dr-status"].get).toBeDefined();
   });
 
-  it("should list domains as a query parameter on both GET endpoints", () => {
-    for (const p of ["/v1/orgs/domains/traffic-history", "/v1/orgs/domains/dr-status"]) {
+  it("should list domains as a query parameter on all GET endpoints", () => {
+    for (const p of [
+      "/v1/orgs/domains/traffic-history",
+      "/v1/orgs/domains/dr-status",
+      "/v1/orgs/domains/ai-visibility",
+    ]) {
       const get = openapi.paths[p].get;
       const params = (get.parameters ?? []) as Array<{ name: string; in: string }>;
       const found = params.find((x) => x.name === "domains" && x.in === "query");
       expect(found).toBeDefined();
     }
+  });
+
+  it("should include /v1/orgs/domains/ai-visibility GET (read cache) in committed openapi.json", () => {
+    expect(openapi.paths["/v1/orgs/domains/ai-visibility"]).toBeDefined();
+    expect(openapi.paths["/v1/orgs/domains/ai-visibility"].get).toBeDefined();
+  });
+
+  it("should keep both GET and POST on /v1/orgs/domains/ai-visibility (method-keyed coexist)", () => {
+    expect(openapi.paths["/v1/orgs/domains/ai-visibility"].get).toBeDefined();
+    expect(openapi.paths["/v1/orgs/domains/ai-visibility"].post).toBeDefined();
   });
 
   it("should include the 3 POST compute endpoints in committed openapi.json", () => {
