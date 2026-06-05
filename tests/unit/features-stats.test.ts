@@ -148,3 +148,51 @@ describe("GET /v1/public/features/best", () => {
     expect(url).not.toContain("by=");
   });
 });
+
+const MOCK_REVENUE = {
+  pipelineRevenueUsdCents: 1234500,
+  organizations: [{ orgId: "o-1", name: "Acme", revenueUsdCents: 1000000 }],
+  leads: [{ leadId: "l-1", stage: "qualified", expectedRevenueUsdCents: 234500 }],
+};
+
+describe("GET /v1/features/:slug/revenue", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("proxies to features-service /features/:slug/revenue and returns the body verbatim", async () => {
+    const app = createApp();
+    mockCallExternalService.mockImplementation((service: any, path: string) => {
+      if (service.url === "http://mock-features" && path.startsWith("/features/sales-cold-email-outreach/revenue")) {
+        return Promise.resolve(MOCK_REVENUE);
+      }
+      return Promise.resolve({});
+    });
+
+    const res = await request(app).get("/v1/features/sales-cold-email-outreach/revenue?brandId=brand-uuid-123&campaignId=campaign-uuid-456");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(MOCK_REVENUE);
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/revenue"),
+    );
+    expect(call).toBeDefined();
+    const url = call![1] as string;
+    expect(url).toContain("brandId=brand-uuid-123");
+    expect(url).toContain("campaignId=campaign-uuid-456");
+  });
+
+  it("forwards only brandId when campaignId is absent", async () => {
+    const app = createApp();
+    mockCallExternalService.mockResolvedValue(MOCK_REVENUE);
+
+    await request(app).get("/v1/features/sales-cold-email-outreach/revenue?brandId=brand-uuid-123");
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/revenue"),
+    );
+    expect(call).toBeDefined();
+    const url = call![1] as string;
+    expect(url).toContain("brandId=brand-uuid-123");
+    expect(url).not.toContain("campaignId=");
+  });
+});

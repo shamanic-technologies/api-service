@@ -167,6 +167,44 @@ describe("Articles proxy routes", () => {
     expect(content).toContain('"/discover/journalist-publications"');
   });
 
+  // ── Mentions ──────────────────────────────────────────────────────────
+
+  it("should have GET /mentions with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/mentions"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should forward filter params on GET /mentions", () => {
+    const section = content.slice(
+      content.indexOf('router.get("/mentions"'),
+      content.indexOf('router.post("/mentions"')
+    );
+    for (const param of ["brandId", "campaignId", "outletId", "journalistId", "limit", "offset"]) {
+      expect(section).toContain(`"${param}"`);
+    }
+  });
+
+  it("should have POST /mentions with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.post") && l.includes('"/mentions"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should proxy /mentions path-preserving to /v1/mentions on articles-service", () => {
+    // POST forwards to bare /v1/mentions; GET forwards with query string
+    expect(content).toContain('"/v1/mentions"');
+    expect(content).toContain('`/v1/mentions${qs}`');
+  });
+
   // ── General checks ────────────────────────────────────────────────────
 
   it("should proxy to articles-service at /v1/ paths (articles-service uses /v1 prefix)", () => {
@@ -181,7 +219,7 @@ describe("Articles proxy routes", () => {
   it("should use buildInternalHeaders for all endpoints", () => {
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(15);
+    expect(headerMatches!.length).toBe(17);
   });
 
   it("should enforce requireOrg + requireUser on ALL article routes", () => {
@@ -296,8 +334,44 @@ describe("Articles OpenAPI schemas", () => {
     expect(schemaContent).toContain("ArticleStatsResponse");
   });
 
+  it("should register GET + POST /v1/mentions", () => {
+    expect(schemaContent).toContain('path: "/v1/mentions"');
+    expect(schemaContent).toContain("CreateMentionRequest");
+    expect(schemaContent).toContain("ListMentionsResponse");
+    expect(schemaContent).toContain("MentionResponse");
+  });
+
+  it("should keep /v1/mentions request + response schemas passthrough (no field re-declaration)", () => {
+    const start = schemaContent.indexOf("CreateMentionRequest");
+    const block = schemaContent.slice(start - 200, start);
+    expect(block).toContain("z.object({}).passthrough()");
+  });
+
+  it("should not cap limit/offset on GET /v1/mentions", () => {
+    const block = schemaContent.slice(
+      schemaContent.indexOf('path: "/v1/mentions"'),
+      schemaContent.indexOf("CreateMentionRequest")
+    );
+    expect(block).toContain("limit: z.coerce.number().int().optional()");
+    expect(block).not.toContain(".max(");
+    expect(block).not.toContain(".default(");
+  });
+
   it("should use Articles tag", () => {
     expect(schemaContent).toContain('tags: ["Articles"]');
+  });
+});
+
+describe("Mentions paths in generated openapi.json", () => {
+  const openapiPath = path.join(__dirname, "../../openapi.json");
+  const openapi = JSON.parse(fs.readFileSync(openapiPath, "utf-8"));
+
+  it("should expose GET /v1/mentions", () => {
+    expect(openapi.paths["/v1/mentions"]?.get).toBeDefined();
+  });
+
+  it("should expose POST /v1/mentions", () => {
+    expect(openapi.paths["/v1/mentions"]?.post).toBeDefined();
   });
 });
 

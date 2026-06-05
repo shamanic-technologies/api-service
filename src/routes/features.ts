@@ -234,4 +234,27 @@ router.get("/features/:slug/stats", authenticate, requireOrg, requireUser, async
   }
 });
 
+/**
+ * GET /v1/features/:slug/revenue
+ * Expected-pipeline-revenue overview for a specific feature, scoped by brandId (+ optional campaignId).
+ */
+router.get("/features/:slug/revenue", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["brandId", "campaignId"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.features,
+      `/features/${encodeURIComponent(req.params.slug)}/revenue${qs}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Feature revenue error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get feature revenue" });
+  }
+});
+
 export default router;
