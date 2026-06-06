@@ -120,11 +120,12 @@ describe("Features proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should forward brandId and campaignId on GET /features/:slug/revenue", () => {
+  it("should forward brandId, campaignId and groupBy on GET /features/:slug/revenue", () => {
     const revenueIdx = content.indexOf('"/features/:slug/revenue"');
     const revenueBlock = content.slice(revenueIdx, revenueIdx + 400);
     expect(revenueBlock).toContain('"brandId"');
     expect(revenueBlock).toContain('"campaignId"');
+    expect(revenueBlock).toContain('"groupBy"');
     expect(revenueBlock).toContain("/revenue");
   });
 

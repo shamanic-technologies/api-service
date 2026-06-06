@@ -31203,6 +31203,17 @@
             "in": "query"
           },
           {
+            "schema": {
+              "type": "string",
+              "description": "Group the revenue view by a dimension (e.g. campaignId) — returns one grouped entry per value instead of the scalar overview",
+              "example": "campaignId"
+            },
+            "required": false,
+            "description": "Group the revenue view by a dimension (e.g. campaignId) — returns one grouped entry per value instead of the scalar overview",
+            "name": "groupBy",
+            "in": "query"
+          },
+          {
             "name": "x-org-id",
             "in": "header",
             "required": false,

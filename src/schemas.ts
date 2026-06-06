@@ -6789,6 +6789,7 @@ registry.registerPath({
     query: z.object({
       brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — scopes the revenue view to one brand"),
       campaignId: z.string().optional().openapi({ example: "campaign-uuid-456" }).describe("Filter by campaign UUID"),
+      groupBy: z.string().optional().openapi({ example: "campaignId" }).describe("Group the revenue view by a dimension (e.g. campaignId) — returns one grouped entry per value instead of the scalar overview"),
     }),
   },
   responses: {
