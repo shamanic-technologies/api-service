@@ -232,4 +232,39 @@ router.put("/emails/templates", authenticate, requireOrg, async (req: Authentica
   }
 });
 
+/**
+ * GET /v1/workflow-examples — example emails per workflow for the workflow picker.
+ * Transparent proxy to content-generation-service GET /generations/examples (a brand→org→global
+ * cascade of past generations). Returns content-gen's body verbatim:
+ * { examples: Array<ExampleEmail> } where each carries the email fields + scope
+ * ("brand"|"org"|"global") + brandName. No enrichment / no field re-declaration (CLAUDE.md #8).
+ */
+router.get("/workflow-examples", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { workflowSlug, brandId, limit } = req.query as {
+      workflowSlug?: string;
+      brandId?: string;
+      limit?: string;
+    };
+    if (!workflowSlug) {
+      return res.status(400).json({ error: "Missing required query parameter: workflowSlug" });
+    }
+
+    const params = new URLSearchParams();
+    params.set("workflowSlug", workflowSlug);
+    if (brandId) params.set("brandId", brandId);
+    if (limit) params.set("limit", limit);
+
+    const result = await callExternalService(
+      externalServices.emailgen,
+      `/generations/examples?${params}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Get workflow examples error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get workflow examples" });
+  }
+});
+
 export default router;
