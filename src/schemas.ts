@@ -5329,6 +5329,42 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/v1/workflow-examples",
+  tags: ["Emails"],
+  summary: "List example emails for a workflow",
+  description:
+    "Example emails per workflow for the workflow picker — a brand→org→global cascade of past generations. " +
+    "Transparent proxy to content-generation-service GET /generations/examples; body forwarded verbatim. " +
+    "Each example carries the email fields plus scope ('brand'|'org'|'global') and brandName.",
+  security: authed,
+  request: {
+    query: z.object({
+      workflowSlug: z.string().openapi({ description: "Workflow slug (required)" }),
+      brandId: z.string().uuid().optional().openapi({ description: "Optional brand ID for the brand-scoped cascade tier" }),
+      limit: z.coerce.number().int().optional().openapi({ description: "Max examples to return" }),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Example emails (passthrough — owned by content-generation-service)",
+      content: {
+        "application/json": {
+          // Passthrough per CLAUDE.md #8 — downstream owns the ExampleEmail shape; do NOT re-declare fields.
+          schema: z
+            .object({ examples: z.array(z.object({}).passthrough()) })
+            .passthrough()
+            .openapi("WorkflowExamplesResponse"),
+        },
+      },
+    },
+    400: { description: "Missing workflowSlug", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/emails/send",
   tags: ["Emails"],
