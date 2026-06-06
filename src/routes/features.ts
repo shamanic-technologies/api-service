@@ -257,4 +257,28 @@ router.get("/features/:slug/revenue", authenticate, requireOrg, requireUser, asy
   }
 });
 
+/**
+ * GET /v1/features/:slug/workflow-projection
+ * Ranks a brand's workflows by cost-per-close and projects a budget through the sales funnel,
+ * scoped by brandId. Proxied to features-service GET /features/:slug/workflow-projection.
+ */
+router.get("/features/:slug/workflow-projection", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["brandId", "objective", "budgetUsd"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.features,
+      `/features/${encodeURIComponent(req.params.slug)}/workflow-projection${qs}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Feature workflow-projection error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get feature workflow projection" });
+  }
+});
+
 export default router;
