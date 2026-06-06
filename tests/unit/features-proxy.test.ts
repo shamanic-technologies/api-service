@@ -128,6 +128,25 @@ describe("Features proxy routes", () => {
     expect(revenueBlock).toContain("/revenue");
   });
 
+  it("should have GET /features/:slug/workflow-projection with auth + requireOrg + requireUser", () => {
+    expect(content).toContain('"/features/:slug/workflow-projection"');
+    const line = content.split("\n").find((l) =>
+      l.includes('"/features/:slug/workflow-projection"')
+    );
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should forward brandId, objective and budgetUsd on GET /features/:slug/workflow-projection", () => {
+    const projectionIdx = content.indexOf('"/features/:slug/workflow-projection"');
+    const projectionBlock = content.slice(projectionIdx, projectionIdx + 400);
+    expect(projectionBlock).toContain('"brandId"');
+    expect(projectionBlock).toContain('"objective"');
+    expect(projectionBlock).toContain('"budgetUsd"');
+    expect(projectionBlock).toContain("/workflow-projection");
+  });
+
   it("should enforce requireOrg + requireUser on ALL authenticated feature routes", () => {
     const routeLines = content.split("\n").filter((l) =>
       /router\.(get|post|put)\(/.test(l) && l.includes('"/') && !l.includes("/public/")
@@ -226,6 +245,10 @@ describe("Features OpenAPI schemas", () => {
 
   it("should register GET /v1/features/{featureSlug}/revenue", () => {
     expect(schemaContent).toContain('path: "/v1/features/{featureSlug}/revenue"');
+  });
+
+  it("should register GET /v1/features/{featureSlug}/workflow-projection", () => {
+    expect(schemaContent).toContain('path: "/v1/features/{featureSlug}/workflow-projection"');
   });
 
   it("should document groupBy query param on stats endpoints", () => {
