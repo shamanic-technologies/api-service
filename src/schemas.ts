@@ -6763,6 +6763,30 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/{featureSlug}/workflow-projection",
+  tags: ["Features"],
+  summary: "Feature workflow projection",
+  description:
+    "Ranks a brand's workflows by cost-per-close and projects a budget through the sales funnel for a specific feature. Scoped by brandId (+ objective, budgetUsd). Proxied from features-service.",
+  security: authed,
+  request: {
+    params: z.object({ featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — scopes the projection to one brand"),
+      objective: z.string().optional().openapi({ example: "meeting-booked" }).describe("Sales-funnel objective to project toward"),
+      budgetUsd: z.string().optional().openapi({ example: "1000" }).describe("Budget in USD to project through the funnel"),
+    }),
+  },
+  responses: {
+    200: { description: "Feature workflow projection", content: { "application/json": { schema: z.object({}).passthrough().openapi("WorkflowProjectionResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ---------------------------------------------------------------------------
 // PUBLIC STATS (no auth — landing page endpoints)
 // ---------------------------------------------------------------------------
