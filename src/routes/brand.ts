@@ -313,6 +313,28 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
 });
 
 /**
+ * GET /v1/sales-economics-average
+ * Proxy to brand-service GET /orgs/sales-economics-average.
+ * Returns the cross-brand average sales conversion-economics for the org
+ * ({ averages: { ...5 metrics } | null }). Used by the dashboard "new campaign"
+ * page to prefill inputs when a brand has saved nothing. Response shape is owned
+ * by the downstream service — passthrough only.
+ */
+router.get("/sales-economics-average", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.brand,
+      "/orgs/sales-economics-average",
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Get sales economics average error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get sales economics average" });
+  }
+});
+
+/**
  * GET /v1/brands/:id/sales-economics
  * Proxy to brand-service GET /orgs/brands/:id/sales-economics.
  * Returns the brand's sales conversion-economics metrics (5 numbers) or
