@@ -21289,6 +21289,16 @@
           {
             "schema": {
               "type": "string",
+              "description": "Filter by event slug(s) — comma-separated, e.g. send-start,generate-start"
+            },
+            "required": false,
+            "description": "Filter by event slug(s) — comma-separated, e.g. send-start,generate-start",
+            "name": "event",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "description": "Page size — forwarded as-is to runs-service"
             },
             "required": false,
