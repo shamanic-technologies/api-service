@@ -5052,6 +5052,10 @@
           "runs"
         ]
       },
+      "SalesEconomicsAverageResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "SalesEconomicsResponse": {
         "type": "object",
         "properties": {}
@@ -19978,6 +19982,109 @@
         }
       }
     },
+    "/v1/sales-economics-average": {
+      "get": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "Get the org's cross-brand average sales conversion-economics",
+        "description": "Proxy to brand-service GET /orgs/sales-economics-average. Returns the average of the org's saved sales conversion-economics across all brands (lifetimeRevenueUsd, replyToMeetingPct, visitToMeetingPct, meetingToClosePct, visitToClosePct), or { averages: null } when no brand has saved any. Used to prefill the new-campaign sales-economics inputs. Response shape is owned by the downstream service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cross-brand average sales economics (or null)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesEconomicsAverageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
+      }
+    },
     "/v1/brands/{id}/sales-economics": {
       "get": {
         "tags": [
@@ -31200,6 +31307,17 @@
             "required": false,
             "description": "Filter by campaign UUID",
             "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Group the revenue view by a dimension (e.g. campaignId) — returns one grouped entry per value instead of the scalar overview",
+              "example": "campaignId"
+            },
+            "required": false,
+            "description": "Group the revenue view by a dimension (e.g. campaignId) — returns one grouped entry per value instead of the scalar overview",
+            "name": "groupBy",
             "in": "query"
           },
           {

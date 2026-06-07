@@ -195,4 +195,33 @@ describe("GET /v1/features/:slug/revenue", () => {
     expect(url).toContain("brandId=brand-uuid-123");
     expect(url).not.toContain("campaignId=");
   });
+
+  it("forwards groupBy downstream when present", async () => {
+    const app = createApp();
+    mockCallExternalService.mockResolvedValue(MOCK_REVENUE);
+
+    await request(app).get("/v1/features/sales-cold-email-outreach/revenue?brandId=brand-uuid-123&groupBy=campaignId");
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/revenue"),
+    );
+    expect(call).toBeDefined();
+    const url = call![1] as string;
+    expect(url).toContain("brandId=brand-uuid-123");
+    expect(url).toContain("groupBy=campaignId");
+  });
+
+  it("does not forward groupBy when absent", async () => {
+    const app = createApp();
+    mockCallExternalService.mockResolvedValue(MOCK_REVENUE);
+
+    await request(app).get("/v1/features/sales-cold-email-outreach/revenue?brandId=brand-uuid-123");
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/revenue"),
+    );
+    expect(call).toBeDefined();
+    const url = call![1] as string;
+    expect(url).not.toContain("groupBy=");
+  });
 });

@@ -3460,6 +3460,31 @@ registry.registerPath({
   },
 });
 
+// Brand – Sales Economics Average (proxy to brand-service /orgs/sales-economics-average)
+// Cross-brand average of the org's saved sales economics. Downstream owns the
+// response shape — passthrough only. Response is { averages: { ...5 metrics } | null }.
+const SalesEconomicsAverageResponseSchema = z.object({}).passthrough().openapi("SalesEconomicsAverageResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/sales-economics-average",
+  tags: ["Brand"],
+  summary: "Get the org's cross-brand average sales conversion-economics",
+  description:
+    "Proxy to brand-service GET /orgs/sales-economics-average. " +
+    "Returns the average of the org's saved sales conversion-economics across all " +
+    "brands (lifetimeRevenueUsd, replyToMeetingPct, visitToMeetingPct, " +
+    "meetingToClosePct, visitToClosePct), or { averages: null } when no brand has " +
+    "saved any. Used to prefill the new-campaign sales-economics inputs. " +
+    "Response shape is owned by the downstream service.",
+  security: authed,
+  responses: {
+    200: { description: "Cross-brand average sales economics (or null)", content: { "application/json": { schema: SalesEconomicsAverageResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // Brand – Sales Economics (proxy to brand-service /orgs/brands/:id/sales-economics)
 // Downstream owns body + response shapes — passthrough only. No gateway re-validation,
 // so brand-service's 4xx validation errors propagate verbatim.
@@ -6789,6 +6814,7 @@ registry.registerPath({
     query: z.object({
       brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — scopes the revenue view to one brand"),
       campaignId: z.string().optional().openapi({ example: "campaign-uuid-456" }).describe("Filter by campaign UUID"),
+      groupBy: z.string().optional().openapi({ example: "campaignId" }).describe("Group the revenue view by a dimension (e.g. campaignId) — returns one grouped entry per value instead of the scalar overview"),
     }),
   },
   responses: {
