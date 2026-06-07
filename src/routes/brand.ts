@@ -313,24 +313,26 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
 });
 
 /**
- * GET /v1/sales-economics-average
- * Proxy to brand-service GET /orgs/sales-economics-average.
- * Returns the cross-brand average sales conversion-economics for the org
- * ({ averages: { ...5 metrics } | null }). Used by the dashboard "new campaign"
- * page to prefill inputs when a brand has saved nothing. Response shape is owned
- * by the downstream service — passthrough only.
+ * GET /v1/brands/:id/sales-economics-effective
+ * Proxy to brand-service GET /orgs/brands/:id/sales-economics-effective.
+ * Returns the brand's "gold" effective sales conversion-economics: its own saved
+ * economics, or the org's cross-brand average when the brand has saved nothing,
+ * plus a `source` provenance field ({ economics: { ...5 metrics } | null,
+ * source: "user" | "cross-brand-average" | null }). Used by the dashboard
+ * "new campaign" page to prefill inputs. Response shape is owned by the
+ * downstream service — passthrough only.
  */
-router.get("/sales-economics-average", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.get("/brands/:id/sales-economics-effective", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.brand,
-      "/orgs/sales-economics-average",
+      `/orgs/brands/${req.params.id}/sales-economics-effective`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
   } catch (error: any) {
-    console.error("[api-service] Get sales economics average error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get sales economics average" });
+    console.error("[api-service] Get sales economics effective error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get effective sales economics" });
   }
 });
 
