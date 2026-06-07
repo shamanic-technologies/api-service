@@ -3460,27 +3460,32 @@ registry.registerPath({
   },
 });
 
-// Brand – Sales Economics Average (proxy to brand-service /orgs/sales-economics-average)
-// Cross-brand average of the org's saved sales economics. Downstream owns the
-// response shape — passthrough only. Response is { averages: { ...5 metrics } | null }.
-const SalesEconomicsAverageResponseSchema = z.object({}).passthrough().openapi("SalesEconomicsAverageResponse");
+// Brand – Sales Economics Effective (proxy to brand-service /orgs/brands/:id/sales-economics-effective)
+// The brand's "gold" effective economics: its own saved economics, or the org's
+// cross-brand average when the brand has saved nothing, plus a `source` provenance
+// field. Downstream owns the response shape — passthrough only. Response is
+// { economics: { ...5 metrics } | null, source: "user" | "cross-brand-average" | null }.
+const SalesEconomicsEffectiveResponseSchema = z.object({}).passthrough().openapi("SalesEconomicsEffectiveResponse");
 
 registry.registerPath({
   method: "get",
-  path: "/v1/sales-economics-average",
+  path: "/v1/brands/{id}/sales-economics-effective",
   tags: ["Brand"],
-  summary: "Get the org's cross-brand average sales conversion-economics",
+  summary: "Get a brand's effective sales conversion-economics",
   description:
-    "Proxy to brand-service GET /orgs/sales-economics-average. " +
-    "Returns the average of the org's saved sales conversion-economics across all " +
-    "brands (lifetimeRevenueUsd, replyToMeetingPct, visitToMeetingPct, " +
-    "meetingToClosePct, visitToClosePct), or { averages: null } when no brand has " +
-    "saved any. Used to prefill the new-campaign sales-economics inputs. " +
+    "Proxy to brand-service GET /orgs/brands/{id}/sales-economics-effective. " +
+    "Returns the brand's effective sales conversion-economics (lifetimeRevenueUsd, " +
+    "replyToMeetingPct, visitToMeetingPct, meetingToClosePct, visitToClosePct): the " +
+    "brand's own saved economics, or the org's cross-brand average when the brand has " +
+    "saved nothing, plus a `source` field (\"user\" | \"cross-brand-average\" | null). " +
+    "Used to prefill the new-campaign sales-economics inputs. " +
     "Response shape is owned by the downstream service.",
   security: authed,
+  request: { params: BrandIdParam },
   responses: {
-    200: { description: "Cross-brand average sales economics (or null)", content: { "application/json": { schema: SalesEconomicsAverageResponseSchema } } },
+    200: { description: "Effective sales economics (or null)", content: { "application/json": { schema: SalesEconomicsEffectiveResponseSchema } } },
     401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
   },
 });

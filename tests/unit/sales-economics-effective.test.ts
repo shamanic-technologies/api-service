@@ -22,6 +22,8 @@ vi.mock("@distribute/runs-client", () => ({
 
 import brandRouter from "../../src/routes/brand.js";
 
+const BRAND_ID = "11111111-1111-4111-8111-111111111111";
+
 function buildApp() {
   const app = express();
   app.use(express.json());
@@ -29,19 +31,31 @@ function buildApp() {
   return app;
 }
 
-const populatedResponse = {
-  averages: {
+const userSourceResponse = {
+  economics: {
+    lifetimeRevenueUsd: 50000,
+    replyToMeetingPct: 30,
+    visitToMeetingPct: 20,
+    meetingToClosePct: 25,
+    visitToClosePct: 5,
+  },
+  source: "user",
+};
+
+const averageSourceResponse = {
+  economics: {
     lifetimeRevenueUsd: 42000,
     replyToMeetingPct: 28,
     visitToMeetingPct: 18,
     meetingToClosePct: 22,
     visitToClosePct: 4,
   },
+  source: "cross-brand-average",
 };
 
-const nullResponse = { averages: null };
+const nullResponse = { economics: null, source: null };
 
-describe("GET /v1/sales-economics-average", () => {
+describe("GET /v1/brands/:id/sales-economics-effective", () => {
   let app: express.Express;
   let capturedUrl: string | undefined;
   let capturedInit: RequestInit | undefined;
@@ -58,19 +72,36 @@ describe("GET /v1/sales-economics-average", () => {
       return {
         ok: true,
         status: 200,
-        json: () => Promise.resolve(populatedResponse),
+        json: () => Promise.resolve(userSourceResponse),
       };
     });
   });
 
-  it("should return the downstream averages payload verbatim on success", async () => {
-    const res = await request(app).get("/v1/sales-economics-average");
+  it("should return the downstream { economics, source: 'user' } payload verbatim", async () => {
+    const res = await request(app).get(`/v1/brands/${BRAND_ID}/sales-economics-effective`);
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual(populatedResponse);
+    expect(res.body).toEqual(userSourceResponse);
   });
 
-  it("should return { averages: null } verbatim when no brand has saved economics", async () => {
+  it("should return { economics, source: 'cross-brand-average' } verbatim", async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      capturedUrl = url;
+      capturedInit = init;
+      return {
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve(averageSourceResponse),
+      };
+    });
+
+    const res = await request(app).get(`/v1/brands/${BRAND_ID}/sales-economics-effective`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(averageSourceResponse);
+  });
+
+  it("should return { economics: null, source: null } verbatim", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       capturedUrl = url;
       capturedInit = init;
@@ -81,21 +112,21 @@ describe("GET /v1/sales-economics-average", () => {
       };
     });
 
-    const res = await request(app).get("/v1/sales-economics-average");
+    const res = await request(app).get(`/v1/brands/${BRAND_ID}/sales-economics-effective`);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(nullResponse);
   });
 
-  it("should forward to brand-service GET /orgs/sales-economics-average", async () => {
-    await request(app).get("/v1/sales-economics-average");
+  it("should forward to brand-service GET /orgs/brands/:id/sales-economics-effective", async () => {
+    await request(app).get(`/v1/brands/${BRAND_ID}/sales-economics-effective`);
 
-    expect(capturedUrl).toContain("/orgs/sales-economics-average");
+    expect(capturedUrl).toContain(`/orgs/brands/${BRAND_ID}/sales-economics-effective`);
     expect(capturedInit?.method ?? "GET").toBe("GET");
   });
 
   it("should forward identity headers (x-org-id, x-user-id, x-run-id)", async () => {
-    await request(app).get("/v1/sales-economics-average");
+    await request(app).get(`/v1/brands/${BRAND_ID}/sales-economics-effective`);
 
     const headers = capturedInit?.headers as Record<string, string>;
     expect(headers["x-org-id"]).toBe("org_test456");
@@ -110,7 +141,7 @@ describe("GET /v1/sales-economics-average", () => {
       text: () => Promise.resolve('{"error":"downstream boom"}'),
     }));
 
-    const res = await request(app).get("/v1/sales-economics-average");
+    const res = await request(app).get(`/v1/brands/${BRAND_ID}/sales-economics-effective`);
 
     expect(res.status).toBe(500);
     expect(res.body.error).toContain("downstream boom");

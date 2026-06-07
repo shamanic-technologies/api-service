@@ -5052,7 +5052,7 @@
           "runs"
         ]
       },
-      "SalesEconomicsAverageResponse": {
+      "SalesEconomicsEffectiveResponse": {
         "type": "object",
         "properties": {}
       },
@@ -19982,51 +19982,29 @@
         }
       }
     },
-    "/v1/sales-economics-average": {
+    "/v1/brands/{id}/sales-economics-effective": {
       "get": {
         "tags": [
           "Brand"
         ],
-        "summary": "Get the org's cross-brand average sales conversion-economics",
-        "description": "Proxy to brand-service GET /orgs/sales-economics-average. Returns the average of the org's saved sales conversion-economics across all brands (lifetimeRevenueUsd, replyToMeetingPct, visitToMeetingPct, meetingToClosePct, visitToClosePct), or { averages: null } when no brand has saved any. Used to prefill the new-campaign sales-economics inputs. Response shape is owned by the downstream service.",
+        "summary": "Get a brand's effective sales conversion-economics",
+        "description": "Proxy to brand-service GET /orgs/brands/{id}/sales-economics-effective. Returns the brand's effective sales conversion-economics (lifetimeRevenueUsd, replyToMeetingPct, visitToMeetingPct, meetingToClosePct, visitToClosePct): the brand's own saved economics, or the org's cross-brand average when the brand has saved nothing, plus a `source` field (\"user\" | \"cross-brand-average\" | null). Used to prefill the new-campaign sales-economics inputs. Response shape is owned by the downstream service.",
         "security": [
           {
             "bearerAuth": []
           }
         ],
-        "responses": {
-          "200": {
-            "description": "Cross-brand average sales economics (or null)",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SalesEconomicsAverageResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Upstream error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
         "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID"
+            },
+            "required": true,
+            "description": "Brand ID",
+            "name": "id",
+            "in": "path"
+          },
           {
             "name": "x-org-id",
             "in": "header",
@@ -20082,7 +20060,49 @@
             },
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
           }
-        ]
+        ],
+        "responses": {
+          "200": {
+            "description": "Effective sales economics (or null)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesEconomicsEffectiveResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Brand not found (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/brands/{id}/sales-economics": {
