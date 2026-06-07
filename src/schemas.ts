@@ -3838,6 +3838,7 @@ registry.registerPath({
       service: z.string().optional().describe("Filter by emitting service name"),
       workflowSlug: z.string().optional().describe("Filter by workflow slug"),
       featureSlug: z.string().optional().describe("Filter by feature slug"),
+      event: z.string().optional().describe("Filter by event slug(s) — comma-separated, e.g. send-start,generate-start"),
       limit: z.string().optional().describe("Page size — forwarded as-is to runs-service"),
       offset: z.string().optional().describe("Page offset — forwarded as-is to runs-service"),
     }).openapi("ListEventsQuery"),
