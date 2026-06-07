@@ -77,7 +77,7 @@ router.get("/runs/stats/costs", authenticate, requireOrg, requireUser, async (re
  * Cross-run event listing from runs-service for the authenticated org.
  * orgId is injected from the auth context — never trusted from client query.
  * Whitelisted query params are forwarded: campaignId, brandId, level, limit,
- * offset, service, workflowSlug, featureSlug.
+ * offset, service, workflowSlug, featureSlug, event.
  */
 const EVENTS_QUERY_WHITELIST = [
   "campaignId",
@@ -88,6 +88,7 @@ const EVENTS_QUERY_WHITELIST = [
   "service",
   "workflowSlug",
   "featureSlug",
+  "event",
 ] as const;
 
 router.get("/events", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {

@@ -97,7 +97,7 @@ describe("GET /v1/events", () => {
     expect(call!.url).toContain("orgId=org_test456");
   });
 
-  it("forwards whitelisted query params: campaignId, brandId, level, limit, offset, service, workflowSlug, featureSlug", async () => {
+  it("forwards whitelisted query params: campaignId, brandId, level, limit, offset, service, workflowSlug, featureSlug, event", async () => {
     const app = createApp();
 
     await request(app)
@@ -111,6 +111,7 @@ describe("GET /v1/events", () => {
         service: "workflow-service",
         workflowSlug: "pr-outreach",
         featureSlug: "lead-serve",
+        event: "send-start",
       })
       .set("Authorization", "Bearer distrib.usr_xxx");
 
@@ -125,7 +126,35 @@ describe("GET /v1/events", () => {
     expect(url).toContain("service=workflow-service");
     expect(url).toContain("workflowSlug=pr-outreach");
     expect(url).toContain("featureSlug=lead-serve");
+    expect(url).toContain("event=send-start");
     expect(url).toContain("orgId=org_test456");
+  });
+
+  it("forwards comma-separated event slugs intact", async () => {
+    const app = createApp();
+
+    await request(app)
+      .get("/v1/events")
+      .query({ campaignId: "c-1", event: "send-start,generate-start" })
+      .set("Authorization", "Bearer distrib.usr_xxx");
+
+    const call = fetchCalls.find((c) => c.url.includes("/v1/events"));
+    expect(call).toBeDefined();
+    expect(decodeURIComponent(call!.url)).toContain("event=send-start,generate-start");
+    expect(call!.url).toContain("campaignId=c-1");
+    expect(call!.url).toContain("orgId=org_test456");
+  });
+
+  it("omits event from the forwarded URL when not supplied", async () => {
+    const app = createApp();
+
+    await request(app)
+      .get("/v1/events?campaignId=c-1")
+      .set("Authorization", "Bearer distrib.usr_xxx");
+
+    const call = fetchCalls.find((c) => c.url.includes("/v1/events"));
+    expect(call).toBeDefined();
+    expect(call!.url).not.toContain("event=");
   });
 
   it("ignores client-supplied orgId — auth orgId wins", async () => {
@@ -191,5 +220,7 @@ describe("OpenAPI spec", () => {
     const op = spec.paths["/v1/events"].get;
     expect(op.security).toBeDefined();
     expect(op.security.length).toBeGreaterThan(0);
+    const paramNames = (op.parameters ?? []).map((p: { name: string }) => p.name);
+    expect(paramNames).toContain("event");
   });
 });
