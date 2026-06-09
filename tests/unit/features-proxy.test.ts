@@ -120,11 +120,12 @@ describe("Features proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should forward brandId, campaignId and groupBy on GET /features/:slug/revenue", () => {
+  it("should forward brandId, campaignId, workflowSlug and groupBy on GET /features/:slug/revenue", () => {
     const revenueIdx = content.indexOf('"/features/:slug/revenue"');
     const revenueBlock = content.slice(revenueIdx, revenueIdx + 400);
     expect(revenueBlock).toContain('"brandId"');
     expect(revenueBlock).toContain('"campaignId"');
+    expect(revenueBlock).toContain('"workflowSlug"');
     expect(revenueBlock).toContain('"groupBy"');
     expect(revenueBlock).toContain("/revenue");
   });
@@ -287,6 +288,20 @@ describe("Public features proxy routes", () => {
     expect(content).toContain('"/public/features"');
   });
 
+  it("should have GET /public/features/revenue without auth middleware", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/public/features/revenue"')
+    );
+    expect(line).toBeDefined();
+    expect(line).not.toContain("authenticate");
+    expect(line).not.toContain("requireOrg");
+  });
+
+  it("should proxy public feature revenue to /public/stats/revenue on features-service", () => {
+    expect(content).toContain('"/public/features/revenue"');
+    expect(content).toContain("`/public/stats/revenue");
+  });
+
   it("should not require auth on public feature endpoints", () => {
     const publicFeaturesBlock = schemaContent.slice(
       schemaContent.indexOf('path: "/public/features"'),
@@ -299,6 +314,11 @@ describe("Public features proxy routes", () => {
 describe("Public features OpenAPI schemas", () => {
   it("should register GET /public/features", () => {
     expect(schemaContent).toContain('path: "/public/features"');
+  });
+
+  it("should register GET /v1/public/features/revenue", () => {
+    expect(schemaContent).toContain('path: "/v1/public/features/revenue"');
+    expect(schemaContent).toContain("PublicFeatureRevenueResponse");
   });
 });
 

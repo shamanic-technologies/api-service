@@ -17,6 +17,7 @@ function buildParams(query: Record<string, unknown>, keys: string[]): URLSearchP
 
 const PUBLIC_RANKED_PARAMS = ["featureSlug", "objective", "groupBy", "limit"];
 const PUBLIC_BEST_PARAMS = ["featureSlug", "groupBy"];
+const PUBLIC_REVENUE_PARAMS = ["featureSlug", "groupBy"];
 
 // ── Public routes (no auth) ─────────────────────────────────────────────────
 
@@ -35,7 +36,7 @@ router.get("/public/features/ranked", async (req: Request, res: Response) => {
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Public ranked features error:", error.message);
-    res.status(502).json({ error: error.message || "Failed to get public ranked features" });
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public ranked features" });
   }
 });
 
@@ -54,7 +55,27 @@ router.get("/public/features/best", async (req: Request, res: Response) => {
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Public best features error:", error.message);
-    res.status(502).json({ error: error.message || "Failed to get public best features" });
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public best features" });
+  }
+});
+
+/**
+ * GET /v1/public/features/revenue
+ * Public expected-pipeline revenue and ROI grouped by brand or workflow.
+ * Proxied to features-service GET /public/stats/revenue.
+ */
+router.get("/public/features/revenue", async (req: Request, res: Response) => {
+  try {
+    const params = buildParams(req.query as Record<string, unknown>, PUBLIC_REVENUE_PARAMS);
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/revenue?${params}`,
+      {},
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public feature revenue error:", error.message);
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public feature revenue" });
   }
 });
 
@@ -241,7 +262,7 @@ router.get("/features/:slug/stats", authenticate, requireOrg, requireUser, async
 router.get("/features/:slug/revenue", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["brandId", "campaignId", "groupBy"]) {
+    for (const key of ["brandId", "campaignId", "workflowSlug", "groupBy"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";
