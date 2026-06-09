@@ -173,6 +173,10 @@
         "type": "object",
         "properties": {}
       },
+      "PublicWorkflowEngagementLatencyResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "MeResponse": {
         "type": "object",
         "properties": {
@@ -9816,6 +9820,84 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PublicFeatureRevenueResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Feature not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/public/features/workflow-engagement-latency": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Public workflow engagement latency",
+        "description": "Public average/median time to first link click and first positive reply for a feature, grouped by workflow. Proxied to features-service GET /public/stats/workflow-engagement-latency. Response is producer-owned. No authentication required.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug (required).",
+              "example": "sales-cold-email-outreach"
+            },
+            "required": true,
+            "description": "Feature slug (required).",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "workflow"
+              ],
+              "description": "Group public workflow engagement latency results by workflow.",
+              "example": "workflow"
+            },
+            "required": true,
+            "description": "Group public workflow engagement latency results by workflow.",
+            "name": "groupBy",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public workflow engagement latency — pass-through from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicWorkflowEngagementLatencyResponse"
                 }
               }
             }

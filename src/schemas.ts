@@ -180,6 +180,11 @@ const publicRevenueQueryParams = z.object({
   groupBy: z.enum(["brand", "workflow"]).openapi({ example: "workflow" }).describe("Group public revenue results by brand or workflow."),
 });
 
+const publicWorkflowEngagementLatencyQueryParams = z.object({
+  featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
+  groupBy: z.enum(["workflow"]).openapi({ example: "workflow" }).describe("Group public workflow engagement latency results by workflow."),
+});
+
 const WorkflowMetadataSchema = z
   .object({
     id: z.string().describe("Workflow ID"),
@@ -262,6 +267,23 @@ registry.registerPath({
   request: { query: publicRevenueQueryParams },
   responses: {
     200: { description: "Public feature revenue — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicFeatureRevenueResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/features/workflow-engagement-latency",
+  tags: ["Features"],
+  summary: "Public workflow engagement latency",
+  description:
+    "Public average/median time to first link click and first positive reply for a feature, grouped by workflow. " +
+    "Proxied to features-service GET /public/stats/workflow-engagement-latency. Response is producer-owned. No authentication required.",
+  request: { query: publicWorkflowEngagementLatencyQueryParams },
+  responses: {
+    200: { description: "Public workflow engagement latency — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicWorkflowEngagementLatencyResponse") } } },
     400: { description: "Bad request from features-service", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
