@@ -175,6 +175,11 @@ const bestQueryParams = z.object({
   groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
 });
 
+const publicRevenueQueryParams = z.object({
+  featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
+  groupBy: z.enum(["brand", "workflow"]).openapi({ example: "workflow" }).describe("Group public revenue results by brand or workflow."),
+});
+
 const WorkflowMetadataSchema = z
   .object({
     id: z.string().describe("Workflow ID"),
@@ -200,25 +205,15 @@ const WorkflowMetadataSchema = z
 
 const rankedResponse = {
   200: {
-    description: "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). Always includes totalCostInUsdCents and completedRuns. Use GET /v1/features/stats/registry for the canonical key list.",
+    description: "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). For groupBy=brand, result items may include optional public-safe timeline points: date, cumulativePipelineUsd, emailsSent, emailsOpened, emailsClicked, emailsReplied. Use GET /v1/features/stats/registry for the canonical stats key list.",
     content: {
       "application/json": {
-        schema: z.object({
-          objective: z.string().describe("The stats key used for sorting"),
-          sortDirection: z.enum(["asc", "desc"]).describe("Sort direction applied"),
-          results: z.array(z.object({
-            workflow: WorkflowMetadataSchema.optional(),
-            brand: z.object({
-              id: z.string(),
-              name: z.string().nullable(),
-              domain: z.string().nullable(),
-            }).optional(),
-            stats: z.record(z.number().nullable()).describe("All output stats for the feature (raw counts + derived rates). Keys are dynamic per feature. Always includes totalCostInUsdCents and completedRuns."),
-          })).describe("Results ranked by the objective metric"),
-        }).openapi("RankedResponse"),
+        schema: z.object({}).passthrough().openapi("RankedResponse"),
       },
     },
   },
+  400: { description: "Bad request from features-service", content: errorContent },
+  404: { description: "Feature not found", content: errorContent },
   502: { description: "Upstream service error", content: errorContent },
 };
 
@@ -254,6 +249,23 @@ registry.registerPath({
   description: "Public hero records — best cost-per-outcome. Proxied to features-service. featureSlug and groupBy are required. No authentication required.",
   request: { query: bestQueryParams },
   responses: bestResponse,
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/features/revenue",
+  tags: ["Features"],
+  summary: "Public feature revenue",
+  description:
+    "Public expected-pipeline revenue, cost-of-acquisition percentage, and ROI multiple for a feature, grouped by brand or workflow. " +
+    "Proxied to features-service GET /public/stats/revenue. Response is producer-owned and may include brand or workflow results with headline.totalPipelineUsd and costEconomics. No authentication required.",
+  request: { query: publicRevenueQueryParams },
+  responses: {
+    200: { description: "Public feature revenue — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicFeatureRevenueResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
 });
 
 // Authenticated endpoints — proxied to features-service
@@ -6820,7 +6832,8 @@ registry.registerPath({
     query: z.object({
       brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — scopes the revenue view to one brand"),
       campaignId: z.string().optional().openapi({ example: "campaign-uuid-456" }).describe("Filter by campaign UUID"),
-      groupBy: z.string().optional().openapi({ example: "campaignId" }).describe("Group the revenue view by a dimension (e.g. campaignId) — returns one grouped entry per value instead of the scalar overview"),
+      workflowSlug: z.string().optional().openapi({ example: "sales-email-cold-outreach-mintaka-v3" }).describe("Filter by workflow slug"),
+      groupBy: z.string().optional().openapi({ example: "workflowSlug" }).describe("Group the revenue view by a dimension: campaignId or workflowSlug. Returns one grouped entry per value instead of the scalar overview"),
     }),
   },
   responses: {
