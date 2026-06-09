@@ -161,149 +161,15 @@
           "error"
         ]
       },
-      "WorkflowMetadata": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "description": "Workflow ID"
-          },
-          "workflowSlug": {
-            "type": "string",
-            "description": "Unique technical identifier. Use this to execute via /workflows/by-slug/{workflowSlug}/execute"
-          },
-          "workflowName": {
-            "type": "string",
-            "description": "Workflow name"
-          },
-          "displayName": {
-            "type": "string",
-            "nullable": true,
-            "description": "Stable display name for the workflow family"
-          },
-          "workflowDynastyName": {
-            "type": "string",
-            "description": "Stable name for the lineage. Constant across all versions of a dynasty"
-          },
-          "workflowDynastySlug": {
-            "type": "string",
-            "description": "Stable slug for the lineage. Use as key for dynasty-level lookups and stats grouping"
-          },
-          "version": {
-            "type": "integer",
-            "description": "Version number within the dynasty. Starts at 1"
-          },
-          "createdForBrandId": {
-            "type": "string",
-            "nullable": true,
-            "description": "Brand ID that created this workflow"
-          },
-          "category": {
-            "type": "string",
-            "description": "Workflow category (e.g. 'sales', 'pr')"
-          },
-          "channel": {
-            "type": "string",
-            "description": "Communication channel (e.g. 'email')"
-          },
-          "audienceType": {
-            "type": "string",
-            "description": "Audience type (e.g. 'cold-outreach')"
-          },
-          "featureSlug": {
-            "type": "string",
-            "description": "Feature slug this workflow belongs to (e.g. 'pr-cold-email-outreach')"
-          },
-          "signature": {
-            "type": "string",
-            "description": "SHA-256 hash of the canonical DAG"
-          },
-          "workflowDynastySignatureName": {
-            "type": "string",
-            "description": "Human-readable name for this DAG variant within the dynasty"
-          }
-        },
-        "required": [
-          "id",
-          "workflowSlug",
-          "workflowName",
-          "displayName",
-          "workflowDynastyName",
-          "workflowDynastySlug",
-          "version",
-          "createdForBrandId",
-          "featureSlug",
-          "signature",
-          "workflowDynastySignatureName"
-        ]
-      },
       "RankedResponse": {
         "type": "object",
-        "properties": {
-          "objective": {
-            "type": "string",
-            "description": "The stats key used for sorting"
-          },
-          "sortDirection": {
-            "type": "string",
-            "enum": [
-              "asc",
-              "desc"
-            ],
-            "description": "Sort direction applied"
-          },
-          "results": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "workflow": {
-                  "$ref": "#/components/schemas/WorkflowMetadata"
-                },
-                "brand": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string"
-                    },
-                    "name": {
-                      "type": "string",
-                      "nullable": true
-                    },
-                    "domain": {
-                      "type": "string",
-                      "nullable": true
-                    }
-                  },
-                  "required": [
-                    "id",
-                    "name",
-                    "domain"
-                  ]
-                },
-                "stats": {
-                  "type": "object",
-                  "additionalProperties": {
-                    "type": "number",
-                    "nullable": true
-                  },
-                  "description": "All output stats for the feature (raw counts + derived rates). Keys are dynamic per feature. Always includes totalCostInUsdCents and completedRuns."
-                }
-              },
-              "required": [
-                "stats"
-              ]
-            },
-            "description": "Results ranked by the objective metric"
-          }
-        },
-        "required": [
-          "objective",
-          "sortDirection",
-          "results"
-        ]
+        "properties": {}
       },
       "BestResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "PublicFeatureRevenueResponse": {
         "type": "object",
         "properties": {}
       },
@@ -5613,6 +5479,82 @@
         "type": "object",
         "properties": {}
       },
+      "WorkflowMetadata": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Workflow ID"
+          },
+          "workflowSlug": {
+            "type": "string",
+            "description": "Unique technical identifier. Use this to execute via /workflows/by-slug/{workflowSlug}/execute"
+          },
+          "workflowName": {
+            "type": "string",
+            "description": "Workflow name"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true,
+            "description": "Stable display name for the workflow family"
+          },
+          "workflowDynastyName": {
+            "type": "string",
+            "description": "Stable name for the lineage. Constant across all versions of a dynasty"
+          },
+          "workflowDynastySlug": {
+            "type": "string",
+            "description": "Stable slug for the lineage. Use as key for dynasty-level lookups and stats grouping"
+          },
+          "version": {
+            "type": "integer",
+            "description": "Version number within the dynasty. Starts at 1"
+          },
+          "createdForBrandId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Brand ID that created this workflow"
+          },
+          "category": {
+            "type": "string",
+            "description": "Workflow category (e.g. 'sales', 'pr')"
+          },
+          "channel": {
+            "type": "string",
+            "description": "Communication channel (e.g. 'email')"
+          },
+          "audienceType": {
+            "type": "string",
+            "description": "Audience type (e.g. 'cold-outreach')"
+          },
+          "featureSlug": {
+            "type": "string",
+            "description": "Feature slug this workflow belongs to (e.g. 'pr-cold-email-outreach')"
+          },
+          "signature": {
+            "type": "string",
+            "description": "SHA-256 hash of the canonical DAG"
+          },
+          "workflowDynastySignatureName": {
+            "type": "string",
+            "description": "Human-readable name for this DAG variant within the dynasty"
+          }
+        },
+        "required": [
+          "id",
+          "workflowSlug",
+          "workflowName",
+          "displayName",
+          "workflowDynastyName",
+          "workflowDynastySlug",
+          "version",
+          "createdForBrandId",
+          "featureSlug",
+          "signature",
+          "workflowDynastySignatureName"
+        ]
+      },
       "ListWorkflowsResponse": {
         "type": "object",
         "properties": {
@@ -9721,11 +9663,31 @@
         ],
         "responses": {
           "200": {
-            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). Always includes totalCostInUsdCents and completedRuns. Use GET /v1/features/stats/registry for the canonical key list.",
+            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). For groupBy=brand, result items may include optional public-safe timeline points: date, cumulativePipelineUsd, emailsSent, emailsOpened, emailsClicked, emailsReplied. Use GET /v1/features/stats/registry for the canonical stats key list.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/RankedResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Feature not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -9791,6 +9753,85 @@
           },
           "400": {
             "description": "Bad request — featureSlug is required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/public/features/revenue": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Public feature revenue",
+        "description": "Public expected-pipeline revenue, cost-of-acquisition percentage, and ROI multiple for a feature, grouped by brand or workflow. Proxied to features-service GET /public/stats/revenue. Response is producer-owned and may include brand or workflow results with headline.totalPipelineUsd and costEconomics. No authentication required.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug (required).",
+              "example": "sales-cold-email-outreach"
+            },
+            "required": true,
+            "description": "Feature slug (required).",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "brand",
+                "workflow"
+              ],
+              "description": "Group public revenue results by brand or workflow.",
+              "example": "workflow"
+            },
+            "required": true,
+            "description": "Group public revenue results by brand or workflow.",
+            "name": "groupBy",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public feature revenue — pass-through from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicFeatureRevenueResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Feature not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -9931,7 +9972,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). Always includes totalCostInUsdCents and completedRuns. Use GET /v1/features/stats/registry for the canonical key list.",
+            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). For groupBy=brand, result items may include optional public-safe timeline points: date, cumulativePipelineUsd, emailsSent, emailsOpened, emailsClicked, emailsReplied. Use GET /v1/features/stats/registry for the canonical stats key list.",
             "content": {
               "application/json": {
                 "schema": {
@@ -9940,8 +9981,28 @@
               }
             }
           },
+          "400": {
+            "description": "Bad request from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Feature not found",
             "content": {
               "application/json": {
                 "schema": {
@@ -31342,11 +31403,22 @@
           {
             "schema": {
               "type": "string",
-              "description": "Group the revenue view by a dimension (e.g. campaignId) — returns one grouped entry per value instead of the scalar overview",
-              "example": "campaignId"
+              "description": "Filter by workflow slug",
+              "example": "sales-email-cold-outreach-mintaka-v3"
             },
             "required": false,
-            "description": "Group the revenue view by a dimension (e.g. campaignId) — returns one grouped entry per value instead of the scalar overview",
+            "description": "Filter by workflow slug",
+            "name": "workflowSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Group the revenue view by a dimension: campaignId or workflowSlug. Returns one grouped entry per value instead of the scalar overview",
+              "example": "workflowSlug"
+            },
+            "required": false,
+            "description": "Group the revenue view by a dimension: campaignId or workflowSlug. Returns one grouped entry per value instead of the scalar overview",
             "name": "groupBy",
             "in": "query"
           },
