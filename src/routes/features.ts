@@ -18,6 +18,7 @@ function buildParams(query: Record<string, unknown>, keys: string[]): URLSearchP
 const PUBLIC_RANKED_PARAMS = ["featureSlug", "objective", "groupBy", "limit"];
 const PUBLIC_BEST_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_REVENUE_PARAMS = ["featureSlug", "groupBy"];
+const PUBLIC_WORKFLOW_ENGAGEMENT_LATENCY_PARAMS = ["featureSlug", "groupBy"];
 
 // ── Public routes (no auth) ─────────────────────────────────────────────────
 
@@ -76,6 +77,26 @@ router.get("/public/features/revenue", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("[api-service] Public feature revenue error:", error.message);
     res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public feature revenue" });
+  }
+});
+
+/**
+ * GET /v1/public/features/workflow-engagement-latency
+ * Public average/median engagement latency grouped by workflow.
+ * Proxied to features-service GET /public/stats/workflow-engagement-latency.
+ */
+router.get("/public/features/workflow-engagement-latency", async (req: Request, res: Response) => {
+  try {
+    const params = buildParams(req.query as Record<string, unknown>, PUBLIC_WORKFLOW_ENGAGEMENT_LATENCY_PARAMS);
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/workflow-engagement-latency?${params}`,
+      {},
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public workflow engagement latency error:", error.message);
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public workflow engagement latency" });
   }
 });
 
