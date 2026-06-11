@@ -7007,6 +7007,14 @@
             "format": "email",
             "description": "Direct recipient email (fallback when no userId on the key)"
           },
+          "bcc": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email"
+            },
+            "description": "True blind-copy recipients (BCC). Forwarded top-level to transactional-email-service; never rendered as visible To/Cc and never injected into template metadata."
+          },
           "brandId": {
             "type": "string",
             "description": "Brand ID for tracking"

@@ -5284,6 +5284,7 @@ export const SendEmailRequestSchema = z
   .object({
     eventType: z.string().min(1).describe("Event type determining which template to use (e.g. 'webinar_welcome', 'j_minus_1')"),
     recipientEmail: z.string().email().optional().describe("Direct recipient email (fallback when no userId on the key)"),
+    bcc: z.array(z.string().email()).optional().describe("True blind-copy recipients (BCC). Forwarded top-level to transactional-email-service; never rendered as visible To/Cc and never injected into template metadata."),
     brandId: z.string().optional().describe("Brand ID for tracking"),
     campaignId: z.string().optional().describe("Campaign ID for tracking"),
     productId: z.string().optional().describe("Product/instance ID for product-scoped dedup (e.g. webinar ID)"),
