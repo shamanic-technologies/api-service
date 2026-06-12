@@ -31,6 +31,10 @@ api-service is a **transparent proxy**. It authenticates, applies middleware, an
 
 8. **Response schemas are passthrough by default — no field declaration.** Every proxied response schema in `src/schemas.ts` MUST be `z.object({}).passthrough().openapi("<Name>")`. Do NOT re-declare downstream fields. Downstream owns the shape; api-service forwards bytes. Field rename downstream = zero edit here. Three precedents codify this: billing PR #454 ("collapse billing response schemas to passthrough"), runs PR #455 (response schema correction after re-declaration drift), brand contract change (this rule's birth). The ONLY exception is a response shape api-service itself constructs via aggregation (e.g. `BrandRunsResponse` enriches with `runs-client` cost data) — those are typed accessors, and the route handler MUST cite the construction site in a comment. If a typed response schema exists and no aggregation justifies it, collapse it to passthrough — that is always safe.
 
+### Staff / admin gating — `authenticatePlatform` IS the staff gate
+
+There is **no `requireStaff` / `requireRole` / `isStaff` middleware** in this repo, and `authenticate` does not distinguish a staff user from a normal customer (it only sets `authType: "admin" | "user_key"`). The repo's ONLY privileged-caller mechanism is **`authenticatePlatform`** (`src/middleware/auth.ts`) — it requires `X-API-Key === ADMIN_DISTRIBUTE_API_KEY` and is what every `/admin/*` route uses. So a route that must be **staff-only** is gated with `authenticatePlatform`; a normal user (Bearer user key) or a missing/wrong key gets 401. The dashboard already sends the admin `x-api-key` for staff actions. Do NOT invent a new staff-role flag — use `authenticatePlatform`. Precedent: `src/routes/promo-codes.ts` (staff-gated GET/PATCH `/v1/promo-codes/:code`, PR #538).
+
 ### Brand-service path convention
 
 - `/orgs/brands/*` (no ID in path) = org-scoped operations using `x-org-id` / `x-brand-id` headers (list, extract-fields, extract-images)

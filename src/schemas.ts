@@ -5218,6 +5218,82 @@ registry.registerPath({
   },
 });
 
+// ---------------------------------------------------------------------------
+// Promo codes (staff-only) — re-price grant amounts (e.g. welcome credit gift).
+// Both routes gated platform/admin (X-API-Key); transparent proxy to
+// billing-service /internal/promo-codes/:code. Responses passthrough (CLAUDE.md #8).
+// ---------------------------------------------------------------------------
+const PromoCodeParam = z.object({
+  code: z.string().openapi({ description: "Promo code", example: "welcome" }),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/promo-codes/{code}",
+  tags: ["Promo codes"],
+  summary: "Get a promo code's grant amount (staff only)",
+  description:
+    "Read the credit-grant amount for a promo code (e.g. the new-signup welcome gift). " +
+    "Staff-only (platform API key). Pass-through from billing-service.",
+  security: platformAuth,
+  request: { params: PromoCodeParam },
+  responses: {
+    200: {
+      description: "Promo code — pass-through from billing-service",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("PromoCodeResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Promo code not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/promo-codes/{code}",
+  tags: ["Promo codes"],
+  summary: "Set a promo code's grant amount (staff only)",
+  description:
+    "Update the credit-grant amount for a promo code. Staff-only (platform API key). " +
+    "Body forwarded as-is to billing-service, which owns value validation.",
+  security: platformAuth,
+  request: {
+    params: PromoCodeParam,
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              amountCents: z
+                .number()
+                .openapi({ description: "New grant amount in cents (non-negative integer)", example: 1000 }),
+            })
+            .passthrough()
+            .openapi("PromoCodeUpdateRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Updated promo code — pass-through from billing-service",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("PromoCodeUpdateResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid amount", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Promo code not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/v1/billing/checkout-sessions",
