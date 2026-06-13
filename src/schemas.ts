@@ -185,6 +185,10 @@ const publicWorkflowEngagementLatencyQueryParams = z.object({
   groupBy: z.enum(["workflow"]).openapi({ example: "workflow" }).describe("Group public workflow engagement latency results by workflow."),
 });
 
+const publicCostProjectionQueryParams = z.object({
+  featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
+});
+
 const WorkflowMetadataSchema = z
   .object({
     id: z.string().describe("Workflow ID"),
@@ -284,6 +288,23 @@ registry.registerPath({
   request: { query: publicWorkflowEngagementLatencyQueryParams },
   responses: {
     200: { description: "Public workflow engagement latency — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicWorkflowEngagementLatencyResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/features/cost-projection",
+  tags: ["Features"],
+  summary: "Public feature cost projection",
+  description:
+    "Public feature-wide expected cost per meeting-booked and per purchase. " +
+    "Proxied to features-service GET /public/stats/cost-projection. Response is producer-owned. No authentication required.",
+  request: { query: publicCostProjectionQueryParams },
+  responses: {
+    200: { description: "Public feature cost projection — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicCostProjectionResponse") } } },
     400: { description: "Bad request from features-service", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },

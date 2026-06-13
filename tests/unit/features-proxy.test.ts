@@ -316,6 +316,20 @@ describe("Public features proxy routes", () => {
     expect(content).toContain("`/public/stats/workflow-engagement-latency");
   });
 
+  it("should have GET /public/features/cost-projection without auth middleware", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/public/features/cost-projection"')
+    );
+    expect(line).toBeDefined();
+    expect(line).not.toContain("authenticate");
+    expect(line).not.toContain("requireOrg");
+  });
+
+  it("should proxy public feature cost projection to /public/stats/cost-projection on features-service", () => {
+    expect(content).toContain('"/public/features/cost-projection"');
+    expect(content).toContain("`/public/stats/cost-projection");
+  });
+
   it("should not require auth on public feature endpoints", () => {
     const publicFeaturesBlock = schemaContent.slice(
       schemaContent.indexOf('path: "/public/features"'),
@@ -338,6 +352,11 @@ describe("Public features OpenAPI schemas", () => {
   it("should register GET /v1/public/features/workflow-engagement-latency", () => {
     expect(schemaContent).toContain('path: "/v1/public/features/workflow-engagement-latency"');
     expect(schemaContent).toContain("PublicWorkflowEngagementLatencyResponse");
+  });
+
+  it("should register GET /v1/public/features/cost-projection", () => {
+    expect(schemaContent).toContain('path: "/v1/public/features/cost-projection"');
+    expect(schemaContent).toContain("PublicCostProjectionResponse");
   });
 });
 
