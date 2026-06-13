@@ -19,6 +19,7 @@ const PUBLIC_RANKED_PARAMS = ["featureSlug", "objective", "groupBy", "limit"];
 const PUBLIC_BEST_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_REVENUE_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_WORKFLOW_ENGAGEMENT_LATENCY_PARAMS = ["featureSlug", "groupBy"];
+const PUBLIC_COST_PROJECTION_PARAMS = ["featureSlug"];
 
 // ── Public routes (no auth) ─────────────────────────────────────────────────
 
@@ -97,6 +98,26 @@ router.get("/public/features/workflow-engagement-latency", async (req: Request, 
   } catch (error: any) {
     console.error("[api-service] Public workflow engagement latency error:", error.message);
     res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public workflow engagement latency" });
+  }
+});
+
+/**
+ * GET /v1/public/features/cost-projection
+ * Public feature-wide expected cost per meeting-booked and per purchase.
+ * Proxied to features-service GET /public/stats/cost-projection.
+ */
+router.get("/public/features/cost-projection", async (req: Request, res: Response) => {
+  try {
+    const params = buildParams(req.query as Record<string, unknown>, PUBLIC_COST_PROJECTION_PARAMS);
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/cost-projection?${params}`,
+      {},
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public feature cost projection error:", error.message);
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public feature cost projection" });
   }
 });
 

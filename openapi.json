@@ -177,6 +177,10 @@
         "type": "object",
         "properties": {}
       },
+      "PublicCostProjectionResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "MeResponse": {
         "type": "object",
         "properties": {
@@ -9927,6 +9931,70 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PublicWorkflowEngagementLatencyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Feature not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/public/features/cost-projection": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Public feature cost projection",
+        "description": "Public feature-wide expected cost per meeting-booked and per purchase. Proxied to features-service GET /public/stats/cost-projection. Response is producer-owned. No authentication required.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug (required).",
+              "example": "sales-cold-email-outreach"
+            },
+            "required": true,
+            "description": "Feature slug (required).",
+            "name": "featureSlug",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public feature cost projection — pass-through from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicCostProjectionResponse"
                 }
               }
             }
