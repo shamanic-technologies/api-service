@@ -12,11 +12,12 @@ const router = Router();
  */
 router.get("/leads", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const { brandId, campaignId, limit, offset } = req.query as {
+    const { brandId, campaignId, limit, offset, view } = req.query as {
       brandId?: string;
       campaignId?: string;
       limit?: string;
       offset?: string;
+      view?: string;
     };
     if (!brandId && !campaignId) {
       return res.status(400).json({ error: "Missing required query parameter: brandId or campaignId" });
@@ -27,6 +28,7 @@ router.get("/leads", authenticate, requireOrg, requireUser, async (req: Authenti
     if (campaignId) params.set("campaignId", campaignId);
     if (limit) params.set("limit", limit);
     if (offset) params.set("offset", offset);
+    if (view) params.set("view", view);
 
     const result = await callExternalService(
       externalServices.lead,

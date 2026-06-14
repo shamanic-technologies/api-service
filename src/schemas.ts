@@ -3036,6 +3036,7 @@ registry.registerPath({
       campaignId: z.string().uuid().optional().openapi({ description: "Campaign ID filter" }),
       limit: z.coerce.number().int().optional().openapi({ description: "Max results to return" }),
       offset: z.coerce.number().int().optional().openapi({ description: "Offset for pagination" }),
+      view: z.string().optional().openapi({ description: "Projection view forwarded to lead-service (e.g. `basic` for a slim payload)" }),
     }),
   },
   responses: {
