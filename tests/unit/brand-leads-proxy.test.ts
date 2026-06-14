@@ -31,6 +31,10 @@ describe("Brand-level GET /leads route", () => {
     expect(content).toContain('params.set("campaignId", campaignId)');
   });
 
+  it("should forward view to lead-service when present", () => {
+    expect(content).toContain('params.set("view", view)');
+  });
+
   it("should call lead-service /orgs/leads endpoint (single call, no /status)", () => {
     expect(content).toContain("externalServices.lead");
     expect(content).toContain("`/orgs/leads?${params}`");
@@ -88,6 +92,11 @@ describe("Brand-level GET /leads OpenAPI schema", () => {
       (p: { name: string; in: string }) => p.name === "campaignId" && p.in === "query"
     );
     expect(campaignIdParam).toBeDefined();
+    const viewParam = params.find(
+      (p: { name: string; in: string }) => p.name === "view" && p.in === "query"
+    );
+    expect(viewParam).toBeDefined();
+    expect(viewParam.required).toBeFalsy();
   });
 
   it("should have 200, 400, 401, 500 responses", () => {

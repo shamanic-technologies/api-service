@@ -18561,6 +18561,15 @@
             "in": "query"
           },
           {
+            "schema": {
+              "type": "string",
+              "description": "Projection view forwarded to lead-service (e.g. `basic` for a slim payload)"
+            },
+            "required": false,
+            "name": "view",
+            "in": "query"
+          },
+          {
             "name": "x-org-id",
             "in": "header",
             "required": false,
