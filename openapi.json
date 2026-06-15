@@ -31874,6 +31874,17 @@
             "in": "query"
           },
           {
+            "schema": {
+              "type": "string",
+              "description": "Filter to a funnel lens (signups | booked-meetings | sales). Returns lens-filtered leads, each carrying conversionProbabilityPct. Absent/unknown → un-lensed overview",
+              "example": "signups"
+            },
+            "required": false,
+            "description": "Filter to a funnel lens (signups | booked-meetings | sales). Returns lens-filtered leads, each carrying conversionProbabilityPct. Absent/unknown → un-lensed overview",
+            "name": "lens",
+            "in": "query"
+          },
+          {
             "name": "x-org-id",
             "in": "header",
             "required": false,
