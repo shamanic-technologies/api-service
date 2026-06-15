@@ -304,7 +304,7 @@ router.get("/features/:slug/stats", authenticate, requireOrg, requireUser, async
 router.get("/features/:slug/revenue", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["brandId", "campaignId", "workflowSlug", "groupBy"]) {
+    for (const key of ["brandId", "campaignId", "workflowSlug", "groupBy", "lens"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";

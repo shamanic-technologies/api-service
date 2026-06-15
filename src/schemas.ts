@@ -6955,6 +6955,7 @@ registry.registerPath({
       campaignId: z.string().optional().openapi({ example: "campaign-uuid-456" }).describe("Filter by campaign UUID"),
       workflowSlug: z.string().optional().openapi({ example: "sales-email-cold-outreach-mintaka-v3" }).describe("Filter by workflow slug"),
       groupBy: z.string().optional().openapi({ example: "workflowSlug" }).describe("Group the revenue view by a dimension: campaignId or workflowSlug. Returns one grouped entry per value instead of the scalar overview"),
+      lens: z.string().optional().openapi({ example: "signups" }).describe("Filter to a funnel lens (signups | booked-meetings | sales). Returns lens-filtered leads, each carrying conversionProbabilityPct. Absent/unknown → un-lensed overview"),
     }),
   },
   responses: {
