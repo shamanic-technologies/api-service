@@ -55,10 +55,10 @@ describe("Billing proxy routes", () => {
   });
 
   it("should use authenticate and requireOrg on all authenticated endpoints", () => {
-    // 6 routes + 1 import = 7
+    // 8 routes + 1 import = 9
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    expect(authMatches!.length).toBe(7);
+    expect(authMatches!.length).toBe(9);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints (no x-key-source)", () => {
@@ -66,7 +66,14 @@ describe("Billing proxy routes", () => {
     expect(content).not.toContain('"x-key-source"');
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(6);
+    expect(headerMatches!.length).toBe(8);
+  });
+
+  it("should have GET + PATCH /brands/:brandId/daily-budget endpoints", () => {
+    expect(content).toContain('"/brands/:brandId/daily-budget"');
+    // GET proxies billing internal read; PATCH proxies billing /v1 write
+    expect(content).toContain("`/internal/brands/${req.params.brandId}/daily-budget`");
+    expect(content).toContain("`/v1/brands/${req.params.brandId}/daily-budget`");
   });
 
   it("should proxy to externalServices.billing", () => {
@@ -120,6 +127,12 @@ describe("Billing OpenAPI schemas", () => {
 
   it("should use Billing tag", () => {
     expect(schemaContent).toContain('tags: ["Billing"]');
+  });
+
+  it("should register brand daily-budget paths (passthrough)", () => {
+    expect(schemaContent).toContain('path: "/v1/brands/{brandId}/daily-budget"');
+    expect(schemaContent).toContain('z.object({}).passthrough().openapi("DailyBudgetResponse")');
+    expect(schemaContent).toContain('z.object({}).passthrough().openapi("DailyBudgetRequest")');
   });
 
   it("should define request schemas with new names", () => {

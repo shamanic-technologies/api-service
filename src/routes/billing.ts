@@ -95,4 +95,47 @@ router.post("/billing/portal-sessions", authenticate, requireOrg, async (req: Au
   }
 });
 
+/**
+ * GET /v1/brands/:brandId/daily-budget
+ * Proxy to billing-service GET /internal/brands/:brandId/daily-budget.
+ * Reads a brand's current daily budget (per-day spend ceiling), keyed by brandId.
+ * Downstream is a user-less internal read (x-api-key only, injected by
+ * callExternalService); the gateway route stays user-facing. An unset brand
+ * returns { dailyBudgetCents: null }. Response shape is owned by the downstream
+ * service — passthrough only.
+ */
+router.get("/brands/:brandId/daily-budget", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      `/internal/brands/${req.params.brandId}/daily-budget`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get daily budget" });
+  }
+});
+
+/**
+ * PATCH /v1/brands/:brandId/daily-budget
+ * Proxy to billing-service PATCH /v1/brands/:brandId/daily-budget.
+ * Sets a brand's daily budget. Body { dailyBudgetCents } (number or decimal
+ * string, >= 0; 0 = pause) and response shape are owned by the downstream
+ * service; identity headers (x-org-id, x-user-id, x-run-id) are forwarded via
+ * buildInternalHeaders. Downstream 4xx errors propagate verbatim — passthrough only.
+ */
+router.patch("/brands/:brandId/daily-budget", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      `/v1/brands/${req.params.brandId}/daily-budget`,
+      { method: "PATCH", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to set daily budget" });
+  }
+});
+
 export default router;
