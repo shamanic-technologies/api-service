@@ -121,6 +121,32 @@ describe("POST /v1/brands/:id/personas", () => {
   });
 });
 
+describe("POST /v1/brands/:id/personas/suggest", () => {
+  const body = { count: 3 };
+  const suggestPayload = { personas: [{ name: "Eco shopper", filters: { interest: "sustainability" } }] };
+
+  it("forwards body byte-identical to the suggest path and returns payload + status verbatim", async () => {
+    mockUpstream(200, suggestPayload);
+    const app = buildApp();
+    const res = await request(app).post(`/v1/brands/${BRAND_ID}/personas/suggest`).send(body);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(suggestPayload);
+    expect(capturedUrl).toContain(`/orgs/brands/${BRAND_ID}/personas/suggest`);
+    expect(capturedInit?.method).toBe("POST");
+    expect(JSON.parse(capturedInit?.body as string)).toEqual(body);
+  });
+
+  it("propagates an upstream error verbatim", async () => {
+    mockUpstream(404, { error: "brand not found" });
+    const app = buildApp();
+    const res = await request(app).post(`/v1/brands/${BRAND_ID}/personas/suggest`).send({});
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toContain("brand not found");
+  });
+});
+
 describe("POST /v1/brands/:id/personas/:personaId/duplicate", () => {
   it("forwards to the duplicate path and returns 201 verbatim", async () => {
     mockUpstream(201, personaPayload);
