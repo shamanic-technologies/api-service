@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, externalServices } from "../lib/service-client.js";
+import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { BrandUpsertRequestSchema, IcpSuggestionRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
@@ -511,6 +511,135 @@ router.get("/brand-transfers/incoming", authenticate, requireOrg, async (req: Au
   } catch (error: any) {
     console.error("[api-service] Incoming transfer history error:", error.message);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get incoming transfers" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Customer Personas + Brand Profile (transparent proxies to brand-service)
+//
+// Mirror the sales-economics proxies above exactly: downstream /orgs/brands/:id/X
+// → gateway /v1/brands/:id/X (the gateway strips /orgs per repo convention; the
+// dashboard's api lib calls /v1/brands/:id/...). Auth + identity forwarding are
+// identical (authenticate + requireOrg + requireUser + buildInternalHeaders).
+//
+// These use callExternalServiceWithStatus so the upstream status code (incl. 201
+// on create/duplicate and 409 on brand-profile conflict) is forwarded verbatim
+// rather than collapsed to 200. Body + response shapes are owned by brand-service
+// — passthrough only, no re-validation. The raw query string is forwarded verbatim.
+// ---------------------------------------------------------------------------
+
+// Forward the incoming request's raw query string verbatim (e.g. ?status=active).
+function rawQuery(req: AuthenticatedRequest): string {
+  const i = req.url.indexOf("?");
+  return i === -1 ? "" : req.url.slice(i);
+}
+
+/**
+ * GET /v1/brands/:id/personas
+ * Proxy to brand-service GET /orgs/brands/:id/personas.
+ */
+router.get("/brands/:id/personas", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/personas${rawQuery(req)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] List personas error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to list personas" });
+  }
+});
+
+/**
+ * POST /v1/brands/:id/personas
+ * Proxy to brand-service POST /orgs/brands/:id/personas. Returns 201 verbatim on create.
+ */
+router.post("/brands/:id/personas", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/personas${rawQuery(req)}`,
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Create persona error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to create persona" });
+  }
+});
+
+/**
+ * POST /v1/brands/:id/personas/:personaId/duplicate
+ * Proxy to brand-service POST /orgs/brands/:id/personas/:personaId/duplicate. Returns 201 verbatim.
+ */
+router.post("/brands/:id/personas/:personaId/duplicate", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/personas/${req.params.personaId}/duplicate${rawQuery(req)}`,
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Duplicate persona error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to duplicate persona" });
+  }
+});
+
+/**
+ * PATCH /v1/brands/:id/personas/:personaId/status
+ * Proxy to brand-service PATCH /orgs/brands/:id/personas/:personaId/status.
+ */
+router.patch("/brands/:id/personas/:personaId/status", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/personas/${req.params.personaId}/status${rawQuery(req)}`,
+      { method: "PATCH", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Update persona status error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to update persona status" });
+  }
+});
+
+/**
+ * GET /v1/brands/:id/brand-profile
+ * Proxy to brand-service GET /orgs/brands/:id/brand-profile.
+ */
+router.get("/brands/:id/brand-profile", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/brand-profile${rawQuery(req)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Get brand profile error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand profile" });
+  }
+});
+
+/**
+ * POST /v1/brands/:id/brand-profile
+ * Proxy to brand-service POST /orgs/brands/:id/brand-profile. Returns 201 verbatim on
+ * create and 409 verbatim on conflict.
+ */
+router.post("/brands/:id/brand-profile", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/brand-profile${rawQuery(req)}`,
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Create brand profile error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to create brand profile" });
   }
 });
 
