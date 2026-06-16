@@ -3661,6 +3661,29 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
+  path: "/v1/brands/{id}/personas/suggest",
+  tags: ["Brand"],
+  summary: "Suggest AI-generated customer personas for a brand",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{id}/personas/suggest. " +
+    "Returns AI-generated persona drafts ({ personas: [{ name, filters }] }). " +
+    "Body + response shapes are owned by the downstream service — passthrough only.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: { content: { "application/json": { schema: PersonaRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Persona drafts", content: { "application/json": { schema: PersonasResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
   path: "/v1/brands/{id}/personas/{personaId}/duplicate",
   tags: ["Brand"],
   summary: "Duplicate a customer persona",
