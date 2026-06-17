@@ -5292,11 +5292,9 @@ export const ConfigureAutoTopupRequestSchema = z
     topup_amount_cents: inboundCents.describe(
       "Auto-topup amount in cents (integer or decimal string)",
     ),
-    topup_threshold_cents: inboundCents
-      .optional()
-      .describe(
-        "Balance threshold in cents that triggers auto-topup (integer or decimal string)",
-      ),
+    topup_threshold_cents: inboundCents.describe(
+      "Balance threshold in cents that triggers auto-topup (integer or decimal string)",
+    ),
   })
   .openapi("ConfigureAutoTopupRequest");
 
@@ -5518,7 +5516,7 @@ registry.registerPath({
   path: "/v1/billing/portal-sessions",
   tags: ["Billing"],
   summary: "Create Stripe portal session",
-  description: "Create a Stripe billing portal session for managing payment methods and subscriptions",
+  description: "Create a Stripe billing portal session for managing payment methods",
   security: authed,
   request: {
     body: {
@@ -5551,9 +5549,12 @@ const BrandDailyBudgetParam = z.object({
   brandId: z.string().uuid().describe("Brand ID"),
 });
 const DailyBudgetResponseSchema = z.object({}).passthrough().openapi("DailyBudgetResponse");
-const DailyBudgetRequestSchema = z.object({}).passthrough().openapi("DailyBudgetRequest");
-const BrandSubscriptionResponseSchema = z.object({}).passthrough().openapi("BrandSubscriptionResponse");
-const BrandSubscriptionRequestSchema = z.object({}).passthrough().openapi("BrandSubscriptionRequest");
+const DailyBudgetRequestSchema = z
+  .object({
+    dailyBudgetCents: inboundCents.describe("Brand daily budget cap in cents (integer or decimal string)"),
+  })
+  .passthrough()
+  .openapi("DailyBudgetRequest");
 
 registry.registerPath({
   method: "get",
@@ -5594,96 +5595,6 @@ registry.registerPath({
     200: { description: "Updated brand daily budget", content: { "application/json": { schema: DailyBudgetResponseSchema } } },
     400: { description: "Validation error (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/brands/{brandId}/subscription",
-  tags: ["Billing"],
-  summary: "Create a brand subscription",
-  description:
-    "Proxy to billing-service POST /v1/brands/{brandId}/subscription. " +
-    "Onboards a brand at a chosen daily subscription amount. Body + response " +
-    "shapes are owned by billing-service; api-service forwards identity headers " +
-    "and mirrors upstream status/body.",
-  security: authed,
-  request: {
-    params: BrandDailyBudgetParam,
-    body: { content: { "application/json": { schema: BrandSubscriptionRequestSchema } } },
-  },
-  responses: {
-    200: { description: "Brand subscription created", content: { "application/json": { schema: BrandSubscriptionResponseSchema } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Brand or account not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "patch",
-  path: "/v1/brands/{brandId}/subscription",
-  tags: ["Billing"],
-  summary: "Update a brand subscription",
-  description:
-    "Proxy to billing-service PATCH /v1/brands/{brandId}/subscription. " +
-    "Changes a brand's daily subscription amount. Body + response shapes are " +
-    "owned by billing-service; api-service forwards identity headers and mirrors " +
-    "upstream status/body.",
-  security: authed,
-  request: {
-    params: BrandDailyBudgetParam,
-    body: { content: { "application/json": { schema: BrandSubscriptionRequestSchema } } },
-  },
-  responses: {
-    200: { description: "Brand subscription updated", content: { "application/json": { schema: BrandSubscriptionResponseSchema } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Subscription not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/brands/{brandId}/subscription/pause",
-  tags: ["Billing"],
-  summary: "Pause a brand subscription",
-  description:
-    "Proxy to billing-service POST /v1/brands/{brandId}/subscription/pause. " +
-    "Pauses the brand subscription. Body + response shapes are owned by " +
-    "billing-service; api-service forwards identity headers and mirrors upstream " +
-    "status/body.",
-  security: authed,
-  request: { params: BrandDailyBudgetParam },
-  responses: {
-    200: { description: "Brand subscription paused", content: { "application/json": { schema: BrandSubscriptionResponseSchema } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Subscription not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/brands/{brandId}/subscription/resume",
-  tags: ["Billing"],
-  summary: "Resume a brand subscription",
-  description:
-    "Proxy to billing-service POST /v1/brands/{brandId}/subscription/resume. " +
-    "Resumes the brand subscription. Body + response shapes are owned by " +
-    "billing-service; api-service forwards identity headers and mirrors upstream " +
-    "status/body.",
-  security: authed,
-  request: { params: BrandDailyBudgetParam },
-  responses: {
-    200: { description: "Brand subscription resumed", content: { "application/json": { schema: BrandSubscriptionResponseSchema } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Subscription not found (forwarded verbatim)", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
   },
 });
@@ -6092,7 +6003,7 @@ const DiscountSchema = z.object({
 export const CreateStripeCheckoutRequestSchema = z
   .object({
     lineItems: z.array(LineItemSchema).min(1).describe("Line items for checkout"),
-    mode: z.enum(["payment", "subscription"]).default("payment").describe("Checkout mode"),
+    mode: z.literal("payment").optional().describe("Checkout mode (payment only)"),
     successUrl: z.string().url().describe("Redirect URL after success"),
     cancelUrl: z.string().url().describe("Redirect URL after cancel"),
     customerEmail: z.string().email().optional().describe("Pre-fill customer email"),
@@ -6307,7 +6218,7 @@ registry.registerPath({
   tags: ["Stripe"],
   summary: "Create a Stripe Checkout session",
   description:
-    "Create a Stripe Checkout session for payment or subscription. Returns the checkout URL to redirect the customer.",
+    "Create a Stripe Checkout session for one-time payment. Returns the checkout URL to redirect the customer.",
   security: authed,
   request: {
     body: {
