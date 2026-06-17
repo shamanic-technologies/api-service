@@ -1,9 +1,20 @@
 import { Router } from "express";
 import { authenticate, requireOrg, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, externalServices } from "../lib/service-client.js";
+import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
+
+function sendBillingProxyError(res: any, error: any, fallbackMessage: string) {
+  const status = error.statusCode || 500;
+  const message = error.message || fallbackMessage;
+
+  try {
+    res.status(status).json(JSON.parse(message));
+  } catch {
+    res.status(status).send(message);
+  }
+}
 
 // GET /v1/billing/accounts — get or create billing account
 router.get("/billing/accounts", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
@@ -135,6 +146,80 @@ router.patch("/brands/:brandId/daily-budget", authenticate, requireOrg, async (r
     res.json(result);
   } catch (error: any) {
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to set daily budget" });
+  }
+});
+
+/**
+ * POST /v1/brands/:brandId/subscription
+ * Proxy to billing-service POST /v1/brands/:brandId/subscription.
+ * Onboards a brand subscription at the requested amount. Body + response shapes
+ * are owned by billing-service; api-service forwards identity headers and
+ * mirrors upstream status/body.
+ */
+router.post("/brands/:brandId/subscription", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.billing,
+      `/v1/brands/${req.params.brandId}/subscription`,
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    sendBillingProxyError(res, error, "Failed to create brand subscription");
+  }
+});
+
+/**
+ * PATCH /v1/brands/:brandId/subscription
+ * Proxy to billing-service PATCH /v1/brands/:brandId/subscription.
+ * Changes a brand subscription amount. Passthrough only.
+ */
+router.patch("/brands/:brandId/subscription", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.billing,
+      `/v1/brands/${req.params.brandId}/subscription`,
+      { method: "PATCH", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    sendBillingProxyError(res, error, "Failed to update brand subscription");
+  }
+});
+
+/**
+ * POST /v1/brands/:brandId/subscription/pause
+ * Proxy to billing-service POST /v1/brands/:brandId/subscription/pause.
+ * Pauses a brand subscription. Passthrough only.
+ */
+router.post("/brands/:brandId/subscription/pause", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.billing,
+      `/v1/brands/${req.params.brandId}/subscription/pause`,
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    sendBillingProxyError(res, error, "Failed to pause brand subscription");
+  }
+});
+
+/**
+ * POST /v1/brands/:brandId/subscription/resume
+ * Proxy to billing-service POST /v1/brands/:brandId/subscription/resume.
+ * Resumes a brand subscription. Passthrough only.
+ */
+router.post("/brands/:brandId/subscription/resume", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.billing,
+      `/v1/brands/${req.params.brandId}/subscription/resume`,
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    sendBillingProxyError(res, error, "Failed to resume brand subscription");
   }
 });
 

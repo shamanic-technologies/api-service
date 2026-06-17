@@ -5552,6 +5552,8 @@ const BrandDailyBudgetParam = z.object({
 });
 const DailyBudgetResponseSchema = z.object({}).passthrough().openapi("DailyBudgetResponse");
 const DailyBudgetRequestSchema = z.object({}).passthrough().openapi("DailyBudgetRequest");
+const BrandSubscriptionResponseSchema = z.object({}).passthrough().openapi("BrandSubscriptionResponse");
+const BrandSubscriptionRequestSchema = z.object({}).passthrough().openapi("BrandSubscriptionRequest");
 
 registry.registerPath({
   method: "get",
@@ -5596,6 +5598,95 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{brandId}/subscription",
+  tags: ["Billing"],
+  summary: "Create a brand subscription",
+  description:
+    "Proxy to billing-service POST /v1/brands/{brandId}/subscription. " +
+    "Onboards a brand at a chosen daily subscription amount. Body + response " +
+    "shapes are owned by billing-service; api-service forwards identity headers " +
+    "and mirrors upstream status/body.",
+  security: authed,
+  request: {
+    params: BrandDailyBudgetParam,
+    body: { content: { "application/json": { schema: BrandSubscriptionRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Brand subscription created", content: { "application/json": { schema: BrandSubscriptionResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand or account not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/brands/{brandId}/subscription",
+  tags: ["Billing"],
+  summary: "Update a brand subscription",
+  description:
+    "Proxy to billing-service PATCH /v1/brands/{brandId}/subscription. " +
+    "Changes a brand's daily subscription amount. Body + response shapes are " +
+    "owned by billing-service; api-service forwards identity headers and mirrors " +
+    "upstream status/body.",
+  security: authed,
+  request: {
+    params: BrandDailyBudgetParam,
+    body: { content: { "application/json": { schema: BrandSubscriptionRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Brand subscription updated", content: { "application/json": { schema: BrandSubscriptionResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Subscription not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{brandId}/subscription/pause",
+  tags: ["Billing"],
+  summary: "Pause a brand subscription",
+  description:
+    "Proxy to billing-service POST /v1/brands/{brandId}/subscription/pause. " +
+    "Pauses the brand subscription. Body + response shapes are owned by " +
+    "billing-service; api-service forwards identity headers and mirrors upstream " +
+    "status/body.",
+  security: authed,
+  request: { params: BrandDailyBudgetParam },
+  responses: {
+    200: { description: "Brand subscription paused", content: { "application/json": { schema: BrandSubscriptionResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Subscription not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{brandId}/subscription/resume",
+  tags: ["Billing"],
+  summary: "Resume a brand subscription",
+  description:
+    "Proxy to billing-service POST /v1/brands/{brandId}/subscription/resume. " +
+    "Resumes the brand subscription. Body + response shapes are owned by " +
+    "billing-service; api-service forwards identity headers and mirrors upstream " +
+    "status/body.",
+  security: authed,
+  request: { params: BrandDailyBudgetParam },
+  responses: {
+    200: { description: "Brand subscription resumed", content: { "application/json": { schema: BrandSubscriptionResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Subscription not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
 
 // ===================================================================
 // TRANSACTIONAL EMAILS
