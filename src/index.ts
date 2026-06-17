@@ -22,6 +22,7 @@ import searchRoutes from "./routes/search.js";
 import meRoutes from "./routes/me.js";
 import qualifyRoutes from "./routes/qualify.js";
 import brandRoutes from "./routes/brand.js";
+import brandPauseRoutes from "./routes/brand-pause.js";
 import scrapingRoutes from "./routes/scraping.js";
 import leadsRoutes from "./routes/leads.js";
 import activityRoutes from "./routes/activity.js";
@@ -191,6 +192,9 @@ app.use("/v1", keysRoutes);
 app.use("/v1", campaignsRoutes);
 app.use("/v1", searchRoutes);
 app.use("/v1", qualifyRoutes);
+// Mount BEFORE brandRoutes: /brands/:brandId/pause forwards to campaign-service,
+// must win over any future brand-service brand proxy.
+app.use("/v1", brandPauseRoutes);
 app.use("/v1", brandRoutes);
 app.use("/v1", scrapingRoutes);
 app.use("/v1", leadsRoutes);
