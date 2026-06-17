@@ -37,6 +37,8 @@ beforeEach(() => {
 });
 
 describe("billing proxy — passthrough contract", () => {
+  const brandId = "11111111-1111-4111-8111-111111111111";
+
   it("GET /billing/accounts/balance forwards upstream body unchanged", async () => {
     const upstream = { available_cents: "100.4200000000", depleted: false };
     mockCallExternalService.mockResolvedValue(upstream);
@@ -160,5 +162,59 @@ describe("billing proxy — passthrough contract", () => {
     ];
     expect(downstreamPath).toBe("/v1/accounts/auto_topup");
     expect(opts?.method).toBe("DELETE");
+  });
+
+  it.each([
+    ["post", `/brands/${brandId}/subscription`, `/v1/brands/${brandId}/subscription`, "POST"],
+    ["patch", `/brands/${brandId}/subscription`, `/v1/brands/${brandId}/subscription`, "PATCH"],
+    ["post", `/brands/${brandId}/subscription/pause`, `/v1/brands/${brandId}/subscription/pause`, "POST"],
+    ["post", `/brands/${brandId}/subscription/resume`, `/v1/brands/${brandId}/subscription/resume`, "POST"],
+  ] as const)(
+    "%s %s forwards method, body, identity headers, and upstream status/body",
+    async (httpMethod, gatewayPath, downstreamPath, downstreamMethod) => {
+      const upstream = {
+        brandId,
+        status: "active",
+        dailyAmountCents: 2500,
+        dailyBudgetCents: "2500.0000000000",
+      };
+      const reqBody = { dailyAmountCents: 2500, clientMetadata: { source: "onboarding" } };
+      mockCallExternalService.mockResolvedValue({ status: 200, data: upstream });
+
+      const res = await request(createApp())[httpMethod](gatewayPath).send(reqBody);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(upstream);
+      const [service, actualPath, opts] = mockCallExternalService.mock.calls[0] as [
+        unknown,
+        string,
+        { method?: string; body?: unknown; headers?: Record<string, string> },
+      ];
+      expect(service).toEqual({ url: "http://mock-billing", apiKey: "k" });
+      expect(actualPath).toBe(downstreamPath);
+      expect(opts?.method).toBe(downstreamMethod);
+      expect(opts?.body).toEqual(reqBody);
+      expect(opts?.headers).toMatchObject({
+        "x-org-id": "org-test",
+        "x-user-id": "user-test",
+      });
+    },
+  );
+
+  it("brand subscription routes mirror upstream 4xx status and JSON body without wrapping", async () => {
+    const upstreamError = {
+      error: "dailyAmountCents must be positive",
+      code: "invalid_subscription_amount",
+    };
+    const err = new Error(JSON.stringify(upstreamError)) as Error & { statusCode?: number };
+    err.statusCode = 422;
+    mockCallExternalService.mockRejectedValue(err);
+
+    const res = await request(createApp())
+      .patch(`/brands/${brandId}/subscription`)
+      .send({ dailyAmountCents: 0 });
+
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual(upstreamError);
   });
 });
