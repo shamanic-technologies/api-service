@@ -4,7 +4,6 @@ const mockCallExternalService = vi.fn();
 
 vi.mock("../../src/lib/service-client.js", () => ({
   callExternalService: (...args: unknown[]) => mockCallExternalService(...args),
-  callExternalServiceWithStatus: (...args: unknown[]) => mockCallExternalService(...args),
   externalServices: {
     billing: { url: "http://mock-billing", apiKey: "k" },
   },
@@ -135,6 +134,19 @@ describe("billing proxy — passthrough contract", () => {
     expect(opts?.body).toEqual(reqBody);
   });
 
+  it("PATCH /billing/accounts/auto_topup rejects missing threshold before downstream", async () => {
+    const res = await request(createApp())
+      .patch("/billing/accounts/auto_topup")
+      .send({ topup_amount_cents: 1000 });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Missing required fields: topup_threshold_cents",
+      missingFields: ["topup_threshold_cents"],
+    });
+    expect(mockCallExternalService).not.toHaveBeenCalled();
+  });
+
   it("DELETE /billing/accounts/auto_topup forwards to /v1/accounts/auto_topup", async () => {
     const upstream = {
       id: "acc_4",
@@ -164,57 +176,82 @@ describe("billing proxy — passthrough contract", () => {
     expect(opts?.method).toBe("DELETE");
   });
 
-  it.each([
-    ["post", `/brands/${brandId}/subscription`, `/v1/brands/${brandId}/subscription`, "POST"],
-    ["patch", `/brands/${brandId}/subscription`, `/v1/brands/${brandId}/subscription`, "PATCH"],
-    ["post", `/brands/${brandId}/subscription/pause`, `/v1/brands/${brandId}/subscription/pause`, "POST"],
-    ["post", `/brands/${brandId}/subscription/resume`, `/v1/brands/${brandId}/subscription/resume`, "POST"],
-  ] as const)(
-    "%s %s forwards method, body, identity headers, and upstream status/body",
-    async (httpMethod, gatewayPath, downstreamPath, downstreamMethod) => {
-      const upstream = {
-        brandId,
-        status: "active",
-        dailyAmountCents: 2500,
-        dailyBudgetCents: "2500.0000000000",
-      };
-      const reqBody = { dailyAmountCents: 2500, clientMetadata: { source: "onboarding" } };
-      mockCallExternalService.mockResolvedValue({ status: 200, data: upstream });
+  it("POST /billing/checkout-sessions rejects missing topup amount before downstream", async () => {
+    const res = await request(createApp())
+      .post("/billing/checkout-sessions")
+      .send({ success_url: "https://example.com/success", cancel_url: "https://example.com/cancel" });
 
-      const res = await request(createApp())[httpMethod](gatewayPath).send(reqBody);
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Missing required fields: topup_amount_cents",
+      missingFields: ["topup_amount_cents"],
+    });
+    expect(mockCallExternalService).not.toHaveBeenCalled();
+  });
 
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual(upstream);
-      const [service, actualPath, opts] = mockCallExternalService.mock.calls[0] as [
-        unknown,
-        string,
-        { method?: string; body?: unknown; headers?: Record<string, string> },
-      ];
-      expect(service).toEqual({ url: "http://mock-billing", apiKey: "k" });
-      expect(actualPath).toBe(downstreamPath);
-      expect(opts?.method).toBe(downstreamMethod);
-      expect(opts?.body).toEqual(reqBody);
-      expect(opts?.headers).toMatchObject({
-        "x-org-id": "org-test",
-        "x-user-id": "user-test",
-      });
-    },
-  );
-
-  it("brand subscription routes mirror upstream 4xx status and JSON body without wrapping", async () => {
-    const upstreamError = {
-      error: "dailyAmountCents must be positive",
-      code: "invalid_subscription_amount",
+  it("PATCH /brands/:brandId/daily-budget forwards body and identity headers", async () => {
+    const upstream = {
+      brandId,
+      orgId: "org-test",
+      dailyBudgetCents: "2500.0000000000",
+      updatedAt: "2026-01-01T00:00:00Z",
     };
-    const err = new Error(JSON.stringify(upstreamError)) as Error & { statusCode?: number };
-    err.statusCode = 422;
-    mockCallExternalService.mockRejectedValue(err);
+    const reqBody = { dailyBudgetCents: "2500.0000000000" };
+    mockCallExternalService.mockResolvedValue(upstream);
 
     const res = await request(createApp())
-      .patch(`/brands/${brandId}/subscription`)
-      .send({ dailyAmountCents: 0 });
+      .patch(`/brands/${brandId}/daily-budget`)
+      .send(reqBody);
 
-    expect(res.status).toBe(422);
-    expect(res.body).toEqual(upstreamError);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(upstream);
+    const [service, actualPath, opts] = mockCallExternalService.mock.calls[0] as [
+      unknown,
+      string,
+      { method?: string; body?: unknown; headers?: Record<string, string> },
+    ];
+    expect(service).toEqual({ url: "http://mock-billing", apiKey: "k" });
+    expect(actualPath).toBe(`/v1/brands/${brandId}/daily-budget`);
+    expect(opts?.method).toBe("PATCH");
+    expect(opts?.body).toEqual(reqBody);
+    expect(opts?.headers).toMatchObject({
+      "x-org-id": "org-test",
+      "x-user-id": "user-test",
+    });
+  });
+
+  it("PATCH /brands/:brandId/daily-budget rejects invalid brand ID before downstream", async () => {
+    const res = await request(createApp())
+      .patch("/brands/not-a-uuid/daily-budget")
+      .send({ dailyBudgetCents: 2500 });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: "Invalid brand ID — expected a UUID" });
+    expect(mockCallExternalService).not.toHaveBeenCalled();
+  });
+
+  it("PATCH /brands/:brandId/daily-budget rejects missing amount before downstream", async () => {
+    const res = await request(createApp())
+      .patch(`/brands/${brandId}/daily-budget`)
+      .send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Missing required fields: dailyBudgetCents",
+      missingFields: ["dailyBudgetCents"],
+    });
+    expect(mockCallExternalService).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["post", `/brands/${brandId}/subscription`],
+    ["patch", `/brands/${brandId}/subscription`],
+    ["post", `/brands/${brandId}/subscription/pause`],
+    ["post", `/brands/${brandId}/subscription/resume`],
+  ] as const)("does not expose %s %s", async (httpMethod, gatewayPath) => {
+    const res = await request(createApp())[httpMethod](gatewayPath).send({ dailyAmountCents: 2500 });
+
+    expect(res.status).toBe(404);
+    expect(mockCallExternalService).not.toHaveBeenCalled();
   });
 });

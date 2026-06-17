@@ -1,19 +1,32 @@
 import { Router } from "express";
 import { authenticate, requireOrg, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
+import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
 
-function sendBillingProxyError(res: any, error: any, fallbackMessage: string) {
-  const status = error.statusCode || 500;
-  const message = error.message || fallbackMessage;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-  try {
-    res.status(status).json(JSON.parse(message));
-  } catch {
-    res.status(status).send(message);
+function missingBodyFields(body: unknown, fields: string[]): string[] {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return fields;
+  const record = body as Record<string, unknown>;
+  return fields.filter((field) => record[field] === undefined || record[field] === null);
+}
+
+function isUuid(value: string): boolean {
+  return UUID_REGEX.test(value);
+}
+
+function requireBodyFields(res: any, body: unknown, fields: string[]): boolean {
+  const missing = missingBodyFields(body, fields);
+  if (missing.length > 0) {
+    res.status(400).json({
+      error: `Missing required fields: ${missing.join(", ")}`,
+      missingFields: missing,
+    });
+    return false;
   }
+  return true;
 }
 
 // GET /v1/billing/accounts — get or create billing account
@@ -51,6 +64,7 @@ router.get("/billing/accounts/balance", authenticate, requireOrg, async (req: Au
 // PATCH /v1/billing/accounts/auto_topup — configure auto-topup
 router.patch("/billing/accounts/auto_topup", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
+    if (!requireBodyFields(res, req.body, ["topup_amount_cents", "topup_threshold_cents"])) return;
     const result = await callExternalService(
       externalServices.billing,
       "/v1/accounts/auto_topup",
@@ -80,6 +94,7 @@ router.delete("/billing/accounts/auto_topup", authenticate, requireOrg, async (r
 // POST /v1/billing/checkout-sessions — create Stripe checkout session
 router.post("/billing/checkout-sessions", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
+    if (!requireBodyFields(res, req.body, ["success_url", "cancel_url", "topup_amount_cents"])) return;
     const result = await callExternalService(
       externalServices.billing,
       "/v1/checkout-sessions",
@@ -117,6 +132,9 @@ router.post("/billing/portal-sessions", authenticate, requireOrg, async (req: Au
  */
 router.get("/brands/:brandId/daily-budget", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
+    if (!isUuid(req.params.brandId)) {
+      return res.status(400).json({ error: "Invalid brand ID — expected a UUID" });
+    }
     const result = await callExternalService(
       externalServices.billing,
       `/internal/brands/${req.params.brandId}/daily-budget`,
@@ -138,6 +156,10 @@ router.get("/brands/:brandId/daily-budget", authenticate, requireOrg, async (req
  */
 router.patch("/brands/:brandId/daily-budget", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
+    if (!isUuid(req.params.brandId)) {
+      return res.status(400).json({ error: "Invalid brand ID — expected a UUID" });
+    }
+    if (!requireBodyFields(res, req.body, ["dailyBudgetCents"])) return;
     const result = await callExternalService(
       externalServices.billing,
       `/v1/brands/${req.params.brandId}/daily-budget`,
@@ -146,80 +168,6 @@ router.patch("/brands/:brandId/daily-budget", authenticate, requireOrg, async (r
     res.json(result);
   } catch (error: any) {
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to set daily budget" });
-  }
-});
-
-/**
- * POST /v1/brands/:brandId/subscription
- * Proxy to billing-service POST /v1/brands/:brandId/subscription.
- * Onboards a brand subscription at the requested amount. Body + response shapes
- * are owned by billing-service; api-service forwards identity headers and
- * mirrors upstream status/body.
- */
-router.post("/brands/:brandId/subscription", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { status, data } = await callExternalServiceWithStatus(
-      externalServices.billing,
-      `/v1/brands/${req.params.brandId}/subscription`,
-      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
-    );
-    res.status(status).json(data);
-  } catch (error: any) {
-    sendBillingProxyError(res, error, "Failed to create brand subscription");
-  }
-});
-
-/**
- * PATCH /v1/brands/:brandId/subscription
- * Proxy to billing-service PATCH /v1/brands/:brandId/subscription.
- * Changes a brand subscription amount. Passthrough only.
- */
-router.patch("/brands/:brandId/subscription", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { status, data } = await callExternalServiceWithStatus(
-      externalServices.billing,
-      `/v1/brands/${req.params.brandId}/subscription`,
-      { method: "PATCH", body: req.body, headers: buildInternalHeaders(req) }
-    );
-    res.status(status).json(data);
-  } catch (error: any) {
-    sendBillingProxyError(res, error, "Failed to update brand subscription");
-  }
-});
-
-/**
- * POST /v1/brands/:brandId/subscription/pause
- * Proxy to billing-service POST /v1/brands/:brandId/subscription/pause.
- * Pauses a brand subscription. Passthrough only.
- */
-router.post("/brands/:brandId/subscription/pause", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { status, data } = await callExternalServiceWithStatus(
-      externalServices.billing,
-      `/v1/brands/${req.params.brandId}/subscription/pause`,
-      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
-    );
-    res.status(status).json(data);
-  } catch (error: any) {
-    sendBillingProxyError(res, error, "Failed to pause brand subscription");
-  }
-});
-
-/**
- * POST /v1/brands/:brandId/subscription/resume
- * Proxy to billing-service POST /v1/brands/:brandId/subscription/resume.
- * Resumes a brand subscription. Passthrough only.
- */
-router.post("/brands/:brandId/subscription/resume", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { status, data } = await callExternalServiceWithStatus(
-      externalServices.billing,
-      `/v1/brands/${req.params.brandId}/subscription/resume`,
-      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
-    );
-    res.status(status).json(data);
-  } catch (error: any) {
-    sendBillingProxyError(res, error, "Failed to resume brand subscription");
   }
 });
 
