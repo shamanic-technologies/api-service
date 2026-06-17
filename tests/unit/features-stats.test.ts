@@ -30,7 +30,12 @@ vi.mock("../../src/lib/service-client.js", () => ({
 }));
 
 vi.mock("../../src/middleware/auth.js", () => ({
-  authenticate: (_req: any, _res: any, next: any) => next(),
+  authenticate: (req: any, _res: any, next: any) => {
+    req.orgId = "org-uuid-123";
+    req.userId = "user-uuid-456";
+    req.runId = "run-uuid-789";
+    next();
+  },
   requireOrg: (_req: any, _res: any, next: any) => next(),
   requireUser: (_req: any, _res: any, next: any) => next(),
   AuthenticatedRequest: {},
@@ -295,6 +300,23 @@ const MOCK_WORKFLOW_REVENUE = {
   ],
 };
 
+const MOCK_PIPELINE_ACTIVITY = {
+  featureSlug: "sales-cold-email-outreach",
+  brandId: "brand-uuid-123",
+  timezone: "America/New_York",
+  days: [
+    {
+      date: "2026-06-11",
+      sent: 12,
+      opened: 7,
+      clicked: 3,
+      replied: 1,
+      downstreamAddedField: { preserved: true },
+    },
+  ],
+  producerOwnedField: "kept",
+};
+
 const MOCK_PUBLIC_BRAND_REVENUE = {
   featureSlug: "sales-cold-email-outreach",
   groupBy: "brand",
@@ -348,6 +370,62 @@ const MOCK_PUBLIC_WORKFLOW_ENGAGEMENT_LATENCY = {
     },
   ],
 };
+
+describe("GET /v1/features/:slug/pipeline-activity", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("proxies to features-service /features/:slug/pipeline-activity and returns the body verbatim", async () => {
+    const app = createApp();
+    mockCallExternalService.mockImplementation((service: any, path: string) => {
+      if (service.url === "http://mock-features" && path.startsWith("/features/sales-cold-email-outreach/pipeline-activity")) {
+        return Promise.resolve(MOCK_PIPELINE_ACTIVITY);
+      }
+      return Promise.resolve({});
+    });
+
+    const res = await request(app).get("/v1/features/sales-cold-email-outreach/pipeline-activity?brandId=brand-uuid-123&days=7&timezone=America/New_York");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(MOCK_PIPELINE_ACTIVITY);
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/pipeline-activity"),
+    );
+    expect(call).toBeDefined();
+    const url = call![1] as string;
+    const params = new URLSearchParams(url.split("?")[1]);
+    expect(params.get("brandId")).toBe("brand-uuid-123");
+    expect(params.get("days")).toBe("7");
+    expect(params.get("timezone")).toBe("America/New_York");
+
+    const options = call![2] as { headers: Record<string, string> };
+    expect(options.headers).toMatchObject({
+      "x-org-id": "org-uuid-123",
+      "x-user-id": "user-uuid-456",
+      "x-run-id": "run-uuid-789",
+      "x-brand-id": "brand-uuid-123",
+    });
+  });
+
+  it("does not forward unrelated query params to pipeline-activity", async () => {
+    const app = createApp();
+    mockCallExternalService.mockResolvedValue(MOCK_PIPELINE_ACTIVITY);
+
+    await request(app).get("/v1/features/sales-cold-email-outreach/pipeline-activity?brandId=brand-uuid-123&days=7&timezone=America/New_York&campaignId=campaign-uuid-456&groupBy=workflowSlug");
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/pipeline-activity"),
+    );
+    expect(call).toBeDefined();
+    const url = call![1] as string;
+    const params = new URLSearchParams(url.split("?")[1]);
+    expect(params.get("brandId")).toBe("brand-uuid-123");
+    expect(params.get("days")).toBe("7");
+    expect(params.get("timezone")).toBe("America/New_York");
+    expect(params.has("campaignId")).toBe(false);
+    expect(params.has("groupBy")).toBe(false);
+  });
+});
 
 describe("GET /v1/features/:slug/revenue", () => {
   beforeEach(() => vi.clearAllMocks());

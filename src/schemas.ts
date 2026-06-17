@@ -7141,6 +7141,30 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/{featureSlug}/pipeline-activity",
+  tags: ["Features"],
+  summary: "Feature pipeline activity",
+  description:
+    "7-day pipeline activity for a brand overview chart. Scoped by brandId, days, and timezone. Proxied from features-service.",
+  security: authed,
+  request: {
+    params: z.object({ featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required)"),
+      days: z.string().openapi({ example: "7" }).describe("Number of days to include"),
+      timezone: z.string().openapi({ example: "America/New_York" }).describe("IANA timezone for day bucketing"),
+    }),
+  },
+  responses: {
+    200: { description: "Feature pipeline activity", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeaturePipelineActivityResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/features/{featureSlug}/stats",
   tags: ["Features"],
   summary: "Feature stats",
