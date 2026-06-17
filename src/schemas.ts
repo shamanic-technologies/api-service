@@ -3661,6 +3661,29 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
+  path: "/v1/brands/{id}/personas/suggest",
+  tags: ["Brand"],
+  summary: "Suggest AI-generated customer personas for a brand",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{id}/personas/suggest. " +
+    "Returns AI-generated persona drafts ({ personas: [{ name, filters }] }). " +
+    "Body + response shapes are owned by the downstream service — passthrough only.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: { content: { "application/json": { schema: PersonaRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Persona drafts", content: { "application/json": { schema: PersonasResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
   path: "/v1/brands/{id}/personas/{personaId}/duplicate",
   tags: ["Brand"],
   summary: "Duplicate a customer persona",
@@ -5516,6 +5539,60 @@ registry.registerPath({
     400: { description: "No Stripe customer found", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// Brand – Daily Budget (proxy to billing-service)
+// Per-brand daily spend ceiling (pacing/allocation), SEPARATE from org credit
+// balance/affordability. GET proxies billing /internal/brands/:brandId/daily-budget
+// (unset -> dailyBudgetCents null); PATCH proxies billing /v1/brands/:brandId/daily-budget.
+// Downstream owns body + response shapes — passthrough only (CLAUDE.md #8).
+const BrandDailyBudgetParam = z.object({
+  brandId: z.string().uuid().describe("Brand ID"),
+});
+const DailyBudgetResponseSchema = z.object({}).passthrough().openapi("DailyBudgetResponse");
+const DailyBudgetRequestSchema = z.object({}).passthrough().openapi("DailyBudgetRequest");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/daily-budget",
+  tags: ["Billing"],
+  summary: "Get a brand's daily budget",
+  description:
+    "Proxy to billing-service GET /internal/brands/{brandId}/daily-budget. " +
+    "Returns the brand's current daily spend ceiling (per-day pacing/allocation " +
+    "value, separate from org credit balance/affordability). An unset brand returns " +
+    "{ dailyBudgetCents: null }. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: BrandDailyBudgetParam },
+  responses: {
+    200: { description: "Brand daily budget (dailyBudgetCents null when unset)", content: { "application/json": { schema: DailyBudgetResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/brands/{brandId}/daily-budget",
+  tags: ["Billing"],
+  summary: "Set a brand's daily budget",
+  description:
+    "Proxy to billing-service PATCH /v1/brands/{brandId}/daily-budget. " +
+    "Sets the brand's daily spend ceiling. Body { dailyBudgetCents } (number or " +
+    "decimal string, >= 0; 0 = pause). Identity headers (x-org-id, x-user-id, " +
+    "x-run-id) are forwarded. Body + response shapes are owned by the downstream " +
+    "service; its 4xx validation errors propagate verbatim.",
+  security: authed,
+  request: {
+    params: BrandDailyBudgetParam,
+    body: { content: { "application/json": { schema: DailyBudgetRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Updated brand daily budget", content: { "application/json": { schema: DailyBudgetResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
   },
 });
 
@@ -8310,5 +8387,57 @@ registry.registerPath({
     400: { description: "Invalid code (forwarded verbatim from downstream)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "orgId path does not match authenticated org", content: errorContent },
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Brand pause state — owned by CAMPAIGN-SERVICE (not brand-service).
+// Proxies to campaign-service /brands/:brandId/pause.
+// ---------------------------------------------------------------------------
+const BrandPauseParam = z.object({
+  brandId: z.string().describe("Brand ID"),
+});
+
+const BrandPauseRequestSchema = z
+  .object({ paused: z.boolean().describe("Desired pause state for the brand") })
+  .openapi("BrandPauseRequest");
+
+// Passthrough — response shape owned by campaign-service (CLAUDE.md #8).
+const BrandPauseResponseSchema = z.object({}).passthrough().openapi("BrandPauseResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/pause",
+  tags: ["Campaigns"],
+  summary: "Get a brand's pause state",
+  description:
+    "Proxy to campaign-service GET /brands/{brandId}/pause. " +
+    "Returns the brand's pause state. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: BrandPauseParam },
+  responses: {
+    200: { description: "Brand pause state", content: { "application/json": { schema: BrandPauseResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/brands/{brandId}/pause",
+  tags: ["Campaigns"],
+  summary: "Update a brand's pause state",
+  description:
+    "Proxy to campaign-service PATCH /brands/{brandId}/pause. " +
+    "Body { paused: boolean }. Body + response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    params: BrandPauseParam,
+    body: { content: { "application/json": { schema: BrandPauseRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Updated brand pause state", content: { "application/json": { schema: BrandPauseResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
   },
 });
