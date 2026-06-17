@@ -6870,6 +6870,14 @@
             "format": "uri",
             "description": "URL to redirect on cancellation"
           },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "payment",
+              "setup"
+            ],
+            "description": "Stripe checkout mode. Setup mode stores a payment method and does not require a top-up amount."
+          },
           "topup_amount_cents": {
             "anyOf": [
               {
@@ -6885,8 +6893,57 @@
         },
         "required": [
           "success_url",
-          "cancel_url",
-          "topup_amount_cents"
+          "cancel_url"
+        ]
+      },
+      "WalletSetupResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "WalletSetupRequest": {
+        "type": "object",
+        "properties": {
+          "initial_load_amount_cents": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              }
+            ],
+            "description": "Initial wallet load amount in cents (integer or decimal string)"
+          },
+          "topup_amount_cents": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              }
+            ],
+            "description": "Auto-topup amount in cents (integer or decimal string)"
+          },
+          "topup_threshold_cents": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              }
+            ],
+            "description": "Balance threshold in cents that triggers auto-topup (integer or decimal string)"
+          }
+        },
+        "required": [
+          "initial_load_amount_cents",
+          "topup_amount_cents",
+          "topup_threshold_cents"
         ]
       },
       "BillingPortalSessionResponse": {
@@ -26536,7 +26593,7 @@
           "Billing"
         ],
         "summary": "Create Stripe checkout session",
-        "description": "Create a Stripe checkout session for purchasing credits",
+        "description": "Create a Stripe checkout session for purchasing credits or setting up a payment method.",
         "security": [
           {
             "bearerAuth": []
@@ -26558,6 +26615,128 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/BillingCheckoutResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
+      }
+    },
+    "/v1/billing/accounts/wallet_setup": {
+      "post": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Configure wallet setup",
+        "description": "Configure first-campaign wallet funding and process the initial load. Pass-through from billing-service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WalletSetupRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Wallet setup configured — pass-through from billing-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WalletSetupResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
