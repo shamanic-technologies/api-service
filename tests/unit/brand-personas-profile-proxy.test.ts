@@ -51,8 +51,10 @@ beforeEach(() => {
   capturedInit = undefined;
 });
 
-const personasPayload = { personas: [{ id: PERSONA_ID, name: "Eco shopper", status: "active" }] };
-const personaPayload = { persona: { id: PERSONA_ID, name: "Eco shopper", status: "active" } };
+const personasPayload = {
+  personas: [{ id: PERSONA_ID, name: "Eco shopper", status: "active", avatarUrl: "https://cdn.example.com/persona.png" }],
+};
+const personaPayload = { persona: { id: PERSONA_ID, name: "Eco shopper", status: "active", avatarUrl: null } };
 const profilePayload = { brandProfile: { id: "prof_1", version: 3 } };
 
 describe("GET /v1/brands/:id/personas", () => {
@@ -157,6 +159,38 @@ describe("POST /v1/brands/:id/personas/:personaId/duplicate", () => {
     expect(res.body).toEqual(personaPayload);
     expect(capturedUrl).toContain(`/orgs/brands/${BRAND_ID}/personas/${PERSONA_ID}/duplicate`);
     expect(capturedInit?.method).toBe("POST");
+  });
+});
+
+describe("POST /v1/brands/:id/personas/:personaId/avatar/regenerate", () => {
+  const regeneratedPayload = {
+    persona: {
+      id: PERSONA_ID,
+      name: "Eco shopper",
+      status: "active",
+      avatarUrl: "https://cdn.example.com/persona-regenerated.png",
+    },
+  };
+
+  it("forwards empty body to the avatar regenerate path and returns payload + status verbatim", async () => {
+    mockUpstream(200, regeneratedPayload);
+    const app = buildApp();
+    const res = await request(app).post(`/v1/brands/${BRAND_ID}/personas/${PERSONA_ID}/avatar/regenerate`).send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(regeneratedPayload);
+    expect(capturedUrl).toContain(`/orgs/brands/${BRAND_ID}/personas/${PERSONA_ID}/avatar/regenerate`);
+    expect(capturedInit?.method).toBe("POST");
+    expect(JSON.parse(capturedInit?.body as string)).toEqual({});
+  });
+
+  it("propagates an upstream avatar regeneration error verbatim", async () => {
+    mockUpstream(404, { error: "persona not found" });
+    const app = buildApp();
+    const res = await request(app).post(`/v1/brands/${BRAND_ID}/personas/${PERSONA_ID}/avatar/regenerate`).send({});
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toContain("persona not found");
   });
 });
 

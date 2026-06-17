@@ -607,6 +607,24 @@ router.post("/brands/:id/personas/:personaId/duplicate", authenticate, requireOr
 });
 
 /**
+ * POST /v1/brands/:id/personas/:personaId/avatar/regenerate
+ * Proxy to brand-service POST /orgs/brands/:id/personas/:personaId/avatar/regenerate.
+ */
+router.post("/brands/:id/personas/:personaId/avatar/regenerate", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/personas/${req.params.personaId}/avatar/regenerate${rawQuery(req)}`,
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Regenerate persona avatar error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to regenerate persona avatar" });
+  }
+});
+
+/**
  * PATCH /v1/brands/:id/personas/:personaId/status
  * Proxy to brand-service PATCH /orgs/brands/:id/personas/:personaId/status.
  */

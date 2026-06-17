@@ -3705,6 +3705,29 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/personas/{personaId}/avatar/regenerate",
+  tags: ["Brand"],
+  summary: "Regenerate a customer persona avatar",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{id}/personas/{personaId}/avatar/regenerate. " +
+    "Brand-service owns avatar generation, storage, cost declaration, and response shape; " +
+    "api-service forwards the request body and downstream response/status verbatim.",
+  security: authed,
+  request: {
+    params: PersonaParam,
+    body: { content: { "application/json": { schema: PersonaRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Persona avatar regenerated", content: { "application/json": { schema: PersonasResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand or persona not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "patch",
   path: "/v1/brands/{id}/personas/{personaId}/status",
   tags: ["Brand"],
