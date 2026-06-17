@@ -94,7 +94,10 @@ router.delete("/billing/accounts/auto_topup", authenticate, requireOrg, async (r
 // POST /v1/billing/checkout-sessions — create Stripe checkout session
 router.post("/billing/checkout-sessions", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
-    if (!requireBodyFields(res, req.body, ["success_url", "cancel_url", "topup_amount_cents"])) return;
+    const requiredFields = req.body?.mode === "setup"
+      ? ["success_url", "cancel_url"]
+      : ["success_url", "cancel_url", "topup_amount_cents"];
+    if (!requireBodyFields(res, req.body, requiredFields)) return;
     const result = await callExternalService(
       externalServices.billing,
       "/v1/checkout-sessions",
@@ -103,6 +106,20 @@ router.post("/billing/checkout-sessions", authenticate, requireOrg, async (req: 
     res.json(result);
   } catch (error: any) {
     res.status(500).json({ error: error.message || "Failed to create checkout session" });
+  }
+});
+
+// POST /v1/billing/accounts/wallet_setup — configure first-campaign wallet funding
+router.post("/billing/accounts/wallet_setup", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/wallet_setup",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to configure wallet setup" });
   }
 });
 

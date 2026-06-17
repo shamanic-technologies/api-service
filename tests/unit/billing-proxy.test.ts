@@ -50,15 +50,19 @@ describe("Billing proxy routes", () => {
     expect(content).toContain('"/billing/checkout-sessions"');
   });
 
+  it("should have POST /billing/accounts/wallet_setup endpoint", () => {
+    expect(content).toContain('"/billing/accounts/wallet_setup"');
+  });
+
   it("should have POST /billing/portal-sessions endpoint", () => {
     expect(content).toContain('"/billing/portal-sessions"');
   });
 
   it("should use authenticate and requireOrg on all authenticated endpoints", () => {
-    // 8 routes + 1 import = 9
+    // 9 routes + 1 import = 10
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    expect(authMatches!.length).toBe(9);
+    expect(authMatches!.length).toBe(10);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints (no x-key-source)", () => {
@@ -66,7 +70,7 @@ describe("Billing proxy routes", () => {
     expect(content).not.toContain('"x-key-source"');
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(8);
+    expect(headerMatches!.length).toBe(9);
   });
 
   it("should have GET + PATCH /brands/:brandId/daily-budget endpoints", () => {
@@ -99,6 +103,7 @@ describe("Billing proxy routes", () => {
     expect(content).toContain('"/v1/accounts/balance"');
     expect(content).toContain('"/v1/accounts/auto_topup"');
     expect(content).toContain('"/v1/checkout-sessions"');
+    expect(content).toContain('"/v1/accounts/wallet_setup"');
     expect(content).toContain('"/v1/portal-sessions"');
   });
 });
@@ -124,6 +129,7 @@ describe("Billing OpenAPI schemas", () => {
     expect(schemaContent).toContain('path: "/v1/billing/accounts/balance"');
     expect(schemaContent).toContain('path: "/v1/billing/accounts/auto_topup"');
     expect(schemaContent).toContain('path: "/v1/billing/checkout-sessions"');
+    expect(schemaContent).toContain('path: "/v1/billing/accounts/wallet_setup"');
     expect(schemaContent).toContain('path: "/v1/billing/portal-sessions"');
   });
 
@@ -160,6 +166,7 @@ describe("Billing OpenAPI schemas", () => {
   it("should define request schemas with new names", () => {
     expect(schemaContent).toContain("ConfigureAutoTopupRequestSchema");
     expect(schemaContent).toContain("CreateCheckoutSessionRequestSchema");
+    expect(schemaContent).toContain("WalletSetupRequestSchema");
     expect(schemaContent).not.toContain("ConfigureAutoReloadRequestSchema");
     expect(schemaContent).not.toContain("SwitchBillingModeRequestSchema");
     expect(schemaContent).not.toContain("DeductCreditsRequestSchema");
@@ -168,6 +175,7 @@ describe("Billing OpenAPI schemas", () => {
   it("should use topup_amount_cents in request schemas (not reload_amount_cents)", () => {
     expect(schemaContent).toContain("topup_amount_cents");
     expect(schemaContent).toContain("topup_threshold_cents");
+    expect(schemaContent).toContain("initial_load_amount_cents");
     expect(schemaContent).not.toContain("reload_amount_cents");
     expect(schemaContent).not.toContain("reload_threshold_cents");
   });
@@ -185,6 +193,7 @@ describe("Billing OpenAPI schemas", () => {
     expect(schemaContent).toContain('z.object({}).passthrough().openapi("ConfigureAutoTopupResponse")');
     expect(schemaContent).toContain('z.object({}).passthrough().openapi("DisableAutoTopupResponse")');
     expect(schemaContent).toContain('z.object({}).passthrough().openapi("BillingCheckoutResponse")');
+    expect(schemaContent).toContain('z.object({}).passthrough().openapi("WalletSetupResponse")');
     expect(schemaContent).toContain('z.object({}).passthrough().openapi("BillingPortalSessionResponse")');
     expect(schemaContent).toContain('z.object({}).passthrough().openapi("PublicBillingStatsResponse")');
     expect(schemaContent).not.toContain("TransactionListResponse");

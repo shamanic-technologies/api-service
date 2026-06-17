@@ -176,7 +176,37 @@ describe("billing proxy — passthrough contract", () => {
     expect(opts?.method).toBe("DELETE");
   });
 
-  it("POST /billing/checkout-sessions rejects missing topup amount before downstream", async () => {
+  it("POST /billing/checkout-sessions forwards setup mode without topup amount", async () => {
+    const upstream = { url: "https://stripe.example/setup" };
+    mockCallExternalService.mockResolvedValue(upstream);
+    const reqBody = {
+      success_url: "https://example.com/success",
+      cancel_url: "https://example.com/cancel",
+      mode: "setup",
+    };
+
+    const res = await request(createApp())
+      .post("/billing/checkout-sessions")
+      .send(reqBody);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(upstream);
+    const [service, downstreamPath, opts] = mockCallExternalService.mock.calls[0] as [
+      unknown,
+      string,
+      { method?: string; body?: unknown; headers?: Record<string, string> },
+    ];
+    expect(service).toEqual({ url: "http://mock-billing", apiKey: "k" });
+    expect(downstreamPath).toBe("/v1/checkout-sessions");
+    expect(opts?.method).toBe("POST");
+    expect(opts?.body).toEqual(reqBody);
+    expect(opts?.headers).toMatchObject({
+      "x-org-id": "org-test",
+      "x-user-id": "user-test",
+    });
+  });
+
+  it("POST /billing/checkout-sessions still rejects payment checkout without topup amount", async () => {
     const res = await request(createApp())
       .post("/billing/checkout-sessions")
       .send({ success_url: "https://example.com/success", cancel_url: "https://example.com/cancel" });
@@ -187,6 +217,39 @@ describe("billing proxy — passthrough contract", () => {
       missingFields: ["topup_amount_cents"],
     });
     expect(mockCallExternalService).not.toHaveBeenCalled();
+  });
+
+  it("POST /billing/accounts/wallet_setup forwards body byte-identical to /v1/accounts/wallet_setup", async () => {
+    const upstream = {
+      wallet_setup_complete: true,
+      checkout_required: false,
+    };
+    mockCallExternalService.mockResolvedValue(upstream);
+    const reqBody = {
+      initial_load_amount_cents: 50000,
+      topup_amount_cents: 25000,
+      topup_threshold_cents: 10000,
+    };
+
+    const res = await request(createApp())
+      .post("/billing/accounts/wallet_setup")
+      .send(reqBody);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(upstream);
+    const [service, downstreamPath, opts] = mockCallExternalService.mock.calls[0] as [
+      unknown,
+      string,
+      { method?: string; body?: unknown; headers?: Record<string, string> },
+    ];
+    expect(service).toEqual({ url: "http://mock-billing", apiKey: "k" });
+    expect(downstreamPath).toBe("/v1/accounts/wallet_setup");
+    expect(opts?.method).toBe("POST");
+    expect(opts?.body).toEqual(reqBody);
+    expect(opts?.headers).toMatchObject({
+      "x-org-id": "org-test",
+      "x-user-id": "user-test",
+    });
   });
 
   it("PATCH /brands/:brandId/daily-budget forwards body and identity headers", async () => {
