@@ -3705,6 +3705,29 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/personas/{personaId}/avatar/regenerate",
+  tags: ["Brand"],
+  summary: "Regenerate a customer persona avatar",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{id}/personas/{personaId}/avatar/regenerate. " +
+    "Brand-service owns avatar generation, storage, cost declaration, and response shape; " +
+    "api-service forwards the request body and downstream response/status verbatim.",
+  security: authed,
+  request: {
+    params: PersonaParam,
+    body: { content: { "application/json": { schema: PersonaRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Persona avatar regenerated", content: { "application/json": { schema: PersonasResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand or persona not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "patch",
   path: "/v1/brands/{id}/personas/{personaId}/status",
   tags: ["Brand"],
@@ -7141,6 +7164,30 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/{featureSlug}/pipeline-activity",
+  tags: ["Features"],
+  summary: "Feature pipeline activity",
+  description:
+    "7-day pipeline activity for a brand overview chart. Scoped by brandId, days, and timezone. Proxied from features-service.",
+  security: authed,
+  request: {
+    params: z.object({ featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required)"),
+      days: z.string().openapi({ example: "7" }).describe("Number of days to include"),
+      timezone: z.string().openapi({ example: "America/New_York" }).describe("IANA timezone for day bucketing"),
+    }),
+  },
+  responses: {
+    200: { description: "Feature pipeline activity", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeaturePipelineActivityResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/features/{featureSlug}/stats",
   tags: ["Features"],
   summary: "Feature stats",
@@ -7185,6 +7232,33 @@ registry.registerPath({
   },
   responses: {
     200: { description: "Feature revenue overview", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureRevenueResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/{featureSlug}/persona-stats",
+  tags: ["Features"],
+  summary: "Feature persona stats",
+  description:
+    "Persona-level cost and outcome evidence for a feature, scoped by brandId and goal. " +
+    "Proxied to features-service GET /features/{featureSlug}/persona-stats. Response shape is downstream-owned and passed through.",
+  security: authed,
+  request: {
+    params: z.object({ featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required)"),
+      goal: z.string().openapi({ example: "signup" }).describe("Optimization goal (required)"),
+      brandProfileId: z.string().optional().openapi({ example: "profile-uuid-123" }).describe("Optional brand-profile version to scope evidence"),
+      limit: z.string().optional().openapi({ example: "3" }).describe("Optional row limit after sorting"),
+    }),
+  },
+  responses: {
+    200: { description: "Feature persona stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeaturePersonaStatsResponse") } } },
+    400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },

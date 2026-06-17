@@ -31,7 +31,7 @@ describe("Features proxy routes", () => {
 
   it("should have GET /features/:slug with auth + requireOrg + requireUser", () => {
     const line = content.split("\n").find((l) =>
-      l.includes("router.get") && l.includes('"/features/:slug"') && !l.includes("/stats")
+      l.includes('router.get("/features/:slug"')
     );
     expect(line).toBeDefined();
     expect(line).toContain("authenticate");
@@ -130,6 +130,45 @@ describe("Features proxy routes", () => {
     expect(revenueBlock).toContain("/revenue");
   });
 
+  it("should have GET /features/:slug/persona-stats with auth + requireOrg + requireUser", () => {
+    expect(content).toContain('"/features/:slug/persona-stats"');
+    const line = content.split("\n").find((l) =>
+      l.includes('"/features/:slug/persona-stats"')
+    );
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should forward brandId, goal, brandProfileId, and limit on GET /features/:slug/persona-stats", () => {
+    const personaStatsIdx = content.indexOf('"/features/:slug/persona-stats"');
+    const personaStatsBlock = content.slice(personaStatsIdx, personaStatsIdx + 500);
+    expect(personaStatsBlock).toContain('"brandId"');
+    expect(personaStatsBlock).toContain('"goal"');
+    expect(personaStatsBlock).toContain('"brandProfileId"');
+    expect(personaStatsBlock).toContain('"limit"');
+    expect(personaStatsBlock).toContain("/persona-stats");
+  });
+
+  it("should have GET /features/:slug/pipeline-activity with auth + requireOrg + requireUser", () => {
+    expect(content).toContain('"/features/:slug/pipeline-activity"');
+    const line = content.split("\n").find((l) =>
+      l.includes('"/features/:slug/pipeline-activity"')
+    );
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should forward brandId, days, and timezone on GET /features/:slug/pipeline-activity", () => {
+    const pipelineActivityIdx = content.indexOf('"/features/:slug/pipeline-activity"');
+    const pipelineActivityBlock = content.slice(pipelineActivityIdx, pipelineActivityIdx + 500);
+    expect(pipelineActivityBlock).toContain('"brandId"');
+    expect(pipelineActivityBlock).toContain('"days"');
+    expect(pipelineActivityBlock).toContain('"timezone"');
+    expect(pipelineActivityBlock).toContain("/pipeline-activity");
+  });
+
   it("should have GET /features/:slug/workflow-projection with auth + requireOrg + requireUser", () => {
     expect(content).toContain('"/features/:slug/workflow-projection"');
     const line = content.split("\n").find((l) =>
@@ -165,10 +204,18 @@ describe("Features proxy routes", () => {
     const entitiesRegistryIdx = content.indexOf('"/features/entities/registry"');
     const registryIdx = content.indexOf('"/features/stats/registry"');
     const globalStatsIdx = content.indexOf('"/features/stats"');
-    const slugIdx = content.indexOf('"/features/:slug"');
+    const slugIdx = content.indexOf('router.get("/features/:slug",');
     expect(entitiesRegistryIdx).toBeLessThan(slugIdx);
     expect(registryIdx).toBeLessThan(slugIdx);
     expect(globalStatsIdx).toBeLessThan(slugIdx);
+  });
+
+  it("should register pipeline-activity before parameterized :slug route", () => {
+    const pipelineActivityIdx = content.indexOf('"/features/:slug/pipeline-activity"');
+    const slugIdx = content.indexOf('router.get("/features/:slug",');
+    expect(pipelineActivityIdx).toBeGreaterThanOrEqual(0);
+    expect(slugIdx).toBeGreaterThanOrEqual(0);
+    expect(pipelineActivityIdx).toBeLessThan(slugIdx);
   });
 
   it("should NOT have dynasty-specific routes (dynasty concept removed)", () => {
@@ -247,6 +294,16 @@ describe("Features OpenAPI schemas", () => {
 
   it("should register GET /v1/features/{featureSlug}/revenue", () => {
     expect(schemaContent).toContain('path: "/v1/features/{featureSlug}/revenue"');
+  });
+
+  it("should register GET /v1/features/{featureSlug}/persona-stats", () => {
+    expect(schemaContent).toContain('path: "/v1/features/{featureSlug}/persona-stats"');
+    expect(schemaContent).toContain("FeaturePersonaStatsResponse");
+  });
+
+  it("should register GET /v1/features/{featureSlug}/pipeline-activity", () => {
+    expect(schemaContent).toContain('path: "/v1/features/{featureSlug}/pipeline-activity"');
+    expect(schemaContent).toContain("FeaturePipelineActivityResponse");
   });
 
   it("should register GET /v1/features/{featureSlug}/workflow-projection", () => {
