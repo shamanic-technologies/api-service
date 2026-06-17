@@ -7240,6 +7240,33 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/{featureSlug}/persona-stats",
+  tags: ["Features"],
+  summary: "Feature persona stats",
+  description:
+    "Persona-level cost and outcome evidence for a feature, scoped by brandId and goal. " +
+    "Proxied to features-service GET /features/{featureSlug}/persona-stats. Response shape is downstream-owned and passed through.",
+  security: authed,
+  request: {
+    params: z.object({ featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required)"),
+      goal: z.string().openapi({ example: "signup" }).describe("Optimization goal (required)"),
+      brandProfileId: z.string().optional().openapi({ example: "profile-uuid-123" }).describe("Optional brand-profile version to scope evidence"),
+      limit: z.string().optional().openapi({ example: "3" }).describe("Optional row limit after sorting"),
+    }),
+  },
+  responses: {
+    200: { description: "Feature persona stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeaturePersonaStatsResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/features/{featureSlug}/workflow-projection",
   tags: ["Features"],
   summary: "Feature workflow projection",

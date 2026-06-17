@@ -344,6 +344,29 @@ router.get("/features/:slug/revenue", authenticate, requireOrg, requireUser, asy
 });
 
 /**
+ * GET /v1/features/:slug/persona-stats
+ * Persona-level cost and outcome evidence for a feature, scoped by brandId and goal.
+ */
+router.get("/features/:slug/persona-stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["brandId", "goal", "brandProfileId", "limit"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.features,
+      `/features/${encodeURIComponent(req.params.slug)}/persona-stats${qs}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Feature persona-stats error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get feature persona stats" });
+  }
+});
+
+/**
  * GET /v1/features/:slug/workflow-projection
  * Ranks a brand's workflows by cost-per-close and projects a budget through the sales funnel,
  * scoped by brandId. Proxied to features-service GET /features/:slug/workflow-projection.
