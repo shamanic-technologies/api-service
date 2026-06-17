@@ -257,6 +257,29 @@ router.post("/features/:slug/prefill", authenticate, requireOrg, requireUser, as
 });
 
 /**
+ * GET /v1/features/:slug/pipeline-activity
+ * 7-day pipeline activity for a brand. Proxied to features-service GET /features/:slug/pipeline-activity.
+ */
+router.get("/features/:slug/pipeline-activity", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["brandId", "days", "timezone"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.features,
+      `/features/${encodeURIComponent(req.params.slug)}/pipeline-activity${qs}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Feature pipeline-activity error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get feature pipeline activity" });
+  }
+});
+
+/**
  * GET /v1/features/:slug
  * Get a single feature by slug
  */
