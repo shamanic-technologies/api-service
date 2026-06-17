@@ -317,6 +317,21 @@ const MOCK_PIPELINE_ACTIVITY = {
   producerOwnedField: "kept",
 };
 
+const MOCK_PERSONA_STATS = {
+  featureSlug: "sales-cold-email-outreach",
+  brandId: "brand-uuid-123",
+  goal: "signup",
+  sortMetric: "cpc",
+  personas: [
+    {
+      customerProfileId: "persona-1",
+      persona: { id: "persona-1", name: "Founders" },
+      evidence: { totalCostInUsdCents: 1200, websiteClicks: 4, positiveReplies: 1 },
+      metrics: { cpcCents: 300, cpprCents: 1200 },
+    },
+  ],
+};
+
 const MOCK_PUBLIC_BRAND_REVENUE = {
   featureSlug: "sales-cold-email-outreach",
   groupBy: "brand",
@@ -424,6 +439,44 @@ describe("GET /v1/features/:slug/pipeline-activity", () => {
     expect(params.get("timezone")).toBe("America/New_York");
     expect(params.has("campaignId")).toBe(false);
     expect(params.has("groupBy")).toBe(false);
+  });
+});
+
+describe("GET /v1/features/:slug/persona-stats", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("proxies to features-service /features/:slug/persona-stats and forwards allowed query params", async () => {
+    const app = createApp();
+    mockCallExternalService.mockImplementation((service: any, path: string) => {
+      if (service.url === "http://mock-features" && path.startsWith("/features/sales-cold-email-outreach/persona-stats")) {
+        return Promise.resolve(MOCK_PERSONA_STATS);
+      }
+      return Promise.resolve({});
+    });
+
+    const res = await request(app).get("/v1/features/sales-cold-email-outreach/persona-stats?brandId=brand-uuid-123&goal=signup&brandProfileId=profile-uuid-456&limit=3&campaignId=campaign-uuid-789");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(MOCK_PERSONA_STATS);
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/persona-stats"),
+    );
+    expect(call).toBeDefined();
+    const url = call![1] as string;
+    const params = new URLSearchParams(url.split("?")[1]);
+    expect(params.get("brandId")).toBe("brand-uuid-123");
+    expect(params.get("goal")).toBe("signup");
+    expect(params.get("brandProfileId")).toBe("profile-uuid-456");
+    expect(params.get("limit")).toBe("3");
+    expect(params.has("campaignId")).toBe(false);
+
+    const options = call![2] as { headers: Record<string, string> };
+    expect(options.headers).toMatchObject({
+      "x-org-id": "org-uuid-123",
+      "x-user-id": "user-uuid-456",
+      "x-run-id": "run-uuid-789",
+    });
   });
 });
 
