@@ -14,6 +14,79 @@ const JOURNALISTS_QUOTES_DISPATCHER: Dispatcher = new Agent({
   bodyTimeout: 600_000,
 });
 
+const TRANSIENT_FETCH_ERROR_CODES = new Set([
+  "EAI_AGAIN",
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "ENOTFOUND",
+  "ETIMEDOUT",
+  "UND_ERR_CONNECT_TIMEOUT",
+]);
+
+const TRANSIENT_FETCH_ERROR_MESSAGE = /\b(EAI_AGAIN|ECONNREFUSED|ECONNRESET|ENOTFOUND|ETIMEDOUT)\b|timeout (expired|exceeded)/i;
+const TRANSIENT_FETCH_RETRY_DELAYS_MS = [250, 500, 1_000] as const;
+
+function findTransientFetchCause(error: unknown, seen = new Set<unknown>()): string | null {
+  if (!error || typeof error !== "object" || seen.has(error)) return null;
+  seen.add(error);
+
+  const err = error as {
+    code?: unknown;
+    cause?: unknown;
+    errors?: unknown;
+    message?: unknown;
+    statusCode?: unknown;
+  };
+
+  if (typeof err.statusCode === "number") return null;
+
+  if (typeof err.code === "string" && TRANSIENT_FETCH_ERROR_CODES.has(err.code)) {
+    return err.code;
+  }
+
+  if (typeof err.message === "string") {
+    const match = err.message.match(TRANSIENT_FETCH_ERROR_MESSAGE);
+    if (match) return match[1] || match[0];
+  }
+
+  const cause = findTransientFetchCause(err.cause, seen);
+  if (cause) return cause;
+
+  if (Array.isArray(err.errors)) {
+    for (const item of err.errors) {
+      const nested = findTransientFetchCause(item, seen);
+      if (nested) return nested;
+    }
+  }
+
+  return null;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchWithTransientNetworkRetry(
+  url: string,
+  init: RequestInit & { dispatcher?: Dispatcher },
+  method: string,
+): Promise<Response> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await fetch(url, init);
+    } catch (error) {
+      const cause = findTransientFetchCause(error);
+      const delayMs = TRANSIENT_FETCH_RETRY_DELAYS_MS[attempt];
+      if (!cause || delayMs === undefined) throw error;
+
+      console.log(
+        `[api-service] [callExternalService] ${method} ${url} transient network failure (cause: ${cause}); retrying ${attempt + 1}/${TRANSIENT_FETCH_RETRY_DELAYS_MS.length} after ${delayMs}ms`,
+      );
+      await sleep(delayMs);
+    }
+  }
+}
+
 export const externalServices = {
   client: {
     url: process.env.CLIENT_SERVICE_URL || "http://localhost:3002",
@@ -195,7 +268,7 @@ export async function callExternalServiceWithStatus<T>(
       body: body ? JSON.stringify(body) : undefined,
     };
     if (service.dispatcher) init.dispatcher = service.dispatcher;
-    const response = await fetch(url, init);
+    const response = await fetchWithTransientNetworkRetry(url, init, method);
 
     if (!response.ok) {
       const errorText = await response.text();
