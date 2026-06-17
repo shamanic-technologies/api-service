@@ -272,6 +272,20 @@ describe("POST /v1/stripe/checkout", () => {
       .send({ successUrl: "https://x.com", cancelUrl: "https://x.com" });
     expect(res.status).toBe(400);
   });
+
+  it("should reject subscription checkout mode", async () => {
+    const res = await request(app)
+      .post("/v1/stripe/checkout")
+      .send({
+        lineItems: [{ priceId: "price_123", quantity: 1 }],
+        mode: "subscription",
+        successUrl: "https://polarity.com/success",
+        cancelUrl: "https://polarity.com/cancel",
+      });
+
+    expect(res.status).toBe(400);
+    expect(fetchCalls).toHaveLength(0);
+  });
 });
 
 // ---------------------------------------------------------------------------
