@@ -108,6 +108,41 @@ describe("callExternalService error handling", () => {
       expect.stringContaining("http://localhost:9999/resolve"),
     );
   });
+
+  it("retries transient thrown network failures before returning success", async () => {
+    const retrySpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const networkError = new TypeError("fetch failed");
+    (networkError as any).cause = { code: "ENOTFOUND", message: "getaddrinfo ENOTFOUND campaign-service.railway.internal" };
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(networkError)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ paused: false }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(callExternalService(service, "/brands/b1/pause")).resolves.toEqual({ paused: false });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(retrySpy).toHaveBeenCalledWith(
+      expect.stringContaining("transient network failure"),
+    );
+  });
+
+  it("does not retry completed upstream HTTP errors", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 502,
+      text: () => Promise.resolve("upstream bad gateway"),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(callExternalService(service, "/brands/b1/pause")).rejects.toThrow("upstream bad gateway");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("streamExternalService error logging", () => {
