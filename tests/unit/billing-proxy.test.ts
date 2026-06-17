@@ -55,10 +55,10 @@ describe("Billing proxy routes", () => {
   });
 
   it("should use authenticate and requireOrg on all authenticated endpoints", () => {
-    // 8 routes + 1 import = 9
+    // 12 routes + 1 import = 13
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    expect(authMatches!.length).toBe(9);
+    expect(authMatches!.length).toBe(13);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints (no x-key-source)", () => {
@@ -66,7 +66,7 @@ describe("Billing proxy routes", () => {
     expect(content).not.toContain('"x-key-source"');
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(8);
+    expect(headerMatches!.length).toBe(12);
   });
 
   it("should have GET + PATCH /brands/:brandId/daily-budget endpoints", () => {
@@ -74,6 +74,20 @@ describe("Billing proxy routes", () => {
     // GET proxies billing internal read; PATCH proxies billing /v1 write
     expect(content).toContain("`/internal/brands/${req.params.brandId}/daily-budget`");
     expect(content).toContain("`/v1/brands/${req.params.brandId}/daily-budget`");
+  });
+
+  it("should have brand subscription proxy endpoints", () => {
+    expect(content).toContain('"/brands/:brandId/subscription"');
+    expect(content).toContain('"/brands/:brandId/subscription/pause"');
+    expect(content).toContain('"/brands/:brandId/subscription/resume"');
+    expect(content).toContain("`/v1/brands/${req.params.brandId}/subscription`");
+    expect(content).toContain("`/v1/brands/${req.params.brandId}/subscription/pause`");
+    expect(content).toContain("`/v1/brands/${req.params.brandId}/subscription/resume`");
+  });
+
+  it("should NOT proxy billing's internal card-confirmed route", () => {
+    expect(content).not.toContain("card-confirmed");
+    expect(schemaContent).not.toContain("card-confirmed");
   });
 
   it("should proxy to externalServices.billing", () => {
@@ -133,6 +147,14 @@ describe("Billing OpenAPI schemas", () => {
     expect(schemaContent).toContain('path: "/v1/brands/{brandId}/daily-budget"');
     expect(schemaContent).toContain('z.object({}).passthrough().openapi("DailyBudgetResponse")');
     expect(schemaContent).toContain('z.object({}).passthrough().openapi("DailyBudgetRequest")');
+  });
+
+  it("should register brand subscription paths (passthrough)", () => {
+    expect(schemaContent).toContain('path: "/v1/brands/{brandId}/subscription"');
+    expect(schemaContent).toContain('path: "/v1/brands/{brandId}/subscription/pause"');
+    expect(schemaContent).toContain('path: "/v1/brands/{brandId}/subscription/resume"');
+    expect(schemaContent).toContain('z.object({}).passthrough().openapi("BrandSubscriptionResponse")');
+    expect(schemaContent).toContain('z.object({}).passthrough().openapi("BrandSubscriptionRequest")');
   });
 
   it("should define request schemas with new names", () => {
