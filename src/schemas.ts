@@ -8389,3 +8389,55 @@ registry.registerPath({
     403: { description: "orgId path does not match authenticated org", content: errorContent },
   },
 });
+
+// ---------------------------------------------------------------------------
+// Brand pause state — owned by CAMPAIGN-SERVICE (not brand-service).
+// Proxies to campaign-service /brands/:brandId/pause.
+// ---------------------------------------------------------------------------
+const BrandPauseParam = z.object({
+  brandId: z.string().describe("Brand ID"),
+});
+
+const BrandPauseRequestSchema = z
+  .object({ paused: z.boolean().describe("Desired pause state for the brand") })
+  .openapi("BrandPauseRequest");
+
+// Passthrough — response shape owned by campaign-service (CLAUDE.md #8).
+const BrandPauseResponseSchema = z.object({}).passthrough().openapi("BrandPauseResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/pause",
+  tags: ["Campaigns"],
+  summary: "Get a brand's pause state",
+  description:
+    "Proxy to campaign-service GET /brands/{brandId}/pause. " +
+    "Returns the brand's pause state. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: BrandPauseParam },
+  responses: {
+    200: { description: "Brand pause state", content: { "application/json": { schema: BrandPauseResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/brands/{brandId}/pause",
+  tags: ["Campaigns"],
+  summary: "Update a brand's pause state",
+  description:
+    "Proxy to campaign-service PATCH /brands/{brandId}/pause. " +
+    "Body { paused: boolean }. Body + response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    params: BrandPauseParam,
+    body: { content: { "application/json": { schema: BrandPauseRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Updated brand pause state", content: { "application/json": { schema: BrandPauseResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
