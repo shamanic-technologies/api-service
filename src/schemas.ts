@@ -8565,3 +8565,191 @@ registry.registerPath({
     500: { description: "Internal error", content: errorContent },
   },
 });
+
+// ===================================================================
+// AUDIENCES (transparent proxy → human-service /orgs/audiences/*)
+// ===================================================================
+// Response schemas are passthrough — human-service owns the shape; api-service
+// forwards bytes (CLAUDE.md rule #8). Request bodies are forwarded verbatim
+// (rule #4), so the request body schemas below are passthrough too, present
+// only for OpenAPI documentation.
+
+const AudienceIdParam = z.object({
+  id: z.string().describe("Audience ID"),
+});
+
+const AudienceResponse = z.object({}).passthrough().openapi("AudienceResponse");
+const AudienceListResponse = z.object({}).passthrough().openapi("AudienceListResponse");
+const AudienceMembersResponse = z.object({}).passthrough().openapi("AudienceMembersResponse");
+const AudienceSuggestResponse = z.object({}).passthrough().openapi("AudienceSuggestResponse");
+const AudienceStatsResponse = z.object({}).passthrough().openapi("AudienceStatsResponse");
+const AudiencePassthroughBody = z.object({}).passthrough();
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/audiences/suggest",
+  tags: ["Audiences"],
+  summary: "Suggest candidate audiences from a natural-language prompt",
+  description:
+    "Proxy to human-service POST /orgs/audiences/suggest. Body { nlPrompt, brandId }. " +
+    "Request + response shapes are owned by human-service — see its openapi.json. Forwarded untransformed.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: AudiencePassthroughBody } } } },
+  responses: {
+    200: { description: "Candidate audiences (human-service { candidates })", content: { "application/json": { schema: AudienceSuggestResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/audiences/stats",
+  tags: ["Audiences"],
+  summary: "Per-audience membership stats for a list of emails / personIds",
+  description:
+    "Proxy to human-service POST /orgs/audiences/stats. Request + response shapes owned by human-service. Forwarded untransformed.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: AudiencePassthroughBody } } } },
+  responses: {
+    200: { description: "Stats as returned by human-service", content: { "application/json": { schema: AudienceStatsResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/audiences",
+  tags: ["Audiences"],
+  summary: "Create an audience",
+  description:
+    "Proxy to human-service POST /orgs/audiences. Request + response shapes owned by human-service. Forwarded untransformed.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: AudiencePassthroughBody } } } },
+  responses: {
+    200: { description: "Created audience", content: { "application/json": { schema: AudienceResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/audiences",
+  tags: ["Audiences"],
+  summary: "List audiences for an org",
+  description:
+    "Proxy to human-service GET /orgs/audiences. Optional brandId filter + limit/offset pagination forwarded untransformed.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().optional().openapi({ description: "Brand ID filter" }),
+      limit: z.coerce.number().int().optional().openapi({ description: "Max results (human-service enforces its own cap)" }),
+      offset: z.coerce.number().int().optional().openapi({ description: "Pagination offset" }),
+    }),
+  },
+  responses: {
+    200: { description: "Audiences as returned by human-service", content: { "application/json": { schema: AudienceListResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/audiences/{id}/refresh-count",
+  tags: ["Audiences"],
+  summary: "Re-snapshot apollo + apify counts for an audience",
+  description:
+    "Proxy to human-service POST /orgs/audiences/{id}/refresh-count. Response shape owned by human-service. Forwarded untransformed.",
+  security: authed,
+  request: { params: AudienceIdParam },
+  responses: {
+    200: { description: "Updated audience counts", content: { "application/json": { schema: AudienceResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/audiences/{id}/members",
+  tags: ["Audiences"],
+  summary: "List the canonical people who are members of an audience",
+  description:
+    "Proxy to human-service GET /orgs/audiences/{id}/members. limit/offset pagination forwarded untransformed.",
+  security: authed,
+  request: {
+    params: AudienceIdParam,
+    query: z.object({
+      limit: z.coerce.number().int().optional().openapi({ description: "Max results (human-service enforces its own cap)" }),
+      offset: z.coerce.number().int().optional().openapi({ description: "Pagination offset" }),
+    }),
+  },
+  responses: {
+    200: { description: "Members as returned by human-service", content: { "application/json": { schema: AudienceMembersResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/audiences/{id}",
+  tags: ["Audiences"],
+  summary: "Get an audience by id",
+  description:
+    "Proxy to human-service GET /orgs/audiences/{id}. Response shape owned by human-service. Forwarded untransformed.",
+  security: authed,
+  request: { params: AudienceIdParam },
+  responses: {
+    200: { description: "Audience as returned by human-service", content: { "application/json": { schema: AudienceResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/orgs/audiences/{id}",
+  tags: ["Audiences"],
+  summary: "Update an audience",
+  description:
+    "Proxy to human-service PATCH /orgs/audiences/{id}. Request + response shapes owned by human-service. Forwarded untransformed.",
+  security: authed,
+  request: {
+    params: AudienceIdParam,
+    body: { content: { "application/json": { schema: AudiencePassthroughBody } } },
+  },
+  responses: {
+    200: { description: "Updated audience", content: { "application/json": { schema: AudienceResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/orgs/audiences/{id}",
+  tags: ["Audiences"],
+  summary: "Delete an audience (cascades members)",
+  description:
+    "Proxy to human-service DELETE /orgs/audiences/{id}. Response shape owned by human-service. Forwarded untransformed.",
+  security: authed,
+  request: { params: AudienceIdParam },
+  responses: {
+    200: { description: "Deletion result as returned by human-service", content: { "application/json": { schema: AudienceResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / not configured", content: errorContent },
+  },
+});
