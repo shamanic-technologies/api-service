@@ -59,6 +59,16 @@ describe("Dynasty slug forwarding — runs/stats/costs", () => {
     }
     expect(runsStatsSection).not.toContain(`"featureDynastySlug"`);
   });
+
+  it("should forward startedAfter/startedBefore on GET /runs/stats/costs", () => {
+    const runsStatsSection = runsRoute.slice(
+      runsRoute.indexOf('"/runs/stats/costs"'),
+      runsRoute.indexOf('"/events"'),
+    );
+    for (const param of ["startedAfter", "startedBefore"]) {
+      expect(runsStatsSection).toContain(`"${param}"`);
+    }
+  });
 });
 
 describe("Dynasty slug forwarding — email-gateway/stats", () => {
