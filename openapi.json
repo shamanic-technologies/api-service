@@ -22523,7 +22523,7 @@
           "Runs"
         ],
         "summary": "Get cost stats from runs-service",
-        "description": "Get cost statistics grouped by a dimension. Supports groupBy=brandId, costName, campaignId, serviceName, workflowDynastySlug. Filter by brandId, campaignId, taskName, workflowSlug, featureSlug, workflowDynastySlug.",
+        "description": "Get cost statistics grouped by a dimension. Supports groupBy=brandId, costName, campaignId, serviceName, workflowDynastySlug. Filter by brandId, campaignId, taskName, workflowSlug, featureSlug, workflowDynastySlug, startedAfter, startedBefore.",
         "security": [
           {
             "bearerAuth": []
@@ -22598,6 +22598,26 @@
             "required": false,
             "description": "Filter by workflow dynasty slug (resolved to all versioned slugs)",
             "name": "workflowDynastySlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by run startedAt >= this ISO date-time"
+            },
+            "required": false,
+            "description": "Filter by run startedAt >= this ISO date-time",
+            "name": "startedAfter",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Filter by run startedAt < this ISO date-time"
+            },
+            "required": false,
+            "description": "Filter by run startedAt < this ISO date-time",
+            "name": "startedBefore",
             "in": "query"
           },
           {
