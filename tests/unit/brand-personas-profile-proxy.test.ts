@@ -149,6 +149,55 @@ describe("POST /v1/brands/:id/personas/suggest", () => {
   });
 });
 
+describe("POST /v1/brands/:id/icp/suggest", () => {
+  const icpPayload = { icp: "B2B SaaS founders at 10-50 person startups looking to scale outbound" };
+
+  it("forwards to brand-service /orgs/brands/:id/icp/suggest and returns { icp } + status verbatim", async () => {
+    mockUpstream(200, icpPayload);
+    const app = buildApp();
+    const res = await request(app).post(`/v1/brands/${BRAND_ID}/icp/suggest`).send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(icpPayload);
+    expect(capturedUrl).toContain(`/orgs/brands/${BRAND_ID}/icp/suggest`);
+    expect(capturedInit?.method).toBe("POST");
+  });
+
+  it("forwards { existingIcps } body byte-identical to downstream", async () => {
+    mockUpstream(200, icpPayload);
+    const app = buildApp();
+    const body = { existingIcps: ["Solo founders", "Marketing agencies"] };
+    await request(app).post(`/v1/brands/${BRAND_ID}/icp/suggest`).send(body);
+
+    expect(JSON.parse(capturedInit?.body as string)).toEqual(body);
+  });
+
+  it("forwards identity headers (x-org-id, x-user-id, x-run-id)", async () => {
+    mockUpstream(200, icpPayload);
+    const app = buildApp();
+    await request(app).post(`/v1/brands/${BRAND_ID}/icp/suggest`).send({});
+
+    const headers = capturedInit?.headers as Record<string, string>;
+    expect(headers["x-org-id"]).toBe("org_test456");
+    expect(headers["x-user-id"]).toBe("user_test123");
+    expect(headers["x-run-id"]).toBe("run_test789");
+  });
+
+  it.each([
+    [402, { error: "Insufficient credits" }, "Insufficient credits"],
+    [422, { error: "Brand profile is empty" }, "Brand profile is empty"],
+    [404, { error: "Brand not found" }, "Brand not found"],
+    [400, { error: "existingIcps must be an array of strings" }, "existingIcps must be an array"],
+  ])("propagates upstream %i status + body verbatim", async (status, payload, expected) => {
+    mockUpstream(status, payload);
+    const app = buildApp();
+    const res = await request(app).post(`/v1/brands/${BRAND_ID}/icp/suggest`).send({});
+
+    expect(res.status).toBe(status);
+    expect(res.body.error).toContain(expected);
+  });
+});
+
 describe("POST /v1/brands/:id/personas/:personaId/duplicate", () => {
   it("forwards to the duplicate path and returns 201 verbatim", async () => {
     mockUpstream(201, personaPayload);
