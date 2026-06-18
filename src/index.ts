@@ -50,6 +50,7 @@ import featuresRoutes from "./routes/features.js";
 import googleRoutes from "./routes/google.js";
 import quotesRoutes from "./routes/quotes.js";
 import visibilityRoutes from "./routes/visibility.js";
+import audiencesRoutes from "./routes/audiences.js";
 import ahrefRoutes from "./routes/ahref.js";
 import invitesRoutes from "./routes/invites.js";
 import waitlistRoutes from "./routes/waitlist.js";
@@ -222,6 +223,7 @@ app.use("/v1", visibilityRoutes);
 app.use("/v1", ahrefRoutes);
 app.use("/v1", invitesRoutes);
 app.use("/v1", waitlistRoutes);
+app.use("/v1", audiencesRoutes);
 
 // 404 handler
 app.use((req, res) => {

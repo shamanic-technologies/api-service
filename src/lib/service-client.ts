@@ -229,6 +229,29 @@ export const externalServices = {
       return v;
     },
   },
+  // Lazy reads so an api-service deploy that lands BEFORE the Railway vars are set
+  // degrades to a 502 on the audiences routes only (statusCode propagated to the
+  // route catch), never a boot-loop. Boot never touches these getters.
+  human: {
+    get url(): string {
+      const v = process.env.HUMAN_SERVICE_URL;
+      if (!v) {
+        const err = new Error("HUMAN_SERVICE_URL env var is required") as Error & { statusCode: number };
+        err.statusCode = 502;
+        throw err;
+      }
+      return v;
+    },
+    get apiKey(): string {
+      const v = process.env.HUMAN_SERVICE_API_KEY;
+      if (!v) {
+        const err = new Error("HUMAN_SERVICE_API_KEY env var is required") as Error & { statusCode: number };
+        err.statusCode = 502;
+        throw err;
+      }
+      return v;
+    },
+  },
 };
 
 interface ServiceCallOptions {
