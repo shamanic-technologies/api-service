@@ -3614,6 +3614,8 @@ const PersonaParam = z.object({
 });
 const PersonasResponseSchema = z.object({}).passthrough().openapi("PersonasResponse");
 const PersonaRequestSchema = z.object({}).passthrough().openapi("PersonaRequest");
+const IcpSuggestRequestSchema = z.object({}).passthrough().openapi("IcpSuggestRequest");
+const IcpSuggestResponseSchema = z.object({}).passthrough().openapi("IcpSuggestResponse");
 const BrandProfileResponseSchema = z.object({}).passthrough().openapi("BrandProfileResponse");
 const BrandProfileRequestSchema = z.object({}).passthrough().openapi("BrandProfileRequest");
 
@@ -3678,6 +3680,32 @@ registry.registerPath({
     400: { description: "Validation error (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/icp/suggest",
+  tags: ["Brand"],
+  summary: "Suggest one natural-language ICP for a brand",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{id}/icp/suggest. " +
+    "Returns one short, plain-language ICP line ({ icp }). Optional body " +
+    "{ existingIcps?: string[] } makes it return a distinct, complementary ICP. " +
+    "Body + response shapes are owned by the downstream service — passthrough only.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: { content: { "application/json": { schema: IcpSuggestRequestSchema } } },
+  },
+  responses: {
+    200: { description: "ICP suggestion", content: { "application/json": { schema: IcpSuggestResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    402: { description: "Insufficient credits (forwarded verbatim)", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    422: { description: "Empty brand profile (forwarded verbatim)", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
   },
 });

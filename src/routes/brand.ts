@@ -589,6 +589,24 @@ router.post("/brands/:id/personas/suggest", authenticate, requireOrg, requireUse
 });
 
 /**
+ * POST /v1/brands/:id/icp/suggest
+ * Proxy to brand-service POST /orgs/brands/:id/icp/suggest. Returns one AI-generated ICP line verbatim.
+ */
+router.post("/brands/:id/icp/suggest", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/icp/suggest${rawQuery(req)}`,
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Suggest ICP error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to suggest ICP" });
+  }
+});
+
+/**
  * POST /v1/brands/:id/personas/:personaId/duplicate
  * Proxy to brand-service POST /orgs/brands/:id/personas/:personaId/duplicate. Returns 201 verbatim.
  */
