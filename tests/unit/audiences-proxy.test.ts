@@ -72,6 +72,12 @@ describe("/v1/orgs/audiences/* → human-service", () => {
     expect(calls[0].url).toBe(`${HUMAN_BASE}/orgs/audiences?limit=50&offset=10&brandId=b1`);
   });
 
+  it("GET list forwards status (lifecycle) filter", async () => {
+    const res = await request(buildApp()).get("/v1/orgs/audiences?brandId=b1&status=active");
+    expect(res.status).toBe(200);
+    expect(calls[0].url).toBe(`${HUMAN_BASE}/orgs/audiences?brandId=b1&status=active`);
+  });
+
   it("GET /:id forwards to the by-id path", async () => {
     await request(buildApp()).get("/v1/orgs/audiences/aud-1");
     expect(calls[0].url).toBe(`${HUMAN_BASE}/orgs/audiences/aud-1`);

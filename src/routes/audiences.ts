@@ -87,7 +87,7 @@ router.get("/orgs/audiences", ...authChain, async (req: AuthenticatedRequest, re
   try {
     const result = await callExternalService(
       externalServices.human,
-      `/orgs/audiences${passthroughQuery(req, ["limit", "offset", "brandId"])}`,
+      `/orgs/audiences${passthroughQuery(req, ["limit", "offset", "brandId", "status"])}`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
