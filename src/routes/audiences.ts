@@ -87,7 +87,7 @@ router.get("/orgs/audiences", ...authChain, async (req: AuthenticatedRequest, re
   try {
     const result = await callExternalService(
       externalServices.human,
-      `/orgs/audiences${passthroughQuery(req, ["limit", "offset", "brandId"])}`,
+      `/orgs/audiences${passthroughQuery(req, ["limit", "offset", "brandId", "status"])}`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
@@ -121,6 +121,20 @@ router.get("/orgs/audiences/:id/members", ...authChain, async (req: Authenticate
     res.json(result);
   } catch (error: any) {
     fail(res, error, "List audience members error");
+  }
+});
+
+// PATCH /v1/orgs/audiences/:id/status → human-service PATCH /orgs/audiences/{id}/status
+router.patch("/orgs/audiences/:id/status", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.human,
+      `/orgs/audiences/${encodeURIComponent(req.params.id)}/status`,
+      { method: "PATCH", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.json(result);
+  } catch (error: any) {
+    fail(res, error, "Update audience status error");
   }
 });
 

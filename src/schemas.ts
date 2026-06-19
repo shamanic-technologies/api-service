@@ -8671,11 +8671,12 @@ registry.registerPath({
   tags: ["Audiences"],
   summary: "List audiences for an org",
   description:
-    "Proxy to human-service GET /orgs/audiences. Optional brandId filter + limit/offset pagination forwarded untransformed.",
+    "Proxy to human-service GET /orgs/audiences. Optional brandId + status (lifecycle) filters + limit/offset pagination forwarded untransformed.",
   security: authed,
   request: {
     query: z.object({
       brandId: z.string().uuid().optional().openapi({ description: "Brand ID filter" }),
+      status: z.string().optional().openapi({ description: "Lifecycle filter (suggested|active|paused|archived) — forwarded to human-service" }),
       limit: z.coerce.number().int().optional().openapi({ description: "Max results (human-service enforces its own cap)" }),
       offset: z.coerce.number().int().optional().openapi({ description: "Pagination offset" }),
     }),
@@ -8739,6 +8740,26 @@ registry.registerPath({
   request: { params: AudienceIdParam },
   responses: {
     200: { description: "Audience as returned by human-service", content: { "application/json": { schema: AudienceResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/orgs/audiences/{id}/status",
+  tags: ["Audiences"],
+  summary: "Change an audience's status (active / paused / archived)",
+  description:
+    "Proxy to human-service PATCH /orgs/audiences/{id}/status. Body { status } + response shapes owned by human-service. Forwarded untransformed.",
+  security: authed,
+  request: {
+    params: AudienceIdParam,
+    body: { content: { "application/json": { schema: AudiencePassthroughBody } } },
+  },
+  responses: {
+    200: { description: "Updated audience", content: { "application/json": { schema: AudienceResponse } } },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
     502: { description: "human-service unreachable / not configured", content: errorContent },
