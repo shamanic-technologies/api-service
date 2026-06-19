@@ -95,6 +95,13 @@ describe("/v1/orgs/audiences/* → human-service", () => {
     expect(JSON.parse(calls[0].options.body)).toEqual({ name: "renamed" });
   });
 
+  it("PATCH /:id/status forwards body verbatim to the status path", async () => {
+    await request(buildApp()).patch("/v1/orgs/audiences/aud-1/status").send({ status: "paused" });
+    expect(calls[0].url).toBe(`${HUMAN_BASE}/orgs/audiences/aud-1/status`);
+    expect(calls[0].options.method).toBe("PATCH");
+    expect(JSON.parse(calls[0].options.body)).toEqual({ status: "paused" });
+  });
+
   it("DELETE /:id forwards", async () => {
     await request(buildApp()).delete("/v1/orgs/audiences/aud-1");
     expect(calls[0].url).toBe(`${HUMAN_BASE}/orgs/audiences/aud-1`);

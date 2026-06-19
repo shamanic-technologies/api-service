@@ -8747,6 +8747,26 @@ registry.registerPath({
 
 registry.registerPath({
   method: "patch",
+  path: "/v1/orgs/audiences/{id}/status",
+  tags: ["Audiences"],
+  summary: "Change an audience's status (active / paused / archived)",
+  description:
+    "Proxy to human-service PATCH /orgs/audiences/{id}/status. Body { status } + response shapes owned by human-service. Forwarded untransformed.",
+  security: authed,
+  request: {
+    params: AudienceIdParam,
+    body: { content: { "application/json": { schema: AudiencePassthroughBody } } },
+  },
+  responses: {
+    200: { description: "Updated audience", content: { "application/json": { schema: AudienceResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
   path: "/v1/orgs/audiences/{id}",
   tags: ["Audiences"],
   summary: "Update an audience",
