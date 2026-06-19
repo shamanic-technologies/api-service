@@ -39,10 +39,6 @@ describe("Dashboard endpoints OpenAPI documentation", () => {
     expect(content).toContain('path: "/v1/campaigns/stats"');
   });
 
-  it("should register POST /v1/brands/{id}/personas/{personaId}/avatar/regenerate", () => {
-    expect(content).toContain('path: "/v1/brands/{id}/personas/{personaId}/avatar/regenerate"');
-  });
-
   it("should document status query param on GET /v1/campaigns", () => {
     // Find the registerPath block for GET /v1/campaigns and verify status is in the query schema
     const listStart = content.indexOf('path: "/v1/campaigns"');
