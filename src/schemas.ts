@@ -3602,87 +3602,15 @@ registry.registerPath({
 });
 
 // ===================================================================
-// Brand – Customer Personas + Brand Profile
-// Transparent proxies to brand-service /orgs/brands/:id/{personas,brand-profile}.
+// Brand – ICP Suggest + Brand Profile
+// Transparent proxies to brand-service /orgs/brands/:id/{icp/suggest,brand-profile}.
 // Downstream owns body + response shapes — passthrough only. No gateway
-// re-validation, so brand-service's 4xx/409 errors propagate verbatim, and the
-// upstream status (incl. 201 on create/duplicate) is forwarded as-is.
+// re-validation, so brand-service's 4xx/409 errors propagate verbatim.
 // ===================================================================
-const PersonaParam = z.object({
-  id: z.string().describe("Brand ID"),
-  personaId: z.string().describe("Persona ID"),
-});
-const PersonasResponseSchema = z.object({}).passthrough().openapi("PersonasResponse");
-const PersonaRequestSchema = z.object({}).passthrough().openapi("PersonaRequest");
 const IcpSuggestRequestSchema = z.object({}).passthrough().openapi("IcpSuggestRequest");
 const IcpSuggestResponseSchema = z.object({}).passthrough().openapi("IcpSuggestResponse");
 const BrandProfileResponseSchema = z.object({}).passthrough().openapi("BrandProfileResponse");
 const BrandProfileRequestSchema = z.object({}).passthrough().openapi("BrandProfileRequest");
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/brands/{id}/personas",
-  tags: ["Brand"],
-  summary: "List a brand's customer personas",
-  description:
-    "Proxy to brand-service GET /orgs/brands/{id}/personas. " +
-    "Response shape is owned by the downstream service — passthrough only. " +
-    "Any query string is forwarded verbatim.",
-  security: authed,
-  request: { params: BrandIdParam },
-  responses: {
-    200: { description: "Personas", content: { "application/json": { schema: PersonasResponseSchema } } },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/brands/{id}/personas",
-  tags: ["Brand"],
-  summary: "Create a customer persona for a brand",
-  description:
-    "Proxy to brand-service POST /orgs/brands/{id}/personas. " +
-    "Body + response shapes are owned by the downstream service; its 4xx validation " +
-    "errors and 201 created status propagate verbatim — passthrough only.",
-  security: authed,
-  request: {
-    params: BrandIdParam,
-    body: { content: { "application/json": { schema: PersonaRequestSchema } } },
-  },
-  responses: {
-    201: { description: "Persona created", content: { "application/json": { schema: PersonasResponseSchema } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/brands/{id}/personas/suggest",
-  tags: ["Brand"],
-  summary: "Suggest AI-generated customer personas for a brand",
-  description:
-    "Proxy to brand-service POST /orgs/brands/{id}/personas/suggest. " +
-    "Returns AI-generated persona drafts ({ personas: [{ name, filters }] }). " +
-    "Body + response shapes are owned by the downstream service — passthrough only.",
-  security: authed,
-  request: {
-    params: BrandIdParam,
-    body: { content: { "application/json": { schema: PersonaRequestSchema } } },
-  },
-  responses: {
-    200: { description: "Persona drafts", content: { "application/json": { schema: PersonasResponseSchema } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
 
 registry.registerPath({
   method: "post",
@@ -3706,74 +3634,6 @@ registry.registerPath({
     402: { description: "Insufficient credits (forwarded verbatim)", content: errorContent },
     404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
     422: { description: "Empty brand profile (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/brands/{id}/personas/{personaId}/duplicate",
-  tags: ["Brand"],
-  summary: "Duplicate a customer persona",
-  description:
-    "Proxy to brand-service POST /orgs/brands/{id}/personas/{personaId}/duplicate. " +
-    "Response shape is owned by the downstream service; its 201 created status " +
-    "propagates verbatim — passthrough only.",
-  security: authed,
-  request: {
-    params: PersonaParam,
-    body: { content: { "application/json": { schema: PersonaRequestSchema } } },
-  },
-  responses: {
-    201: { description: "Persona duplicated", content: { "application/json": { schema: PersonasResponseSchema } } },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Brand or persona not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/brands/{id}/personas/{personaId}/avatar/regenerate",
-  tags: ["Brand"],
-  summary: "Regenerate a customer persona avatar",
-  description:
-    "Proxy to brand-service POST /orgs/brands/{id}/personas/{personaId}/avatar/regenerate. " +
-    "Brand-service owns avatar generation, storage, cost declaration, and response shape; " +
-    "api-service forwards the request body and downstream response/status verbatim.",
-  security: authed,
-  request: {
-    params: PersonaParam,
-    body: { content: { "application/json": { schema: PersonaRequestSchema } } },
-  },
-  responses: {
-    200: { description: "Persona avatar regenerated", content: { "application/json": { schema: PersonasResponseSchema } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Brand or persona not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "patch",
-  path: "/v1/brands/{id}/personas/{personaId}/status",
-  tags: ["Brand"],
-  summary: "Update a customer persona's status",
-  description:
-    "Proxy to brand-service PATCH /orgs/brands/{id}/personas/{personaId}/status. " +
-    "Body + response shapes are owned by the downstream service; its 4xx validation " +
-    "errors propagate verbatim — passthrough only.",
-  security: authed,
-  request: {
-    params: PersonaParam,
-    body: { content: { "application/json": { schema: PersonaRequestSchema } } },
-  },
-  responses: {
-    200: { description: "Persona status updated", content: { "application/json": { schema: PersonasResponseSchema } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Brand or persona not found (forwarded verbatim)", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
   },
 });
