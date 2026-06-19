@@ -38286,7 +38286,7 @@
           "Audiences"
         ],
         "summary": "List audiences for an org",
-        "description": "Proxy to human-service GET /orgs/audiences. Optional brandId filter + limit/offset pagination forwarded untransformed.",
+        "description": "Proxy to human-service GET /orgs/audiences. Optional brandId + status (lifecycle) filters + limit/offset pagination forwarded untransformed.",
         "security": [
           {
             "bearerAuth": []
@@ -38301,6 +38301,15 @@
             },
             "required": false,
             "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Lifecycle filter (suggested|active|paused|archived) — forwarded to human-service"
+            },
+            "required": false,
+            "name": "status",
             "in": "query"
           },
           {

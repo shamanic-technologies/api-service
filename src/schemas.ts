@@ -8671,11 +8671,12 @@ registry.registerPath({
   tags: ["Audiences"],
   summary: "List audiences for an org",
   description:
-    "Proxy to human-service GET /orgs/audiences. Optional brandId filter + limit/offset pagination forwarded untransformed.",
+    "Proxy to human-service GET /orgs/audiences. Optional brandId + status (lifecycle) filters + limit/offset pagination forwarded untransformed.",
   security: authed,
   request: {
     query: z.object({
       brandId: z.string().uuid().optional().openapi({ description: "Brand ID filter" }),
+      status: z.string().optional().openapi({ description: "Lifecycle filter (suggested|active|paused|archived) — forwarded to human-service" }),
       limit: z.coerce.number().int().optional().openapi({ description: "Max results (human-service enforces its own cap)" }),
       offset: z.coerce.number().int().optional().openapi({ description: "Pagination offset" }),
     }),
