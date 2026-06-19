@@ -124,6 +124,20 @@ router.get("/orgs/audiences/:id/members", ...authChain, async (req: Authenticate
   }
 });
 
+// PATCH /v1/orgs/audiences/:id/status → human-service PATCH /orgs/audiences/{id}/status
+router.patch("/orgs/audiences/:id/status", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.human,
+      `/orgs/audiences/${encodeURIComponent(req.params.id)}/status`,
+      { method: "PATCH", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.json(result);
+  } catch (error: any) {
+    fail(res, error, "Update audience status error");
+  }
+});
+
 // GET /v1/orgs/audiences/:id → human-service GET /orgs/audiences/{id}
 router.get("/orgs/audiences/:id", ...authChain, async (req: AuthenticatedRequest, res) => {
   try {
