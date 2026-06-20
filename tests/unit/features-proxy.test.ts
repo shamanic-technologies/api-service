@@ -150,6 +150,26 @@ describe("Features proxy routes", () => {
     expect(personaStatsBlock).toContain("/persona-stats");
   });
 
+  it("should have GET /features/:slug/audience-stats with auth + requireOrg + requireUser", () => {
+    expect(content).toContain('"/features/:slug/audience-stats"');
+    const line = content.split("\n").find((l) =>
+      l.includes('"/features/:slug/audience-stats"')
+    );
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should forward brandId, goal, brandProfileId, and limit on GET /features/:slug/audience-stats", () => {
+    const audienceStatsIdx = content.indexOf('"/features/:slug/audience-stats"');
+    const audienceStatsBlock = content.slice(audienceStatsIdx, audienceStatsIdx + 500);
+    expect(audienceStatsBlock).toContain('"brandId"');
+    expect(audienceStatsBlock).toContain('"goal"');
+    expect(audienceStatsBlock).toContain('"brandProfileId"');
+    expect(audienceStatsBlock).toContain('"limit"');
+    expect(audienceStatsBlock).toContain("/audience-stats");
+  });
+
   it("should have GET /features/:slug/pipeline-activity with auth + requireOrg + requireUser", () => {
     expect(content).toContain('"/features/:slug/pipeline-activity"');
     const line = content.split("\n").find((l) =>
@@ -299,6 +319,11 @@ describe("Features OpenAPI schemas", () => {
   it("should register GET /v1/features/{featureSlug}/persona-stats", () => {
     expect(schemaContent).toContain('path: "/v1/features/{featureSlug}/persona-stats"');
     expect(schemaContent).toContain("FeaturePersonaStatsResponse");
+  });
+
+  it("should register GET /v1/features/{featureSlug}/audience-stats", () => {
+    expect(schemaContent).toContain('path: "/v1/features/{featureSlug}/audience-stats"');
+    expect(schemaContent).toContain("FeatureAudienceStatsResponse");
   });
 
   it("should register GET /v1/features/{featureSlug}/pipeline-activity", () => {
