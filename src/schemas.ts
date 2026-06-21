@@ -8567,6 +8567,28 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/audiences/{id}/avatar",
+  tags: ["Audiences"],
+  summary: "(Re)generate the audience's avatar",
+  description:
+    "Proxy to human-service POST /orgs/audiences/{id}/avatar. Optional body { prompt }. " +
+    "human-service generates the avatar via chat-service (which owns the cost) and returns { audience } " +
+    "with avatarUrl populated. Request + response shapes owned by human-service. Forwarded untransformed.",
+  security: authed,
+  request: {
+    params: AudienceIdParam,
+    body: { content: { "application/json": { schema: AudiencePassthroughBody } } },
+  },
+  responses: {
+    200: { description: "Audience with regenerated avatar (human-service { audience })", content: { "application/json": { schema: AudienceResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "get",
   path: "/v1/orgs/audiences/{id}/members",
   tags: ["Audiences"],

@@ -110,6 +110,23 @@ router.post("/orgs/audiences/:id/refresh-count", ...authChain, async (req: Authe
   }
 });
 
+// POST /v1/orgs/audiences/:id/avatar → human-service POST /orgs/audiences/{id}/avatar
+// (Re)generate the audience avatar. Body { prompt? } forwarded untransformed.
+// Mirrors /refresh-count: x-user-id is forwarded (chat-service avatar cost is
+// org+user scoped) so the LLM spend is attributed to the caller.
+router.post("/orgs/audiences/:id/avatar", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.human,
+      `/orgs/audiences/${encodeURIComponent(req.params.id)}/avatar`,
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.json(result);
+  } catch (error: any) {
+    fail(res, error, "Generate audience avatar error");
+  }
+});
+
 // GET /v1/orgs/audiences/:id/members → human-service GET /orgs/audiences/{id}/members
 router.get("/orgs/audiences/:id/members", ...authChain, async (req: AuthenticatedRequest, res) => {
   try {
