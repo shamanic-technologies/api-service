@@ -94,6 +94,15 @@ describe("/v1/orgs/audiences/* → human-service", () => {
     expect(calls[0].options.method).toBe("POST");
   });
 
+  it("POST /:id/avatar forwards body verbatim + x-user-id (cost attribution)", async () => {
+    const body = { prompt: "minimalist founder avatar" };
+    await request(buildApp()).post("/v1/orgs/audiences/aud-1/avatar").send(body);
+    expect(calls[0].url).toBe(`${HUMAN_BASE}/orgs/audiences/aud-1/avatar`);
+    expect(calls[0].options.method).toBe("POST");
+    expect(JSON.parse(calls[0].options.body)).toEqual(body);
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
   it("PATCH /:id forwards body verbatim", async () => {
     await request(buildApp()).patch("/v1/orgs/audiences/aud-1").send({ name: "renamed" });
     expect(calls[0].url).toBe(`${HUMAN_BASE}/orgs/audiences/aud-1`);
