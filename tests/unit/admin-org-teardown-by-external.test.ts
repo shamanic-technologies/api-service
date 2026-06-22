@@ -11,7 +11,7 @@ vi.mock("../../src/middleware/auth.js", async (importOriginal) => {
 import adminRoutes from "../../src/routes/admin.js";
 
 const VALID_API_KEY = "test-admin-distribute-key";
-const EXTERNAL_ORG_ID = "org_clerk_2abcDEF123";
+const EXTERNAL_ORG_ID = "org_clerk_external_456";
 
 function createApp() {
   const app = express();
@@ -23,10 +23,8 @@ function createApp() {
 const downstreamBody = {
   deleted: true,
   externalOrgId: EXTERNAL_ORG_ID,
-  orgId: "org_internal_uuid",
-  clerk: "deleted",
+  orgId: "org_internal_789",
   clerkUsers: "deleted",
-  stripe: "deleted",
 };
 
 describe("DELETE /internal/admin/orgs/by-external/:externalOrgId", () => {
@@ -82,9 +80,7 @@ describe("DELETE /internal/admin/orgs/by-external/:externalOrgId", () => {
 
   it("rejects requests without platform API key (401)", async () => {
     const app = createApp();
-    const res = await request(app).delete(
-      `/internal/admin/orgs/by-external/${EXTERNAL_ORG_ID}`,
-    );
+    const res = await request(app).delete(`/internal/admin/orgs/by-external/${EXTERNAL_ORG_ID}`);
 
     expect(res.status).toBe(401);
   });
@@ -118,7 +114,7 @@ describe("DELETE /internal/admin/orgs/by-external/:externalOrgId", () => {
     global.fetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 500,
-      text: () => Promise.resolve("Clerk org deletion failed"),
+      text: () => Promise.resolve("Clerk user deletion failed"),
     });
 
     const app = createApp();
@@ -127,6 +123,6 @@ describe("DELETE /internal/admin/orgs/by-external/:externalOrgId", () => {
       .set("X-API-Key", VALID_API_KEY);
 
     expect(res.status).toBe(500);
-    expect(res.body.error).toContain("Clerk org deletion failed");
+    expect(res.body.error).toContain("Clerk user deletion failed");
   });
 });
