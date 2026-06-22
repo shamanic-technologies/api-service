@@ -275,4 +275,32 @@ router.delete("/admin/orgs/:orgId", authenticatePlatform, async (req: Request, r
   }
 });
 
+// ── DELETE /admin/orgs/by-external/:externalOrgId ───────────────────────────
+// Staff-only org cascade teardown keyed by the EXTERNAL (Clerk) org id. Pure
+// proxy to client-service, which resolves the Clerk org id to the internal org,
+// runs the full org-teardown cascade, and deletes the org's Clerk users. The
+// gateway adds no logic: it forwards the result + status and propagates any
+// upstream error body verbatim so a partial teardown fails loud (CLAUDE.md #7).
+router.delete(
+  "/admin/orgs/by-external/:externalOrgId",
+  authenticatePlatform,
+  async (req: Request, res: Response) => {
+    const { externalOrgId } = req.params;
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.client,
+        `/internal/orgs/by-external/${encodeURIComponent(externalOrgId)}`,
+        { method: "DELETE" },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error(
+        `[api-service] org teardown by-external failed for ${externalOrgId}:`,
+        error.message,
+      );
+      res.status(error.statusCode || 500).json({ error: error.message || "Failed to tear down org" });
+    }
+  },
+);
+
 export default router;
