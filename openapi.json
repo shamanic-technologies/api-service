@@ -12136,6 +12136,16 @@
           },
           {
             "schema": {
+              "type": "string",
+              "description": "Opt-in enrichment. Pass 'ahref' to have each outlet returned with its Ahrefs Domain Rating + monthly traffic (resolved by outlets-service). Forwarded verbatim; absent = unchanged."
+            },
+            "required": false,
+            "description": "Opt-in enrichment. Pass 'ahref' to have each outlet returned with its Ahrefs Domain Rating + monthly traffic (resolved by outlets-service). Forwarded verbatim; absent = unchanged.",
+            "name": "enrich",
+            "in": "query"
+          },
+          {
+            "schema": {
               "type": "integer",
               "minimum": 0,
               "exclusiveMinimum": true
