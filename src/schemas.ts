@@ -1015,6 +1015,7 @@ registry.registerPath({
       runId: z.string().optional().openapi({ description: "Filter by run ID (from discover endpoint)" }),
       featureSlugs: z.string().optional().describe("Filter by feature slugs (comma-separated). Use a single slug or multiple."),
       featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs via features-service). Takes priority over featureSlugs."),
+      enrich: z.string().optional().describe("Opt-in enrichment. Pass 'ahref' to have each outlet returned with its Ahrefs Domain Rating + monthly traffic (resolved by outlets-service). Forwarded verbatim; absent = unchanged."),
       limit: z.coerce.number().int().positive().optional(),
       offset: z.coerce.number().int().min(0).optional(),
     }),
