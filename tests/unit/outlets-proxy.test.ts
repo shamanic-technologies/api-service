@@ -26,7 +26,7 @@ describe("Outlets proxy routes", () => {
   });
 
   it("should forward query params on GET /outlets", () => {
-    for (const param of ["campaignId", "brandId", "status", "runId", "limit", "offset", "featureSlugs", "featureDynastySlug"]) {
+    for (const param of ["campaignId", "brandId", "status", "runId", "limit", "offset", "featureSlugs", "featureDynastySlug", "enrich"]) {
       expect(content).toContain(`"${param}"`);
     }
   });
@@ -271,6 +271,16 @@ describe("Outlets OpenAPI schemas", () => {
       getOutletsSection.indexOf("responses:")
     );
     expect(queryBlock).not.toMatch(/\bfeatureSlug\b(?!s)/);
+  });
+
+  it("should include enrich filter on GET /v1/outlets (forwarded verbatim)", () => {
+    const getOutletsSection = schemaContent.slice(
+      schemaContent.indexOf('path: "/v1/outlets"'),
+      schemaContent.indexOf('path: "/v1/outlets"') + 1700
+    );
+    expect(getOutletsSection).toContain("enrich:");
+    // route forwards the enrich query param to outlets-service
+    expect(content).toContain('"enrich"');
   });
 
   it("should document deduplicated response with campaigns[] array on GET /v1/outlets", () => {
