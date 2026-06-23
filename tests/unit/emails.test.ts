@@ -85,13 +85,13 @@ describe("POST /v1/emails/send", () => {
     expect(sendCall!.headers!["x-user-id"]).toBe("user_test123");
   });
 
-  it("should forward bcc recipients top-level, not inside metadata (backward-compatible)", async () => {
+  it("should forward bccEmails recipients top-level, not inside metadata (matches transactional-email-service contract)", async () => {
     const res = await request(app)
       .post("/v1/emails/send")
       .send({
         eventType: "welcome",
         recipientEmail: "user@polarity.com",
-        bcc: ["alpha1@team.com", "alpha2@team.com"],
+        bccEmails: ["alpha1@team.com", "alpha2@team.com"],
         metadata: { name: "Kevin" },
       });
 
@@ -99,14 +99,14 @@ describe("POST /v1/emails/send", () => {
 
     const sendCall = fetchCalls.find((c) => c.url.includes("/send"));
     expect(sendCall).toBeDefined();
-    // bcc forwarded as a top-level field
-    expect(sendCall!.body.bcc).toEqual(["alpha1@team.com", "alpha2@team.com"]);
-    // bcc must NOT leak into template metadata
+    // bccEmails forwarded as a top-level field (downstream reads `bccEmails`)
+    expect(sendCall!.body.bccEmails).toEqual(["alpha1@team.com", "alpha2@team.com"]);
+    // bccEmails must NOT leak into template metadata
     expect(sendCall!.body.metadata).toEqual({ name: "Kevin" });
-    expect(sendCall!.body.metadata.bcc).toBeUndefined();
+    expect(sendCall!.body.metadata.bccEmails).toBeUndefined();
   });
 
-  it("should omit bcc entirely when caller does not provide it (no behavior change)", async () => {
+  it("should omit bccEmails entirely when caller does not provide it (no behavior change)", async () => {
     const res = await request(app)
       .post("/v1/emails/send")
       .send({ eventType: "welcome", recipientEmail: "user@polarity.com" });
@@ -115,13 +115,13 @@ describe("POST /v1/emails/send", () => {
 
     const sendCall = fetchCalls.find((c) => c.url.includes("/send"));
     expect(sendCall).toBeDefined();
-    expect("bcc" in sendCall!.body).toBe(false);
+    expect("bccEmails" in sendCall!.body).toBe(false);
   });
 
-  it("should return 400 when bcc contains an invalid email", async () => {
+  it("should return 400 when bccEmails contains an invalid email", async () => {
     const res = await request(app)
       .post("/v1/emails/send")
-      .send({ eventType: "welcome", bcc: ["not-an-email"] });
+      .send({ eventType: "welcome", bccEmails: ["not-an-email"] });
 
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("Invalid request");
