@@ -5413,6 +5413,78 @@ registry.registerPath({
   },
 });
 
+// ---------------------------------------------------------------------------
+// Credit grants (staff-only) — grant arbitrary free credit + read grants ledger.
+// Gated by requireStaff (platform API key + x-email in the STAFF_EMAILS allowlist);
+// a customer can never reach these. Transparent proxy to billing-service. Responses
+// passthrough (CLAUDE.md #8); body forwarded as-is (CLAUDE.md #4).
+// ---------------------------------------------------------------------------
+const CreditGrantRequestSchema = z
+  .object({
+    amountCents: z.number().openapi({ description: "Credit amount to grant, in cents (non-negative integer)", example: 5000 }),
+    note: z.string().optional().openapi({ description: "Optional human note recorded with the grant", example: "Goodwill credit" }),
+    idempotencyKey: z.string().openapi({ description: "Idempotency key to dedupe retried grants", example: "grant-2026-06-23-abc" }),
+  })
+  .passthrough()
+  .openapi("CreditGrantRequest");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/billing/credits/grant",
+  tags: ["Billing"],
+  summary: "Grant free credit to an org (staff only)",
+  description:
+    "Grant an arbitrary free-credit amount to the org in context. Staff-only: requires the " +
+    "platform API key AND an x-email in the STAFF_EMAILS allowlist. Transparent proxy to " +
+    "billing-service POST /v1/credits/grant; body { amountCents, note?, idempotencyKey } " +
+    "forwarded as-is, response owned by the downstream service.",
+  security: platformAuth,
+  request: { body: { content: { "application/json": { schema: CreditGrantRequestSchema } } } },
+  responses: {
+    200: { description: "Grant recorded — pass-through from billing-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CreditGrantResponse") } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/credits/grants",
+  tags: ["Billing"],
+  summary: "Get an org's credit-grants ledger (staff only)",
+  description:
+    "List credit grants for the org in context. Staff-only (platform API key + STAFF_EMAILS " +
+    "x-email). Transparent proxy to billing-service GET /v1/credits/grants; response owned by " +
+    "the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Org grants ledger — pass-through from billing-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CreditGrantsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/credits/grants/all",
+  tags: ["Billing"],
+  summary: "Get the platform-wide credit-grants ledger (staff only)",
+  description:
+    "List credit grants across ALL orgs (cross-org platform ledger). Staff-only (platform API " +
+    "key + STAFF_EMAILS x-email); no org context required. Transparent proxy to billing-service " +
+    "GET /internal/credits/grants; response owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Platform grants ledger — pass-through from billing-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PlatformCreditGrantsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/v1/billing/checkout-sessions",

@@ -29,6 +29,8 @@ export interface AuthenticatedRequest extends Request {
   brandId?: string;
   workflowSlug?: string;
   featureSlug?: string;
+  /** Normalized staff email, set by requireStaff after allowlist match */
+  staffEmail?: string;
 }
 
 /**
@@ -241,6 +243,61 @@ export async function authenticatePlatform(
     return res.status(401).json({ error: "Invalid or missing platform API key" });
   }
   req.authType = "admin";
+  return next();
+}
+
+/**
+ * Parse the STAFF_EMAILS env var (comma-separated) into a normalized
+ * lowercase Set. Unset/empty => empty Set (nobody is staff — fail closed).
+ */
+function staffEmailAllowlist(): Set<string> {
+  const raw = process.env.STAFF_EMAILS || "";
+  return new Set(
+    raw
+      .split(",")
+      .map((e) => e.trim().toLowerCase())
+      .filter((e) => e.length > 0),
+  );
+}
+
+/**
+ * Staff-only gate. MUST run after `authenticate` or `authenticatePlatform`.
+ *
+ * Two conditions, BOTH required (fail closed → 403):
+ *  1. `req.authType === "admin"` — the request came in via the platform API key
+ *     (ADMIN_DISTRIBUTE_API_KEY), i.e. a trusted server-side caller (the admin /
+ *     dashboard proxy). A Bearer user-key (authType "user_key") is rejected, so a
+ *     customer cannot forge `x-email` on a direct call and self-authorize.
+ *  2. The forwarded `x-email` header is in the STAFF_EMAILS allowlist. The platform
+ *     key ALONE is shared with the customer dashboard's server-side proxy, so it
+ *     does NOT distinguish staff from customer — `x-email` (forwarded from the
+ *     verified dashboard/admin session) is the staff signal.
+ *
+ * This closes the customer-self-grant hole that `authenticatePlatform` alone leaves
+ * open. STAFF_EMAILS is a comma-separated env var; unset/empty means nobody is staff.
+ */
+export function requireStaff(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  if (req.authType !== "admin") {
+    return res.status(403).json({ error: "Staff access required" });
+  }
+
+  const allowlist = staffEmailAllowlist();
+  if (allowlist.size === 0) {
+    console.warn("[auth] requireStaff blocked: STAFF_EMAILS is unset/empty — no staff configured");
+    return res.status(403).json({ error: "Staff access required" });
+  }
+
+  const email = (req.headers["x-email"] as string | undefined)?.trim().toLowerCase();
+  if (!email || !allowlist.has(email)) {
+    console.warn("[auth] requireStaff blocked non-staff email", { email: email || null, path: req.path });
+    return res.status(403).json({ error: "Staff access required" });
+  }
+
+  req.staffEmail = email;
   return next();
 }
 
