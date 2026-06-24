@@ -3603,6 +3603,48 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – Click Destination (proxy to brand-service /orgs/brands/:id/click-destination)
+// Downstream owns body + response shapes — passthrough only. No gateway
+// re-validation, so brand-service's 4xx errors propagate verbatim.
+// ===================================================================
+const ClickDestinationRequestSchema = z
+  .object({
+    clickDestinationUrl: z.string().openapi({
+      description: "Page outreach clicks should land on. Must be a valid http(s) URL.",
+      example: "https://acme.com/welcome",
+    }),
+  })
+  .openapi("ClickDestinationRequest");
+const ClickDestinationResponseSchema = z
+  .object({ clickDestinationUrl: z.string() })
+  .openapi("ClickDestinationResponse");
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/click-destination",
+  tags: ["Brand"],
+  summary: "Set a brand's outreach click-destination URL",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{id}/click-destination. " +
+    "Sets the per-brand page outreach clicks should land on (default = brand domain, " +
+    "user-overridable). Body + response shapes are owned by the downstream service; its " +
+    "4xx validation errors (incl. 400 on a non-http(s)/invalid URL) propagate verbatim.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: { content: { "application/json": { schema: ClickDestinationRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Click destination saved", content: { "application/json": { schema: ClickDestinationResponseSchema } } },
+    400: { description: "Invalid click-destination URL (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand not in caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+// ===================================================================
 // Brand – ICP Suggest + Brand Profile
 // Transparent proxies to brand-service /orgs/brands/:id/{icp/suggest,brand-profile}.
 // Downstream owns body + response shapes — passthrough only. No gateway
