@@ -383,6 +383,31 @@ router.put("/brands/:id/sales-economics", authenticate, requireOrg, requireUser,
 });
 
 /**
+ * PUT /v1/brands/:id/click-destination
+ * Proxy to brand-service PUT /orgs/brands/:id/click-destination.
+ * Sets the per-brand page outreach clicks should land on. Body + response
+ * shapes are owned by the downstream service; its 4xx validation errors
+ * (incl. 400 on a non-http(s)/invalid URL) propagate verbatim — passthrough only.
+ */
+router.put("/brands/:id/click-destination", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/click-destination`,
+      {
+        method: "PUT",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+      },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Save click destination error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to save click destination" });
+  }
+});
+
+/**
  * POST /v1/brands/:id/transfer
  * Transfer a brand to a different org. Resolves the Clerk org ID to an internal UUID,
  * then proxies to brand-service which orchestrates the full transfer.
