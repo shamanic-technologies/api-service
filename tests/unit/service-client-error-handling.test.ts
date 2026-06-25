@@ -131,6 +131,32 @@ describe("callExternalService error handling", () => {
     );
   });
 
+  it("retries undici socket-close failures before returning success", async () => {
+    const retrySpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const networkError = new TypeError("fetch failed");
+    (networkError as any).cause = {
+      code: "UND_ERR_SOCKET",
+      message: "other side closed",
+      socket: { bytesWritten: 691, bytesRead: 0 },
+    };
+    const fetchMock = vi
+      .fn()
+      .mockRejectedValueOnce(networkError)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ audiences: [] }),
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(callExternalService(service, "/orgs/audiences/suggest", { method: "POST" })).resolves.toEqual({ audiences: [] });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(retrySpy).toHaveBeenCalledWith(
+      expect.stringContaining("cause: UND_ERR_SOCKET"),
+    );
+  });
+
   it("does not retry completed upstream HTTP errors", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: false,
