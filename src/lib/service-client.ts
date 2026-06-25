@@ -21,9 +21,10 @@ const TRANSIENT_FETCH_ERROR_CODES = new Set([
   "ENOTFOUND",
   "ETIMEDOUT",
   "UND_ERR_CONNECT_TIMEOUT",
+  "UND_ERR_SOCKET",
 ]);
 
-const TRANSIENT_FETCH_ERROR_MESSAGE = /\b(EAI_AGAIN|ECONNREFUSED|ECONNRESET|ENOTFOUND|ETIMEDOUT)\b|timeout (expired|exceeded)/i;
+const TRANSIENT_FETCH_ERROR_MESSAGE = /\b(EAI_AGAIN|ECONNREFUSED|ECONNRESET|ENOTFOUND|ETIMEDOUT|UND_ERR_SOCKET)\b|timeout (expired|exceeded)|other side closed/i;
 const TRANSIENT_FETCH_RETRY_DELAYS_MS = [250, 500, 1_000] as const;
 
 function findTransientFetchCause(error: unknown, seen = new Set<unknown>()): string | null {
