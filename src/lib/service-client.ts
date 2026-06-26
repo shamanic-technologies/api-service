@@ -326,6 +326,14 @@ export async function streamExternalService(
   const { method = "POST", body, headers = {}, expressRes } = options;
   const url = `${service.url}${path}`;
 
+  // Abort the upstream fetch the moment the client socket closes. Without this,
+  // a client that disconnects mid-stream (closed tab, navigation, network drop)
+  // leaves the read loop below draining the upstream SSE for its full lifetime
+  // (chat sessions run 30–60 min) — each orphaned reader pins native undici
+  // buffers that never get freed, leaking memory until the container OOMs.
+  const controller = new AbortController();
+  expressRes.on("close", () => controller.abort());
+
   const init: RequestInit & { dispatcher?: Dispatcher } = {
     method,
     headers: {
@@ -334,6 +342,7 @@ export async function streamExternalService(
       ...headers,
     },
     body: body ? JSON.stringify(body) : undefined,
+    signal: controller.signal,
   };
   if (service.dispatcher) init.dispatcher = service.dispatcher;
   const response = await fetch(url, init);
@@ -367,7 +376,11 @@ export async function streamExternalService(
       expressRes.write(value);
     }
   } catch (err) {
-    console.error("[streamExternalService] Stream error:", (err as Error).message);
+    // controller.abort() on client disconnect surfaces here as an AbortError —
+    // that's the expected teardown path, not a failure worth logging as an error.
+    if (!controller.signal.aborted) {
+      console.error("[streamExternalService] Stream error:", (err as Error).message);
+    }
   } finally {
     expressRes.end();
   }

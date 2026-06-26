@@ -192,6 +192,7 @@ describe("streamExternalService error logging", () => {
     const expressRes = {
       status: vi.fn().mockReturnThis(),
       json: vi.fn(),
+      on: vi.fn(),
     } as any;
 
     await streamExternalService(service, "/chat", {
