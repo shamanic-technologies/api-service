@@ -350,7 +350,7 @@ router.get("/features/:slug/revenue", authenticate, requireOrg, requireUser, asy
 router.get("/features/:slug/audience-stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["brandId", "goal", "brandProfileId", "limit"]) {
+    for (const key of ["brandId", "goal", "brandProfileId", "limit", "statuses"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";

@@ -7306,6 +7306,7 @@ registry.registerPath({
       goal: z.string().openapi({ example: "signup" }).describe("Optimization goal (required)"),
       brandProfileId: z.string().optional().openapi({ example: "profile-uuid-123" }).describe("Optional brand-profile version to scope evidence"),
       limit: z.string().optional().openapi({ example: "3" }).describe("Optional row limit after sorting"),
+      statuses: z.string().optional().openapi({ example: "active,paused,archived" }).describe("Optional comma-separated subset of active,paused,archived to scope which audiences are included (features-service owns the default)"),
     }),
   },
   responses: {
