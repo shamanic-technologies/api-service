@@ -29,11 +29,24 @@ describe("Credit-grant proxy routes (source)", () => {
     expect(content).toContain('"/billing/credits/grants/all"');
   });
 
-  it("should gate org-scoped routes with authenticate + requireOrg + requireStaff", () => {
-    // 2 routes use the org-resolving chain
+  it("should gate the staff grant mutation with authenticate + requireOrg + requireStaff", () => {
+    // Only POST /billing/credits/grant uses the staff org-resolving chain now.
     const matches = content.match(/authenticate,\s*requireOrg,\s*requireStaff/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(2);
+    expect(matches!.length).toBe(1);
+  });
+
+  it("should gate the per-org grants ledger with normal org auth (NO requireStaff)", () => {
+    // GET /billing/credits/grants is now readable by any org for its OWN grants
+    // (customer dashboard "Gifts received"). It must use authenticate + requireOrg WITHOUT
+    // requireStaff — same tier as GET /billing/accounts.
+    // Slice just the middleware list of the per-org route: from its mount string up to the
+    // start of its async handler (so the grants/all comment that follows is excluded).
+    const mountIdx = content.indexOf('"/billing/credits/grants"');
+    const middlewares = content.slice(mountIdx, content.indexOf("async (req", mountIdx));
+    expect(middlewares).toContain("authenticate,");
+    expect(middlewares).toContain("requireOrg,");
+    expect(middlewares).not.toContain("requireStaff");
   });
 
   it("should gate the cross-org ledger with authenticatePlatform + requireStaff (no org)", () => {
@@ -43,10 +56,12 @@ describe("Credit-grant proxy routes (source)", () => {
     expect(matches!.length).toBe(1);
   });
 
-  it("every route uses requireStaff", () => {
-    const matches = content.match(/requireStaff/g);
-    // 1 import + 3 route usages
-    expect(matches!.length).toBeGreaterThanOrEqual(4);
+  it("staff gate (requireStaff) remains on exactly the mutating grant + cross-org ledger", () => {
+    // Match `requireStaff,` (import + middleware usages) — prose comments mentioning the
+    // word lack the trailing comma, so this counts code references only.
+    const matches = content.match(/requireStaff,/g);
+    // 1 import + 2 route usages (POST grant, GET grants/all). The per-org GET grants dropped it.
+    expect(matches!.length).toBe(3);
   });
 
   it("should forward correct LOCKED downstream billing paths", () => {
