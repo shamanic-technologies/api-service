@@ -140,13 +140,14 @@ describe("Features proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should forward brandId, goal, brandProfileId, and limit on GET /features/:slug/audience-stats", () => {
+  it("should forward brandId, goal, brandProfileId, limit, and statuses on GET /features/:slug/audience-stats", () => {
     const audienceStatsIdx = content.indexOf('"/features/:slug/audience-stats"');
     const audienceStatsBlock = content.slice(audienceStatsIdx, audienceStatsIdx + 500);
     expect(audienceStatsBlock).toContain('"brandId"');
     expect(audienceStatsBlock).toContain('"goal"');
     expect(audienceStatsBlock).toContain('"brandProfileId"');
     expect(audienceStatsBlock).toContain('"limit"');
+    expect(audienceStatsBlock).toContain('"statuses"');
     expect(audienceStatsBlock).toContain("/audience-stats");
   });
 

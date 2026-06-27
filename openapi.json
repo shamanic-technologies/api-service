@@ -33742,6 +33742,17 @@
             "in": "query"
           },
           {
+            "schema": {
+              "type": "string",
+              "description": "Optional comma-separated subset of active,paused,archived to scope which audiences are included (features-service owns the default)",
+              "example": "active,paused,archived"
+            },
+            "required": false,
+            "description": "Optional comma-separated subset of active,paused,archived to scope which audiences are included (features-service owns the default)",
+            "name": "statuses",
+            "in": "query"
+          },
+          {
             "name": "x-org-id",
             "in": "header",
             "required": false,
