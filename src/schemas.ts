@@ -5496,16 +5496,17 @@ registry.registerPath({
   method: "get",
   path: "/v1/billing/credits/grants",
   tags: ["Billing"],
-  summary: "Get an org's credit-grants ledger (staff only)",
+  summary: "Get the org's own credit-grants ledger",
   description:
-    "List credit grants for the org in context. Staff-only (platform API key + STAFF_EMAILS " +
-    "x-email). Transparent proxy to billing-service GET /v1/credits/grants; response owned by " +
-    "the downstream service.",
-  security: platformAuth,
+    "List the credit grants (welcome credit, first-deposit match, staff bonuses, referral " +
+    "credits) for the org in context — powers the customer dashboard 'Gifts received' section. " +
+    "Normal org auth (same tier as GET /v1/billing/accounts); billing-service scopes the response " +
+    "to the caller's x-org-id, so an org reads only its own grants. Transparent proxy to " +
+    "billing-service GET /v1/credits/grants; response owned by the downstream service.",
+  security: authed,
   responses: {
     200: { description: "Org grants ledger — pass-through from billing-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CreditGrantsResponse") } } },
     401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
   },
 });
