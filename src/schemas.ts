@@ -5794,6 +5794,39 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/emails/by-lead/{leadId}",
+  tags: ["Emails"],
+  summary: "Get the generated email for a lead",
+  description:
+    "The generated email (subject + body + follow-up sequence) for a single lead. " +
+    "Transparent proxy to content-generation-service GET /generations/by-lead/{leadId}; body forwarded verbatim. " +
+    "Returns { generation: null } when no email has been generated for the lead yet (a normal empty state, not an error).",
+  security: authed,
+  request: {
+    params: z.object({
+      leadId: z.string().openapi({ description: "Lead ID" }),
+    }),
+  },
+  responses: {
+    200: {
+      description: "The lead's generated email, or null if none exists yet (passthrough — owned by content-generation-service)",
+      content: {
+        "application/json": {
+          // Passthrough per CLAUDE.md #8 — downstream owns the generation shape; do NOT re-declare fields.
+          schema: z
+            .object({ generation: z.object({}).passthrough().nullable() })
+            .passthrough()
+            .openapi("EmailByLeadResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/workflow-examples",
   tags: ["Emails"],
   summary: "List example emails for a workflow",

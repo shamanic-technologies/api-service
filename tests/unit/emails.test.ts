@@ -195,6 +195,74 @@ describe("GET /v1/emails/stats", () => {
   });
 });
 
+describe("GET /v1/emails/by-lead/:leadId", () => {
+  let app: express.Express;
+
+  function mockFetch(impl: (url: string, init?: RequestInit) => any) {
+    global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+      const headers = init?.headers ? Object.fromEntries(Object.entries(init.headers)) : undefined;
+      fetchCalls.push({ url, method: init?.method, headers });
+      return impl(url, init);
+    });
+    app = createApp();
+  }
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    fetchCalls = [];
+  });
+
+  it("proxies to content-gen /generations/by-lead/:leadId and forwards the generation byte-identical", async () => {
+    const generation = {
+      id: "gen_1",
+      campaignId: "camp_1",
+      subject: "Hi Kevin",
+      bodyHtml: "<p>Hi</p>",
+      bodyText: "Hi",
+      sequence: [{ step: 1, subject: "Follow up" }],
+      leadId: "lead_abc",
+      createdAt: "2026-06-28T00:00:00.000Z",
+    };
+    mockFetch(() => ({ ok: true, json: () => Promise.resolve({ generation }) }));
+
+    const res = await request(app).get("/v1/emails/by-lead/lead_abc");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ generation });
+
+    const call = fetchCalls.find((c) => c.url.includes("/generations/by-lead/"));
+    expect(call).toBeDefined();
+    expect(call!.url).toContain("/generations/by-lead/lead_abc");
+    expect(call!.headers!["x-org-id"]).toBe("org_test456");
+    expect(call!.headers!["x-user-id"]).toBe("user_test123");
+  });
+
+  it("maps upstream 404 (no generation yet) to 200 { generation: null }", async () => {
+    mockFetch(() => ({
+      ok: false,
+      status: 404,
+      text: () => Promise.resolve('{"error":"Generation not found"}'),
+    }));
+
+    const res = await request(app).get("/v1/emails/by-lead/lead_none");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ generation: null });
+  });
+
+  it("propagates non-404 upstream errors (fail loud)", async () => {
+    mockFetch(() => ({
+      ok: false,
+      status: 500,
+      text: () => Promise.resolve('{"error":"boom"}'),
+    }));
+
+    const res = await request(app).get("/v1/emails/by-lead/lead_err");
+
+    expect(res.status).toBe(500);
+  });
+});
+
 describe("PUT /v1/emails/templates", () => {
   let app: express.Express;
 
