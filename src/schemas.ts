@@ -7342,6 +7342,30 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/{featureSlug}/candidates",
+  tags: ["Features"],
+  summary: "Feature candidate evidence set",
+  description:
+    "Serves the (audienceId, workflow) candidate evidence set for a brand + feature + goal, with per-candidate cost-per-outcome at the audience / brand-goal / goal-global grain ladder. Scoped by brandId + goal (+ optional brandProfileId). Proxied from features-service.",
+  security: authed,
+  request: {
+    params: z.object({ featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — conversion economics are brand-scoped"),
+      goal: z.string().openapi({ example: "meetingBooked" }).describe("Optimization target (required): signup | meetingBooked | purchase"),
+      brandProfileId: z.string().optional().openapi({ example: "profile-uuid-123" }).describe("Brand-profile-version context (optional, echoed)"),
+    }),
+  },
+  responses: {
+    200: { description: "Feature candidate evidence set", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureCandidatesResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ---------------------------------------------------------------------------
 // PUBLIC STATS (no auth — landing page endpoints)
 // ---------------------------------------------------------------------------
