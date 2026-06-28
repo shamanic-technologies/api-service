@@ -390,4 +390,29 @@ router.get("/features/:slug/workflow-projection", authenticate, requireOrg, requ
   }
 });
 
+/**
+ * GET /v1/features/:slug/candidates
+ * Serves the (audienceId, workflow) candidate evidence set for a brand + feature + goal,
+ * with per-candidate cost-per-outcome at the audience / brand-goal / goal-global grain ladder.
+ * Scoped by brandId + goal. Proxied to features-service GET /features/:slug/candidates.
+ */
+router.get("/features/:slug/candidates", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const key of ["brandId", "goal", "brandProfileId"]) {
+      if (req.query[key]) params.set(key, req.query[key] as string);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.features,
+      `/features/${encodeURIComponent(req.params.slug)}/candidates${qs}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Feature candidates error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get feature candidates" });
+  }
+});
+
 export default router;
