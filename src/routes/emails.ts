@@ -86,6 +86,40 @@ router.get("/emails", authenticate, requireOrg, requireUser, async (req: Authent
 });
 
 /**
+ * GET /v1/emails/by-lead/:leadId — the generated email for ONE lead.
+ * Transparent proxy to content-generation-service GET /generations/by-lead/:leadId
+ * (org-scoped via identity headers). Body forwarded verbatim (CLAUDE.md #8 — downstream
+ * owns the generation shape; no field re-declaration / stripping).
+ *
+ * Upstream 404 ("Generation not found") is a NORMAL empty state ("no email yet for this
+ * lead"), so it maps to 200 { generation: null } — NOT a client-facing error. Any other
+ * upstream error propagates verbatim (fail loud).
+ */
+router.get(
+  "/emails/by-lead/:leadId",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.emailgen,
+        `/generations/by-lead/${encodeURIComponent(req.params.leadId)}`,
+        { headers: buildInternalHeaders(req) },
+      ) as { generation: Record<string, unknown> };
+      res.json({ generation: result.generation });
+    } catch (error: any) {
+      // No generation yet for this lead → normal empty state, not an error.
+      if (error.statusCode === 404) {
+        return res.json({ generation: null });
+      }
+      console.error("[api-service] Get email by lead error:", error.message);
+      res.status(error.statusCode || 500).json({ error: error.message || "Failed to get email for lead" });
+    }
+  },
+);
+
+/**
  * POST /v1/emails/send
  * Send a transactional email via the transactional-email service
  */
