@@ -5549,6 +5549,26 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/audit/reconcile",
+  tags: ["Instantly"],
+  summary: "Get the platform local-vs-Instantly reconciliation audit (staff only)",
+  description:
+    "Fleet-wide Instantly reconciliation audit: for each countable fact, our LOCAL number vs " +
+    "INSTANTLY's number plus the delta, so staff can spot cold-email data drift (cross-org ops " +
+    "data, NOT customer data) — powers the staff 'Audit → Instantly' ops page. Staff-only " +
+    "(platform API key + STAFF_EMAILS x-email); no org context required. Transparent proxy to " +
+    "instantly-service GET /internal/audit/reconcile; response owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Reconciliation audit — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyReconcileResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/billing/checkout-sessions",
   tags: ["Billing"],

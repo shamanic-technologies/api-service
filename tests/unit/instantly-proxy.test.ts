@@ -54,3 +54,29 @@ describe("Instantly audit proxy route (source)", () => {
     expect(schemaContent).toContain("security: platformAuth");
   });
 });
+
+describe("Instantly reconcile audit proxy route (source)", () => {
+  it("should have GET /instantly/audit/reconcile route", () => {
+    expect(content).toContain('"/instantly/audit/reconcile"');
+    expect(content).toContain("router.get");
+  });
+
+  it("forwards to instantly-service downstream path verbatim", () => {
+    expect(content).toContain("externalServices.instantly");
+    expect(content).toContain('"/internal/audit/reconcile"');
+  });
+
+  it("is staff-gated with authenticatePlatform + requireStaff (no org)", () => {
+    const mountIdx = content.indexOf('"/instantly/audit/reconcile"');
+    const chain = content.slice(mountIdx, content.indexOf("async (req", mountIdx));
+    expect(chain).toContain("authenticatePlatform,");
+    expect(chain).toContain("requireStaff,");
+    expect(chain).not.toContain("requireOrg");
+  });
+
+  it("registers the OpenAPI path with passthrough response + platform auth", () => {
+    expect(schemaContent).toContain('path: "/v1/instantly/audit/reconcile"');
+    expect(schemaContent).toContain('InstantlyReconcileResponse');
+    expect(schemaContent).toContain("security: platformAuth");
+  });
+});
