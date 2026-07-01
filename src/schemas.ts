@@ -5530,6 +5530,25 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/audit/sending-forecast",
+  tags: ["Instantly"],
+  summary: "Get the platform sending-forecast audit (staff only)",
+  description:
+    "Fleet-wide Instantly sending-forecast audit (cross-org sending infrastructure ops data, " +
+    "NOT customer data) — powers the staff 'Audit → Instantly' ops page. Staff-only (platform API " +
+    "key + STAFF_EMAILS x-email); no org context required. Transparent proxy to instantly-service " +
+    "GET /internal/audit/sending-forecast; response owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Sending forecast — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlySendingForecastResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/billing/checkout-sessions",
   tags: ["Billing"],
