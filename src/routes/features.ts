@@ -290,6 +290,29 @@ router.get("/features/audit/send-forecast", authenticatePlatform, requireStaff, 
 });
 
 /**
+ * GET /v1/features/audit/accounts
+ * STAFF-ONLY cross-org listing of customer accounts plus fleet financial stats (total daily budget,
+ * MRR, ARR). Cross-org fleet financials, so gated by authenticatePlatform + requireStaff (same tier
+ * as GET /v1/features/audit/send-forecast): the caller must come in via the platform API key
+ * (authType "admin") AND carry an x-email in the STAFF_EMAILS allowlist. No org context (cross-org
+ * read), no query params. Transparent proxy to features-service GET /internal/stats/accounts;
+ * response (rows + stats + asOf) owned by the downstream service.
+ */
+router.get("/features/audit/accounts", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/internal/stats/accounts`,
+      { headers: staffHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Staff accounts audit error:", error.message);
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get accounts" });
+  }
+});
+
+/**
  * GET /v1/features/:slug/pipeline-activity
  * 7-day pipeline activity for a brand. Proxied to features-service GET /features/:slug/pipeline-activity.
  */
