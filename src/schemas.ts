@@ -189,7 +189,7 @@ const publicCostProjectionQueryParams = z.object({
   featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
 });
 
-const publicSendForecastQueryParams = z.object({
+const auditSendForecastQueryParams = z.object({
   days: z.coerce.number().int().optional().openapi({ example: 14 }).describe("Future horizon in days (1..90). A 7-day past tail is always included. Optional; downstream defaults to 14."),
 });
 
@@ -317,16 +317,20 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/public/features/send-forecast",
+  path: "/v1/features/audit/send-forecast",
   tags: ["Features"],
-  summary: "Public fleet email send forecast",
+  summary: "Staff fleet email send forecast (staff only)",
   description:
-    "Global, cross-org, fleet-wide projection of how many outreach emails will be SENT per calendar day over a past+future window. " +
-    "Proxied to features-service GET /public/stats/send-forecast. Forwards optional `days` (1..90). Response is producer-owned. No authentication required.",
-  request: { query: publicSendForecastQueryParams },
+    "STAFF-ONLY global, cross-org, fleet-wide projection of how many outreach emails will be SENT per calendar day over a past+future window, " +
+    "plus a fleet budget summary (total daily budget across all brands, remaining budget today, active brand count). The summary carries " +
+    "cross-org fleet financials, so this is gated by platform API key + STAFF_EMAILS x-email (same tier as GET /v1/instantly/audit/*); no org " +
+    "context required. Transparent proxy to features-service GET /internal/stats/send-forecast. Forwards optional `days` (1..90). Response is producer-owned.",
+  security: platformAuth,
+  request: { query: auditSendForecastQueryParams },
   responses: {
-    200: { description: "Per-day fleet send forecast + summary — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicSendForecastResponse") } } },
-    400: { description: "Bad request from features-service", content: errorContent },
+    200: { description: "Per-day fleet send forecast + summary — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffSendForecastResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
   },
 });

@@ -25,6 +25,8 @@ vi.mock("../../src/middleware/auth.js", () => ({
     if (!req.userId) return res.status(401).json({ error: "User identity required" });
     next();
   },
+  authenticatePlatform: (_req: any, _res: any, next: any) => next(),
+  requireStaff: (_req: any, _res: any, next: any) => next(),
   AuthenticatedRequest: {},
 }));
 
