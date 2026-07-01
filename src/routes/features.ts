@@ -20,6 +20,7 @@ const PUBLIC_BEST_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_REVENUE_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_WORKFLOW_ENGAGEMENT_LATENCY_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_COST_PROJECTION_PARAMS = ["featureSlug"];
+const PUBLIC_SEND_FORECAST_PARAMS = ["days"];
 
 // ── Public routes (no auth) ─────────────────────────────────────────────────
 
@@ -118,6 +119,27 @@ router.get("/public/features/cost-projection", async (req: Request, res: Respons
   } catch (error: any) {
     console.error("[api-service] Public feature cost projection error:", error.message);
     res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public feature cost projection" });
+  }
+});
+
+/**
+ * GET /v1/public/features/send-forecast
+ * Global, cross-org, fleet-wide projection of outreach emails SENT per calendar day
+ * over a past+future window. Forwards optional `days` (1..90).
+ * Proxied to features-service GET /public/stats/send-forecast.
+ */
+router.get("/public/features/send-forecast", async (req: Request, res: Response) => {
+  try {
+    const params = buildParams(req.query as Record<string, unknown>, PUBLIC_SEND_FORECAST_PARAMS);
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/send-forecast?${params}`,
+      {},
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public send forecast error:", error.message);
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public send forecast" });
   }
 });
 

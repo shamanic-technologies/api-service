@@ -185,6 +185,10 @@
         "type": "object",
         "properties": {}
       },
+      "PublicSendForecastResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "MeResponse": {
         "type": "object",
         "properties": {
@@ -10240,6 +10244,61 @@
           },
           "404": {
             "description": "Feature not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/public/features/send-forecast": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Public fleet email send forecast",
+        "description": "Global, cross-org, fleet-wide projection of how many outreach emails will be SENT per calendar day over a past+future window. Proxied to features-service GET /public/stats/send-forecast. Forwards optional `days` (1..90). Response is producer-owned. No authentication required.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "description": "Future horizon in days (1..90). A 7-day past tail is always included. Optional; downstream defaults to 14.",
+              "example": 14
+            },
+            "required": false,
+            "description": "Future horizon in days (1..90). A 7-day past tail is always included. Optional; downstream defaults to 14.",
+            "name": "days",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Per-day fleet send forecast + summary — pass-through from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicSendForecastResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request from features-service",
             "content": {
               "application/json": {
                 "schema": {
