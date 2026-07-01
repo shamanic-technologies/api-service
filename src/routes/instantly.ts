@@ -1,0 +1,57 @@
+import { Router } from "express";
+import {
+  authenticatePlatform,
+  requireStaff,
+  AuthenticatedRequest,
+} from "../middleware/auth.js";
+import { callExternalService, externalServices } from "../lib/service-client.js";
+
+const router = Router();
+
+// ---------------------------------------------------------------------------
+// Staff-only proxies to instantly-service platform/audit endpoints.
+//
+// These surface FLEET-WIDE ops data (cross-org sending infrastructure), NOT
+// customer data — they power the staff "Audit → Instantly" ops page in
+// admin.distribute.you. Gated by authenticatePlatform + requireStaff (same tier
+// as GET /v1/billing/credits/grants/all): the caller must come in via the
+// platform API key (authType "admin") AND carry an x-email in the STAFF_EMAILS
+// allowlist. No org context (cross-org read). A customer (Bearer user key) or a
+// missing/non-allowlisted email gets 403.
+//
+// Transparent proxy (CLAUDE.md): no body/response transform (rules #4/#8),
+// upstream errors propagated verbatim (rule #7). The X-API-Key for instantly-service
+// is injected by callExternalService; x-email is forwarded for staff attribution.
+// ---------------------------------------------------------------------------
+
+// Forward the verified staff email downstream for actor attribution.
+function staffHeaders(req: AuthenticatedRequest): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (req.staffEmail) headers["x-email"] = req.staffEmail;
+  return headers;
+}
+
+// GET /v1/instantly/audit/sending-forecast — platform sending-forecast audit (staff only).
+// Transparent proxy to instantly-service GET /internal/audit/sending-forecast; no org
+// context, response owned by the downstream service.
+router.get(
+  "/instantly/audit/sending-forecast",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.instantly,
+        "/internal/audit/sending-forecast",
+        { headers: staffHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: any) {
+      res
+        .status(error.statusCode || 500)
+        .json({ error: error.message || "Failed to get instantly sending forecast" });
+    }
+  },
+);
+
+export default router;
