@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
+import { authenticate, authenticatePlatform, requireOrg, requireUser, requireStaff, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
@@ -20,7 +20,14 @@ const PUBLIC_BEST_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_REVENUE_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_WORKFLOW_ENGAGEMENT_LATENCY_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_COST_PROJECTION_PARAMS = ["featureSlug"];
-const PUBLIC_SEND_FORECAST_PARAMS = ["days"];
+const AUDIT_SEND_FORECAST_PARAMS = ["days"];
+
+// Forward the verified staff email downstream for actor attribution (no org context).
+function staffHeaders(req: AuthenticatedRequest): Record<string, string> {
+  const headers: Record<string, string> = {};
+  if (req.staffEmail) headers["x-email"] = req.staffEmail;
+  return headers;
+}
 
 // ── Public routes (no auth) ─────────────────────────────────────────────────
 
@@ -119,27 +126,6 @@ router.get("/public/features/cost-projection", async (req: Request, res: Respons
   } catch (error: any) {
     console.error("[api-service] Public feature cost projection error:", error.message);
     res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public feature cost projection" });
-  }
-});
-
-/**
- * GET /v1/public/features/send-forecast
- * Global, cross-org, fleet-wide projection of outreach emails SENT per calendar day
- * over a past+future window. Forwards optional `days` (1..90).
- * Proxied to features-service GET /public/stats/send-forecast.
- */
-router.get("/public/features/send-forecast", async (req: Request, res: Response) => {
-  try {
-    const params = buildParams(req.query as Record<string, unknown>, PUBLIC_SEND_FORECAST_PARAMS);
-    const result = await callExternalService(
-      externalServices.features,
-      `/public/stats/send-forecast?${params}`,
-      {},
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("[api-service] Public send forecast error:", error.message);
-    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public send forecast" });
   }
 });
 
@@ -275,6 +261,31 @@ router.post("/features/:slug/prefill", authenticate, requireOrg, requireUser, as
   } catch (error: any) {
     console.error("[api-service] Prefill feature error:", error.message);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to prefill feature" });
+  }
+});
+
+/**
+ * GET /v1/features/audit/send-forecast
+ * STAFF-ONLY fleet-wide, cross-org projection of outreach emails SENT per calendar day over a
+ * past+future window, plus a fleet budget summary (total daily budget across all brands, remaining
+ * budget today, active brand count). The summary carries cross-org fleet financials, so this is
+ * gated by authenticatePlatform + requireStaff (same tier as GET /v1/instantly/audit/*): the caller
+ * must come in via the platform API key (authType "admin") AND carry an x-email in the STAFF_EMAILS
+ * allowlist. No org context (cross-org read). Forwards optional `days` (1..90). Transparent proxy to
+ * features-service GET /internal/stats/send-forecast; response owned by the downstream service.
+ */
+router.get("/features/audit/send-forecast", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = buildParams(req.query as Record<string, unknown>, AUDIT_SEND_FORECAST_PARAMS);
+    const result = await callExternalService(
+      externalServices.features,
+      `/internal/stats/send-forecast?${params}`,
+      { headers: staffHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Staff send forecast error:", error.message);
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get send forecast" });
   }
 });
 

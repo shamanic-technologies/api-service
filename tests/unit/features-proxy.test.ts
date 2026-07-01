@@ -189,9 +189,13 @@ describe("Features proxy routes", () => {
     expect(projectionBlock).toContain("/workflow-projection");
   });
 
-  it("should enforce requireOrg + requireUser on ALL authenticated feature routes", () => {
+  it("should enforce requireOrg + requireUser on ALL org-scoped authenticated feature routes", () => {
     const routeLines = content.split("\n").filter((l) =>
-      /router\.(get|post|put)\(/.test(l) && l.includes('"/') && !l.includes("/public/")
+      /router\.(get|post|put)\(/.test(l) &&
+      l.includes('"/') &&
+      !l.includes("/public/") &&
+      // Staff-only cross-org route: gated by authenticatePlatform + requireStaff, no org context.
+      !l.includes("/features/audit/")
     );
     expect(routeLines.length).toBeGreaterThan(0);
     for (const line of routeLines) {
@@ -388,22 +392,11 @@ describe("Public features proxy routes", () => {
     expect(content).toContain("`/public/stats/cost-projection");
   });
 
-  it("should have GET /public/features/send-forecast without auth middleware", () => {
-    const line = content.split("\n").find((l) =>
-      l.includes("router.get") && l.includes('"/public/features/send-forecast"')
-    );
-    expect(line).toBeDefined();
-    expect(line).not.toContain("authenticate");
-    expect(line).not.toContain("requireOrg");
-  });
-
-  it("should proxy public send forecast to /public/stats/send-forecast on features-service", () => {
-    expect(content).toContain('"/public/features/send-forecast"');
-    expect(content).toContain("`/public/stats/send-forecast");
-  });
-
-  it("should forward the days query param on send-forecast", () => {
-    expect(content).toContain('PUBLIC_SEND_FORECAST_PARAMS = ["days"]');
+  it("should NOT expose a public send-forecast route (cross-org fleet financials moved to staff)", () => {
+    expect(content).not.toContain('"/public/features/send-forecast"');
+    expect(content).not.toContain("/public/stats/send-forecast");
+    expect(schemaContent).not.toContain('path: "/v1/public/features/send-forecast"');
+    expect(schemaContent).not.toContain("PublicSendForecastResponse");
   });
 
   it("should not require auth on public feature endpoints", () => {
@@ -435,9 +428,44 @@ describe("Public features OpenAPI schemas", () => {
     expect(schemaContent).toContain("PublicCostProjectionResponse");
   });
 
-  it("should register GET /v1/public/features/send-forecast", () => {
-    expect(schemaContent).toContain('path: "/v1/public/features/send-forecast"');
-    expect(schemaContent).toContain("PublicSendForecastResponse");
+  it("should NOT register GET /v1/public/features/send-forecast (moved to staff)", () => {
+    expect(schemaContent).not.toContain('path: "/v1/public/features/send-forecast"');
+    expect(schemaContent).not.toContain("PublicSendForecastResponse");
+  });
+});
+
+describe("Staff fleet send-forecast proxy route (source)", () => {
+  it("registers GET /features/audit/send-forecast on the router", () => {
+    expect(content).toContain('"/features/audit/send-forecast"');
+    expect(content).toContain("router.get");
+  });
+
+  it("is staff-gated with authenticatePlatform + requireStaff (no org)", () => {
+    const mountIdx = content.indexOf('"/features/audit/send-forecast"');
+    const chain = content.slice(mountIdx, content.indexOf("async (req", mountIdx));
+    expect(chain).toContain("authenticatePlatform,");
+    expect(chain).toContain("requireStaff,");
+    expect(chain).not.toContain("requireOrg");
+  });
+
+  it("proxies to features-service GET /internal/stats/send-forecast", () => {
+    expect(content).toContain("externalServices.features");
+    expect(content).toContain("`/internal/stats/send-forecast");
+  });
+
+  it("forwards the days query param", () => {
+    expect(content).toContain('AUDIT_SEND_FORECAST_PARAMS = ["days"]');
+  });
+
+  it("forwards the verified staff x-email downstream for attribution", () => {
+    expect(content).toContain("req.staffEmail");
+    expect(content).toContain('"x-email"');
+  });
+
+  it("registers the OpenAPI path with passthrough response + platform auth", () => {
+    expect(schemaContent).toContain('path: "/v1/features/audit/send-forecast"');
+    expect(schemaContent).toContain("StaffSendForecastResponse");
+    expect(schemaContent).toContain("security: platformAuth");
   });
 });
 
