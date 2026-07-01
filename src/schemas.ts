@@ -3052,7 +3052,7 @@ registry.registerPath({
                 "(id, leadId, email, namespace, apolloPersonId, emailStatus, status, statusReason, statusDetails, " +
                 "parentRunId, runId, brandIds, campaignId, orgId, userId, workflowSlug, featureSlug, servedAt, " +
                 "contacted, sent, delivered, opened, clicked, bounced, unsubscribed, replied, replyClassification, " +
-                "lastDeliveredAt, global) plus a canonical `lead: FullLead | null` payload."
+                "lastDeliveredAt, global, audience: { id, name, avatarUrl } | null) plus a canonical `lead: FullLead | null` payload."
               ),
             })
             .openapi("BrandLeadsResponse"),
