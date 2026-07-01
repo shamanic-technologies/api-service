@@ -54,4 +54,27 @@ router.get(
   },
 );
 
+// GET /v1/instantly/audit/reconcile — platform local-vs-Instantly reconciliation audit (staff only).
+// Transparent proxy to instantly-service GET /internal/audit/reconcile; no org
+// context, response owned by the downstream service.
+router.get(
+  "/instantly/audit/reconcile",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.instantly,
+        "/internal/audit/reconcile",
+        { headers: staffHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: any) {
+      res
+        .status(error.statusCode || 500)
+        .json({ error: error.message || "Failed to get instantly reconcile audit" });
+    }
+  },
+);
+
 export default router;
