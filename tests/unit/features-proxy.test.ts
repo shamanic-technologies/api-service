@@ -469,6 +469,39 @@ describe("Staff fleet send-forecast proxy route (source)", () => {
   });
 });
 
+describe("Staff fleet accounts audit proxy route (source)", () => {
+  it("registers GET /features/audit/accounts on the router", () => {
+    expect(content).toContain('"/features/audit/accounts"');
+    expect(content).toContain("router.get");
+  });
+
+  it("is staff-gated with authenticatePlatform + requireStaff (no org)", () => {
+    const mountIdx = content.indexOf('"/features/audit/accounts"');
+    const chain = content.slice(mountIdx, content.indexOf("async (req", mountIdx));
+    expect(chain).toContain("authenticatePlatform,");
+    expect(chain).toContain("requireStaff,");
+    expect(chain).not.toContain("requireOrg");
+  });
+
+  it("proxies to features-service GET /internal/stats/accounts", () => {
+    const mountIdx = content.indexOf('"/features/audit/accounts"');
+    const block = content.slice(mountIdx, mountIdx + 500);
+    expect(block).toContain("externalServices.features");
+    expect(block).toContain("`/internal/stats/accounts`");
+  });
+
+  it("forwards the verified staff x-email downstream for attribution", () => {
+    const mountIdx = content.indexOf('"/features/audit/accounts"');
+    const block = content.slice(mountIdx, mountIdx + 500);
+    expect(block).toContain("staffHeaders(req)");
+  });
+
+  it("registers the OpenAPI path with passthrough response + platform auth", () => {
+    expect(schemaContent).toContain('path: "/v1/features/audit/accounts"');
+    expect(schemaContent).toContain("StaffAccountsResponse");
+  });
+});
+
 describe("Features routes are mounted in index.ts", () => {
   it("should import and mount features routes", () => {
     expect(indexContent).toContain("featuresRoutes");

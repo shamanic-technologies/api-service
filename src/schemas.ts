@@ -335,6 +335,24 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/audit/accounts",
+  tags: ["Features"],
+  summary: "Staff fleet customer accounts + financials (staff only)",
+  description:
+    "STAFF-ONLY cross-org listing of customer accounts plus fleet financial stats (total daily budget, MRR, ARR). The stats carry " +
+    "cross-org fleet financials, so this is gated by platform API key + STAFF_EMAILS x-email (same tier as GET /v1/features/audit/send-forecast); " +
+    "no org context required, no query params. Transparent proxy to features-service GET /internal/stats/accounts. Response (rows + stats + asOf) is producer-owned.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Cross-org accounts + fleet financial stats — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffAccountsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
 // Authenticated endpoints — proxied to features-service
 registry.registerPath({
   method: "get",
