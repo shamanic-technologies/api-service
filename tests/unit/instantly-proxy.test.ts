@@ -55,6 +55,32 @@ describe("Instantly audit proxy route (source)", () => {
   });
 });
 
+describe("Instantly account-health audit proxy route (source)", () => {
+  it("should have GET /instantly/audit/account-health route", () => {
+    expect(content).toContain('"/instantly/audit/account-health"');
+    expect(content).toContain("router.get");
+  });
+
+  it("forwards to instantly-service downstream path verbatim", () => {
+    expect(content).toContain("externalServices.instantly");
+    expect(content).toContain('"/internal/audit/account-health"');
+  });
+
+  it("is staff-gated with authenticatePlatform + requireStaff (no org)", () => {
+    const mountIdx = content.indexOf('"/instantly/audit/account-health"');
+    const chain = content.slice(mountIdx, content.indexOf("async (req", mountIdx));
+    expect(chain).toContain("authenticatePlatform,");
+    expect(chain).toContain("requireStaff,");
+    expect(chain).not.toContain("requireOrg");
+  });
+
+  it("registers the OpenAPI path with passthrough response + platform auth", () => {
+    expect(schemaContent).toContain('path: "/v1/instantly/audit/account-health"');
+    expect(schemaContent).toContain('InstantlyAccountHealthResponse');
+    expect(schemaContent).toContain("security: platformAuth");
+  });
+});
+
 describe("Instantly reconcile audit proxy route (source)", () => {
   it("should have GET /instantly/audit/reconcile route", () => {
     expect(content).toContain('"/instantly/audit/reconcile"');
