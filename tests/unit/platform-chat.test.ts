@@ -138,28 +138,50 @@ describe("PUT /platform-chat/config", () => {
     expect(res.body.error).toBe("Invalid request");
   });
 
-  it("should strip removed mcpServerUrl and mcpKeyName fields", async () => {
+  it("should forward provider + model + thinkingLevel verbatim (passthrough)", async () => {
     const res = await request(app)
       .put("/platform-chat/config")
       .set("X-API-Key", VALID_API_KEY)
       .send({
-        key: "workflow",
-        systemPrompt: "You are a helpful assistant.",
+        key: "feature",
+        systemPrompt: "You are a press-kit assistant.",
         allowedTools: ["request_user_input"],
-        mcpServerUrl: "https://mcp.example.com",
-        mcpKeyName: "dashboard-mcp",
+        provider: "google",
+        model: "pro",
+        thinkingLevel: "medium",
       });
 
     expect(res.status).toBe(200);
 
     const call = fetchCalls.find((c) => c.url.includes("/platform-config"));
     expect(call!.body).toMatchObject({
-      key: "workflow",
-      systemPrompt: "You are a helpful assistant.",
+      key: "feature",
+      systemPrompt: "You are a press-kit assistant.",
       allowedTools: ["request_user_input"],
+      provider: "google",
+      model: "pro",
+      thinkingLevel: "medium",
     });
-    expect(call!.body).not.toHaveProperty("mcpServerUrl");
-    expect(call!.body).not.toHaveProperty("mcpKeyName");
+  });
+
+  it("should passthrough arbitrary future config fields untouched", async () => {
+    const res = await request(app)
+      .put("/platform-chat/config")
+      .set("X-API-Key", VALID_API_KEY)
+      .send({
+        key: "campaign",
+        systemPrompt: "You are a campaign-prefill assistant.",
+        allowedTools: ["request_user_input"],
+        someFutureField: { nested: true, value: 42 },
+      });
+
+    expect(res.status).toBe(200);
+
+    const call = fetchCalls.find((c) => c.url.includes("/platform-config"));
+    expect(call!.body).toMatchObject({
+      key: "campaign",
+      someFutureField: { nested: true, value: 42 },
+    });
   });
 
   it("should return 401 without API key", async () => {

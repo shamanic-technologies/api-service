@@ -5240,6 +5240,11 @@ export const PlatformChatConfigRequestSchema = z
       .optional()
       .describe("Per-config thinking/reasoning level applied by chat-service (e.g. raise Gemini chat thinking to medium)"),
   })
+  // Passthrough: this is a transparent gateway proxy to chat-service PUT /platform-config.
+  // Unknown keys (provider, model, and any future config field) MUST survive into parsed.data
+  // and forward verbatim — the gateway does not own the downstream config shape (CLAUDE.md #8).
+  // The 3 required-field guards above still 400 when missing.
+  .passthrough()
   .openapi("PlatformChatConfigRequest");
 
 registry.registerPath({
