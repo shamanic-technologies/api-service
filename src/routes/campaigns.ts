@@ -152,8 +152,18 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       ...buildInternalHeaders(req),
       "x-brand-id": brandIds.join(","),
       "x-feature-slug": featureLookupSlug,
-      "x-workflow-slug": workflowSlugForType,
     };
+    // The tracking x-workflow-slug namespace MUST be the VERSIONED slug, never
+    // the dynasty. runs-service enforces child.workflowSlug === parent.workflowSlug,
+    // and campaign-service creates the parent run with the resolved versioned slug
+    // (it stamps downstream runs from campaign.workflowSlug — see campaign-service
+    // gate-check.ts). So stamp the header ONLY when an exact (versioned) workflowSlug
+    // was supplied; when only a dynasty slug was given, OMIT it and let
+    // campaign-service stamp the resolved versioned slug on its own run tree.
+    // Do NOT reuse workflowSlugForType here — it is dynasty-preferring (correct for
+    // deriveCampaignType, wrong for the tracking header) and would taint the whole
+    // run tree with the dynasty slug, 409-ing every downstream child-run creation.
+    if (workflowSlug) campaignHeaders["x-workflow-slug"] = workflowSlug;
     const result = await callExternalService(
       externalServices.campaign,
       "/campaigns",
