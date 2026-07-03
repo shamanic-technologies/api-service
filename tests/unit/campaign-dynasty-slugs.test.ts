@@ -189,7 +189,12 @@ describe("Campaign dynasty slug support", () => {
     expect(campaignCall!.body!.type).toBe("outlets-database-discovery");
   });
 
-  it("should forward dynasty slug as x-feature-slug and x-workflow-slug headers", async () => {
+  it("should NOT stamp the dynasty slug as x-workflow-slug when only a dynasty slug is supplied", async () => {
+    // Regression: api-service#662. The tracking x-workflow-slug namespace MUST be
+    // versioned. When only a dynasty slug is given, api-service omits the header and
+    // lets campaign-service stamp the resolved versioned slug on its own run tree.
+    // Stamping the dynasty here tainted the whole run tree and 409'd every downstream
+    // child-run creation (runs-service: child.workflowSlug === parent.workflowSlug).
     const app = createApp();
     await request(app)
       .post("/v1/campaigns")
@@ -202,8 +207,32 @@ describe("Campaign dynasty slug support", () => {
       });
 
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
+    // x-feature-slug is a plain lookup slug (dynasty accepted) — unchanged.
     expect(campaignCall!.headers!["x-feature-slug"]).toBe("pr-cold-email-outreach");
-    expect(campaignCall!.headers!["x-workflow-slug"]).toBe("sales-email-cold-outreach-sienna");
+    // x-workflow-slug must NOT carry the dynasty slug — absent is correct.
+    expect(campaignCall!.headers!["x-workflow-slug"]).toBeUndefined();
+  });
+
+  it("should stamp the exact (versioned) workflowSlug as x-workflow-slug when supplied", async () => {
+    // Regression: api-service#662. When an exact versioned workflowSlug is supplied,
+    // it (never the dynasty) is the tracking x-workflow-slug — matching the versioned
+    // slug campaign-service stamps on the parent run, so no runs-service 409.
+    const app = createApp();
+    await request(app)
+      .post("/v1/campaigns")
+      .send({
+        name: "Header Versioned",
+        workflowSlug: "sales-email-cold-outreach-sienna-v3",
+        workflowDynastySlug: "sales-email-cold-outreach-sienna",
+        brandUrls: ["https://acme.com"],
+        featureDynastySlug: "pr-cold-email-outreach",
+        featureInputs: { targetAudience: "SaaS founders" },
+      });
+
+    const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.body?.orgId === "org_test456");
+    expect(campaignCall!.headers!["x-feature-slug"]).toBe("pr-cold-email-outreach");
+    // Exact versioned slug wins — NOT the dynasty-preferring workflowSlugForType.
+    expect(campaignCall!.headers!["x-workflow-slug"]).toBe("sales-email-cold-outreach-sienna-v3");
   });
 
   // -----------------------------------------------------------------------
