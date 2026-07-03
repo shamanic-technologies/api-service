@@ -6811,6 +6811,16 @@
             },
             "minItems": 1,
             "description": "List of MCP tool names this config is allowed to invoke"
+          },
+          "thinkingLevel": {
+            "type": "string",
+            "enum": [
+              "minimal",
+              "low",
+              "medium",
+              "high"
+            ],
+            "description": "Per-config thinking/reasoning level applied by chat-service (e.g. raise Gemini chat thinking to medium)"
           }
         },
         "required": [
