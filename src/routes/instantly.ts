@@ -54,6 +54,29 @@ router.get(
   },
 );
 
+// GET /v1/instantly/audit/account-health — platform per-account deliverability health audit (staff only).
+// Transparent proxy to instantly-service GET /internal/audit/account-health; no org
+// context, response owned by the downstream service.
+router.get(
+  "/instantly/audit/account-health",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.instantly,
+        "/internal/audit/account-health",
+        { headers: staffHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: any) {
+      res
+        .status(error.statusCode || 500)
+        .json({ error: error.message || "Failed to get instantly account-health audit" });
+    }
+  },
+);
+
 // GET /v1/instantly/audit/reconcile — platform local-vs-Instantly reconciliation audit (staff only).
 // Transparent proxy to instantly-service GET /internal/audit/reconcile; no org
 // context, response owned by the downstream service.

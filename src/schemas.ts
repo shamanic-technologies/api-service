@@ -5592,6 +5592,26 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/instantly/audit/account-health",
+  tags: ["Instantly"],
+  summary: "Get the platform per-account deliverability health audit (staff only)",
+  description:
+    "Fleet-wide Instantly per-sending-account deliverability health (identity, sending config, " +
+    "daily send limit, allowed-to-send / blocked state) across all cold-email accounts (cross-org " +
+    "sending infrastructure ops data, NOT customer data) — powers the staff 'Audit → Instantly' ops " +
+    "page. Staff-only (platform API key + STAFF_EMAILS x-email); no org context required. Transparent " +
+    "proxy to instantly-service GET /internal/audit/account-health; response owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Per-account health — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyAccountHealthResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/instantly/audit/reconcile",
   tags: ["Instantly"],
   summary: "Get the platform local-vs-Instantly reconciliation audit (staff only)",
