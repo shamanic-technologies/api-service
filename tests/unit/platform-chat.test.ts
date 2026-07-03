@@ -85,6 +85,59 @@ describe("PUT /platform-chat/config", () => {
     expect(call!.headers!["x-run-id"]).toBeUndefined();
   });
 
+  it("should forward thinkingLevel to chat-service when provided", async () => {
+    const res = await request(app)
+      .put("/platform-chat/config")
+      .set("X-API-Key", VALID_API_KEY)
+      .send({
+        key: "workflow",
+        systemPrompt: "You are a helpful workflow assistant.",
+        allowedTools: ["request_user_input"],
+        thinkingLevel: "medium",
+      });
+
+    expect(res.status).toBe(200);
+
+    const call = fetchCalls.find((c) => c.url.includes("/platform-config"));
+    expect(call!.body).toMatchObject({
+      key: "workflow",
+      systemPrompt: "You are a helpful workflow assistant.",
+      allowedTools: ["request_user_input"],
+      thinkingLevel: "medium",
+    });
+  });
+
+  it("should omit thinkingLevel from the forwarded body when not provided", async () => {
+    const res = await request(app)
+      .put("/platform-chat/config")
+      .set("X-API-Key", VALID_API_KEY)
+      .send({
+        key: "workflow",
+        systemPrompt: "You are a helpful workflow assistant.",
+        allowedTools: ["request_user_input"],
+      });
+
+    expect(res.status).toBe(200);
+
+    const call = fetchCalls.find((c) => c.url.includes("/platform-config"));
+    expect(call!.body).not.toHaveProperty("thinkingLevel");
+  });
+
+  it("should reject an invalid thinkingLevel value", async () => {
+    const res = await request(app)
+      .put("/platform-chat/config")
+      .set("X-API-Key", VALID_API_KEY)
+      .send({
+        key: "workflow",
+        systemPrompt: "You are a helpful workflow assistant.",
+        allowedTools: ["request_user_input"],
+        thinkingLevel: "ultra",
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe("Invalid request");
+  });
+
   it("should strip removed mcpServerUrl and mcpKeyName fields", async () => {
     const res = await request(app)
       .put("/platform-chat/config")

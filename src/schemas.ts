@@ -5235,6 +5235,10 @@ export const PlatformChatConfigRequestSchema = z
     key: z.string().min(1).describe('Config key identifying this configuration (e.g. "workflow", "feature")'),
     systemPrompt: z.string().min(1).describe("System prompt for the AI assistant"),
     allowedTools: z.array(z.string()).min(1).describe("List of MCP tool names this config is allowed to invoke"),
+    thinkingLevel: z
+      .enum(["minimal", "low", "medium", "high"])
+      .optional()
+      .describe("Per-config thinking/reasoning level applied by chat-service (e.g. raise Gemini chat thinking to medium)"),
   })
   .openapi("PlatformChatConfigRequest");
 
