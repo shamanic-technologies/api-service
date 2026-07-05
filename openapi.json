@@ -6947,14 +6947,6 @@
         "type": "object",
         "properties": {}
       },
-      "InstantlyAccountBlacklistResponse": {
-        "type": "object",
-        "properties": {}
-      },
-      "InstantlyAccountBlacklistRequest": {
-        "type": "object",
-        "properties": {}
-      },
       "BillingCheckoutResponse": {
         "type": "object",
         "properties": {}
@@ -8917,57 +8909,57 @@
           "accounts"
         ]
       },
-      "GoogleContact": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "googleAccountId": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "resourceName": {
-            "type": "string"
-          },
-          "etag": {
-            "type": "string",
-            "nullable": true
-          },
-          "payload": {
-            "nullable": true
-          },
-          "fetchedAt": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "googleAccountId",
-          "resourceName",
-          "etag",
-          "fetchedAt"
-        ]
-      },
       "GoogleContactsResponse": {
         "type": "object",
+        "properties": {}
+      },
+      "GoogleContactLinksResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "GoogleContactLinksRequest": {
+        "type": "object",
         "properties": {
-          "items": {
+          "resourceName": {
+            "type": "string",
+            "description": "People API resourceName of the contact"
+          },
+          "orgIds": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/GoogleContact"
-            }
+              "type": "string"
+            },
+            "description": "Org ids to link the contact to"
           },
-          "nextCursor": {
+          "brandIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Brand ids to link the contact to"
+          },
+          "featureSlugs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Feature slugs to link the contact to"
+          },
+          "status": {
             "type": "string",
-            "nullable": true
+            "description": "Optional link status"
           }
         },
         "required": [
-          "items",
-          "nextCursor"
+          "resourceName",
+          "orgIds",
+          "brandIds",
+          "featureSlugs"
         ]
+      },
+      "AdminBrandsResponse": {
+        "type": "object",
+        "properties": {}
       },
       "QuoteRequest": {
         "type": "object",
@@ -27144,128 +27136,6 @@
         ]
       }
     },
-    "/v1/instantly/audit/account-blacklist": {
-      "post": {
-        "tags": [
-          "Instantly"
-        ],
-        "summary": "Manually blacklist / re-allow a sending account (staff only)",
-        "description": "Manually blacklist or re-allow a single Instantly sending account (cross-org sending infrastructure ops action, NOT customer data) — powers the blacklist toggle on the staff 'Audit → Instantly → Sending accounts' table. Staff-only (platform API key + STAFF_EMAILS x-email); no org context required. Transparent proxy to instantly-service POST /internal/audit/account-blacklist; request body and response owned by the downstream service.",
-        "security": [
-          {
-            "apiKeyAuth": []
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/InstantlyAccountBlacklistRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Updated account blacklist state — pass-through from instantly-service",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/InstantlyAccountBlacklistResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Unauthorized",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Not staff",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Upstream error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "x-org-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-user-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
-          },
-          {
-            "name": "x-campaign-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-brand-id",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string",
-              "example": "uuid1,uuid2,uuid3"
-            },
-            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-workflow-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
-          },
-          {
-            "name": "x-feature-slug",
-            "in": "header",
-            "required": false,
-            "schema": {
-              "type": "string"
-            },
-            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
-          }
-        ]
-      }
-    },
     "/v1/billing/checkout-sessions": {
       "post": {
         "tags": [
@@ -35665,6 +35535,15 @@
             "in": "query"
           },
           {
+            "schema": {
+              "type": "string",
+              "description": "Filter messages by participant email"
+            },
+            "required": false,
+            "name": "participant",
+            "in": "query"
+          },
+          {
             "name": "x-org-id",
             "in": "header",
             "required": false,
@@ -35961,6 +35840,221 @@
             }
           }
         }
+      }
+    },
+    "/v1/orgs/google/contact-links": {
+      "put": {
+        "tags": [
+          "Google CRM"
+        ],
+        "summary": "Set link targets (orgs/brands/features) for a Google contact",
+        "description": "Sets the org/brand/feature link targets for a contact identified by its People API resourceName. Transparent proxy to google-service PUT /orgs/google/contact-links; body + response owned by the downstream service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleContactLinksRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated contact links",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoogleContactLinksResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
+      }
+    },
+    "/v1/admin/brands": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "List all brands across orgs (staff only)",
+        "description": "Fleet-wide brands list (id, name, domain, orgId) across all orgs — powers the admin CRM brands view (cross-org ops data, NOT customer data). Staff-only (platform API key + STAFF_EMAILS x-email); no org context required. Transparent proxy to brand-service GET /internal/brands/all; response owned by the downstream service.",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brands list — pass-through from brand-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBrandsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not staff",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
       }
     },
     "/v1/orgs/quote-requests": {
