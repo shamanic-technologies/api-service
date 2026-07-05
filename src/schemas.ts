@@ -5641,29 +5641,6 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
-  path: "/v1/instantly/audit/account-blacklist",
-  tags: ["Instantly"],
-  summary: "Manually blacklist / re-allow a sending account (staff only)",
-  description:
-    "Manually blacklist or re-allow a single Instantly sending account (cross-org sending " +
-    "infrastructure ops action, NOT customer data) — powers the blacklist toggle on the staff " +
-    "'Audit → Instantly → Sending accounts' table. Staff-only (platform API key + STAFF_EMAILS " +
-    "x-email); no org context required. Transparent proxy to instantly-service POST " +
-    "/internal/audit/account-blacklist; request body and response owned by the downstream service.",
-  security: platformAuth,
-  request: {
-    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyAccountBlacklistRequest") } } },
-  },
-  responses: {
-    200: { description: "Updated account blacklist state — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyAccountBlacklistResponse") } } },
-    401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
   path: "/v1/billing/checkout-sessions",
   tags: ["Billing"],
   summary: "Create Stripe checkout session",
