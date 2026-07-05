@@ -3687,6 +3687,53 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – Conversion Tracking Token (proxy to lead-service
+// /orgs/brands/:id/conversion-token[/rotate]). Per-brand publishable token +
+// ingest URL for the website conversion snippet. Downstream owns the response
+// shape — passthrough only ({ token, ingestUrl }).
+// ===================================================================
+const ConversionTokenResponseSchema = z.object({}).passthrough().openapi("ConversionTokenResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/conversion-token",
+  tags: ["Brand"],
+  summary: "Get a brand's conversion-tracking token",
+  description:
+    "Proxy to lead-service GET /orgs/brands/{id}/conversion-token. " +
+    "Returns the brand's per-brand conversion-tracking publishable token and ingest " +
+    "URL ({ token, ingestUrl }) for the website snippet that fires Signup / Meeting " +
+    "Booked events. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "Conversion token + ingest URL", content: { "application/json": { schema: ConversionTokenResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/conversion-token/rotate",
+  tags: ["Brand"],
+  summary: "Rotate a brand's conversion-tracking token",
+  description:
+    "Proxy to lead-service POST /orgs/brands/{id}/conversion-token/rotate. " +
+    "Rotates the brand's per-brand conversion-tracking token and returns the new " +
+    "{ token, ingestUrl }. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "Rotated conversion token + ingest URL", content: { "application/json": { schema: ConversionTokenResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+// ===================================================================
 // Brand – ICP Suggest + Brand Profile
 // Transparent proxies to brand-service /orgs/brands/:id/{icp/suggest,brand-profile}.
 // Downstream owns body + response shapes — passthrough only. No gateway
@@ -7585,6 +7632,33 @@ registry.registerPath({
     "No authentication required. Proxied from runs-service.",
   responses: {
     200: { description: "Run stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicRunStatsResponse") } } },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+// PUBLIC CONVERSIONS (no Clerk auth — third-party website postback)
+// ---------------------------------------------------------------------------
+
+registry.registerPath({
+  method: "post",
+  path: "/public/conversions",
+  tags: ["Public"],
+  summary: "Ingest a conversion event (no Clerk auth — per-brand token)",
+  description:
+    "PUBLIC conversion-tracking ingest. Called directly by third-party client " +
+    "websites (conversion snippet / server-side postback). NOT authenticated by a " +
+    "Clerk session — the per-brand publishable token travels in the `x-conversion-token` " +
+    "header (or `Authorization: Bearer`) and is verified downstream. Proxied to " +
+    "lead-service POST /public/conversions; the raw JSON body is forwarded untouched. " +
+    "Response (expected 200 { received: true }, or its 400/401) is owned by the " +
+    "downstream service.",
+  request: {
+    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("ConversionIngestRequest") } } },
+  },
+  responses: {
+    200: { description: "Conversion received", content: { "application/json": { schema: z.object({}).passthrough().openapi("ConversionIngestResponse") } } },
+    400: { description: "Invalid payload (forwarded verbatim)", content: errorContent },
+    401: { description: "Invalid or missing conversion token (forwarded verbatim)", content: errorContent },
     502: { description: "Upstream error", content: errorContent },
   },
 });
