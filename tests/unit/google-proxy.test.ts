@@ -82,14 +82,32 @@ describe("Google CRM proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should forward limit/cursor/account_id/thread_id on GET /orgs/google/messages", () => {
+  it("should forward limit/cursor/account_id/thread_id/participant on GET /orgs/google/messages", () => {
     const section = content.slice(
       content.indexOf('"/orgs/google/messages"'),
       content.indexOf('"/orgs/google/messages"') + 800
     );
-    for (const param of ["limit", "cursor", "account_id", "thread_id"]) {
+    for (const param of ["limit", "cursor", "account_id", "thread_id", "participant"]) {
       expect(section).toContain(`"${param}"`);
     }
+  });
+
+  it("should have PUT /orgs/google/contact-links with auth + requireOrg + requireUser", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.put") && l.includes('"/orgs/google/contact-links"')
+    );
+    expect(line).toBeDefined();
+    expect(line).toContain("authenticate");
+    expect(line).toContain("requireOrg");
+    expect(line).toContain("requireUser");
+  });
+
+  it("should forward body as-is on PUT /orgs/google/contact-links (no transform)", () => {
+    const idx = content.indexOf('"/orgs/google/contact-links"');
+    expect(idx).toBeGreaterThan(-1);
+    const section = content.slice(idx, idx + 400);
+    expect(section).toContain('method: "PUT"');
+    expect(section).toContain("body: req.body");
   });
 
   it("should have GET /orgs/google/contacts with auth + requireOrg + requireUser", () => {
@@ -125,13 +143,13 @@ describe("Google CRM proxy routes", () => {
   it("should call externalServices.google for every endpoint", () => {
     const matches = content.match(/externalServices\.google/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(7);
+    expect(matches!.length).toBe(8);
   });
 
   it("should use buildInternalHeaders for every endpoint", () => {
     const matches = content.match(/buildInternalHeaders\(req\)/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(7);
+    expect(matches!.length).toBe(8);
   });
 
   it("should preserve downstream paths (no path renaming)", () => {
@@ -225,6 +243,26 @@ describe("Google CRM OpenAPI schemas", () => {
     expect(schemaContent).toContain("GoogleContactsResponse");
   });
 
+  it("should keep GoogleContactsResponse as passthrough so downstream links survive", () => {
+    const idx = schemaContent.indexOf("GoogleContactsResponseSchema");
+    expect(idx).toBeGreaterThan(-1);
+    const section = schemaContent.slice(idx, idx + 200);
+    expect(section).toContain(".passthrough()");
+  });
+
+  it("should register PUT /v1/orgs/google/contact-links", () => {
+    expect(schemaContent).toContain('path: "/v1/orgs/google/contact-links"');
+    expect(schemaContent).toContain("GoogleContactLinksRequest");
+    expect(schemaContent).toContain("GoogleContactLinksResponse");
+  });
+
+  it("should declare participant query param on messages", () => {
+    const idx = schemaContent.indexOf('path: "/v1/orgs/google/messages"');
+    expect(idx).toBeGreaterThan(-1);
+    const section = schemaContent.slice(idx, idx + 600);
+    expect(section).toContain("participant");
+  });
+
   it("should register GET /v1/orgs/google/accounts", () => {
     expect(schemaContent).toContain('path: "/v1/orgs/google/accounts"');
     expect(schemaContent).toContain("GoogleAccountsListResponse");
@@ -253,6 +291,15 @@ describe("Google CRM sync job poll endpoint in openapi.json", () => {
     expect(openapi.paths).toBeDefined();
     expect(openapi.paths["/v1/orgs/google/sync/{jobId}"]).toBeDefined();
     expect(openapi.paths["/v1/orgs/google/sync/{jobId}"].get).toBeDefined();
+  });
+});
+
+describe("Google CRM contact-links endpoint in openapi.json", () => {
+  it("should include /v1/orgs/google/contact-links PUT in committed openapi.json", () => {
+    const openapiPath = path.join(__dirname, "../../openapi.json");
+    const openapi = JSON.parse(fs.readFileSync(openapiPath, "utf-8"));
+    expect(openapi.paths["/v1/orgs/google/contact-links"]).toBeDefined();
+    expect(openapi.paths["/v1/orgs/google/contact-links"].put).toBeDefined();
   });
 });
 

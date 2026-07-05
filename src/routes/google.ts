@@ -71,7 +71,7 @@ router.get("/orgs/google/sync/:jobId", authenticate, requireOrg, requireUser, as
 router.get("/orgs/google/messages", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["limit", "cursor", "account_id", "thread_id"]) {
+    for (const key of ["limit", "cursor", "account_id", "thread_id", "participant"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";
@@ -118,6 +118,20 @@ router.get("/orgs/google/contacts", authenticate, requireOrg, requireUser, async
     res.json(result);
   } catch (error: any) {
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to list Google contacts" });
+  }
+});
+
+// PUT /v1/orgs/google/contact-links — set link targets (orgs/brands/features) for a contact
+router.put("/orgs/google/contact-links", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.google,
+      "/orgs/google/contact-links",
+      { method: "PUT", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to update Google contact links" });
   }
 });
 

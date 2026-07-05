@@ -7717,23 +7717,28 @@ const GoogleMessagesResponseSchema = z
   })
   .openapi("GoogleMessagesResponse");
 
-const GoogleContactSchema = z
-  .object({
-    id: z.string().uuid(),
-    googleAccountId: z.string().uuid(),
-    resourceName: z.string(),
-    etag: z.string().nullable(),
-    payload: z.unknown().optional(),
-    fetchedAt: z.string(),
-  })
-  .openapi("GoogleContact");
-
+// Passthrough (rule #8): google-service owns the contact shape, including the
+// per-item `links` object (org/brand/feature link targets). Forwarded byte-for-byte.
 const GoogleContactsResponseSchema = z
-  .object({
-    items: z.array(GoogleContactSchema),
-    nextCursor: z.string().nullable(),
-  })
+  .object({})
+  .passthrough()
   .openapi("GoogleContactsResponse");
+
+// PUT /orgs/google/contact-links — set link targets for a contact.
+const GoogleContactLinksRequestSchema = z
+  .object({
+    resourceName: z.string().openapi({ description: "People API resourceName of the contact" }),
+    orgIds: z.array(z.string()).openapi({ description: "Org ids to link the contact to" }),
+    brandIds: z.array(z.string()).openapi({ description: "Brand ids to link the contact to" }),
+    featureSlugs: z.array(z.string()).openapi({ description: "Feature slugs to link the contact to" }),
+    status: z.string().optional().openapi({ description: "Optional link status" }),
+  })
+  .openapi("GoogleContactLinksRequest");
+
+const GoogleContactLinksResponseSchema = z
+  .object({})
+  .passthrough()
+  .openapi("GoogleContactLinksResponse");
 
 const GoogleAccountSummarySchema = z
   .object({
@@ -7843,6 +7848,7 @@ registry.registerPath({
       cursor: z.string().optional(),
       account_id: z.string().uuid().optional(),
       thread_id: z.string().optional(),
+      participant: z.string().optional().openapi({ description: "Filter messages by participant email" }),
     }),
   },
   responses: {
@@ -7883,6 +7889,51 @@ registry.registerPath({
   responses: {
     200: { description: "Paginated raw Google contacts", content: { "application/json": { schema: GoogleContactsResponseSchema } } },
     401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/orgs/google/contact-links",
+  tags: ["Google CRM"],
+  summary: "Set link targets (orgs/brands/features) for a Google contact",
+  description:
+    "Sets the org/brand/feature link targets for a contact identified by its People API resourceName. " +
+    "Transparent proxy to google-service PUT /orgs/google/contact-links; body + response owned by the downstream service.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: GoogleContactLinksRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Updated contact links", content: { "application/json": { schema: GoogleContactLinksResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+// ===================================================================
+// ADMIN CRM (brand-service staff proxy)
+// ===================================================================
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/admin/brands",
+  tags: ["Admin"],
+  summary: "List all brands across orgs (staff only)",
+  description:
+    "Fleet-wide brands list (id, name, domain, orgId) across all orgs — powers the admin CRM " +
+    "brands view (cross-org ops data, NOT customer data). Staff-only (platform API key + " +
+    "STAFF_EMAILS x-email); no org context required. Transparent proxy to brand-service " +
+    "GET /internal/brands/all; response owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Brands list — pass-through from brand-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("AdminBrandsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
   },
 });
 
