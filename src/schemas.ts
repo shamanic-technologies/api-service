@@ -5621,6 +5621,32 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/instantly/audit/capacity-history",
+  tags: ["Instantly"],
+  summary: "Get the platform sending-capacity-over-time audit (staff only)",
+  description:
+    "Fleet-wide Instantly sending-capacity history: a time series of in-production sending accounts " +
+    "and daily sending capacity, so staff can chart how the cold-email fleet's capacity evolves " +
+    "(cross-org sending infrastructure ops data, NOT customer data) — powers the staff 'Audit → " +
+    "Instantly' ops page. Staff-only (platform API key + STAFF_EMAILS x-email); no org context " +
+    "required. Transparent proxy to instantly-service GET /internal/audit/capacity-history; response " +
+    "owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.coerce.number().int().optional().describe("Number of days of history to return (forwarded to instantly-service)"),
+    }),
+  },
+  responses: {
+    200: { description: "Sending-capacity history — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyCapacityHistoryResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/instantly/audit/reconcile",
   tags: ["Instantly"],
   summary: "Get the platform local-vs-Instantly reconciliation audit (staff only)",

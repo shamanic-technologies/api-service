@@ -77,6 +77,32 @@ router.get(
   },
 );
 
+// GET /v1/instantly/audit/capacity-history — platform sending-capacity-over-time audit (staff only).
+// Transparent proxy to instantly-service GET /internal/audit/capacity-history; no org
+// context, response owned by the downstream service. Optional `days` query param forwarded through.
+router.get(
+  "/instantly/audit/capacity-history",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const params = new URLSearchParams();
+      if (req.query.days) params.set("days", req.query.days as string);
+      const queryString = params.toString() ? `?${params.toString()}` : "";
+      const result = await callExternalService(
+        externalServices.instantly,
+        `/internal/audit/capacity-history${queryString}`,
+        { headers: staffHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: any) {
+      res
+        .status(error.statusCode || 500)
+        .json({ error: error.message || "Failed to get instantly capacity-history audit" });
+    }
+  },
+);
+
 // GET /v1/instantly/audit/reconcile — platform local-vs-Instantly reconciliation audit (staff only).
 // Transparent proxy to instantly-service GET /internal/audit/reconcile; no org
 // context, response owned by the downstream service.

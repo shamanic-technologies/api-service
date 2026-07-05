@@ -81,6 +81,41 @@ describe("Instantly account-health audit proxy route (source)", () => {
   });
 });
 
+describe("Instantly capacity-history audit proxy route (source)", () => {
+  it("should have GET /instantly/audit/capacity-history route", () => {
+    expect(content).toContain('"/instantly/audit/capacity-history"');
+    expect(content).toContain("router.get");
+  });
+
+  it("forwards to instantly-service downstream path verbatim", () => {
+    expect(content).toContain("externalServices.instantly");
+    expect(content).toContain("/internal/audit/capacity-history");
+  });
+
+  it("forwards the optional days query param through", () => {
+    const mountIdx = content.indexOf('"/instantly/audit/capacity-history"');
+    const handler = content.slice(mountIdx, mountIdx + 700);
+    expect(handler).toContain("req.query.days");
+    expect(handler).toContain('params.set("days"');
+  });
+
+  it("is staff-gated with authenticatePlatform + requireStaff (no org)", () => {
+    const mountIdx = content.indexOf('"/instantly/audit/capacity-history"');
+    const chain = content.slice(mountIdx, content.indexOf("async (req", mountIdx));
+    expect(chain).toContain("authenticatePlatform,");
+    expect(chain).toContain("requireStaff,");
+    expect(chain).not.toContain("requireOrg");
+  });
+
+  it("registers the OpenAPI path with passthrough response + platform auth", () => {
+    expect(schemaContent).toContain('path: "/v1/instantly/audit/capacity-history"');
+    expect(schemaContent).toContain('InstantlyCapacityHistoryResponse');
+    const mountIdx = schemaContent.indexOf('path: "/v1/instantly/audit/capacity-history"');
+    const block = schemaContent.slice(mountIdx, mountIdx + 1400);
+    expect(block).toContain("security: platformAuth");
+  });
+});
+
 describe("Instantly reconcile audit proxy route (source)", () => {
   it("should have GET /instantly/audit/reconcile route", () => {
     expect(content).toContain('"/instantly/audit/reconcile"');
