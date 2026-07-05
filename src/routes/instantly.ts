@@ -100,29 +100,4 @@ router.get(
   },
 );
 
-// POST /v1/instantly/audit/account-blacklist — manually blacklist / re-allow a sending
-// account (staff only). Powers the blacklist toggle on the staff "Audit → Instantly →
-// Sending accounts" table. Transparent proxy to instantly-service POST
-// /internal/audit/account-blacklist: body { email, blacklisted } forwarded verbatim,
-// response { email, manuallyBlacklisted, warmupDailyLimit } passed through unchanged.
-router.post(
-  "/instantly/audit/account-blacklist",
-  authenticatePlatform,
-  requireStaff,
-  async (req: AuthenticatedRequest, res) => {
-    try {
-      const result = await callExternalService(
-        externalServices.instantly,
-        "/internal/audit/account-blacklist",
-        { method: "POST", body: req.body, headers: staffHeaders(req) },
-      );
-      res.json(result);
-    } catch (error: any) {
-      res
-        .status(error.statusCode || 500)
-        .json({ error: error.message || "Failed to set instantly account blacklist" });
-    }
-  },
-);
-
 export default router;
