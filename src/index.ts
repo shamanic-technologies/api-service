@@ -57,6 +57,7 @@ import ahrefRoutes from "./routes/ahref.js";
 import invitesRoutes from "./routes/invites.js";
 import waitlistRoutes from "./routes/waitlist.js";
 import publicStatsRoutes from "./routes/public-stats.js";
+import conversionsRoutes from "./routes/conversions.js";
 import costsRoutes from "./routes/costs.js";
 import adminRoutes from "./routes/admin.js";
 import adminBrandsRoutes from "./routes/admin-brands.js";
@@ -181,6 +182,7 @@ app.use(healthRoutes);
 app.use(pressKitsRoutes); // public press-kit endpoints (no auth)
 app.use(featuresRoutes);  // public features endpoints (no auth)
 app.use(publicStatsRoutes); // public stats endpoints (no auth)
+app.use(conversionsRoutes); // public conversion-tracking ingest (no Clerk auth — token in header)
 app.use(costsRoutes); // public costs endpoints (no auth) — declares full /v1/costs/* paths
 
 // Internal platform routes (API key only, no identity)

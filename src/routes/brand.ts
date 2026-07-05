@@ -408,6 +408,48 @@ router.put("/brands/:id/click-destination", authenticate, requireOrg, requireUse
 });
 
 /**
+ * GET /v1/brands/:id/conversion-token
+ * Proxy to lead-service GET /orgs/brands/:id/conversion-token.
+ * Returns the brand's per-brand conversion-tracking publishable token + ingest URL
+ * ({ token, ingestUrl }) for the website snippet. Response shape is owned by the
+ * downstream service — passthrough only.
+ */
+router.get("/brands/:id/conversion-token", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.lead,
+      `/orgs/brands/${req.params.id}/conversion-token`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Get conversion token error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get conversion token" });
+  }
+});
+
+/**
+ * POST /v1/brands/:id/conversion-token/rotate
+ * Proxy to lead-service POST /orgs/brands/:id/conversion-token/rotate.
+ * Rotates the brand's per-brand conversion-tracking token and returns the new
+ * { token, ingestUrl }. Response shape is owned by the downstream service —
+ * passthrough only.
+ */
+router.post("/brands/:id/conversion-token/rotate", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.lead,
+      `/orgs/brands/${req.params.id}/conversion-token/rotate`,
+      { method: "POST", headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Rotate conversion token error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to rotate conversion token" });
+  }
+});
+
+/**
  * POST /v1/brands/:id/transfer
  * Transfer a brand to a different org. Resolves the Clerk org ID to an internal UUID,
  * then proxies to brand-service which orchestrates the full transfer.
