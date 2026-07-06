@@ -424,14 +424,17 @@ router.get("/features/:slug/audience-stats", authenticate, requireOrg, requireUs
 
 /**
  * GET /v1/features/:slug/workflow-projection
- * Ranks a brand's workflows by cost-per-close and projects a budget through the sales funnel,
- * scoped by brandId. Proxied to features-service GET /features/:slug/workflow-projection.
+ * Serves a 3-grain (crossOrg → brand → audience) cost-per-outcome projection ladder + a
+ * resolved pick, keyed per (audienceId?, workflowDynasty). Scoped by brandId; goal/objective
+ * select the outcome metric; audienceId/budgetUsd are optional context. Forwards ALL query
+ * params (brandId, goal, objective, audienceId, budgetUsd, …) transparently to features-service
+ * GET /features/:slug/workflow-projection — passthrough response.
  */
 router.get("/features/:slug/workflow-projection", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["brandId", "objective", "budgetUsd"]) {
-      if (req.query[key]) params.set(key, req.query[key] as string);
+    for (const [key, value] of Object.entries(req.query)) {
+      if (typeof value === "string") params.set(key, value);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";
     const result = await callExternalService(
@@ -443,31 +446,6 @@ router.get("/features/:slug/workflow-projection", authenticate, requireOrg, requ
   } catch (error: any) {
     console.error("Feature workflow-projection error:", error.message);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get feature workflow projection" });
-  }
-});
-
-/**
- * GET /v1/features/:slug/candidates
- * Serves the (audienceId, workflow) candidate evidence set for a brand + feature + goal,
- * with per-candidate cost-per-outcome at the audience / brand-goal / goal-global grain ladder.
- * Scoped by brandId + goal. Proxied to features-service GET /features/:slug/candidates.
- */
-router.get("/features/:slug/candidates", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const params = new URLSearchParams();
-    for (const key of ["brandId", "goal", "brandProfileId"]) {
-      if (req.query[key]) params.set(key, req.query[key] as string);
-    }
-    const qs = params.toString() ? `?${params.toString()}` : "";
-    const result = await callExternalService(
-      externalServices.features,
-      `/features/${encodeURIComponent(req.params.slug)}/candidates${qs}`,
-      { headers: buildInternalHeaders(req) },
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("Feature candidates error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get feature candidates" });
   }
 });
 
