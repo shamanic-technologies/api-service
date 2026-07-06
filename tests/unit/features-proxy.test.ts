@@ -180,13 +180,17 @@ describe("Features proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should forward brandId, objective and budgetUsd on GET /features/:slug/workflow-projection", () => {
+  it("should forward ALL query params transparently on GET /features/:slug/workflow-projection", () => {
     const projectionIdx = content.indexOf('"/features/:slug/workflow-projection"');
-    const projectionBlock = content.slice(projectionIdx, projectionIdx + 400);
-    expect(projectionBlock).toContain('"brandId"');
-    expect(projectionBlock).toContain('"objective"');
-    expect(projectionBlock).toContain('"budgetUsd"');
+    const projectionBlock = content.slice(projectionIdx, projectionIdx + 700);
+    // Passthrough: no per-key whitelist — forwards every query param (brandId, goal,
+    // objective, audienceId, budgetUsd, …) so new downstream params need no api-service edit.
+    expect(projectionBlock).toContain("Object.entries(req.query)");
     expect(projectionBlock).toContain("/workflow-projection");
+  });
+
+  it("should NOT have a candidates route (endpoint removed downstream, folded into workflow-projection)", () => {
+    expect(content).not.toContain('"/features/:slug/candidates"');
   });
 
   it("should enforce requireOrg + requireUser on ALL org-scoped authenticated feature routes", () => {
@@ -313,6 +317,21 @@ describe("Features OpenAPI schemas", () => {
 
   it("should register GET /v1/features/{featureSlug}/workflow-projection", () => {
     expect(schemaContent).toContain('path: "/v1/features/{featureSlug}/workflow-projection"');
+  });
+
+  it("should document goal + audienceId query params on workflow-projection", () => {
+    const projIdx = schemaContent.indexOf('path: "/v1/features/{featureSlug}/workflow-projection"');
+    const projBlock = schemaContent.slice(projIdx, projIdx + 1400);
+    expect(projBlock).toContain("brandId:");
+    expect(projBlock).toContain("goal:");
+    expect(projBlock).toContain("objective:");
+    expect(projBlock).toContain("audienceId:");
+    expect(projBlock).toContain("budgetUsd:");
+  });
+
+  it("should NOT register the removed candidates endpoint", () => {
+    expect(schemaContent).not.toContain('path: "/v1/features/{featureSlug}/candidates"');
+    expect(schemaContent).not.toContain("FeatureCandidatesResponse");
   });
 
   it("should document groupBy query param on stats endpoints", () => {
