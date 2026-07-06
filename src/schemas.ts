@@ -7540,42 +7540,20 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Feature workflow projection",
   description:
-    "Ranks a brand's workflows by cost-per-close and projects a budget through the sales funnel for a specific feature. Scoped by brandId (+ objective, budgetUsd). Proxied from features-service.",
-  security: authed,
-  request: {
-    params: z.object({ featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug") }),
-    query: z.object({
-      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — scopes the projection to one brand"),
-      objective: z.string().optional().openapi({ example: "meeting-booked" }).describe("Sales-funnel objective to project toward"),
-      budgetUsd: z.string().optional().openapi({ example: "1000" }).describe("Budget in USD to project through the funnel"),
-    }),
-  },
-  responses: {
-    200: { description: "Feature workflow projection", content: { "application/json": { schema: z.object({}).passthrough().openapi("WorkflowProjectionResponse") } } },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Feature not found", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/features/{featureSlug}/candidates",
-  tags: ["Features"],
-  summary: "Feature candidate evidence set",
-  description:
-    "Serves the (audienceId, workflow) candidate evidence set for a brand + feature + goal, with per-candidate cost-per-outcome at the audience / brand-goal / goal-global grain ladder. Scoped by brandId + goal (+ optional brandProfileId). Proxied from features-service.",
+    "Serves a 3-grain cost-per-outcome projection ladder (crossOrg → brand → audience) + a resolved pick per (audienceId?, workflow dynasty), scoped by brandId (+ goal/objective, audienceId, budgetUsd). Folds in the audience×workflow grain formerly served by the removed /candidates endpoint. Passthrough proxy from features-service — forwards all query params.",
   security: authed,
   request: {
     params: z.object({ featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug") }),
     query: z.object({
       brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — conversion economics are brand-scoped"),
-      goal: z.string().openapi({ example: "meetingBooked" }).describe("Optimization target (required): signup | meetingBooked | purchase"),
-      brandProfileId: z.string().optional().openapi({ example: "profile-uuid-123" }).describe("Brand-profile-version context (optional, echoed)"),
+      audienceId: z.string().optional().openapi({ example: "audience-uuid-123" }).describe("Optional audience UUID context (echoed via audience rows; audience rows enumerate ALL of the brand's active audiences that ran the workflow)"),
+      goal: z.string().optional().openapi({ example: "meetingBooked" }).describe("Optimization goal (accepts camel/snake/kebab; alias of objective). Defaults to meeting-booked"),
+      objective: z.string().optional().openapi({ example: "meeting-booked" }).describe("Alias of goal (snake/kebab spelling) — kept for back-compat"),
+      budgetUsd: z.string().optional().openapi({ example: "1000" }).describe("Optional budget context (accepted for back-compat)"),
     }),
   },
   responses: {
-    200: { description: "Feature candidate evidence set", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureCandidatesResponse") } } },
+    200: { description: "Feature workflow projection", content: { "application/json": { schema: z.object({}).passthrough().openapi("WorkflowProjectionResponse") } } },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },

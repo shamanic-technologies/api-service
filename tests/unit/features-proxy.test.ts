@@ -180,13 +180,17 @@ describe("Features proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should forward brandId, objective and budgetUsd on GET /features/:slug/workflow-projection", () => {
+  it("should forward ALL query params (passthrough) on GET /features/:slug/workflow-projection", () => {
     const projectionIdx = content.indexOf('"/features/:slug/workflow-projection"');
-    const projectionBlock = content.slice(projectionIdx, projectionIdx + 400);
-    expect(projectionBlock).toContain('"brandId"');
-    expect(projectionBlock).toContain('"objective"');
-    expect(projectionBlock).toContain('"budgetUsd"');
+    const projectionBlock = content.slice(projectionIdx, projectionIdx + 600);
+    // Transparent proxy: iterate req.query rather than a fixed whitelist, so brandId,
+    // objective, goal, audienceId, budgetUsd (and any future downstream param) all forward.
+    expect(projectionBlock).toContain("Object.entries(req.query)");
     expect(projectionBlock).toContain("/workflow-projection");
+  });
+
+  it("should NOT proxy the removed GET /features/:slug/candidates route (deleted upstream)", () => {
+    expect(content).not.toContain("/candidates");
   });
 
   it("should enforce requireOrg + requireUser on ALL org-scoped authenticated feature routes", () => {
@@ -313,6 +317,20 @@ describe("Features OpenAPI schemas", () => {
 
   it("should register GET /v1/features/{featureSlug}/workflow-projection", () => {
     expect(schemaContent).toContain('path: "/v1/features/{featureSlug}/workflow-projection"');
+  });
+
+  it("should document audienceId + goal query params on workflow-projection", () => {
+    const idx = schemaContent.indexOf('path: "/v1/features/{featureSlug}/workflow-projection"');
+    const block = schemaContent.slice(idx, idx + 2400);
+    expect(block).toContain("audienceId:");
+    expect(block).toContain("goal:");
+    expect(block).toContain("objective:");
+    expect(block).toContain("budgetUsd:");
+  });
+
+  it("should NOT register the removed GET /v1/features/{featureSlug}/candidates path", () => {
+    expect(schemaContent).not.toContain('path: "/v1/features/{featureSlug}/candidates"');
+    expect(schemaContent).not.toContain("FeatureCandidatesResponse");
   });
 
   it("should document groupBy query param on stats endpoints", () => {
