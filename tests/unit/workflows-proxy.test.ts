@@ -315,6 +315,64 @@ describe("Workflow schemas — ranked and best endpoints", () => {
   });
 });
 
+describe("Workflow dynasty status proxy", () => {
+  const routePath = path.join(__dirname, "../../src/routes/workflows.ts");
+  const content = fs.readFileSync(routePath, "utf-8");
+  const schemaPath = path.join(__dirname, "../../src/schemas.ts");
+  const schema = fs.readFileSync(schemaPath, "utf-8");
+
+  it("should define PUT /workflows/dynasty/:workflowDynastySlug/status", () => {
+    expect(content).toContain('"/workflows/dynasty/:workflowDynastySlug/status"');
+  });
+
+  it("should proxy to workflow-service /workflows/dynasty/{slug}/status verbatim", () => {
+    const start = content.indexOf('"/workflows/dynasty/:workflowDynastySlug/status"');
+    const block = content.slice(start, content.indexOf("Set workflow dynasty status error", start));
+    expect(block).toContain("externalServices.workflow");
+    expect(block).toContain("/workflows/dynasty/${encodeURIComponent(workflowDynastySlug)}/status");
+    expect(block).toContain('method: "PUT"');
+    // Forwards body + status code verbatim (passthrough)
+    expect(block).toContain("callExternalServiceWithStatus");
+    expect(block).toContain("res.status(status).json(data)");
+    expect(block).toContain("buildInternalHeaders(req)");
+  });
+
+  it("should use the same auth as other /workflows routes", () => {
+    const start = content.indexOf('"/workflows/dynasty/:workflowDynastySlug/status"');
+    const block = content.slice(start, content.indexOf(", async", start));
+    expect(block).toContain("authenticate");
+    expect(block).toContain("requireOrg");
+    expect(block).toContain("requireUser");
+  });
+
+  it("should register PUT /v1/workflows/dynasty/{workflowDynastySlug}/status in openapi", () => {
+    expect(schema).toContain('path: "/v1/workflows/dynasty/{workflowDynastySlug}/status"');
+  });
+
+  it("should validate request body as { status: active | deprecated }", () => {
+    expect(schema).toContain("WorkflowDynastyStatusRequestSchema");
+    const start = schema.indexOf("WorkflowDynastyStatusRequestSchema");
+    const block = schema.slice(start, start + 300);
+    expect(block).toContain('z.enum(["active", "deprecated"])');
+  });
+
+  it("should register a passthrough response for the dynasty status route", () => {
+    expect(schema).toContain('"WorkflowDynastyStatusResponse"');
+    const start = schema.indexOf("WorkflowDynastyStatusResponse");
+    const block = schema.slice(start - 120, start);
+    expect(block).toContain("z.object({}).passthrough()");
+  });
+
+  it("should expose status field on WorkflowMetadata as active | deprecated", () => {
+    const metaSection = schema.slice(
+      schema.indexOf("WorkflowMetadataSchema"),
+      schema.indexOf('.openapi("WorkflowMetadata")')
+    );
+    expect(metaSection).toContain("status:");
+    expect(metaSection).toContain('z.enum(["active", "deprecated"])');
+  });
+});
+
 describe("Workflow routes are mounted in index.ts", () => {
   const indexPath = path.join(__dirname, "../../src/index.ts");
   const content = fs.readFileSync(indexPath, "utf-8");

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
-import { CreateWorkflowRequestSchema, UpgradeWorkflowRequestSchema, UpdateWorkflowRequestSchema } from "../schemas.js";
+import { CreateWorkflowRequestSchema, UpgradeWorkflowRequestSchema, UpdateWorkflowRequestSchema, WorkflowDynastyStatusRequestSchema } from "../schemas.js";
 
 const router = Router();
 
@@ -379,6 +379,41 @@ router.post("/workflows/:id/validate", authenticate, requireOrg, requireUser, as
     console.error("Validate workflow error:", error.message);
     const status = error.statusCode || 500;
     res.status(status).json({ error: error.message || "Failed to validate workflow" });
+  }
+});
+
+/**
+ * PUT /v1/workflows/dynasty/:workflowDynastySlug/status
+ * Activate or deprecate a workflow dynasty. Transparent proxy to workflow-service
+ * PUT /workflows/dynasty/{workflowDynastySlug}/status. Body + response forwarded verbatim.
+ */
+router.put("/workflows/dynasty/:workflowDynastySlug/status", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { workflowDynastySlug } = req.params;
+
+    const parsed = WorkflowDynastyStatusRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({
+        error: "Invalid request",
+        details: parsed.error.flatten(),
+      });
+    }
+
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.workflow,
+      `/workflows/dynasty/${encodeURIComponent(workflowDynastySlug)}/status`,
+      {
+        method: "PUT",
+        headers: buildInternalHeaders(req),
+        body: parsed.data,
+      },
+    );
+
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("Set workflow dynasty status error:", error.message);
+    const status = error.statusCode || 500;
+    res.status(status).json({ error: error.message || "Failed to set workflow dynasty status" });
   }
 });
 
