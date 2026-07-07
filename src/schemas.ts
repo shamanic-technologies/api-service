@@ -209,7 +209,9 @@ const WorkflowMetadataSchema = z
     featureSlug: z.string().describe("Feature slug this workflow belongs to (e.g. 'pr-cold-email-outreach')"),
     signature: z.string().describe("SHA-256 hash of the canonical DAG"),
     workflowDynastySignatureName: z.string().describe("Human-readable name for this DAG variant within the dynasty"),
+    status: z.enum(["active", "deprecated"]).optional().describe("Dynasty lifecycle status. 'deprecated' workflows are hidden from selection. Owned by workflow-service."),
   })
+  .passthrough()
   .openapi("WorkflowMetadata");
 
 // Ranked & best responses are pass-through from features-service.
@@ -4602,6 +4604,45 @@ export const UpdateWorkflowRequestSchema = z
       },
     },
   });
+
+export const WorkflowDynastyStatusRequestSchema = z
+  .object({
+    status: z.enum(["active", "deprecated"]).describe("New lifecycle status for the workflow dynasty."),
+  })
+  .openapi("WorkflowDynastyStatusRequest", { example: { status: "deprecated" } });
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/workflows/dynasty/{workflowDynastySlug}/status",
+  tags: ["Workflows"],
+  summary: "Set workflow dynasty status",
+  description:
+    "Activate or deprecate a workflow dynasty by its stable dynasty slug. Proxied verbatim to workflow-service. " +
+    "Deprecating hides the dynasty from selection; reactivating restores it.",
+  security: authed,
+  request: {
+    params: z.object({
+      workflowDynastySlug: z.string().openapi({ example: "sales-email-cold-outreach-sienna" }).describe("Stable dynasty slug"),
+    }),
+    body: {
+      content: {
+        "application/json": { schema: WorkflowDynastyStatusRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Updated dynasty status — pass-through from workflow-service",
+      content: {
+        "application/json": { schema: z.object({}).passthrough().openapi("WorkflowDynastyStatusResponse") },
+      },
+    },
+    400: { description: "Invalid request", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Workflow dynasty not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
 
 registry.registerPath({
   method: "put",
