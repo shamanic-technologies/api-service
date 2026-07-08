@@ -20,6 +20,8 @@ const PUBLIC_BEST_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_REVENUE_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_WORKFLOW_ENGAGEMENT_LATENCY_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_COST_PROJECTION_PARAMS = ["featureSlug"];
+const PUBLIC_COST_PER_OUTCOME_TREND_PARAMS = ["featureSlug", "objective", "days", "windowOutcomes"];
+const PUBLIC_WORKFLOW_COST_PER_OUTCOME_PARAMS = ["featureSlug", "objective"];
 const AUDIT_SEND_FORECAST_PARAMS = ["days"];
 
 // Forward the verified staff email downstream for actor attribution (no org context).
@@ -126,6 +128,46 @@ router.get("/public/features/cost-projection", async (req: Request, res: Respons
   } catch (error: any) {
     console.error("[api-service] Public feature cost projection error:", error.message);
     res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public feature cost projection" });
+  }
+});
+
+/**
+ * GET /v1/public/features/cost-per-outcome-trend
+ * Public dated moving-average cost-per-outcome series for one objective.
+ * Proxied to features-service GET /public/stats/cost-per-outcome-trend.
+ */
+router.get("/public/features/cost-per-outcome-trend", async (req: Request, res: Response) => {
+  try {
+    const params = buildParams(req.query as Record<string, unknown>, PUBLIC_COST_PER_OUTCOME_TREND_PARAMS);
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/cost-per-outcome-trend?${params}`,
+      {},
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public cost-per-outcome trend error:", error.message);
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public cost-per-outcome trend" });
+  }
+});
+
+/**
+ * GET /v1/public/features/workflow-cost-per-outcome
+ * Public per-workflow cross-org cost-per-outcome ratio for one objective.
+ * Proxied to features-service GET /public/stats/workflow-cost-per-outcome.
+ */
+router.get("/public/features/workflow-cost-per-outcome", async (req: Request, res: Response) => {
+  try {
+    const params = buildParams(req.query as Record<string, unknown>, PUBLIC_WORKFLOW_COST_PER_OUTCOME_PARAMS);
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/workflow-cost-per-outcome?${params}`,
+      {},
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public workflow cost-per-outcome error:", error.message);
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public workflow cost-per-outcome" });
   }
 });
 
