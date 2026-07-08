@@ -189,6 +189,18 @@ const publicCostProjectionQueryParams = z.object({
   featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
 });
 
+const publicCostPerOutcomeTrendQueryParams = z.object({
+  featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
+  objective: z.string().openapi({ example: "positiveReply" }).describe("Optimization objective — one of websiteVisit / positiveReply / signup / formSubmission / meetingBooked / purchase (required)."),
+  days: z.string().optional().openapi({ example: "30" }).describe("Number of trailing display days to emit (default 30, max 180)."),
+  windowOutcomes: z.string().optional().openapi({ example: "100" }).describe("Target outcomes per moving-average window (default 100)."),
+});
+
+const publicWorkflowCostPerOutcomeQueryParams = z.object({
+  featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
+  objective: z.string().openapi({ example: "positiveReply" }).describe("Optimization objective — one of websiteVisit / positiveReply / signup / formSubmission / meetingBooked / purchase (required)."),
+});
+
 const auditSendForecastQueryParams = z.object({
   days: z.coerce.number().int().optional().openapi({ example: 14 }).describe("Future horizon in days (1..90). A 7-day past tail is always included. Optional; downstream defaults to 14."),
 });
@@ -311,6 +323,40 @@ registry.registerPath({
   request: { query: publicCostProjectionQueryParams },
   responses: {
     200: { description: "Public feature cost projection — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicCostProjectionResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/features/cost-per-outcome-trend",
+  tags: ["Features"],
+  summary: "Public cost-per-outcome trend",
+  description:
+    "Public cross-org dated moving-average cost-per-outcome series for a feature and one objective. " +
+    "Proxied to features-service GET /public/stats/cost-per-outcome-trend. Forwards featureSlug, objective, and optional days/windowOutcomes. Response is producer-owned. No authentication required.",
+  request: { query: publicCostPerOutcomeTrendQueryParams },
+  responses: {
+    200: { description: "Public cost-per-outcome trend — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicCostPerOutcomeTrendResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/features/workflow-cost-per-outcome",
+  tags: ["Features"],
+  summary: "Public per-workflow cost-per-outcome",
+  description:
+    "Public cross-org per-workflow-dynasty cost-per-outcome ratio for a feature and one objective. " +
+    "Proxied to features-service GET /public/stats/workflow-cost-per-outcome. Forwards featureSlug and objective. Response is producer-owned. No authentication required.",
+  request: { query: publicWorkflowCostPerOutcomeQueryParams },
+  responses: {
+    200: { description: "Public per-workflow cost-per-outcome — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicWorkflowCostPerOutcomeResponse") } } },
     400: { description: "Bad request from features-service", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },

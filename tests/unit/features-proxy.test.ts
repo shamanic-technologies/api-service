@@ -411,6 +411,34 @@ describe("Public features proxy routes", () => {
     expect(content).toContain("`/public/stats/cost-projection");
   });
 
+  it("should have GET /public/features/cost-per-outcome-trend without auth middleware", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/public/features/cost-per-outcome-trend"')
+    );
+    expect(line).toBeDefined();
+    expect(line).not.toContain("authenticate");
+    expect(line).not.toContain("requireOrg");
+  });
+
+  it("should proxy public cost-per-outcome trend to /public/stats/cost-per-outcome-trend on features-service", () => {
+    expect(content).toContain('"/public/features/cost-per-outcome-trend"');
+    expect(content).toContain("`/public/stats/cost-per-outcome-trend");
+  });
+
+  it("should have GET /public/features/workflow-cost-per-outcome without auth middleware", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/public/features/workflow-cost-per-outcome"')
+    );
+    expect(line).toBeDefined();
+    expect(line).not.toContain("authenticate");
+    expect(line).not.toContain("requireOrg");
+  });
+
+  it("should proxy public workflow cost-per-outcome to /public/stats/workflow-cost-per-outcome on features-service", () => {
+    expect(content).toContain('"/public/features/workflow-cost-per-outcome"');
+    expect(content).toContain("`/public/stats/workflow-cost-per-outcome");
+  });
+
   it("should NOT expose a public send-forecast route (cross-org fleet financials moved to staff)", () => {
     expect(content).not.toContain('"/public/features/send-forecast"');
     expect(content).not.toContain("/public/stats/send-forecast");
@@ -445,6 +473,16 @@ describe("Public features OpenAPI schemas", () => {
   it("should register GET /v1/public/features/cost-projection", () => {
     expect(schemaContent).toContain('path: "/v1/public/features/cost-projection"');
     expect(schemaContent).toContain("PublicCostProjectionResponse");
+  });
+
+  it("should register GET /v1/public/features/cost-per-outcome-trend", () => {
+    expect(schemaContent).toContain('path: "/v1/public/features/cost-per-outcome-trend"');
+    expect(schemaContent).toContain("PublicCostPerOutcomeTrendResponse");
+  });
+
+  it("should register GET /v1/public/features/workflow-cost-per-outcome", () => {
+    expect(schemaContent).toContain('path: "/v1/public/features/workflow-cost-per-outcome"');
+    expect(schemaContent).toContain("PublicWorkflowCostPerOutcomeResponse");
   });
 
   it("should NOT register GET /v1/public/features/send-forecast (moved to staff)", () => {
