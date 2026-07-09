@@ -201,6 +201,10 @@ const publicWorkflowCostPerOutcomeQueryParams = z.object({
   objective: z.string().openapi({ example: "positiveReply" }).describe("Optimization objective — one of websiteVisit / positiveReply / signup / formSubmission / meetingBooked / purchase (required)."),
 });
 
+const publicCostPerOutcomeLifetimeQueryParams = z.object({
+  featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
+});
+
 const auditSendForecastQueryParams = z.object({
   days: z.coerce.number().int().optional().openapi({ example: 14 }).describe("Future horizon in days (1..90). A 7-day past tail is always included. Optional; downstream defaults to 14."),
 });
@@ -357,6 +361,23 @@ registry.registerPath({
   request: { query: publicWorkflowCostPerOutcomeQueryParams },
   responses: {
     200: { description: "Public per-workflow cost-per-outcome — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicWorkflowCostPerOutcomeResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/features/cost-per-outcome-lifetime",
+  tags: ["Features"],
+  summary: "Public lifetime cost-per-outcome",
+  description:
+    "Public lifetime (all-history) cross-org average cost-per-outcome across all optimization objectives for a feature. " +
+    "Proxied to features-service GET /public/stats/cost-per-outcome-lifetime. Forwards featureSlug. Response is producer-owned. No authentication required.",
+  request: { query: publicCostPerOutcomeLifetimeQueryParams },
+  responses: {
+    200: { description: "Public lifetime cost-per-outcome — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicCostPerOutcomeLifetimeResponse") } } },
     400: { description: "Bad request from features-service", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
