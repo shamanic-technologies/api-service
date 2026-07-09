@@ -193,6 +193,10 @@
         "type": "object",
         "properties": {}
       },
+      "PublicCostPerOutcomeLifetimeResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "StaffSendForecastResponse": {
         "type": "object",
         "properties": {}
@@ -10469,6 +10473,70 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PublicWorkflowCostPerOutcomeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Feature not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/public/features/cost-per-outcome-lifetime": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Public lifetime cost-per-outcome",
+        "description": "Public lifetime (all-history) cross-org average cost-per-outcome across all optimization objectives for a feature. Proxied to features-service GET /public/stats/cost-per-outcome-lifetime. Forwards featureSlug. Response is producer-owned. No authentication required.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug (required).",
+              "example": "sales-cold-email-outreach"
+            },
+            "required": true,
+            "description": "Feature slug (required).",
+            "name": "featureSlug",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public lifetime cost-per-outcome — pass-through from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicCostPerOutcomeLifetimeResponse"
                 }
               }
             }

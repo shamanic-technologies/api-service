@@ -22,6 +22,7 @@ const PUBLIC_WORKFLOW_ENGAGEMENT_LATENCY_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_COST_PROJECTION_PARAMS = ["featureSlug"];
 const PUBLIC_COST_PER_OUTCOME_TREND_PARAMS = ["featureSlug", "objective", "days", "windowOutcomes"];
 const PUBLIC_WORKFLOW_COST_PER_OUTCOME_PARAMS = ["featureSlug", "objective"];
+const PUBLIC_COST_PER_OUTCOME_LIFETIME_PARAMS = ["featureSlug"];
 const AUDIT_SEND_FORECAST_PARAMS = ["days"];
 
 // Forward the verified staff email downstream for actor attribution (no org context).
@@ -168,6 +169,26 @@ router.get("/public/features/workflow-cost-per-outcome", async (req: Request, re
   } catch (error: any) {
     console.error("[api-service] Public workflow cost-per-outcome error:", error.message);
     res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public workflow cost-per-outcome" });
+  }
+});
+
+/**
+ * GET /v1/public/features/cost-per-outcome-lifetime
+ * Public lifetime (all-history) cross-org average cost-per-outcome across all objectives for a feature.
+ * Proxied to features-service GET /public/stats/cost-per-outcome-lifetime.
+ */
+router.get("/public/features/cost-per-outcome-lifetime", async (req: Request, res: Response) => {
+  try {
+    const params = buildParams(req.query as Record<string, unknown>, PUBLIC_COST_PER_OUTCOME_LIFETIME_PARAMS);
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/cost-per-outcome-lifetime?${params}`,
+      {},
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public cost-per-outcome lifetime error:", error.message);
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public cost-per-outcome lifetime" });
   }
 });
 
