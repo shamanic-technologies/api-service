@@ -116,9 +116,13 @@ describe("Credit routes mounted in index.ts", () => {
 });
 
 describe("requireStaff middleware is defined in auth.ts", () => {
-  it("should export requireStaff and read STAFF_EMAILS", () => {
+  it("should export requireStaff and source a hardcoded STAFF_EMAILS allowlist", () => {
     expect(authContent).toContain("export function requireStaff");
     expect(authContent).toContain("STAFF_EMAILS");
+    // Allowlist is hardcoded in source, NOT read from the environment.
+    expect(authContent).not.toContain("process.env.STAFF_EMAILS");
+    expect(authContent).toContain("kevin.lourd@gmail.com");
+    expect(authContent).toContain("kevin@distribute.you");
   });
 });
 
@@ -152,24 +156,20 @@ function runGate(reqOverrides: Partial<AuthenticatedRequest> & { headers?: Recor
 }
 
 describe("requireStaff runtime gate", () => {
-  const ORIGINAL = process.env.STAFF_EMAILS;
-  beforeEach(() => {
-    process.env.STAFF_EMAILS = "staff@distribute.you, Boss@Distribute.You";
-  });
-  afterEach(() => {
-    if (ORIGINAL === undefined) delete process.env.STAFF_EMAILS;
-    else process.env.STAFF_EMAILS = ORIGINAL;
-  });
-
-  it("passes a staff x-email (admin auth)", () => {
-    const { res, next, req } = runGate({ authType: "admin", headers: { "x-email": "staff@distribute.you" } });
+  it("passes a hardcoded staff x-email (admin auth)", () => {
+    const { res, next, req } = runGate({ authType: "admin", headers: { "x-email": "kevin.lourd@gmail.com" } });
     expect(next).toHaveBeenCalledOnce();
     expect(res.statusCode).toBe(200);
-    expect((req as any).staffEmail).toBe("staff@distribute.you");
+    expect((req as any).staffEmail).toBe("kevin.lourd@gmail.com");
+  });
+
+  it("passes the second hardcoded staff x-email", () => {
+    const { next } = runGate({ authType: "admin", headers: { "x-email": "kevin@distribute.you" } });
+    expect(next).toHaveBeenCalledOnce();
   });
 
   it("is case/space-insensitive on the email match", () => {
-    const { next } = runGate({ authType: "admin", headers: { "x-email": "  BOSS@distribute.you " } });
+    const { next } = runGate({ authType: "admin", headers: { "x-email": "  KEVIN@Distribute.You " } });
     expect(next).toHaveBeenCalledOnce();
   });
 
@@ -186,14 +186,7 @@ describe("requireStaff runtime gate", () => {
   });
 
   it("403s a Bearer user-key even with a forged staff x-email (closes self-grant hole)", () => {
-    const { res, next } = runGate({ authType: "user_key", headers: { "x-email": "staff@distribute.you" } });
-    expect(next).not.toHaveBeenCalled();
-    expect(res.statusCode).toBe(403);
-  });
-
-  it("403s everyone when STAFF_EMAILS is empty (fail closed)", () => {
-    process.env.STAFF_EMAILS = "";
-    const { res, next } = runGate({ authType: "admin", headers: { "x-email": "staff@distribute.you" } });
+    const { res, next } = runGate({ authType: "user_key", headers: { "x-email": "kevin.lourd@gmail.com" } });
     expect(next).not.toHaveBeenCalled();
     expect(res.statusCode).toBe(403);
   });
