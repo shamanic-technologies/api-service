@@ -5735,6 +5735,78 @@ registry.registerPath({
   },
 });
 
+// ---------------------------------------------------------------------------
+// Per-org platform-usage discount (staff-only) — set / read / remove an org's
+// usage-discount percentage. Gated by requireStaff (platform API key + x-email
+// in the STAFF_EMAILS allowlist); a customer can never reach these. Transparent
+// proxy to billing-service. Responses passthrough (CLAUDE.md #8); body forwarded
+// as-is (CLAUDE.md #4).
+// ---------------------------------------------------------------------------
+const SetUsageDiscountRequestSchema = z
+  .object({
+    discountPct: z.number().openapi({ description: "Platform-usage discount percentage (integer 0–100). Validated downstream — out-of-range rejected 400, no clamp.", example: 50 }),
+  })
+  .passthrough()
+  .openapi("SetUsageDiscountRequest");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/usage-discount",
+  tags: ["Billing"],
+  summary: "Read an org's platform-usage discount (staff only)",
+  description:
+    "Read the usage-discount percentage for the org in context. Staff-only: requires the platform " +
+    "API key AND an x-email in the STAFF_EMAILS allowlist. Transparent proxy to billing-service " +
+    "GET /v1/usage-discount; response { orgId, discountPct, setBy, setAt } (discountPct null when " +
+    "unset) owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Usage discount — pass-through from billing-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("UsageDiscountResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/billing/usage-discount",
+  tags: ["Billing"],
+  summary: "Set / replace an org's platform-usage discount (staff only)",
+  description:
+    "Set or replace the usage-discount percentage for the org in context. Staff-only (platform API " +
+    "key + STAFF_EMAILS x-email); the staff x-email is recorded as setBy. Transparent proxy to " +
+    "billing-service PUT /v1/usage-discount; body { discountPct } forwarded as-is (downstream owns " +
+    "value validation: integer 0–100, fail-loud 400, no clamp), response owned by the downstream service.",
+  security: platformAuth,
+  request: { body: { content: { "application/json": { schema: SetUsageDiscountRequestSchema } } } },
+  responses: {
+    200: { description: "Discount set — pass-through from billing-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("SetUsageDiscountResponse") } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/billing/usage-discount",
+  tags: ["Billing"],
+  summary: "Remove an org's platform-usage discount (staff only)",
+  description:
+    "Remove the usage-discount for the org in context (→ discountPct null). Staff-only (platform API " +
+    "key + STAFF_EMAILS x-email). Idempotent. Transparent proxy to billing-service " +
+    "DELETE /v1/usage-discount; response owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Discount removed — pass-through from billing-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("RemoveUsageDiscountResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/instantly/audit/sending-forecast",
