@@ -247,16 +247,21 @@ export async function authenticatePlatform(
 }
 
 /**
- * Parse the STAFF_EMAILS env var (comma-separated) into a normalized
- * lowercase Set. Unset/empty => empty Set (nobody is staff — fail closed).
+ * Canonical staff allowlist — hardcoded in source (NOT an env var), so the
+ * staff set lives in the repo and cannot drift / be forgotten on Railway.
+ * These are the only emails that pass `requireStaff`.
+ */
+const STAFF_EMAILS = [
+  "kevin.lourd@gmail.com",
+  "kevin@distribute.you",
+] as const;
+
+/**
+ * Normalized lowercase Set of the hardcoded staff allowlist.
  */
 function staffEmailAllowlist(): Set<string> {
-  const raw = process.env.STAFF_EMAILS || "";
   return new Set(
-    raw
-      .split(",")
-      .map((e) => e.trim().toLowerCase())
-      .filter((e) => e.length > 0),
+    STAFF_EMAILS.map((e) => e.trim().toLowerCase()).filter((e) => e.length > 0),
   );
 }
 
@@ -268,13 +273,14 @@ function staffEmailAllowlist(): Set<string> {
  *     (ADMIN_DISTRIBUTE_API_KEY), i.e. a trusted server-side caller (the admin /
  *     dashboard proxy). A Bearer user-key (authType "user_key") is rejected, so a
  *     customer cannot forge `x-email` on a direct call and self-authorize.
- *  2. The forwarded `x-email` header is in the STAFF_EMAILS allowlist. The platform
- *     key ALONE is shared with the customer dashboard's server-side proxy, so it
- *     does NOT distinguish staff from customer — `x-email` (forwarded from the
- *     verified dashboard/admin session) is the staff signal.
+ *  2. The forwarded `x-email` header is in the hardcoded staff allowlist
+ *     (`STAFF_EMAILS`). The platform key ALONE is shared with the customer
+ *     dashboard's server-side proxy, so it does NOT distinguish staff from
+ *     customer — `x-email` (forwarded from the verified dashboard/admin session)
+ *     is the staff signal.
  *
  * This closes the customer-self-grant hole that `authenticatePlatform` alone leaves
- * open. STAFF_EMAILS is a comma-separated env var; unset/empty means nobody is staff.
+ * open. The staff allowlist is hardcoded in source (not an env var) so it cannot drift.
  */
 export function requireStaff(
   req: AuthenticatedRequest,
@@ -287,7 +293,9 @@ export function requireStaff(
 
   const allowlist = staffEmailAllowlist();
   if (allowlist.size === 0) {
-    console.warn("[auth] requireStaff blocked: STAFF_EMAILS is unset/empty — no staff configured");
+    // Defensive fail-closed — the hardcoded allowlist is non-empty, so this
+    // should be unreachable unless the constant is emptied in a bad edit.
+    console.warn("[auth] requireStaff blocked: staff allowlist is empty — no staff configured");
     return res.status(403).json({ error: "Staff access required" });
   }
 
