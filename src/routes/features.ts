@@ -23,6 +23,7 @@ const PUBLIC_COST_PROJECTION_PARAMS = ["featureSlug"];
 const PUBLIC_COST_PER_OUTCOME_TREND_PARAMS = ["featureSlug", "objective", "days", "windowOutcomes"];
 const PUBLIC_WORKFLOW_COST_PER_OUTCOME_PARAMS = ["featureSlug", "objective"];
 const PUBLIC_COST_PER_OUTCOME_LIFETIME_PARAMS = ["featureSlug"];
+const PUBLIC_COST_PER_OUTCOME_DISTRIBUTION_PARAMS = ["featureSlug", "objective", "buckets"];
 const AUDIT_SEND_FORECAST_PARAMS = ["days"];
 
 // Forward the verified staff email downstream for actor attribution (no org context).
@@ -189,6 +190,26 @@ router.get("/public/features/cost-per-outcome-lifetime", async (req: Request, re
   } catch (error: any) {
     console.error("[api-service] Public cost-per-outcome lifetime error:", error.message);
     res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public cost-per-outcome lifetime" });
+  }
+});
+
+/**
+ * GET /v1/public/features/cost-per-outcome-distribution
+ * Public cross-org distribution (histogram + spread) of cost-per-outcome across brands for one objective.
+ * Proxied to features-service GET /public/stats/cost-per-outcome-distribution.
+ */
+router.get("/public/features/cost-per-outcome-distribution", async (req: Request, res: Response) => {
+  try {
+    const params = buildParams(req.query as Record<string, unknown>, PUBLIC_COST_PER_OUTCOME_DISTRIBUTION_PARAMS);
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/cost-per-outcome-distribution?${params}`,
+      {},
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public cost-per-outcome distribution error:", error.message);
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public cost-per-outcome distribution" });
   }
 });
 
