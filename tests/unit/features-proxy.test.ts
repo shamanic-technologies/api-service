@@ -453,6 +453,20 @@ describe("Public features proxy routes", () => {
     expect(content).toContain("`/public/stats/cost-per-outcome-lifetime");
   });
 
+  it("should have GET /public/features/cost-per-outcome-distribution without auth middleware", () => {
+    const line = content.split("\n").find((l) =>
+      l.includes("router.get") && l.includes('"/public/features/cost-per-outcome-distribution"')
+    );
+    expect(line).toBeDefined();
+    expect(line).not.toContain("authenticate");
+    expect(line).not.toContain("requireOrg");
+  });
+
+  it("should proxy public cost-per-outcome distribution to /public/stats/cost-per-outcome-distribution on features-service", () => {
+    expect(content).toContain('"/public/features/cost-per-outcome-distribution"');
+    expect(content).toContain("`/public/stats/cost-per-outcome-distribution");
+  });
+
   it("should NOT expose a public send-forecast route (cross-org fleet financials moved to staff)", () => {
     expect(content).not.toContain('"/public/features/send-forecast"');
     expect(content).not.toContain("/public/stats/send-forecast");
@@ -502,6 +516,11 @@ describe("Public features OpenAPI schemas", () => {
   it("should register GET /v1/public/features/cost-per-outcome-lifetime", () => {
     expect(schemaContent).toContain('path: "/v1/public/features/cost-per-outcome-lifetime"');
     expect(schemaContent).toContain("PublicCostPerOutcomeLifetimeResponse");
+  });
+
+  it("should register GET /v1/public/features/cost-per-outcome-distribution", () => {
+    expect(schemaContent).toContain('path: "/v1/public/features/cost-per-outcome-distribution"');
+    expect(schemaContent).toContain("PublicCostPerOutcomeDistributionResponse");
   });
 
   it("should NOT register GET /v1/public/features/send-forecast (moved to staff)", () => {

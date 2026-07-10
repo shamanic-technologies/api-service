@@ -197,6 +197,10 @@
         "type": "object",
         "properties": {}
       },
+      "PublicCostPerOutcomeDistributionResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "StaffSendForecastResponse": {
         "type": "object",
         "properties": {}
@@ -10562,6 +10566,92 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PublicCostPerOutcomeLifetimeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Feature not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/public/features/cost-per-outcome-distribution": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Public cost-per-outcome distribution",
+        "description": "Public cross-org DISTRIBUTION (histogram + spread) of cost-per-outcome across brands for a feature and one objective. Proxied to features-service GET /public/stats/cost-per-outcome-distribution. Forwards featureSlug, objective, and optional buckets. Response is producer-owned. No authentication required.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug (required).",
+              "example": "sales-cold-email-outreach"
+            },
+            "required": true,
+            "description": "Feature slug (required).",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optimization objective — one of websiteVisit / positiveReply / signup / formSubmission / meetingBooked / purchase (required).",
+              "example": "positiveReply"
+            },
+            "required": true,
+            "description": "Optimization objective — one of websiteVisit / positiveReply / signup / formSubmission / meetingBooked / purchase (required).",
+            "name": "objective",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Number of equal-width histogram bars (default 10, max 50).",
+              "example": "10"
+            },
+            "required": false,
+            "description": "Number of equal-width histogram bars (default 10, max 50).",
+            "name": "buckets",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public cost-per-outcome distribution — pass-through from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicCostPerOutcomeDistributionResponse"
                 }
               }
             }

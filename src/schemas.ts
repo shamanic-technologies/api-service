@@ -205,6 +205,12 @@ const publicCostPerOutcomeLifetimeQueryParams = z.object({
   featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
 });
 
+const publicCostPerOutcomeDistributionQueryParams = z.object({
+  featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
+  objective: z.string().openapi({ example: "positiveReply" }).describe("Optimization objective — one of websiteVisit / positiveReply / signup / formSubmission / meetingBooked / purchase (required)."),
+  buckets: z.string().optional().openapi({ example: "10" }).describe("Number of equal-width histogram bars (default 10, max 50)."),
+});
+
 const auditSendForecastQueryParams = z.object({
   days: z.coerce.number().int().optional().openapi({ example: 14 }).describe("Future horizon in days (1..90). A 7-day past tail is always included. Optional; downstream defaults to 14."),
 });
@@ -378,6 +384,23 @@ registry.registerPath({
   request: { query: publicCostPerOutcomeLifetimeQueryParams },
   responses: {
     200: { description: "Public lifetime cost-per-outcome — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicCostPerOutcomeLifetimeResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/features/cost-per-outcome-distribution",
+  tags: ["Features"],
+  summary: "Public cost-per-outcome distribution",
+  description:
+    "Public cross-org DISTRIBUTION (histogram + spread) of cost-per-outcome across brands for a feature and one objective. " +
+    "Proxied to features-service GET /public/stats/cost-per-outcome-distribution. Forwards featureSlug, objective, and optional buckets. Response is producer-owned. No authentication required.",
+  request: { query: publicCostPerOutcomeDistributionQueryParams },
+  responses: {
+    200: { description: "Public cost-per-outcome distribution — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicCostPerOutcomeDistributionResponse") } } },
     400: { description: "Bad request from features-service", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
