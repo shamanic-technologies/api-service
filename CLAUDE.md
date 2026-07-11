@@ -58,6 +58,17 @@ Verify with `mcp__railway__list-variables` BEFORE shipping. Unit tests pass eith
 
 Never add `.default()` or `.max()` on `limit` / `pageSize` / `per_page` / `count` query/body Zod schemas at the api-service layer. Callers get whatever the downstream service returns. Silent caps caused truncated-result bugs (outlets-service hotfix v0.2.1). Enforced by `tests/unit/no-limit-defaults.regression.test.ts` — it WILL fail your build if you add one.
 
+### Diagnosing a "gateway route hangs / is slow but downstream serves fine"
+
+The gateway is a pure passthrough: on a proxy route it does `callExternalService` → `res.json`, adding ~0 overhead when the downstream responds warm. So a report of "gateway times out but the downstream endpoint is fast directly" is almost never a gateway bug — it is downstream cold-state (request-path cache/dataset build, Neon scale-to-zero wake, cold Railway container). **Do NOT add a cache / warm-loop / per-route timeout / connection-prewarm to the gateway to "fix" it — that violates rules #2/#8 and would only surface the fallback faster, not the real data. The fix belongs downstream.**
+
+The "direct is fast / gateway is slow" asymmetry is usually a **measurement artifact**: the first call (whichever path) warms the downstream's shared cache, so the *second-measured* path looks artificially fast. To diagnose correctly, control for warm-state:
+- Measure the UNTOUCHED path FIRST after a genuine idle (past the downstream's cache TTL) — hit **direct, bypassing the gateway**; if direct-cold is also slow, the gateway is exonerated.
+- The tell for a shared downstream cold build: N concurrent requests all **return together at the same elevated latency** (one cold `O(brands)`/`O(N)` fan-out they all block on), then everything is fast for the cache-TTL window.
+- Check the downstream's prod Neon compute suspend setting (`list_branch_computes`) and its own repo issues before blaming the gateway — a never-suspend DB rules out DB cold-start and points at a request-path build.
+
+Incident 2026-07-11 (public cost-per-outcome-trend "gateway timeout"): brief pinned it on the gateway; profiling showed gateway warm-overhead ~0, and a 5.5-min-idle direct-first A/B gave direct-cold ~11.6s / gateway-warm 0.32s — the gateway was innocent. Root cause was features-service's shared goal-bucket dataset cold-building on the request path (its own issue #547's documented next-lever); fixed there via SWR warm-off-request-path (features-service v0.87.7 / #551), no api-service change.
+
 ### Future direction
 
 New proxy routes should follow the pattern `/v1/{service-name}/{original-downstream-path}` to make the mapping obvious and mechanical. Existing routes keep their current shape to avoid breaking clients.
