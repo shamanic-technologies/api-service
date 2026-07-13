@@ -467,7 +467,10 @@ router.get("/features/:slug/stats", authenticate, requireOrg, requireUser, async
 router.get("/features/:slug/revenue", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["brandId", "campaignId", "workflowSlug", "groupBy", "lens"]) {
+    // `pricing` (gross|net) selects the org's discounted (net) vs list (gross) cost
+    // figures — the dashboard sends net so a discounted brand's spend cards match the
+    // net-paced budget. Dropping it here silently served gross under a net request.
+    for (const key of ["brandId", "campaignId", "workflowSlug", "groupBy", "lens", "pricing"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";
@@ -490,7 +493,9 @@ router.get("/features/:slug/revenue", authenticate, requireOrg, requireUser, asy
 router.get("/features/:slug/audience-stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["brandId", "goal", "brandProfileId", "limit", "statuses"]) {
+    // `pricing` (gross|net) → net returns the org's frozen discounted per-audience cost
+    // metrics so the ranking matches the net brand-overview cost cards. Must be forwarded.
+    for (const key of ["brandId", "goal", "brandProfileId", "limit", "statuses", "pricing"]) {
       if (req.query[key]) params.set(key, req.query[key] as string);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";
