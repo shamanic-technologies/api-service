@@ -120,13 +120,14 @@ describe("Features proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should forward brandId, campaignId, workflowSlug and groupBy on GET /features/:slug/revenue", () => {
+  it("should forward brandId, campaignId, workflowSlug, groupBy and pricing on GET /features/:slug/revenue", () => {
     const revenueIdx = content.indexOf('"/features/:slug/revenue"');
     const revenueBlock = content.slice(revenueIdx, revenueIdx + 400);
     expect(revenueBlock).toContain('"brandId"');
     expect(revenueBlock).toContain('"campaignId"');
     expect(revenueBlock).toContain('"workflowSlug"');
     expect(revenueBlock).toContain('"groupBy"');
+    expect(revenueBlock).toContain('"pricing"');
     expect(revenueBlock).toContain("/revenue");
   });
 
@@ -140,7 +141,7 @@ describe("Features proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should forward brandId, goal, brandProfileId, limit, and statuses on GET /features/:slug/audience-stats", () => {
+  it("should forward brandId, goal, brandProfileId, limit, statuses, and pricing on GET /features/:slug/audience-stats", () => {
     const audienceStatsIdx = content.indexOf('"/features/:slug/audience-stats"');
     const audienceStatsBlock = content.slice(audienceStatsIdx, audienceStatsIdx + 500);
     expect(audienceStatsBlock).toContain('"brandId"');
@@ -148,6 +149,7 @@ describe("Features proxy routes", () => {
     expect(audienceStatsBlock).toContain('"brandProfileId"');
     expect(audienceStatsBlock).toContain('"limit"');
     expect(audienceStatsBlock).toContain('"statuses"');
+    expect(audienceStatsBlock).toContain('"pricing"');
     expect(audienceStatsBlock).toContain("/audience-stats");
   });
 
