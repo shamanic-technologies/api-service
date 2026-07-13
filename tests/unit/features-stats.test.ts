@@ -517,4 +517,32 @@ describe("GET /v1/features/:slug/revenue", () => {
     const url = call![1] as string;
     expect(url).not.toContain("groupBy=");
   });
+
+  it("forwards pricing=net downstream when present", async () => {
+    const app = createApp();
+    mockCallExternalService.mockResolvedValue(MOCK_REVENUE);
+
+    await request(app).get("/v1/features/sales-cold-email-outreach/revenue?brandId=brand-uuid-123&pricing=net");
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/revenue"),
+    );
+    expect(call).toBeDefined();
+    const url = call![1] as string;
+    expect(url).toContain("pricing=net");
+  });
+
+  it("does not forward pricing when absent (gross default preserved)", async () => {
+    const app = createApp();
+    mockCallExternalService.mockResolvedValue(MOCK_REVENUE);
+
+    await request(app).get("/v1/features/sales-cold-email-outreach/revenue?brandId=brand-uuid-123");
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/revenue"),
+    );
+    expect(call).toBeDefined();
+    const url = call![1] as string;
+    expect(url).not.toContain("pricing=");
+  });
 });
