@@ -5871,6 +5871,32 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/instantly/audit/account-detail",
+  tags: ["Instantly"],
+  summary: "Get the full raw Instantly config for one account (staff only)",
+  description:
+    "Full raw Instantly account object for ONE cold-email sending account (all provider config: " +
+    "identity, sending settings, warmup, tracking, limits) — powers the account drilldown right-panel " +
+    "on the staff 'Audit → Instantly' ops page (cross-org sending infrastructure ops data, NOT " +
+    "customer data). Staff-only (platform API key + STAFF_EMAILS x-email); no org context required. " +
+    "Transparent proxy to instantly-service GET /internal/audit/account-detail; response owned by the " +
+    "downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      email: z.string().describe("Email of the Instantly account to fetch (forwarded to instantly-service)"),
+    }),
+  },
+  responses: {
+    200: { description: "Raw account object — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyAccountDetailResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/instantly/audit/capacity-history",
   tags: ["Instantly"],
   summary: "Get the platform sending-capacity-over-time audit (staff only)",

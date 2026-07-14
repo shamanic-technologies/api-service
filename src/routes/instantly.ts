@@ -77,6 +77,32 @@ router.get(
   },
 );
 
+// GET /v1/instantly/audit/account-detail — full raw Instantly config for ONE account (staff only).
+// Transparent proxy to instantly-service GET /internal/audit/account-detail; no org context,
+// response owned by the downstream service. Required `email` query param forwarded through.
+router.get(
+  "/instantly/audit/account-detail",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const params = new URLSearchParams();
+      if (req.query.email) params.set("email", req.query.email as string);
+      const queryString = params.toString() ? `?${params.toString()}` : "";
+      const result = await callExternalService(
+        externalServices.instantly,
+        `/internal/audit/account-detail${queryString}`,
+        { headers: staffHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: any) {
+      res
+        .status(error.statusCode || 500)
+        .json({ error: error.message || "Failed to get instantly account-detail audit" });
+    }
+  },
+);
+
 // GET /v1/instantly/audit/capacity-history — platform sending-capacity-over-time audit (staff only).
 // Transparent proxy to instantly-service GET /internal/audit/capacity-history; no org
 // context, response owned by the downstream service. Optional `days` query param forwarded through.
