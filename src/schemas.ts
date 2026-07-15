@@ -491,6 +491,28 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/audit/revenue",
+  tags: ["Features"],
+  summary: "Staff fleet realized-revenue history (staff only)",
+  description:
+    "STAFF-ONLY cross-org, fleet-wide HISTORY of realized revenue (summed actualized cold-email spend across all orgs) bucketed monthly, " +
+    "weekly, and daily, each with a period-over-period growth rate, plus the total since inception, a per-day-since-inception MRR-over-time " +
+    "line, and the current live MRR. The realized-revenue companion to GET /v1/features/audit/active-users (same universe + signal). Aggregate " +
+    "cross-org fleet financials, so this is gated by platform API key + STAFF_EMAILS x-email (same tier as GET /v1/features/audit/active-users); " +
+    "no org context required. Forwards optional window params `days`/`weeks`/`months`. Transparent proxy to features-service " +
+    "GET /internal/stats/revenue. Response is producer-owned.",
+  security: platformAuth,
+  request: { query: auditActiveUsersQueryParams },
+  responses: {
+    200: { description: "Fleet realized-revenue history (total + monthly/weekly/daily + mrrOverTime + currentMrr + asOf) — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffRevenueResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
 // Authenticated endpoints — proxied to features-service
 registry.registerPath({
   method: "get",
