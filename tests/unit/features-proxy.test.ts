@@ -671,6 +671,40 @@ describe("Staff fleet active-users-by-user audit proxy route (source)", () => {
   });
 });
 
+describe("Staff fleet customer-success audit proxy route (source)", () => {
+  it("registers GET /features/audit/customer-success on the router", () => {
+    expect(content).toContain('"/features/audit/customer-success"');
+    expect(content).toContain("router.get");
+  });
+
+  it("is staff-gated with authenticatePlatform + requireStaff (no org)", () => {
+    const mountIdx = content.indexOf('"/features/audit/customer-success"');
+    const chain = content.slice(mountIdx, content.indexOf("async (req", mountIdx));
+    expect(chain).toContain("authenticatePlatform,");
+    expect(chain).toContain("requireStaff,");
+    expect(chain).not.toContain("requireOrg");
+  });
+
+  it("proxies to features-service GET /internal/stats/customer-success", () => {
+    const mountIdx = content.indexOf('"/features/audit/customer-success"');
+    const block = content.slice(mountIdx, mountIdx + 600);
+    expect(block).toContain("externalServices.features");
+    expect(block).toContain("`/internal/stats/customer-success`");
+  });
+
+  it("forwards the verified staff x-email downstream for attribution", () => {
+    const mountIdx = content.indexOf('"/features/audit/customer-success"');
+    const block = content.slice(mountIdx, mountIdx + 600);
+    expect(block).toContain("staffHeaders(req)");
+  });
+
+  it("registers the OpenAPI path with passthrough response + platform auth", () => {
+    expect(schemaContent).toContain('path: "/v1/features/audit/customer-success"');
+    expect(schemaContent).toContain("StaffCustomerSuccessResponse");
+    expect(schemaContent).toContain("security: platformAuth");
+  });
+});
+
 describe("Staff fleet revenue audit proxy route (source)", () => {
   it("registers GET /features/audit/revenue on the router", () => {
     expect(content).toContain('"/features/audit/revenue"');
