@@ -506,7 +506,7 @@ registry.registerPath({
     "STAFF-ONLY cross-org, fleet-wide CUSTOMER-SUCCESS health board: one composed row per ever-active customer (name, CAC, grain, and the rest " +
     "of the health signals the downstream computes). Cross-org fleet data (per-customer rows), so this is gated by platform API key + " +
     "STAFF_EMAILS x-email (same tier as GET /v1/features/audit/active-users-by-user); no org context required, no query params. Transparent " +
-    "proxy to features-service GET /internal/stats/customer-success. Response is producer-owned.",
+    "proxy to features-service GET /internal/stats/customer-health. Response is producer-owned.",
   security: platformAuth,
   responses: {
     200: { description: "Cross-org customer-success health board — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffCustomerSuccessResponse") } } },

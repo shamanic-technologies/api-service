@@ -485,14 +485,14 @@ router.get("/features/audit/revenue", authenticatePlatform, requireStaff, async 
  * fleet data (per-customer rows), so gated by authenticatePlatform + requireStaff (same tier as
  * GET /v1/features/audit/active-users-by-user): the caller must come in via the platform API key
  * (authType "admin") AND carry an x-email in the STAFF_EMAILS allowlist. No org context (cross-org
- * read), no query params. Transparent proxy to features-service GET /internal/stats/customer-success;
+ * read), no query params. Transparent proxy to features-service GET /internal/stats/customer-health;
  * response owned by the downstream service.
  */
 router.get("/features/audit/customer-success", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.features,
-      `/internal/stats/customer-success`,
+      `/internal/stats/customer-health`,
       { headers: staffHeaders(req) },
     );
     res.json(result);
