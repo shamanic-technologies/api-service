@@ -499,6 +499,25 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/audit/customer-success",
+  tags: ["Features"],
+  summary: "Staff fleet customer-success health board (staff only)",
+  description:
+    "STAFF-ONLY cross-org, fleet-wide CUSTOMER-SUCCESS health board: one composed row per ever-active customer (name, CAC, grain, and the rest " +
+    "of the health signals the downstream computes). Cross-org fleet data (per-customer rows), so this is gated by platform API key + " +
+    "STAFF_EMAILS x-email (same tier as GET /v1/features/audit/active-users-by-user); no org context required, no query params. Transparent " +
+    "proxy to features-service GET /internal/stats/customer-success. Response is producer-owned.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Cross-org customer-success health board — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffCustomerSuccessResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/features/audit/revenue",
   tags: ["Features"],
   summary: "Staff fleet realized-revenue history (staff only)",
