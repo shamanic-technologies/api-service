@@ -215,6 +215,12 @@ const auditSendForecastQueryParams = z.object({
   days: z.coerce.number().int().optional().openapi({ example: 14 }).describe("Future horizon in days (1..90). A 7-day past tail is always included. Optional; downstream defaults to 14."),
 });
 
+const auditActiveUsersQueryParams = z.object({
+  days: z.coerce.number().int().optional().openapi({ example: 90 }).describe("Trailing days in the daily series. Optional; downstream defaults to 90 (max 365)."),
+  weeks: z.coerce.number().int().optional().openapi({ example: 26 }).describe("Trailing ISO weeks in the weekly series. Optional; downstream defaults to 26 (max 104)."),
+  months: z.coerce.number().int().optional().openapi({ example: 12 }).describe("Trailing months in the monthly series. Optional; downstream defaults to 12 (max 36)."),
+});
+
 const WorkflowMetadataSchema = z
   .object({
     id: z.string().describe("Workflow ID"),
@@ -439,6 +445,26 @@ registry.registerPath({
   security: platformAuth,
   responses: {
     200: { description: "Cross-org accounts + fleet financial stats — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffAccountsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/audit/active-users",
+  tags: ["Features"],
+  summary: "Staff fleet active-users history (staff only)",
+  description:
+    "STAFF-ONLY cross-org, fleet-wide HISTORY of active users (distinct orgs with an active, funded, non-paused cold-email brand) bucketed " +
+    "monthly, weekly, and daily, each with a period-over-period growth rate, plus the current live total. Aggregate cross-org fleet data, so this " +
+    "is gated by platform API key + STAFF_EMAILS x-email (same tier as GET /v1/features/audit/accounts); no org context required. Forwards optional " +
+    "window params `days`/`weeks`/`months`. Transparent proxy to features-service GET /internal/stats/active-users. Response is producer-owned.",
+  security: platformAuth,
+  request: { query: auditActiveUsersQueryParams },
+  responses: {
+    200: { description: "Fleet active-users history (currentTotal + monthly/weekly/daily + asOf) — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffActiveUsersResponse") } } },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Not staff", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
