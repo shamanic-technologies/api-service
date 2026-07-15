@@ -471,6 +471,26 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/audit/active-users-by-user",
+  tags: ["Features"],
+  summary: "Staff fleet per-user active history (staff only)",
+  description:
+    "STAFF-ONLY cross-org, fleet-wide PER-USER active history: for each user (a distinct org with an active, funded, non-paused cold-email " +
+    "brand), that user's active months/weeks/days, first/last active month+week, retention window in weeks, and current-week/current-month " +
+    "active flags. This is the per-user companion to GET /v1/features/audit/active-users (the aggregate history). Cross-org fleet data (per-org " +
+    "rows), so this is gated by platform API key + STAFF_EMAILS x-email (same tier as GET /v1/features/audit/accounts); no org context required, " +
+    "no query params. Transparent proxy to features-service GET /internal/stats/active-users-by-user. Response is producer-owned.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Cross-org per-user active history — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffActiveUsersByUserResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
 // Authenticated endpoints — proxied to features-service
 registry.registerPath({
   method: "get",
