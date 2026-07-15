@@ -685,11 +685,11 @@ describe("Staff fleet customer-success audit proxy route (source)", () => {
     expect(chain).not.toContain("requireOrg");
   });
 
-  it("proxies to features-service GET /internal/stats/customer-success", () => {
+  it("proxies to features-service GET /internal/stats/customer-health", () => {
     const mountIdx = content.indexOf('"/features/audit/customer-success"');
     const block = content.slice(mountIdx, mountIdx + 600);
     expect(block).toContain("externalServices.features");
-    expect(block).toContain("`/internal/stats/customer-success`");
+    expect(block).toContain("`/internal/stats/customer-health`");
   });
 
   it("forwards the verified staff x-email downstream for attribution", () => {
