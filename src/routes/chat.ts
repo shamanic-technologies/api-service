@@ -19,6 +19,29 @@ router.put("/chat/config", authenticate, requireOrg, requireUser, async (req: Au
   }
 });
 
+// GET /v1/chat/sessions/:sessionId — read a chat session's stored conversation
+// history. Lets the dashboard "Edit with AI" panel restore its visible chat
+// after a page refresh. Org identity is forwarded; chat-service returns 404 for
+// a session belonging to another org (existence not leaked across orgs).
+router.get(
+  "/chat/sessions/:sessionId",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.chat,
+        `/sessions/${encodeURIComponent(req.params.sessionId)}`,
+        { method: "GET", headers: buildInternalHeaders(req) }
+      );
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || "Failed to fetch chat session history" });
+    }
+  }
+);
+
 // POST /v1/chat — stream AI response via SSE
 router.post("/chat", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
