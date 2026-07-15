@@ -5304,6 +5304,48 @@ export const SSEErrorEventSchema = z
   })
   .openapi("SSEErrorEvent");
 
+// ── Session history (read) ──────────────────────────────────────────────────
+
+const SessionIdParam = z.object({
+  sessionId: z.string().describe("UUID of the chat session to read"),
+});
+
+// Passthrough: chat-service owns the response shape (session metadata + ordered
+// conversation turns). api-service forwards bytes; do not re-declare fields.
+export const SessionHistoryResponseSchema = z
+  .object({})
+  .passthrough()
+  .openapi("SessionHistoryResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/chat/sessions/{sessionId}",
+  tags: ["Chat"],
+  summary: "Get chat session history",
+  description:
+    "Read a chat session's stored conversation history by session ID. Lets a client " +
+    '(e.g. the dashboard "Edit with AI" panel) restore the visible chat after a page ' +
+    "refresh. Read-only — no run tracking, no cost, no writes. Org-scoped: a session " +
+    "that does not exist or belongs to another org returns 404 (existence not leaked " +
+    "across orgs).",
+  security: authed,
+  request: { params: SessionIdParam },
+  responses: {
+    200: {
+      description: "Session metadata and the full ordered conversation.",
+      content: {
+        "application/json": { schema: SessionHistoryResponseSchema },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: {
+      description: "Session not found (invalid, expired, or belonging to another org)",
+      content: errorContent,
+    },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "put",
   path: "/v1/chat/config",
