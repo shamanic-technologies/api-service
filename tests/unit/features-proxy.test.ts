@@ -671,6 +671,44 @@ describe("Staff fleet active-users-by-user audit proxy route (source)", () => {
   });
 });
 
+describe("Staff fleet revenue audit proxy route (source)", () => {
+  it("registers GET /features/audit/revenue on the router", () => {
+    expect(content).toContain('"/features/audit/revenue"');
+    expect(content).toContain("router.get");
+  });
+
+  it("is staff-gated with authenticatePlatform + requireStaff (no org)", () => {
+    const mountIdx = content.indexOf('"/features/audit/revenue"');
+    const chain = content.slice(mountIdx, content.indexOf("async (req", mountIdx));
+    expect(chain).toContain("authenticatePlatform,");
+    expect(chain).toContain("requireStaff,");
+    expect(chain).not.toContain("requireOrg");
+  });
+
+  it("proxies to features-service GET /internal/stats/revenue", () => {
+    const mountIdx = content.indexOf('"/features/audit/revenue"');
+    const block = content.slice(mountIdx, mountIdx + 700);
+    expect(block).toContain("externalServices.features");
+    expect(block).toContain("`/internal/stats/revenue");
+  });
+
+  it("forwards the days/weeks/months window query params", () => {
+    expect(content).toContain('AUDIT_REVENUE_PARAMS = ["days", "weeks", "months"]');
+  });
+
+  it("forwards the verified staff x-email downstream for attribution", () => {
+    const mountIdx = content.indexOf('"/features/audit/revenue"');
+    const block = content.slice(mountIdx, mountIdx + 700);
+    expect(block).toContain("staffHeaders(req)");
+  });
+
+  it("registers the OpenAPI path with passthrough response + platform auth", () => {
+    expect(schemaContent).toContain('path: "/v1/features/audit/revenue"');
+    expect(schemaContent).toContain("StaffRevenueResponse");
+    expect(schemaContent).toContain("security: platformAuth");
+  });
+});
+
 describe("Features routes are mounted in index.ts", () => {
   it("should import and mount features routes", () => {
     expect(indexContent).toContain("featuresRoutes");
