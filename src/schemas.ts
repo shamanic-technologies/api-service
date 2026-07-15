@@ -221,6 +221,12 @@ const auditActiveUsersQueryParams = z.object({
   months: z.coerce.number().int().optional().openapi({ example: 12 }).describe("Trailing months in the monthly series. Optional; downstream defaults to 12 (max 36)."),
 });
 
+const auditRevenueQueryParams = z.object({
+  days: z.coerce.number().int().optional().openapi({ example: 90 }).describe("Trailing days in the daily revenue series. Optional; downstream default applies."),
+  weeks: z.coerce.number().int().optional().openapi({ example: 26 }).describe("Trailing ISO weeks in the weekly revenue series. Optional; downstream default applies."),
+  months: z.coerce.number().int().optional().openapi({ example: 12 }).describe("Trailing months in the monthly revenue series. Optional; downstream default applies."),
+});
+
 const WorkflowMetadataSchema = z
   .object({
     id: z.string().describe("Workflow ID"),
@@ -477,14 +483,35 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Staff fleet per-user active history (staff only)",
   description:
-    "STAFF-ONLY cross-org, fleet-wide PER-USER active history: for each user (a distinct org with an active, funded, non-paused " +
-    "cold-email brand), that user's active months/weeks/days over time, first/last active month+week, retention window in weeks, and " +
-    "current-week/current-month active flags for tab counts. Per-user companion to GET /v1/features/audit/active-users. Cross-org fleet " +
-    "data, so this is gated by platform API key + STAFF_EMAILS x-email (same tier as GET /v1/features/audit/accounts); no org context " +
-    "required, no query params. Transparent proxy to features-service GET /internal/stats/active-users-by-user. Response is producer-owned.",
+    "STAFF-ONLY cross-org, fleet-wide PER-USER active history: for each user (a distinct org with an active, funded, non-paused cold-email " +
+    "brand), that user's active months/weeks/days, first/last active month+week, retention window in weeks, and current-week/current-month " +
+    "active flags. This is the per-user companion to GET /v1/features/audit/active-users (the aggregate history). Cross-org fleet data (per-org " +
+    "rows), so this is gated by platform API key + STAFF_EMAILS x-email (same tier as GET /v1/features/audit/accounts); no org context required, " +
+    "no query params. Transparent proxy to features-service GET /internal/stats/active-users-by-user. Response is producer-owned.",
   security: platformAuth,
   responses: {
     200: { description: "Cross-org per-user active history — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffActiveUsersByUserResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/audit/revenue",
+  tags: ["Features"],
+  summary: "Staff fleet realized-revenue history (staff only)",
+  description:
+    "STAFF-ONLY cross-org, fleet-wide HISTORY of REALIZED REVENUE (the sum of actualized cold-email spend per day — the money twin of " +
+    "active-users): total revenue since inception, plus monthly, weekly, and daily revenue buckets each with a period-over-period growth rate, " +
+    "and current MRR. Aggregate cross-org fleet financials, so this is gated by platform API key + STAFF_EMAILS x-email (same tier as " +
+    "GET /v1/features/audit/active-users); no org context required. Forwards optional window params `days`/`weeks`/`months`. Transparent proxy " +
+    "to features-service GET /internal/stats/revenue. Response is producer-owned.",
+  security: platformAuth,
+  request: { query: auditRevenueQueryParams },
+  responses: {
+    200: { description: "Fleet realized-revenue history (total + MRR + monthly/weekly/daily + asOf) — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffRevenueResponse") } } },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Not staff", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },

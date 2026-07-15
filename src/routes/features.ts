@@ -26,6 +26,7 @@ const PUBLIC_COST_PER_OUTCOME_LIFETIME_PARAMS = ["featureSlug"];
 const PUBLIC_COST_PER_OUTCOME_DISTRIBUTION_PARAMS = ["featureSlug", "objective", "buckets"];
 const AUDIT_SEND_FORECAST_PARAMS = ["days"];
 const AUDIT_ACTIVE_USERS_PARAMS = ["days", "weeks", "months"];
+const AUDIT_REVENUE_PARAMS = ["days", "weeks", "months"];
 
 // Forward the verified staff email downstream for actor attribution (no org context).
 function staffHeaders(req: AuthenticatedRequest): Record<string, string> {
@@ -427,10 +428,10 @@ router.get("/features/audit/active-users", authenticatePlatform, requireStaff, a
 /**
  * GET /v1/features/audit/active-users-by-user
  * STAFF-ONLY cross-org, fleet-wide PER-USER active history: for each user (a distinct org with an
- * active, funded, non-paused cold-email brand), that user's active months/weeks/days over time,
- * first/last active month+week, retention window in weeks, and current-week/current-month active
- * flags for tab counts. Per-user companion to GET /v1/features/audit/active-users (aggregate history).
- * Cross-org fleet data, so gated by authenticatePlatform + requireStaff (same tier as
+ * active, funded, non-paused cold-email brand), that user's active months/weeks/days, first/last
+ * active month+week, retention window in weeks, and current-week/current-month active flags. This is
+ * the per-user companion to GET /v1/features/audit/active-users (the aggregate history). Cross-org
+ * fleet data (per-org rows), so gated by authenticatePlatform + requireStaff (same tier as
  * GET /v1/features/audit/accounts): the caller must come in via the platform API key (authType
  * "admin") AND carry an x-email in the STAFF_EMAILS allowlist. No org context (cross-org read), no
  * query params. Transparent proxy to features-service GET /internal/stats/active-users-by-user;
@@ -447,6 +448,33 @@ router.get("/features/audit/active-users-by-user", authenticatePlatform, require
   } catch (error: any) {
     console.error("[api-service] Staff active-users-by-user audit error:", error.message);
     res.status(error.statusCode || 502).json({ error: error.message || "Failed to get active users by user" });
+  }
+});
+
+/**
+ * GET /v1/features/audit/revenue
+ * STAFF-ONLY cross-org, fleet-wide HISTORY of REALIZED REVENUE (the sum of actualized cold-email spend
+ * per day — the money twin of active-users): total revenue since inception, plus monthly/weekly/daily
+ * revenue buckets each with period-over-period growth, and current MRR. Aggregate cross-org fleet
+ * financials, so gated by authenticatePlatform + requireStaff (same tier as GET /v1/features/audit/
+ * active-users): the caller must come in via the platform API key (authType "admin") AND carry an
+ * x-email in the STAFF_EMAILS allowlist. No org context (cross-org read). Forwards optional window
+ * params `days`/`weeks`/`months`. Transparent proxy to features-service GET /internal/stats/revenue;
+ * response owned by the downstream service.
+ */
+router.get("/features/audit/revenue", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = buildParams(req.query as Record<string, unknown>, AUDIT_REVENUE_PARAMS);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.features,
+      `/internal/stats/revenue${qs}`,
+      { headers: staffHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Staff revenue audit error:", error.message);
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get revenue" });
   }
 });
 
