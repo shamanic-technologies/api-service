@@ -425,6 +425,32 @@ router.get("/features/audit/active-users", authenticatePlatform, requireStaff, a
 });
 
 /**
+ * GET /v1/features/audit/active-users-by-user
+ * STAFF-ONLY cross-org, fleet-wide PER-USER active history: for each user (a distinct org with an
+ * active, funded, non-paused cold-email brand), that user's active months/weeks/days over time,
+ * first/last active month+week, retention window in weeks, and current-week/current-month active
+ * flags for tab counts. Per-user companion to GET /v1/features/audit/active-users (aggregate history).
+ * Cross-org fleet data, so gated by authenticatePlatform + requireStaff (same tier as
+ * GET /v1/features/audit/accounts): the caller must come in via the platform API key (authType
+ * "admin") AND carry an x-email in the STAFF_EMAILS allowlist. No org context (cross-org read), no
+ * query params. Transparent proxy to features-service GET /internal/stats/active-users-by-user;
+ * response owned by the downstream service.
+ */
+router.get("/features/audit/active-users-by-user", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/internal/stats/active-users-by-user`,
+      { headers: staffHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Staff active-users-by-user audit error:", error.message);
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get active users by user" });
+  }
+});
+
+/**
  * GET /v1/features/:slug/pipeline-activity
  * 7-day pipeline activity for a brand. Proxied to features-service GET /features/:slug/pipeline-activity.
  */

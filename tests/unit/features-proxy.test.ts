@@ -637,6 +637,40 @@ describe("Staff fleet active-users audit proxy route (source)", () => {
   });
 });
 
+describe("Staff fleet per-user active history audit proxy route (source)", () => {
+  it("registers GET /features/audit/active-users-by-user on the router", () => {
+    expect(content).toContain('"/features/audit/active-users-by-user"');
+    expect(content).toContain("router.get");
+  });
+
+  it("is staff-gated with authenticatePlatform + requireStaff (no org)", () => {
+    const mountIdx = content.indexOf('"/features/audit/active-users-by-user"');
+    const chain = content.slice(mountIdx, content.indexOf("async (req", mountIdx));
+    expect(chain).toContain("authenticatePlatform,");
+    expect(chain).toContain("requireStaff,");
+    expect(chain).not.toContain("requireOrg");
+  });
+
+  it("proxies to features-service GET /internal/stats/active-users-by-user", () => {
+    const mountIdx = content.indexOf('"/features/audit/active-users-by-user"');
+    const block = content.slice(mountIdx, mountIdx + 700);
+    expect(block).toContain("externalServices.features");
+    expect(block).toContain("`/internal/stats/active-users-by-user`");
+  });
+
+  it("forwards the verified staff x-email downstream for attribution", () => {
+    const mountIdx = content.indexOf('"/features/audit/active-users-by-user"');
+    const block = content.slice(mountIdx, mountIdx + 700);
+    expect(block).toContain("staffHeaders(req)");
+  });
+
+  it("registers the OpenAPI path with passthrough response + platform auth", () => {
+    expect(schemaContent).toContain('path: "/v1/features/audit/active-users-by-user"');
+    expect(schemaContent).toContain("StaffActiveUsersByUserResponse");
+    expect(schemaContent).toContain("security: platformAuth");
+  });
+});
+
 describe("Features routes are mounted in index.ts", () => {
   it("should import and mount features routes", () => {
     expect(indexContent).toContain("featuresRoutes");
