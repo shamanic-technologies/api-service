@@ -73,11 +73,31 @@ describe("Chat proxy routes", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(2);
+    expect(headerMatches!.length).toBe(3);
   });
 
   it("should handle errors after headers sent for SSE", () => {
     expect(content).toContain("res.headersSent");
+  });
+
+  it("should have GET /chat/sessions/:sessionId session-history endpoint", () => {
+    expect(content).toContain('"/chat/sessions/:sessionId"');
+    expect(content).toContain("router.get");
+  });
+
+  it("should org-scope + user-forward the session-history read", () => {
+    const historySection = content.slice(
+      content.indexOf('"/chat/sessions/:sessionId"'),
+      content.indexOf('"/chat/sessions/:sessionId"') + 400,
+    );
+    expect(historySection).toContain("authenticate");
+    expect(historySection).toContain("requireOrg");
+    expect(historySection).toContain("requireUser");
+  });
+
+  it("should proxy session-history to /sessions/:id on chat-service (GET, no rename)", () => {
+    expect(content).toContain("/sessions/${encodeURIComponent(req.params.sessionId)}");
+    expect(content).toContain("externalServices.chat");
   });
 
   it("should strip null/falsy sessionId before forwarding to chat-service", () => {
@@ -97,6 +117,13 @@ describe("Chat OpenAPI schemas", () => {
 
   it("should register chat SSE path", () => {
     expect(schemaContent).toContain('path: "/v1/chat"');
+  });
+
+  it("should register session-history path with passthrough response", () => {
+    expect(schemaContent).toContain('path: "/v1/chat/sessions/{sessionId}"');
+    expect(schemaContent).toContain("SessionHistoryResponseSchema");
+    // rule #8: passthrough, no re-declared downstream fields
+    expect(schemaContent).toContain('.passthrough()\n  .openapi("SessionHistoryResponse")');
   });
 
   it("should define ChatConfigRequestSchema with key and allowedTools", () => {
