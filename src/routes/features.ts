@@ -479,6 +479,30 @@ router.get("/features/audit/revenue", authenticatePlatform, requireStaff, async 
 });
 
 /**
+ * GET /v1/features/audit/customer-success
+ * STAFF-ONLY cross-org, fleet-wide CUSTOMER-SUCCESS health board: one composed row per ever-active
+ * customer (name, CAC, grain, and the rest of the health signals the downstream computes). Cross-org
+ * fleet data (per-customer rows), so gated by authenticatePlatform + requireStaff (same tier as
+ * GET /v1/features/audit/active-users-by-user): the caller must come in via the platform API key
+ * (authType "admin") AND carry an x-email in the STAFF_EMAILS allowlist. No org context (cross-org
+ * read), no query params. Transparent proxy to features-service GET /internal/stats/customer-success;
+ * response owned by the downstream service.
+ */
+router.get("/features/audit/customer-success", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/internal/stats/customer-success`,
+      { headers: staffHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Staff customer-success audit error:", error.message);
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get customer success" });
+  }
+});
+
+/**
  * GET /v1/features/:slug/pipeline-activity
  * 7-day pipeline activity for a brand. Proxied to features-service GET /features/:slug/pipeline-activity.
  */
