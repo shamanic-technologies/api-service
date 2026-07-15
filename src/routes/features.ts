@@ -25,6 +25,7 @@ const PUBLIC_WORKFLOW_COST_PER_OUTCOME_PARAMS = ["featureSlug", "objective"];
 const PUBLIC_COST_PER_OUTCOME_LIFETIME_PARAMS = ["featureSlug"];
 const PUBLIC_COST_PER_OUTCOME_DISTRIBUTION_PARAMS = ["featureSlug", "objective", "buckets"];
 const AUDIT_SEND_FORECAST_PARAMS = ["days"];
+const AUDIT_ACTIVE_USERS_PARAMS = ["days", "weeks", "months"];
 
 // Forward the verified staff email downstream for actor attribution (no org context).
 function staffHeaders(req: AuthenticatedRequest): Record<string, string> {
@@ -393,6 +394,33 @@ router.get("/features/audit/accounts", authenticatePlatform, requireStaff, async
   } catch (error: any) {
     console.error("[api-service] Staff accounts audit error:", error.message);
     res.status(error.statusCode || 502).json({ error: error.message || "Failed to get accounts" });
+  }
+});
+
+/**
+ * GET /v1/features/audit/active-users
+ * STAFF-ONLY cross-org, fleet-wide HISTORY of active users (distinct orgs with an active, funded,
+ * non-paused cold-email brand) bucketed monthly/weekly/daily with period-over-period growth, plus the
+ * current live total. Aggregate cross-org fleet data, so gated by authenticatePlatform + requireStaff
+ * (same tier as GET /v1/features/audit/send-forecast and /v1/features/audit/accounts): the caller must
+ * come in via the platform API key (authType "admin") AND carry an x-email in the STAFF_EMAILS
+ * allowlist. No org context (cross-org read). Forwards optional window params `days`/`weeks`/`months`.
+ * Transparent proxy to features-service GET /internal/stats/active-users; response
+ * (currentTotal + monthly/weekly/daily + asOf) owned by the downstream service.
+ */
+router.get("/features/audit/active-users", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = buildParams(req.query as Record<string, unknown>, AUDIT_ACTIVE_USERS_PARAMS);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.features,
+      `/internal/stats/active-users${qs}`,
+      { headers: staffHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Staff active-users audit error:", error.message);
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get active users" });
   }
 });
 

@@ -209,6 +209,10 @@
         "type": "object",
         "properties": {}
       },
+      "StaffActiveUsersResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "MeResponse": {
         "type": "object",
         "properties": {
@@ -10929,6 +10933,155 @@
             "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
           }
         ]
+      }
+    },
+    "/v1/features/audit/active-users": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Staff fleet active-users history (staff only)",
+        "description": "STAFF-ONLY cross-org, fleet-wide HISTORY of active users (distinct orgs with an active, funded, non-paused cold-email brand) bucketed monthly, weekly, and daily, each with a period-over-period growth rate, plus the current live total. Aggregate cross-org fleet data, so this is gated by platform API key + STAFF_EMAILS x-email (same tier as GET /v1/features/audit/accounts); no org context required. Forwards optional window params `days`/`weeks`/`months`. Transparent proxy to features-service GET /internal/stats/active-users. Response is producer-owned.",
+        "security": [
+          {
+            "apiKeyAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "description": "Trailing days in the daily series. Optional; downstream defaults to 90 (max 365).",
+              "example": 90
+            },
+            "required": false,
+            "description": "Trailing days in the daily series. Optional; downstream defaults to 90 (max 365).",
+            "name": "days",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "description": "Trailing ISO weeks in the weekly series. Optional; downstream defaults to 26 (max 104).",
+              "example": 26
+            },
+            "required": false,
+            "description": "Trailing ISO weeks in the weekly series. Optional; downstream defaults to 26 (max 104).",
+            "name": "weeks",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "nullable": true,
+              "description": "Trailing months in the monthly series. Optional; downstream defaults to 12 (max 36).",
+              "example": 12
+            },
+            "required": false,
+            "description": "Trailing months in the monthly series. Optional; downstream defaults to 12 (max 36).",
+            "name": "months",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Fleet active-users history (currentTotal + monthly/weekly/daily + asOf) — pass-through from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StaffActiveUsersResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not staff",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/v1/workflows/ranked": {
