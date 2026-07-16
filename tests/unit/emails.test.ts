@@ -233,6 +233,24 @@ describe("GET /v1/emails/by-lead/:leadId", () => {
     const call = fetchCalls.find((c) => c.url.includes("/generations/by-lead/"));
     expect(call).toBeDefined();
     expect(call!.url).toContain("/generations/by-lead/lead_abc");
+    // Unscoped call (no brandId) must carry NO query string — byte-unchanged from before.
+    expect(call!.url).not.toContain("?");
+    expect(call!.headers!["x-org-id"]).toBe("org_test456");
+    expect(call!.headers!["x-user-id"]).toBe("user_test123");
+  });
+
+  it("forwards ?brandId brand scope through to content-gen by-lead read", async () => {
+    mockFetch(() => ({ ok: true, json: () => Promise.resolve({ generation: { id: "gen_2" } }) }));
+
+    const res = await request(app).get(
+      "/v1/emails/by-lead/lead_abc?brandId=11111111-2222-3333-4444-555555555555",
+    );
+
+    expect(res.status).toBe(200);
+    const call = fetchCalls.find((c) => c.url.includes("/generations/by-lead/"));
+    expect(call).toBeDefined();
+    expect(call!.url).toContain("/generations/by-lead/lead_abc");
+    expect(call!.url).toContain("brandId=11111111-2222-3333-4444-555555555555");
     expect(call!.headers!["x-org-id"]).toBe("org_test456");
     expect(call!.headers!["x-user-id"]).toBe("user_test123");
   });
