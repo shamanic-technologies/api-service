@@ -91,6 +91,10 @@ router.get("/emails", authenticate, requireOrg, requireUser, async (req: Authent
  * (org-scoped via identity headers). Body forwarded verbatim (CLAUDE.md #8 — downstream
  * owns the generation shape; no field re-declaration / stripping).
  *
+ * When the caller passes ?brandId=<uuid> (the brand the user is viewing), it is forwarded
+ * as brand scope so content-generation-service returns the brand-correct generation for a
+ * lead contacted by multiple brands in one org. Without it, behavior is unchanged.
+ *
  * Upstream 404 ("Generation not found") is a NORMAL empty state ("no email yet for this
  * lead"), so it maps to 200 { generation: null } — NOT a client-facing error. Any other
  * upstream error propagates verbatim (fail loud).
@@ -102,9 +106,14 @@ router.get(
   requireUser,
   async (req: AuthenticatedRequest, res) => {
     try {
+      const { brandId } = req.query as { brandId?: string };
+      const params = new URLSearchParams();
+      if (brandId) params.set("brandId", brandId);
+      const qs = params.toString();
+
       const result = await callExternalService(
         externalServices.emailgen,
-        `/generations/by-lead/${encodeURIComponent(req.params.leadId)}`,
+        `/generations/by-lead/${encodeURIComponent(req.params.leadId)}${qs ? `?${qs}` : ""}`,
         { headers: buildInternalHeaders(req) },
       ) as { generation: Record<string, unknown> };
       res.json({ generation: result.generation });
