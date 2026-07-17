@@ -9535,3 +9535,77 @@ registry.registerPath({
     502: { description: "human-service unreachable / not configured", content: errorContent },
   },
 });
+
+// ── CRM contacts (crm-service proxy) ─────────────────────────────────────────
+// Transparent proxy of crm-service /orgs/contacts/*. Request + response shapes
+// are owned by crm-service; passthrough per CLAUDE.md rules #6/#8.
+const CrmPassthroughResponse = z.object({}).passthrough().openapi("CrmContactsResponse");
+const CrmUploadMultipartBody = z
+  .object({
+    file: z.string().openapi({ type: "string", format: "binary", description: "The CSV file to ingest" }),
+    brandId: z.string().uuid().openapi({ description: "Brand the contacts belong to (required)" }),
+    columnMapping: z
+      .string()
+      .optional()
+      .openapi({ description: "Optional JSON column-mapping override" }),
+  })
+  .openapi("CrmUploadMultipartBody");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/contacts/upload",
+  tags: ["CRM Contacts"],
+  summary: "Upload a CSV of contacts (bronze ingest + async silver promotion)",
+  description:
+    "Proxy to crm-service POST /orgs/contacts/upload. Multipart body (field `file` = CSV, `brandId` required, optional `columnMapping`) is streamed through untransformed — no buffering, no size ceiling. Requires x-user-id. Response shape owned by crm-service.",
+  security: authed,
+  request: { body: { content: { "multipart/form-data": { schema: CrmUploadMultipartBody } } } },
+  responses: {
+    200: { description: "Upload ingested (crm-service { uploadId, rowCount, status, mappingProvenance })", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "crm-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/contacts",
+  tags: ["CRM Contacts"],
+  summary: "List silver contacts for a brand",
+  description:
+    "Proxy to crm-service GET /orgs/contacts. `brandId` query forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().openapi({ description: "Brand ID (required)" }),
+    }),
+  },
+  responses: {
+    200: { description: "Contacts as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "crm-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/contacts/uploads",
+  tags: ["CRM Contacts"],
+  summary: "List uploads and their status for a brand",
+  description:
+    "Proxy to crm-service GET /orgs/contacts/uploads. `brandId` query forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().openapi({ description: "Brand ID (required)" }),
+    }),
+  },
+  responses: {
+    200: { description: "Uploads as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "crm-service unreachable / not configured", content: errorContent },
+  },
+});

@@ -253,6 +253,26 @@ export const externalServices = {
       return v;
     },
   },
+  crm: {
+    get url(): string {
+      const v = process.env.CRM_SERVICE_URL;
+      if (!v) {
+        const err = new Error("CRM_SERVICE_URL env var is required") as Error & { statusCode: number };
+        err.statusCode = 502;
+        throw err;
+      }
+      return v;
+    },
+    get apiKey(): string {
+      const v = process.env.CRM_SERVICE_API_KEY;
+      if (!v) {
+        const err = new Error("CRM_SERVICE_API_KEY env var is required") as Error & { statusCode: number };
+        err.statusCode = 502;
+        throw err;
+      }
+      return v;
+    },
+  },
 };
 
 interface ServiceCallOptions {
@@ -384,4 +404,60 @@ export async function streamExternalService(
   } finally {
     expressRes.end();
   }
+}
+
+/**
+ * Stream a multipart/form-data request body straight through to a downstream
+ * service without buffering or parsing it. Used for file uploads (e.g. crm-service
+ * CSV ingest, up to ~80K rows) where re-encoding the body would corrupt the
+ * multipart boundary and buffering the whole file wastes memory.
+ *
+ * The Express `req` (a Node Readable) is passed as the fetch body with
+ * `duplex: "half"`; the original `content-type` (INCLUDING the multipart
+ * boundary) and `content-length` are forwarded verbatim, plus the identity
+ * headers and `X-API-Key`. The upstream JSON response is parsed and returned
+ * with its status. On a non-2xx the upstream body is thrown verbatim (CLAUDE.md
+ * rule #7) with `statusCode` set, so the route can surface it to the client.
+ *
+ * No transient-network retry here: the request stream is single-use and can't be
+ * replayed once consumed.
+ */
+export async function streamMultipartUpload<T>(
+  service: { url: string; apiKey: string; dispatcher?: Dispatcher },
+  path: string,
+  options: { req: import("express").Request; headers?: Record<string, string> },
+): Promise<{ status: number; data: T }> {
+  const { req, headers = {} } = options;
+  const url = `${service.url}${path}`;
+
+  const forwardHeaders: Record<string, string> = {
+    "X-API-Key": service.apiKey,
+    ...headers,
+  };
+  const contentType = req.headers["content-type"];
+  if (contentType) forwardHeaders["content-type"] = contentType;
+  const contentLength = req.headers["content-length"];
+  if (contentLength) forwardHeaders["content-length"] = contentLength;
+
+  const init: RequestInit & { dispatcher?: Dispatcher; duplex: "half" } = {
+    method: "POST",
+    headers: forwardHeaders,
+    body: req as unknown as ReadableStream,
+    duplex: "half",
+  };
+  if (service.dispatcher) init.dispatcher = service.dispatcher;
+
+  const response = await fetch(url, init);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error(`[streamMultipartUpload] POST ${url} upstream error ${response.status}:`, errorText);
+    const message = errorText || `Service call failed: ${response.status}`;
+    const err = new Error(message) as Error & { statusCode: number };
+    err.statusCode = response.status;
+    throw err;
+  }
+
+  const data: T = await response.json();
+  return { status: response.status, data };
 }
