@@ -6203,6 +6203,38 @@ registry.registerPath({
   },
 });
 
+// Billing – Payments (proxy to stripe-service)
+// Lists the calling org's payment history (its Stripe PaymentIntents / top-ups).
+// Org resolved from the Bearer key; sourced from stripe-service internal
+// /payment_intents/by-org/{orgId}. Full Stripe list, no pagination. Each item
+// carries id, amount (cents), currency, status, created. Downstream owns the
+// shape — passthrough only (CLAUDE.md #4/#8).
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/payments",
+  tags: ["Billing"],
+  summary: "List the org's payment history",
+  description:
+    "Returns every payment (Stripe PaymentIntent / top-up) for the calling org, " +
+    "scoped to the Bearer key's org (no orgId in the request). Sourced from " +
+    "stripe-service GET /internal/payment_intents/by-org/{orgId}. Full set, no " +
+    "pagination. Each PaymentIntent carries id, amount (cents), currency, status, " +
+    "created. Response shape is owned by stripe-service — passthrough.",
+  security: authed,
+  responses: {
+    200: {
+      description: "Stripe PaymentIntent list — pass-through from stripe-service",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("OrgPaymentsResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // Brand – Daily Budget (proxy to billing-service)
 // Per-brand daily spend ceiling (pacing/allocation), SEPARATE from org credit
 // balance/affordability. GET proxies billing /internal/brands/:brandId/daily-budget
