@@ -858,6 +858,48 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "patch",
+  path: "/v1/brands/{brandId}/campaigns/daily-budget",
+  tags: ["Campaigns"],
+  summary: "Set daily budget for all of a brand's campaigns",
+  description:
+    "Proxy to campaign-service PATCH /brands/{brandId}/daily-budget. Sets dailyBudgetCents on " +
+    "EVERY sales campaign of the brand at once — the brand-page propagation lever: when a customer " +
+    "edits their daily budget on the brand page it flows down to the brand's campaign(s). Distinct " +
+    "from PATCH /v1/brands/{brandId}/daily-budget (billing-service brand spend cap). Body " +
+    "{ dailyBudgetCents } (integer cents >= 0, or null to clear each campaign's own budget so they " +
+    "fall back to the brand daily budget). Identity headers (x-org-id, x-user-id, x-run-id) are " +
+    "forwarded. Body + response shapes are owned by campaign-service; its 4xx validation errors " +
+    "propagate verbatim.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().uuid().describe("Brand ID") }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              dailyBudgetCents: z
+                .number()
+                .int()
+                .nonnegative()
+                .nullable()
+                .describe("Daily budget in cents for every sales campaign of the brand; null clears each campaign's own budget"),
+            })
+            .openapi("SetBrandCampaignsDailyBudgetRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Per-campaign daily budgets updated", content: { "application/json": { schema: z.object({}).passthrough().openapi("SetBrandCampaignsDailyBudgetResponse") } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/campaigns/{id}/stop",
   tags: ["Campaigns"],
@@ -7884,6 +7926,7 @@ registry.registerPath({
       brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required)"),
       goal: z.string().openapi({ example: "signup" }).describe("Optimization goal (required)"),
       brandProfileId: z.string().optional().openapi({ example: "profile-uuid-123" }).describe("Optional brand-profile version to scope evidence"),
+      campaignId: z.string().optional().openapi({ example: "campaign-uuid-123" }).describe("Optional single-campaign scope for the stats (audiences stay brand-wide; only the per-audience cost + outcome numerators narrow to this campaign). Omit for brand-wide numbers"),
       limit: z.string().optional().openapi({ example: "3" }).describe("Optional row limit after sorting"),
       statuses: z.string().optional().openapi({ example: "active,paused,archived" }).describe("Optional comma-separated subset of active,paused,archived to scope which audiences are included (features-service owns the default)"),
     }),

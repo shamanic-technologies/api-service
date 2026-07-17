@@ -562,6 +562,24 @@
           "campaign"
         ]
       },
+      "SetBrandCampaignsDailyBudgetResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "SetBrandCampaignsDailyBudgetRequest": {
+        "type": "object",
+        "properties": {
+          "dailyBudgetCents": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 0,
+            "description": "Daily budget in cents for every sales campaign of the brand; null clears each campaign's own budget"
+          }
+        },
+        "required": [
+          "dailyBudgetCents"
+        ]
+      },
       "StopCampaignResponse": {
         "type": "object",
         "properties": {
@@ -12374,6 +12392,139 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UpdateCampaignResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/brands/{brandId}/campaigns/daily-budget": {
+      "patch": {
+        "tags": [
+          "Campaigns"
+        ],
+        "summary": "Set daily budget for all of a brand's campaigns",
+        "description": "Proxy to campaign-service PATCH /brands/{brandId}/daily-budget. Sets dailyBudgetCents on EVERY sales campaign of the brand at once — the brand-page propagation lever: when a customer edits their daily budget on the brand page it flows down to the brand's campaign(s). Distinct from PATCH /v1/brands/{brandId}/daily-budget (billing-service brand spend cap). Body { dailyBudgetCents } (integer cents >= 0, or null to clear each campaign's own budget so they fall back to the brand daily budget). Identity headers (x-org-id, x-user-id, x-run-id) are forwarded. Body + response shapes are owned by campaign-service; its 4xx validation errors propagate verbatim.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Brand ID"
+            },
+            "required": true,
+            "description": "Brand ID",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetBrandCampaignsDailyBudgetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Per-campaign daily budgets updated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetBrandCampaignsDailyBudgetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -36535,6 +36686,17 @@
             "required": false,
             "description": "Optional brand-profile version to scope evidence",
             "name": "brandProfileId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optional single-campaign scope for the stats (audiences stay brand-wide; only the per-audience cost + outcome numerators narrow to this campaign). Omit for brand-wide numbers",
+              "example": "campaign-uuid-123"
+            },
+            "required": false,
+            "description": "Optional single-campaign scope for the stats (audiences stay brand-wide; only the per-audience cost + outcome numerators narrow to this campaign). Omit for brand-wide numbers",
+            "name": "campaignId",
             "in": "query"
           },
           {
