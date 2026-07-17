@@ -59,10 +59,10 @@ describe("Billing proxy routes", () => {
   });
 
   it("should use authenticate and requireOrg on all authenticated endpoints", () => {
-    // 9 routes + 1 import = 10
+    // 10 routes + 1 import = 11
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    expect(authMatches!.length).toBe(10);
+    expect(authMatches!.length).toBe(11);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints (no x-key-source)", () => {
@@ -70,7 +70,14 @@ describe("Billing proxy routes", () => {
     expect(content).not.toContain('"x-key-source"');
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(9);
+    expect(headerMatches!.length).toBe(10);
+  });
+
+  it("should have GET /billing/payments endpoint sourced from stripe-service", () => {
+    expect(content).toContain('"/billing/payments"');
+    // org resolved from Bearer (req.orgId), inserted into the stripe internal path
+    expect(content).toContain("/internal/payment_intents/by-org/${encodeURIComponent(req.orgId!)}");
+    expect(content).toContain("externalServices.stripe");
   });
 
   it("should have GET + PATCH /brands/:brandId/daily-budget endpoints", () => {
@@ -147,6 +154,11 @@ describe("Billing OpenAPI schemas", () => {
 
   it("should use Billing tag", () => {
     expect(schemaContent).toContain('tags: ["Billing"]');
+  });
+
+  it("should register /v1/billing/payments path (passthrough)", () => {
+    expect(schemaContent).toContain('path: "/v1/billing/payments"');
+    expect(schemaContent).toContain('z.object({}).passthrough().openapi("OrgPaymentsResponse")');
   });
 
   it("should register brand daily-budget paths (passthrough)", () => {
