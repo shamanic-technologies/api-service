@@ -7884,6 +7884,7 @@ registry.registerPath({
       brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required)"),
       goal: z.string().openapi({ example: "signup" }).describe("Optimization goal (required)"),
       brandProfileId: z.string().optional().openapi({ example: "profile-uuid-123" }).describe("Optional brand-profile version to scope evidence"),
+      campaignId: z.string().optional().openapi({ example: "campaign-uuid-123" }).describe("Optional single-campaign scope for the stats (audiences stay brand-wide; only the per-audience cost + outcome numerators narrow to this campaign). Omit for brand-wide numbers"),
       limit: z.string().optional().openapi({ example: "3" }).describe("Optional row limit after sorting"),
       statuses: z.string().optional().openapi({ example: "active,paused,archived" }).describe("Optional comma-separated subset of active,paused,archived to scope which audiences are included (features-service owns the default)"),
     }),
