@@ -390,6 +390,38 @@ router.patch("/campaigns/:id", authenticate, requireOrg, requireUser, async (req
 });
 
 /**
+ * PATCH /v1/brands/:brandId/campaigns/daily-budget
+ * Set the daily budget for ALL of a brand's sales campaigns at once.
+ *
+ * Brand-page propagation lever: when a customer edits their daily budget on the brand page,
+ * that number must flow down to the brand's campaign(s) so per-campaign pacing enforces it.
+ * Distinct from PATCH /v1/brands/:brandId/daily-budget (billing-service brand spend cap) — this
+ * targets campaign-service's per-campaign budget. dailyBudgetCents:null clears each campaign's
+ * own budget so they fall back to the brand daily budget.
+ * Proxies to campaign-service PATCH /brands/:brandId/daily-budget. Body + response are
+ * downstream-owned and forwarded byte-identical.
+ */
+router.patch("/brands/:brandId/campaigns/daily-budget", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { brandId } = req.params;
+
+    const result = await callExternalService(
+      externalServices.campaign,
+      `/brands/${brandId}/daily-budget`,
+      {
+        method: "PATCH",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+      }
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Set brand campaigns daily budget error:", error);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to set brand campaigns daily budget" });
+  }
+});
+
+/**
  * POST /v1/campaigns/:id/stop
  * Stop a running campaign
  */
