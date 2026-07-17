@@ -36540,6 +36540,17 @@
           {
             "schema": {
               "type": "string",
+              "description": "Optional single-campaign scope for the stats (audiences stay brand-wide; only the per-audience cost + outcome numerators narrow to this campaign). Omit for brand-wide numbers",
+              "example": "campaign-uuid-123"
+            },
+            "required": false,
+            "description": "Optional single-campaign scope for the stats (audiences stay brand-wide; only the per-audience cost + outcome numerators narrow to this campaign). Omit for brand-wide numbers",
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "description": "Optional row limit after sorting",
               "example": "3"
             },
