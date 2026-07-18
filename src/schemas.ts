@@ -612,6 +612,12 @@ export const CreateCampaignRequestSchema = z
     maxBudgetTotalUsd: z.union([z.string(), z.number()]).optional().describe("Max total budget in USD"),
     maxLeads: z.number().int().optional().describe("Maximum number of leads to contact"),
     endDate: z.string().optional().describe("Campaign end date"),
+    // Campaign v2 — per-campaign configuration (owned by campaign-service).
+    // Faithful passthrough: types mirror campaign-service's create contract exactly.
+    goal: z.enum(["signup", "meetingBooked", "purchase"]).nullable().optional().describe("Campaign's own optimization goal"),
+    audienceIds: z.array(z.string().min(1)).min(1).nullable().optional().describe("Subset of the brand's audiences this campaign targets"),
+    servicesOffered: z.array(z.string().min(1)).nullable().optional().describe("Services offered by this campaign"),
+    clickDestinationUrl: z.string().min(1).nullable().optional().describe("Campaign's click-destination URL"),
   })
   .refine(
     (d) => d.workflowSlug || d.workflowDynastySlug,
@@ -730,6 +736,11 @@ const CampaignSchema = z
     maxBudgetMonthlyUsd: z.string().nullable().describe("Max monthly budget in USD"),
     maxBudgetTotalUsd: z.string().nullable().describe("Max total budget in USD"),
     maxLeads: z.number().nullable().describe("Maximum number of leads"),
+    // Campaign v2 — per-campaign configuration (owned by campaign-service, forwarded byte-identical).
+    goal: z.enum(["signup", "meetingBooked", "purchase"]).nullable().describe("Campaign's own optimization goal"),
+    audienceIds: z.array(z.string()).nullable().describe("Subset of the brand's audiences this campaign targets"),
+    servicesOffered: z.array(z.string()).nullable().describe("Services offered by this campaign"),
+    clickDestinationUrl: z.string().nullable().describe("Campaign's click-destination URL"),
     startDate: z.string().nullable().describe("Campaign start date"),
     endDate: z.string().nullable().describe("Campaign end date"),
     status: z.string().describe("Campaign status (e.g. 'active', 'stopped')"),
