@@ -333,6 +333,37 @@
             "nullable": true,
             "description": "Maximum number of leads"
           },
+          "goal": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "signup",
+              "meetingBooked",
+              "purchase"
+            ],
+            "description": "Campaign's own optimization goal"
+          },
+          "audienceIds": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            },
+            "description": "Subset of the brand's audiences this campaign targets"
+          },
+          "servicesOffered": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            },
+            "description": "Services offered by this campaign"
+          },
+          "clickDestinationUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Campaign's click-destination URL"
+          },
           "startDate": {
             "type": "string",
             "nullable": true,
@@ -393,6 +424,10 @@
           "maxBudgetMonthlyUsd",
           "maxBudgetTotalUsd",
           "maxLeads",
+          "goal",
+          "audienceIds",
+          "servicesOffered",
+          "clickDestinationUrl",
           "startDate",
           "endDate",
           "status",
@@ -523,6 +558,41 @@
           "endDate": {
             "type": "string",
             "description": "Campaign end date"
+          },
+          "goal": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "signup",
+              "meetingBooked",
+              "purchase"
+            ],
+            "description": "Campaign's own optimization goal"
+          },
+          "audienceIds": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "description": "Subset of the brand's audiences this campaign targets"
+          },
+          "servicesOffered": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Services offered by this campaign"
+          },
+          "clickDestinationUrl": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "description": "Campaign's click-destination URL"
           }
         },
         "required": [
