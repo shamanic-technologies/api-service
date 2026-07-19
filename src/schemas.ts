@@ -196,6 +196,13 @@ const publicCostPerOutcomeTrendQueryParams = z.object({
   windowOutcomes: z.string().optional().openapi({ example: "100" }).describe("Target outcomes per moving-average window (default 100)."),
 });
 
+const publicBestModelCostPerOutcomeTrendQueryParams = z.object({
+  featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
+  objective: z.string().openapi({ example: "positiveReply" }).describe("Optimization objective — one of websiteVisit / positiveReply / signup / formSubmission / meetingBooked / purchase (required)."),
+  days: z.string().optional().openapi({ example: "30" }).describe("Number of trailing display days to emit (default 30, max 180)."),
+  windowOutcomes: z.string().optional().openapi({ example: "100" }).describe("Target outcomes per moving-average window (default 100)."),
+});
+
 const publicWorkflowCostPerOutcomeQueryParams = z.object({
   featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
   objective: z.string().openapi({ example: "positiveReply" }).describe("Optimization objective — one of websiteVisit / positiveReply / signup / formSubmission / meetingBooked / purchase (required)."),
@@ -362,6 +369,23 @@ registry.registerPath({
   request: { query: publicCostPerOutcomeTrendQueryParams },
   responses: {
     200: { description: "Public cost-per-outcome trend — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicCostPerOutcomeTrendResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/features/best-model-cost-per-outcome-trend",
+  tags: ["Features"],
+  summary: "Public best-model cost-per-outcome trend",
+  description:
+    "Public cross-org dated cost-per-outcome timeseries of the single BEST workflow model for a feature and one objective — the drop-in replacement for the pooled cost-per-outcome-trend, coherent with the best-model headline (min cost-per-outcome across workflows). Every point is a single workflow's cost, never pooled across workflows. " +
+    "Proxied to features-service GET /public/stats/best-model-cost-per-outcome-trend. Forwards featureSlug, objective, and optional days/windowOutcomes. Response is producer-owned. No authentication required.",
+  request: { query: publicBestModelCostPerOutcomeTrendQueryParams },
+  responses: {
+    200: { description: "Public best-model cost-per-outcome trend — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicBestModelCostPerOutcomeTrendResponse") } } },
     400: { description: "Bad request from features-service", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
