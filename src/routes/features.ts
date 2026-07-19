@@ -21,6 +21,7 @@ const PUBLIC_REVENUE_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_WORKFLOW_ENGAGEMENT_LATENCY_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_COST_PROJECTION_PARAMS = ["featureSlug"];
 const PUBLIC_COST_PER_OUTCOME_TREND_PARAMS = ["featureSlug", "objective", "days", "windowOutcomes"];
+const PUBLIC_BEST_MODEL_COST_PER_OUTCOME_TREND_PARAMS = ["featureSlug", "objective", "days", "windowOutcomes"];
 const PUBLIC_WORKFLOW_COST_PER_OUTCOME_PARAMS = ["featureSlug", "objective"];
 const PUBLIC_COST_PER_OUTCOME_LIFETIME_PARAMS = ["featureSlug"];
 const PUBLIC_COST_PER_OUTCOME_DISTRIBUTION_PARAMS = ["featureSlug", "objective", "buckets"];
@@ -152,6 +153,26 @@ router.get("/public/features/cost-per-outcome-trend", async (req: Request, res: 
   } catch (error: any) {
     console.error("[api-service] Public cost-per-outcome trend error:", error.message);
     res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public cost-per-outcome trend" });
+  }
+});
+
+/**
+ * GET /v1/public/features/best-model-cost-per-outcome-trend
+ * Public dated cost-per-outcome trend of the single BEST cross-org workflow model for one objective.
+ * Proxied to features-service GET /public/stats/best-model-cost-per-outcome-trend.
+ */
+router.get("/public/features/best-model-cost-per-outcome-trend", async (req: Request, res: Response) => {
+  try {
+    const params = buildParams(req.query as Record<string, unknown>, PUBLIC_BEST_MODEL_COST_PER_OUTCOME_TREND_PARAMS);
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/best-model-cost-per-outcome-trend?${params}`,
+      {},
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public best-model cost-per-outcome trend error:", error.message);
+    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public best-model cost-per-outcome trend" });
   }
 });
 
