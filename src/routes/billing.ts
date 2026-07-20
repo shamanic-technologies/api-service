@@ -94,9 +94,18 @@ router.delete("/billing/accounts/auto_topup", authenticate, requireOrg, async (r
 // POST /v1/billing/checkout-sessions — create Stripe checkout session
 router.post("/billing/checkout-sessions", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
-    const requiredFields = req.body?.mode === "setup"
-      ? ["success_url", "cancel_url"]
-      : ["success_url", "cancel_url", "topup_amount_cents"];
+    // Embedded checkout returns an inline client_secret (no redirect), so
+    // success_url/cancel_url do not apply — it only needs an amount. Mirror
+    // billing-service's CreateCheckoutRequestSchema semantics:
+    //   embedded     → topup_amount_cents (payment-only, no urls)
+    //   mode:setup   → success_url + cancel_url
+    //   hosted topup → success_url + cancel_url + topup_amount_cents
+    const isEmbedded = req.body?.ui_mode === "embedded";
+    const requiredFields = isEmbedded
+      ? ["topup_amount_cents"]
+      : req.body?.mode === "setup"
+        ? ["success_url", "cancel_url"]
+        : ["success_url", "cancel_url", "topup_amount_cents"];
     if (!requireBodyFields(res, req.body, requiredFields)) return;
     const result = await callExternalService(
       externalServices.billing,
