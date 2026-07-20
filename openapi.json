@@ -7154,15 +7154,22 @@
       "CreateCheckoutSessionRequest": {
         "type": "object",
         "properties": {
+          "ui_mode": {
+            "type": "string",
+            "enum": [
+              "embedded"
+            ],
+            "description": "Set to 'embedded' for Stripe Embedded Checkout (in-app modal). Returns an inline client_secret instead of a redirect URL, so success_url/cancel_url do not apply. Always payment-only (requires topup_amount_cents)."
+          },
           "success_url": {
             "type": "string",
             "format": "uri",
-            "description": "URL to redirect after successful payment"
+            "description": "URL to redirect after successful payment. Required for hosted checkout; omit for embedded (ui_mode='embedded')."
           },
           "cancel_url": {
             "type": "string",
             "format": "uri",
-            "description": "URL to redirect on cancellation"
+            "description": "URL to redirect on cancellation. Required for hosted checkout; omit for embedded (ui_mode='embedded')."
           },
           "mode": {
             "type": "string",
@@ -7184,11 +7191,7 @@
             ],
             "description": "Amount to top up in cents (integer or decimal string)"
           }
-        },
-        "required": [
-          "success_url",
-          "cancel_url"
-        ]
+        }
       },
       "WalletSetupResponse": {
         "type": "object",

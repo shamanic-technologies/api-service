@@ -5696,8 +5696,15 @@ export const ConfigureAutoTopupRequestSchema = z
 
 export const CreateCheckoutSessionRequestSchema = z
   .object({
-    success_url: z.string().url().describe("URL to redirect after successful payment"),
-    cancel_url: z.string().url().describe("URL to redirect on cancellation"),
+    ui_mode: z.literal("embedded").optional().describe(
+      "Set to 'embedded' for Stripe Embedded Checkout (in-app modal). Returns an inline client_secret instead of a redirect URL, so success_url/cancel_url do not apply. Always payment-only (requires topup_amount_cents).",
+    ),
+    success_url: z.string().url().optional().describe(
+      "URL to redirect after successful payment. Required for hosted checkout; omit for embedded (ui_mode='embedded').",
+    ),
+    cancel_url: z.string().url().optional().describe(
+      "URL to redirect on cancellation. Required for hosted checkout; omit for embedded (ui_mode='embedded').",
+    ),
     mode: z.enum(["payment", "setup"]).optional().describe(
       "Stripe checkout mode. Setup mode stores a payment method and does not require a top-up amount.",
     ),
