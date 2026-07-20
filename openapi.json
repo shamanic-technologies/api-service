@@ -84,6 +84,10 @@
       "description": "Google CRM (Gmail + People bronze) ingestion"
     },
     {
+      "name": "CRM Contacts",
+      "description": "Client B2C CRM CSV contact ingestion (crm-service proxy)"
+    },
+    {
       "name": "Expert Quotes",
       "description": "Expert quote outreach (journalists-quotes-service proxy)"
     },
@@ -186,6 +190,10 @@
         "properties": {}
       },
       "PublicCostPerOutcomeTrendResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "PublicBestModelCostPerOutcomeTrendResponse": {
         "type": "object",
         "properties": {}
       },
@@ -329,6 +337,37 @@
             "nullable": true,
             "description": "Maximum number of leads"
           },
+          "goal": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "signup",
+              "meetingBooked",
+              "purchase"
+            ],
+            "description": "Campaign's own optimization goal"
+          },
+          "audienceIds": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            },
+            "description": "Subset of the brand's audiences this campaign targets"
+          },
+          "servicesOffered": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string"
+            },
+            "description": "Services offered by this campaign"
+          },
+          "clickDestinationUrl": {
+            "type": "string",
+            "nullable": true,
+            "description": "Campaign's click-destination URL"
+          },
           "startDate": {
             "type": "string",
             "nullable": true,
@@ -389,6 +428,10 @@
           "maxBudgetMonthlyUsd",
           "maxBudgetTotalUsd",
           "maxLeads",
+          "goal",
+          "audienceIds",
+          "servicesOffered",
+          "clickDestinationUrl",
           "startDate",
           "endDate",
           "status",
@@ -519,6 +562,41 @@
           "endDate": {
             "type": "string",
             "description": "Campaign end date"
+          },
+          "goal": {
+            "type": "string",
+            "nullable": true,
+            "enum": [
+              "signup",
+              "meetingBooked",
+              "purchase"
+            ],
+            "description": "Campaign's own optimization goal"
+          },
+          "audienceIds": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "description": "Subset of the brand's audiences this campaign targets"
+          },
+          "servicesOffered": {
+            "type": "array",
+            "nullable": true,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "description": "Services offered by this campaign"
+          },
+          "clickDestinationUrl": {
+            "type": "string",
+            "nullable": true,
+            "minLength": 1,
+            "description": "Campaign's click-destination URL"
           }
         },
         "required": [
@@ -7076,15 +7154,22 @@
       "CreateCheckoutSessionRequest": {
         "type": "object",
         "properties": {
+          "ui_mode": {
+            "type": "string",
+            "enum": [
+              "embedded"
+            ],
+            "description": "Set to 'embedded' for Stripe Embedded Checkout (in-app modal). Returns an inline client_secret instead of a redirect URL, so success_url/cancel_url do not apply. Always payment-only (requires topup_amount_cents)."
+          },
           "success_url": {
             "type": "string",
             "format": "uri",
-            "description": "URL to redirect after successful payment"
+            "description": "URL to redirect after successful payment. Required for hosted checkout; omit for embedded (ui_mode='embedded')."
           },
           "cancel_url": {
             "type": "string",
             "format": "uri",
-            "description": "URL to redirect on cancellation"
+            "description": "URL to redirect on cancellation. Required for hosted checkout; omit for embedded (ui_mode='embedded')."
           },
           "mode": {
             "type": "string",
@@ -7106,11 +7191,7 @@
             ],
             "description": "Amount to top up in cents (integer or decimal string)"
           }
-        },
-        "required": [
-          "success_url",
-          "cancel_url"
-        ]
+        }
       },
       "WalletSetupResponse": {
         "type": "object",
@@ -9951,6 +10032,33 @@
       "AudienceMembersResponse": {
         "type": "object",
         "properties": {}
+      },
+      "CrmContactsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CrmUploadMultipartBody": {
+        "type": "object",
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "The CSV file to ingest",
+            "format": "binary"
+          },
+          "brandId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Brand the contacts belong to (required)"
+          },
+          "columnMapping": {
+            "type": "string",
+            "description": "Optional JSON column-mapping override"
+          }
+        },
+        "required": [
+          "file",
+          "brandId"
+        ]
       }
     },
     "parameters": {}
@@ -10473,6 +10581,103 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PublicCostPerOutcomeTrendResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Feature not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/public/features/best-model-cost-per-outcome-trend": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Public best-model cost-per-outcome trend",
+        "description": "Public cross-org dated cost-per-outcome timeseries of the single BEST workflow model for a feature and one objective — the drop-in replacement for the pooled cost-per-outcome-trend, coherent with the best-model headline (min cost-per-outcome across workflows). Every point is a single workflow's cost, never pooled across workflows. Proxied to features-service GET /public/stats/best-model-cost-per-outcome-trend. Forwards featureSlug, objective, and optional days/windowOutcomes. Response is producer-owned. No authentication required.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug (required).",
+              "example": "sales-cold-email-outreach"
+            },
+            "required": true,
+            "description": "Feature slug (required).",
+            "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optimization objective — one of websiteVisit / positiveReply / signup / formSubmission / meetingBooked / purchase (required).",
+              "example": "positiveReply"
+            },
+            "required": true,
+            "description": "Optimization objective — one of websiteVisit / positiveReply / signup / formSubmission / meetingBooked / purchase (required).",
+            "name": "objective",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Number of trailing display days to emit (default 30, max 180).",
+              "example": "30"
+            },
+            "required": false,
+            "description": "Number of trailing display days to emit (default 30, max 180).",
+            "name": "days",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Target outcomes per moving-average window (default 100).",
+              "example": "100"
+            },
+            "required": false,
+            "description": "Target outcomes per moving-average window (default 100).",
+            "name": "windowOutcomes",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public best-model cost-per-outcome trend — pass-through from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBestModelCostPerOutcomeTrendResponse"
                 }
               }
             }
@@ -42432,6 +42637,374 @@
           },
           "502": {
             "description": "human-service unreachable / not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/contacts/upload": {
+      "post": {
+        "tags": [
+          "CRM Contacts"
+        ],
+        "summary": "Upload a CSV of contacts (bronze ingest + async silver promotion)",
+        "description": "Proxy to crm-service POST /orgs/contacts/upload. Multipart body (field `file` = CSV, `brandId` required, optional `columnMapping`) is streamed through untransformed — no buffering, no size ceiling. Requires x-user-id. Response shape owned by crm-service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/CrmUploadMultipartBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Upload ingested (crm-service { uploadId, rowCount, status, mappingProvenance })",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrmContactsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "crm-service unreachable / not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
+      }
+    },
+    "/v1/orgs/contacts": {
+      "get": {
+        "tags": [
+          "CRM Contacts"
+        ],
+        "summary": "List silver contacts for a brand",
+        "description": "Proxy to crm-service GET /orgs/contacts. `brandId` query forwarded untransformed. Response shape owned by crm-service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Brand ID (required)"
+            },
+            "required": true,
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Contacts as returned by crm-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrmContactsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "crm-service unreachable / not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/orgs/contacts/uploads": {
+      "get": {
+        "tags": [
+          "CRM Contacts"
+        ],
+        "summary": "List uploads and their status for a brand",
+        "description": "Proxy to crm-service GET /orgs/contacts/uploads. `brandId` query forwarded untransformed. Response shape owned by crm-service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Brand ID (required)"
+            },
+            "required": true,
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Uploads as returned by crm-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrmContactsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "crm-service unreachable / not configured",
             "content": {
               "application/json": {
                 "schema": {

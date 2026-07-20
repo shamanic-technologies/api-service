@@ -196,6 +196,13 @@ const publicCostPerOutcomeTrendQueryParams = z.object({
   windowOutcomes: z.string().optional().openapi({ example: "100" }).describe("Target outcomes per moving-average window (default 100)."),
 });
 
+const publicBestModelCostPerOutcomeTrendQueryParams = z.object({
+  featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
+  objective: z.string().openapi({ example: "positiveReply" }).describe("Optimization objective — one of websiteVisit / positiveReply / signup / formSubmission / meetingBooked / purchase (required)."),
+  days: z.string().optional().openapi({ example: "30" }).describe("Number of trailing display days to emit (default 30, max 180)."),
+  windowOutcomes: z.string().optional().openapi({ example: "100" }).describe("Target outcomes per moving-average window (default 100)."),
+});
+
 const publicWorkflowCostPerOutcomeQueryParams = z.object({
   featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
   objective: z.string().openapi({ example: "positiveReply" }).describe("Optimization objective — one of websiteVisit / positiveReply / signup / formSubmission / meetingBooked / purchase (required)."),
@@ -362,6 +369,23 @@ registry.registerPath({
   request: { query: publicCostPerOutcomeTrendQueryParams },
   responses: {
     200: { description: "Public cost-per-outcome trend — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicCostPerOutcomeTrendResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/features/best-model-cost-per-outcome-trend",
+  tags: ["Features"],
+  summary: "Public best-model cost-per-outcome trend",
+  description:
+    "Public cross-org dated cost-per-outcome timeseries of the single BEST workflow model for a feature and one objective — the drop-in replacement for the pooled cost-per-outcome-trend, coherent with the best-model headline (min cost-per-outcome across workflows). Every point is a single workflow's cost, never pooled across workflows. " +
+    "Proxied to features-service GET /public/stats/best-model-cost-per-outcome-trend. Forwards featureSlug, objective, and optional days/windowOutcomes. Response is producer-owned. No authentication required.",
+  request: { query: publicBestModelCostPerOutcomeTrendQueryParams },
+  responses: {
+    200: { description: "Public best-model cost-per-outcome trend — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicBestModelCostPerOutcomeTrendResponse") } } },
     400: { description: "Bad request from features-service", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
@@ -612,6 +636,12 @@ export const CreateCampaignRequestSchema = z
     maxBudgetTotalUsd: z.union([z.string(), z.number()]).optional().describe("Max total budget in USD"),
     maxLeads: z.number().int().optional().describe("Maximum number of leads to contact"),
     endDate: z.string().optional().describe("Campaign end date"),
+    // Campaign v2 — per-campaign configuration (owned by campaign-service).
+    // Faithful passthrough: types mirror campaign-service's create contract exactly.
+    goal: z.enum(["signup", "meetingBooked", "purchase"]).nullable().optional().describe("Campaign's own optimization goal"),
+    audienceIds: z.array(z.string().min(1)).min(1).nullable().optional().describe("Subset of the brand's audiences this campaign targets"),
+    servicesOffered: z.array(z.string().min(1)).nullable().optional().describe("Services offered by this campaign"),
+    clickDestinationUrl: z.string().min(1).nullable().optional().describe("Campaign's click-destination URL"),
   })
   .refine(
     (d) => d.workflowSlug || d.workflowDynastySlug,
@@ -730,6 +760,11 @@ const CampaignSchema = z
     maxBudgetMonthlyUsd: z.string().nullable().describe("Max monthly budget in USD"),
     maxBudgetTotalUsd: z.string().nullable().describe("Max total budget in USD"),
     maxLeads: z.number().nullable().describe("Maximum number of leads"),
+    // Campaign v2 — per-campaign configuration (owned by campaign-service, forwarded byte-identical).
+    goal: z.enum(["signup", "meetingBooked", "purchase"]).nullable().describe("Campaign's own optimization goal"),
+    audienceIds: z.array(z.string()).nullable().describe("Subset of the brand's audiences this campaign targets"),
+    servicesOffered: z.array(z.string()).nullable().describe("Services offered by this campaign"),
+    clickDestinationUrl: z.string().nullable().describe("Campaign's click-destination URL"),
     startDate: z.string().nullable().describe("Campaign start date"),
     endDate: z.string().nullable().describe("Campaign end date"),
     status: z.string().describe("Campaign status (e.g. 'active', 'stopped')"),
@@ -5661,8 +5696,15 @@ export const ConfigureAutoTopupRequestSchema = z
 
 export const CreateCheckoutSessionRequestSchema = z
   .object({
-    success_url: z.string().url().describe("URL to redirect after successful payment"),
-    cancel_url: z.string().url().describe("URL to redirect on cancellation"),
+    ui_mode: z.literal("embedded").optional().describe(
+      "Set to 'embedded' for Stripe Embedded Checkout (in-app modal). Returns an inline client_secret instead of a redirect URL, so success_url/cancel_url do not apply. Always payment-only (requires topup_amount_cents).",
+    ),
+    success_url: z.string().url().optional().describe(
+      "URL to redirect after successful payment. Required for hosted checkout; omit for embedded (ui_mode='embedded').",
+    ),
+    cancel_url: z.string().url().optional().describe(
+      "URL to redirect on cancellation. Required for hosted checkout; omit for embedded (ui_mode='embedded').",
+    ),
     mode: z.enum(["payment", "setup"]).optional().describe(
       "Stripe checkout mode. Setup mode stores a payment method and does not require a top-up amount.",
     ),
@@ -9533,5 +9575,79 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
     502: { description: "human-service unreachable / not configured", content: errorContent },
+  },
+});
+
+// ── CRM contacts (crm-service proxy) ─────────────────────────────────────────
+// Transparent proxy of crm-service /orgs/contacts/*. Request + response shapes
+// are owned by crm-service; passthrough per CLAUDE.md rules #6/#8.
+const CrmPassthroughResponse = z.object({}).passthrough().openapi("CrmContactsResponse");
+const CrmUploadMultipartBody = z
+  .object({
+    file: z.string().openapi({ type: "string", format: "binary", description: "The CSV file to ingest" }),
+    brandId: z.string().uuid().openapi({ description: "Brand the contacts belong to (required)" }),
+    columnMapping: z
+      .string()
+      .optional()
+      .openapi({ description: "Optional JSON column-mapping override" }),
+  })
+  .openapi("CrmUploadMultipartBody");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/contacts/upload",
+  tags: ["CRM Contacts"],
+  summary: "Upload a CSV of contacts (bronze ingest + async silver promotion)",
+  description:
+    "Proxy to crm-service POST /orgs/contacts/upload. Multipart body (field `file` = CSV, `brandId` required, optional `columnMapping`) is streamed through untransformed — no buffering, no size ceiling. Requires x-user-id. Response shape owned by crm-service.",
+  security: authed,
+  request: { body: { content: { "multipart/form-data": { schema: CrmUploadMultipartBody } } } },
+  responses: {
+    200: { description: "Upload ingested (crm-service { uploadId, rowCount, status, mappingProvenance })", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "crm-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/contacts",
+  tags: ["CRM Contacts"],
+  summary: "List silver contacts for a brand",
+  description:
+    "Proxy to crm-service GET /orgs/contacts. `brandId` query forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().openapi({ description: "Brand ID (required)" }),
+    }),
+  },
+  responses: {
+    200: { description: "Contacts as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "crm-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/contacts/uploads",
+  tags: ["CRM Contacts"],
+  summary: "List uploads and their status for a brand",
+  description:
+    "Proxy to crm-service GET /orgs/contacts/uploads. `brandId` query forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().openapi({ description: "Brand ID (required)" }),
+    }),
+  },
+  responses: {
+    200: { description: "Uploads as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "crm-service unreachable / not configured", content: errorContent },
   },
 });

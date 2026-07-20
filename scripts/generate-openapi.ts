@@ -73,6 +73,7 @@ Authorization: Bearer distrib.usr_abc123...
     { name: "Internal", description: "Platform-level operations (API key auth, no identity headers)" },
     { name: "Platform", description: "Service discovery and platform configuration" },
     { name: "Google CRM", description: "Google CRM (Gmail + People bronze) ingestion" },
+    { name: "CRM Contacts", description: "Client B2C CRM CSV contact ingestion (crm-service proxy)" },
     { name: "Expert Quotes", description: "Expert quote outreach (journalists-quotes-service proxy)" },
     { name: "AI Visibility", description: "AI visibility-score audits (ai-visibility-score-service proxy)" },
     { name: "Invites", description: "Invite-only gate (Wave 0.5): validate codes, query org quota, claim rewards" },

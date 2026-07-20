@@ -219,6 +219,55 @@ describe("billing proxy — passthrough contract", () => {
     expect(mockCallExternalService).not.toHaveBeenCalled();
   });
 
+  it("POST /billing/checkout-sessions forwards embedded checkout (no urls) and returns client_secret", async () => {
+    const upstream = { client_secret: "cs_test_secret", session_id: "cs_test_123" };
+    mockCallExternalService.mockResolvedValue(upstream);
+    const reqBody = { ui_mode: "embedded", topup_amount_cents: 1000 };
+
+    const res = await request(createApp())
+      .post("/billing/checkout-sessions")
+      .send(reqBody);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(upstream);
+    const [service, downstreamPath, opts] = mockCallExternalService.mock.calls[0] as [
+      unknown,
+      string,
+      { method?: string; body?: unknown },
+    ];
+    expect(service).toEqual({ url: "http://mock-billing", apiKey: "k" });
+    expect(downstreamPath).toBe("/v1/checkout-sessions");
+    expect(opts?.method).toBe("POST");
+    // Body forwarded byte-identical — no urls injected, no fields stripped.
+    expect(opts?.body).toEqual(reqBody);
+  });
+
+  it("POST /billing/checkout-sessions rejects embedded checkout without topup amount", async () => {
+    const res = await request(createApp())
+      .post("/billing/checkout-sessions")
+      .send({ ui_mode: "embedded" });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Missing required fields: topup_amount_cents",
+      missingFields: ["topup_amount_cents"],
+    });
+    expect(mockCallExternalService).not.toHaveBeenCalled();
+  });
+
+  it("POST /billing/checkout-sessions still requires urls for hosted checkout", async () => {
+    const res = await request(createApp())
+      .post("/billing/checkout-sessions")
+      .send({ topup_amount_cents: 1000 });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      error: "Missing required fields: success_url, cancel_url",
+      missingFields: ["success_url", "cancel_url"],
+    });
+    expect(mockCallExternalService).not.toHaveBeenCalled();
+  });
+
   it("POST /billing/accounts/wallet_setup forwards body byte-identical to /v1/accounts/wallet_setup", async () => {
     const upstream = {
       wallet_setup_complete: true,
