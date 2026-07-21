@@ -4004,6 +4004,8 @@ const IcpSuggestRequestSchema = z.object({}).passthrough().openapi("IcpSuggestRe
 const IcpSuggestResponseSchema = z.object({}).passthrough().openapi("IcpSuggestResponse");
 const BrandProfileResponseSchema = z.object({}).passthrough().openapi("BrandProfileResponse");
 const BrandProfileRequestSchema = z.object({}).passthrough().openapi("BrandProfileRequest");
+const BrandUserFieldsResponseSchema = z.object({}).passthrough().openapi("BrandUserFieldsResponse");
+const BrandUserFieldsRequestSchema = z.object({}).passthrough().openapi("BrandUserFieldsRequest");
 
 registry.registerPath({
   method: "post",
@@ -4070,6 +4072,51 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
     409: { description: "Conflict (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/user-fields",
+  tags: ["Brand"],
+  summary: "Get a brand's confirmed user-facing fields",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{id}/user-fields. " +
+    "Returns { fields: { <key>: { value, provenance } } } for the 7 user-facing keys " +
+    "(confirmed value wins with provenance `confirmed`, else the most-recent non-expired " +
+    "auto-extract prefill with provenance `suggested`). Response shape is owned by the " +
+    "downstream service — passthrough only. Any query string is forwarded verbatim.",
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "User-facing fields with provenance", content: { "application/json": { schema: BrandUserFieldsResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/user-fields",
+  tags: ["Brand"],
+  summary: "Confirm (upsert) a brand's user-facing fields",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{id}/user-fields. Body { fields: { <key>: value } } " +
+    "upserts confirmed (durable) values; returns the updated view in the same shape as GET. " +
+    "Body + response shapes are owned by the downstream service; its 4xx (incl. 400 on an " +
+    "unknown key) propagate verbatim — passthrough only.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: { content: { "application/json": { schema: BrandUserFieldsRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Updated user-facing fields with provenance", content: { "application/json": { schema: BrandUserFieldsResponseSchema } } },
+    400: { description: "Validation error / unknown key (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
   },
 });

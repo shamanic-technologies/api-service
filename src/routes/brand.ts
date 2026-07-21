@@ -656,4 +656,46 @@ router.post("/brands/:id/brand-profile", authenticate, requireOrg, requireUser, 
   }
 });
 
+/**
+ * GET /v1/brands/:id/user-fields
+ * Proxy to brand-service GET /orgs/brands/:id/user-fields.
+ * Returns the brand's 7 user-facing fields as { fields: { <key>: { value, provenance } } }
+ * (confirmed value wins, else the most-recent non-expired auto-extract prefill). Response
+ * shape is owned by the downstream service — passthrough only. Query string forwarded verbatim.
+ */
+router.get("/brands/:id/user-fields", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/user-fields${rawQuery(req)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Get brand user-fields error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand user-fields" });
+  }
+});
+
+/**
+ * PUT /v1/brands/:id/user-fields
+ * Proxy to brand-service PUT /orgs/brands/:id/user-fields. Upserts confirmed user fields
+ * (body { fields: { <key>: value } }); returns the updated view in the same shape as GET.
+ * Body + response shapes are owned by the downstream service; its 4xx (incl. 400 on an
+ * unknown key) propagate verbatim — passthrough only.
+ */
+router.put("/brands/:id/user-fields", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/user-fields${rawQuery(req)}`,
+      { method: "PUT", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Save brand user-fields error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to save brand user-fields" });
+  }
+});
+
 export default router;
