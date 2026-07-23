@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import {
   callExternalService,
-  streamMultipartUpload,
+  forwardMultipartUpload,
   externalServices,
 } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
@@ -21,11 +21,12 @@ import { buildInternalHeaders } from "../lib/internal-headers.js";
  * `statusCode: 502`, so a deploy that lands before the Railway vars are set
  * degrades to a 502 on these routes only — never a boot-loop.
  *
- * The upload route is a MULTIPART file upload (a CSV, up to ~80K rows). It is
- * streamed straight through via `streamMultipartUpload` — the request body is
- * NOT buffered or parsed, so the multipart boundary stays intact and there is
- * no size ceiling (the global `express.json()` only parses application/json, so
- * a multipart body reaches the handler as an untouched readable stream).
+ * The upload route is a MULTIPART file upload (a CSV, up to ~80K rows). The body
+ * is buffered whole and forwarded via `forwardMultipartUpload` — the multipart
+ * boundary stays intact (raw bytes copied verbatim) and undici sets a
+ * `content-length` matching the buffered bytes. The global `express.json()`
+ * only parses application/json, so the multipart body reaches the handler as an
+ * untouched readable stream.
  *
  * crm-service `/internal/contacts/promote` is deliberately NOT proxied — it is
  * an internal-tier route, not a dashboard path (CLAUDE.md rule #3).
@@ -40,10 +41,10 @@ function fail(res: import("express").Response, error: any, msg: string): void {
 }
 
 // POST /v1/orgs/contacts/upload → crm-service POST /orgs/contacts/upload
-// Multipart CSV upload streamed through untouched.
+// Multipart CSV upload buffered + forwarded untouched.
 router.post("/orgs/contacts/upload", ...authChain, async (req: AuthenticatedRequest, res) => {
   try {
-    const { status, data } = await streamMultipartUpload(externalServices.crm, "/orgs/contacts/upload", {
+    const { status, data } = await forwardMultipartUpload(externalServices.crm, "/orgs/contacts/upload", {
       req,
       headers: buildInternalHeaders(req),
     });
