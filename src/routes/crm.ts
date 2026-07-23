@@ -81,4 +81,19 @@ router.get("/orgs/contacts/uploads", ...authChain, async (req: AuthenticatedRequ
   }
 });
 
+// GET /v1/orgs/contacts/serve-stats → crm-service GET /orgs/contacts/serve-stats
+// (served / remainingSendable / totalSendable counts for a brand)
+router.get("/orgs/contacts/serve-stats", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const brandId = req.query?.brandId;
+    const qs = typeof brandId === "string" && brandId.length > 0 ? `?brandId=${encodeURIComponent(brandId)}` : "";
+    const result = await callExternalService(externalServices.crm, `/orgs/contacts/serve-stats${qs}`, {
+      headers: buildInternalHeaders(req),
+    });
+    res.json(result);
+  } catch (error: any) {
+    fail(res, error, "Contact serve-stats error");
+  }
+});
+
 export default router;
