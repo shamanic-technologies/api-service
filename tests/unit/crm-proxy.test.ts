@@ -91,6 +91,17 @@ describe("/v1/orgs/contacts/* → crm-service", () => {
     expect(calls[0].url).toBe(`${CRM_BASE}/orgs/contacts/uploads?brandId=brand-uuid-1`);
   });
 
+  it("GET /orgs/contacts/serve-stats forwards brandId + identity + api-key headers", async () => {
+    const res = await request(buildApp()).get("/v1/orgs/contacts/serve-stats?brandId=brand-uuid-1");
+    expect(res.status).toBe(200);
+    const call = calls[0];
+    expect(call.url).toBe(`${CRM_BASE}/orgs/contacts/serve-stats?brandId=brand-uuid-1`);
+    expect(call.options.method ?? "GET").toBe("GET");
+    expect(call.options.headers["X-API-Key"]).toBe("crm-test-key");
+    expect(call.options.headers["x-org-id"]).toBe("org_test456");
+    expect(call.options.headers["x-user-id"]).toBe("user_test123");
+  });
+
   it("propagates upstream error status + verbatim body (no mask)", async () => {
     (global.fetch as any).mockImplementationOnce(async (url: string, options: any) => {
       calls.push({ url, options });

@@ -9653,3 +9653,24 @@ registry.registerPath({
     502: { description: "crm-service unreachable / not configured", content: errorContent },
   },
 });
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/contacts/serve-stats",
+  tags: ["CRM Contacts"],
+  summary: "Served vs remaining sendable counts for a brand",
+  description:
+    "Proxy to crm-service GET /orgs/contacts/serve-stats. `brandId` query forwarded untransformed. Response shape (served / remainingSendable / totalSendable) owned by crm-service.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().openapi({ description: "Brand ID (required)" }),
+    }),
+  },
+  responses: {
+    200: { description: "Serve stats as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "crm-service unreachable / not configured", content: errorContent },
+  },
+});
