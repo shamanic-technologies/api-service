@@ -582,17 +582,17 @@ router.get("/brand-transfers/incoming", authenticate, requireOrg, async (req: Au
 });
 
 // ---------------------------------------------------------------------------
-// ICP Suggest + Brand Profile (transparent proxies to brand-service)
+// ICP Suggest (transparent proxy to brand-service)
 //
 // Mirror the sales-economics proxies above exactly: downstream /orgs/brands/:id/X
 // → gateway /v1/brands/:id/X (the gateway strips /orgs per repo convention; the
 // dashboard's api lib calls /v1/brands/:id/...). Auth + identity forwarding are
 // identical (authenticate + requireOrg + requireUser + buildInternalHeaders).
 //
-// These use callExternalServiceWithStatus so the upstream status code (incl. 409
-// on brand-profile conflict) is forwarded verbatim rather than collapsed to 200.
-// Body + response shapes are owned by brand-service — passthrough only, no
-// re-validation. The raw query string is forwarded verbatim.
+// These use callExternalServiceWithStatus so the upstream status code is
+// forwarded verbatim rather than collapsed to 200. Body + response shapes are
+// owned by brand-service — passthrough only, no re-validation. The raw query
+// string is forwarded verbatim.
 // ---------------------------------------------------------------------------
 
 // Forward the incoming request's raw query string verbatim (e.g. ?status=active).
@@ -616,43 +616,6 @@ router.post("/brands/:id/icp/suggest", authenticate, requireOrg, requireUser, as
   } catch (error: any) {
     console.error("[api-service] Suggest ICP error:", error.message);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to suggest ICP" });
-  }
-});
-
-/**
- * GET /v1/brands/:id/brand-profile
- * Proxy to brand-service GET /orgs/brands/:id/brand-profile.
- */
-router.get("/brands/:id/brand-profile", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { status, data } = await callExternalServiceWithStatus(
-      externalServices.brand,
-      `/orgs/brands/${req.params.id}/brand-profile${rawQuery(req)}`,
-      { headers: buildInternalHeaders(req) },
-    );
-    res.status(status).json(data);
-  } catch (error: any) {
-    console.error("[api-service] Get brand profile error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand profile" });
-  }
-});
-
-/**
- * POST /v1/brands/:id/brand-profile
- * Proxy to brand-service POST /orgs/brands/:id/brand-profile. Returns 201 verbatim on
- * create and 409 verbatim on conflict.
- */
-router.post("/brands/:id/brand-profile", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { status, data } = await callExternalServiceWithStatus(
-      externalServices.brand,
-      `/orgs/brands/${req.params.id}/brand-profile${rawQuery(req)}`,
-      { method: "POST", headers: buildInternalHeaders(req), body: req.body },
-    );
-    res.status(status).json(data);
-  } catch (error: any) {
-    console.error("[api-service] Create brand profile error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to create brand profile" });
   }
 });
 

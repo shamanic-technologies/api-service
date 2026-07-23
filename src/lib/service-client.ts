@@ -407,22 +407,33 @@ export async function streamExternalService(
 }
 
 /**
- * Stream a multipart/form-data request body straight through to a downstream
- * service without buffering or parsing it. Used for file uploads (e.g. crm-service
- * CSV ingest, up to ~80K rows) where re-encoding the body would corrupt the
- * multipart boundary and buffering the whole file wastes memory.
+ * Forward a multipart/form-data request body to a downstream service (e.g.
+ * crm-service CSV ingest). The whole body is BUFFERED into memory first, then
+ * sent as a single Buffer so undici derives a `content-length` that exactly
+ * matches the bytes on the wire.
  *
- * The Express `req` (a Node Readable) is passed as the fetch body with
- * `duplex: "half"`; the original `content-type` (INCLUDING the multipart
- * boundary) and `content-length` are forwarded verbatim, plus the identity
- * headers and `X-API-Key`. The upstream JSON response is parsed and returned
- * with its status. On a non-2xx the upstream body is thrown verbatim (CLAUDE.md
- * rule #7) with `statusCode` set, so the route can surface it to the client.
+ * Why buffer instead of stream: passing the raw Express `req` (a Node Readable)
+ * as the fetch body with `duplex: "half"` WHILE forwarding the inbound
+ * `content-length` header makes undici abort with "Request body length does not
+ * match content-length header" the moment the streamed byte count diverges from
+ * the declared length — surfacing to the client as an opaque
+ * `TypeError: fetch failed` (500). Buffering removes the mismatch entirely:
+ * undici sets `content-length` from the Buffer, and the multipart boundary in
+ * the forwarded `content-type` stays intact because the raw bytes are copied
+ * verbatim (no re-encoding, no field stripping — CLAUDE.md rules #1/#4). CSV
+ * uploads are bounded/small, so the memory cost is negligible.
  *
- * No transient-network retry here: the request stream is single-use and can't be
- * replayed once consumed.
+ * The original `content-type` (INCLUDING the multipart boundary) is forwarded
+ * verbatim, plus the identity headers and `X-API-Key`. The inbound
+ * `content-length` is deliberately NOT forwarded — undici recomputes it. The
+ * upstream JSON response is parsed and returned with its status. On a non-2xx
+ * the upstream body is thrown verbatim (CLAUDE.md rule #7) with `statusCode`
+ * set, so the route can surface it to the client.
+ *
+ * No transient-network retry here: the request body is consumed once while
+ * buffering and the semantics of a partial upload retry are undefined.
  */
-export async function streamMultipartUpload<T>(
+export async function forwardMultipartUpload<T>(
   service: { url: string; apiKey: string; dispatcher?: Dispatcher },
   path: string,
   options: { req: import("express").Request; headers?: Record<string, string> },
@@ -430,20 +441,27 @@ export async function streamMultipartUpload<T>(
   const { req, headers = {} } = options;
   const url = `${service.url}${path}`;
 
+  // Buffer the entire multipart body. `express.json()` skips non-JSON content
+  // types, so the multipart stream reaches here untouched and fully readable.
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  const bodyBuffer = Buffer.concat(chunks);
+
   const forwardHeaders: Record<string, string> = {
     "X-API-Key": service.apiKey,
     ...headers,
   };
   const contentType = req.headers["content-type"];
   if (contentType) forwardHeaders["content-type"] = contentType;
-  const contentLength = req.headers["content-length"];
-  if (contentLength) forwardHeaders["content-length"] = contentLength;
+  // Do NOT forward the inbound `content-length` — undici sets it from
+  // `bodyBuffer`, guaranteeing the declared length matches the bytes sent.
 
-  const init: RequestInit & { dispatcher?: Dispatcher; duplex: "half" } = {
+  const init: RequestInit & { dispatcher?: Dispatcher } = {
     method: "POST",
     headers: forwardHeaders,
-    body: req as unknown as ReadableStream,
-    duplex: "half",
+    body: bodyBuffer,
   };
   if (service.dispatcher) init.dispatcher = service.dispatcher;
 
@@ -451,7 +469,7 @@ export async function streamMultipartUpload<T>(
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error(`[streamMultipartUpload] POST ${url} upstream error ${response.status}:`, errorText);
+    console.error(`[forwardMultipartUpload] POST ${url} upstream error ${response.status}:`, errorText);
     const message = errorText || `Service call failed: ${response.status}`;
     const err = new Error(message) as Error & { statusCode: number };
     err.statusCode = response.status;

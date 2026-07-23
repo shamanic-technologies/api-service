@@ -3995,15 +3995,13 @@ registry.registerPath({
 });
 
 // ===================================================================
-// Brand – ICP Suggest + Brand Profile
-// Transparent proxies to brand-service /orgs/brands/:id/{icp/suggest,brand-profile}.
+// Brand – ICP Suggest
+// Transparent proxies to brand-service /orgs/brands/:id/{icp/suggest,user-fields}.
 // Downstream owns body + response shapes — passthrough only. No gateway
-// re-validation, so brand-service's 4xx/409 errors propagate verbatim.
+// re-validation, so brand-service's 4xx errors propagate verbatim.
 // ===================================================================
 const IcpSuggestRequestSchema = z.object({}).passthrough().openapi("IcpSuggestRequest");
 const IcpSuggestResponseSchema = z.object({}).passthrough().openapi("IcpSuggestResponse");
-const BrandProfileResponseSchema = z.object({}).passthrough().openapi("BrandProfileResponse");
-const BrandProfileRequestSchema = z.object({}).passthrough().openapi("BrandProfileRequest");
 const BrandUserFieldsResponseSchema = z.object({}).passthrough().openapi("BrandUserFieldsResponse");
 const BrandUserFieldsRequestSchema = z.object({}).passthrough().openapi("BrandUserFieldsRequest");
 
@@ -4029,49 +4027,6 @@ registry.registerPath({
     402: { description: "Insufficient credits (forwarded verbatim)", content: errorContent },
     404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
     422: { description: "Empty brand profile (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/brands/{id}/brand-profile",
-  tags: ["Brand"],
-  summary: "Get a brand's brand profile",
-  description:
-    "Proxy to brand-service GET /orgs/brands/{id}/brand-profile. " +
-    "Response shape is owned by the downstream service — passthrough only. " +
-    "Any query string is forwarded verbatim.",
-  security: authed,
-  request: { params: BrandIdParam },
-  responses: {
-    200: { description: "Brand profile", content: { "application/json": { schema: BrandProfileResponseSchema } } },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Brand or profile not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/brands/{id}/brand-profile",
-  tags: ["Brand"],
-  summary: "Create a brand profile version",
-  description:
-    "Proxy to brand-service POST /orgs/brands/{id}/brand-profile. " +
-    "Body + response shapes are owned by the downstream service; its 4xx validation " +
-    "errors, 201 created status, and 409 conflict propagate verbatim — passthrough only.",
-  security: authed,
-  request: {
-    params: BrandIdParam,
-    body: { content: { "application/json": { schema: BrandProfileRequestSchema } } },
-  },
-  responses: {
-    201: { description: "Brand profile created", content: { "application/json": { schema: BrandProfileResponseSchema } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
-    409: { description: "Conflict (forwarded verbatim)", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
   },
 });
@@ -9693,6 +9648,27 @@ registry.registerPath({
   },
   responses: {
     200: { description: "Uploads as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "crm-service unreachable / not configured", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/contacts/serve-stats",
+  tags: ["CRM Contacts"],
+  summary: "Served vs remaining sendable counts for a brand",
+  description:
+    "Proxy to crm-service GET /orgs/contacts/serve-stats. `brandId` query forwarded untransformed. Response shape (served / remainingSendable / totalSendable) owned by crm-service.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().uuid().openapi({ description: "Brand ID (required)" }),
+    }),
+  },
+  responses: {
+    200: { description: "Serve stats as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
     502: { description: "crm-service unreachable / not configured", content: errorContent },
