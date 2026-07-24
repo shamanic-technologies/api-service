@@ -626,7 +626,8 @@ export const CreateCampaignRequestSchema = z
     name: z.string().describe("Campaign name"),
     workflowSlug: z.string().min(1).optional().describe("Exact versioned workflow slug (e.g. 'sales-email-cold-outreach-sienna-v3'). Use for pinning to a specific version. Provide this OR workflowDynastySlug."),
     workflowDynastySlug: z.string().min(1).optional().describe("Stable dynasty slug for the workflow lineage (e.g. 'sales-email-cold-outreach-sienna'). Campaign-service resolves to the latest version automatically. Preferred over workflowSlug for dashboard use."),
-    brandUrls: z.array(z.string().min(1)).min(1).describe("Brand website URLs. First URL is the primary brand; additional URLs are secondary brands."),
+    brandUrls: z.array(z.string().min(1)).min(1).optional().describe("Brand website URLs. First URL is the primary brand; additional URLs are secondary brands. Provide this (website path) OR brandIds (no-website path) — exactly one."),
+    brandIds: z.array(z.string().min(1)).min(1).optional().describe("Brand UUIDs of already-created brands (no-website path). First id is the primary brand. When provided, api-service skips the brandUrls→brand upsert and forwards these ids straight to campaign-service. Provide this OR brandUrls — exactly one."),
     featureSlug: z.string().min(1).optional().describe("Exact versioned feature slug. Use for pinning to a specific version. Provide this OR featureDynastySlug."),
     featureDynastySlug: z.string().min(1).optional().describe("Stable dynasty slug for the feature lineage (e.g. 'pr-cold-email-outreach'). Campaign-service resolves to the latest version automatically. Preferred over featureSlug for dashboard use."),
     featureInputs: z.record(z.unknown()).describe("Opaque feature inputs. Validated by key-presence against features-service, never inspected by api-service."),
@@ -650,6 +651,10 @@ export const CreateCampaignRequestSchema = z
   .refine(
     (d) => d.featureSlug || d.featureDynastySlug,
     { message: "Either featureSlug or featureDynastySlug is required", path: ["featureSlug"] },
+  )
+  .refine(
+    (d) => Boolean(d.brandUrls) !== Boolean(d.brandIds),
+    { message: "Provide exactly one of brandUrls (website path) or brandIds (no-website path)", path: ["brandUrls"] },
   )
   .openapi("CreateCampaignRequest", {
     example: {
@@ -3949,6 +3954,113 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Brand not in caller's org (forwarded verbatim)", content: errorContent },
     404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+// ===================================================================
+// Brand – Business Context (proxy to brand-service /orgs/brands/:id/business-context)
+// The free-form business context field-extraction reads from when a brand has no
+// website. Downstream owns body + response shapes — passthrough only.
+// GET returns { content: string | null }; PUT body { content: string }.
+// ===================================================================
+const BusinessContextResponseSchema = z
+  .object({ content: z.string().nullable() })
+  .openapi("BusinessContextResponse");
+const BusinessContextRequestSchema = z
+  .object({
+    content: z.string().openapi({
+      description: "Free-form business context field-extraction reads from for a no-website brand. Large bodies (~up to 1MB) accepted.",
+      example: "Acme Corp is a B2B SaaS selling AI-powered analytics to mid-market retailers...",
+    }),
+  })
+  .openapi("BusinessContextRequest");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/business-context",
+  tags: ["Brand"],
+  summary: "Get a no-website brand's pasted business context",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{id}/business-context. " +
+    "Returns { content: string | null } — the free-form business context used as the " +
+    "field-extraction source for a no-website brand, or null when unset. " +
+    "Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "Business context (or null when unset)", content: { "application/json": { schema: BusinessContextResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/business-context",
+  tags: ["Brand"],
+  summary: "Save a no-website brand's business context",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{id}/business-context. " +
+    "Saves the free-form business context field-extraction reads from when the brand " +
+    "has no website (idempotent on brand_id). Large bodies (~up to 1MB) are accepted. " +
+    "Body { content } + response shapes are owned by the downstream service; its 4xx " +
+    "validation errors propagate verbatim.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: { content: { "application/json": { schema: BusinessContextRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Business context saved", content: { "application/json": { schema: BusinessContextResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+// ===================================================================
+// Brand – Attach Website (proxy to brand-service PATCH /orgs/brands/:id)
+// Attaches a website to an existing no-website brand (sets url + domain).
+// Downstream owns body { url } + response shapes — passthrough only.
+// ===================================================================
+const AttachBrandWebsiteRequestSchema = z
+  .object({
+    url: z.string().openapi({
+      description: "The website URL to attach to the no-website brand. Must be a valid http(s) URL.",
+      example: "https://acme.com",
+    }),
+  })
+  .openapi("AttachBrandWebsiteRequest");
+const AttachBrandWebsiteResponseSchema = z
+  .object({})
+  .passthrough()
+  .openapi("AttachBrandWebsiteResponse");
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/brands/{id}",
+  tags: ["Brand"],
+  summary: "Attach a website to an existing no-website brand",
+  description:
+    "Proxy to brand-service PATCH /orgs/brands/{id}. " +
+    "Attaches a website to an existing no-website brand (sets brands.url + domain); the " +
+    "next post-cache-expiry field extraction re-sources from the site automatically. " +
+    "Body { url } + response shape ({ brandId, domain, name, url }) are owned by the " +
+    "downstream service; its 4xx validation errors and 409 domain-conflict propagate verbatim.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: { content: { "application/json": { schema: AttachBrandWebsiteRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Website attached", content: { "application/json": { schema: AttachBrandWebsiteResponseSchema } } },
+    400: { description: "Invalid URL (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    409: { description: "Domain already in use by another brand (forwarded verbatim)", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
   },
 });
