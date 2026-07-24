@@ -67,7 +67,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       });
     }
 
-    const { featureSlug, featureDynastySlug, featureInputs, brandUrls } = parsed.data;
+    const { featureSlug, featureDynastySlug, featureInputs, brandUrls, brandIds: providedBrandIds } = parsed.data;
     // Prefer dynasty slug for features-service lookups (accepts both)
     const featureLookupSlug = featureDynastySlug ?? featureSlug!;
 
@@ -95,30 +95,39 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
       inputCount: Object.keys(featureInputs).length,
     });
 
-    // 3. Upsert brands to get brandIds (resolve all URLs in parallel)
-    console.log("[api-service] POST /v1/campaigns — upserting brands", { brandUrls, orgId: req.orgId });
-    const brandResults = await Promise.all(
-      brandUrls.map((url) =>
-        callExternalService<{ brandId: string }>(
-          externalServices.brand,
-          "/orgs/brands",
-          {
-            method: "POST",
-            headers: buildInternalHeaders(req),
-            body: {
-              orgId: req.orgId,
-              url,
-              userId: req.userId,
-            },
-          }
+    // 3. Resolve brandIds.
+    // No-website path: the brand is already created (by name), so brandIds arrive
+    // in the body — forward them verbatim, skip the brandUrls→brand upsert entirely.
+    // Website path: upsert each URL to brand-service to resolve its brandId.
+    let brandIds: string[];
+    if (providedBrandIds) {
+      brandIds = providedBrandIds;
+      console.log("[api-service] POST /v1/campaigns — using provided brandIds (no-website path)", { brandIds });
+    } else {
+      console.log("[api-service] POST /v1/campaigns — upserting brands", { brandUrls, orgId: req.orgId });
+      const brandResults = await Promise.all(
+        brandUrls!.map((url) =>
+          callExternalService<{ brandId: string }>(
+            externalServices.brand,
+            "/orgs/brands",
+            {
+              method: "POST",
+              headers: buildInternalHeaders(req),
+              body: {
+                orgId: req.orgId,
+                url,
+                userId: req.userId,
+              },
+            }
+          )
         )
-      )
-    );
-    const brandIds = brandResults.map((r) => r.brandId);
-    console.log("[api-service] POST /v1/campaigns — brands upserted", { brandIds });
+      );
+      brandIds = brandResults.map((r) => r.brandId);
+      console.log("[api-service] POST /v1/campaigns — brands upserted", { brandIds });
+    }
 
     // 4. Forward to campaign-service (featureInputs forwarded as-is, never inspected)
-    const { workflowSlug, workflowDynastySlug, brandUrls: _brandUrls, ...restData } = parsed.data;
+    const { workflowSlug, workflowDynastySlug, brandUrls: _brandUrls, brandIds: _brandIds, ...restData } = parsed.data;
     // Use dynasty slug or exact slug for campaign type derivation
     const workflowSlugForType = workflowDynastySlug ?? workflowSlug!;
     const campaignType = deriveCampaignType(workflowSlugForType);

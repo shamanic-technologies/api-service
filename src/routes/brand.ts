@@ -414,6 +414,78 @@ router.put("/brands/:id/click-destination", authenticate, requireOrg, requireUse
 });
 
 /**
+ * GET /v1/brands/:id/business-context
+ * Proxy to brand-service GET /orgs/brands/:id/business-context.
+ * Returns the pasted business context for a no-website brand (the alternative
+ * field-extraction source), or { content: null } when unset. Response shape is
+ * owned by the downstream service — passthrough only.
+ */
+router.get("/brands/:id/business-context", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/business-context`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Get business context error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get business context" });
+  }
+});
+
+/**
+ * PUT /v1/brands/:id/business-context
+ * Proxy to brand-service PUT /orgs/brands/:id/business-context.
+ * Saves the free-form business context field-extraction reads from when the brand
+ * has no website. Large bodies (~up to 1MB) are accepted (the global JSON cap is
+ * 10mb). Body + response shapes are owned by the downstream service; its 4xx
+ * validation errors propagate verbatim — passthrough only.
+ */
+router.put("/brands/:id/business-context", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/business-context`,
+      {
+        method: "PUT",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+      },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Save business context error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to save business context" });
+  }
+});
+
+/**
+ * PATCH /v1/brands/:id
+ * Proxy to brand-service PATCH /orgs/brands/:id.
+ * Attaches a website to an existing no-website brand (sets brands.url + domain).
+ * Body { url } + response shapes are owned by the downstream service; its 4xx
+ * validation errors and 409 domain-conflict propagate verbatim — passthrough only.
+ */
+router.patch("/brands/:id", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}`,
+      {
+        method: "PATCH",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+      },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Set brand website error:", error.message);
+    res.status(error.statusCode || 500).json({ error: error.message || "Failed to set brand website" });
+  }
+});
+
+/**
  * GET /v1/brands/:id/conversion-token
  * Proxy to lead-service GET /orgs/brands/:id/conversion-token.
  * Returns the brand's per-brand conversion-tracking publishable token + ingest URL
