@@ -5045,12 +5045,14 @@
           "url": {
             "type": "string",
             "minLength": 1,
-            "description": "Brand website URL"
+            "description": "Brand website URL (omit for a no-website brand)"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Brand name — identity source when no URL is provided"
           }
-        },
-        "required": [
-          "url"
-        ]
+        }
       },
       "BrandRunsResponse": {
         "type": "object",
