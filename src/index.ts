@@ -90,7 +90,10 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
+// Raised from the 100kb express default: no-website brands post a large
+// free-form business-context body (~1MB / ~300k chars, "5 PDFs of 20 pages")
+// that brand-service stores + uses as the field-extraction source.
+app.use(express.json({ limit: "10mb" }));
 
 // OpenAPI spec endpoint
 const openapiPath = join(__dirname, "..", "openapi.json");

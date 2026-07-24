@@ -3440,10 +3440,16 @@ registry.registerPath({
 // ===================================================================
 
 
+// Passthrough — brand-service owns this shape. A brand may have NO website:
+// callers send `name` (identity source) instead of `url`, and may include a
+// large free-form business-context field. Both are forwarded as-is; the
+// route handler enforces "at least one of url/name" (fail loud).
 export const BrandUpsertRequestSchema = z
   .object({
-    url: z.string().min(1).describe("Brand website URL"),
+    url: z.string().min(1).optional().describe("Brand website URL (omit for a no-website brand)"),
+    name: z.string().min(1).optional().describe("Brand name — identity source when no URL is provided"),
   })
+  .passthrough()
   .openapi("BrandUpsertRequest");
 
 export const IcpSuggestionRequestSchema = z

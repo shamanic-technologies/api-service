@@ -27,7 +27,8 @@ import brandRouter from "../../src/routes/brand.js";
 
 function buildApp() {
   const app = express();
-  app.use(express.json());
+  // Mirror src/index.ts: raised limit so a large business-context body is accepted.
+  app.use(express.json({ limit: "10mb" }));
   app.use("/v1", brandRouter);
   return app;
 }
@@ -68,7 +69,35 @@ describe("POST /v1/brands – upsert brand", () => {
     });
   });
 
-  it("should return 400 when url is missing", async () => {
+  it("should create a no-website brand from name only and forward name, orgId, userId", async () => {
+    const res = await request(app)
+      .post("/v1/brands")
+      .send({ name: "Acme Co" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ brandId: "brand-abc" });
+    expect(capturedBody).toEqual({
+      name: "Acme Co",
+      orgId: "org_test456",
+      userId: "user_test123",
+    });
+  });
+
+  it("should forward a large free-form business-context field verbatim (passthrough)", async () => {
+    const businessContext = "x".repeat(300_000);
+    await request(app)
+      .post("/v1/brands")
+      .send({ name: "Acme Co", businessContext });
+
+    expect(capturedBody).toEqual({
+      name: "Acme Co",
+      businessContext,
+      orgId: "org_test456",
+      userId: "user_test123",
+    });
+  });
+
+  it("should return 400 when neither url nor name is provided", async () => {
     const res = await request(app)
       .post("/v1/brands")
       .send({});
