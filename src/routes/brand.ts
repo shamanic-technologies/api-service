@@ -17,7 +17,13 @@ router.post("/brands", authenticate, requireOrg, requireUser, async (req: Authen
     if (!parsed.success) {
       return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
     }
+    // A brand needs an identity: a website URL, or a name for the no-website case.
+    if (!parsed.data.url && !parsed.data.name) {
+      return res.status(400).json({ error: "Invalid request", details: "Either url or name is required" });
+    }
 
+    // Pure passthrough: forward the body verbatim (url and/or name, plus any
+    // free-form business-context field) with the resolved org/user identity.
     const result = await callExternalService<{ brandId: string }>(
       externalServices.brand,
       "/orgs/brands",
@@ -25,7 +31,7 @@ router.post("/brands", authenticate, requireOrg, requireUser, async (req: Authen
         method: "POST",
         headers: buildInternalHeaders(req),
         body: {
-          url: parsed.data.url,
+          ...parsed.data,
           orgId: req.orgId!,
           userId: req.userId!,
         },
