@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
+import { respondUpstreamError } from "../lib/upstream-error.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { BrandUpsertRequestSchema, IcpSuggestionRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
@@ -41,7 +42,7 @@ router.post("/brands", authenticate, requireOrg, requireUser, async (req: Authen
     res.json(result);
   } catch (error: any) {
     console.error("Brand upsert error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to upsert brand" });
+    respondUpstreamError(res, error, "Failed to upsert brand");
   }
 });
 
@@ -61,7 +62,7 @@ router.get("/brands", authenticate, requireOrg, requireUser, async (req: Authent
     res.json(result);
   } catch (error: any) {
     console.error("Get brands error:", error);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brands" });
+    respondUpstreamError(res, error, "Failed to get brands");
   }
 });
 
@@ -85,7 +86,7 @@ router.get("/brands/by-ids", authenticate, async (req: AuthenticatedRequest, res
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Get brands batch error:", error);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brands batch" });
+    respondUpstreamError(res, error, "Failed to get brands batch");
   }
 });
 
@@ -103,7 +104,7 @@ router.get("/brands/:id", authenticate, async (req: AuthenticatedRequest, res) =
     res.json(result);
   } catch (error: any) {
     console.error("Get brand by id error:", error);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand" });
+    respondUpstreamError(res, error, "Failed to get brand");
   }
 });
 
@@ -141,7 +142,7 @@ router.post("/brands/extract-fields", authenticate, requireOrg, requireUser, asy
         error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
       });
     }
-    res.status(error.statusCode || 500).json({ error: msg });
+    respondUpstreamError(res, error, msg);
   }
 });
 
@@ -159,7 +160,7 @@ router.get("/brands/:id/extracted-fields", authenticate, requireOrg, requireUser
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Get extracted fields error:", error);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get extracted fields" });
+    respondUpstreamError(res, error, "Failed to get extracted fields");
   }
 });
 
@@ -197,7 +198,7 @@ router.post("/brands/extract-images", authenticate, requireOrg, requireUser, asy
         error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
       });
     }
-    res.status(error.statusCode || 500).json({ error: msg });
+    respondUpstreamError(res, error, msg);
   }
 });
 
@@ -218,7 +219,7 @@ router.get("/brands/:id/extracted-images", authenticate, requireOrg, requireUser
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Get extracted images error:", error);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get extracted images" });
+    respondUpstreamError(res, error, "Failed to get extracted images");
   }
 });
 
@@ -256,7 +257,7 @@ router.post("/brand/icp-suggestion", authenticate, requireOrg, requireUser, asyn
         error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
       });
     }
-    res.status(error.statusCode || 500).json({ error: msg });
+    respondUpstreamError(res, error, msg);
   }
 });
 
@@ -314,7 +315,7 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
     res.json({ runs: enriched });
   } catch (error: any) {
     console.error("Get brand runs error:", error);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand runs" });
+    respondUpstreamError(res, error, "Failed to get brand runs");
   }
 });
 
@@ -338,7 +339,7 @@ router.get("/brands/:id/sales-economics-effective", authenticate, requireOrg, re
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Get sales economics effective error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get effective sales economics" });
+    respondUpstreamError(res, error, "Failed to get effective sales economics");
   }
 });
 
@@ -359,7 +360,7 @@ router.get("/brands/:id/sales-economics", authenticate, requireOrg, requireUser,
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Get sales economics error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get sales economics" });
+    respondUpstreamError(res, error, "Failed to get sales economics");
   }
 });
 
@@ -384,7 +385,7 @@ router.put("/brands/:id/sales-economics", authenticate, requireOrg, requireUser,
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Save sales economics error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to save sales economics" });
+    respondUpstreamError(res, error, "Failed to save sales economics");
   }
 });
 
@@ -409,7 +410,7 @@ router.put("/brands/:id/click-destination", authenticate, requireOrg, requireUse
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Save click destination error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to save click destination" });
+    respondUpstreamError(res, error, "Failed to save click destination");
   }
 });
 
@@ -430,7 +431,7 @@ router.get("/brands/:id/business-context", authenticate, requireOrg, requireUser
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Get business context error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get business context" });
+    respondUpstreamError(res, error, "Failed to get business context");
   }
 });
 
@@ -456,7 +457,7 @@ router.put("/brands/:id/business-context", authenticate, requireOrg, requireUser
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Save business context error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to save business context" });
+    respondUpstreamError(res, error, "Failed to save business context");
   }
 });
 
@@ -481,7 +482,7 @@ router.patch("/brands/:id", authenticate, requireOrg, requireUser, async (req: A
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Set brand website error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to set brand website" });
+    respondUpstreamError(res, error, "Failed to set brand website");
   }
 });
 
@@ -502,7 +503,7 @@ router.get("/brands/:id/conversion-token", authenticate, requireOrg, requireUser
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Get conversion token error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get conversion token" });
+    respondUpstreamError(res, error, "Failed to get conversion token");
   }
 });
 
@@ -523,7 +524,7 @@ router.post("/brands/:id/conversion-token/rotate", authenticate, requireOrg, req
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Rotate conversion token error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to rotate conversion token" });
+    respondUpstreamError(res, error, "Failed to rotate conversion token");
   }
 });
 
@@ -588,7 +589,7 @@ router.post("/brands/:id/transfer", authenticate, requireOrg, requireUser, async
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Brand transfer error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to transfer brand" });
+    respondUpstreamError(res, error, "Failed to transfer brand");
   }
 });
 
@@ -609,7 +610,7 @@ router.get("/brands/:id/transfers", authenticate, requireOrg, async (req: Authen
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Brand transfer history error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get transfer history" });
+    respondUpstreamError(res, error, "Failed to get transfer history");
   }
 });
 
@@ -632,7 +633,7 @@ router.get("/brand-transfers/outgoing", authenticate, requireOrg, async (req: Au
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Outgoing transfer history error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get outgoing transfers" });
+    respondUpstreamError(res, error, "Failed to get outgoing transfers");
   }
 });
 
@@ -655,7 +656,7 @@ router.get("/brand-transfers/incoming", authenticate, requireOrg, async (req: Au
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] Incoming transfer history error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get incoming transfers" });
+    respondUpstreamError(res, error, "Failed to get incoming transfers");
   }
 });
 
@@ -693,7 +694,7 @@ router.post("/brands/:id/icp/suggest", authenticate, requireOrg, requireUser, as
     res.status(status).json(data);
   } catch (error: any) {
     console.error("[api-service] Suggest ICP error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to suggest ICP" });
+    respondUpstreamError(res, error, "Failed to suggest ICP");
   }
 });
 
@@ -714,7 +715,7 @@ router.get("/brands/:id/user-fields", authenticate, requireOrg, requireUser, asy
     res.status(status).json(data);
   } catch (error: any) {
     console.error("[api-service] Get brand user-fields error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand user-fields" });
+    respondUpstreamError(res, error, "Failed to get brand user-fields");
   }
 });
 
@@ -735,7 +736,7 @@ router.put("/brands/:id/user-fields", authenticate, requireOrg, requireUser, asy
     res.status(status).json(data);
   } catch (error: any) {
     console.error("[api-service] Save brand user-fields error:", error.message);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to save brand user-fields" });
+    respondUpstreamError(res, error, "Failed to save brand user-fields");
   }
 });
 

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticatePlatform, requireStaff, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
+import { respondUpstreamError } from "../lib/upstream-error.js";
 
 const router = Router();
 
@@ -21,7 +22,7 @@ router.get("/admin/brands", authenticatePlatform, requireStaff, async (req: Auth
     );
     res.json(result);
   } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to list brands" });
+    respondUpstreamError(res, error, "Failed to list brands");
   }
 });
 

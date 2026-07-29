@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
+import { respondUpstreamError } from "../lib/upstream-error.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
@@ -36,7 +37,7 @@ router.get(
       res.json(result);
     } catch (error: any) {
       console.error("[api-service] Get brand pause error:", error, { brandId: req.params.brandId, orgId: req.orgId });
-      res.status(error.statusCode || 500).json({ error: error.message || "Failed to get brand pause state" });
+      respondUpstreamError(res, error, "Failed to get brand pause state");
     }
   },
 );
@@ -65,7 +66,7 @@ router.patch(
       res.json(result);
     } catch (error: any) {
       console.error("[api-service] Update brand pause error:", error, { brandId: req.params.brandId, orgId: req.orgId });
-      res.status(error.statusCode || 500).json({ error: error.message || "Failed to update brand pause state" });
+      respondUpstreamError(res, error, "Failed to update brand pause state");
     }
   },
 );

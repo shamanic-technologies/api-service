@@ -183,13 +183,18 @@ describe("PATCH /v1/brands/:id (attach website)", () => {
   });
 
   it("propagates an upstream 409 (domain conflict) verbatim", async () => {
+    const upstreamBody = { error: "Domain already in use", code: "BRAND_DOMAIN_CONFLICT" };
     global.fetch = vi.fn().mockImplementation(async () => ({
       ok: false,
       status: 409,
-      text: () => Promise.resolve('{"error":"Domain already in use","code":"BRAND_DOMAIN_CONFLICT"}'),
+      text: () => Promise.resolve(JSON.stringify(upstreamBody)),
     }));
     const res = await request(app).patch(`/v1/brands/${BRAND_ID}`).send({ url: "https://taken.com" });
     expect(res.status).toBe(409);
+    // Body must reach the caller field-for-field: the machine-readable `code` is
+    // what a consumer branches on to show the right copy, and the message must NOT
+    // be the whole JSON body stringified into `error`.
+    expect(res.body).toEqual(upstreamBody);
   });
 
   it("propagates an upstream 400 (invalid url) verbatim", async () => {
