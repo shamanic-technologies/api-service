@@ -104,10 +104,13 @@ describe("Features proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should forward groupBy, brandId, campaignId, workflowSlug, workflowDynastySlug on GET /features/:slug/stats", () => {
-    expect(content).toContain('"campaignId"');
-    expect(content).toContain('"workflowSlug"');
-    expect(content).toContain('"workflowDynastySlug"');
+  it("should forward ALL query params transparently on GET /features/:slug/stats", () => {
+    const statsIdx = content.indexOf('"/features/:slug/stats"');
+    const statsBlock = content.slice(statsIdx, statsIdx + 700);
+    // Passthrough: no per-key whitelist — forwards every query param (groupBy, brandId,
+    // campaignId, workflowSlug, workflowDynastySlug, pricing, …).
+    expect(statsBlock).toContain("Object.entries(req.query)");
+    expect(statsBlock).toContain("/stats");
   });
 
   it("should have GET /features/:slug/revenue with auth + requireOrg + requireUser", () => {
@@ -163,12 +166,12 @@ describe("Features proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should forward brandId, days, and timezone on GET /features/:slug/pipeline-activity", () => {
+  it("should forward ALL query params transparently on GET /features/:slug/pipeline-activity", () => {
     const pipelineActivityIdx = content.indexOf('"/features/:slug/pipeline-activity"');
-    const pipelineActivityBlock = content.slice(pipelineActivityIdx, pipelineActivityIdx + 500);
-    expect(pipelineActivityBlock).toContain('"brandId"');
-    expect(pipelineActivityBlock).toContain('"days"');
-    expect(pipelineActivityBlock).toContain('"timezone"');
+    const pipelineActivityBlock = content.slice(pipelineActivityIdx, pipelineActivityIdx + 700);
+    // Passthrough: no per-key whitelist — forwards every query param (brandId, days, timezone,
+    // pricing, …) so new downstream params need no api-service edit.
+    expect(pipelineActivityBlock).toContain("Object.entries(req.query)");
     expect(pipelineActivityBlock).toContain("/pipeline-activity");
   });
 
