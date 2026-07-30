@@ -32,13 +32,15 @@ describe("Billing proxy routes", () => {
   });
 
   it("should NOT reference removed endpoints", () => {
-    // Removed in billing-service PR #112. Build via template literal so the
-    // literal strings don't show up in `grep` AC sweeps.
+    // Removed in billing-service PR #112 (and #303 for the wallet-setup /
+    // first-load-match path). Build via template literal so the literal
+    // strings don't show up in `grep` AC sweeps.
     const dead = [
       "transactions",
       "credits/deduct",
       "accounts/auto-reload",
       "accounts/mode",
+      "accounts/wallet_setup",
     ];
     for (const seg of dead) {
       expect(content).not.toContain(`/billing/${seg}`);
@@ -50,19 +52,15 @@ describe("Billing proxy routes", () => {
     expect(content).toContain('"/billing/checkout-sessions"');
   });
 
-  it("should have POST /billing/accounts/wallet_setup endpoint", () => {
-    expect(content).toContain('"/billing/accounts/wallet_setup"');
-  });
-
   it("should have POST /billing/portal-sessions endpoint", () => {
     expect(content).toContain('"/billing/portal-sessions"');
   });
 
   it("should use authenticate and requireOrg on all authenticated endpoints", () => {
-    // 10 routes + 1 import = 11
+    // 9 routes + 1 import = 10
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    expect(authMatches!.length).toBe(11);
+    expect(authMatches!.length).toBe(10);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints (no x-key-source)", () => {
@@ -70,7 +68,7 @@ describe("Billing proxy routes", () => {
     expect(content).not.toContain('"x-key-source"');
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(10);
+    expect(headerMatches!.length).toBe(9);
   });
 
   it("should have GET /billing/payments endpoint sourced from stripe-service", () => {
@@ -110,7 +108,6 @@ describe("Billing proxy routes", () => {
     expect(content).toContain('"/v1/accounts/balance"');
     expect(content).toContain('"/v1/accounts/auto_topup"');
     expect(content).toContain('"/v1/checkout-sessions"');
-    expect(content).toContain('"/v1/accounts/wallet_setup"');
     expect(content).toContain('"/v1/portal-sessions"');
   });
 });
@@ -136,7 +133,6 @@ describe("Billing OpenAPI schemas", () => {
     expect(schemaContent).toContain('path: "/v1/billing/accounts/balance"');
     expect(schemaContent).toContain('path: "/v1/billing/accounts/auto_topup"');
     expect(schemaContent).toContain('path: "/v1/billing/checkout-sessions"');
-    expect(schemaContent).toContain('path: "/v1/billing/accounts/wallet_setup"');
     expect(schemaContent).toContain('path: "/v1/billing/portal-sessions"');
   });
 
@@ -146,10 +142,15 @@ describe("Billing OpenAPI schemas", () => {
       "credits/deduct",
       "accounts/auto-reload",
       "accounts/mode",
+      "accounts/wallet_setup",
     ];
     for (const seg of dead) {
       expect(schemaContent).not.toContain(`path: "/v1/billing/${seg}"`);
     }
+    // billing-service PR #303 deleted the whole first-load-match flow.
+    expect(schemaContent).not.toContain("WalletSetupRequestSchema");
+    expect(schemaContent).not.toContain("WalletSetupResponse");
+    expect(schemaContent).not.toContain("initial_load_amount_cents");
   });
 
   it("should use Billing tag", () => {
@@ -178,7 +179,6 @@ describe("Billing OpenAPI schemas", () => {
   it("should define request schemas with new names", () => {
     expect(schemaContent).toContain("ConfigureAutoTopupRequestSchema");
     expect(schemaContent).toContain("CreateCheckoutSessionRequestSchema");
-    expect(schemaContent).toContain("WalletSetupRequestSchema");
     expect(schemaContent).not.toContain("ConfigureAutoReloadRequestSchema");
     expect(schemaContent).not.toContain("SwitchBillingModeRequestSchema");
     expect(schemaContent).not.toContain("DeductCreditsRequestSchema");
@@ -187,7 +187,6 @@ describe("Billing OpenAPI schemas", () => {
   it("should use topup_amount_cents in request schemas (not reload_amount_cents)", () => {
     expect(schemaContent).toContain("topup_amount_cents");
     expect(schemaContent).toContain("topup_threshold_cents");
-    expect(schemaContent).toContain("initial_load_amount_cents");
     expect(schemaContent).not.toContain("reload_amount_cents");
     expect(schemaContent).not.toContain("reload_threshold_cents");
   });
@@ -205,7 +204,6 @@ describe("Billing OpenAPI schemas", () => {
     expect(schemaContent).toContain('z.object({}).passthrough().openapi("ConfigureAutoTopupResponse")');
     expect(schemaContent).toContain('z.object({}).passthrough().openapi("DisableAutoTopupResponse")');
     expect(schemaContent).toContain('z.object({}).passthrough().openapi("BillingCheckoutResponse")');
-    expect(schemaContent).toContain('z.object({}).passthrough().openapi("WalletSetupResponse")');
     expect(schemaContent).toContain('z.object({}).passthrough().openapi("BillingPortalSessionResponse")');
     expect(schemaContent).toContain('z.object({}).passthrough().openapi("PublicBillingStatsResponse")');
     expect(schemaContent).not.toContain("TransactionListResponse");
