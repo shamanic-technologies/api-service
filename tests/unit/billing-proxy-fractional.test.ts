@@ -268,37 +268,16 @@ describe("billing proxy — passthrough contract", () => {
     expect(mockCallExternalService).not.toHaveBeenCalled();
   });
 
-  it("POST /billing/accounts/wallet_setup forwards body byte-identical to /v1/accounts/wallet_setup", async () => {
-    const upstream = {
-      wallet_setup_complete: true,
-      checkout_required: false,
-    };
-    mockCallExternalService.mockResolvedValue(upstream);
-    const reqBody = {
-      initial_load_amount_cents: 50000,
-      topup_amount_cents: 25000,
-      topup_threshold_cents: 10000,
-    };
-
+  // billing-service PR #303 deleted POST /v1/accounts/wallet_setup along with the
+  // whole first-load-match flow, so the gateway must 404 locally rather than
+  // round-trip to a route that no longer exists.
+  it("POST /billing/accounts/wallet_setup 404s at the gateway (route removed)", async () => {
     const res = await request(createApp())
       .post("/billing/accounts/wallet_setup")
-      .send(reqBody);
+      .send({ initial_load_amount_cents: 50000 });
 
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual(upstream);
-    const [service, downstreamPath, opts] = mockCallExternalService.mock.calls[0] as [
-      unknown,
-      string,
-      { method?: string; body?: unknown; headers?: Record<string, string> },
-    ];
-    expect(service).toEqual({ url: "http://mock-billing", apiKey: "k" });
-    expect(downstreamPath).toBe("/v1/accounts/wallet_setup");
-    expect(opts?.method).toBe("POST");
-    expect(opts?.body).toEqual(reqBody);
-    expect(opts?.headers).toMatchObject({
-      "x-org-id": "org-test",
-      "x-user-id": "user-test",
-    });
+    expect(res.status).toBe(404);
+    expect(mockCallExternalService).not.toHaveBeenCalled();
   });
 
   it("PATCH /brands/:brandId/daily-budget forwards body and identity headers", async () => {

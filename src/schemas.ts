@@ -5834,20 +5834,6 @@ export const CreateCheckoutSessionRequestSchema = z
   })
   .openapi("CreateCheckoutSessionRequest");
 
-export const WalletSetupRequestSchema = z
-  .object({
-    initial_load_amount_cents: inboundCents.describe(
-      "Initial wallet load amount in cents (integer or decimal string)",
-    ),
-    topup_amount_cents: inboundCents.describe(
-      "Auto-topup amount in cents (integer or decimal string)",
-    ),
-    topup_threshold_cents: inboundCents.describe(
-      "Balance threshold in cents that triggers auto-topup (integer or decimal string)",
-    ),
-  })
-  .openapi("WalletSetupRequest");
-
 export const CreatePortalSessionRequestSchema = z
   .object({
     return_url: z.string().url().describe("URL to redirect after the portal session ends"),
@@ -6302,35 +6288,6 @@ registry.registerPath({
         },
       },
     },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/billing/accounts/wallet_setup",
-  tags: ["Billing"],
-  summary: "Configure wallet setup",
-  description: "Configure first-campaign wallet funding and process the initial load. Pass-through from billing-service.",
-  security: authed,
-  request: {
-    body: {
-      content: {
-        "application/json": { schema: WalletSetupRequestSchema },
-      },
-    },
-  },
-  responses: {
-    200: {
-      description: "Wallet setup configured — pass-through from billing-service",
-      content: {
-        "application/json": {
-          schema: z.object({}).passthrough().openapi("WalletSetupResponse"),
-        },
-      },
-    },
-    400: { description: "Invalid request", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },

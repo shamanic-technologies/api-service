@@ -118,20 +118,6 @@ router.post("/billing/checkout-sessions", authenticate, requireOrg, async (req: 
   }
 });
 
-// POST /v1/billing/accounts/wallet_setup — configure first-campaign wallet funding
-router.post("/billing/accounts/wallet_setup", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.billing,
-      "/v1/accounts/wallet_setup",
-      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to configure wallet setup" });
-  }
-});
-
 // POST /v1/billing/portal-sessions — create Stripe billing portal session
 router.post("/billing/portal-sessions", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
