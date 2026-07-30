@@ -409,23 +409,129 @@ describe("GET /v1/features/:slug/pipeline-activity", () => {
     });
   });
 
-  it("does not forward unrelated query params to pipeline-activity", async () => {
+  it("forwards the pricing selector to pipeline-activity", async () => {
     const app = createApp();
     mockCallExternalService.mockResolvedValue(MOCK_PIPELINE_ACTIVITY);
 
-    await request(app).get("/v1/features/sales-cold-email-outreach/pipeline-activity?brandId=brand-uuid-123&days=7&timezone=America/New_York&campaignId=campaign-uuid-456&groupBy=workflowSlug");
+    await request(app).get("/v1/features/sales-cold-email-outreach/pipeline-activity?brandId=brand-uuid-123&days=7&timezone=America/New_York&pricing=net");
 
     const call = mockCallExternalService.mock.calls.find(
       (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/pipeline-activity"),
     );
     expect(call).toBeDefined();
-    const url = call![1] as string;
-    const params = new URLSearchParams(url.split("?")[1]);
+    const params = new URLSearchParams((call![1] as string).split("?")[1]);
+    expect(params.get("pricing")).toBe("net");
+  });
+
+  it("forwards ANY query param to pipeline-activity (no whitelist)", async () => {
+    const app = createApp();
+    mockCallExternalService.mockResolvedValue(MOCK_PIPELINE_ACTIVITY);
+
+    await request(app).get("/v1/features/sales-cold-email-outreach/pipeline-activity?brandId=brand-uuid-123&days=7&timezone=America/New_York&campaignId=campaign-uuid-456&groupBy=workflowSlug&futureDownstreamParam=abc");
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/pipeline-activity"),
+    );
+    expect(call).toBeDefined();
+    const params = new URLSearchParams((call![1] as string).split("?")[1]);
     expect(params.get("brandId")).toBe("brand-uuid-123");
     expect(params.get("days")).toBe("7");
     expect(params.get("timezone")).toBe("America/New_York");
-    expect(params.has("campaignId")).toBe(false);
-    expect(params.has("groupBy")).toBe(false);
+    expect(params.get("campaignId")).toBe("campaign-uuid-456");
+    expect(params.get("groupBy")).toBe("workflowSlug");
+    expect(params.get("futureDownstreamParam")).toBe("abc");
+  });
+
+  it("sends no query string to pipeline-activity when the caller sends none", async () => {
+    const app = createApp();
+    mockCallExternalService.mockResolvedValue(MOCK_PIPELINE_ACTIVITY);
+
+    await request(app).get("/v1/features/sales-cold-email-outreach/pipeline-activity");
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/pipeline-activity"),
+    );
+    expect(call).toBeDefined();
+    expect(call![1]).toBe("/features/sales-cold-email-outreach/pipeline-activity");
+  });
+});
+
+const MOCK_FEATURE_STATS = {
+  featureSlug: "sales-cold-email-outreach",
+  systemStats: { totalCostInUsdCents: 500, actualCostInUsdCents: 400, completedRuns: 10, activeCampaigns: 2, firstRunAt: null, lastRunAt: null },
+  stats: { costPerReplyCents: 1234 },
+};
+
+describe("GET /v1/features/:slug/stats", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("proxies to features-service /features/:slug/stats and returns the body verbatim", async () => {
+    const app = createApp();
+    mockCallExternalService.mockImplementation((service: any, path: string) => {
+      if (service.url === "http://mock-features" && path.startsWith("/features/sales-cold-email-outreach/stats")) {
+        return Promise.resolve(MOCK_FEATURE_STATS);
+      }
+      return Promise.resolve({});
+    });
+
+    const res = await request(app).get("/v1/features/sales-cold-email-outreach/stats?groupBy=workflowSlug&brandId=brand-uuid-123");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(MOCK_FEATURE_STATS);
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/stats"),
+    );
+    expect(call).toBeDefined();
+    const params = new URLSearchParams((call![1] as string).split("?")[1]);
+    expect(params.get("groupBy")).toBe("workflowSlug");
+    expect(params.get("brandId")).toBe("brand-uuid-123");
+  });
+
+  it("forwards the pricing selector to feature stats", async () => {
+    const app = createApp();
+    mockCallExternalService.mockResolvedValue(MOCK_FEATURE_STATS);
+
+    await request(app).get("/v1/features/sales-cold-email-outreach/stats?brandId=brand-uuid-123&pricing=net");
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/stats"),
+    );
+    expect(call).toBeDefined();
+    const params = new URLSearchParams((call![1] as string).split("?")[1]);
+    expect(params.get("pricing")).toBe("net");
+  });
+
+  it("forwards ANY query param to feature stats (no whitelist)", async () => {
+    const app = createApp();
+    mockCallExternalService.mockResolvedValue(MOCK_FEATURE_STATS);
+
+    await request(app).get("/v1/features/sales-cold-email-outreach/stats?groupBy=workflowSlug&brandId=brand-uuid-123&campaignId=campaign-uuid-456&workflowSlug=w-v3&workflowDynastySlug=w&futureDownstreamParam=abc");
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/stats"),
+    );
+    expect(call).toBeDefined();
+    const params = new URLSearchParams((call![1] as string).split("?")[1]);
+    expect(params.get("groupBy")).toBe("workflowSlug");
+    expect(params.get("brandId")).toBe("brand-uuid-123");
+    expect(params.get("campaignId")).toBe("campaign-uuid-456");
+    expect(params.get("workflowSlug")).toBe("w-v3");
+    expect(params.get("workflowDynastySlug")).toBe("w");
+    expect(params.get("futureDownstreamParam")).toBe("abc");
+  });
+
+  it("sends no query string to feature stats when the caller sends none", async () => {
+    const app = createApp();
+    mockCallExternalService.mockResolvedValue(MOCK_FEATURE_STATS);
+
+    await request(app).get("/v1/features/sales-cold-email-outreach/stats");
+
+    const call = mockCallExternalService.mock.calls.find(
+      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/features/sales-cold-email-outreach/stats"),
+    );
+    expect(call).toBeDefined();
+    expect(call![1]).toBe("/features/sales-cold-email-outreach/stats");
   });
 });
 
