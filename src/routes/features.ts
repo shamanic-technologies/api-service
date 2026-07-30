@@ -525,13 +525,15 @@ router.get("/features/audit/customer-success", authenticatePlatform, requireStaf
 
 /**
  * GET /v1/features/:slug/pipeline-activity
- * 7-day pipeline activity for a brand. Proxied to features-service GET /features/:slug/pipeline-activity.
+ * 7-day pipeline activity for a brand. Forwards ALL query params (brandId, days, timezone,
+ * pricing, …) transparently to features-service GET /features/:slug/pipeline-activity —
+ * no whitelist, so a new downstream param needs no api-service edit.
  */
 router.get("/features/:slug/pipeline-activity", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["brandId", "days", "timezone"]) {
-      if (req.query[key]) params.set(key, req.query[key] as string);
+    for (const [key, value] of Object.entries(req.query)) {
+      if (typeof value === "string") params.set(key, value);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";
     const result = await callExternalService(
@@ -566,13 +568,16 @@ router.get("/features/:slug", authenticate, requireOrg, requireUser, async (req:
 
 /**
  * GET /v1/features/:slug/stats
- * Stats for a specific feature, groupable by workflowSlug/brandId/campaignId
+ * Stats for a specific feature, groupable by workflowSlug/brandId/campaignId. Forwards ALL
+ * query params (groupBy, brandId, campaignId, workflowSlug, workflowDynastySlug, pricing, …)
+ * transparently to features-service GET /features/:slug/stats — no whitelist, so a new
+ * downstream param needs no api-service edit.
  */
 router.get("/features/:slug/stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["groupBy", "brandId", "campaignId", "workflowSlug", "workflowDynastySlug"]) {
-      if (req.query[key]) params.set(key, req.query[key] as string);
+    for (const [key, value] of Object.entries(req.query)) {
+      if (typeof value === "string") params.set(key, value);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";
     const result = await callExternalService(

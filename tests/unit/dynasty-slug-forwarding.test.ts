@@ -28,11 +28,14 @@ describe("Dynasty slug forwarding — features/stats", () => {
     expect(statsSection).toContain('"workflowSlug"');
   });
 
-  it("should forward workflowDynastySlug on GET /features/:slug/stats", () => {
+  it("should forward workflowDynastySlug on GET /features/:slug/stats (via full query passthrough)", () => {
     const slugStatsSection = featuresRoute.slice(
       featuresRoute.indexOf('"/features/:slug/stats"'),
+      featuresRoute.indexOf('"/features/:slug/revenue"'),
     );
-    expect(slugStatsSection).toContain('"workflowDynastySlug"');
+    // No whitelist: every query param is forwarded, so workflowDynastySlug reaches the
+    // downstream service without being named here.
+    expect(slugStatsSection).toContain("Object.entries(req.query)");
   });
 });
 

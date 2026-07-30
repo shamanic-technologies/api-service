@@ -7992,7 +7992,8 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Feature pipeline activity",
   description:
-    "7-day pipeline activity for a brand overview chart. Scoped by brandId, days, and timezone. Proxied from features-service.",
+    "7-day pipeline activity for a brand overview chart. Scoped by brandId, days, and timezone. Proxied from features-service. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list, so any param features-service adds works without an api-service change.",
   security: authed,
   request: {
     params: z.object({ featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug") }),
@@ -8000,7 +8001,8 @@ registry.registerPath({
       brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required)"),
       days: z.string().openapi({ example: "7" }).describe("Number of days to include"),
       timezone: z.string().openapi({ example: "America/New_York" }).describe("IANA timezone for day bucketing"),
-    }),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default, undiscounted) | net (the org's discounted figures). Owned and validated by features-service"),
+    }).passthrough(),
   },
   responses: {
     200: { description: "Feature pipeline activity", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeaturePipelineActivityResponse") } } },
@@ -8016,7 +8018,8 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Feature stats",
   description:
-    "Stats for a specific feature, groupable by workflowSlug, workflowDynastySlug, brandId, or campaignId. Proxied from features-service.",
+    "Stats for a specific feature, groupable by workflowSlug, workflowDynastySlug, brandId, or campaignId. Proxied from features-service. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list, so any param features-service adds works without an api-service change.",
   security: authed,
   request: {
     params: z.object({ featureSlug: z.string().openapi({ example: "pr-cold-email-outreach" }).describe("Feature slug") }),
@@ -8026,7 +8029,8 @@ registry.registerPath({
       campaignId: z.string().optional().openapi({ example: "campaign-uuid-456" }).describe("Filter by campaign UUID"),
       workflowSlug: z.string().optional().openapi({ example: "sales-email-cold-outreach-sienna-v3" }).describe("Filter by exact workflow slug"),
       workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
-    }),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default, undiscounted) | net (the org's discounted figures). Owned and validated by features-service"),
+    }).passthrough(),
   },
   responses: {
     200: { description: "Feature stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureStatsResponse") } } },
