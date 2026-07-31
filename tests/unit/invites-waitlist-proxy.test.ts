@@ -52,8 +52,21 @@ describe("Invites proxy routes", () => {
     expect(block).toContain("authenticate");
     expect(block).toContain("requireOrg");
     expect(block).toContain("requireUser");
-    expect(block).toContain("/internal/orgs/");
-    expect(block).toContain("/invites/claim");
+  });
+
+  it("POST /orgs/:orgId/invites/claim targets the real downstream path, not an org-scoped one", () => {
+    const block = blockFor(invitesContent, "post", "/orgs/:orgId/invites/claim");
+    expect(block).toContain('"/internal/invites/claim"');
+    // client-service serves the claim under /internal/invites/claim; the
+    // org-scoped shape it does NOT serve must never come back.
+    expect(block).not.toContain("/internal/orgs/");
+  });
+
+  it("supplies inviteeOrgId from the authenticated org, overriding the request body", () => {
+    const block = blockFor(invitesContent, "post", "/orgs/:orgId/invites/claim");
+    expect(block).toContain("inviteeOrgId: req.orgId");
+    // Spread first, identity last — a client-supplied inviteeOrgId is discarded.
+    expect(block).toMatch(/\.\.\.req\.body,\s*inviteeOrgId: req\.orgId/);
   });
 
   it("authed routes guard params.orgId !== req.orgId with 403", () => {
