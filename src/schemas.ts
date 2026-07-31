@@ -6066,6 +6066,30 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/billing/free-credit-promises",
+  tags: ["Billing"],
+  summary: "Free credits this org is still waiting on",
+  description:
+    "Every outstanding free-credit promise for the org in context: the welcome remainder, " +
+    "plus a promise for each converting referral. Each carries what it is worth, the level of " +
+    "cumulative payments that unlocks it, how far along the org is, and — when the promise " +
+    "exists because someone this org referred converted — which org that was, which the " +
+    "dashboard resolves to a brand through brand-service. An outstanding promise is a promise, " +
+    "not money: it is not part of credited, balance or spendable. Normal org auth (same tier as " +
+    "GET /v1/billing/credits/grants); billing-service scopes the response to the caller's " +
+    "x-org-id, so an org reads only its own promises and the client never names an org. " +
+    "Transparent proxy to billing-service GET /v1/free-credit-promises; response owned by the " +
+    "downstream service.",
+  security: authed,
+  responses: {
+    200: { description: "Outstanding promises — pass-through from billing-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("FreeCreditPromisesResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/billing/credits/grants/all",
   tags: ["Billing"],
   summary: "Get the platform-wide credit-grants ledger (staff only)",

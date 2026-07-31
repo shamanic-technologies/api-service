@@ -8,6 +8,7 @@ import {
 } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
+import { respondUpstreamError } from "../lib/upstream-error.js";
 
 const router = Router();
 
@@ -85,6 +86,38 @@ router.get(
       res.json(result);
     } catch (error: any) {
       res.status(error.statusCode || 500).json({ error: error.message || "Failed to get grants ledger" });
+    }
+  },
+);
+
+// GET /v1/billing/free-credit-promises — the free credits this org is still waiting on.
+//
+// The customer's own view of every outstanding promise: the welcome remainder and,
+// since the referral launched, a $500 promise for each converting referral. Each one
+// carries what it is worth, the cumulative-payments bar that unlocks it, and how far
+// along the org is.
+//
+// Same auth tier as the org's own grants ledger above: billing-service scopes the
+// response to the caller's x-org-id, so an org reads only its own promises and the
+// client never names an org.
+//
+// Transparent passthrough. The response is billing's, including `referred_org_id`
+// (the org whose conversion opened the promise), which the dashboard resolves to a
+// brand through brand-service. The gateway does not reshape or compute anything.
+router.get(
+  "/billing/free-credit-promises",
+  authenticate,
+  requireOrg,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.billing,
+        "/v1/free-credit-promises",
+        { headers: buildInternalHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: unknown) {
+      respondUpstreamError(res, error, "Failed to get free-credit promises");
     }
   },
 );
