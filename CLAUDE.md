@@ -46,6 +46,17 @@ api-service is a **transparent proxy**. It authenticates, applies middleware, an
 
 Do NOT invent a new staff-role flag. Do NOT gate a staff-only route with `authenticatePlatform` alone — a customer's dashboard session carries the same admin key, so it would leak. Use `requireStaff` for the staff signal.
 
+### Identity-enrichment headers forwarded on `/internal/resolve`
+
+On the admin path, `authenticate` resolves `x-external-org-id` / `x-external-user-id` to internal UUIDs via client-service `POST /internal/resolve`, and forwards four OPTIONAL enrichment headers into that body when present: `x-email` → `email`, `x-first-name` → `firstName`, `x-last-name` → `lastName`, `x-org-slug` → `orgSlug`. The dashboard/admin proxy reads all four off the caller's session (Next.js `auth()` — `sessionClaims` for the profile fields, `orgSlug` for the slug) and sends them on every `/v1/*` request.
+
+Rules for this set:
+
+- **Forward verbatim, never derive.** api-service does not mint, normalize, slugify, or default any of these. It is the identity provider's value or nothing. An absent header means an absent body field — never an empty string, never a fallback.
+- **Absent must stay harmless.** Every one of these is optional downstream; a caller that sends none still authenticates identically. Do not make any of them required, and do not 4xx on absence.
+- **client-service owns the write semantics, not the gateway.** `orgSlug` in particular is written only when the stored `orgs.slug` is NULL (`COALESCE(orgs.slug, $orgSlug)`) — client-service guards it because upstream slugs are immutable per org, so every authenticated request self-heals an org that predates the header. Do NOT add a second "only if empty" opinion here.
+- **Why the slug matters:** `orgs.slug` IS the org's invite/referral code — client-service `/invites/validate` and `/orgs/:orgId/invites/status` read it directly. Before this header existed, no org had a slug and the whole referral surface was dead (`code: null` for every org). Adding a new enrichment header follows the same shape; changing how any of them is derived is a downstream (client-service) contract change, not a gateway one.
+
 ### Brand-service path convention
 
 - `/orgs/brands/*` (no ID in path) = org-scoped operations using `x-org-id` / `x-brand-id` headers (list, extract-fields, extract-images)

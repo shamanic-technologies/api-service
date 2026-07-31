@@ -38,7 +38,7 @@ export interface AuthenticatedRequest extends Request {
  *
  * 1. Admin (dashboard) → X-API-Key header matches ADMIN_DISTRIBUTE_API_KEY env var.
  *    External IDs from x-external-org-id / x-external-user-id are resolved via client-service POST /resolve.
- *    Optional profile headers (x-email, x-first-name, x-last-name) are forwarded.
+ *    Optional profile headers (x-email, x-first-name, x-last-name, x-org-slug) are forwarded.
  *
  * 2. User key (distrib.usr_*) → Authorization: Bearer validated via key-service.
  *    Identity comes from the key itself.
@@ -192,6 +192,15 @@ async function validateKey(apiKey: string): Promise<{
 /**
  * Resolve external org/user IDs to internal UUIDs via client-service POST /resolve.
  * Forwards optional profile headers (x-email, x-first-name, x-last-name) for non-destructive upsert.
+ *
+ * `x-org-slug` carries the org slug the upstream identity provider already holds,
+ * read by the dashboard proxy off the caller's session and forwarded verbatim —
+ * api-service never mints, normalizes, or defaults a slug. client-service stores it
+ * on the org row only when the stored slug is NULL, so every authenticated request
+ * self-heals an org that predates this forwarding. That slug IS the org's invite
+ * code (client-service `/invites/*` reads `orgs.slug`), so without it the referral
+ * link does not exist. Absent header = absent field: the org resolves and
+ * authenticates exactly as before.
  */
 async function resolveExternalIds(
   externalOrgId: string,
@@ -204,10 +213,12 @@ async function resolveExternalIds(
     const email = req.headers["x-email"] as string | undefined;
     const firstName = req.headers["x-first-name"] as string | undefined;
     const lastName = req.headers["x-last-name"] as string | undefined;
+    const orgSlug = req.headers["x-org-slug"] as string | undefined;
 
     if (email) body.email = email;
     if (firstName) body.firstName = firstName;
     if (lastName) body.lastName = lastName;
+    if (orgSlug) body.orgSlug = orgSlug;
 
     const result = await callExternalService<{
       orgId: string;
