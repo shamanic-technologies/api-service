@@ -7150,6 +7150,10 @@
         "type": "object",
         "properties": {}
       },
+      "FreeCreditPromisesResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "PlatformCreditGrantsResponse": {
         "type": "object",
         "properties": {}
@@ -28831,6 +28835,109 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/CreditGrantsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
+      }
+    },
+    "/v1/billing/free-credit-promises": {
+      "get": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Free credits this org is still waiting on",
+        "description": "Every outstanding free-credit promise for the org in context: the welcome remainder, plus a promise for each converting referral. Each carries what it is worth, the level of cumulative payments that unlocks it, how far along the org is, and — when the promise exists because someone this org referred converted — which org that was, which the dashboard resolves to a brand through brand-service. An outstanding promise is a promise, not money: it is not part of credited, balance or spendable. Normal org auth (same tier as GET /v1/billing/credits/grants); billing-service scopes the response to the caller's x-org-id, so an org reads only its own promises and the client never names an org. Transparent proxy to billing-service GET /v1/free-credit-promises; response owned by the downstream service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Outstanding promises — pass-through from billing-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FreeCreditPromisesResponse"
                 }
               }
             }

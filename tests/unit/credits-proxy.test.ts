@@ -191,3 +191,47 @@ describe("requireStaff runtime gate", () => {
     expect(res.statusCode).toBe(403);
   });
 });
+
+describe("GET /v1/billing/free-credit-promises (source)", () => {
+  const mountIdx = content.indexOf('"/billing/free-credit-promises"');
+
+  it("is mounted", () => {
+    expect(mountIdx).toBeGreaterThan(-1);
+  });
+
+  it("reads the org from the authenticated identity, never from the client", () => {
+    // The route takes no org parameter at all: billing-service scopes the response
+    // to the caller's x-org-id. A client-supplied org is the whole attack.
+    const middlewares = content.slice(mountIdx, content.indexOf("async (req", mountIdx));
+    expect(middlewares).toContain("authenticate,");
+    expect(middlewares).toContain("requireOrg,");
+    expect(middlewares).not.toContain("requireStaff");
+    expect(content).not.toContain("/billing/free-credit-promises/:");
+  });
+
+  it("forwards to billing's real path", () => {
+    expect(content).toContain('"/v1/free-credit-promises"');
+  });
+
+  it("forwards the downstream error with its status and body intact", () => {
+    // Rebuilding the envelope as { error: err.message } stringifies the whole
+    // downstream JSON into the message and destroys its fields (CLAUDE.md #7).
+    const body = content.slice(mountIdx, mountIdx + 900);
+    expect(body).toContain("respondUpstreamError");
+    expect(body).not.toContain("error.message ||");
+  });
+
+  it("is a transparent passthrough that reshapes nothing", () => {
+    // billing owns the response, including referred_org_id. The gateway must not
+    // re-declare, trim or compute any of it.
+    const body = content.slice(mountIdx, mountIdx + 900);
+    expect(body).toContain("res.json(result)");
+    expect(body).not.toContain("referred_org_id");
+    expect(body).not.toContain("map(");
+  });
+
+  it("is published on the OpenAPI surface", () => {
+    expect(schemaContent).toContain('path: "/v1/billing/free-credit-promises"');
+    expect(schemaContent).toContain("FreeCreditPromisesResponse");
+  });
+});
