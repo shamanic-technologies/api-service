@@ -10,6 +10,12 @@ vi.mock("../../src/middleware/auth.js", () => ({
     req.brandId = "brand-uuid-1,brand-uuid-2";
     next();
   },
+  // Mirrors `authenticate`'s admin path minus identity resolution: the share
+  // resolve route is org-less by construction.
+  authenticatePlatform: (req: any, _res: any, next: any) => {
+    req.authType = "admin";
+    next();
+  },
   requireOrg: (_req: any, _res: any, next: any) => next(),
   requireUser: (_req: any, _res: any, next: any) => next(),
   AuthenticatedRequest: {},

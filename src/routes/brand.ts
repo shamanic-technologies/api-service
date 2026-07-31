@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
+import { authenticate, authenticatePlatform, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
@@ -839,19 +839,28 @@ router.delete("/brands/:id/share-token", authenticate, requireOrg, requireUser, 
  * credential alone, learn which brand it refers to plus that brand's public-safe
  * payload.
  *
- * `authenticate` WITHOUT `requireOrg`, deliberately and uniquely on this file:
- * the caller is a trusted server-side renderer holding a platform key that has
- * no org context YET — resolving the credential is precisely how it learns which
- * brand it is rendering. Requiring an org here would make the route unusable for
- * its only purpose. It stays authenticated so the credential oracle is never
- * reachable unauthenticated from the internet.
+ * `authenticatePlatform`, NOT `authenticate` — and that distinction is the
+ * whole route. `authenticate`'s platform-key path still RESOLVES AN IDENTITY,
+ * so it 400s with "Organization context required" when no `x-external-org-id`
+ * is present. This caller has none by construction: it is the public share page,
+ * a server-side renderer holding the platform key whose entire reason for
+ * calling is to learn which brand (and therefore which org) it is rendering.
+ * Dropping `requireOrg` alone does not help, because the 400 comes from
+ * `authenticate` itself. `authenticatePlatform` validates the key and stops
+ * there — no identity resolution, no org — which is exactly what an org-less
+ * trusted caller needs.
+ *
+ * It is still authenticated, so the credential oracle is never reachable
+ * unauthenticated from the internet. No `requireStaff`: this serves a customer's
+ * own public page, not a staff surface. The share credential in the body is the
+ * real authority; the platform key only keeps the route off the open internet.
  *
  * The credential travels in the BODY, matching downstream: a share credential in
  * a URL lands in access logs and proxy traces, and this one is exactly the
  * secret that must not leak. brand-service's 404 (unknown, revoked and
  * rotated-away credentials alike) propagates verbatim.
  */
-router.post("/share-tokens/resolve", authenticate, async (req: AuthenticatedRequest, res) => {
+router.post("/share-tokens/resolve", authenticatePlatform, async (req: AuthenticatedRequest, res) => {
   try {
     const { status, data } = await callExternalServiceWithStatus(
       externalServices.brand,

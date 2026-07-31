@@ -18,6 +18,12 @@ vi.mock("../../src/middleware/auth.js", () => ({
     req.authType = "admin";
     next();
   },
+  // Mirrors `authenticate`'s admin path minus identity resolution: the share
+  // resolve route is org-less by construction.
+  authenticatePlatform: (req: any, _res: any, next: any) => {
+    req.authType = "admin";
+    next();
+  },
   requireOrg: (req: any, res: any, next: any) => {
     if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
     next();
