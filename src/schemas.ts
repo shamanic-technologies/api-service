@@ -4113,6 +4113,132 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – Share Token (proxy to brand-service
+// /orgs/brands/:id/share-token[/rotate] + /internal/share-tokens/resolve).
+// The credential someone OUTSIDE the org presents to open a read-only view of
+// one brand. Downstream owns the response shape — passthrough only.
+// ===================================================================
+const BrandShareTokenResponseSchema = z.object({}).passthrough().openapi("BrandShareTokenProxyResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/share-token",
+  tags: ["Brand"],
+  summary: "Get a brand's public share credential",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{id}/share-token. Returns the credential " +
+    "currently letting someone outside the org open a read-only view of this brand, or " +
+    "{ token: null } when the brand has never been shared. A READ: it does NOT mint one, so " +
+    "opening a share menu cannot accidentally start sharing a brand. Response shape is owned " +
+    "by the downstream service.",
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "Current share credential (token null when unshared)", content: { "application/json": { schema: BrandShareTokenResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/share-token",
+  tags: ["Brand"],
+  summary: "Start sharing a brand, returning its credential",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{id}/share-token. Mints the credential that lets " +
+    "someone outside the org open a read-only view of this brand. Idempotent: a brand already " +
+    "shared gets its EXISTING token back rather than a fresh one, so pressing share twice " +
+    "cannot silently invalidate a link the customer already sent. Response shape is owned by " +
+    "the downstream service.",
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "Share credential", content: { "application/json": { schema: BrandShareTokenResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/share-token/rotate",
+  tags: ["Brand"],
+  summary: "Rotate a brand's public share credential",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{id}/share-token/rotate. Replaces the credential, " +
+    "so the previous link stops working immediately — this is how a customer takes back a link " +
+    "already in someone else's hands. Downstream 404s a brand that was never shared rather than " +
+    "minting one, and that propagates verbatim. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "New share credential", content: { "application/json": { schema: BrandShareTokenResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "Brand not found, or brand is not shared (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/brands/{id}/share-token",
+  tags: ["Brand"],
+  summary: "Stop sharing a brand",
+  description:
+    "Proxy to brand-service DELETE /orgs/brands/{id}/share-token. Revokes the credential so the " +
+    "public link stops resolving. Idempotent — a brand that was not shared is already in the " +
+    "requested end state. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "Whether a link existed and was removed", content: { "application/json": { schema: BrandShareTokenResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/share-tokens/resolve",
+  tags: ["Brand"],
+  summary: "Resolve a brand share credential",
+  description:
+    "Proxy to brand-service POST /internal/share-tokens/resolve. Present the credential alone " +
+    "and learn which brand it refers to, plus that brand's public-safe payload. Authenticated but " +
+    "NOT org-scoped, uniquely among the brand routes: the caller is a trusted server-side renderer " +
+    "holding a platform key that has no org context YET, and resolving the credential is precisely " +
+    "how it learns which brand it is rendering, so requiring one here would make the route " +
+    "unusable for its only purpose. The credential travels in the BODY, matching downstream: a " +
+    "share credential in a URL lands in access logs and proxy traces. Downstream 404s unknown, " +
+    "revoked and rotated-away credentials alike, and that propagates verbatim. Response shape is " +
+    "owned by the downstream service.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({ shareToken: z.string() }).openapi("ResolveShareTokenProxyRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "The brand the credential refers to", content: { "application/json": { schema: BrandShareTokenResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Share token not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+// ===================================================================
 // Brand – ICP Suggest
 // Transparent proxies to brand-service /orgs/brands/:id/{icp/suggest,user-fields}.
 // Downstream owns body + response shapes — passthrough only. No gateway

@@ -152,6 +152,107 @@ describe("Auth middleware — admin key via X-API-Key", () => {
     );
   });
 
+  // ── x-org-slug → resolve body `orgSlug` ──
+  //
+  // The org slug is the org's invite/referral code (client-service `/invites/*`
+  // reads `orgs.slug`). client-service writes it only when the stored slug is
+  // NULL, so forwarding it on every authenticated request self-heals orgs that
+  // signed up before this header existed. api-service forwards verbatim — it
+  // never mints, normalizes, or defaults a slug.
+  it("should forward x-org-slug to POST /resolve as orgSlug", async () => {
+    mockCall.mockResolvedValueOnce({
+      orgId: "org-uuid-123",
+      userId: "user-uuid-456",
+    });
+
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("X-API-Key", ADMIN_KEY)
+      .set("x-external-org-id", "ext_org_123")
+      .set("x-external-user-id", "ext_user_456")
+      .set("x-org-slug", "steadyrecruit-1785183518835827060");
+
+    expect(res.status).toBe(200);
+    expect(mockCall).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "http://client-service" }),
+      "/internal/resolve",
+      {
+        method: "POST",
+        body: {
+          externalOrgId: "ext_org_123",
+          externalUserId: "ext_user_456",
+          orgSlug: "steadyrecruit-1785183518835827060",
+        },
+      },
+    );
+  });
+
+  it("should forward x-org-slug alongside the profile headers", async () => {
+    mockCall.mockResolvedValueOnce({
+      orgId: "org-uuid-123",
+      userId: "user-uuid-456",
+    });
+
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("X-API-Key", ADMIN_KEY)
+      .set("x-external-org-id", "ext_org_123")
+      .set("x-external-user-id", "ext_user_456")
+      .set("x-email", "john@example.com")
+      .set("x-first-name", "John")
+      .set("x-last-name", "Doe")
+      .set("x-org-slug", "acme-1785183518835827060");
+
+    expect(res.status).toBe(200);
+    expect(mockCall).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "http://client-service" }),
+      "/internal/resolve",
+      {
+        method: "POST",
+        body: {
+          externalOrgId: "ext_org_123",
+          externalUserId: "ext_user_456",
+          email: "john@example.com",
+          firstName: "John",
+          lastName: "Doe",
+          orgSlug: "acme-1785183518835827060",
+        },
+      },
+    );
+  });
+
+  it("should omit orgSlug and still authenticate when x-org-slug is an empty string", async () => {
+    mockCall.mockResolvedValueOnce({
+      orgId: "org-uuid-123",
+      userId: "user-uuid-456",
+    });
+
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("X-API-Key", ADMIN_KEY)
+      .set("x-external-org-id", "ext_org_123")
+      .set("x-external-user-id", "ext_user_456")
+      .set("x-org-slug", "");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      orgId: "org-uuid-123",
+      userId: "user-uuid-456",
+      authType: "admin",
+    });
+    expect(mockCall).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "http://client-service" }),
+      "/internal/resolve",
+      {
+        method: "POST",
+        body: {
+          externalOrgId: "ext_org_123",
+          externalUserId: "ext_user_456",
+        },
+      },
+    );
+  });
+
   it("should accept direct x-org-id and x-user-id without calling client-service", async () => {
     const res = await request(app)
       .get("/v1/workflows")
