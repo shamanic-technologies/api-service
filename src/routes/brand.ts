@@ -741,123 +741,127 @@ router.put("/brands/:id/user-fields", authenticate, requireOrg, requireUser, asy
 });
 
 /**
- * Brand share link — the credential someone OUTSIDE the org presents to open a
+ * Brand share token — the credential someone OUTSIDE the org presents to open a
  * read-only view of one brand.
  *
- * Four org-scoped routes below (read / mint / rotate / revoke) are ordinary
+ * Four org-scoped routes (read / mint / rotate / revoke) are ordinary
  * passthroughs to brand-service; the resolve route further down is the odd one
  * and is documented there.
  */
 
 /**
- * GET /v1/brands/:id/share-link
- * Proxy to brand-service GET /orgs/brands/:id/share-link. Returns the current
- * credential or `{ token: null }` when the brand has never been shared; it does
- * NOT mint one. Response shape is owned by the downstream service — passthrough
- * only.
+ * GET /v1/brands/:id/share-token
+ * Proxy to brand-service GET /orgs/brands/:id/share-token. Returns the brand's
+ * current credential, or `{ shareToken: null }` when nobody has shared it — a
+ * brand is not shareable until someone asks, so this READ never mints one.
+ * Response shape is owned by the downstream service — passthrough only.
  */
-router.get("/brands/:id/share-link", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.get("/brands/:id/share-token", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { status, data } = await callExternalServiceWithStatus(
       externalServices.brand,
-      `/orgs/brands/${req.params.id}/share-link`,
+      `/orgs/brands/${req.params.id}/share-token`,
       { headers: buildInternalHeaders(req) },
     );
     res.status(status).json(data);
   } catch (error: any) {
-    console.error("[api-service] Get brand share link error:", error.message);
-    respondUpstreamError(res, error, "Failed to get brand share link");
+    console.error("[api-service] Get brand share token error:", error.message);
+    respondUpstreamError(res, error, "Failed to get brand share token");
   }
 });
 
 /**
- * POST /v1/brands/:id/share-link
- * Proxy to brand-service POST /orgs/brands/:id/share-link. Starts sharing and
- * returns the credential; idempotent, so an already-shared brand gets its
- * existing token back. Response shape is owned by the downstream service —
- * passthrough only.
+ * POST /v1/brands/:id/share-token
+ * Proxy to brand-service POST /orgs/brands/:id/share-token. Makes the brand
+ * shareable. Idempotent: a brand that already has a credential keeps it (200,
+ * `created: false`) rather than getting a fresh one, because minting again would
+ * invalidate a link somebody is already holding. 201 when it mints. Both the
+ * status and the response shape are owned by the downstream service.
  */
-router.post("/brands/:id/share-link", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.post("/brands/:id/share-token", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { status, data } = await callExternalServiceWithStatus(
       externalServices.brand,
-      `/orgs/brands/${req.params.id}/share-link`,
+      `/orgs/brands/${req.params.id}/share-token`,
       { method: "POST", headers: buildInternalHeaders(req) },
     );
     res.status(status).json(data);
   } catch (error: any) {
-    console.error("[api-service] Create brand share link error:", error.message);
-    respondUpstreamError(res, error, "Failed to create brand share link");
+    console.error("[api-service] Create brand share token error:", error.message);
+    respondUpstreamError(res, error, "Failed to create brand share token");
   }
 });
 
 /**
- * POST /v1/brands/:id/share-link/rotate
- * Proxy to brand-service POST /orgs/brands/:id/share-link/rotate. Replaces the
- * credential so the previous link stops working; its 404 on a brand that was
- * never shared propagates verbatim — passthrough only.
+ * POST /v1/brands/:id/share-token/rotate
+ * Proxy to brand-service POST /orgs/brands/:id/share-token/rotate. Mints a NEW
+ * credential; the previous one stops resolving immediately, which is what makes
+ * a leaked link recoverable. Response shape is owned by the downstream service.
  */
-router.post("/brands/:id/share-link/rotate", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.post("/brands/:id/share-token/rotate", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { status, data } = await callExternalServiceWithStatus(
       externalServices.brand,
-      `/orgs/brands/${req.params.id}/share-link/rotate`,
+      `/orgs/brands/${req.params.id}/share-token/rotate`,
       { method: "POST", headers: buildInternalHeaders(req) },
     );
     res.status(status).json(data);
   } catch (error: any) {
-    console.error("[api-service] Rotate brand share link error:", error.message);
-    respondUpstreamError(res, error, "Failed to rotate brand share link");
+    console.error("[api-service] Rotate brand share token error:", error.message);
+    respondUpstreamError(res, error, "Failed to rotate brand share token");
   }
 });
 
 /**
- * DELETE /v1/brands/:id/share-link
- * Proxy to brand-service DELETE /orgs/brands/:id/share-link. Stops sharing;
- * idempotent. Response shape is owned by the downstream service — passthrough
- * only.
+ * DELETE /v1/brands/:id/share-token
+ * Proxy to brand-service DELETE /orgs/brands/:id/share-token. The brand becomes
+ * unshareable and every link handed out for it stops resolving. Revoking an
+ * already-unshared brand is a truthful no-op rather than a 404. Response shape
+ * is owned by the downstream service.
  */
-router.delete("/brands/:id/share-link", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.delete("/brands/:id/share-token", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { status, data } = await callExternalServiceWithStatus(
       externalServices.brand,
-      `/orgs/brands/${req.params.id}/share-link`,
+      `/orgs/brands/${req.params.id}/share-token`,
       { method: "DELETE", headers: buildInternalHeaders(req) },
     );
     res.status(status).json(data);
   } catch (error: any) {
-    console.error("[api-service] Revoke brand share link error:", error.message);
-    respondUpstreamError(res, error, "Failed to revoke brand share link");
+    console.error("[api-service] Revoke brand share token error:", error.message);
+    respondUpstreamError(res, error, "Failed to revoke brand share token");
   }
 });
 
 /**
- * GET /v1/brand-share-links/:token
- * Proxy to brand-service GET /internal/brand-share-links/:token. Resolves a
- * share credential to the org + brand it opens.
+ * POST /v1/share-tokens/resolve
+ * Proxy to brand-service POST /internal/share-tokens/resolve. Present the
+ * credential alone, learn which brand it refers to plus that brand's public-safe
+ * payload.
  *
  * `authenticate` WITHOUT `requireOrg`, deliberately and uniquely on this file:
  * the caller is a trusted server-side renderer holding a platform key that has
- * no org context YET — resolving the token is precisely how it learns which org
- * to act as. Requiring an org here would make the route unusable for its only
- * purpose. It stays authenticated so the token oracle is never reachable
- * unauthenticated from the internet.
+ * no org context YET — resolving the credential is precisely how it learns which
+ * brand it is rendering. Requiring an org here would make the route unusable for
+ * its only purpose. It stays authenticated so the credential oracle is never
+ * reachable unauthenticated from the internet.
  *
- * Mounted on its own path rather than under `/brands/` so it cannot be confused
- * with a brand-id route. brand-service's 404 (unknown, revoked or rotated-away
- * token alike) propagates verbatim.
+ * The credential travels in the BODY, matching downstream: a share credential in
+ * a URL lands in access logs and proxy traces, and this one is exactly the
+ * secret that must not leak. brand-service's 404 (unknown, revoked and
+ * rotated-away credentials alike) propagates verbatim.
  */
-router.get("/brand-share-links/:token", authenticate, async (req: AuthenticatedRequest, res) => {
+router.post("/share-tokens/resolve", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const { status, data } = await callExternalServiceWithStatus(
       externalServices.brand,
-      `/internal/brand-share-links/${encodeURIComponent(req.params.token)}`,
-      { headers: buildInternalHeaders(req) },
+      "/internal/share-tokens/resolve",
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body },
     );
     res.status(status).json(data);
   } catch (error: any) {
-    console.error("[api-service] Resolve brand share link error:", error.message);
-    respondUpstreamError(res, error, "Failed to resolve brand share link");
+    console.error("[api-service] Resolve brand share token error:", error.message);
+    respondUpstreamError(res, error, "Failed to resolve brand share token");
   }
 });
 
