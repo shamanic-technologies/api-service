@@ -9352,9 +9352,12 @@ registry.registerPath({
   tags: ["Invites"],
   summary: "Claim an invite code for the authenticated org",
   description:
-    "Pass-through to client-service POST /internal/orgs/{orgId}/invites/claim. " +
-    "Downstream orchestrates: record claim row -> grant $25 to inviter + $25 to invitee via " +
-    "billing-service -> send invite-claimed-welcome + invite-success-notification via " +
+    "Pass-through to client-service POST /internal/invites/claim. " +
+    "Send only { code }: the gateway supplies the downstream-required inviteeOrgId " +
+    "from the authenticated identity, and discards any inviteeOrgId in the request body " +
+    "so a caller can never claim on behalf of another org. " +
+    "Downstream orchestrates: record claim row -> grant credits to inviter + invitee via " +
+    "billing-service -> send the invite confirmation emails via " +
     "transactional-email-service. Idempotent on (code, inviteeOrgId). " +
     "The {orgId} path segment MUST match the authenticated x-org-id; mismatch returns 403. " +
     "Body + response shapes are owned by the downstream service.",
@@ -9373,6 +9376,12 @@ registry.registerPath({
     400: { description: "Invalid code (forwarded verbatim from downstream)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "orgId path does not match authenticated org", content: errorContent },
+    404: { description: "Unknown invite code (forwarded verbatim from downstream)", content: errorContent },
+    409: {
+      description:
+        "Invite cap reached. Downstream body is forwarded field-for-field, including used / total.",
+      content: { "application/json": { schema: OrgInvitesClaimResponseSchema } },
+    },
   },
 });
 

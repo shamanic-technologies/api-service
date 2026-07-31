@@ -41168,7 +41168,7 @@
           "Invites"
         ],
         "summary": "Claim an invite code for the authenticated org",
-        "description": "Pass-through to client-service POST /internal/orgs/{orgId}/invites/claim. Downstream orchestrates: record claim row -> grant $25 to inviter + $25 to invitee via billing-service -> send invite-claimed-welcome + invite-success-notification via transactional-email-service. Idempotent on (code, inviteeOrgId). The {orgId} path segment MUST match the authenticated x-org-id; mismatch returns 403. Body + response shapes are owned by the downstream service.",
+        "description": "Pass-through to client-service POST /internal/invites/claim. Send only { code }: the gateway supplies the downstream-required inviteeOrgId from the authenticated identity, and discards any inviteeOrgId in the request body so a caller can never claim on behalf of another org. Downstream orchestrates: record claim row -> grant credits to inviter + invitee via billing-service -> send the invite confirmation emails via transactional-email-service. Idempotent on (code, inviteeOrgId). The {orgId} path segment MUST match the authenticated x-org-id; mismatch returns 403. Body + response shapes are owned by the downstream service.",
         "security": [
           {
             "bearerAuth": []
@@ -41287,6 +41287,26 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown invite code (forwarded verbatim from downstream)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Invite cap reached. Downstream body is forwarded field-for-field, including used / total.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgInvitesClaimResponse"
                 }
               }
             }
