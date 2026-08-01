@@ -3917,6 +3917,137 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – Sales Funnels (proxy to brand-service /orgs/brands/:id/sales-funnels[/:funnelKey])
+// The funnels a brand DECLARES it sells through, each carrying its own economics.
+// Downstream owns body + response shapes — passthrough only, no gateway
+// re-validation, so brand-service's 4xx propagate verbatim.
+//
+// The read answers { declared, funnels }, and `declared` is load-bearing:
+// `declared: false` with an empty list means no set has ever been stated,
+// `declared: true` with an empty list means the brand stated it sells through
+// none. Opposite answers, and the flag is the only thing separating them.
+//
+// The service-auth GET /internal/brands/{id}/sales-funnels is NOT proxied:
+// features-service reads it service-to-service.
+// ===================================================================
+const SalesFunnelsResponseSchema = z.object({}).passthrough().openapi("SalesFunnelsResponse");
+const SalesFunnelsSetRequestSchema = z.object({}).passthrough().openapi("SalesFunnelsSetRequest");
+const SalesFunnelRequestSchema = z.object({}).passthrough().openapi("SalesFunnelRequest");
+
+const BrandFunnelKeyParams = z.object({
+  id: z.string().describe("Brand ID"),
+  funnelKey: z
+    .string()
+    .describe("Funnel key: reply_meeting | visit_meeting | visit_signup | visit_form"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/sales-funnels",
+  tags: ["Brand"],
+  summary: "Get the sales funnels a brand has declared it sells through",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{id}/sales-funnels. Returns " +
+    "{ declared, funnels }: the funnels the brand declared, in catalogue order, each with " +
+    "its own conversion rates, lifetime revenue, landing page and booking link. Read " +
+    "`declared` BEFORE `funnels` — `declared: true` with an empty list means the brand " +
+    "STATED it sells through none, while `declared: false` means it has never told us " +
+    "anything. Nothing is defaulted: a value the brand never declared reads null, which " +
+    "never means zero. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "The declared funnels (possibly empty)", content: { "application/json": { schema: SalesFunnelsResponseSchema } } },
+    400: { description: "Invalid brand ID format (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/sales-funnels",
+  tags: ["Brand"],
+  summary: "State the whole set of funnels a brand sells through",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{id}/sales-funnels. States the WHOLE set at " +
+    "once (body { funnelKeys }): exactly these funnels, no others. Funnels already in the " +
+    "set keep the economics they were priced with; funnels dropped from it lose their " +
+    "declaration and their economics together. `{ \"funnelKeys\": [] }` is legal and is the " +
+    "only way a brand can state it sells through NOTHING. The set is validated whole before " +
+    "anything is written, so a rejected set leaves nothing half-applied. Body + response " +
+    "shapes are owned by the downstream service; its 4xx propagate verbatim.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: { content: { "application/json": { schema: SalesFunnelsSetRequestSchema } } },
+  },
+  responses: {
+    200: { description: "The stated set", content: { "application/json": { schema: SalesFunnelsResponseSchema } } },
+    400: { description: "Invalid brand ID, unknown funnel key, or a website-led funnel on a brand with no website (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/sales-funnels/{funnelKey}",
+  tags: ["Brand"],
+  summary: "Declare a sales funnel and write its economics",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{id}/sales-funnels/{funnelKey}. Declares that " +
+    "the brand sells through this funnel and writes what the body carries of its economics. " +
+    "Idempotent — the declaration IS the row, and a body with no fields declares the funnel " +
+    "without pricing it yet. PARTIAL: an omitted field is left exactly as stored, an explicit " +
+    "null CLEARS the value back to never-declared. brand-service rejects a rate outside this " +
+    "funnel's own chain, a destination the funnel has no use for, an off-domain page " +
+    "destination, and a website-led funnel on a brand with no website; the gateway adds no " +
+    "validation of its own. Body + response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    params: BrandFunnelKeyParams,
+    body: { content: { "application/json": { schema: SalesFunnelRequestSchema } } },
+  },
+  responses: {
+    200: { description: "The declared funnel", content: { "application/json": { schema: SalesFunnelsResponseSchema } } },
+    400: { description: "Invalid brand ID or funnel key, a rate outside this funnel's chain, a destination the funnel has no use for, or a website-led funnel on a brand with no website (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/brands/{id}/sales-funnels/{funnelKey}",
+  tags: ["Brand"],
+  summary: "Undeclare a sales funnel",
+  description:
+    "Proxy to brand-service DELETE /orgs/brands/{id}/sales-funnels/{funnelKey}. The brand no " +
+    "longer sells through this funnel, and removing the declaration removes its economics " +
+    "with it. Idempotent — undeclaring a funnel that was never declared is a 200 with the " +
+    "unchanged set. Does NOT un-state the set: a brand that removes its LAST funnel keeps " +
+    "`declared: true`, because it has stated it sells through none. Returns the set that is " +
+    "left. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: BrandFunnelKeyParams },
+  responses: {
+    200: { description: "The funnels still declared", content: { "application/json": { schema: SalesFunnelsResponseSchema } } },
+    400: { description: "Invalid brand ID format or unknown funnel key (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+// ===================================================================
 // Brand – Click Destination (proxy to brand-service /orgs/brands/:id/click-destination)
 // Downstream owns body + response shapes — passthrough only. No gateway
 // re-validation, so brand-service's 4xx errors propagate verbatim.
