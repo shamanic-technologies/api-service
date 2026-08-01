@@ -390,6 +390,117 @@ router.put("/brands/:id/sales-economics", authenticate, requireOrg, requireUser,
 });
 
 /**
+ * Brand sales funnels — the funnels a brand DECLARES it sells through, each
+ * carrying its own economics.
+ *
+ * Four org-scoped passthroughs sitting beside the sales-economics proxies above,
+ * with the same auth and the same downstream path shape
+ * (/orgs/brands/:id/sales-funnels[/:funnelKey] → /v1/brands/:id/...).
+ *
+ * `declared` is the one semantic worth naming here, because flattening it is
+ * easy and lies about user data: `declared: false` with an empty list means the
+ * brand has never stated a set, `declared: true` with an empty list means it
+ * stated it sells through none. Both come back untouched — brand-service owns
+ * the shape (CLAUDE.md #8) and this layer re-declares nothing.
+ *
+ * No validation here either (CLAUDE.md rule: no gateway re-validation).
+ * brand-service already rejects a rate outside a funnel's own chain, a
+ * destination the funnel has no use for, and a website-led funnel on a brand
+ * with no website; its 400s reach the caller with status and body intact via
+ * callExternalServiceWithStatus + respondUpstreamError.
+ *
+ * The service-auth GET /internal/brands/:id/sales-funnels is deliberately NOT
+ * proxied: features-service reads it service-to-service, and an internal route
+ * is never mounted client-facing (CLAUDE.md rule #3).
+ */
+
+/**
+ * GET /v1/brands/:id/sales-funnels
+ * Proxy to brand-service GET /orgs/brands/:id/sales-funnels. Returns
+ * { declared, funnels } — the funnels the brand declared, in catalogue order,
+ * each with its own rates, lifetime revenue, landing page and booking link.
+ * Response shape is owned by the downstream service — passthrough only.
+ */
+router.get("/brands/:id/sales-funnels", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/sales-funnels`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Get brand sales funnels error:", error.message);
+    respondUpstreamError(res, error, "Failed to get brand sales funnels");
+  }
+});
+
+/**
+ * PUT /v1/brands/:id/sales-funnels
+ * Proxy to brand-service PUT /orgs/brands/:id/sales-funnels. States the WHOLE
+ * set at once (body { funnelKeys }); `{ "funnelKeys": [] }` is the only way a
+ * brand can state it sells through nothing. Body + response shapes are owned by
+ * the downstream service; its 4xx propagate verbatim — passthrough only.
+ */
+router.put("/brands/:id/sales-funnels", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/sales-funnels`,
+      { method: "PUT", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Save brand sales funnels error:", error.message);
+    respondUpstreamError(res, error, "Failed to save brand sales funnels");
+  }
+});
+
+/**
+ * PUT /v1/brands/:id/sales-funnels/:funnelKey
+ * Proxy to brand-service PUT /orgs/brands/:id/sales-funnels/:funnelKey.
+ * Declares one funnel and writes what the body carries of its economics
+ * (partial: an omitted field is left as stored, an explicit null clears it).
+ * Body + response shapes are owned by the downstream service; its 4xx
+ * propagate verbatim — passthrough only.
+ */
+router.put("/brands/:id/sales-funnels/:funnelKey", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/sales-funnels/${encodeURIComponent(req.params.funnelKey)}`,
+      { method: "PUT", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Declare brand sales funnel error:", error.message);
+    respondUpstreamError(res, error, "Failed to declare brand sales funnel");
+  }
+});
+
+/**
+ * DELETE /v1/brands/:id/sales-funnels/:funnelKey
+ * Proxy to brand-service DELETE /orgs/brands/:id/sales-funnels/:funnelKey. The
+ * brand no longer sells through this funnel, and its economics go with the
+ * declaration. Returns the set that is left; a brand that removes its last
+ * funnel keeps `declared: true`. Response shape is owned by the downstream
+ * service — passthrough only.
+ */
+router.delete("/brands/:id/sales-funnels/:funnelKey", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/sales-funnels/${encodeURIComponent(req.params.funnelKey)}`,
+      { method: "DELETE", headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Undeclare brand sales funnel error:", error.message);
+    respondUpstreamError(res, error, "Failed to undeclare brand sales funnel");
+  }
+});
+
+/**
  * PUT /v1/brands/:id/click-destination
  * Proxy to brand-service PUT /orgs/brands/:id/click-destination.
  * Sets the per-brand page outreach clicks should land on. Body + response
