@@ -8766,6 +8766,10 @@
         "type": "object",
         "properties": {}
       },
+      "FeatureGoalArbitrationResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "PublicUserStatsResponse": {
         "type": "object",
         "properties": {}
@@ -39006,6 +39010,162 @@
           },
           "500": {
             "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/features/{featureSlug}/goal-arbitration": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Feature goal arbitration",
+        "description": "The goal features-service elects for a brand out of the sales funnels that brand declared — the same arbitration campaign-service reads service-to-service, so a client can show the goal that actually runs instead of the brand's stored optimizationGoal. Proxied to features-service GET /features/{featureSlug}/goal-arbitration; every query param is forwarded and the response shape is downstream-owned and passed through. The upstream status AND body both survive: a 502 with reason='authorized_goals_unavailable' (this brand never stated a funnel set) is distinguishable from a 200 whose arbitration.reason='no_authorized_goals' (it stated it sells through none).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Feature slug",
+              "example": "sales-cold-email-outreach"
+            },
+            "required": true,
+            "description": "Feature slug",
+            "name": "featureSlug",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand UUID (required) — the authorized goal set and the economics are brand-scoped",
+              "example": "brand-uuid-123"
+            },
+            "required": true,
+            "description": "Brand UUID (required) — the authorized goal set and the economics are brand-scoped",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Pricing basis for every money metric: omit or 'gross' for undiscounted figures (default), 'net' for the org's discounted ones",
+              "example": "net"
+            },
+            "required": false,
+            "description": "Pricing basis for every money metric: omit or 'gross' for undiscounted figures (default), 'net' for the org's discounted ones",
+            "name": "pricing",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Feature goal arbitration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeatureGoalArbitrationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Feature not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Downstream service error, or the brand's declared sales funnels could not be read",
             "content": {
               "application/json": {
                 "schema": {
