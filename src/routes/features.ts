@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import { authenticate, authenticatePlatform, requireOrg, requireUser, requireStaff, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
+import { respondUpstreamError } from "../lib/upstream-error.js";
 
 const router = Router();
 
@@ -662,6 +663,43 @@ router.get("/features/:slug/workflow-projection", authenticate, requireOrg, requ
   } catch (error: any) {
     console.error("Feature workflow-projection error:", error.message);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get feature workflow projection" });
+  }
+});
+
+/**
+ * GET /v1/features/:slug/goal-arbitration
+ * The goal features-service elects for a brand out of the sales funnels that brand
+ * declared — the same arbitration campaign-service reads service-to-service, so the
+ * dashboard can show the goal that actually runs instead of the brand's stored
+ * optimizationGoal. Scoped by brandId; `pricing` selects the gross/net basis.
+ *
+ * Forwards ALL query params transparently to features-service
+ * GET /features/:slug/goal-arbitration — no whitelist, so a new downstream param
+ * needs no api-service edit, and `pricing` can never be silently dropped.
+ *
+ * Errors go through respondUpstreamError so the upstream STATUS and BODY both
+ * survive the hop (CLAUDE.md #7): the consumer branches on the difference between a
+ * 502 reason='authorized_goals_unavailable' (this brand never stated a funnel set)
+ * and a 200 arbitration.reason='no_authorized_goals' (it stated it sells through
+ * none) to decide whether to fall back to the stored brand goal. Flattening either
+ * one would erase that distinction.
+ */
+router.get("/features/:slug/goal-arbitration", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(req.query)) {
+      if (typeof value === "string") params.set(key, value);
+    }
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const result = await callExternalService(
+      externalServices.features,
+      `/features/${encodeURIComponent(req.params.slug)}/goal-arbitration${qs}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Feature goal-arbitration error:", error.message);
+    respondUpstreamError(res, error, "Failed to get feature goal arbitration");
   }
 });
 

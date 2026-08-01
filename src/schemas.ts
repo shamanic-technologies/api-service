@@ -8402,6 +8402,32 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/{featureSlug}/goal-arbitration",
+  tags: ["Features"],
+  summary: "Feature goal arbitration",
+  description:
+    "The goal features-service elects for a brand out of the sales funnels that brand declared — the same arbitration campaign-service reads service-to-service, so a client can show the goal that actually runs instead of the brand's stored optimizationGoal. " +
+    "Proxied to features-service GET /features/{featureSlug}/goal-arbitration; every query param is forwarded and the response shape is downstream-owned and passed through. " +
+    "The upstream status AND body both survive: a 502 with reason='authorized_goals_unavailable' (this brand never stated a funnel set) is distinguishable from a 200 whose arbitration.reason='no_authorized_goals' (it stated it sells through none).",
+  security: authed,
+  request: {
+    params: z.object({ featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — the authorized goal set and the economics are brand-scoped"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for every money metric: omit or 'gross' for undiscounted figures (default), 'net' for the org's discounted ones"),
+    }),
+  },
+  responses: {
+    200: { description: "Feature goal arbitration", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureGoalArbitrationResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    502: { description: "Downstream service error, or the brand's declared sales funnels could not be read", content: errorContent },
+  },
+});
+
 // ---------------------------------------------------------------------------
 // PUBLIC STATS (no auth — landing page endpoints)
 // ---------------------------------------------------------------------------
