@@ -10159,3 +10159,147 @@ registry.registerPath({
     502: { description: "crm-service unreachable / not configured", content: errorContent },
   },
 });
+
+// ===================================================================
+// Mailing Lists (proxy to transactional-email-service /mailing-lists/:slug/*)
+//
+// Platform-level (org-less) lists of bare email addresses — "investors" is the
+// first — that staff read, add to, prune, and mail a written update to from the
+// staff console. STAFF-ONLY: authenticate + requireOrg + requireStaff (the org
+// is identity, not scope; the allowlisted x-email is what gates access).
+//
+// Every request and response shape below is owned by transactional-email-service.
+// Passthrough only — nothing is re-declared, nothing is capped, and a field added
+// downstream later arrives at the caller with no change here.
+// ===================================================================
+const MailingListPassthroughResponse = z
+  .object({})
+  .passthrough()
+  .openapi("MailingListPassthroughResponse");
+const MailingListSubscribersAddRequest = z
+  .object({})
+  .passthrough()
+  .openapi("MailingListSubscribersAddRequest");
+const MailingListUpdateRequest = z
+  .object({})
+  .passthrough()
+  .openapi("MailingListUpdateRequest");
+
+const MailingListSlugParam = z.object({
+  slug: z
+    .string()
+    .describe('List slug, e.g. "investors". Lower-case letters, digits and hyphens.'),
+});
+
+const mailingListErrorResponses = {
+  400: { description: "Invalid slug, or a bad request forwarded verbatim from transactional-email-service", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  403: { description: "Staff access required — the caller is not on the staff allowlist", content: errorContent },
+  404: { description: "No such list (forwarded verbatim)", content: errorContent },
+  500: { description: "Upstream error", content: errorContent },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/mailing-lists/{slug}/subscribers",
+  tags: ["Mailing Lists"],
+  summary: "Read a mailing list's subscribers (staff only)",
+  description:
+    "Proxy to transactional-email-service GET /mailing-lists/{slug}/subscribers. Each " +
+    "subscriber states whether the provider is currently suppressing it — the member used " +
+    "the native unsubscribe, complained, or hard-bounced. That opt-out state is read live " +
+    "from Postmark's broadcast stream on every request and is stored nowhere in this " +
+    "gateway. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: MailingListSlugParam },
+  responses: {
+    200: { description: "Subscribers with live opt-out state", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListErrorResponses,
+    502: { description: "Provider suppression state unavailable (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/mailing-lists/{slug}/subscribers",
+  tags: ["Mailing Lists"],
+  summary: "Add addresses to a mailing list in bulk (staff only)",
+  description:
+    "Proxy to transactional-email-service POST /mailing-lists/{slug}/subscribers. The body " +
+    "carries a pasted blob of addresses; downstream parses it leniently, creates the list on " +
+    "first use, and reports what was added, skipped and rejected. Re-pasting the same blob is " +
+    "a no-op. The gateway forwards the body as-is and validates nothing — body and response " +
+    "shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    params: MailingListSlugParam,
+    body: { content: { "application/json": { schema: MailingListSubscribersAddRequest } } },
+  },
+  responses: {
+    200: { description: "What was added, skipped and rejected", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/mailing-lists/{slug}/subscribers",
+  tags: ["Mailing Lists"],
+  summary: "Remove an address from a mailing list (staff only)",
+  description:
+    "Proxy to transactional-email-service DELETE /mailing-lists/{slug}/subscribers. The query " +
+    "string is forwarded byte-for-byte, so `email` reaches downstream exactly as sent. " +
+    "Removing an address is not the same as opting it out: suppression lives with the " +
+    "provider, and a removed address that is still suppressed stays suppressed.",
+  security: authed,
+  request: {
+    params: MailingListSlugParam,
+    query: z.object({
+      email: z.string().openapi({ description: "The address to remove (required)" }),
+    }),
+  },
+  responses: {
+    200: { description: "Removal outcome", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/mailing-lists/{slug}/updates",
+  tags: ["Mailing Lists"],
+  summary: "Send a written update to a mailing list (staff only)",
+  description:
+    "Proxy to transactional-email-service POST /mailing-lists/{slug}/updates. The body carries " +
+    "a subject and a markdown body; downstream renders it to HTML, sends ONE message per " +
+    "recipient (so no recipient is visible to another), skips members the provider is " +
+    "suppressing, and appends the unsubscribe itself. A partial failure comes back as " +
+    "`partial` with the failing addresses and reasons, never as a clean success. Body and " +
+    "response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    params: MailingListSlugParam,
+    body: { content: { "application/json": { schema: MailingListUpdateRequest } } },
+  },
+  responses: {
+    200: { description: "Send outcome, including anyone skipped or failed", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/mailing-lists/{slug}/updates",
+  tags: ["Mailing Lists"],
+  summary: "Read the updates already sent to a mailing list (staff only)",
+  description:
+    "Proxy to transactional-email-service GET /mailing-lists/{slug}/updates. Returns every " +
+    "update with its subject, the body as sent, when it went out, and how many people it " +
+    "reached. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: MailingListSlugParam },
+  responses: {
+    200: { description: "Update history, newest first", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListErrorResponses,
+  },
+});
