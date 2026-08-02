@@ -253,6 +253,26 @@ export const externalServices = {
       return v;
     },
   },
+  cloudflare: {
+    get url(): string {
+      const v = process.env.CLOUDFLARE_SERVICE_URL;
+      if (!v) {
+        const err = new Error("CLOUDFLARE_SERVICE_URL env var is required") as Error & { statusCode: number };
+        err.statusCode = 502;
+        throw err;
+      }
+      return v;
+    },
+    get apiKey(): string {
+      const v = process.env.CLOUDFLARE_SERVICE_API_KEY;
+      if (!v) {
+        const err = new Error("CLOUDFLARE_SERVICE_API_KEY env var is required") as Error & { statusCode: number };
+        err.statusCode = 502;
+        throw err;
+      }
+      return v;
+    },
+  },
   crm: {
     get url(): string {
       const v = process.env.CRM_SERVICE_URL;

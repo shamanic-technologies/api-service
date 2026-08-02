@@ -10325,3 +10325,51 @@ registry.registerPath({
     ...mailingListErrorResponses,
   },
 });
+
+// ===================================================================
+// Platform uploads (proxy to cloudflare-service POST /internal/upload/base64)
+//
+// A platform asset — ours, not any customer org's. Staff pick a file in the
+// browser, the gateway forwards the bytes to cloudflare-service's platform
+// (org-less) upload, and the permanent public URL comes back for the composer
+// to put in an email. STAFF-ONLY: authenticatePlatform + requireStaff.
+//
+// Request and response shapes are owned by cloudflare-service. Passthrough
+// only — nothing is re-declared, nothing is capped, and a field added
+// downstream later arrives at the caller with no change here.
+// ===================================================================
+const PlatformUploadRequest = z
+  .object({})
+  .passthrough()
+  .openapi("PlatformUploadRequest");
+const PlatformUploadResponse = z
+  .object({})
+  .passthrough()
+  .openapi("PlatformUploadResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/platform-uploads",
+  tags: ["Platform Uploads"],
+  summary: "Upload a platform file and get its public URL (staff only)",
+  description:
+    "Proxy to cloudflare-service POST /internal/upload/base64. The body carries the file " +
+    "as base64 (`contentBase64`, data-URL prefixes accepted) plus the optional `folder`, " +
+    "`filename` and `contentType` cloudflare-service documents; it is forwarded as-is and " +
+    "validated nowhere in this gateway. The file is stored on our own R2 as a PLATFORM " +
+    "asset — no org owns it, no org is billed for it — and the response carries the " +
+    "permanent public `url`, which renders in an <img> with no auth. A ~5MB image is ~6.7MB " +
+    "base64, within this gateway's 10mb JSON body limit. Body and response shapes are owned " +
+    "by the downstream service.",
+  security: platformAuth,
+  request: {
+    body: { content: { "application/json": { schema: PlatformUploadRequest } } },
+  },
+  responses: {
+    200: { description: "The stored file, including its permanent public URL", content: { "application/json": { schema: PlatformUploadResponse } } },
+    400: { description: "Invalid body, forwarded verbatim from cloudflare-service", content: errorContent },
+    401: { description: "Invalid or missing platform API key", content: errorContent },
+    403: { description: "Staff access required — the caller is not on the staff allowlist", content: errorContent },
+    502: { description: "Upload failed (forwarded verbatim), or the cloudflare-service env vars are unset", content: errorContent },
+  },
+});
