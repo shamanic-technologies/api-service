@@ -6690,6 +6690,96 @@ registry.registerPath({
     200: { description: "Updated brand daily budget", content: { "application/json": { schema: DailyBudgetResponseSchema } } },
     400: { description: "Validation error (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
+    409: {
+      description:
+        "Brand is funded PER FUNNEL — the brand-level write is refused. Status and body " +
+        "are billing's, forwarded field-for-field.",
+      content: errorContent,
+    },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+// Brand – Per-funnel Daily Budgets (proxy to billing-service)
+// A brand can fund each of its sales funnels separately: one daily ceiling per funnel
+// instead of a single brand-level pot. Once per-funnel ceilings exist the brand-level
+// daily budget is their SUM and PATCH /v1/brands/{brandId}/daily-budget is refused (409).
+// billing owns the funnel-key vocabulary, the per-funnel product minimums and the
+// atomic all-or-nothing write — the gateway declares none of it (CLAUDE.md #4/#8).
+const BrandFunnelBudgetsParam = z.object({
+  brandId: z.string().uuid().describe("Brand ID"),
+});
+const BrandFunnelBudgetParam = z.object({
+  brandId: z.string().uuid().describe("Brand ID"),
+  funnelKey: z.string().describe("Sales-funnel key — vocabulary owned by billing-service"),
+});
+const FunnelBudgetsResponseSchema = z.object({}).passthrough().openapi("FunnelBudgetsResponse");
+const FunnelBudgetsRequestSchema = z.object({}).passthrough().openapi("FunnelBudgetsRequest");
+const FunnelBudgetRequestSchema = z.object({}).passthrough().openapi("FunnelBudgetRequest");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/funnel-budgets",
+  tags: ["Billing"],
+  summary: "Get a brand's per-funnel daily budgets",
+  description:
+    "Proxy to billing-service GET /v1/brands/{brandId}/funnel-budgets. " +
+    "Returns the calling org's per-funnel daily ceilings for the brand plus the brand-level " +
+    "total. A brand with no per-funnel ceilings returns an empty funnel list. Response shape " +
+    "is owned by the downstream service.",
+  security: authed,
+  request: { params: BrandFunnelBudgetsParam },
+  responses: {
+    200: { description: "Per-funnel ceilings + brand total", content: { "application/json": { schema: FunnelBudgetsResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{brandId}/funnel-budgets",
+  tags: ["Billing"],
+  summary: "Set a brand's whole per-funnel daily budget set (atomic)",
+  description:
+    "Proxy to billing-service PUT /v1/brands/{brandId}/funnel-budgets. " +
+    "Writes every per-funnel daily ceiling for this org + brand in one transaction — signup " +
+    "checkout uses this. Body { funnels: [{ funnelKey, dailyBudgetCents }] }; funnel keys, " +
+    "per-funnel minimums and the all-or-nothing semantics are owned by the downstream " +
+    "service, which validates the payload. Its 4xx errors propagate verbatim.",
+  security: authed,
+  request: {
+    params: BrandFunnelBudgetsParam,
+    body: { content: { "application/json": { schema: FunnelBudgetsRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Stored per-funnel ceilings + the resulting brand total", content: { "application/json": { schema: FunnelBudgetsResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/brands/{brandId}/funnel-budgets/{funnelKey}",
+  tags: ["Billing"],
+  summary: "Set one funnel's daily budget for a brand",
+  description:
+    "Proxy to billing-service PATCH /v1/brands/{brandId}/funnel-budgets/{funnelKey}. " +
+    "Sets a single sales funnel's daily spend ceiling — brand Settings changes them one at a " +
+    "time; untouched funnels keep theirs. Body { dailyBudgetCents }. Funnel-key vocabulary and " +
+    "per-funnel minimums are owned by the downstream service; its 4xx errors propagate verbatim.",
+  security: authed,
+  request: {
+    params: BrandFunnelBudgetParam,
+    body: { content: { "application/json": { schema: FunnelBudgetRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Stored per-funnel ceilings + the resulting brand total", content: { "application/json": { schema: FunnelBudgetsResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
   },
 });
