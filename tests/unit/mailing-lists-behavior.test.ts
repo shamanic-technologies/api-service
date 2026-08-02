@@ -246,6 +246,41 @@ describe("/v1/mailing-lists — over the wire", () => {
     expect(res.body).toEqual({ error: "No such list", code: "LIST_NOT_FOUND" });
   });
 
+  it("renders a preview through a slug-less path, body untouched, and sends nothing", async () => {
+    stubFetch({
+      htmlBody: "<table><tr><td><h2>July</h2></td></tr></table>",
+      textBody: "## July",
+      unrenderableImages: [],
+    });
+
+    const body = { body: "## July\n\nRevenue up." };
+    const res = await request(buildApp()).post("/v1/mailing-lists/updates/preview").send(body);
+
+    expect(res.status).toBe(200);
+    // No slug reaches downstream — and this three-segment path must not be
+    // swallowed by `/mailing-lists/:slug/updates`, which is also three segments.
+    expect(calls[0].url).toBe(`${TE_BASE}/mailing-lists/updates/preview`);
+    expect(calls[0].options.method).toBe("POST");
+    expect(JSON.parse(calls[0].options.body)).toEqual(body);
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-email"]).toBe("kevin.lourd@gmail.com");
+    expect(res.body).toEqual({
+      htmlBody: "<table><tr><td><h2>July</h2></td></tr></table>",
+      textBody: "## July",
+      unrenderableImages: [],
+    });
+  });
+
+  it("does not route a real send into the preview path", async () => {
+    stubFetch({ updateId: "u1", slug: "updates", subject: "s", status: "sent", recipientCount: 1, skippedOptedOut: [], failures: [] });
+
+    // A list literally named "updates" is legal, and its send must still reach
+    // the send path rather than the preview one.
+    await request(buildApp()).post("/v1/mailing-lists/updates/updates").send({ subject: "s", body: "b" });
+
+    expect(calls[0].url).toBe(`${TE_BASE}/mailing-lists/updates/updates`);
+  });
+
   it("propagates a downstream 502 when provider suppression state is unavailable", async () => {
     calls = [];
     global.fetch = vi.fn().mockImplementation(async () => ({
