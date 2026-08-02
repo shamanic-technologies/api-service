@@ -170,6 +170,33 @@ router.delete(
   },
 );
 
+// POST /v1/mailing-lists/updates/preview — render a draft as a recipient will
+// see it, without sending it (staff only). Proxies transactional-email-service
+// POST /mailing-lists/updates/preview.
+//
+// Deliberately carries NO slug: downstream takes none, because a body renders
+// identically whoever receives it. That is also why this cannot collide with
+// `/mailing-lists/:slug/updates` above — both are three segments, and the third
+// is a different literal, so neither pattern can swallow the other.
+router.post(
+  "/mailing-lists/updates/preview",
+  authenticate,
+  requireOrg,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.transactionalEmail,
+        `/mailing-lists/updates/preview${rawQueryString(req.originalUrl)}`,
+        { method: "POST", body: req.body, headers: staffHeaders(req) },
+      );
+      res.json(result);
+    } catch (error) {
+      respondUpstreamError(res, error, "Failed to render the mailing list update preview");
+    }
+  },
+);
+
 // POST /v1/mailing-lists/:slug/updates — send a written update to a list (staff only).
 // Proxies transactional-email-service POST /mailing-lists/{slug}/updates. Body
 // forwarded as-is; downstream renders the markdown, sends one message per recipient,
