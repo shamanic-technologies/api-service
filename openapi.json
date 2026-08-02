@@ -7321,6 +7321,18 @@
           "dailyBudgetCents"
         ]
       },
+      "FunnelBudgetsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "FunnelBudgetsRequest": {
+        "type": "object",
+        "properties": {}
+      },
+      "FunnelBudgetRequest": {
+        "type": "object",
+        "properties": {}
+      },
       "BrandEmailsResponse": {
         "type": "object",
         "properties": {
@@ -31907,6 +31919,414 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/DailyBudgetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Brand is funded PER FUNNEL — the brand-level write is refused. Status and body are billing's, forwarded field-for-field.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/brands/{brandId}/funnel-budgets": {
+      "get": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Get a brand's per-funnel daily budgets",
+        "description": "Proxy to billing-service GET /v1/brands/{brandId}/funnel-budgets. Returns the calling org's per-funnel daily ceilings for the brand plus the brand-level total. A brand with no per-funnel ceilings returns an empty funnel list. Response shape is owned by the downstream service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Brand ID"
+            },
+            "required": true,
+            "description": "Brand ID",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Per-funnel ceilings + brand total",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FunnelBudgetsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Set a brand's whole per-funnel daily budget set (atomic)",
+        "description": "Proxy to billing-service PUT /v1/brands/{brandId}/funnel-budgets. Writes every per-funnel daily ceiling for this org + brand in one transaction — signup checkout uses this. Body { funnels: [{ funnelKey, dailyBudgetCents }] }; funnel keys, per-funnel minimums and the all-or-nothing semantics are owned by the downstream service, which validates the payload. Its 4xx errors propagate verbatim.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Brand ID"
+            },
+            "required": true,
+            "description": "Brand ID",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FunnelBudgetsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored per-funnel ceilings + the resulting brand total",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FunnelBudgetsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/brands/{brandId}/funnel-budgets/{funnelKey}": {
+      "patch": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Set one funnel's daily budget for a brand",
+        "description": "Proxy to billing-service PATCH /v1/brands/{brandId}/funnel-budgets/{funnelKey}. Sets a single sales funnel's daily spend ceiling — brand Settings changes them one at a time; untouched funnels keep theirs. Body { dailyBudgetCents }. Funnel-key vocabulary and per-funnel minimums are owned by the downstream service; its 4xx errors propagate verbatim.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Brand ID"
+            },
+            "required": true,
+            "description": "Brand ID",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Sales-funnel key — vocabulary owned by billing-service"
+            },
+            "required": true,
+            "description": "Sales-funnel key — vocabulary owned by billing-service",
+            "name": "funnelKey",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FunnelBudgetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored per-funnel ceilings + the resulting brand total",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FunnelBudgetsResponse"
                 }
               }
             }

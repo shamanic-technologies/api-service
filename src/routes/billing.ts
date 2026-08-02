@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
+import { respondUpstreamError } from "../lib/upstream-error.js";
 
 const router = Router();
 
@@ -177,7 +178,7 @@ router.get("/brands/:brandId/daily-budget", authenticate, requireOrg, async (req
     );
     res.json(result);
   } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get daily budget" });
+    respondUpstreamError(res, error, "Failed to get daily budget");
   }
 });
 
@@ -188,6 +189,13 @@ router.get("/brands/:brandId/daily-budget", authenticate, requireOrg, async (req
  * string, >= 0; 0 = pause) and response shape are owned by the downstream
  * service; identity headers (x-org-id, x-user-id, x-run-id) are forwarded via
  * buildInternalHeaders. Downstream 4xx errors propagate verbatim — passthrough only.
+ *
+ * In particular billing answers 409 here when the brand is already funded PER FUNNEL
+ * (see the funnel-budgets routes below): once per-funnel ceilings exist the brand-level
+ * value is their SUM and this write is refused. That status AND its body must reach the
+ * caller field-for-field — a consumer branches on it — hence respondUpstreamError rather
+ * than a rebuilt { error: err.message } envelope, which would stringify billing's whole
+ * JSON body into the `error` string and destroy every machine-readable field (CLAUDE.md #7).
  */
 router.patch("/brands/:brandId/daily-budget", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
@@ -202,8 +210,85 @@ router.patch("/brands/:brandId/daily-budget", authenticate, requireOrg, async (r
     );
     res.json(result);
   } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to set daily budget" });
+    respondUpstreamError(res, error, "Failed to set daily budget");
   }
 });
+
+/**
+ * GET /v1/brands/:brandId/funnel-budgets
+ * Proxy to billing-service GET /v1/brands/:brandId/funnel-budgets.
+ * Reads the calling org's per-funnel daily ceilings for a brand — brand Settings
+ * shows them back. A brand with no per-funnel ceilings returns funnels: [] plus its
+ * brand-level value. Response shape is owned by billing — passthrough only (CLAUDE.md #8).
+ */
+router.get("/brands/:brandId/funnel-budgets", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!isUuid(req.params.brandId)) {
+      return res.status(400).json({ error: "Invalid brand ID — expected a UUID" });
+    }
+    const result = await callExternalService(
+      externalServices.billing,
+      `/v1/brands/${req.params.brandId}/funnel-budgets`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to get funnel budgets");
+  }
+});
+
+/**
+ * PUT /v1/brands/:brandId/funnel-budgets
+ * Proxy to billing-service PUT /v1/brands/:brandId/funnel-budgets.
+ * Writes the WHOLE per-funnel ceiling set atomically — signup checkout uses this.
+ * Body { funnels: [{ funnelKey, dailyBudgetCents }, ...] }; billing owns the funnel-key
+ * vocabulary, the per-funnel product minimums and the all-or-nothing semantics. The
+ * gateway declares none of it and adds no cap, default or validation of its own
+ * (CLAUDE.md #4/#8) — billing's 4xx propagates verbatim.
+ */
+router.put("/brands/:brandId/funnel-budgets", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!isUuid(req.params.brandId)) {
+      return res.status(400).json({ error: "Invalid brand ID — expected a UUID" });
+    }
+    const result = await callExternalService(
+      externalServices.billing,
+      `/v1/brands/${req.params.brandId}/funnel-budgets`,
+      { method: "PUT", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to set funnel budgets");
+  }
+});
+
+/**
+ * PATCH /v1/brands/:brandId/funnel-budgets/:funnelKey
+ * Proxy to billing-service PATCH /v1/brands/:brandId/funnel-budgets/:funnelKey.
+ * Sets ONE funnel's daily ceiling — brand Settings changes them one at a time;
+ * untouched funnels keep theirs. Body { dailyBudgetCents }. The funnel key is
+ * forwarded as given: billing owns the enum, so an unknown key must come back as
+ * billing's 400, not a gateway-invented one (CLAUDE.md #8).
+ */
+router.patch(
+  "/brands/:brandId/funnel-budgets/:funnelKey",
+  authenticate,
+  requireOrg,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      if (!isUuid(req.params.brandId)) {
+        return res.status(400).json({ error: "Invalid brand ID — expected a UUID" });
+      }
+      const result = await callExternalService(
+        externalServices.billing,
+        `/v1/brands/${req.params.brandId}/funnel-budgets/${encodeURIComponent(req.params.funnelKey)}`,
+        { method: "PATCH", body: req.body, headers: buildInternalHeaders(req) }
+      );
+      res.json(result);
+    } catch (error: any) {
+      respondUpstreamError(res, error, "Failed to set funnel budget");
+    }
+  }
+);
 
 export default router;
