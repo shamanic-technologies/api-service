@@ -10266,6 +10266,28 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
+  path: "/v1/mailing-lists/updates/preview",
+  tags: ["Mailing Lists"],
+  summary: "Render an update as a recipient will see it, without sending it (staff only)",
+  description:
+    "Proxy to transactional-email-service POST /mailing-lists/updates/preview. The body carries " +
+    "a markdown body; downstream returns the HTML a recipient would receive, rendered by the " +
+    "same code a real send uses, plus any image URLs no mail client renders. Nothing is sent, " +
+    "nothing is recorded, no suppression list is read. It takes no list slug because a body " +
+    "renders identically whoever receives it. Body and response shapes are owned by the " +
+    "downstream service.",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: MailingListUpdateRequest } } },
+  },
+  responses: {
+    200: { description: "The body as it would arrive", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
   path: "/v1/mailing-lists/{slug}/updates",
   tags: ["Mailing Lists"],
   summary: "Send a written update to a mailing list (staff only)",

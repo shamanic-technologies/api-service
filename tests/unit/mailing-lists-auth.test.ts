@@ -24,6 +24,7 @@ const ROUTES: Array<[string, string]> = [
   ["get", "/v1/mailing-lists/investors/subscribers"],
   ["post", "/v1/mailing-lists/investors/subscribers"],
   ["delete", "/v1/mailing-lists/investors/subscribers?email=a@b.com"],
+  ["post", "/v1/mailing-lists/updates/preview"],
   ["post", "/v1/mailing-lists/investors/updates"],
   ["get", "/v1/mailing-lists/investors/updates"],
 ];
