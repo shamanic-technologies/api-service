@@ -152,4 +152,88 @@ router.get(
   },
 );
 
+// ---------------------------------------------------------------------------
+// Provider-infrastructure inventory (instantly-service#555).
+//
+// Same staff tier as the audit proxies above. These answer what the fleet OWNS
+// underneath the Instantly accounts — which vendor sells us each domain, when
+// it expires, and what it actually costs — across Gandi, Mailforge, Primeforge
+// and Instantly DFY.
+//
+// They exist so the admin "Sending domains" delete list can stop deriving cost
+// from hardcoded list prices keyed on the connection protocol. That guess is
+// wrong in both directions today: the `imap` accounts sit on Gandi domains
+// whose mailboxes are free and whose DOMAIN is the recurring cost, and the
+// `google` ones are Primeforge or DFY, neither of which is priced like Google
+// Workspace.
+// ---------------------------------------------------------------------------
+
+// GET /v1/instantly/infra/domains — per (provider, domain) inventory with cost (staff only).
+// Transparent proxy to instantly-service GET /internal/infra/domains.
+router.get(
+  "/instantly/infra/domains",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.instantly,
+        "/internal/infra/domains",
+        { headers: staffHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: any) {
+      res
+        .status(error.statusCode || 500)
+        .json({ error: error.message || "Failed to get instantly infra domains" });
+    }
+  },
+);
+
+// GET /v1/instantly/infra/waste — domains billed for but unused, cancelled or expiring (staff only).
+// Transparent proxy to instantly-service GET /internal/infra/waste. Report-only
+// downstream: nothing here cancels an autorenew or schedules a deletion.
+router.get(
+  "/instantly/infra/waste",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.instantly,
+        "/internal/infra/waste",
+        { headers: staffHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: any) {
+      res
+        .status(error.statusCode || 500)
+        .json({ error: error.message || "Failed to get instantly infra waste" });
+    }
+  },
+);
+
+// GET /v1/instantly/infra/spend — monthly infrastructure run-rate by vendor (staff only).
+// Transparent proxy to instantly-service GET /internal/infra/spend. Totals are
+// per currency downstream (Gandi bills EUR); do not blend them here.
+router.get(
+  "/instantly/infra/spend",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.instantly,
+        "/internal/infra/spend",
+        { headers: staffHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: any) {
+      res
+        .status(error.statusCode || 500)
+        .json({ error: error.message || "Failed to get instantly infra spend" });
+    }
+  },
+);
+
 export default router;
