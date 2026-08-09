@@ -25,7 +25,6 @@ import brandRoutes from "./routes/brand.js";
 import brandPauseRoutes from "./routes/brand-pause.js";
 import scrapingRoutes from "./routes/scraping.js";
 import leadsRoutes from "./routes/leads.js";
-import crmRoutes from "./routes/crm.js";
 import activityRoutes from "./routes/activity.js";
 import workflowsRoutes from "./routes/workflows.js";
 import promptsRoutes from "./routes/prompts.js";
@@ -46,18 +45,12 @@ import platformPromptsRoutes from "./routes/platform-prompts.js";
 import emailGatewayRoutes from "./routes/email-gateway.js";
 import runsRoutes from "./routes/runs.js";
 import contentRoutes from "./routes/content.js";
-import pressKitsRoutes from "./routes/press-kits.js";
-import outletsRoutes from "./routes/outlets.js";
-import journalistsRoutes from "./routes/journalists.js";
-import articlesRoutes from "./routes/articles.js";
 import featuresRoutes from "./routes/features.js";
-import googleRoutes from "./routes/google.js";
 import quotesRoutes from "./routes/quotes.js";
 import visibilityRoutes from "./routes/visibility.js";
 import audiencesRoutes from "./routes/audiences.js";
 import mailingListsRoutes from "./routes/mailing-lists.js";
 import platformUploadsRoutes from "./routes/platform-uploads.js";
-import ahrefRoutes from "./routes/ahref.js";
 import invitesRoutes from "./routes/invites.js";
 import waitlistRoutes from "./routes/waitlist.js";
 import publicStatsRoutes from "./routes/public-stats.js";
@@ -186,7 +179,6 @@ app.use(
 
 // Public routes
 app.use(healthRoutes);
-app.use(pressKitsRoutes); // public press-kit endpoints (no auth)
 app.use(featuresRoutes);  // public features endpoints (no auth)
 app.use(publicStatsRoutes); // public stats endpoints (no auth)
 app.use(conversionsRoutes); // public conversion-tracking ingest (no Clerk auth — token in header)
@@ -211,7 +203,6 @@ app.use("/v1", brandPauseRoutes);
 app.use("/v1", brandRoutes);
 app.use("/v1", scrapingRoutes);
 app.use("/v1", leadsRoutes);
-app.use("/v1", crmRoutes);
 app.use("/v1", activityRoutes);
 app.use("/v1", workflowsRoutes);
 app.use("/v1", promptsRoutes);
@@ -228,16 +219,10 @@ app.use("/v1", platformRoutes);
 app.use("/v1", emailGatewayRoutes);
 app.use("/v1", runsRoutes);
 app.use("/v1", contentRoutes);
-app.use("/v1", pressKitsRoutes); // authenticated press-kit endpoints
-app.use("/v1", outletsRoutes);
-app.use("/v1", journalistsRoutes);
-app.use("/v1", articlesRoutes);
 app.use("/v1", featuresRoutes);
-app.use("/v1", googleRoutes);
 app.use("/v1", adminBrandsRoutes);
 app.use("/v1", quotesRoutes);
 app.use("/v1", visibilityRoutes);
-app.use("/v1", ahrefRoutes);
 app.use("/v1", invitesRoutes);
 app.use("/v1", waitlistRoutes);
 app.use("/v1", audiencesRoutes);
