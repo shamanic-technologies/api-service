@@ -58,6 +58,16 @@ Rules for this set:
 - **client-service owns the write semantics, not the gateway.** `orgSlug` in particular is written only when the stored `orgs.slug` is NULL (`COALESCE(orgs.slug, $orgSlug)`) — client-service guards it because upstream slugs are immutable per org, so every authenticated request self-heals an org that predates the header. Do NOT add a second "only if empty" opinion here.
 - **Why the slug matters:** `orgs.slug` IS the org's invite/referral code — client-service `/invites/validate` and `/orgs/:orgId/invites/status` read it directly. Before this header existed, no org had a slug and the whole referral surface was dead (`code: null` for every org). Adding a new enrichment header follows the same shape; changing how any of them is derived is a downstream (client-service) contract change, not a gateway one.
 
+### Retired downstreams — do NOT re-add routes for these
+
+The Hetzner migration (2026-08-07/08) moved 24 services; the rest exist nowhere, and Railway is deleted. A gateway route whose only downstream is one of them answers `500 {"error":"fetch failed"}` (DNS resolution failure inside the docker network), which reads as an outage rather than as "this is gone". So no route here may point at a service that has no container on the box.
+
+**Removed (v0.98.0, features retired by the owner)** — `ahref-service`, `articles-service`, `crm-service`, `google-service`, `journalists-service`, `outlets-service`, `press-kits-service`. Their routers, schemas, `externalServices` entries and openapi paths are gone. `apify-service` and `twilio-service` are also dead but this gateway never routed to them. Do NOT re-add any of these, and do NOT re-add an `externalServices` entry for them — a proxy route with no live downstream is worse than no route.
+
+**Still routed, still 500ing, retirement NOT yet decided** — `ai-visibility-score-service` (`src/routes/visibility.ts`), `expert-quotes-requests-service` + `journalists-quotes-service` (`src/routes/quotes.ts`). These are the `ai-visibility-scoring` and `pr-expert-quote-outreach` features, both with campaigns in the last 30 days; whether they come back is a product call (distribute.you#3310). Remove their routes the same way once that call is made.
+
+**`src/routes/admin.ts` is NOT in this class.** Its `SERVICE_DB_REGISTRY` maps a service name to a `*_DATABASE_URL` and opens a Postgres pool directly — it never calls the service. Six of the retired services still have a restored database on the box, so those entries keep working. Read what a route actually reaches before removing it by name.
+
 ### Brand-service path convention
 
 - `/orgs/brands/*` (no ID in path) = org-scoped operations using `x-org-id` / `x-brand-id` headers (list, extract-fields, extract-images)
