@@ -157,22 +157,6 @@ export const externalServices = {
     url: process.env.API_REGISTRY_SERVICE_URL || "http://localhost:3023",
     apiKey: process.env.API_REGISTRY_SERVICE_API_KEY || "",
   },
-  pressKits: {
-    url: process.env.PRESS_KITS_SERVICE_URL || "https://press-kits.mcpfactory.org",
-    apiKey: process.env.PRESS_KITS_SERVICE_API_KEY || "",
-  },
-  outlet: {
-    url: process.env.OUTLETS_SERVICE_URL || "http://localhost:3030",
-    apiKey: process.env.OUTLETS_SERVICE_API_KEY || "",
-  },
-  journalist: {
-    url: process.env.JOURNALISTS_SERVICE_URL || "http://localhost:3031",
-    apiKey: process.env.JOURNALISTS_SERVICE_API_KEY || "",
-  },
-  articles: {
-    url: process.env.ARTICLES_SERVICE_URL || "http://localhost:3012",
-    apiKey: process.env.ARTICLES_SERVICE_API_KEY || "",
-  },
   features: {
     url: process.env.FEATURES_SERVICE_URL || "http://localhost:3032",
     apiKey: process.env.FEATURES_SERVICE_API_KEY || "",
@@ -180,18 +164,6 @@ export const externalServices = {
   costs: {
     url: process.env.COSTS_SERVICE_URL || "http://localhost:3025",
     apiKey: process.env.COSTS_SERVICE_API_KEY || "",
-  },
-  google: {
-    get url(): string {
-      const v = process.env.GOOGLE_SERVICE_URL;
-      if (!v) throw new Error("GOOGLE_SERVICE_URL env var is required");
-      return v;
-    },
-    get apiKey(): string {
-      const v = process.env.GOOGLE_SERVICE_API_KEY;
-      if (!v) throw new Error("GOOGLE_SERVICE_API_KEY env var is required");
-      return v;
-    },
   },
   journalistsQuotes: {
     get url(): string {
@@ -215,18 +187,6 @@ export const externalServices = {
     get apiKey(): string {
       const v = process.env.AI_VISIBILITY_SCORE_SERVICE_API_KEY;
       if (!v) throw new Error("AI_VISIBILITY_SCORE_SERVICE_API_KEY env var is required");
-      return v;
-    },
-  },
-  ahref: {
-    get url(): string {
-      const v = process.env.AHREF_SERVICE_URL;
-      if (!v) throw new Error("AHREF_SERVICE_URL env var is required");
-      return v;
-    },
-    get apiKey(): string {
-      const v = process.env.AHREF_SERVICE_API_KEY;
-      if (!v) throw new Error("AHREF_SERVICE_API_KEY env var is required");
       return v;
     },
   },
@@ -267,26 +227,6 @@ export const externalServices = {
       const v = process.env.CLOUDFLARE_SERVICE_API_KEY;
       if (!v) {
         const err = new Error("CLOUDFLARE_SERVICE_API_KEY env var is required") as Error & { statusCode: number };
-        err.statusCode = 502;
-        throw err;
-      }
-      return v;
-    },
-  },
-  crm: {
-    get url(): string {
-      const v = process.env.CRM_SERVICE_URL;
-      if (!v) {
-        const err = new Error("CRM_SERVICE_URL env var is required") as Error & { statusCode: number };
-        err.statusCode = 502;
-        throw err;
-      }
-      return v;
-    },
-    get apiKey(): string {
-      const v = process.env.CRM_SERVICE_API_KEY;
-      if (!v) {
-        const err = new Error("CRM_SERVICE_API_KEY env var is required") as Error & { statusCode: number };
         err.statusCode = 502;
         throw err;
       }
@@ -426,76 +366,3 @@ export async function streamExternalService(
   }
 }
 
-/**
- * Forward a multipart/form-data request body to a downstream service (e.g.
- * crm-service CSV ingest). The whole body is BUFFERED into memory first, then
- * sent as a single Buffer so undici derives a `content-length` that exactly
- * matches the bytes on the wire.
- *
- * Why buffer instead of stream: passing the raw Express `req` (a Node Readable)
- * as the fetch body with `duplex: "half"` WHILE forwarding the inbound
- * `content-length` header makes undici abort with "Request body length does not
- * match content-length header" the moment the streamed byte count diverges from
- * the declared length — surfacing to the client as an opaque
- * `TypeError: fetch failed` (500). Buffering removes the mismatch entirely:
- * undici sets `content-length` from the Buffer, and the multipart boundary in
- * the forwarded `content-type` stays intact because the raw bytes are copied
- * verbatim (no re-encoding, no field stripping — CLAUDE.md rules #1/#4). CSV
- * uploads are bounded/small, so the memory cost is negligible.
- *
- * The original `content-type` (INCLUDING the multipart boundary) is forwarded
- * verbatim, plus the identity headers and `X-API-Key`. The inbound
- * `content-length` is deliberately NOT forwarded — undici recomputes it. The
- * upstream JSON response is parsed and returned with its status. On a non-2xx
- * the upstream body is thrown verbatim (CLAUDE.md rule #7) with `statusCode`
- * set, so the route can surface it to the client.
- *
- * No transient-network retry here: the request body is consumed once while
- * buffering and the semantics of a partial upload retry are undefined.
- */
-export async function forwardMultipartUpload<T>(
-  service: { url: string; apiKey: string; dispatcher?: Dispatcher },
-  path: string,
-  options: { req: import("express").Request; headers?: Record<string, string> },
-): Promise<{ status: number; data: T }> {
-  const { req, headers = {} } = options;
-  const url = `${service.url}${path}`;
-
-  // Buffer the entire multipart body. `express.json()` skips non-JSON content
-  // types, so the multipart stream reaches here untouched and fully readable.
-  const chunks: Buffer[] = [];
-  for await (const chunk of req) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-  }
-  const bodyBuffer = Buffer.concat(chunks);
-
-  const forwardHeaders: Record<string, string> = {
-    "X-API-Key": service.apiKey,
-    ...headers,
-  };
-  const contentType = req.headers["content-type"];
-  if (contentType) forwardHeaders["content-type"] = contentType;
-  // Do NOT forward the inbound `content-length` — undici sets it from
-  // `bodyBuffer`, guaranteeing the declared length matches the bytes sent.
-
-  const init: RequestInit & { dispatcher?: Dispatcher } = {
-    method: "POST",
-    headers: forwardHeaders,
-    body: bodyBuffer,
-  };
-  if (service.dispatcher) init.dispatcher = service.dispatcher;
-
-  const response = await fetch(url, init);
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error(`[forwardMultipartUpload] POST ${url} upstream error ${response.status}:`, errorText);
-    const message = errorText || `Service call failed: ${response.status}`;
-    const err = new Error(message) as Error & { statusCode: number };
-    err.statusCode = response.status;
-    throw err;
-  }
-
-  const data: T = await response.json();
-  return { status: response.status, data };
-}

@@ -93,16 +93,3 @@ describe("Brand-level GET /emails OpenAPI schema", () => {
     expect(emailsOp.responses["500"]).toBeDefined();
   });
 });
-
-describe("Discoveries already supports brandId (no changes needed)", () => {
-  it("should have brandId in discoveries OpenAPI query params", () => {
-    const discoveriesPath = openapi.paths["/v1/discoveries"];
-    expect(discoveriesPath).toBeDefined();
-    expect(discoveriesPath.get).toBeDefined();
-    const params = discoveriesPath.get.parameters || [];
-    const brandIdParam = params.find(
-      (p: { name: string; in: string }) => p.name === "brandId" && p.in === "query"
-    );
-    expect(brandIdParam).toBeDefined();
-  });
-});
