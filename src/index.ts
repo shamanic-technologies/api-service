@@ -23,6 +23,7 @@ import meRoutes from "./routes/me.js";
 import qualifyRoutes from "./routes/qualify.js";
 import brandRoutes from "./routes/brand.js";
 import brandPauseRoutes from "./routes/brand-pause.js";
+import crmRoutes from "./routes/crm.js";
 import scrapingRoutes from "./routes/scraping.js";
 import leadsRoutes from "./routes/leads.js";
 import activityRoutes from "./routes/activity.js";
@@ -201,6 +202,7 @@ app.use("/v1", qualifyRoutes);
 // must win over any future brand-service brand proxy.
 app.use("/v1", brandPauseRoutes);
 app.use("/v1", brandRoutes);
+app.use("/v1", crmRoutes);
 app.use("/v1", scrapingRoutes);
 app.use("/v1", leadsRoutes);
 app.use("/v1", activityRoutes);

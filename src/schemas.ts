@@ -7664,6 +7664,179 @@ registry.registerPath({
   },
 });
 
+// ── CRM contacts + Matrix DMs (crm-service proxy) ────────────────────────────
+// Transparent proxy of crm-service's org-scoped surface: CSV contact uploads and
+// the Matrix DM ingest (WhatsApp / Telegram / Discord), both landing in the same
+// contact registry. Request AND response shapes are owned by crm-service;
+// passthrough only, per CLAUDE.md rules #6/#8 and its request-body corollary.
+// crm-service's /internal/* routes (contacts/promote, matrix/sync, matrix/rebuild)
+// are its cron-driven service-to-service tier and are deliberately not exposed.
+const CrmPassthroughResponse = z.object({}).passthrough().openapi("CrmPassthroughResponse");
+const CrmPassthroughRequest = z.object({}).passthrough().openapi("CrmPassthroughRequest");
+const CrmUploadMultipartBody = z
+  .object({
+    file: z.string().openapi({ type: "string", format: "binary", description: "The CSV file to ingest" }),
+    brandId: z.string().uuid().openapi({ description: "Brand the contacts belong to (required)" }),
+    columnMapping: z
+      .string()
+      .optional()
+      .openapi({ description: "Optional JSON column-mapping override" }),
+  })
+  .openapi("CrmUploadMultipartBody");
+
+// The gateway forwards the inbound query string byte-for-byte, so a filter
+// crm-service adds later needs no change here. `brandId` is documented because it
+// is required downstream on every read; it is not the only param accepted.
+const CrmBrandIdQuery = z.object({
+  brandId: z.string().uuid().openapi({ description: "Brand ID (required by crm-service)" }),
+});
+
+const crmErrorResponses = {
+  400: { description: "Bad request, forwarded verbatim from crm-service", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  500: { description: "Internal error", content: errorContent },
+  502: { description: "crm-service unreachable / not configured", content: errorContent },
+};
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/contacts/upload",
+  tags: ["CRM Contacts"],
+  summary: "Upload a CSV of contacts (bronze ingest + async silver promotion)",
+  description:
+    "Proxy to crm-service POST /orgs/contacts/upload. Multipart body (field `file` = CSV, `brandId` required, optional `columnMapping`) is forwarded untransformed — the multipart boundary is preserved byte-for-byte. Requires x-user-id. Response shape owned by crm-service.",
+  security: authed,
+  request: { body: { content: { "multipart/form-data": { schema: CrmUploadMultipartBody } } } },
+  responses: {
+    200: { description: "Upload ingested (crm-service { uploadId, rowCount, status, mappingProvenance })", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/contacts",
+  tags: ["CRM Contacts"],
+  summary: "List silver contacts for a brand",
+  description:
+    "Proxy to crm-service GET /orgs/contacts. The whole query string is forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Contacts as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/contacts/uploads",
+  tags: ["CRM Contacts"],
+  summary: "List uploads and their status for a brand",
+  description:
+    "Proxy to crm-service GET /orgs/contacts/uploads. The whole query string is forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Uploads as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/contacts/serve-stats",
+  tags: ["CRM Contacts"],
+  summary: "Served vs remaining sendable counts for a brand",
+  description:
+    "Proxy to crm-service GET /orgs/contacts/serve-stats. The whole query string is forwarded untransformed, including a repeated or comma-separated `uploadIds` per-file scope. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Serve stats as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/contacts/serve-next",
+  tags: ["CRM Contacts"],
+  summary: "Serve the next batch of un-served contacts for a brand",
+  description:
+    "Proxy to crm-service POST /orgs/contacts/serve-next. Request body forwarded verbatim — crm-service owns its shape. Response shape owned by crm-service.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: CrmPassthroughRequest } } } },
+  responses: {
+    200: { description: "Served contacts as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/matrix/connections",
+  tags: ["CRM Contacts"],
+  summary: "Register (or update) a brand's Matrix DM connection",
+  description:
+    "Proxy to crm-service POST /orgs/matrix/connections — the WhatsApp / Telegram / Discord bridge a brand's inbound DMs arrive on. Request body forwarded verbatim. Requires x-user-id: crm-service persists the creator on the row so the sync cron can bill the org. Response shape owned by crm-service.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: CrmPassthroughRequest } } } },
+  responses: {
+    200: { description: "Connection as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/orgs/matrix/connections/{id}",
+  tags: ["CRM Contacts"],
+  summary: "Pause or resume a Matrix DM connection",
+  description:
+    "Proxy to crm-service PATCH /orgs/matrix/connections/{id}. Request body forwarded verbatim. Response shape owned by crm-service.",
+  security: authed,
+  request: {
+    params: z.object({ id: z.string().uuid().openapi({ description: "Connection ID" }) }),
+    body: { content: { "application/json": { schema: CrmPassthroughRequest } } },
+  },
+  responses: {
+    200: { description: "Connection as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: { description: "No such connection (forwarded verbatim)", content: errorContent },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/matrix/connections",
+  tags: ["CRM Contacts"],
+  summary: "Matrix DM connection health for a brand",
+  description:
+    "Proxy to crm-service GET /orgs/matrix/connections. The whole query string is forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Connections as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/matrix/leads",
+  tags: ["CRM Contacts"],
+  summary: "Leads read out of a brand's inbound DM conversations",
+  description:
+    "Proxy to crm-service GET /orgs/matrix/leads — one row per conversation, carrying the LLM's reading plus the conversation counters and contact identity. The whole query string is forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Leads as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
 // ===================================================================
 // Mailing Lists (proxy to transactional-email-service /mailing-lists/:slug/*)
 //
