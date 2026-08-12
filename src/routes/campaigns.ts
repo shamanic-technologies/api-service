@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
+import { respondUpstreamError } from "../lib/upstream-error.js";
 import { fetchDeliveryStats, EMPTY_DELIVERY_STATS } from "../lib/delivery-stats.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import {
@@ -190,7 +191,11 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] POST /v1/campaigns — FAILED:", error.message, error.stack);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to create campaign" });
+    // campaign-service rejects a create it cannot accept — a sales campaign that states
+    // no funnel, an unknown funnel key. That rejection is its contract, body included:
+    // re-emit it field-for-field under its own status instead of flattening the JSON
+    // body into an `error` string (CLAUDE.md rule #7, corollary).
+    respondUpstreamError(res, error, "Failed to create campaign");
   }
 });
 
