@@ -621,6 +621,16 @@ registry.registerPath({
 
 // -- Request schemas --
 
+// The gateway declares ONLY the fields it needs for its own work: the required-field
+// check it 400s on, the brandUrls→brandIds upsert, the workflow slug it derives the
+// campaign type + tracking header from, and the featureInputs it key-presence-validates
+// against features-service. Everything else campaign-service accepts — `funnelKey`, and
+// any field it adds next — rides through `.passthrough()` untouched. A whitelist here
+// would silently DROP those fields (the create reaching campaign-service without them),
+// which is the gateway owning a downstream shape it does not own (CLAUDE.md rule #8).
+// So: never re-declare a field just to let it through, and never validate a downstream
+// vocabulary here — campaign-service rejects what it does not accept, and rule #7
+// forwards that rejection verbatim.
 export const CreateCampaignRequestSchema = z
   .object({
     name: z.string().describe("Campaign name"),
@@ -639,11 +649,14 @@ export const CreateCampaignRequestSchema = z
     endDate: z.string().optional().describe("Campaign end date"),
     // Campaign v2 — per-campaign configuration (owned by campaign-service).
     // Faithful passthrough: types mirror campaign-service's create contract exactly.
-    goal: z.enum(["signup", "meetingBooked", "purchase"]).nullable().optional().describe("Campaign's own optimization goal"),
+    goal: z.string().min(1).nullable().optional().describe("Campaign's own optimization goal. Vocabulary owned by campaign-service — not enumerated here."),
     audienceIds: z.array(z.string().min(1)).min(1).nullable().optional().describe("Subset of the brand's audiences this campaign targets"),
     servicesOffered: z.array(z.string().min(1)).nullable().optional().describe("Services offered by this campaign"),
     clickDestinationUrl: z.string().min(1).nullable().optional().describe("Campaign's click-destination URL"),
   })
+  // Forward every other field campaign-service accepts — `funnelKey` (the sales funnel a
+  // sales campaign is paced and priced on) and whatever it adds next — byte-identical.
+  .passthrough()
   .refine(
     (d) => d.workflowSlug || d.workflowDynastySlug,
     { message: "Either workflowSlug or workflowDynastySlug is required", path: ["workflowSlug"] },
@@ -828,7 +841,12 @@ registry.registerPath({
     "Create a new campaign. Requires feature inputs and at least one of featureSlug/featureDynastySlug plus one of workflowSlug/workflowDynastySlug.\n\n" +
     "Use `workflowDynastySlug`/`featureDynastySlug` (preferred) to let campaign-service resolve to the latest version automatically. " +
     "Use `workflowSlug`/`featureSlug` only to pin to a specific version. " +
-    "Feature inputs are validated by key-presence against features-service (api-service never inspects values).",
+    "Feature inputs are validated by key-presence against features-service (api-service never inspects values).\n\n" +
+    "The body is a PASSTHROUGH: the fields below are the ones the gateway itself needs, and every other field " +
+    "campaign-service accepts is forwarded unchanged. A sales-outreach campaign must state the sales funnel it " +
+    "sells as `funnelKey` (`reply_meeting` | `visit_meeting` | `visit_signup` | `visit_form`) — that is what the " +
+    "campaign is paced and priced on. The gateway neither infers nor defaults one: state no funnel on a sales " +
+    "feature and campaign-service's own 400 comes back verbatim.",
   security: authed,
   request: {
     body: {

@@ -579,12 +579,8 @@
           "goal": {
             "type": "string",
             "nullable": true,
-            "enum": [
-              "signup",
-              "meetingBooked",
-              "purchase"
-            ],
-            "description": "Campaign's own optimization goal"
+            "minLength": 1,
+            "description": "Campaign's own optimization goal. Vocabulary owned by campaign-service — not enumerated here."
           },
           "audienceIds": {
             "type": "array",
@@ -8968,7 +8964,7 @@
           "Campaigns"
         ],
         "summary": "Create a campaign",
-        "description": "Create a new campaign. Requires feature inputs and at least one of featureSlug/featureDynastySlug plus one of workflowSlug/workflowDynastySlug.\n\nUse `workflowDynastySlug`/`featureDynastySlug` (preferred) to let campaign-service resolve to the latest version automatically. Use `workflowSlug`/`featureSlug` only to pin to a specific version. Feature inputs are validated by key-presence against features-service (api-service never inspects values).",
+        "description": "Create a new campaign. Requires feature inputs and at least one of featureSlug/featureDynastySlug plus one of workflowSlug/workflowDynastySlug.\n\nUse `workflowDynastySlug`/`featureDynastySlug` (preferred) to let campaign-service resolve to the latest version automatically. Use `workflowSlug`/`featureSlug` only to pin to a specific version. Feature inputs are validated by key-presence against features-service (api-service never inspects values).\n\nThe body is a PASSTHROUGH: the fields below are the ones the gateway itself needs, and every other field campaign-service accepts is forwarded unchanged. A sales-outreach campaign must state the sales funnel it sells as `funnelKey` (`reply_meeting` | `visit_meeting` | `visit_signup` | `visit_form`) — that is what the campaign is paced and priced on. The gateway neither infers nor defaults one: state no funnel on a sales feature and campaign-service's own 400 comes back verbatim.",
         "security": [
           {
             "bearerAuth": []
