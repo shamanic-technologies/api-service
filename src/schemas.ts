@@ -1678,8 +1678,10 @@ registry.registerPath({
   summary: "List leads",
   description:
     "Pass-through to lead-service GET /orgs/leads. Filter by brandId and/or campaignId (at least one required). " +
+    "The whole query string is forwarded to lead-service verbatim: the parameters listed here are the ones documented " +
+    "today, not a whitelist — any other filter lead-service accepts can be sent and reaches it unchanged. " +
     "Each lead is a LeadDetail with the canonical FullLead payload under `lead` (lead-service v0.13.4+). " +
-    "Refer to lead-service openapi.json for the exact response shape — api-service forwards it untransformed.",
+    "Refer to lead-service openapi.json for the exact query parameters and response shape — api-service forwards both untransformed.",
   security: authed,
   request: {
     query: z.object({
@@ -1688,7 +1690,7 @@ registry.registerPath({
       limit: z.coerce.number().int().optional().openapi({ description: "Max results to return" }),
       offset: z.coerce.number().int().optional().openapi({ description: "Offset for pagination" }),
       view: z.string().optional().openapi({ description: "Projection view forwarded to lead-service (e.g. `basic` for a slim payload)" }),
-    }),
+    }).passthrough(),
   },
   responses: {
     200: {
