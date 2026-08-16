@@ -89,7 +89,10 @@ describe("OpenAPI spec — response schemas", () => {
     expect(schemas).toHaveProperty("ExtractedFieldsResponse");
     expect(schemas).toHaveProperty("ExtractImagesMultiBrandResponse");
     expect(schemas).toHaveProperty("ExtractedImagesResponse");
-    expect(schemas).toHaveProperty("IcpSuggestionResponse");
+    // IcpSuggestionResponse is deliberately absent: POST /v1/brand/icp-suggestion
+    // forwarded to a brand-service path that service never served, so the route
+    // and its schemas were removed. The per-brand IcpSuggestResponse is the live one.
+    expect(schemas).toHaveProperty("IcpSuggestResponse");
   });
 
   it("should define billing response schemas", () => {
