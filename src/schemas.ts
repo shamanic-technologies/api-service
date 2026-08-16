@@ -1717,6 +1717,94 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/leads/stats",
+  tags: ["Leads"],
+  summary: "Lead counts, without the leads",
+  description:
+    "Pass-through to lead-service GET /orgs/stats. Returns a brand's (or campaign's, or the whole org's) lead " +
+    "counts — the total plus the split by lifecycle state — with no lead rows in the response, so a surface that " +
+    "renders a count badge does not have to download the lead list to get one integer. " +
+    "The whole query string is forwarded to lead-service verbatim: the parameters listed here are the ones " +
+    "documented today, not a whitelist — any other filter or `groupBy` dimension lead-service accepts can be sent " +
+    "and reaches it unchanged. Org scope comes from the authenticated identity, not from the query. " +
+    "Refer to lead-service openapi.json for the exact parameters and response shape — api-service forwards both untransformed.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().optional().openapi({ description: "Brand ID filter" }),
+      campaignId: z.string().optional().openapi({ description: "Campaign ID filter" }),
+      groupBy: z.string().optional().openapi({
+        description:
+          "Return one count row per value of this dimension (e.g. `campaignId`, `brandId`, `audienceId`) instead of a flat total.",
+      }),
+    }).passthrough(),
+  },
+  responses: {
+    200: {
+      description:
+        "Lead counts as returned by lead-service GET /orgs/stats. Flat (`totalLeads`, `byOutreachStatus`, " +
+        "`repliesDetail`, `buffered`, `skipped`, `claimed`) without `groupBy`, or `{ groups: [...] }` with it. " +
+        "lead-service owns this shape; api-service forwards it byte-identical.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadStatsResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/leads/{id}",
+  tags: ["Leads"],
+  summary: "Read one lead's full record",
+  description:
+    "Pass-through to lead-service GET /orgs/leads/{id}. Returns the full record of a SINGLE lead — the same object " +
+    "GET /v1/leads emits for that row — wrapped as `{ leadDetail }` rather than a one-element list. " +
+    "`id` is the `id` a row of GET /v1/leads already carries, so a caller needs nothing it did not already receive " +
+    "from the list: take the slim list for the table, then ask for depth one row at a time instead of holding the " +
+    "full projection for a whole brand. The whole query string is forwarded to lead-service verbatim: the parameters " +
+    "listed here are the ones documented today, not a whitelist. `brandId` / `campaignId` mean exactly what they mean " +
+    "on the list — which scope the delivery overlay answers for. The read is org-scoped downstream: a lead outside the " +
+    "caller's org is a 404, indistinguishable from one that does not exist. " +
+    "Refer to lead-service openapi.json for the exact response shape — api-service forwards it untransformed.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().openapi({
+        description: "The `id` of a lead as returned by GET /v1/leads. A non-uuid value is a 400 from lead-service.",
+      }),
+    }),
+    query: z.object({
+      brandId: z.string().uuid().optional().openapi({
+        description: "Delivery-overlay scope, same as on the list. A lead that does not belong to this brand is a 404.",
+      }),
+      campaignId: z.string().uuid().optional().openapi({
+        description: "Campaign scope for the delivery overlay, same as on the list.",
+      }),
+    }).passthrough(),
+  },
+  responses: {
+    200: {
+      description: "The lead's full record as returned by lead-service (`{ leadDetail }`).",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadDetailResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid lead id", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead in this caller's org (or brand, when brandId is given)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // QUALIFY
 // ===================================================================
@@ -1800,12 +1888,6 @@ export const BrandUpsertRequestSchema = z
   })
   .passthrough()
   .openapi("BrandUpsertRequest");
-
-export const IcpSuggestionRequestSchema = z
-  .object({
-    brandUrl: z.string().min(1).describe("Brand website URL"),
-  })
-  .openapi("IcpSuggestionRequest");
 
 // Passthrough — brand-service owns this shape. Per CLAUDE.md "Response schema policy",
 // no field re-declaration here. Field renames downstream do not require an api-service edit.
@@ -2086,36 +2168,6 @@ registry.registerPath({
     },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Brand not found", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/brand/icp-suggestion",
-  tags: ["Brand"],
-  summary: "Get ICP suggestion",
-  description:
-    "Get AI-generated Ideal Customer Profile suggestion (Apollo-compatible search params) for a brand URL",
-  security: authed,
-  request: {
-    body: {
-      content: {
-        "application/json": { schema: IcpSuggestionRequestSchema },
-      },
-    },
-  },
-  responses: {
-    200: {
-      description: "ICP suggestion (Apollo-compatible search params)",
-      content: {
-        "application/json": {
-          schema: z.object({}).passthrough().openapi("IcpSuggestionResponse"),
-        },
-      },
-    },
-    400: { description: "Invalid request", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
