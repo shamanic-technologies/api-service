@@ -1717,6 +1717,47 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/leads/stats",
+  tags: ["Leads"],
+  summary: "Lead counts, without the leads",
+  description:
+    "Pass-through to lead-service GET /orgs/stats. Returns a brand's (or campaign's, or the whole org's) lead " +
+    "counts — the total plus the split by lifecycle state — with no lead rows in the response, so a surface that " +
+    "renders a count badge does not have to download the lead list to get one integer. " +
+    "The whole query string is forwarded to lead-service verbatim: the parameters listed here are the ones " +
+    "documented today, not a whitelist — any other filter or `groupBy` dimension lead-service accepts can be sent " +
+    "and reaches it unchanged. Org scope comes from the authenticated identity, not from the query. " +
+    "Refer to lead-service openapi.json for the exact parameters and response shape — api-service forwards both untransformed.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().optional().openapi({ description: "Brand ID filter" }),
+      campaignId: z.string().optional().openapi({ description: "Campaign ID filter" }),
+      groupBy: z.string().optional().openapi({
+        description:
+          "Return one count row per value of this dimension (e.g. `campaignId`, `brandId`, `audienceId`) instead of a flat total.",
+      }),
+    }).passthrough(),
+  },
+  responses: {
+    200: {
+      description:
+        "Lead counts as returned by lead-service GET /orgs/stats. Flat (`totalLeads`, `byOutreachStatus`, " +
+        "`repliesDetail`, `buffered`, `skipped`, `claimed`) without `groupBy`, or `{ groups: [...] }` with it. " +
+        "lead-service owns this shape; api-service forwards it byte-identical.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadStatsResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // QUALIFY
 // ===================================================================
