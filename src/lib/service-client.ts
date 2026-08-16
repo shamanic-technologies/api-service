@@ -3,6 +3,8 @@
  * All services require API key authentication via X-API-Key header
  */
 import { Agent, type Dispatcher } from "undici";
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
 
 // Shared undici dispatcher for journalists-quotes-service.
 // /orgs/opportunities/discover (batch scorer) and /next run heavy RAG scoring on
@@ -311,6 +313,104 @@ export async function callExternalServiceWithStatus<T>(
     const cause = error.cause ? ` (cause: ${error.cause?.code || error.cause?.message || error.cause})` : "";
     console.error(`[callExternalService] ${method} ${url} failed: ${error.message}${cause}`);
     throw error;
+  }
+}
+
+/**
+ * Pipe a downstream JSON response to the client as RAW BYTES, without ever
+ * materializing it as JavaScript values.
+ *
+ * `callExternalService` does `await response.json()` then the route does
+ * `res.json(result)` — that is a full JS object graph of the body PLUS a second
+ * full copy of the body as a serialized string, both live at the same time. On a
+ * large brand `GET /v1/leads` returns 100–156 MB, so those two copies blow past
+ * the default V8 heap and the process dies with
+ * `FATAL ERROR: Reached heap limit ... JsonStringifier::SerializeString`. An OOM
+ * kills the whole gateway, so one large-brand poll takes down every org's
+ * in-flight request, not just its own.
+ *
+ * This helper never parses: it copies the upstream body stream straight into the
+ * Express socket. Memory stays at one chunk plus whatever backpressure the socket
+ * has not drained — flat in the size of the body — and the bytes the caller
+ * receives are the bytes lead-service sent, which is what a passthrough route
+ * owes its consumer (CLAUDE.md rules #4/#8).
+ *
+ * `pipeline` (not a manual `read()` loop) is what makes it flat: it honours
+ * `res.write()` backpressure, so a slow client throttles the upstream read
+ * instead of queueing the whole body in the response buffer.
+ *
+ * Like `streamExternalService`, an `AbortController` is wired to the client
+ * socket: a caller that disconnects mid-body (closed tab, navigation, the
+ * dashboard's own 30 s poll superseding itself) tears the upstream connection
+ * down instead of leaving it draining. `server.requestTimeout = 0` means nothing
+ * else would reap it.
+ *
+ * A non-2xx is read to completion and thrown verbatim with `statusCode`, exactly
+ * as `callExternalService` does, so the route's existing catch keeps forwarding
+ * the upstream status and body unchanged (rule #7). Error bodies are small — the
+ * whole point of not buffering does not apply to them.
+ *
+ * Only `content-type` is forwarded. `content-length` deliberately is NOT: fetch
+ * transparently decodes `content-encoding`, so the upstream's declared length can
+ * describe compressed bytes we are no longer sending. Omitting it lets Node use
+ * chunked transfer-encoding, which changes framing, never body bytes.
+ */
+export async function pipeExternalService(
+  service: { url: string; apiKey: string; dispatcher?: Dispatcher },
+  path: string,
+  options: ServiceCallOptions & { expressRes: import("express").Response },
+): Promise<void> {
+  const { method = "GET", body, headers = {}, expressRes } = options;
+  const url = `${service.url}${path}`;
+
+  const controller = new AbortController();
+  const abortOnClose = () => controller.abort();
+  expressRes.on("close", abortOnClose);
+
+  try {
+    const init: RequestInit & { dispatcher?: Dispatcher } = {
+      method,
+      headers: {
+        "Content-Type": "application/json",
+        "X-API-Key": service.apiKey,
+        ...headers,
+      },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    };
+    if (service.dispatcher) init.dispatcher = service.dispatcher;
+
+    const response = await fetchWithTransientNetworkRetry(url, init, method);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[pipeExternalService] ${method} ${url} upstream error ${response.status}:`, errorText);
+      const err = new Error(errorText || `Service call failed: ${response.status}`) as Error & {
+        statusCode: number;
+      };
+      err.statusCode = response.status;
+      throw err;
+    }
+
+    const contentType = response.headers.get("content-type");
+    expressRes.status(response.status);
+    expressRes.setHeader("Content-Type", contentType || "application/json");
+
+    if (!response.body) {
+      expressRes.end();
+      return;
+    }
+
+    await pipeline(Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]), expressRes);
+  } catch (error: any) {
+    // The client hung up: the abort is the expected teardown, and the response
+    // socket is already gone, so there is nothing to report and nothing to fail.
+    if (controller.signal.aborted) return;
+    const cause = error?.cause ? ` (cause: ${error.cause?.code || error.cause?.message || error.cause})` : "";
+    console.error(`[pipeExternalService] ${method} ${url} failed: ${error?.message}${cause}`);
+    throw error;
+  } finally {
+    expressRes.off("close", abortOnClose);
   }
 }
 

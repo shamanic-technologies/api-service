@@ -59,9 +59,14 @@ describe("GET /v1/leads — per-lead audience passthrough (#637)", () => {
 
   beforeEach(() => {
     capturedUrls = [];
+    // A real Response: the route pipes the upstream body through as raw bytes
+    // (it never parses it), so the stub must expose a body stream.
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
       capturedUrls.push(url);
-      return { ok: true, json: () => Promise.resolve(upstreamBody) };
+      return new Response(JSON.stringify(upstreamBody), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
     });
   });
 
