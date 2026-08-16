@@ -98,6 +98,50 @@ router.get("/leads/stats", authenticate, requireOrg, requireUser, async (req: Au
 });
 
 /**
+ * GET /v1/leads/:id — pass-through to lead-service GET /orgs/leads/{id}.
+ *
+ * Registered AFTER the literal `/leads/stats` above: a path parameter matches any
+ * single segment, so declaring it first would swallow `/v1/leads/stats` and send
+ * lead-service `stats` as a lead id.
+ *
+ * Reads ONE lead's full record. `id` is the `id` a row of GET /v1/leads already
+ * carries, so a caller needs nothing it did not already receive from the list —
+ * which is the point: a table + detail-panel surface takes the slim list for the
+ * table and asks for depth one row at a time, instead of holding the full
+ * projection for a whole brand (~57k rows / >100 MB on the largest one) so that one
+ * panel can work.
+ *
+ * The caller's query string is forwarded verbatim for the same reason the list
+ * route forwards it: `brandId` / `campaignId` decide which scope lead-service's
+ * delivery overlay answers for, and a filter this gateway has never heard of must
+ * still reach lead-service unchanged (CLAUDE.md rule #11). Nothing is read out of
+ * it here — this route has no guard of its own to raise.
+ *
+ * The org boundary is the authenticated one: `x-org-id` comes from
+ * `buildInternalHeaders(req)`, never from the caller, and lead-service scopes the
+ * lookup on it — a lead in another org is a 404 there, indistinguishable from one
+ * that does not exist.
+ *
+ * One record, not a list: the body is small, so it is forwarded through
+ * `callExternalService` rather than piped (rule #10 is for bodies measured in MB).
+ * The response shape is lead-service's; this gateway does not declare it (rule #8).
+ */
+router.get("/leads/:id", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.lead,
+      `/orgs/leads/${encodeURIComponent(req.params.id)}${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) }
+    );
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Get lead detail error:", error);
+    respondUpstreamError(res, error, "Failed to get lead");
+  }
+});
+
+/**
  * POST /v1/leads/search
  * Search for leads via lead-service
  */

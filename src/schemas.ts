@@ -1758,6 +1758,53 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/leads/{id}",
+  tags: ["Leads"],
+  summary: "Read one lead's full record",
+  description:
+    "Pass-through to lead-service GET /orgs/leads/{id}. Returns the full record of a SINGLE lead — the same object " +
+    "GET /v1/leads emits for that row — wrapped as `{ leadDetail }` rather than a one-element list. " +
+    "`id` is the `id` a row of GET /v1/leads already carries, so a caller needs nothing it did not already receive " +
+    "from the list: take the slim list for the table, then ask for depth one row at a time instead of holding the " +
+    "full projection for a whole brand. The whole query string is forwarded to lead-service verbatim: the parameters " +
+    "listed here are the ones documented today, not a whitelist. `brandId` / `campaignId` mean exactly what they mean " +
+    "on the list — which scope the delivery overlay answers for. The read is org-scoped downstream: a lead outside the " +
+    "caller's org is a 404, indistinguishable from one that does not exist. " +
+    "Refer to lead-service openapi.json for the exact response shape — api-service forwards it untransformed.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().openapi({
+        description: "The `id` of a lead as returned by GET /v1/leads. A non-uuid value is a 400 from lead-service.",
+      }),
+    }),
+    query: z.object({
+      brandId: z.string().uuid().optional().openapi({
+        description: "Delivery-overlay scope, same as on the list. A lead that does not belong to this brand is a 404.",
+      }),
+      campaignId: z.string().uuid().optional().openapi({
+        description: "Campaign scope for the delivery overlay, same as on the list.",
+      }),
+    }).passthrough(),
+  },
+  responses: {
+    200: {
+      description: "The lead's full record as returned by lead-service (`{ leadDetail }`).",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadDetailResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid lead id", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead in this caller's org (or brand, when brandId is given)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // QUALIFY
 // ===================================================================
