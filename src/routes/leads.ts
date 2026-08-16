@@ -7,8 +7,24 @@ import { LeadSearchRequestSchema } from "../schemas.js";
 const router = Router();
 
 /**
+ * The inbound query string, verbatim, including the leading `?` (empty when there
+ * is none). Read off `req.originalUrl` rather than re-serialized from `req.query`:
+ * re-serializing imposes this gateway's opinion on repeated keys, ordering and
+ * encoding, and silently drops anything the gateway does not know about.
+ */
+function rawQueryString(originalUrl: string): string {
+  const index = originalUrl.indexOf("?");
+  return index === -1 ? "" : originalUrl.slice(index);
+}
+
+/**
  * GET /v1/leads — pass-through to lead-service GET /orgs/leads.
  * No body transform, no aggregation. Response shape is whatever lead-service returns.
+ *
+ * The caller's query string is forwarded verbatim, so any filter lead-service
+ * accepts can be asked for without teaching this gateway about it one parameter
+ * at a time. The only thing read out of it here is the brandId/campaignId
+ * presence check the gateway 400s on.
  *
  * The upstream body is piped through as raw bytes rather than parsed and
  * re-serialized: the largest brands return 100–156 MB here, and holding the
@@ -18,27 +34,17 @@ const router = Router();
  */
 router.get("/leads", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const { brandId, campaignId, limit, offset, view } = req.query as {
+    const { brandId, campaignId } = req.query as {
       brandId?: string;
       campaignId?: string;
-      limit?: string;
-      offset?: string;
-      view?: string;
     };
     if (!brandId && !campaignId) {
       return res.status(400).json({ error: "Missing required query parameter: brandId or campaignId" });
     }
 
-    const params = new URLSearchParams();
-    if (brandId) params.set("brandId", brandId);
-    if (campaignId) params.set("campaignId", campaignId);
-    if (limit) params.set("limit", limit);
-    if (offset) params.set("offset", offset);
-    if (view) params.set("view", view);
-
     await pipeExternalService(
       externalServices.lead,
-      `/orgs/leads?${params}`,
+      `/orgs/leads${rawQueryString(req.originalUrl)}`,
       { headers: buildInternalHeaders(req), expressRes: res }
     );
   } catch (error: any) {
