@@ -26,18 +26,15 @@ describe("Brand-level GET /leads route", () => {
     expect(content).toContain('"Missing required query parameter: brandId or campaignId"');
   });
 
-  it("should forward brandId and campaignId to lead-service when present", () => {
-    expect(content).toContain('params.set("brandId", brandId)');
-    expect(content).toContain('params.set("campaignId", campaignId)');
-  });
-
-  it("should forward view to lead-service when present", () => {
-    expect(content).toContain('params.set("view", view)');
+  it("should forward the caller's query string verbatim, not a re-serialized whitelist", () => {
+    expect(content).toContain("rawQueryString(req.originalUrl)");
+    expect(content).not.toContain("new URLSearchParams()");
+    expect(content).not.toContain("params.set(");
   });
 
   it("should call lead-service /orgs/leads endpoint (single call, no /status)", () => {
     expect(content).toContain("externalServices.lead");
-    expect(content).toContain("`/orgs/leads?${params}`");
+    expect(content).toContain("`/orgs/leads${rawQueryString(req.originalUrl)}`");
     expect(content).not.toContain("/orgs/leads/status");
   });
 
