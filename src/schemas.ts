@@ -1889,12 +1889,6 @@ export const BrandUpsertRequestSchema = z
   .passthrough()
   .openapi("BrandUpsertRequest");
 
-export const IcpSuggestionRequestSchema = z
-  .object({
-    brandUrl: z.string().min(1).describe("Brand website URL"),
-  })
-  .openapi("IcpSuggestionRequest");
-
 // Passthrough — brand-service owns this shape. Per CLAUDE.md "Response schema policy",
 // no field re-declaration here. Field renames downstream do not require an api-service edit.
 const BrandSummarySchema = z.object({}).passthrough().openapi("BrandSummary");
@@ -2174,36 +2168,6 @@ registry.registerPath({
     },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Brand not found", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/brand/icp-suggestion",
-  tags: ["Brand"],
-  summary: "Get ICP suggestion",
-  description:
-    "Get AI-generated Ideal Customer Profile suggestion (Apollo-compatible search params) for a brand URL",
-  security: authed,
-  request: {
-    body: {
-      content: {
-        "application/json": { schema: IcpSuggestionRequestSchema },
-      },
-    },
-  },
-  responses: {
-    200: {
-      description: "ICP suggestion (Apollo-compatible search params)",
-      content: {
-        "application/json": {
-          schema: z.object({}).passthrough().openapi("IcpSuggestionResponse"),
-        },
-      },
-    },
-    400: { description: "Invalid request", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });

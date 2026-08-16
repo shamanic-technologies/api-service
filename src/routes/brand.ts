@@ -3,7 +3,7 @@ import { authenticate, authenticatePlatform, requireOrg, requireUser, Authentica
 import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
-import { BrandUpsertRequestSchema, IcpSuggestionRequestSchema } from "../schemas.js";
+import { BrandUpsertRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 const router = Router();
@@ -220,44 +220,6 @@ router.get("/brands/:id/extracted-images", authenticate, requireOrg, requireUser
   } catch (error: any) {
     console.error("[api-service] Get extracted images error:", error);
     respondUpstreamError(res, error, "Failed to get extracted images");
-  }
-});
-
-/**
- * POST /v1/brand/icp-suggestion
- * Get ICP suggestion (Apollo-compatible search params) for a brand URL
- */
-router.post("/brand/icp-suggestion", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const parsed = IcpSuggestionRequestSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid request", details: parsed.error.flatten() });
-    }
-    const { brandUrl } = parsed.data;
-
-    const result = await callExternalService(
-      externalServices.brand,
-      "/orgs/icp-suggestion",
-      {
-        method: "POST",
-        headers: buildInternalHeaders(req),
-        body: {
-          orgId: req.orgId,
-          userId: req.userId,
-          url: brandUrl,
-        },
-      }
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("ICP suggestion error:", error.message);
-    const msg = error.message || "Failed to get ICP suggestion";
-    if (msg.includes("No Anthropic API key found")) {
-      return res.status(400).json({
-        error: "Anthropic API key not configured. Add your Anthropic key in the dashboard under Settings > API Keys.",
-      });
-    }
-    respondUpstreamError(res, error, msg);
   }
 });
 
