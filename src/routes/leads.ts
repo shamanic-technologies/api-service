@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, externalServices } from "../lib/service-client.js";
+import { callExternalService, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { LeadSearchRequestSchema } from "../schemas.js";
 
@@ -9,6 +9,12 @@ const router = Router();
 /**
  * GET /v1/leads — pass-through to lead-service GET /orgs/leads.
  * No body transform, no aggregation. Response shape is whatever lead-service returns.
+ *
+ * The upstream body is piped through as raw bytes rather than parsed and
+ * re-serialized: the largest brands return 100–156 MB here, and holding the
+ * parsed object graph plus its re-serialized copy OOM-killed the whole gateway
+ * (every org's in-flight request dies with the process, not just this one).
+ * See pipeExternalService.
  */
 router.get("/leads", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
@@ -30,15 +36,19 @@ router.get("/leads", authenticate, requireOrg, requireUser, async (req: Authenti
     if (offset) params.set("offset", offset);
     if (view) params.set("view", view);
 
-    const result = await callExternalService(
+    await pipeExternalService(
       externalServices.lead,
       `/orgs/leads?${params}`,
-      { headers: buildInternalHeaders(req) }
+      { headers: buildInternalHeaders(req), expressRes: res }
     );
-
-    res.json(result);
   } catch (error: any) {
     console.error("[api-service] Get brand leads error:", error);
+    // The failure is raised before any byte of the upstream body is written, so
+    // the error envelope is still the one this route has always sent.
+    if (res.headersSent) {
+      res.end();
+      return;
+    }
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get leads" });
   }
 });
