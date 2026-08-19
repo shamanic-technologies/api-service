@@ -19,7 +19,7 @@ api-service is a **transparent proxy**. It authenticates, applies middleware, an
 3. **Correct middleware per route tier:**
    - Downstream `/orgs/*` routes → `authenticate + requireOrg` (client must provide org context)
    - Downstream `/internal/*` routes → NEVER exposed to clients. api-service may call them server-side when needed, but they are not mounted as client-facing routes.
-   - Downstream `/public/*` routes → `authenticate` only
+   - Downstream `/public/*` routes → **no middleware at all**, not `authenticate`. A downstream route that is public at the producer is public here: the consumer is an anonymous visitor (the marketing site is generated from these reads), so the gateway must not demand a key, an org or a user, and must not invent identity headers for them. `src/routes/features.ts` is the reference — its public block is mounted both unprefixed and under `/v1`, and every handler calls `callExternalService` with no `buildInternalHeaders`. Assert the absence behaviourally: drive the real router with supertest and check the forwarded request carries no `x-org-id` / `x-user-id`, and do NOT mock `authenticate` in that file — mocking it would hide a gate rather than prove there is none. (`tests/unit/public-channels-proxy.behavior.test.ts`, PR #842.)
 
 4. **No body transforms.** Don't strip fields from the body or inject fields from headers. Just proxy the request as-is.
 
