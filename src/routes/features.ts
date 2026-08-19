@@ -30,6 +30,15 @@ const AUDIT_SEND_FORECAST_PARAMS = ["days"];
 const AUDIT_ACTIVE_USERS_PARAMS = ["days", "weeks", "months"];
 const AUDIT_REVENUE_PARAMS = ["days", "weeks", "months"];
 
+// The caller's query string, byte-identical. Read off req.originalUrl rather than
+// re-serialized from req.query so repeated keys, ordering and the caller's own
+// percent-encoding survive, and a parameter features-service ships next needs no
+// edit here (CLAUDE.md #11).
+function rawQueryString(originalUrl: string): string {
+  const index = originalUrl.indexOf("?");
+  return index === -1 ? "" : originalUrl.slice(index);
+}
+
 // Forward the verified staff email downstream for actor attribution (no org context).
 function staffHeaders(req: AuthenticatedRequest): Record<string, string> {
   const headers: Record<string, string> = {};
@@ -234,6 +243,51 @@ router.get("/public/features/cost-per-outcome-distribution", async (req: Request
   } catch (error: any) {
     console.error("[api-service] Public cost-per-outcome distribution error:", error.message);
     res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public cost-per-outcome distribution" });
+  }
+});
+
+/**
+ * GET /v1/public/channels
+ * The acquisition-channel catalogue: every channel a customer can book, its
+ * commercial terms, the kinds of step it can produce and the sales funnels that
+ * follow. Proxied to features-service GET /public/channels.
+ *
+ * No identity of any kind: the marketing site is generated from this read and
+ * its visitor is anonymous. The caller's query string is forwarded verbatim.
+ */
+router.get("/public/channels", async (req: Request, res: Response) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/channels${rawQueryString(req.originalUrl)}`,
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public channel catalogue error:", error.message);
+    respondUpstreamError(res, error, "Failed to get the public channel catalogue");
+  }
+});
+
+/**
+ * GET /v1/public/channel-funnel-economics
+ * Measured economics per (sales funnel, acquisition channel) pair, or the
+ * explicit not-enough-data answer naming the missing ingredient.
+ * Proxied to features-service GET /public/channel-funnel-economics.
+ *
+ * Public by design at the producer, so no identity here either. The query is
+ * forwarded verbatim — the site's pages are parameterised by channel, and a
+ * stripped channelSlug would render the whole catalogue with no error anywhere.
+ */
+router.get("/public/channel-funnel-economics", async (req: Request, res: Response) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/channel-funnel-economics${rawQueryString(req.originalUrl)}`,
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public channel-funnel economics error:", error.message);
+    respondUpstreamError(res, error, "Failed to get the public channel-funnel economics");
   }
 });
 
