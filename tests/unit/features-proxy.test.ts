@@ -123,14 +123,18 @@ describe("Features proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should forward brandId, campaignId, workflowSlug, groupBy and pricing on GET /features/:slug/revenue", () => {
+  // The whole query is forwarded, and no name may be enumerated here.
+  //
+  // This guard used to pin the CONTENTS of a closed list, which made it agree
+  // with the bug: `funnel` had already shipped downstream and never reached it,
+  // and `offerId` would have been the next. A guard that names the accepted
+  // params has to be widened every time one ships — so it asserts the ABSENCE
+  // of a list instead, which no future param can rot.
+  it("forwards the WHOLE query on GET /features/:slug/revenue, with no whitelist", () => {
     const revenueIdx = content.indexOf('"/features/:slug/revenue"');
     const revenueBlock = content.slice(revenueIdx, revenueIdx + 400);
-    expect(revenueBlock).toContain('"brandId"');
-    expect(revenueBlock).toContain('"campaignId"');
-    expect(revenueBlock).toContain('"workflowSlug"');
-    expect(revenueBlock).toContain('"groupBy"');
-    expect(revenueBlock).toContain('"pricing"');
+    expect(revenueBlock).toContain("Object.entries(req.query)");
+    expect(revenueBlock).not.toContain("for (const key of [");
     expect(revenueBlock).toContain("/revenue");
   });
 
@@ -144,15 +148,13 @@ describe("Features proxy routes", () => {
     expect(line).toContain("requireUser");
   });
 
-  it("should forward brandId, goal, brandProfileId, limit, statuses, and pricing on GET /features/:slug/audience-stats", () => {
+  // Same rule as the revenue route above: assert there is no list, never which
+  // names are on it.
+  it("forwards the WHOLE query on GET /features/:slug/audience-stats, with no whitelist", () => {
     const audienceStatsIdx = content.indexOf('"/features/:slug/audience-stats"');
     const audienceStatsBlock = content.slice(audienceStatsIdx, audienceStatsIdx + 500);
-    expect(audienceStatsBlock).toContain('"brandId"');
-    expect(audienceStatsBlock).toContain('"goal"');
-    expect(audienceStatsBlock).toContain('"brandProfileId"');
-    expect(audienceStatsBlock).toContain('"limit"');
-    expect(audienceStatsBlock).toContain('"statuses"');
-    expect(audienceStatsBlock).toContain('"pricing"');
+    expect(audienceStatsBlock).toContain("Object.entries(req.query)");
+    expect(audienceStatsBlock).not.toContain("for (const key of [");
     expect(audienceStatsBlock).toContain("/audience-stats");
   });
 
