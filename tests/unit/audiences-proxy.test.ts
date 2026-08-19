@@ -69,7 +69,19 @@ describe("/v1/orgs/audiences/* → human-service", () => {
   it("GET list forwards brandId + pagination query", async () => {
     const res = await request(buildApp()).get("/v1/orgs/audiences?brandId=b1&limit=50&offset=10");
     expect(res.status).toBe(200);
-    expect(calls[0].url).toBe(`${HUMAN_BASE}/orgs/audiences?limit=50&offset=10&brandId=b1`);
+    // Request order, not a whitelist's order — the proxy no longer re-declares
+    // which params exist, so it can no longer reorder them either.
+    expect(calls[0].url).toBe(`${HUMAN_BASE}/orgs/audiences?brandId=b1&limit=50&offset=10`);
+  });
+
+  // A filter human-service adds must reach it with no api-service edit. Before
+  // this, the proxy enumerated the params it accepted, so a new one — `offerId`,
+  // the offer an audience belongs to — was dropped in silence: the list still
+  // parsed, nothing went red, and the filter simply did nothing.
+  it("GET list forwards a filter the gateway has never heard of", async () => {
+    const res = await request(buildApp()).get("/v1/orgs/audiences?brandId=b1&offerId=of-1");
+    expect(res.status).toBe(200);
+    expect(calls[0].url).toBe(`${HUMAN_BASE}/orgs/audiences?brandId=b1&offerId=of-1`);
   });
 
   it("GET list forwards status (lifecycle) filter", async () => {
