@@ -213,6 +213,14 @@
         "type": "object",
         "properties": {}
       },
+      "PublicChannelCatalogueResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "PublicChannelFunnelEconomicsResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "StaffSendForecastResponse": {
         "type": "object",
         "properties": {}
@@ -7617,6 +7625,111 @@
           },
           "404": {
             "description": "Feature not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/public/channels": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Public acquisition-channel catalogue",
+        "description": "The published acquisition-channel catalogue: every channel a customer can book, the commercial terms committed to before anything is measured, the kinds of step it can produce, and the sales funnels that follow. The marketing site is generated from this read, so no customer identity appears anywhere on the path. Proxied to features-service GET /public/channels. The caller's query string is forwarded verbatim. Response is producer-owned. No authentication required.",
+        "responses": {
+          "200": {
+            "description": "Acquisition-channel catalogue — pass-through from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicChannelCatalogueResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream service error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/public/channel-funnel-economics": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Public per-(sales funnel, channel) economics",
+        "description": "One row per (sales funnel, acquisition channel) pair: either the pair's measured economics — cost per step, cost per sale, return per dollar — or an explicit not-enough-data answer naming the missing ingredient. Public by design at the producer, so no identity is required here either. Proxied to features-service GET /public/channel-funnel-economics. The caller's query string is forwarded verbatim; the documented parameter below is the one features-service publishes today, not a whitelist. Response is producer-owned. No authentication required.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Narrow to one channel. Omitted returns every pair in the catalogue. An unknown slug is a 404 at features-service, never an empty pair list.",
+              "example": "sales-cold-email-outreach"
+            },
+            "required": false,
+            "description": "Narrow to one channel. Omitted returns every pair in the catalogue. An unknown slug is a 404 at features-service, never an empty pair list.",
+            "name": "channelSlug",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Per-pair economics — pass-through from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicChannelFunnelEconomicsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown channel slug",
             "content": {
               "application/json": {
                 "schema": {

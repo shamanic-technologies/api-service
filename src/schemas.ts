@@ -218,6 +218,13 @@ const publicCostPerOutcomeDistributionQueryParams = z.object({
   buckets: z.string().optional().openapi({ example: "10" }).describe("Number of equal-width histogram bars (default 10, max 50)."),
 });
 
+// The parameters features-service documents today, not a whitelist: the handler
+// forwards the caller's raw query string, so anything it ships next arrives
+// without an edit here (CLAUDE.md #11).
+const publicChannelFunnelEconomicsQueryParams = z.object({
+  channelSlug: z.string().optional().openapi({ example: "sales-cold-email-outreach" }).describe("Narrow to one channel. Omitted returns every pair in the catalogue. An unknown slug is a 404 at features-service, never an empty pair list."),
+}).passthrough();
+
 const auditSendForecastQueryParams = z.object({
   days: z.coerce.number().int().optional().openapi({ example: 14 }).describe("Future horizon in days (1..90). A 7-day past tail is always included. Optional; downstream defaults to 14."),
 });
@@ -439,6 +446,38 @@ registry.registerPath({
     200: { description: "Public cost-per-outcome distribution — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicCostPerOutcomeDistributionResponse") } } },
     400: { description: "Bad request from features-service", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/channels",
+  tags: ["Features"],
+  summary: "Public acquisition-channel catalogue",
+  description:
+    "The published acquisition-channel catalogue: every channel a customer can book, the commercial terms committed to before anything is measured, the kinds of step it can produce, and the sales funnels that follow. The marketing site is generated from this read, so no customer identity appears anywhere on the path. " +
+    "Proxied to features-service GET /public/channels. The caller's query string is forwarded verbatim. Response is producer-owned. No authentication required.",
+  responses: {
+    200: { description: "Acquisition-channel catalogue — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicChannelCatalogueResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/channel-funnel-economics",
+  tags: ["Features"],
+  summary: "Public per-(sales funnel, channel) economics",
+  description:
+    "One row per (sales funnel, acquisition channel) pair: either the pair's measured economics — cost per step, cost per sale, return per dollar — or an explicit not-enough-data answer naming the missing ingredient. Public by design at the producer, so no identity is required here either. " +
+    "Proxied to features-service GET /public/channel-funnel-economics. The caller's query string is forwarded verbatim; the documented parameter below is the one features-service publishes today, not a whitelist. Response is producer-owned. No authentication required.",
+  request: { query: publicChannelFunnelEconomicsQueryParams },
+  responses: {
+    200: { description: "Per-pair economics — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicChannelFunnelEconomicsResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    404: { description: "Unknown channel slug", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
   },
 });
