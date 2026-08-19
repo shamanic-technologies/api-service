@@ -22,13 +22,18 @@ const router = Router();
 
 const authChain = [authenticate, requireOrg, requireUser] as const;
 
-// Forward the audience list/members pagination + brand filter query params
-// untouched. No `.max()` / `.default()` caps here — human-service owns the
-// caps (CLAUDE.md "no-limit-defaults" rule). Unknown params are dropped.
-function passthroughQuery(req: AuthenticatedRequest, keys: string[]): string {
+// Forward EVERY query param untouched. No `.max()` / `.default()` caps here —
+// human-service owns the caps (CLAUDE.md "no-limit-defaults" rule) — and no
+// whitelist either: the gateway does not own downstream shapes (CLAUDE.md #8),
+// so a new human-service filter reaches it with no api-service edit.
+//
+// This used to take an explicit key list, which is the gateway-strips-a-field
+// bug: `offerId` (the offer an audience belongs to) would have been dropped in
+// silence, with the list still parsing and every guard still green. Naming one
+// more key each time a filter ships reproduces that bug with extra steps.
+function passthroughQuery(req: AuthenticatedRequest): string {
   const params = new URLSearchParams();
-  for (const key of keys) {
-    const val = req.query?.[key];
+  for (const [key, val] of Object.entries(req.query ?? {})) {
     if (typeof val === "string" && val.length > 0) params.set(key, val);
   }
   const qs = params.toString();
@@ -87,7 +92,7 @@ router.get("/orgs/audiences", ...authChain, async (req: AuthenticatedRequest, re
   try {
     const result = await callExternalService(
       externalServices.human,
-      `/orgs/audiences${passthroughQuery(req, ["limit", "offset", "brandId", "status"])}`,
+      `/orgs/audiences${passthroughQuery(req)}`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);
@@ -132,7 +137,7 @@ router.get("/orgs/audiences/:id/members", ...authChain, async (req: Authenticate
   try {
     const result = await callExternalService(
       externalServices.human,
-      `/orgs/audiences/${encodeURIComponent(req.params.id)}/members${passthroughQuery(req, ["limit", "offset"])}`,
+      `/orgs/audiences/${encodeURIComponent(req.params.id)}/members${passthroughQuery(req)}`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);

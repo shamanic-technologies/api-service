@@ -649,13 +649,25 @@ router.get("/features/:slug/stats", authenticate, requireOrg, requireUser, async
 
 /**
  * GET /v1/features/:slug/revenue
- * Expected-pipeline-revenue overview for a specific feature, scoped by brandId (+ optional campaignId).
+ * Expected-pipeline-revenue overview for a specific feature, scoped by brandId
+ * (+ optional campaignId / offerId), grouped by campaign, workflow or offer.
+ *
+ * Forwards ALL query params transparently to features-service
+ * GET /features/:slug/revenue — no whitelist, so a new downstream param needs no
+ * api-service edit and can never be silently dropped.
+ *
+ * This USED to re-declare a closed list, which is the gateway-strips-a-field bug
+ * (CLAUDE.md #8: the gateway does not own downstream shapes). It cost real
+ * coverage rather than being hypothetical: `funnel` had already shipped
+ * downstream and never reached it, and `offerId` would have been the second.
+ * Widening the list by one name each time reproduces the bug with extra steps —
+ * the fix is to stop declaring one.
  */
 router.get("/features/:slug/revenue", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["brandId", "campaignId", "workflowSlug", "groupBy", "lens", "pricing"]) {
-      if (req.query[key]) params.set(key, req.query[key] as string);
+    for (const [key, value] of Object.entries(req.query)) {
+      if (typeof value === "string") params.set(key, value);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";
     const result = await callExternalService(
@@ -672,13 +684,18 @@ router.get("/features/:slug/revenue", authenticate, requireOrg, requireUser, asy
 
 /**
  * GET /v1/features/:slug/audience-stats
- * Audience-level cost and outcome evidence for a feature, scoped by brandId and goal.
+ * Audience-level cost and outcome evidence for a feature, scoped by brandId and
+ * goal (+ optional campaignId / offerId).
+ *
+ * Forwards ALL query params transparently, for the same reason as the revenue
+ * route above: a closed list here silently dropped `funnel` and would have
+ * dropped `offerId`, and the gateway does not own downstream shapes.
  */
 router.get("/features/:slug/audience-stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
-    for (const key of ["brandId", "goal", "brandProfileId", "limit", "statuses", "pricing", "campaignId"]) {
-      if (req.query[key]) params.set(key, req.query[key] as string);
+    for (const [key, value] of Object.entries(req.query)) {
+      if (typeof value === "string") params.set(key, value);
     }
     const qs = params.toString() ? `?${params.toString()}` : "";
     const result = await callExternalService(
