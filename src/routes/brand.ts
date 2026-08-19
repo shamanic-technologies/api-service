@@ -463,6 +463,86 @@ router.delete("/brands/:id/sales-funnels/:funnelKey", authenticate, requireOrg, 
 });
 
 /**
+ * OFFERS — /v1/brands/:id/offers[/:offerId[/…]]
+ *
+ * An OFFER is one distinct thing a brand sells: the value it promises and the
+ * sales funnels it is sold through. A brand is an IDENTITY (a name, a domain, a
+ * logo); the offer is the PROPOSITION, and a brand can hold several. Every
+ * route below is a transparent proxy of the brand-service route of the same
+ * name under `/orgs`, exactly like the sales-funnels block above.
+ *
+ * These are what makes the dashboard's offer level reachable at all. Without
+ * them every offer read 404s at the gateway and the customer's brand Overview
+ * reads "No offer yet" for a brand that has one — which is precisely what
+ * happened in production for the window between brand-service shipping the
+ * routes and this landing.
+ *
+ * The WHOLE query is forwarded on each, never a re-declared subset: the gateway
+ * does not own downstream shapes (CLAUDE.md #8), and brand-service already
+ * takes `?erase=true` on the undeclare. Re-declaring a param list here is the
+ * gateway-strips-a-field bug this same file was cleaned of in #845.
+ */
+function offerQuery(req: AuthenticatedRequest): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(req.query)) {
+    if (typeof value === "string") params.set(key, value);
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+/** The brand-service path an offer route proxies to. */
+function offerPath(req: AuthenticatedRequest, suffix = ""): string {
+  const base = `/orgs/brands/${req.params.id}/offers`;
+  const offer = req.params.offerId ? `/${encodeURIComponent(req.params.offerId)}` : "";
+  return `${base}${offer}${suffix}${offerQuery(req)}`;
+}
+
+/**
+ * One offer route, proxied. They differ only by method, path suffix and the
+ * sentence logged when the downstream refuses, so they are declared from one
+ * table rather than ten near-identical blocks that can drift apart.
+ */
+const OFFER_ROUTES = [
+  { method: "get", path: "/brands/:id/offers", suffix: "", what: "list brand offers" },
+  { method: "post", path: "/brands/:id/offers", suffix: "", what: "create brand offer" },
+  { method: "get", path: "/brands/:id/offers/:offerId", suffix: "", what: "get brand offer" },
+  { method: "patch", path: "/brands/:id/offers/:offerId", suffix: "", what: "rename brand offer" },
+  { method: "get", path: "/brands/:id/offers/:offerId/sales-funnels", suffix: "/sales-funnels", what: "get offer sales funnels" },
+  { method: "put", path: "/brands/:id/offers/:offerId/sales-funnels", suffix: "/sales-funnels", what: "state offer sales funnels" },
+  { method: "put", path: "/brands/:id/offers/:offerId/sales-funnels/:funnelKey", suffix: "/sales-funnels", what: "declare offer sales funnel" },
+  { method: "delete", path: "/brands/:id/offers/:offerId/sales-funnels/:funnelKey", suffix: "/sales-funnels", what: "undeclare offer sales funnel" },
+  { method: "get", path: "/brands/:id/offers/:offerId/user-fields", suffix: "/user-fields", what: "get offer user fields" },
+  { method: "put", path: "/brands/:id/offers/:offerId/user-fields", suffix: "/user-fields", what: "save offer user fields" },
+] as const;
+
+for (const route of OFFER_ROUTES) {
+  router[route.method](route.path, authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      // The funnel key is a path segment on two of these, and it is the brand's
+      // own vocabulary: forwarded as given so an unknown key comes back as
+      // brand-service's 400 rather than a gateway-invented one (CLAUDE.md #8).
+      const suffix = req.params.funnelKey
+        ? `${route.suffix}/${encodeURIComponent(req.params.funnelKey)}`
+        : route.suffix;
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.brand,
+        offerPath(req, suffix),
+        {
+          method: route.method.toUpperCase() as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+          headers: buildInternalHeaders(req),
+          ...(route.method === "get" || route.method === "delete" ? {} : { body: req.body }),
+        },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error(`[api-service] Failed to ${route.what}:`, error.message);
+      respondUpstreamError(res, error, `Failed to ${route.what}`);
+    }
+  });
+}
+
+/**
  * PUT /v1/brands/:id/click-destination
  * Proxy to brand-service PUT /orgs/brands/:id/click-destination.
  * Sets the per-brand page outreach clicks should land on. Body + response
