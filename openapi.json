@@ -5800,6 +5800,18 @@
         "type": "object",
         "properties": {}
       },
+      "OfferRevenueResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "OfferAudienceStatsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "OfferPipelineActivityResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "WorkflowProjectionResponse": {
         "type": "object",
         "properties": {}
@@ -28827,6 +28839,551 @@
           },
           "404": {
             "description": "Feature not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/offers/{offerId}/revenue": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Offer revenue overview",
+        "description": "An offer's money, across every acquisition channel it is sold through, with the per-channel breakdown beside it. Proxied to features-service GET /offers/{offerId}/revenue. The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Offer UUID",
+              "example": "offer-uuid-123"
+            },
+            "required": true,
+            "description": "Offer UUID",
+            "name": "offerId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand UUID (required) — an offer belongs to a brand",
+              "example": "brand-uuid-123"
+            },
+            "required": true,
+            "description": "Brand UUID (required) — an offer belongs to a brand",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Sales funnel the cost-per-outcome columns are priced on. Owned and validated by features-service",
+              "example": "self-serve"
+            },
+            "required": false,
+            "description": "Sales funnel the cost-per-outcome columns are priced on. Owned and validated by features-service",
+            "name": "funnel",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Pricing basis for money metrics: gross (default, undiscounted) | net (the org's discounted figures). Owned and validated by features-service",
+              "example": "net"
+            },
+            "required": false,
+            "description": "Pricing basis for money metrics: gross (default, undiscounted) | net (the org's discounted figures). Owned and validated by features-service",
+            "name": "pricing",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Offer revenue overview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferRevenueResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Offer not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/offers/{offerId}/audience-stats": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Offer audience stats",
+        "description": "An offer's per-audience economics, across every channel it is sold through, with the channel set on the same body. Proxied to features-service GET /offers/{offerId}/audience-stats. The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Offer UUID",
+              "example": "offer-uuid-123"
+            },
+            "required": true,
+            "description": "Offer UUID",
+            "name": "offerId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand UUID (required)",
+              "example": "brand-uuid-123"
+            },
+            "required": true,
+            "description": "Brand UUID (required)",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Optimization goal. Omitting both goal and funnel is the brand-level read, not an error",
+              "example": "signup"
+            },
+            "required": false,
+            "description": "Optimization goal. Omitting both goal and funnel is the brand-level read, not an error",
+            "name": "goal",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Sales funnel, same vocabulary as the per-feature read",
+              "example": "self-serve"
+            },
+            "required": false,
+            "description": "Sales funnel, same vocabulary as the per-feature read",
+            "name": "funnel",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated audience statuses (features-service owns the default)",
+              "example": "active,paused,archived"
+            },
+            "required": false,
+            "description": "Comma-separated audience statuses (features-service owns the default)",
+            "name": "statuses",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Maximum number of audience rows",
+              "example": "3"
+            },
+            "required": false,
+            "description": "Maximum number of audience rows",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Pricing basis for money metrics: gross (default) | net. Owned and validated by features-service",
+              "example": "net"
+            },
+            "required": false,
+            "description": "Pricing basis for money metrics: gross (default) | net. Owned and validated by features-service",
+            "name": "pricing",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Offer audience stats",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferAudienceStatsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Offer not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/offers/{offerId}/pipeline-activity": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Offer pipeline activity",
+        "description": "An offer's per-day activity, across every acquisition channel it is sold through, day buckets merged. Proxied to features-service GET /offers/{offerId}/pipeline-activity. The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Offer UUID",
+              "example": "offer-uuid-123"
+            },
+            "required": true,
+            "description": "Offer UUID",
+            "name": "offerId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand UUID (required)",
+              "example": "brand-uuid-123"
+            },
+            "required": true,
+            "description": "Brand UUID (required)",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "IANA timezone used for calendar day ordering (required)",
+              "example": "America/New_York"
+            },
+            "required": true,
+            "description": "IANA timezone used for calendar day ordering (required)",
+            "name": "timezone",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Number of days to return (features-service owns the default)",
+              "example": "7"
+            },
+            "required": false,
+            "description": "Number of days to return (features-service owns the default)",
+            "name": "days",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Accepted for parity with the sibling reads. Owned and validated by features-service",
+              "example": "net"
+            },
+            "required": false,
+            "description": "Accepted for parity with the sibling reads. Owned and validated by features-service",
+            "name": "pricing",
+            "in": "query"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Offer pipeline activity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferPipelineActivityResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Offer not found",
             "content": {
               "application/json": {
                 "schema": {
