@@ -6607,6 +6607,99 @@ registry.registerPath({
   },
 });
 
+// ── Offer grain ──────────────────────────────────────────────────────────────
+// The three reads above, one grain up: an offer is sold through SEVERAL
+// acquisition channels at once, and features-service answers across all of them
+// with the per-channel breakdown on the same body. Query objects below are
+// PASSTHROUGH documentation of the params known today, never a whitelist — the
+// gateway forwards the caller's query string verbatim (CLAUDE.md #11), and the
+// response is downstream-owned and passed through unchanged (CLAUDE.md #8).
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/offers/{offerId}/revenue",
+  tags: ["Features"],
+  summary: "Offer revenue overview",
+  description:
+    "An offer's money, across every acquisition channel it is sold through, with the per-channel breakdown beside it. " +
+    "Proxied to features-service GET /offers/{offerId}/revenue. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+      funnel: z.string().optional().openapi({ example: "self-serve" }).describe("Sales funnel the cost-per-outcome columns are priced on. Owned and validated by features-service"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default, undiscounted) | net (the org's discounted figures). Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer revenue overview", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferRevenueResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Offer not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/offers/{offerId}/audience-stats",
+  tags: ["Features"],
+  summary: "Offer audience stats",
+  description:
+    "An offer's per-audience economics, across every channel it is sold through, with the channel set on the same body. " +
+    "Proxied to features-service GET /offers/{offerId}/audience-stats. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required)"),
+      goal: z.string().optional().openapi({ example: "signup" }).describe("Optimization goal. Omitting both goal and funnel is the brand-level read, not an error"),
+      funnel: z.string().optional().openapi({ example: "self-serve" }).describe("Sales funnel, same vocabulary as the per-feature read"),
+      statuses: z.string().optional().openapi({ example: "active,paused,archived" }).describe("Comma-separated audience statuses (features-service owns the default)"),
+      limit: z.string().optional().openapi({ example: "3" }).describe("Maximum number of audience rows"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default) | net. Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer audience stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferAudienceStatsResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Offer not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/offers/{offerId}/pipeline-activity",
+  tags: ["Features"],
+  summary: "Offer pipeline activity",
+  description:
+    "An offer's per-day activity, across every acquisition channel it is sold through, day buckets merged. " +
+    "Proxied to features-service GET /offers/{offerId}/pipeline-activity. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required)"),
+      timezone: z.string().openapi({ example: "America/New_York" }).describe("IANA timezone used for calendar day ordering (required)"),
+      days: z.string().optional().openapi({ example: "7" }).describe("Number of days to return (features-service owns the default)"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Accepted for parity with the sibling reads. Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer pipeline activity", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferPipelineActivityResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Offer not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/features/{featureSlug}/workflow-projection",
