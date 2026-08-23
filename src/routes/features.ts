@@ -885,4 +885,52 @@ for (const { suffix, what } of GRAIN_SUFFIXES) {
   );
 }
 
+/**
+ * GET /v1/features/brands/:brandId/offers
+ *
+ * The brand grain's fourth read, and the one a brand Overview's offer table is
+ * built on: every offer of a brand, each with its own money combined across every
+ * channel that offer is sold through, in one lean body a table can poll.
+ *
+ * Before it, that table had to pick a channel and print it — so a brand running
+ * more than one acquisition channel saw a row that was right about one channel and
+ * wrong about the offer. Nothing is combined here: money adds across an offer's
+ * channels because a run belongs to one channel, people do not (a lead worked
+ * through two channels is one lead) and no ratio does. features-service owns all
+ * of it (CLAUDE.md #2).
+ *
+ * PATH NOTE — why this one is NOT `/v1/brands/:brandId/offers` like its three
+ * siblings: `src/routes/brand.ts` already serves `GET /v1/brands/:id/offers` (the
+ * brand's offer CATALOG, from brand-service) and brandRoutes mounts BEFORE this
+ * router, so that route wins and a same-path declaration here would be dead code.
+ * Two different questions that happen to share a noun. This takes the documented
+ * `/v1/{service-name}/{original-downstream-path}` shape instead (CLAUDE.md "Future
+ * direction"), which leaves the DOWNSTREAM path exactly what features-service
+ * serves — `/brands/{brandId}/offers` — and renames nothing.
+ *
+ * The WHOLE query is forwarded off req.originalUrl (CLAUDE.md #11): `funnel`,
+ * `pricing` and whatever features-service ships next all reach it, and a value it
+ * rejects comes back as its own 400. Its named 404 / 409 / 502 reach the caller
+ * with their reason intact via respondUpstreamError (CLAUDE.md #7).
+ */
+router.get(
+  "/features/brands/:brandId/offers",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.features,
+        `/brands/${encodeURIComponent(req.params.brandId)}/offers${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: any) {
+      console.error("Failed to get brand offers:", error.message);
+      respondUpstreamError(res, error, "Failed to get brand offers");
+    }
+  },
+);
+
 export default router;
