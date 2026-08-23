@@ -774,25 +774,31 @@ router.get("/features/:slug/goal-arbitration", authenticate, requireOrg, require
   }
 });
 
-// ── Offer grain ──────────────────────────────────────────────────────────────
+// ── Coarser grains: offer, brand ─────────────────────────────────────────────
 
 /**
  * GET /v1/offers/:offerId/{revenue,audience-stats,pipeline-activity}
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity}
  *
- * The three sibling reads above, one grain up. A brand sells ONE offer through
- * SEVERAL acquisition channels at once, and each of the per-feature reads answers
- * for exactly one of them — so an offer screen built on them describes whichever
- * channel it happened to ask, and understates the offer by whatever the others
- * did. features-service now answers at the offer grain directly, with the
- * per-channel breakdown on the same body, and these are the way in.
+ * The three sibling reads above, one and two grains up. A brand runs SEVERAL
+ * acquisition channels at once and sells each offer through several of them, and
+ * each of the per-feature reads answers for exactly one channel — so a screen
+ * built on them describes whichever channel it happened to ask, and understates
+ * the offer (or the brand) by whatever the others did. On the brand Overview that
+ * showed as a fraction with two grains in it: one channel's spend over billing's
+ * brand-wide ceiling, both halves real, about different things, nothing erroring.
+ * features-service now answers at both grains directly, with the per-channel
+ * breakdown on the same body, and these are the way in.
  *
- * Proxied verbatim to features-service GET /offers/{offerId}/<suffix>, same
- * identity and same org scoping as the per-feature reads beside them: an offer is
- * the customer's own, on the customer's own brand.
+ * Proxied verbatim to features-service GET /{collection}/{id}/<suffix>, same
+ * identity and same org scoping as the per-feature reads beside them: the offer
+ * and the brand are the customer's own.
  *
- * Nothing is combined here. Most figures at this grain do NOT add — a lead worked
- * through two channels is one lead, and a ratio of sums is not a sum of ratios —
- * which is exactly why the grain exists downstream (CLAUDE.md #2).
+ * Nothing is combined here. Most figures at these grains do NOT add — a lead
+ * worked through two channels is one lead, and a ratio of sums is not a sum of
+ * ratios — which is exactly why the grain exists downstream (CLAUDE.md #2). Which
+ * figures do combine, and how, is features-service's statement to make on its own
+ * body (it nulls the ones that cannot rather than blending them).
  *
  * The WHOLE query is forwarded off req.originalUrl (CLAUDE.md #11): brandId,
  * funnel, goal, statuses, limit, days, timezone, pricing and whatever
@@ -800,33 +806,41 @@ router.get("/features/:slug/goal-arbitration", authenticate, requireOrg, require
  * its own 400 rather than a gateway-invented one. A re-declared subset here is
  * the bug this file was cleaned of in #845 — `funnel` had already shipped
  * downstream and never arrived.
+ *
+ * Declared from one table rather than six near-identical blocks: the grains
+ * differ only by collection segment, path parameter and the sentence logged on a
+ * refusal, so a seventh read is one row.
  */
-const OFFER_ROUTES = [
-  { suffix: "revenue", what: "offer revenue" },
-  { suffix: "audience-stats", what: "offer audience stats" },
-  { suffix: "pipeline-activity", what: "offer pipeline activity" },
+const GRAIN_SUFFIXES = ["revenue", "audience-stats", "pipeline-activity"] as const;
+
+const GRAINS = [
+  { collection: "offers", idParam: "offerId", noun: "offer" },
+  { collection: "brands", idParam: "brandId", noun: "brand" },
 ] as const;
 
-for (const { suffix, what } of OFFER_ROUTES) {
-  router.get(
-    `/offers/:offerId/${suffix}`,
-    authenticate,
-    requireOrg,
-    requireUser,
-    async (req: AuthenticatedRequest, res) => {
-      try {
-        const result = await callExternalService(
-          externalServices.features,
-          `/offers/${encodeURIComponent(req.params.offerId)}/${suffix}${rawQueryString(req.originalUrl)}`,
-          { headers: buildInternalHeaders(req) },
-        );
-        res.json(result);
-      } catch (error: any) {
-        console.error(`Failed to get ${what}:`, error.message);
-        respondUpstreamError(res, error, `Failed to get ${what}`);
-      }
-    },
-  );
+for (const { collection, idParam, noun } of GRAINS) {
+  for (const suffix of GRAIN_SUFFIXES) {
+    const what = `${noun} ${suffix.replace("-", " ")}`;
+    router.get(
+      `/${collection}/:${idParam}/${suffix}`,
+      authenticate,
+      requireOrg,
+      requireUser,
+      async (req: AuthenticatedRequest, res) => {
+        try {
+          const result = await callExternalService(
+            externalServices.features,
+            `/${collection}/${encodeURIComponent(req.params[idParam])}/${suffix}${rawQueryString(req.originalUrl)}`,
+            { headers: buildInternalHeaders(req) },
+          );
+          res.json(result);
+        } catch (error: any) {
+          console.error(`Failed to get ${what}:`, error.message);
+          respondUpstreamError(res, error, `Failed to get ${what}`);
+        }
+      },
+    );
+  }
 }
 
 export default router;
