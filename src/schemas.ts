@@ -6792,6 +6792,40 @@ registry.registerPath({
   },
 });
 
+// Every offer of a brand, each with its own money combined across every channel it
+// is sold through — the read a brand Overview's offer table is built on. NOT mounted
+// at /v1/brands/{brandId}/offers: that path is brand-service's offer CATALOG, served
+// by src/routes/brand.ts, which mounts first. This takes the /v1/{service}/{downstream
+// path} shape instead, so the downstream path stays exactly what features-service
+// serves and nothing is renamed.
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/brands/{brandId}/offers",
+  tags: ["Features"],
+  summary: "Brand offers, each combined across its channels",
+  description:
+    "Every offer of a brand, each with its own money combined across every acquisition channel that offer is sold through — one lean body an offer table can poll. " +
+    "Proxied to features-service GET /brands/{brandId}/offers. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID") }),
+    query: z.object({
+      funnel: z.string().optional().openapi({ example: "self-serve" }).describe("Sales funnel the cost-per-outcome columns are priced on. Owned and validated by features-service"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default, undiscounted) | net (the org's discounted figures). Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Brand offers with per-offer economics", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandOffersResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found", content: errorContent },
+    409: { description: "Conflict", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/features/{featureSlug}/workflow-projection",
