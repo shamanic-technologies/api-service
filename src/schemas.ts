@@ -3715,6 +3715,54 @@ registry.registerPath({
   },
 });
 
+export const WorkflowStatusRequestSchema = z
+  .object({
+    status: z.string().min(1).describe(
+      "New per-version lifecycle status, e.g. 'active' or 'deprecated'. The vocabulary is " +
+      "workflow-service's; the gateway forwards the body verbatim and does not validate it.",
+    ),
+  })
+  .passthrough()
+  .openapi("WorkflowStatusRequest", { example: { status: "deprecated" } });
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/workflows/{id}/status",
+  tags: ["Workflows"],
+  summary: "Set one workflow version's status",
+  description:
+    "Retire (or un-retire) a SINGLE workflow version by id, as opposed to the whole lineage " +
+    "(`PUT /v1/workflows/dynasty/{workflowDynastySlug}/status`). Proxied verbatim to workflow-service. " +
+    "Deprecating stops that version running and stops it being offered to the pickers; the dynasty's " +
+    "other versions are untouched. Re-activating is refused with 409 when another version of the same " +
+    "dynasty is already active — the upstream body carries `existingWorkflowId` / `existingWorkflowSlug` " +
+    "and reaches the caller field-for-field.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().uuid().openapi({ example: "3fa85f64-5717-4562-b3fc-2c963f66afa6" }).describe("Workflow version id"),
+    }),
+    body: {
+      content: {
+        "application/json": { schema: WorkflowStatusRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Updated workflow — pass-through from workflow-service",
+      content: {
+        "application/json": { schema: z.object({}).passthrough().openapi("WorkflowStatusResponse") },
+      },
+    },
+    400: { description: "Invalid request", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: { description: "Another version of the dynasty is already active", content: errorContent },
+    404: { description: "Workflow not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "put",
   path: "/v1/workflows/{id}",

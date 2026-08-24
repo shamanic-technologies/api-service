@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
+import { respondUpstreamError } from "../lib/upstream-error.js";
 import { CreateWorkflowRequestSchema, UpgradeWorkflowRequestSchema, UpdateWorkflowRequestSchema, WorkflowDynastyStatusRequestSchema } from "../schemas.js";
 
 const router = Router();
@@ -414,6 +415,41 @@ router.put("/workflows/dynasty/:workflowDynastySlug/status", authenticate, requi
     console.error("Set workflow dynasty status error:", error.message);
     const status = error.statusCode || 500;
     res.status(status).json({ error: error.message || "Failed to set workflow dynasty status" });
+  }
+});
+
+/**
+ * PUT /v1/workflows/:id/status
+ * Retire (or un-retire) ONE workflow version. Transparent proxy to workflow-service
+ * PUT /workflows/{id}/status. Body forwarded verbatim (the gateway owns no part of
+ * the status vocabulary); the upstream body is re-emitted field-for-field on every
+ * status, so workflow-service's 409 (another version of the dynasty is already
+ * active — carries `existingWorkflowId` / `existingWorkflowSlug`) and its 404
+ * reach the operator intact.
+ *
+ * Declared before `/workflows/:id` — Express matches in declaration order, and
+ * these are distinct segment counts, but keeping the status routes together keeps
+ * the dynasty/version pair readable.
+ */
+router.put("/workflows/:id/status", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
+
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.workflow,
+      `/workflows/${id}/status`,
+      {
+        method: "PUT",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+      },
+    );
+
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("Set workflow status error:", error.message);
+    respondUpstreamError(res, error, "Failed to set workflow status");
   }
 });
 
