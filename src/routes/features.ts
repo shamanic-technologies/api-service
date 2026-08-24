@@ -807,6 +807,40 @@ const OFFER_ROUTES = [
   { suffix: "pipeline-activity", what: "offer pipeline activity" },
 ] as const;
 
+// ── Brand grain ──────────────────────────────────────────────────────────────
+
+/**
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity}
+ *
+ * The offer grain above, one level further up. A brand holds several offers and
+ * each of those runs several channels, so a brand screen built on a per-feature
+ * read describes whichever channel it happened to ask. It shows up as a fraction
+ * with two grains in it — one channel's spend over billing's brand-wide ceiling,
+ * which read `$40 / 50` for a brand whose two channels had spent $40.07 and
+ * $10.32 against their own $40 and $10. Both halves real, about different things.
+ *
+ * A brand's answer is NOT the sum of its offers' and NOT the sum of its channels'.
+ * features-service owns how those parts combine — money adds because a run belongs
+ * to one channel; people do not, because a lead worked through two channels is one
+ * lead; no ratio does, because a ratio of sums is neither the sum nor the average
+ * of ratios. So nothing is combined here, exactly as nothing is at the offer grain.
+ *
+ * NOTE ON ORDER: these mount with the rest of this router at `/v1`, AFTER
+ * `brandRoutes`. No brand-service proxy claims these three suffixes, so nothing is
+ * shadowed — but a future `/brands/:id/<one of these>` added to brand.ts would win,
+ * so add there with that in mind.
+ *
+ * The WHOLE query is forwarded off req.originalUrl (CLAUDE.md #11), same as the
+ * offer routes: a value features-service rejects comes back as its own 400 rather
+ * than a gateway-invented one, and a field it ships next arrives without a change
+ * here. A re-declared subset is the bug this file was cleaned of in #845.
+ */
+const GRAIN_SUFFIXES = [
+  { suffix: "revenue", what: "revenue" },
+  { suffix: "audience-stats", what: "audience stats" },
+  { suffix: "pipeline-activity", what: "pipeline activity" },
+] as const;
+
 for (const { suffix, what } of OFFER_ROUTES) {
   router.get(
     `/offers/:offerId/${suffix}`,
@@ -828,5 +862,75 @@ for (const { suffix, what } of OFFER_ROUTES) {
     },
   );
 }
+
+for (const { suffix, what } of GRAIN_SUFFIXES) {
+  router.get(
+    `/brands/:brandId/${suffix}`,
+    authenticate,
+    requireOrg,
+    requireUser,
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const result = await callExternalService(
+          externalServices.features,
+          `/brands/${encodeURIComponent(req.params.brandId)}/${suffix}${rawQueryString(req.originalUrl)}`,
+          { headers: buildInternalHeaders(req) },
+        );
+        res.json(result);
+      } catch (error: any) {
+        console.error(`Failed to get brand ${what}:`, error.message);
+        respondUpstreamError(res, error, `Failed to get brand ${what}`);
+      }
+    },
+  );
+}
+
+/**
+ * GET /v1/features/brands/:brandId/offers
+ *
+ * The brand grain's fourth read, and the one a brand Overview's offer table is
+ * built on: every offer of a brand, each with its own money combined across every
+ * channel that offer is sold through, in one lean body a table can poll.
+ *
+ * Before it, that table had to pick a channel and print it — so a brand running
+ * more than one acquisition channel saw a row that was right about one channel and
+ * wrong about the offer. Nothing is combined here: money adds across an offer's
+ * channels because a run belongs to one channel, people do not (a lead worked
+ * through two channels is one lead) and no ratio does. features-service owns all
+ * of it (CLAUDE.md #2).
+ *
+ * PATH NOTE — why this one is NOT `/v1/brands/:brandId/offers` like its three
+ * siblings: `src/routes/brand.ts` already serves `GET /v1/brands/:id/offers` (the
+ * brand's offer CATALOG, from brand-service) and brandRoutes mounts BEFORE this
+ * router, so that route wins and a same-path declaration here would be dead code.
+ * Two different questions that happen to share a noun. This takes the documented
+ * `/v1/{service-name}/{original-downstream-path}` shape instead (CLAUDE.md "Future
+ * direction"), which leaves the DOWNSTREAM path exactly what features-service
+ * serves — `/brands/{brandId}/offers` — and renames nothing.
+ *
+ * The WHOLE query is forwarded off req.originalUrl (CLAUDE.md #11): `funnel`,
+ * `pricing` and whatever features-service ships next all reach it, and a value it
+ * rejects comes back as its own 400. Its named 404 / 409 / 502 reach the caller
+ * with their reason intact via respondUpstreamError (CLAUDE.md #7).
+ */
+router.get(
+  "/features/brands/:brandId/offers",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.features,
+        `/brands/${encodeURIComponent(req.params.brandId)}/offers${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: any) {
+      console.error("Failed to get brand offers:", error.message);
+      respondUpstreamError(res, error, "Failed to get brand offers");
+    }
+  },
+);
 
 export default router;

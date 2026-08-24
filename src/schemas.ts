@@ -3715,6 +3715,54 @@ registry.registerPath({
   },
 });
 
+export const WorkflowStatusRequestSchema = z
+  .object({
+    status: z.string().min(1).describe(
+      "New per-version lifecycle status, e.g. 'active' or 'deprecated'. The vocabulary is " +
+      "workflow-service's; the gateway forwards the body verbatim and does not validate it.",
+    ),
+  })
+  .passthrough()
+  .openapi("WorkflowStatusRequest", { example: { status: "deprecated" } });
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/workflows/{id}/status",
+  tags: ["Workflows"],
+  summary: "Set one workflow version's status",
+  description:
+    "Retire (or un-retire) a SINGLE workflow version by id, as opposed to the whole lineage " +
+    "(`PUT /v1/workflows/dynasty/{workflowDynastySlug}/status`). Proxied verbatim to workflow-service. " +
+    "Deprecating stops that version running and stops it being offered to the pickers; the dynasty's " +
+    "other versions are untouched. Re-activating is refused with 409 when another version of the same " +
+    "dynasty is already active — the upstream body carries `existingWorkflowId` / `existingWorkflowSlug` " +
+    "and reaches the caller field-for-field.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().uuid().openapi({ example: "3fa85f64-5717-4562-b3fc-2c963f66afa6" }).describe("Workflow version id"),
+    }),
+    body: {
+      content: {
+        "application/json": { schema: WorkflowStatusRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Updated workflow — pass-through from workflow-service",
+      content: {
+        "application/json": { schema: z.object({}).passthrough().openapi("WorkflowStatusResponse") },
+      },
+    },
+    400: { description: "Invalid request", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: { description: "Another version of the dynasty is already active", content: errorContent },
+    404: { description: "Workflow not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "put",
   path: "/v1/workflows/{id}",
@@ -6697,6 +6745,132 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Offer not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },
+  },
+});
+
+
+// ── Brand grain ──────────────────────────────────────────────────────────────
+// The three reads above, one grain further up: a brand holds SEVERAL offers and
+// each of those runs SEVERAL channels, so a per-feature read describes whichever
+// channel it happened to ask. A brand answer is neither the sum of its offers nor
+// the sum of its channels — features-service owns how those parts combine. Query objects below are
+// PASSTHROUGH documentation of the params known today, never a whitelist — the
+// gateway forwards the caller's query string verbatim (CLAUDE.md #11), and the
+// response is downstream-owned and passed through unchanged (CLAUDE.md #8).
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/revenue",
+  tags: ["Features"],
+  summary: "Brand revenue overview",
+  description:
+    "A brand's money, across every acquisition channel it runs, with the per-channel breakdown beside it. " +
+    "Proxied to features-service GET /brands/{brandId}/revenue. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID") }),
+    query: z.object({
+      funnel: z.string().optional().openapi({ example: "self-serve" }).describe("Sales funnel the cost-per-outcome columns are priced on. Owned and validated by features-service"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default, undiscounted) | net (the org's discounted figures). Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Brand revenue overview", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandRevenueResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/audience-stats",
+  tags: ["Features"],
+  summary: "Brand audience stats",
+  description:
+    "A brand's per-audience economics, across every channel it runs, with the channel set on the same body. " +
+    "Proxied to features-service GET /brands/{brandId}/audience-stats. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID") }),
+    query: z.object({
+      goal: z.string().optional().openapi({ example: "signup" }).describe("Optimization goal. Omitting both goal and funnel is the brand-level read, not an error"),
+      funnel: z.string().optional().openapi({ example: "self-serve" }).describe("Sales funnel, same vocabulary as the per-feature read"),
+      statuses: z.string().optional().openapi({ example: "active,paused,archived" }).describe("Comma-separated audience statuses (features-service owns the default)"),
+      limit: z.string().optional().openapi({ example: "3" }).describe("Maximum number of audience rows"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default) | net. Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Brand audience stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandAudienceStatsResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/pipeline-activity",
+  tags: ["Features"],
+  summary: "Brand pipeline activity",
+  description:
+    "An offer's per-day activity, across every acquisition channel it is sold through, day buckets merged. " +
+    "Proxied to features-service GET /brands/{brandId}/pipeline-activity. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID") }),
+    query: z.object({
+      timezone: z.string().openapi({ example: "America/New_York" }).describe("IANA timezone used for calendar day ordering (required)"),
+      days: z.string().optional().openapi({ example: "7" }).describe("Number of days to return (features-service owns the default)"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Accepted for parity with the sibling reads. Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Brand pipeline activity", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandPipelineActivityResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// Every offer of a brand, each with its own money combined across every channel it
+// is sold through — the read a brand Overview's offer table is built on. NOT mounted
+// at /v1/brands/{brandId}/offers: that path is brand-service's offer CATALOG, served
+// by src/routes/brand.ts, which mounts first. This takes the /v1/{service}/{downstream
+// path} shape instead, so the downstream path stays exactly what features-service
+// serves and nothing is renamed.
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/brands/{brandId}/offers",
+  tags: ["Features"],
+  summary: "Brand offers, each combined across its channels",
+  description:
+    "Every offer of a brand, each with its own money combined across every acquisition channel that offer is sold through — one lean body an offer table can poll. " +
+    "Proxied to features-service GET /brands/{brandId}/offers. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID") }),
+    query: z.object({
+      funnel: z.string().optional().openapi({ example: "self-serve" }).describe("Sales funnel the cost-per-outcome columns are priced on. Owned and validated by features-service"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default, undiscounted) | net (the org's discounted figures). Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Brand offers with per-offer economics", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandOffersResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found", content: errorContent },
+    409: { description: "Conflict", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
   },
 });
 
