@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
+import { respondUpstreamError } from "../lib/upstream-error.js";
 import { SendEmailRequestSchema, DeployEmailTemplatesRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
@@ -208,7 +209,11 @@ router.post(
       res.json(result);
     } catch (error: any) {
       console.error("[api-service] Manual qualification create error:", error.message);
-      res.status(error.statusCode || 500).json({ error: error.message || "Failed to record manual qualification" });
+      // Forward instantly-service's own status and body. Rebuilding the envelope from
+      // the thrown Error stringifies the WHOLE downstream body into `error`, which
+      // destroys the `code` a consumer branches on and puts raw JSON in front of a
+      // customer — the refusals here are the ones a surface needs to tell apart.
+      respondUpstreamError(res, error, "Failed to record manual qualification");
     }
   },
 );
@@ -241,7 +246,7 @@ router.get(
       res.json(result);
     } catch (error: any) {
       console.error("[api-service] Manual qualification list error:", error.message);
-      res.status(error.statusCode || 500).json({ error: error.message || "Failed to list manual qualifications" });
+      respondUpstreamError(res, error, "Failed to list manual qualifications");
     }
   },
 );
