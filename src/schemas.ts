@@ -5395,26 +5395,25 @@ export const DeployEmailTemplatesRequestSchema = z
 // Manual reply qualifications (forwarded to email-gateway → instantly-service)
 // ───────────────────────────────────────────────────────────────────────────
 
-const ManualQualificationStatusEnum = z.enum([
-  "lead_interested",
-  "lead_meeting_booked",
-  "lead_closed",
-  "lead_not_interested",
-  "lead_wrong_person",
-  "lead_neutral",
-  "lead_out_of_office",
-  "auto_reply_received",
-]);
-
+// The route forwards `req.body` byte-identical and parses nothing, so this schema is a
+// DESCRIPTION of a passthrough, never its contract. It used to re-declare the status
+// vocabulary as a closed 8-value enum; instantly-service has since reshaped it (the two
+// deal-progress values moved out to the lead-outcomes service, and the positive case
+// split four ways), so the enum documented three values that no longer mean what they
+// said and omitted four that work today. Nothing broke — the wire was never gated on it
+// — but a reader checking the registry before wiring a consumer is told the new values
+// will be rejected, which is worse than saying nothing. `.passthrough()` with the
+// vocabulary named upstream: this gateway does not own that shape (rule #8).
 export const ManualQualificationCreateRequestSchema = z
   .object({
     campaign_id: z.string().min(1).describe("Logical campaign id (groups sub-campaigns for the same workflow run)"),
     email: z.string().email().describe("Lead email address"),
-    status: ManualQualificationStatusEnum.describe(
-      "Manual reply qualification status — mirrors Instantly webhook reply event_type values exactly. Set by a human via the dashboard when Instantly fails to detect a reply (e.g. reply received on a non-leurre email account).",
+    status: z.string().min(1).describe(
+      "What a human states about the reply. instantly-service owns this vocabulary and is the only place it is authoritative — refer to its openapi.json rather than to this line, which cannot be kept in lockstep across a deploy boundary.",
     ),
     notes: z.string().max(2000).optional().describe("Optional free-text human note for audit"),
   })
+  .passthrough()
   .openapi("ManualQualificationCreateRequest");
 
 registry.registerPath({
