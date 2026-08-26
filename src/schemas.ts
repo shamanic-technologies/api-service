@@ -112,7 +112,17 @@ registry.registerPath({
   summary: "OpenAPI specification",
   description: "Returns the OpenAPI 3.0 JSON spec for this service",
   responses: {
-    200: { description: "OpenAPI 3.0 specification" },
+    200: {
+      description: "OpenAPI 3.0 specification",
+      content: {
+        "application/json": {
+          // The document this gateway itself serves — passthrough, because the
+          // shape is the OpenAPI 3.0 specification and re-declaring it here
+          // would be a second, drifting copy of a standard.
+          schema: z.object({}).passthrough().openapi("OpenApiDocumentResponse"),
+        },
+      },
+    },
     404: { description: "Spec not generated yet", content: errorContent },
   },
 });
