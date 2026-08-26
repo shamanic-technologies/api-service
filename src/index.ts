@@ -59,6 +59,8 @@ import conversionsRoutes from "./routes/conversions.js";
 import costsRoutes from "./routes/costs.js";
 import adminRoutes from "./routes/admin.js";
 import adminBrandsRoutes from "./routes/admin-brands.js";
+import { rateLimit } from "./middleware/rate-limit.js";
+import { requestId } from "./middleware/request-id.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
@@ -84,7 +86,29 @@ if (process.env.NODE_ENV !== "production") {
 app.use(cors({
   origin: corsOrigins,
   credentials: true,
+  // Browser-side agents can only read these off a cross-origin response if the
+  // server says so. Without this the rate-limit state is invisible to exactly
+  // the callers that most need to self-throttle.
+  exposedHeaders: [
+    "RateLimit",
+    "RateLimit-Policy",
+    "RateLimit-Limit",
+    "RateLimit-Remaining",
+    "RateLimit-Reset",
+    "Retry-After",
+    "Deprecation",
+    "Sunset",
+    "Link",
+    "x-request-id",
+  ],
 }));
+
+// ── Correlation id + rate limiting ───────────────────────────────────────────
+// Mounted before every route (docs and health included) so that the headers
+// describe every response this gateway sends, and so a throttled request is
+// answered here instead of reaching the downstream fleet.
+app.use(requestId);
+app.use(rateLimit);
 
 // Raised from the 100kb express default: no-website brands post a large
 // free-form business-context body (~1MB / ~300k chars, "5 PDFs of 20 pages")
