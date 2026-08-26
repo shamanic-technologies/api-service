@@ -154,6 +154,26 @@ describe("POST /v1/leads/:id/step-statements", () => {
     expect(res.body.statement.aFieldThisGatewayHasNeverHeardOf).toBe(7);
   });
 
+  it("returns the UPSTREAM success status, not one this gateway decided on", async () => {
+    // The route used to hardcode 201. lead-service only answers 201 today, so the
+    // assertion is cheap now and is the whole contract the day it answers anything
+    // else — a status this gateway invents is a downstream shape it does not own.
+    calls = stubFetch(STATEMENT_BODY, 200);
+    const res = await request(buildApp())
+      .post(`/v1/leads/${LEAD}/step-statements`)
+      .send({ step: "meeting_attended", kind: "outcome" });
+    expect(res.status).toBe(200);
+    expect(res.body.retractedNever).toBe(true);
+  });
+
+  it("forwards the caller's query string verbatim, like the sibling read", async () => {
+    const query = "?campaignId=33333333-3333-3333-3333-333333333333&somethingNew=x%20y";
+    await request(buildApp())
+      .post(`/v1/leads/${LEAD}/step-statements${query}`)
+      .send({ step: "signup", kind: "outcome" });
+    expect(calls[0].url.endsWith(`/orgs/leads/${LEAD}/step-statements${query}`)).toBe(true);
+  });
+
   it("forwards a REFUSAL with its own status and body, so a surface can say why", async () => {
     // A 409 flattened into a generic gateway error is what makes a consumer unable
     // to distinguish "this step already happened" from any other failure.
