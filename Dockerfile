@@ -4,7 +4,7 @@ FROM node:20-slim AS builder
 WORKDIR /app
 
 # Install pnpm
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9
 
 # Copy workspace config and package files first for better caching
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml* ./
@@ -28,7 +28,7 @@ FROM node:20-slim
 
 WORKDIR /app
 
-RUN npm install -g pnpm
+RUN npm install -g pnpm@9
 
 # Copy workspace config and install prod deps only
 COPY --from=builder /app/package.json /app/pnpm-workspace.yaml /app/pnpm-lock.yaml* ./
