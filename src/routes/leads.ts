@@ -186,4 +186,99 @@ router.post("/leads/search", authenticate, requireOrg, requireUser, async (req: 
 
 // POST /v1/leads/enrich removed - no consumers
 
+/**
+ * GET /v1/leads/:id/step-statements — pass-through to lead-service
+ * GET /orgs/leads/{id}/step-statements.
+ *
+ * What is known about EVERY step of one lead's campaign funnel: for each, whether it
+ * happened, whether a human stated it never will, or whether nobody has said anything.
+ * Pending is named by lead-service rather than inferred from an absent count, which is
+ * the point of the endpoint — an outcome that has not arrived and a lead that is dead
+ * at that step used to be indistinguishable.
+ *
+ * `id` is the `id` a row of GET /v1/leads already carries, exactly as on `/leads/:id`,
+ * so the detail panel that lists the lead can ask for its steps with nothing new.
+ *
+ * The org boundary is the authenticated one: `x-org-id` comes from
+ * `buildInternalHeaders(req)`, never from the caller, and lead-service scopes the
+ * lookup on it.
+ *
+ * One record, forwarded through `callExternalService` rather than piped: the body is a
+ * handful of steps (rule #10's piping is for bodies measured in MB). The response shape
+ * is lead-service's and this gateway does not declare it (rule #8).
+ */
+router.get(
+  "/leads/:id/step-statements",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/step-statements${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) }
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Get lead step statements error:", error);
+      respondUpstreamError(res, error, "Failed to get lead step statements");
+    }
+  }
+);
+
+/**
+ * POST /v1/leads/:id/step-statements — pass-through to lead-service
+ * POST /orgs/leads/{id}/step-statements.
+ *
+ * Records, by hand, what happened to this lead at one step of its campaign's funnel —
+ * or that it never will. lead-service writes an `outcome` into the same conversion
+ * ledger every consumer already counts, so a brand's outcome counts move on the next
+ * read with no change anywhere downstream; a `never` goes to a store no count reads,
+ * so it can never move a number.
+ *
+ * Why it matters that a browser can reach this at all: 26 of the 29 conversion events
+ * ever recorded fleet-wide are unmatched, because the tracker's identity waterfall
+ * misses whenever somebody signs up under a different address than the one we emailed.
+ * A statement made here names the lead by the row id the caller already holds, so
+ * nothing is matched and nothing is guessed.
+ *
+ * The body is forwarded VERBATIM. This gateway does not re-declare, narrow or validate
+ * lead-service's request shape (rule #8): a field it stripped would be a bug no
+ * consumer could see, and lead-service is the one that owns which statements are legal
+ * — including the refusals (a `never` on a step that already happened, a value on a
+ * `never`, an unparseable timestamp), each of which the two surfaces branch on to show
+ * their own copy. `respondUpstreamError` forwards the upstream status and body
+ * field-for-field so `code` survives; flattening it into a generic gateway error is
+ * what makes a caller unable to say WHY a statement was refused.
+ *
+ * `buildInternalHeaders(req)` carries the caller's org AND user, because lead-service
+ * records who stated the fact and attributes it to the caller's own campaign row.
+ */
+router.post(
+  "/leads/:id/step-statements",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/step-statements`,
+        {
+          method: "POST",
+          headers: buildInternalHeaders(req),
+          body: req.body,
+        }
+      );
+
+      res.status(201).json(result);
+    } catch (error: any) {
+      console.error("[api-service] Set lead step statement error:", error);
+      respondUpstreamError(res, error, "Failed to record lead step statement");
+    }
+  }
+);
+
 export default router;
