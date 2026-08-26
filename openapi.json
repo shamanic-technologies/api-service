@@ -1969,6 +1969,18 @@
         "type": "object",
         "properties": {}
       },
+      "LeadStepStatementsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "LeadStepStatementResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "LeadStepStatementRequest": {
+        "type": "object",
+        "properties": {}
+      },
       "QualifyResponse": {
         "type": "object",
         "properties": {
@@ -12099,6 +12111,287 @@
           },
           "404": {
             "description": "No such lead in this caller's org (or brand, when brandId is given)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/leads/{id}/step-statements": {
+      "get": {
+        "tags": [
+          "Leads"
+        ],
+        "summary": "Everything known about every funnel step of one lead",
+        "description": "Pass-through to lead-service GET /orgs/leads/{id}/step-statements. One entry per step of the outcome vocabulary, always all of them: each is either an outcome (with the source that reported or stated it), a `never` a human stated, or pending. Pending is named by lead-service rather than inferred from an absent count — an outcome that has not arrived and a lead that is dead at that step used to read the same. `id` is the `id` a row of GET /v1/leads already carries, so the panel listing the lead needs nothing new. The read is org-scoped downstream. Refer to lead-service openapi.json for the exact response shape — api-service forwards it untransformed.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The `id` of a lead as returned by GET /v1/leads."
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Per-step state for this lead, as returned by lead-service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadStepStatementsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid lead id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such lead in this caller's org",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Leads"
+        ],
+        "summary": "State by hand what happened to one lead at one funnel step (or that it never will)",
+        "description": "Pass-through to lead-service POST /orgs/leads/{id}/step-statements. Records, by hand, what happened to this lead at one step of its campaign's sales funnel. An `outcome` is written to the same conversion ledger every consumer already counts, so the brand's outcome counts move on the next read with nothing to change downstream; a `never` goes to a store no count reads, so it can never move a number — it exists so a reader can tell a lead that is DEAD at a step from one still PENDING. The body is forwarded VERBATIM: this gateway does not re-declare or narrow lead-service's request shape, and lead-service owns which statements are legal, including its refusals (a `never` on a step that already happened, a value attached to a `never`, an unparseable timestamp). Those refusals reach the caller with their own status and body so a surface can say WHY a statement was refused. The caller's org AND user identity are forwarded, because lead-service records who stated the fact and attributes the statement to the caller's own campaign row. Refer to lead-service openapi.json for the exact request and response shapes.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The `id` of a lead as returned by GET /v1/leads."
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External organization ID (e.g. Clerk org ID `org_2xyz...`). Required when using an app key (`distrib.app_*`) on endpoints that need org context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeadStepStatementRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The statement as recorded by lead-service.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadStepStatementResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid statement (lead-service states the reason)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such lead in this caller's org",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The statement contradicts one already recorded for this step",
             "content": {
               "application/json": {
                 "schema": {
