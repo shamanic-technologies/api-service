@@ -1,6 +1,11 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, pipeExternalService, externalServices } from "../lib/service-client.js";
+import {
+  callExternalService,
+  callExternalServiceWithStatus,
+  pipeExternalService,
+  externalServices,
+} from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 import { LeadSearchRequestSchema } from "../schemas.js";
@@ -255,6 +260,14 @@ router.get(
  *
  * `buildInternalHeaders(req)` carries the caller's org AND user, because lead-service
  * records who stated the fact and attributes it to the caller's own campaign row.
+ *
+ * The upstream STATUS is forwarded as well, via `callExternalServiceWithStatus`. A
+ * hardcoded `res.status(201)` reads as harmless while lead-service only ever answers
+ * 201, and it is this gateway asserting a downstream shape all the same (rule #8): the
+ * day lead-service distinguishes a created statement from a corrected one by status,
+ * every consumer here would read the wrong one, with nothing in the body to catch it.
+ * The query string is forwarded verbatim for the same reason as on the sibling read
+ * (rule #11) — the downstream takes none today, and one it ships later needs no edit.
  */
 router.post(
   "/leads/:id/step-statements",
@@ -263,9 +276,9 @@ router.post(
   requireUser,
   async (req: AuthenticatedRequest, res) => {
     try {
-      const result = await callExternalService(
+      const { status, data } = await callExternalServiceWithStatus(
         externalServices.lead,
-        `/orgs/leads/${encodeURIComponent(req.params.id)}/step-statements`,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/step-statements${rawQueryString(req.originalUrl)}`,
         {
           method: "POST",
           headers: buildInternalHeaders(req),
@@ -273,7 +286,7 @@ router.post(
         }
       );
 
-      res.status(201).json(result);
+      res.status(status).json(data);
     } catch (error: any) {
       console.error("[api-service] Set lead step statement error:", error);
       respondUpstreamError(res, error, "Failed to record lead step statement");
