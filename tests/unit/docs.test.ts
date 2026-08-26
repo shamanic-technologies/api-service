@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { buildDocument } from "../../src/openapi/document.js";
 
 describe("API docs configuration", () => {
   const indexSource = readFileSync(
@@ -23,13 +24,12 @@ describe("API docs configuration", () => {
     expect(indexSource).toContain('url: "/openapi.json"');
   });
 
-  const openapiSource = readFileSync(
-    join(__dirname, "../../scripts/generate-openapi.ts"),
-    "utf-8",
-  );
-
+  // Assert against the document the build actually produces, not against the
+  // source that produces it — the generator moved once already and a
+  // source-substring assertion followed it silently.
   it("uses distribute branding in OpenAPI title", () => {
-    expect(openapiSource).toContain('title: "distribute API"');
-    expect(openapiSource).not.toContain("MCPFactory");
+    const info = buildDocument().info as { title: string; description: string };
+    expect(info.title).toBe("distribute API");
+    expect(info.description).not.toContain("MCPFactory");
   });
 });
