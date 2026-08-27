@@ -12,7 +12,7 @@ const { FEATURES_BASE } = vi.hoisted(() => {
 });
 
 /**
- * GET /v1/offers/:offerId/{revenue,audience-stats,pipeline-activity,chains} — BEHAVIOURAL cover.
+ * GET /v1/offers/:offerId/{revenue,audience-stats,pipeline-activity,funnels,chains} — BEHAVIOURAL cover.
  *
  * Per CLAUDE.md #7 corollary 3, a source-substring test cannot see a template
  * literal's interpolated value, so it can verify neither the downstream path that
@@ -99,15 +99,21 @@ const PIPELINE_ACTIVITY_BODY = {
   channels: CHANNELS,
 };
 
-// The (offer x sales chain) grain: one row per chain, each carrying its own
+// The (offer x sales funnel) grain: one row per funnel, each carrying its own
 // channels. The per-channel breakdown sits one level deeper than on the three
 // reads above, which is exactly why the body must not be reshaped here.
-const CHAINS_BODY = {
+//
+// Two fixtures, because two spellings are mounted while features-service renames
+// this read: `funnels` is what it will answer, `chains` is what it answers today.
+// Each gateway path forwards to its OWN downstream path — the assertion that
+// matters is that `/funnels` never reaches `/chains` and the body is never
+// reshaped between them, since a rewrite layer is exactly what this must not be.
+const FUNNELS_BODY = {
   offerId: OFFER_ID,
   brandId: BRAND_ID,
   costBasis: "charged",
   costCoverage: "platform_spend_only",
-  chains: [
+  funnels: [
     {
       funnelKey: "self-serve",
       name: "Self-serve",
@@ -138,10 +144,15 @@ const CHAINS_BODY = {
   unattributedCampaignIds: ["campaign-d"],
 };
 
+// Today's downstream spelling, same rows under the other key.
+const CHAINS_BODY = { ...FUNNELS_BODY, funnels: undefined, chains: FUNNELS_BODY.funnels };
+delete (CHAINS_BODY as any).funnels;
+
 const READS = [
   { suffix: "revenue", body: REVENUE_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
   { suffix: "audience-stats", body: AUDIENCE_STATS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
   { suffix: "pipeline-activity", body: PIPELINE_ACTIVITY_BODY, query: `brandId=${BRAND_ID}&timezone=America%2FNew_York`, channelsOf: (b: any) => b.channels },
+  { suffix: "funnels", body: FUNNELS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.funnels[0].channels },
   { suffix: "chains", body: CHAINS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.chains[0].channels },
 ] as const;
 
