@@ -2564,7 +2564,7 @@ registry.registerPath({
     "Idempotent — the declaration IS the row, and a body with no fields declares the funnel " +
     "without pricing it yet. PARTIAL: an omitted field is left exactly as stored, an explicit " +
     "null CLEARS the value back to never-declared. brand-service rejects a rate outside this " +
-    "funnel's own chain, a destination the funnel has no use for, an off-domain page " +
+    "funnel's own legs, a destination the funnel has no use for, an off-domain page " +
     "destination, and a website-led funnel on a brand with no website; the gateway adds no " +
     "validation of its own. Body + response shapes are owned by the downstream service.",
   security: authed,
@@ -2574,7 +2574,7 @@ registry.registerPath({
   },
   responses: {
     200: { description: "The declared funnel", content: { "application/json": { schema: SalesFunnelsResponseSchema } } },
-    400: { description: "Invalid brand ID or funnel key, a rate outside this funnel's chain, a destination the funnel has no use for, or a website-led funnel on a brand with no website (forwarded verbatim)", content: errorContent },
+    400: { description: "Invalid brand ID or funnel key, a rate outside this funnel's own legs, a destination the funnel has no use for, or a website-led funnel on a brand with no website (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
     404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
