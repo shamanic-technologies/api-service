@@ -110,7 +110,9 @@ registry.registerPath({
   path: "/openapi.json",
   tags: ["Health"],
   summary: "OpenAPI specification",
-  description: "Returns the OpenAPI 3.0 JSON spec for this service",
+  description:
+    "Returns the OpenAPI 3.0 JSON document for this API — the document you are reading. " +
+    "It describes every operation you can call with your API key.",
   responses: {
     200: {
       description: "OpenAPI 3.0 specification",
@@ -124,6 +126,31 @@ registry.registerPath({
       },
     },
     404: { description: "Spec not generated yet", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/internal/openapi.json",
+  tags: ["Internal"],
+  security: platformAuth,
+  summary: "Complete OpenAPI specification (platform key)",
+  description:
+    "The complete OpenAPI 3.0 document, including the platform operations that the " +
+    "published document at `GET /openapi.json` does not advertise. Requires the platform " +
+    "API key — the same key those operations themselves require, so this exposes nothing " +
+    "to a caller who could not already call them. Staff tooling (the CLI) generates its " +
+    "command surface from this document.",
+  responses: {
+    200: {
+      description: "OpenAPI 3.0 specification, every operation included",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("InternalOpenApiDocumentResponse"),
+        },
+      },
+    },
+    401: { description: "Invalid or missing platform API key", content: errorContent },
   },
 });
 
