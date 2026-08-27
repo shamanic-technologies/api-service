@@ -6842,33 +6842,6 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/offers/{offerId}/chains",
-  tags: ["Features"],
-  summary: "Offer sales chains (former spelling of /funnels)",
-  description:
-    "The same read as GET /v1/offers/{offerId}/funnels, under the word features-service shipped it with. " +
-    "It exists only while features-service's rename to `funnels` is in flight and comes out the moment that rename is live in production — a caller should read /funnels. " +
-    "Proxied to features-service GET /offers/{offerId}/chains, which stops existing when the rename lands; there is no rewrite layer here, so this path then returns features-service's own 404 verbatim. " +
-    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
-  security: authed,
-  request: {
-    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
-    query: z.object({
-      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
-      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default, undiscounted) | net (the org's discounted figures). Owned and validated by features-service"),
-    }).passthrough(),
-  },
-  responses: {
-    200: { description: "Offer sales chains", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferChainsResponse") } } },
-    400: { description: "Validation error", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Offer not found", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/v1/offers/{offerId}/audience-stats",
   tags: ["Features"],
   summary: "Offer audience stats",
