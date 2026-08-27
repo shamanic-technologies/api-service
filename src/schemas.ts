@@ -6815,6 +6815,32 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/offers/{offerId}/chains",
+  tags: ["Features"],
+  summary: "Offer sales chains",
+  description:
+    "What each of an offer's sales chains cost and returned: one row per chain the offer is sold through, each priced on its own declared terms. " +
+    "Proxied to features-service GET /offers/{offerId}/chains. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default, undiscounted) | net (the org's discounted figures). Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "One row per sales chain the offer is sold through", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferChainsResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Offer not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/offers/{offerId}/audience-stats",
   tags: ["Features"],
   summary: "Offer audience stats",

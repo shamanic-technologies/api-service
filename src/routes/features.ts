@@ -777,7 +777,7 @@ router.get("/features/:slug/goal-arbitration", authenticate, requireOrg, require
 // ── Offer grain ──────────────────────────────────────────────────────────────
 
 /**
- * GET /v1/offers/:offerId/{revenue,audience-stats,pipeline-activity}
+ * GET /v1/offers/:offerId/{revenue,audience-stats,pipeline-activity,chains}
  *
  * The three sibling reads above, one grain up. A brand sells ONE offer through
  * SEVERAL acquisition channels at once, and each of the per-feature reads answers
@@ -805,6 +805,12 @@ const OFFER_ROUTES = [
   { suffix: "revenue", what: "offer revenue" },
   { suffix: "audience-stats", what: "offer audience stats" },
   { suffix: "pipeline-activity", what: "offer pipeline activity" },
+  // The (offer x sales chain) grain: one row per chain the offer is sold through,
+  // each priced on its OWN declared terms. Same auth, same identity, same verbatim
+  // query and body passthrough as its three siblings — it is one more suffix, not
+  // a new shape. Stated here rather than behind a wildcard so the route stays
+  // explicit and documented (CLAUDE.md "transparent does NOT mean catch-all").
+  { suffix: "chains", what: "offer sales chains" },
 ] as const;
 
 // ── Brand grain ──────────────────────────────────────────────────────────────

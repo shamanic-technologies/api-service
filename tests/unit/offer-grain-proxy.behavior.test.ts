@@ -12,7 +12,7 @@ const { FEATURES_BASE } = vi.hoisted(() => {
 });
 
 /**
- * GET /v1/offers/:offerId/{revenue,audience-stats,pipeline-activity} — BEHAVIOURAL cover.
+ * GET /v1/offers/:offerId/{revenue,audience-stats,pipeline-activity,chains} — BEHAVIOURAL cover.
  *
  * Per CLAUDE.md #7 corollary 3, a source-substring test cannot see a template
  * literal's interpolated value, so it can verify neither the downstream path that
@@ -99,10 +99,50 @@ const PIPELINE_ACTIVITY_BODY = {
   channels: CHANNELS,
 };
 
+// The (offer x sales chain) grain: one row per chain, each carrying its own
+// channels. The per-channel breakdown sits one level deeper than on the three
+// reads above, which is exactly why the body must not be reshaped here.
+const CHAINS_BODY = {
+  offerId: OFFER_ID,
+  brandId: BRAND_ID,
+  costBasis: "charged",
+  costCoverage: "platform_spend_only",
+  chains: [
+    {
+      funnelKey: "self-serve",
+      name: "Self-serve",
+      steps: ["contacted", "clicked", "signed_up"],
+      campaignIds: ["campaign-a", "campaign-b", "campaign-c"],
+      channels: CHANNELS,
+      priced: true,
+      unpricedReason: null,
+      headline: { totalPipelineUsd: 4534.05, economicsSource: "sales-economics" },
+      costEconomics: {
+        committedCostUsd: 2518.92,
+        actualCostUsd: 2411.42,
+        costOfAcquisitionPct: 55.55,
+        roiMultiple: 1.8,
+        costPerAcquisitionUsd: 111.06,
+      },
+      outcomes: {
+        recipientsContacted: 812,
+        recipientsClicked: 47,
+        recipientsRepliesPositive: 9,
+        committedSpentCents: 251892,
+        actualSpentCents: 241142,
+        cpcCents: 5359,
+        cpprCents: 27988,
+      },
+    },
+  ],
+  unattributedCampaignIds: ["campaign-d"],
+};
+
 const READS = [
-  { suffix: "revenue", body: REVENUE_BODY, query: `brandId=${BRAND_ID}` },
-  { suffix: "audience-stats", body: AUDIENCE_STATS_BODY, query: `brandId=${BRAND_ID}` },
-  { suffix: "pipeline-activity", body: PIPELINE_ACTIVITY_BODY, query: `brandId=${BRAND_ID}&timezone=America%2FNew_York` },
+  { suffix: "revenue", body: REVENUE_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
+  { suffix: "audience-stats", body: AUDIENCE_STATS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
+  { suffix: "pipeline-activity", body: PIPELINE_ACTIVITY_BODY, query: `brandId=${BRAND_ID}&timezone=America%2FNew_York`, channelsOf: (b: any) => b.channels },
+  { suffix: "chains", body: CHAINS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.chains[0].channels },
 ] as const;
 
 describe("GET /v1/offers/:offerId/* — over the wire", () => {
@@ -119,7 +159,7 @@ describe("GET /v1/offers/:offerId/* — over the wire", () => {
     calls = [];
   });
 
-  for (const { suffix, body, query } of READS) {
+  for (const { suffix, body, query, channelsOf } of READS) {
     describe(`/${suffix}`, () => {
       it("forwards to features-service's offer-grain path, carrying the resolved identity", async () => {
         stubUpstream(body);
@@ -143,7 +183,7 @@ describe("GET /v1/offers/:offerId/* — over the wire", () => {
 
         expect(res.status).toBe(200);
         expect(res.body).toEqual(body);
-        expect(res.body.channels).toHaveLength(2);
+        expect(channelsOf(res.body)).toHaveLength(2);
       });
 
       it("forwards every query param verbatim — no whitelist, nothing narrowed", async () => {
