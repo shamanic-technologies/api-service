@@ -366,7 +366,7 @@ router.put("/brands/:id/sales-economics", authenticate, requireOrg, requireUser,
  * the shape (CLAUDE.md #8) and this layer re-declares nothing.
  *
  * No validation here either (CLAUDE.md rule: no gateway re-validation).
- * brand-service already rejects a rate outside a funnel's own chain, a
+ * brand-service already rejects a rate outside a funnel's own legs, a
  * destination the funnel has no use for, and a website-led funnel on a brand
  * with no website; its 400s reach the caller with status and body intact via
  * callExternalServiceWithStatus + respondUpstreamError.
