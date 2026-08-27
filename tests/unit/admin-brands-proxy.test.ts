@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import * as fs from "fs";
 import * as path from "path";
+import { buildDocument } from "../../src/openapi/document.js";
 
 const routePath = path.join(__dirname, "../../src/routes/admin-brands.ts");
 const content = fs.readFileSync(routePath, "utf-8");
@@ -37,11 +38,18 @@ describe("Admin brands OpenAPI schema", () => {
     expect(schemaContent).toContain("AdminBrandsResponse");
   });
 
-  it("should include /v1/admin/brands GET in committed openapi.json", () => {
+  // The published document does not advertise platform operations, so this one
+  // lives in the staff document only — see openapi-public-surface.test.ts.
+  it("should include /v1/admin/brands GET in the staff document", () => {
+    const staff = buildDocument({ audience: "staff" }) as {
+      paths: Record<string, Record<string, unknown>>;
+    };
+    expect(staff.paths["/v1/admin/brands"]).toBeDefined();
+    expect(staff.paths["/v1/admin/brands"].get).toBeDefined();
+
     const openapiPath = path.join(__dirname, "../../openapi.json");
-    const openapi = JSON.parse(fs.readFileSync(openapiPath, "utf-8"));
-    expect(openapi.paths["/v1/admin/brands"]).toBeDefined();
-    expect(openapi.paths["/v1/admin/brands"].get).toBeDefined();
+    const published = JSON.parse(fs.readFileSync(openapiPath, "utf-8"));
+    expect(published.paths["/v1/admin/brands"]).toBeUndefined();
   });
 });
 
