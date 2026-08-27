@@ -805,11 +805,18 @@ const OFFER_ROUTES = [
   { suffix: "revenue", what: "offer revenue" },
   { suffix: "audience-stats", what: "offer audience stats" },
   { suffix: "pipeline-activity", what: "offer pipeline activity" },
-  // The grain UNDER the offer: what each of its sales chains cost and returned. It matters as the
-  // product moves to one campaign per STEP of a chain — a campaign then buys a single link and has no
-  // return of its own, because the lifetime revenue sits at the end of the chain. Same passthrough as
+  // The grain UNDER the offer: what each of its SALES FUNNELS cost and returned. It matters as the
+  // product moves to one campaign per STEP of a funnel — a campaign then buys a single step and has no
+  // return of its own, because the lifetime revenue sits at the end of the funnel. Same passthrough as
   // its siblings; features-service owns the shape, the pricing and every refusal.
-  { suffix: "chains", what: "offer sales chains" },
+  //
+  // The read shipped downstream under the word CHAIN and was renamed to FUNNEL, which is the only word
+  // the product uses for it: the entity key is `funnelKey` and the catalogue is brand-service's sales
+  // funnels. Both spellings were mounted while that rename was in flight, each forwarding to its own
+  // downstream spelling. features-service carries no alias, so `/offers/{id}/chains` stopped existing
+  // when the rename went live and the gateway path that fed it could only 404 from then on — it is
+  // gone, and one word is left for one read.
+  { suffix: "funnels", what: "offer sales funnels" },
 ] as const;
 
 // ── Brand grain ──────────────────────────────────────────────────────────────

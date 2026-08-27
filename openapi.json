@@ -5809,7 +5809,7 @@
         "type": "object",
         "properties": {}
       },
-      "OfferChainsResponse": {
+      "OfferFunnelsResponse": {
         "type": "object",
         "properties": {}
       },
@@ -34215,7 +34215,7 @@
           "Brand"
         ],
         "summary": "Declare a sales funnel and write its economics",
-        "description": "Proxy to brand-service PUT /orgs/brands/{id}/sales-funnels/{funnelKey}. Declares that the brand sells through this funnel and writes what the body carries of its economics. Idempotent — the declaration IS the row, and a body with no fields declares the funnel without pricing it yet. PARTIAL: an omitted field is left exactly as stored, an explicit null CLEARS the value back to never-declared. brand-service rejects a rate outside this funnel's own chain, a destination the funnel has no use for, an off-domain page destination, and a website-led funnel on a brand with no website; the gateway adds no validation of its own. Body + response shapes are owned by the downstream service.",
+        "description": "Proxy to brand-service PUT /orgs/brands/{id}/sales-funnels/{funnelKey}. Declares that the brand sells through this funnel and writes what the body carries of its economics. Idempotent — the declaration IS the row, and a body with no fields declares the funnel without pricing it yet. PARTIAL: an omitted field is left exactly as stored, an explicit null CLEARS the value back to never-declared. brand-service rejects a rate outside this funnel's own legs, a destination the funnel has no use for, an off-domain page destination, and a website-led funnel on a brand with no website; the gateway adds no validation of its own. Body + response shapes are owned by the downstream service.",
         "security": [
           {
             "bearerAuth": []
@@ -34386,7 +34386,7 @@
             }
           },
           "400": {
-            "description": "Invalid brand ID or funnel key, a rate outside this funnel's chain, a destination the funnel has no use for, or a website-led funnel on a brand with no website (forwarded verbatim)",
+            "description": "Invalid brand ID or funnel key, a rate outside this funnel's own legs, a destination the funnel has no use for, or a website-led funnel on a brand with no website (forwarded verbatim)",
             "content": {
               "application/json": {
                 "schema": {
@@ -80152,13 +80152,13 @@
         "operationId": "getV1OffersByOfferIdRevenue"
       }
     },
-    "/v1/offers/{offerId}/chains": {
+    "/v1/offers/{offerId}/funnels": {
       "get": {
         "tags": [
           "Features"
         ],
-        "summary": "Offer sales chains",
-        "description": "What each of an offer's sales chains cost and returned — one row per chain, each with its own spend, pipeline, return per dollar and cost of acquisition. The grain under the offer, and the one that survives one campaign per STEP of a chain: a campaign then buys a single link and has no return of its own, because the lifetime revenue sits at the end of the chain. Proxied to features-service GET /offers/{offerId}/chains. The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+        "summary": "Offer sales funnels",
+        "description": "What each of an offer's sales funnels cost and returned — one row per funnel, each with its own spend, pipeline, return per dollar and cost of acquisition. The grain under the offer, and the one that survives one campaign per STEP of a funnel: a campaign then buys a single step and has no return of its own, because the lifetime revenue sits at the end of the funnel. Proxied to features-service GET /offers/{offerId}/funnels. The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
         "security": [
           {
             "bearerAuth": []
@@ -80267,11 +80267,11 @@
         ],
         "responses": {
           "200": {
-            "description": "Offer sales chains",
+            "description": "Offer sales funnels",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OfferChainsResponse"
+                  "$ref": "#/components/schemas/OfferFunnelsResponse"
                 }
               }
             },
@@ -80700,7 +80700,7 @@
             }
           }
         },
-        "operationId": "getV1OffersByOfferIdChains"
+        "operationId": "getV1OffersByOfferIdFunnels"
       }
     },
     "/v1/offers/{offerId}/audience-stats": {

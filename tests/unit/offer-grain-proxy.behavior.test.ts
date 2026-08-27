@@ -12,7 +12,7 @@ const { FEATURES_BASE } = vi.hoisted(() => {
 });
 
 /**
- * GET /v1/offers/:offerId/{revenue,audience-stats,pipeline-activity,chains} — BEHAVIOURAL cover.
+ * GET /v1/offers/:offerId/{revenue,audience-stats,pipeline-activity,funnels} — BEHAVIOURAL cover.
  *
  * Per CLAUDE.md #7 corollary 3, a source-substring test cannot see a template
  * literal's interpolated value, so it can verify neither the downstream path that
@@ -99,15 +99,21 @@ const PIPELINE_ACTIVITY_BODY = {
   channels: CHANNELS,
 };
 
-// The (offer x sales chain) grain: one row per chain, each carrying its own
+// The (offer x sales funnel) grain: one row per funnel, each carrying its own
 // channels. The per-channel breakdown sits one level deeper than on the three
 // reads above, which is exactly why the body must not be reshaped here.
-const CHAINS_BODY = {
+//
+// The read was called a CHAIN downstream before it was called a FUNNEL. Both
+// spellings were mounted here while features-service renamed it; only the funnel
+// one is left, and the assertion that keeps it honest is the full downstream path
+// literal below — a gateway that quietly rewrote one word into the other would
+// still return 200 and would still be wrong.
+const FUNNELS_BODY = {
   offerId: OFFER_ID,
   brandId: BRAND_ID,
   costBasis: "charged",
   costCoverage: "platform_spend_only",
-  chains: [
+  funnels: [
     {
       funnelKey: "self-serve",
       name: "Self-serve",
@@ -142,7 +148,7 @@ const READS = [
   { suffix: "revenue", body: REVENUE_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
   { suffix: "audience-stats", body: AUDIENCE_STATS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
   { suffix: "pipeline-activity", body: PIPELINE_ACTIVITY_BODY, query: `brandId=${BRAND_ID}&timezone=America%2FNew_York`, channelsOf: (b: any) => b.channels },
-  { suffix: "chains", body: CHAINS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.chains[0].channels },
+  { suffix: "funnels", body: FUNNELS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.funnels[0].channels },
 ] as const;
 
 describe("GET /v1/offers/:offerId/* — over the wire", () => {

@@ -2564,7 +2564,7 @@ registry.registerPath({
     "Idempotent — the declaration IS the row, and a body with no fields declares the funnel " +
     "without pricing it yet. PARTIAL: an omitted field is left exactly as stored, an explicit " +
     "null CLEARS the value back to never-declared. brand-service rejects a rate outside this " +
-    "funnel's own chain, a destination the funnel has no use for, an off-domain page " +
+    "funnel's own legs, a destination the funnel has no use for, an off-domain page " +
     "destination, and a website-led funnel on a brand with no website; the gateway adds no " +
     "validation of its own. Body + response shapes are owned by the downstream service.",
   security: authed,
@@ -2574,7 +2574,7 @@ registry.registerPath({
   },
   responses: {
     200: { description: "The declared funnel", content: { "application/json": { schema: SalesFunnelsResponseSchema } } },
-    400: { description: "Invalid brand ID or funnel key, a rate outside this funnel's chain, a destination the funnel has no use for, or a website-led funnel on a brand with no website (forwarded verbatim)", content: errorContent },
+    400: { description: "Invalid brand ID or funnel key, a rate outside this funnel's own legs, a destination the funnel has no use for, or a website-led funnel on a brand with no website (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
     404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
@@ -6815,13 +6815,13 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/offers/{offerId}/chains",
+  path: "/v1/offers/{offerId}/funnels",
   tags: ["Features"],
-  summary: "Offer sales chains",
+  summary: "Offer sales funnels",
   description:
-    "What each of an offer's sales chains cost and returned — one row per chain, each with its own spend, pipeline, return per dollar and cost of acquisition. " +
-    "The grain under the offer, and the one that survives one campaign per STEP of a chain: a campaign then buys a single link and has no return of its own, because the lifetime revenue sits at the end of the chain. " +
-    "Proxied to features-service GET /offers/{offerId}/chains. " +
+    "What each of an offer's sales funnels cost and returned — one row per funnel, each with its own spend, pipeline, return per dollar and cost of acquisition. " +
+    "The grain under the offer, and the one that survives one campaign per STEP of a funnel: a campaign then buys a single step and has no return of its own, because the lifetime revenue sits at the end of the funnel. " +
+    "Proxied to features-service GET /offers/{offerId}/funnels. " +
     "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
   security: authed,
   request: {
@@ -6832,7 +6832,7 @@ registry.registerPath({
     }).passthrough(),
   },
   responses: {
-    200: { description: "Offer sales chains", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferChainsResponse") } } },
+    200: { description: "Offer sales funnels", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferFunnelsResponse") } } },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Offer not found", content: errorContent },
