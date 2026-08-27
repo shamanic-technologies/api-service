@@ -805,6 +805,11 @@ const OFFER_ROUTES = [
   { suffix: "revenue", what: "offer revenue" },
   { suffix: "audience-stats", what: "offer audience stats" },
   { suffix: "pipeline-activity", what: "offer pipeline activity" },
+  // The grain UNDER the offer: what each of its sales chains cost and returned. It matters as the
+  // product moves to one campaign per STEP of a chain — a campaign then buys a single link and has no
+  // return of its own, because the lifetime revenue sits at the end of the chain. Same passthrough as
+  // its siblings; features-service owns the shape, the pricing and every refusal.
+  { suffix: "chains", what: "offer sales chains" },
 ] as const;
 
 // ── Brand grain ──────────────────────────────────────────────────────────────
