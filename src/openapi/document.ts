@@ -232,11 +232,11 @@ const rateLimitedResponse = () => ({
 // Document
 // ---------------------------------------------------------------------------
 
-const DESCRIPTION = `API Gateway for distribute.
+const DESCRIPTION = `API Gateway for distribute.you.
 
 ## Quick Start
 
-1. Create an API key in the distribute dashboard, or via \`POST /v1/api-keys\`
+1. Create an API key in the distribute.you dashboard, or via \`POST /v1/api-keys\`
 2. Use it as a Bearer token — that's it, no extra headers needed
 
 \`\`\`
@@ -323,7 +323,7 @@ export function buildDocument(): Record<string, unknown> {
   const document = generator.generateDocument({
     openapi: "3.0.0",
     info: {
-      title: "distribute API",
+      title: "distribute.you API",
       description: DESCRIPTION,
       version: "1.0.0",
     },
