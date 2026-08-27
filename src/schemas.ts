@@ -6815,13 +6815,40 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/offers/{offerId}/funnels",
+  tags: ["Features"],
+  summary: "Offer sales funnels",
+  description:
+    "What each of an offer's sales funnels cost and returned — one row per funnel, each with its own spend, pipeline, return per dollar and cost of acquisition. " +
+    "The grain under the offer, and the one that survives one campaign per STEP of a funnel: a campaign then buys a single step and has no return of its own, because the lifetime revenue sits at the end of the funnel. " +
+    "Proxied to features-service GET /offers/{offerId}/funnels. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default, undiscounted) | net (the org's discounted figures). Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer sales funnels", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferFunnelsResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Offer not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/offers/{offerId}/chains",
   tags: ["Features"],
-  summary: "Offer sales chains",
+  summary: "Offer sales chains (former spelling of /funnels)",
   description:
-    "What each of an offer's sales chains cost and returned — one row per chain, each with its own spend, pipeline, return per dollar and cost of acquisition. " +
-    "The grain under the offer, and the one that survives one campaign per STEP of a chain: a campaign then buys a single link and has no return of its own, because the lifetime revenue sits at the end of the chain. " +
-    "Proxied to features-service GET /offers/{offerId}/chains. " +
+    "The same read as GET /v1/offers/{offerId}/funnels, under the word features-service shipped it with. " +
+    "It exists only while features-service's rename to `funnels` is in flight and comes out the moment that rename is live in production — a caller should read /funnels. " +
+    "Proxied to features-service GET /offers/{offerId}/chains, which stops existing when the rename lands; there is no rewrite layer here, so this path then returns features-service's own 404 verbatim. " +
     "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
   security: authed,
   request: {
