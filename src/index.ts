@@ -23,6 +23,7 @@ import meRoutes from "./routes/me.js";
 import qualifyRoutes from "./routes/qualify.js";
 import brandRoutes from "./routes/brand.js";
 import brandPauseRoutes from "./routes/brand-pause.js";
+import brandSpendableBudgetRoutes from "./routes/brand-spendable-budget.js";
 import crmRoutes from "./routes/crm.js";
 import scrapingRoutes from "./routes/scraping.js";
 import leadsRoutes from "./routes/leads.js";
@@ -245,6 +246,7 @@ app.use("/v1", qualifyRoutes);
 // Mount BEFORE brandRoutes: /brands/:brandId/pause forwards to campaign-service,
 // must win over any future brand-service brand proxy.
 app.use("/v1", brandPauseRoutes);
+app.use("/v1", brandSpendableBudgetRoutes);
 app.use("/v1", brandRoutes);
 app.use("/v1", crmRoutes);
 app.use("/v1", scrapingRoutes);

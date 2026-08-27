@@ -7916,6 +7916,43 @@ registry.registerPath({
   },
 });
 
+// ---------------------------------------------------------------------------
+// Brand spendable budget — owned by CAMPAIGN-SERVICE (not brand-service).
+// Proxies to campaign-service /brands/:brandId/spendable-budget.
+// ---------------------------------------------------------------------------
+const BrandSpendableBudgetParam = z.object({
+  brandId: z.string().describe("Brand ID"),
+});
+
+// Passthrough — response shape owned by campaign-service (CLAUDE.md #8).
+const BrandSpendableBudgetResponseSchema = z
+  .object({})
+  .passthrough()
+  .openapi("BrandSpendableBudgetResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/spendable-budget",
+  tags: ["Campaigns"],
+  summary: "Get a brand's configured and actually-running daily budget",
+  description:
+    "Proxy to campaign-service GET /brands/{brandId}/spendable-budget. " +
+    "Answers both figures for a brand: what the customer configured, and the part of it " +
+    "attached to a campaign that is ongoing right now, with per-offer / per-campaign / " +
+    "per-ceiling decompositions so no caller has to sum anything. Response shape is owned " +
+    "by the downstream service.",
+  security: authed,
+  request: { params: BrandSpendableBudgetParam },
+  responses: {
+    200: {
+      description: "Configured and running daily budget",
+      content: { "application/json": { schema: BrandSpendableBudgetResponseSchema } },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // AUDIENCES (transparent proxy → human-service /orgs/audiences/*)
 // ===================================================================
