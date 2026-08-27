@@ -6815,6 +6815,33 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/offers/{offerId}/chains",
+  tags: ["Features"],
+  summary: "Offer sales chains",
+  description:
+    "What each of an offer's sales chains cost and returned — one row per chain, each with its own spend, pipeline, return per dollar and cost of acquisition. " +
+    "The grain under the offer, and the one that survives one campaign per STEP of a chain: a campaign then buys a single link and has no return of its own, because the lifetime revenue sits at the end of the chain. " +
+    "Proxied to features-service GET /offers/{offerId}/chains. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default, undiscounted) | net (the org's discounted figures). Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer sales chains", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferChainsResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Offer not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/offers/{offerId}/audience-stats",
   tags: ["Features"],
   summary: "Offer audience stats",
@@ -7911,6 +7938,43 @@ registry.registerPath({
   },
   responses: {
     200: { description: "Updated brand pause state", content: { "application/json": { schema: BrandPauseResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Brand spendable budget — owned by CAMPAIGN-SERVICE (not brand-service).
+// Proxies to campaign-service /brands/:brandId/spendable-budget.
+// ---------------------------------------------------------------------------
+const BrandSpendableBudgetParam = z.object({
+  brandId: z.string().describe("Brand ID"),
+});
+
+// Passthrough — response shape owned by campaign-service (CLAUDE.md #8).
+const BrandSpendableBudgetResponseSchema = z
+  .object({})
+  .passthrough()
+  .openapi("BrandSpendableBudgetResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/spendable-budget",
+  tags: ["Campaigns"],
+  summary: "Get a brand's configured and actually-running daily budget",
+  description:
+    "Proxy to campaign-service GET /brands/{brandId}/spendable-budget. " +
+    "Answers both figures for a brand: what the customer configured, and the part of it " +
+    "attached to a campaign that is ongoing right now, with per-offer / per-campaign / " +
+    "per-ceiling decompositions so no caller has to sum anything. Response shape is owned " +
+    "by the downstream service.",
+  security: authed,
+  request: { params: BrandSpendableBudgetParam },
+  responses: {
+    200: {
+      description: "Configured and running daily budget",
+      content: { "application/json": { schema: BrandSpendableBudgetResponseSchema } },
+    },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
