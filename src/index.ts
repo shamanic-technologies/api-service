@@ -60,6 +60,8 @@ import costsRoutes from "./routes/costs.js";
 import adminRoutes from "./routes/admin.js";
 import adminBrandsRoutes from "./routes/admin-brands.js";
 import { rateLimit } from "./middleware/rate-limit.js";
+import { authenticatePlatform } from "./middleware/auth.js";
+import { buildDocument } from "./openapi/document.js";
 import { requestId } from "./middleware/request-id.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { readFileSync, existsSync } from "fs";
@@ -115,7 +117,16 @@ app.use(rateLimit);
 // that brand-service stores + uses as the field-extraction source.
 app.use(express.json({ limit: "10mb" }));
 
-// OpenAPI spec endpoint
+// ── OpenAPI ─────────────────────────────────────────────────────────────────
+// `openapi.json` is generated for the PUBLIC audience (see
+// `src/openapi/document.ts`): it describes the API a customer can actually use
+// and says nothing about the platform key or the operations that need it.
+//
+// Staff still need the complete document — the CLI generates its command
+// surface from it — so it is served at `GET /internal/openapi.json` behind the
+// platform key. Built on demand from the same registry, so there is no second
+// committed file to keep in sync. The OPERATIONS themselves are unchanged:
+// removing one from the published document does not remove its route.
 const openapiPath = join(__dirname, "..", "openapi.json");
 app.get("/openapi.json", (_req, res) => {
   if (existsSync(openapiPath)) {
@@ -201,6 +212,15 @@ app.use(
     theme: "kepler",
   }),
 );
+
+// ── Complete OpenAPI document (staff) ───────────────────────────────────────
+// Every operation, both security schemes. `authenticatePlatform` 401s anything
+// that does not carry `ADMIN_DISTRIBUTE_API_KEY`, which is the same key the
+// documented platform operations themselves require — so this exposes nothing
+// to a caller who could not already call them.
+app.get("/internal/openapi.json", authenticatePlatform, (_req, res) => {
+  res.json(buildDocument({ audience: "staff" }));
+});
 
 // Public routes
 app.use(healthRoutes);

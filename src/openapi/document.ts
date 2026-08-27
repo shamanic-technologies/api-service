@@ -312,12 +312,43 @@ The same policy is machine-readable at the root of this document under
 `;
 
 /**
+ * Which audience a built document is for.
+ *
+ * `"public"` is the document production publishes at `GET /openapi.json` — it
+ * describes the API a customer can actually use and nothing else. `"staff"` is
+ * the complete document, served only to a caller holding the platform key at
+ * `GET /internal/openapi.json`.
+ */
+export type DocumentAudience = "public" | "staff";
+
+/** Security scheme naming the shared platform key (`ADMIN_DISTRIBUTE_API_KEY`). */
+export const PLATFORM_SECURITY_SCHEME = "apiKeyAuth";
+
+/**
+ * Tags whose every operation is staff-gated (`requireStaff`) even though it
+ * authenticates with a normal user key, so the operation is invisible to the
+ * criterion below (its declared scheme is `bearerAuth` like any customer route).
+ *
+ * `tests/unit/openapi-public-surface.test.ts` scans `src/routes/` for any route
+ * file that chains `requireStaff` after `authenticate` and fails if a family
+ * appears that is not represented here.
+ */
+export const STAFF_ONLY_TAGS = new Set(["Mailing Lists"]);
+
+/**
  * Build the OpenAPI document.
  *
  * Exported (rather than inlined in the generate script) so tests can assert on
  * the document the build actually produces, not on a committed copy of it.
+ *
+ * Defaults to the PUBLIC audience: the committed `openapi.json`, `GET
+ * /openapi.json` and `/docs` all serve that one, so the default is the safe
+ * direction — a new operation is only published if it is reachable with a
+ * customer's own key.
  */
-export function buildDocument(): Record<string, unknown> {
+export function buildDocument(
+  options: { audience?: DocumentAudience } = {},
+): Record<string, unknown> {
   const generator = new OpenApiGeneratorV3(registry.definitions);
 
   const document = generator.generateDocument({
@@ -349,7 +380,7 @@ export function buildDocument(): Record<string, unknown> {
       { name: "Billing", description: "Billing, credits, and checkout" },
       { name: "Instantly", description: "Instantly sending-infrastructure audit (staff-only, instantly-service proxy)" },
       { name: "Internal", description: "Platform-level operations (API key auth, no identity headers)" },
-      { name: "Platform", description: "Service discovery and platform configuration" },
+      { name: "Platform", description: "Service discovery" },
       { name: "Google CRM", description: "Google CRM (Gmail + People bronze) ingestion" },
       { name: "CRM Contacts", description: "Client B2C CRM CSV contact ingestion (crm-service proxy)" },
       { name: "Expert Quotes", description: "Expert quote outreach (journalists-quotes-service proxy)" },
@@ -365,7 +396,72 @@ export function buildDocument(): Record<string, unknown> {
 
   postProcessOperations(document);
 
+  if ((options.audience ?? "public") === "public") {
+    stripNonCustomerSurface(document);
+  }
+
   return document;
+}
+
+/**
+ * Remove every operation a customer's own key cannot call, and every trace that
+ * such operations exist.
+ *
+ * The criterion is exactly "can a customer call this with the key they created
+ * in the dashboard": an operation declaring `apiKeyAuth` needs the shared
+ * platform secret, and an operation under a `STAFF_ONLY_TAGS` tag answers 403 to
+ * a non-staff caller. Everything else stays, including operations that need no
+ * key at all.
+ *
+ * This removes the operations from the DOCUMENT only. The routes are untouched
+ * and answer exactly as before — see `src/index.ts`, which serves the complete
+ * document at `GET /internal/openapi.json` behind `authenticatePlatform` so
+ * staff tooling (the CLI) still generates the full command surface.
+ *
+ * Documenting `X-API-Key` is not merely noise for a customer, it is a trap:
+ * `authenticate()` branches on the header BEFORE it reads `Authorization`, so a
+ * request carrying a valid Bearer token AND anything in `X-API-Key` is answered
+ * `401 Invalid admin key` without the Bearer ever being examined.
+ */
+function stripNonCustomerSurface(document: Record<string, unknown>): void {
+  const paths = document.paths as Record<string, Record<string, unknown>> | undefined;
+  const keptTags = new Set<string>();
+
+  for (const [path, pathItem] of Object.entries(paths ?? {})) {
+    for (const method of HTTP_METHODS) {
+      const operation = pathItem[method] as OperationObject | undefined;
+      if (!operation) continue;
+
+      const schemes = (operation.security ?? []).flatMap((requirement) =>
+        Object.keys((requirement ?? {}) as Record<string, unknown>),
+      );
+      const tags = (operation.tags as string[] | undefined) ?? [];
+      const platformOnly =
+        schemes.includes(PLATFORM_SECURITY_SCHEME) ||
+        tags.some((tag) => STAFF_ONLY_TAGS.has(tag));
+
+      if (platformOnly) {
+        delete pathItem[method];
+      } else {
+        for (const tag of tags) keptTags.add(tag);
+      }
+    }
+
+    if (!HTTP_METHODS.some((method) => pathItem[method])) {
+      delete (paths as Record<string, unknown>)[path];
+    }
+  }
+
+  // The scheme itself, so no reader learns a second way to authenticate exists.
+  const components = document.components as
+    | { securitySchemes?: Record<string, unknown> }
+    | undefined;
+  delete components?.securitySchemes?.[PLATFORM_SECURITY_SCHEME];
+
+  // A tag left with no operations still carries its description, which is where
+  // "staff-only", "platform-level" and "API key auth" are spelled out.
+  const tags = document.tags as { name: string }[] | undefined;
+  if (tags) document.tags = tags.filter((tag) => keptTags.has(tag.name));
 }
 
 /**
