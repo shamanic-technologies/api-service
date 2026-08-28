@@ -819,6 +819,37 @@ const OFFER_ROUTES = [
   { suffix: "funnels", what: "offer sales funnels" },
 ] as const;
 
+// ── Sales-funnel grain, under the offer ──────────────────────────────────────
+
+/**
+ * GET /v1/offers/:offerId/funnels/:funnelKey/{revenue,audience-stats,pipeline-activity}
+ *
+ * The offer reads above, asked of ONE of the offer's sales funnels. `/offers/{id}/funnels`
+ * answers the comparison — every funnel side by side, one row each — and a customer who
+ * picks a row then wants the same substance the offer screen already gives them, for that
+ * funnel alone: what it cost, which audiences it reached, what it did day by day.
+ *
+ * features-service answers all three at that grain, so these forward per suffix exactly as
+ * their offer-grain siblings do — same identity, same org scoping, same verbatim query
+ * (CLAUDE.md #11), same downstream-owned body (CLAUDE.md #8). Nothing is combined and
+ * nothing is narrowed here; a funnel is a slice features-service owns, not one this gateway
+ * could reconstruct from the offer's answer.
+ *
+ * A funnel the offer does not sell is features-service's 404 to raise, and it reaches the
+ * caller with its reason intact via respondUpstreamError (CLAUDE.md #7) — not flattened
+ * into a generic gateway error, which would leave a consumer unable to tell "wrong funnel"
+ * from "features-service is down".
+ *
+ * ORDER: these are five path segments where `/offers/:offerId/funnels` is three, so the
+ * sibling above cannot shadow them and they cannot shadow it. The behaviour test asserts
+ * both still reach their own downstream path (CLAUDE.md #13).
+ */
+const OFFER_FUNNEL_ROUTES = [
+  { suffix: "revenue", what: "offer funnel revenue" },
+  { suffix: "audience-stats", what: "offer funnel audience stats" },
+  { suffix: "pipeline-activity", what: "offer funnel pipeline activity" },
+] as const;
+
 // ── Brand grain ──────────────────────────────────────────────────────────────
 
 /**
@@ -864,6 +895,28 @@ for (const { suffix, what } of OFFER_ROUTES) {
         const result = await callExternalService(
           externalServices.features,
           `/offers/${encodeURIComponent(req.params.offerId)}/${suffix}${rawQueryString(req.originalUrl)}`,
+          { headers: buildInternalHeaders(req) },
+        );
+        res.json(result);
+      } catch (error: any) {
+        console.error(`Failed to get ${what}:`, error.message);
+        respondUpstreamError(res, error, `Failed to get ${what}`);
+      }
+    },
+  );
+}
+
+for (const { suffix, what } of OFFER_FUNNEL_ROUTES) {
+  router.get(
+    `/offers/:offerId/funnels/:funnelKey/${suffix}`,
+    authenticate,
+    requireOrg,
+    requireUser,
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const result = await callExternalService(
+          externalServices.features,
+          `/offers/${encodeURIComponent(req.params.offerId)}/funnels/${encodeURIComponent(req.params.funnelKey)}/${suffix}${rawQueryString(req.originalUrl)}`,
           { headers: buildInternalHeaders(req) },
         );
         res.json(result);
