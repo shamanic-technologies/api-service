@@ -875,6 +875,70 @@ for (const { suffix, what } of OFFER_ROUTES) {
   );
 }
 
+// ── Sales-funnel grain, under the offer ──────────────────────────────────────
+
+/**
+ * GET /v1/offers/:offerId/funnels/:funnelKey/{revenue,audience-stats,pipeline-activity}
+ *
+ * The offer's three reads, narrowed to ONE of the sales funnels that offer is sold
+ * through. `/offers/:offerId/funnels` beside them answers at the grain of a TABLE
+ * — a lean row per funnel — which is the right shape for a list and the wrong one
+ * for a funnel's own page: the spend breakdown its cost card reads, the return over
+ * the brand's whole life and the dated series behind its activity chart are simply
+ * not on a lean row. features-service answers all three at this grain directly.
+ *
+ * Proxied verbatim to features-service GET
+ * /offers/{offerId}/funnels/{funnelKey}/<suffix>, same identity, same org scoping
+ * and same passthrough as the offer reads above: a funnel of an offer is the
+ * customer's own, on the customer's own brand.
+ *
+ * Nothing is combined, validated or reshaped here (CLAUDE.md #2/#8). A funnel is
+ * carried by however many channels perform its legs, and features-service owns how
+ * those legs add — money does, people do not, no ratio does. It also owns the
+ * vocabulary: an unknown `funnelKey` is its 400 listing the keys it takes, an offer
+ * whose campaigns sell no such funnel is its named 404 carrying the ones they do
+ * (`reason: "funnel_not_sold"`, `soldFunnelKeys`), and both reach the caller with
+ * their machine-readable fields intact via respondUpstreamError (CLAUDE.md #7). A
+ * gateway-side enum here would 400 a key features-service accepts and would need a
+ * release every time it names another.
+ *
+ * The WHOLE query is forwarded off req.originalUrl (CLAUDE.md #11): brandId,
+ * pricing, goal, statuses, limit, days, timezone and whatever features-service
+ * ships next all reach it. A re-declared subset is the bug this file was cleaned of
+ * in #845 — `funnel` had already shipped downstream and never arrived.
+ *
+ * ORDER: this mounts AFTER `/offers/:offerId/funnels` above. The two never collide
+ * (three path segments after the offer id versus one), but the literal-before-param
+ * discipline of CLAUDE.md #13 is why the table read is declared first.
+ */
+const FUNNEL_GRAIN_ROUTES = [
+  { suffix: "revenue", what: "offer funnel revenue" },
+  { suffix: "audience-stats", what: "offer funnel audience stats" },
+  { suffix: "pipeline-activity", what: "offer funnel pipeline activity" },
+] as const;
+
+for (const { suffix, what } of FUNNEL_GRAIN_ROUTES) {
+  router.get(
+    `/offers/:offerId/funnels/:funnelKey/${suffix}`,
+    authenticate,
+    requireOrg,
+    requireUser,
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const result = await callExternalService(
+          externalServices.features,
+          `/offers/${encodeURIComponent(req.params.offerId)}/funnels/${encodeURIComponent(req.params.funnelKey)}/${suffix}${rawQueryString(req.originalUrl)}`,
+          { headers: buildInternalHeaders(req) },
+        );
+        res.json(result);
+      } catch (error: any) {
+        console.error(`Failed to get ${what}:`, error.message);
+        respondUpstreamError(res, error, `Failed to get ${what}`);
+      }
+    },
+  );
+}
+
 for (const { suffix, what } of GRAIN_SUFFIXES) {
   router.get(
     `/brands/:brandId/${suffix}`,
