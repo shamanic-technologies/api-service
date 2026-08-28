@@ -1968,6 +1968,63 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "delete",
+  path: "/v1/leads/{id}/step-statements/{step}",
+  tags: ["Leads"],
+  summary: "Take back a statement somebody made by hand about one funnel step of one lead",
+  description:
+    "Pass-through to lead-service DELETE /orgs/leads/{id}/step-statements/{step} — the undo of the POST on the " +
+    "same path. A statement made by mistake (wrong lead, wrong step, a misread reply) is TAKEN BACK, so the step " +
+    "reads exactly as it did before anybody spoke and the outcome stops counting in the brand's figures. Nothing " +
+    "is deleted: what somebody stated and the fact they later withdrew it both stay readable. Withdrawing what " +
+    "is already withdrawn is a success, not an error. " +
+    "`id` and `step` are the ones the caller already holds, and neither is validated here: lead-service owns the " +
+    "step vocabulary and this gateway does not enumerate it, so a step it ships later needs no release here. " +
+    "Its refusals reach the caller with their own status and body, `code` included — a step nobody stated and " +
+    "only READS as reached because the funnel implies it, an outcome the tracker reported rather than a person, " +
+    "a pair outside this org — so a surface can tell each apart from a server failure. " +
+    "Refer to lead-service openapi.json for the exact response shape.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().openapi({
+        description: "The `id` of a lead as returned by GET /v1/leads.",
+      }),
+      step: z.string().openapi({
+        description:
+          "The funnel step whose statement is being taken back. lead-service owns this vocabulary and is the " +
+          "only place it is authoritative — refer to its openapi.json rather than to this line, which cannot be " +
+          "kept in lockstep across a deploy boundary.",
+        example: "meeting_booked",
+      }),
+    }),
+  },
+  responses: {
+    200: {
+      description:
+        "The statement was withdrawn (or was already withdrawn), with every step re-derived, as returned by lead-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadStepStatementWithdrawalResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid lead id or step (lead-service states the reason)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead in this caller's org", content: errorContent },
+    409: {
+      description:
+        "Nothing a person stated to withdraw: the step was reported by the tracker or measured by the delivery " +
+        "layer, or nobody stated it and it only reads as reached or dead because the funnel implies it. " +
+        "lead-service names which in `code`.",
+      content: errorContent,
+    },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "lead-service could not reach a service it needs to answer", content: errorContent },
+  },
+});
+
 // ===================================================================
 // QUALIFY
 // ===================================================================
@@ -5707,6 +5764,47 @@ registry.registerPath({
       },
     },
     401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/emails/manual-qualifications/withdrawals",
+  tags: ["Emails"],
+  summary: "Take back the standing manual reply qualification for a (campaign, lead) pair",
+  description:
+    "The undo of POST /v1/emails/manual-qualifications, for a person who picked the wrong kind by mistake. After " +
+    "the withdrawal the lead reads as it did before anybody said anything: no standing human statement, and the " +
+    "automatic classification takes over again. It is a correction, not an erasure — the statement stays on " +
+    "record carrying who withdrew it and when. " +
+    "The body is forwarded byte-identical and this gateway never enumerates the reply-kind vocabulary; " +
+    "instantly-service owns it. Withdrawing when nothing stands answers 404 with a `code` saying which " +
+    "(`no_standing_qualification`, including a second withdrawal of the same statement, or `campaign_not_found`), " +
+    "and that status and body reach the caller unchanged so a surface can tell them apart from a server failure. " +
+    "Transparent proxy to email-gateway → instantly-service; the response shape is owned upstream.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("ManualQualificationWithdrawalRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "The standing statement was withdrawn, as returned upstream",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("ManualQualificationWithdrawalResponse"),
+        },
+      },
+    },
+    400: { description: "Validation error from upstream", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Nothing to withdraw for this (campaign, lead) pair in the caller's org", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });

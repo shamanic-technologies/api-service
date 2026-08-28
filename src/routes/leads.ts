@@ -294,4 +294,61 @@ router.post(
   }
 );
 
+/**
+ * DELETE /v1/leads/:id/step-statements/:step — pass-through to lead-service
+ * DELETE /orgs/leads/{id}/step-statements/{step}.
+ *
+ * Takes back a statement a person made by hand about one funnel step of one lead — the
+ * undo of the POST above. Until it existed a statement made by mistake was permanent
+ * and kept counting, so every cost-of-acquisition and return figure downstream carried
+ * an outcome nobody had.
+ *
+ * `id` and `step` are the ones the caller already holds: the row id a list row carries
+ * and the step it stated. Neither is validated here. The step vocabulary is
+ * lead-service's and this gateway does not enumerate it (rule #8's corollary): a
+ * `z.enum` copied here 400s a step lead-service accepts, and every step it ships later
+ * needs a gateway release before a customer can withdraw one.
+ *
+ * The refusals are the point of forwarding the body untouched. Withdrawing something no
+ * person stated answers 409 `nothing_stated`; withdrawing a tracker-reported or
+ * delivery-measured outcome answers 409 `not_a_statement`; a pair outside this org is a
+ * 404. A customer surface has to tell each of those apart from a server failure, and it
+ * can only do that if `code` survives — `respondUpstreamError` re-emits the upstream
+ * JSON field-for-field under the upstream status, where rebuilding the envelope from
+ * the thrown Error would stringify the whole body into `error`.
+ *
+ * The upstream STATUS is forwarded for the same reason as on the write: withdrawing
+ * what is already withdrawn is a 200 with `alreadyWithdrawn: true`, and a hardcoded
+ * status here would be this gateway asserting a downstream shape.
+ *
+ * The org boundary is the authenticated one, and `buildInternalHeaders(req)` carries
+ * the user too because lead-service records who withdrew the statement. The query
+ * string is forwarded verbatim (rule #11) — the sibling read scopes on `brandId` there.
+ */
+router.delete(
+  "/leads/:id/step-statements/:step",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/step-statements/${encodeURIComponent(
+          req.params.step
+        )}${rawQueryString(req.originalUrl)}`,
+        {
+          method: "DELETE",
+          headers: buildInternalHeaders(req),
+        }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Withdraw lead step statement error:", error);
+      respondUpstreamError(res, error, "Failed to withdraw lead step statement");
+    }
+  }
+);
+
 export default router;
