@@ -188,3 +188,83 @@ describe("POST /v1/leads/:id/step-statements", () => {
     expect(res.body.code).toBe("STEP_ALREADY_REACHED");
   });
 });
+
+describe("DELETE /v1/leads/:id/step-statements/:step", () => {
+  const WITHDRAWN_BODY = JSON.stringify({
+    leadCampaignId: LEAD,
+    step: "meeting_booked",
+    kind: "outcome",
+    withdrawn: true,
+    alreadyWithdrawn: false,
+    restoredNeverSteps: ["sale"],
+    steps: [{ step: "meeting_booked", state: "pending", origin: null }],
+    aFieldThisGatewayHasNeverHeardOf: 7,
+  });
+
+  let calls: Array<{ url: string; init: any }>;
+  beforeEach(() => {
+    calls = stubFetch(WITHDRAWN_BODY, 200);
+  });
+
+  it("forwards to lead-service DELETE /orgs/leads/{id}/step-statements/{step}", async () => {
+    const res = await request(buildApp()).delete(`/v1/leads/${LEAD}/step-statements/meeting_booked`);
+    expect(res.status).toBe(200);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url.endsWith(`/orgs/leads/${LEAD}/step-statements/meeting_booked`)).toBe(true);
+    expect(calls[0].init.method).toBe("DELETE");
+  });
+
+  it("forwards a step it has never heard of, because lead-service owns the vocabulary", async () => {
+    // An enum copied into this gateway would 400 a step lead-service accepts, and
+    // every step it ships later would need a release here before anyone could
+    // withdraw one.
+    await request(buildApp()).delete(`/v1/leads/${LEAD}/step-statements/a_step_shipped_tomorrow`);
+    expect(calls[0].url.endsWith(`/orgs/leads/${LEAD}/step-statements/a_step_shipped_tomorrow`)).toBe(true);
+  });
+
+  it("carries the AUTHENTICATED org and user, never a caller-supplied one", async () => {
+    await request(buildApp())
+      .delete(`/v1/leads/${LEAD}/step-statements/sale`)
+      .set("x-org-id", "org_spoofed_by_caller")
+      .set("x-user-id", "user_spoofed_by_caller");
+    const headers = calls[0].init.headers as Record<string, string>;
+    expect(headers["x-org-id"]).toBe("org_authenticated");
+    expect(headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("forwards the caller's query string verbatim", async () => {
+    const query = "?brandId=33333333-3333-3333-3333-333333333333&somethingNew=x%20y";
+    await request(buildApp()).delete(`/v1/leads/${LEAD}/step-statements/sale${query}`);
+    expect(calls[0].url.endsWith(`/orgs/leads/${LEAD}/step-statements/sale${query}`)).toBe(true);
+  });
+
+  it("returns lead-service's body untransformed, including fields it has never heard of", async () => {
+    const res = await request(buildApp()).delete(`/v1/leads/${LEAD}/step-statements/meeting_booked`);
+    expect(res.body.aFieldThisGatewayHasNeverHeardOf).toBe(7);
+    expect(res.body.restoredNeverSteps).toEqual(["sale"]);
+    expect(res.body.withdrawn).toBe(true);
+  });
+
+  it("forwards each REFUSAL with its own status and code, so a surface can tell them apart", async () => {
+    // nothing_stated and not_a_statement are different things to say to a customer,
+    // and both have to be distinguishable from a server failure.
+    for (const [status, code] of [
+      [409, "nothing_stated"],
+      [409, "not_a_statement"],
+      [404, "not_found"],
+    ] as Array<[number, string]>) {
+      calls = stubFetch(JSON.stringify({ error: "refused", code }), status);
+      const res = await request(buildApp()).delete(`/v1/leads/${LEAD}/step-statements/meeting_booked`);
+      expect(res.status).toBe(status);
+      expect(res.body.code).toBe(code);
+    }
+  });
+
+  it("does not swallow the sibling POST — the two live on different paths", async () => {
+    await request(buildApp())
+      .post(`/v1/leads/${LEAD}/step-statements`)
+      .send({ step: "sale", kind: "outcome" });
+    expect(calls[0].url.endsWith(`/orgs/leads/${LEAD}/step-statements`)).toBe(true);
+    expect(calls[0].init.method).toBe("POST");
+  });
+});

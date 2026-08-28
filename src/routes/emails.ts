@@ -252,6 +252,48 @@ router.get(
 );
 
 /**
+ * POST /v1/emails/manual-qualifications/withdrawals
+ * Take back the standing human statement about a reply — the undo of the POST above,
+ * for a person who picked the wrong kind by mistake. After it the lead reads as it did
+ * before anybody spoke and the automatic classification takes over again.
+ *
+ * Transparent proxy to email-gateway → instantly-service. The body is forwarded
+ * byte-identical: this gateway does not re-declare the pair the owner identifies the
+ * statement by, and it never enumerates the reply-kind vocabulary — instantly-service
+ * is the only place that vocabulary is authoritative, as the sibling write above
+ * already says.
+ *
+ * Withdrawing when nothing stands is a 404 carrying `no_standing_qualification` (a
+ * second withdrawal of the same statement lands here too), and an email with no
+ * campaign in this org is `campaign_not_found`. A customer surface has to tell both
+ * apart from a server failure, so `respondUpstreamError` re-emits the upstream JSON
+ * field-for-field under the upstream status rather than flattening it into `error`.
+ */
+router.post(
+  "/emails/manual-qualifications/withdrawals",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.emailGateway,
+        "/orgs/manual-qualifications/withdrawals",
+        {
+          method: "POST",
+          headers: buildInternalHeaders(req),
+          body: req.body,
+        },
+      );
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Manual qualification withdrawal error:", error.message);
+      respondUpstreamError(res, error, "Failed to withdraw manual qualification");
+    }
+  },
+);
+
+/**
  * PUT /v1/emails/templates
  * Deploy (upsert) email templates — idempotent, safe to call on every cold start
  */
