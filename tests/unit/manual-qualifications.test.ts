@@ -252,3 +252,84 @@ describe("GET /v1/emails/manual-qualifications", () => {
     expect(res.body.error).toContain("limit must be <= 500");
   });
 });
+
+describe("POST /v1/emails/manual-qualifications/withdrawals", () => {
+  let app: express.Express;
+
+  const WITHDRAWN = {
+    ...QUALIFICATION_FIXTURE,
+    replyKind: "lead_interested",
+    withdrawnAt: "2026-08-28T09:00:00.000Z",
+    withdrawnBy: "user_test123",
+    aFieldThisGatewayHasNeverHeardOf: 7,
+  };
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    fetchCalls = [];
+    mockFetchOk({ qualification: WITHDRAWN });
+    app = createApp();
+  });
+
+  it("forwards to /orgs/manual-qualifications/withdrawals, body byte-identical", async () => {
+    const body = {
+      campaign_id: "c1a2b3c4-0000-0000-0000-000000000001",
+      email: "alice@media.com",
+      notes: "Picked the wrong kind by mistake",
+      someFutureField: "keep me",
+    };
+    const res = await request(app).post("/v1/emails/manual-qualifications/withdrawals").send(body);
+
+    expect(res.status).toBe(200);
+    const call = fetchCalls.find((c) => c.url.includes("/orgs/manual-qualifications/withdrawals"));
+    expect(call).toBeDefined();
+    expect(call!.method).toBe("POST");
+    expect(call!.url.endsWith("/orgs/manual-qualifications/withdrawals")).toBe(true);
+    // A whitelist here would drop the fields email-gateway has not taught this
+    // gateway about, and no consumer could see them go missing.
+    expect(call!.body).toEqual(body);
+  });
+
+  it("does not swallow the sibling write — the two are different downstream paths", async () => {
+    await request(app)
+      .post("/v1/emails/manual-qualifications")
+      .send({ campaign_id: "c1", email: "alice@media.com", status: "lead_interested" });
+    const call = fetchCalls[0];
+    expect(call.url.endsWith("/orgs/manual-qualifications")).toBe(true);
+  });
+
+  it("carries the AUTHENTICATED org and user, never a caller-supplied one", async () => {
+    await request(app)
+      .post("/v1/emails/manual-qualifications/withdrawals")
+      .set("x-org-id", "org_spoofed_by_caller")
+      .set("x-user-id", "user_spoofed_by_caller")
+      .send({ campaign_id: "c1", email: "alice@media.com" });
+    const call = fetchCalls[0];
+    expect(call.headers!["x-org-id"]).toBe("org_test456");
+    expect(call.headers!["x-user-id"]).toBe("user_test123");
+  });
+
+  it("returns the upstream body untransformed, including fields it has never heard of", async () => {
+    const res = await request(app)
+      .post("/v1/emails/manual-qualifications/withdrawals")
+      .send({ campaign_id: "c1", email: "alice@media.com" });
+    expect(res.body.qualification.withdrawnAt).toBe("2026-08-28T09:00:00.000Z");
+    expect(res.body.qualification.aFieldThisGatewayHasNeverHeardOf).toBe(7);
+  });
+
+  it("forwards each REFUSAL with its own status and code, so a surface can tell them apart", async () => {
+    for (const code of ["no_standing_qualification", "campaign_not_found"]) {
+      fetchCalls = [];
+      mockFetchError(404, JSON.stringify({ error: "Nothing to withdraw", code }));
+      app = createApp();
+      const res = await request(app)
+        .post("/v1/emails/manual-qualifications/withdrawals")
+        .send({ campaign_id: "c1", email: "alice@media.com" });
+      expect(res.status).toBe(404);
+      // The `code` is what a consumer branches on. Rebuilding the envelope from the
+      // thrown Error stringifies the whole body into `error` and destroys it.
+      expect(res.body.code).toBe(code);
+      expect(res.body.error).toBe("Nothing to withdraw");
+    }
+  });
+});
