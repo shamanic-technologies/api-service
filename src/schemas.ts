@@ -6898,6 +6898,104 @@ registry.registerPath({
   },
 });
 
+// ── Sales-funnel grain, under the offer ──────────────────────────────────────
+// The three offer reads above, asked of ONE of the offer's sales funnels.
+// /offers/{offerId}/funnels answers the comparison across funnels; these answer
+// the same substance for the funnel a customer picked out of it. Same passthrough
+// rules as every read on this file: the query object documents the params known
+// today and is never a whitelist (CLAUDE.md #11), and the response is
+// downstream-owned (CLAUDE.md #8). A funnel the offer does not sell is
+// features-service's 404, and it reaches the caller with its reason intact.
+
+const offerFunnelParams = z.object({
+  offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID"),
+  funnelKey: z.string().openapi({ example: "self-serve" }).describe("Sales-funnel key, as returned by GET /v1/offers/{offerId}/funnels. A key the offer does not sell is features-service's 404"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/offers/{offerId}/funnels/{funnelKey}/revenue",
+  tags: ["Features"],
+  summary: "Offer sales-funnel revenue overview",
+  description:
+    "What ONE of an offer's sales funnels cost and returned, with the per-channel breakdown beside it. " +
+    "The offer read one grain down: the same substance, for the single funnel a customer picked. " +
+    "Proxied to features-service GET /offers/{offerId}/funnels/{funnelKey}/revenue. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: offerFunnelParams,
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default, undiscounted) | net (the org's discounted figures). Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer sales-funnel revenue overview", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferFunnelRevenueResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Offer or sales funnel not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/offers/{offerId}/funnels/{funnelKey}/audience-stats",
+  tags: ["Features"],
+  summary: "Offer sales-funnel audience stats",
+  description:
+    "The per-audience economics of ONE of an offer's sales funnels, across every channel that funnel is sold through. " +
+    "Proxied to features-service GET /offers/{offerId}/funnels/{funnelKey}/audience-stats. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: offerFunnelParams,
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required)"),
+      goal: z.string().optional().openapi({ example: "signup" }).describe("Optimization goal. Owned and validated by features-service"),
+      statuses: z.string().optional().openapi({ example: "active,paused,archived" }).describe("Comma-separated audience statuses (features-service owns the default)"),
+      limit: z.string().optional().openapi({ example: "3" }).describe("Maximum number of audience rows"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default) | net. Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer sales-funnel audience stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferFunnelAudienceStatsResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Offer or sales funnel not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/offers/{offerId}/funnels/{funnelKey}/pipeline-activity",
+  tags: ["Features"],
+  summary: "Offer sales-funnel pipeline activity",
+  description:
+    "The per-day activity of ONE of an offer's sales funnels, day buckets merged across every channel that funnel is sold through. " +
+    "Proxied to features-service GET /offers/{offerId}/funnels/{funnelKey}/pipeline-activity. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: offerFunnelParams,
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required)"),
+      timezone: z.string().openapi({ example: "America/New_York" }).describe("IANA timezone used for calendar day ordering (required)"),
+      days: z.string().optional().openapi({ example: "7" }).describe("Number of days to return (features-service owns the default)"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Accepted for parity with the sibling reads. Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer sales-funnel pipeline activity", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferFunnelPipelineActivityResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Offer or sales funnel not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 
 // ── Brand grain ──────────────────────────────────────────────────────────────
 // The three reads above, one grain further up: a brand holds SEVERAL offers and
