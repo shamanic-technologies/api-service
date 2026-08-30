@@ -77,7 +77,7 @@ describe("Billing proxy routes", () => {
   it("should have GET /billing/payments endpoint sourced from stripe-service", () => {
     expect(content).toContain('"/billing/payments"');
     // org resolved from Bearer (req.orgId), inserted into the stripe internal path
-    expect(content).toContain("/internal/payment_intents/by-org/${encodeURIComponent(req.orgId!)}");
+    expect(content).toContain("/internal/payments/by-org/${encodeURIComponent(req.orgId!)}");
     expect(content).toContain("externalServices.stripe");
   });
 
