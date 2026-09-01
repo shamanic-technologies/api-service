@@ -5810,6 +5810,123 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/emails/opt-outs",
+  tags: ["Emails"],
+  summary: "Record that a person asked a human to stop contacting them",
+  description:
+    "A prospect rarely clicks the unsubscribe link: they send an SMS, they call, they reply to a thread somebody " +
+    "forwarded them, they say it in person. This records that statement — it is never inferred — and instantly-service " +
+    "then honours it: the sending stops and the person reads as unsubscribed on the delivery status. " +
+    "Scope is the PERSON, not a campaign, and the row is a consent record: who stated it, when, and through which channel. " +
+    "Re-recording a standing opt-out is idempotent. " +
+    "The body is forwarded byte-identical and this gateway never enumerates the channel vocabulary; instantly-service " +
+    "owns it, so a value it rejects comes back as its own refusal rather than a local 400. " +
+    "Transparent proxy to email-gateway → instantly-service; the response shape is owned upstream.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("OptOutCreateRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Opt-out recorded (or idempotent no-op), as returned upstream",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("OptOutCreateResponse"),
+        },
+      },
+    },
+    400: { description: "Validation error from upstream", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/emails/opt-outs",
+  tags: ["Emails"],
+  summary: "The org's recorded opt-out log",
+  description:
+    "Every opt-out recorded by a human for the caller's org, newest first. Withdrawn records are returned too and " +
+    "carry the withdrawal — hiding them would destroy the audit — so a surface reads that field rather than assuming " +
+    "every row still stands. Cross-org rows are blocked at the instantly-service layer. " +
+    "The query string is forwarded verbatim, so any filter instantly-service accepts can be asked for; the parameters " +
+    "below are the ones it documents today, not a whitelist this gateway enforces. " +
+    "Transparent proxy to email-gateway → instantly-service; the response shape is owned upstream.",
+  security: authed,
+  request: {
+    query: z
+      .object({
+        email: z.string().optional().describe("Filter by the person's email address"),
+        standing_only: z
+          .string()
+          .optional()
+          .describe("Return only records that still stand (upstream default false — withdrawn records are part of the audit)"),
+        limit: z.coerce.number().int().optional().describe("Max rows to return (upstream default 200, max 500)"),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: {
+      description: "The org's recorded opt-outs, as returned upstream",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("OptOutListResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/emails/opt-outs/withdrawals",
+  tags: ["Emails"],
+  summary: "Withdraw the standing recorded opt-out for a person",
+  description:
+    "The undo of POST /v1/emails/opt-outs, for an opt-out recorded on the wrong person or a prospect who came back " +
+    "and asked to hear from us again. After it the person stops reading as unsubscribed. " +
+    "It is a correction, not an erasure: the record stays on file carrying who withdrew it and when, and it releases " +
+    "the opt-out without resuming the sequences it stopped. " +
+    "The body is forwarded byte-identical. Withdrawing when nothing stands answers 404 with a `code` saying which, " +
+    "and that status and body reach the caller unchanged so a surface can tell it apart from a server failure. " +
+    "Transparent proxy to email-gateway → instantly-service; the response shape is owned upstream.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("OptOutWithdrawalRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "The standing opt-out was withdrawn, as returned upstream",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("OptOutWithdrawalResponse"),
+        },
+      },
+    },
+    400: { description: "Validation error from upstream", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Nothing to withdraw for this person in the caller's org", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "put",
   path: "/v1/emails/templates",
   tags: ["Emails"],
