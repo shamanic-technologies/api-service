@@ -9,6 +9,17 @@ import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 const router = Router();
 
 /**
+ * The caller's query string, verbatim. Read off `req.originalUrl` rather than
+ * re-serialized from `req.query`, so repeated keys, ordering and the caller's own
+ * percent-encoding survive byte-identical (CLAUDE.md #11).
+ */
+function rawQueryString(originalUrl: string): string {
+  const index = originalUrl.indexOf("?");
+  return index === -1 ? "" : originalUrl.slice(index);
+}
+
+
+/**
  * GET /v1/emails — list generated emails with filters (brand-level)
  * Proxies to content-generation-service GET /generations with brandId query param.
  * Returns the same enriched shape as GET /campaigns/:id/emails.
@@ -289,6 +300,107 @@ router.post(
     } catch (error: any) {
       console.error("[api-service] Manual qualification withdrawal error:", error.message);
       respondUpstreamError(res, error, "Failed to withdraw manual qualification");
+    }
+  },
+);
+
+/**
+ * POST /v1/emails/opt-outs
+ * Record that a person asked a human to stop contacting them. A prospect rarely clicks
+ * the unsubscribe link: they send an SMS, they call, they reply to a thread somebody
+ * forwarded them, they say it in person. The record is scoped to the PERSON, not to a
+ * campaign, and it is a consent record: who stated it, when, and through which channel.
+ *
+ * Transparent proxy to email-gateway -> instantly-service. The body is forwarded
+ * byte-identical: this gateway never enumerates the channel vocabulary — instantly-service
+ * owns it, exactly as the manual-qualification siblings above say of the reply kinds.
+ * A value it rejects comes back as its own refusal, not as a local 400.
+ */
+router.post(
+  "/emails/opt-outs",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.emailGateway,
+        "/orgs/opt-outs",
+        {
+          method: "POST",
+          headers: buildInternalHeaders(req),
+          body: req.body,
+        },
+      );
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Opt-out create error:", error.message);
+      // The board branches on the refusal to say why a card would not move, so the
+      // upstream status AND body reach the caller field-for-field (CLAUDE.md #7).
+      respondUpstreamError(res, error, "Failed to record opt-out");
+    }
+  },
+);
+
+/**
+ * GET /v1/emails/opt-outs
+ * The caller-org's recorded opt-out log, newest first. Withdrawn records come back too,
+ * carrying `withdrawnAt` / `withdrawnBy` — hiding them would destroy the audit.
+ *
+ * The query string is forwarded verbatim, so any filter instantly-service accepts
+ * (`email`, `standing_only`, `limit`, and whatever it ships next) can be asked for
+ * without teaching this gateway about it one parameter at a time (CLAUDE.md #11).
+ */
+router.get(
+  "/emails/opt-outs",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.emailGateway,
+        `/orgs/opt-outs${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Opt-out list error:", error.message);
+      respondUpstreamError(res, error, "Failed to list opt-outs");
+    }
+  },
+);
+
+/**
+ * POST /v1/emails/opt-outs/withdrawals
+ * Take a recorded opt-out back — recorded on the wrong person, or a prospect who came
+ * back and asked to hear from us again. A correction, not an erasure: the record stays
+ * on file carrying who withdrew it and when.
+ *
+ * Transparent proxy to email-gateway -> instantly-service, body forwarded byte-identical.
+ * Withdrawing when nothing stands answers 404 with a `code`, and that status and body
+ * reach the caller unchanged so a surface can tell it apart from a server failure.
+ */
+router.post(
+  "/emails/opt-outs/withdrawals",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.emailGateway,
+        "/orgs/opt-outs/withdrawals",
+        {
+          method: "POST",
+          headers: buildInternalHeaders(req),
+          body: req.body,
+        },
+      );
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Opt-out withdrawal error:", error.message);
+      respondUpstreamError(res, error, "Failed to withdraw opt-out");
     }
   },
 );
