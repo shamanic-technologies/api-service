@@ -226,7 +226,8 @@ describe("GET /v1/emails/manual-qualifications", () => {
     expect(call).toBeDefined();
     expect(call!.method).toBe("GET");
     expect(call!.url).toContain("campaign_id=c1a2b3c4-0000-0000-0000-000000000001");
-    expect(call!.url).toContain("email=alice%40media.com");
+    // Forwarded verbatim, so the caller's own encoding survives rather than this gateway's.
+    expect(call!.url).toContain("email=alice@media.com");
     expect(call!.url).toContain("limit=50");
     expect(call!.headers!["x-org-id"]).toBe("org_test456");
     expect(call!.headers!["x-user-id"]).toBe("user_test123");

@@ -5517,15 +5517,19 @@ registry.registerPath({
   summary: "List generated emails by brand",
   description:
     "List all generated emails across campaigns for a brand. Returns the same enriched shape as GET /campaigns/{id}/emails. " +
-    "Proxies to content-generation-service GET /generations with brandId filter.",
+    "Proxies to content-generation-service GET /generations. The query string is forwarded verbatim, so every filter " +
+    "content-generation-service accepts can be asked for; the parameters below are the ones it documents today, not a " +
+    "whitelist this gateway enforces. brandId is the one this gateway itself requires.",
   security: authed,
   request: {
-    query: z.object({
-      brandId: z.string().uuid().openapi({ description: "Brand ID (required)" }),
-      campaignId: z.string().uuid().optional().openapi({ description: "Optional campaign ID filter" }),
-      limit: z.coerce.number().int().optional().openapi({ description: "Max results to return" }),
-      offset: z.coerce.number().int().optional().openapi({ description: "Offset for pagination" }),
-    }),
+    query: z
+      .object({
+        brandId: z.string().uuid().openapi({ description: "Brand ID (required)" }),
+        campaignId: z.string().uuid().optional().openapi({ description: "Optional campaign ID filter" }),
+        limit: z.coerce.number().int().optional().openapi({ description: "Max results to return" }),
+        offset: z.coerce.number().int().optional().openapi({ description: "Offset for pagination" }),
+      })
+      .passthrough(),
   },
   responses: {
     200: {
@@ -5573,12 +5577,31 @@ registry.registerPath({
   description:
     "The generated email (subject + body + follow-up sequence) for a single lead. " +
     "Transparent proxy to content-generation-service GET /generations/by-lead/{leadId}; body forwarded verbatim. " +
+    "The query string is forwarded verbatim too, so the scope the caller asks for decides which of the person's " +
+    "generations comes back; the parameters below are the ones content-generation-service documents today, not a " +
+    "whitelist this gateway enforces. " +
     "Returns { generation: null } when no email has been generated for the lead yet (a normal empty state, not an error).",
   security: authed,
   request: {
     params: z.object({
       leadId: z.string().openapi({ description: "Lead ID" }),
     }),
+    query: z
+      .object({
+        brandId: z
+          .string()
+          .optional()
+          .describe("Scope the read to one brand — a person contacted by several brands of one org has one generation per brand"),
+        campaignId: z
+          .string()
+          .optional()
+          .describe(
+            "Scope the read to one campaign — a person contacted by several campaigns of one brand has one generation per " +
+              "campaign, and this returns that campaign's. Omit it and no campaign is inferred; the campaign a returned " +
+              "generation belongs to is always on the row as campaignId.",
+          ),
+      })
+      .passthrough(),
   },
   responses: {
     200: {
@@ -5605,15 +5628,18 @@ registry.registerPath({
   summary: "List example emails for a workflow",
   description:
     "Example emails per workflow for the workflow picker — a brand→org→global cascade of past generations. " +
-    "Transparent proxy to content-generation-service GET /generations/examples; body forwarded verbatim. " +
+    "Transparent proxy to content-generation-service GET /generations/examples; body and query string both forwarded " +
+    "verbatim — the parameters below are the ones content-generation-service documents today, not a whitelist. " +
     "Each example carries the email fields plus scope ('brand'|'org'|'global') and brandName.",
   security: authed,
   request: {
-    query: z.object({
-      workflowSlug: z.string().openapi({ description: "Workflow slug (required)" }),
-      brandId: z.string().uuid().optional().openapi({ description: "Optional brand ID for the brand-scoped cascade tier" }),
-      limit: z.coerce.number().int().optional().openapi({ description: "Max examples to return" }),
-    }),
+    query: z
+      .object({
+        workflowSlug: z.string().openapi({ description: "Workflow slug (required)" }),
+        brandId: z.string().uuid().optional().openapi({ description: "Optional brand ID for the brand-scoped cascade tier" }),
+        limit: z.coerce.number().int().optional().openapi({ description: "Max examples to return" }),
+      })
+      .passthrough(),
   },
   responses: {
     200: {
@@ -5743,16 +5769,19 @@ registry.registerPath({
   tags: ["Emails"],
   summary: "List manual reply qualifications (org-scoped audit history)",
   description:
-    "Returns the caller-org's manual qualification history, sorted by `qualifiedAt` DESC. Optionally filter by " +
-    "`campaign_id` and/or `email`. Cross-org rows are blocked at the instantly-service layer. " +
+    "Returns the caller-org's manual qualification history, sorted by `qualifiedAt` DESC. Cross-org rows are blocked " +
+    "at the instantly-service layer. The query string is forwarded verbatim, so any filter instantly-service accepts " +
+    "can be asked for; the parameters below are the ones it documents today, not a whitelist this gateway enforces. " +
     "Transparent proxy to email-gateway → instantly-service; the response shape is owned upstream.",
   security: authed,
   request: {
-    query: z.object({
-      campaign_id: z.string().min(1).optional().describe("Filter by logical campaign id"),
-      email: z.string().email().optional().describe("Filter by lead email"),
-      limit: z.coerce.number().int().optional().describe("Max rows to return (upstream default 200, max 500)"),
-    }),
+    query: z
+      .object({
+        campaign_id: z.string().min(1).optional().describe("Filter by logical campaign id"),
+        email: z.string().email().optional().describe("Filter by lead email"),
+        limit: z.coerce.number().int().optional().describe("Max rows to return (upstream default 200, max 500)"),
+      })
+      .passthrough(),
   },
   responses: {
     200: {
