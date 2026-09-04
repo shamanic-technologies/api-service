@@ -2025,6 +2025,69 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/leads/{id}/history",
+  tags: ["Leads"],
+  summary: "Everything that happened to one person, in order, in one place",
+  description:
+    "Pass-through to lead-service GET /orgs/leads/{id}/history. Both directions of every exchange WITH the " +
+    "message bodies, what was sent and when it was delivered, what the person did, what somebody recorded by " +
+    "hand and who recorded it, and what it converted into — one ordered, de-duplicated list a consumer renders " +
+    "without merging anything. lead-service asks each fact of the service that owns it; api-service forwards " +
+    "the answer untransformed and aggregates nothing. " +
+    "`id` is the `id` a row of GET /v1/leads already carries, so the panel listing the lead needs nothing new. " +
+    "The read distinguishes a source it could NOT read (`sources[].status: \"unavailable\"`, `complete: false`) " +
+    "from a fact that did not happen, and says so in the body — this gateway forwards that body byte-for-byte " +
+    "rather than flattening it, because \"we could not read your mailbox\" and \"your prospect said nothing\" are " +
+    "different answers. The query parameters below are the ones lead-service documents today, not a whitelist: " +
+    "the caller's query string is forwarded verbatim, so any parameter it accepts later reaches it unchanged. " +
+    "The read is org-scoped downstream on the authenticated org. " +
+    "Refer to lead-service openapi.json for the exact response shape.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().openapi({
+        description: "The `id` of a lead as returned by GET /v1/leads.",
+      }),
+    }),
+    query: z
+      .object({
+        scope: z.string().optional().openapi({
+          description:
+            "`campaign` (lead-service's default): what this campaign did. `brand`: the roll-up across every " +
+            "campaign of the brand this person is in. The vocabulary is lead-service's and is not enumerated " +
+            "here — it answers the refusal on a value it does not accept.",
+          example: "campaign",
+        }),
+        brandId: z.string().optional().openapi({
+          description:
+            "Which brand the history is about — the same scoping GET /v1/leads/{id} takes. A brand this row is " +
+            "not part of answers 404, exactly as an absent row does.",
+        }),
+      })
+      .passthrough()
+      .openapi("LeadHistoryQuery"),
+  },
+  responses: {
+    200: {
+      description: "The person's history, ordered oldest first, as returned by lead-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadHistoryResponse"),
+        },
+      },
+    },
+    400: {
+      description: "Invalid lead id, or a `scope` lead-service does not accept (it states which)",
+      content: errorContent,
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead in this caller's org (or for the requested brand scope)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // QUALIFY
 // ===================================================================
