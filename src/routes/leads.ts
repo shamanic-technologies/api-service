@@ -351,4 +351,60 @@ router.delete(
   }
 );
 
+/**
+ * GET /v1/leads/:id/history — pass-through to lead-service
+ * GET /orgs/leads/{id}/history.
+ *
+ * Everything that happened to one person, in order, in one place: both directions of
+ * every exchange WITH the message bodies, what was sent and when it was delivered,
+ * what the person did, what somebody recorded by hand, and what it converted into.
+ * lead-service merges and de-duplicates it across the services that own each fact, so
+ * this gateway forwards one ordered list and merges nothing (rule #2).
+ *
+ * `id` is the `id` a row of GET /v1/leads already carries, exactly as on `/leads/:id`
+ * and `/leads/:id/step-statements`, so the detail panel listing the lead can ask for
+ * its history with nothing new.
+ *
+ * Why the error path matters more here than on most reads: this endpoint deliberately
+ * distinguishes a source it could NOT read (`sources[].status: "unavailable"`,
+ * `complete: false`) from a fact that did not happen, and it says so in the body. A
+ * gateway that flattened or rewrote that body would turn "we could not read your
+ * mailbox" into "your prospect said nothing". `respondUpstreamError` re-emits the
+ * upstream JSON field-for-field under the upstream status, so the 400 on a bad `scope`
+ * and the 404 on a lead outside this org stay themselves.
+ *
+ * The query string is forwarded verbatim (rule #11): `scope` and `brandId` are the ones
+ * lead-service documents today, and any it adds tomorrow reaches it without a change
+ * here. Nothing is read out of it — this route has no guard of its own to raise.
+ *
+ * The org boundary is the authenticated one: `x-org-id` comes from
+ * `buildInternalHeaders(req)`, never from the caller, and lead-service scopes the
+ * lookup on it — a lead in another org is a 404 there.
+ *
+ * One person's history, forwarded through `callExternalService` rather than piped:
+ * bounded by one lead's own events, not by a brand's population (rule #10's piping is
+ * for bodies measured in MB). The response shape is lead-service's and this gateway
+ * does not declare it (rule #8).
+ */
+router.get(
+  "/leads/:id/history",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/history${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) }
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Get lead history error:", error);
+      respondUpstreamError(res, error, "Failed to get lead history");
+    }
+  }
+);
+
 export default router;
