@@ -134,21 +134,23 @@ router.post("/billing/portal-sessions", authenticate, requireOrg, async (req: Au
   }
 });
 
-// GET /v1/billing/payments — list the calling org's payment history
-// (its Stripe PaymentIntents / top-ups).
+// GET /v1/billing/payments — list the calling org's payment history.
 //
 // Org is resolved from the Bearer key (req.orgId) — the client sends no orgId.
-// Sourced directly from stripe-service GET /internal/payment_intents/by-org/:orgId,
-// a user-less DB-mirror read (x-api-key injected by callExternalService; orgId in
-// the path, org<->customer is 1:1). Returns the full Stripe list (no pagination —
-// a customer has a handful of top-ups); each PaymentIntent carries id, amount
-// (cents), currency, status, created. Response shape is owned by stripe-service —
-// passthrough only, no body transform (CLAUDE.md #4/#8).
+// Sourced from stripe-service GET /internal/payments/by-org/:orgId, a user-less
+// DB-mirror read that spans EVERY acquirer that has taken money for the org.
+// The Stripe-shaped sibling (/internal/payment_intents/by-org) shows only one
+// vendor's payments, which made this history contradict the balance for an org
+// paying through another acquirer — credit with no traceable payment.
+//
+// Items carry id, amount (minor units), currency, canonical status, created
+// (unix seconds), description and amount_returned. Response shape is owned by
+// stripe-service — passthrough only, no body transform (CLAUDE.md #4/#8).
 router.get("/billing/payments", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.stripe,
-      `/internal/payment_intents/by-org/${encodeURIComponent(req.orgId!)}`,
+      `/internal/payments/by-org/${encodeURIComponent(req.orgId!)}`,
       { headers: buildInternalHeaders(req) }
     );
     res.json(result);

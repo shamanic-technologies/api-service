@@ -172,7 +172,7 @@ describe("GET /v1/workflow-examples (source + OpenAPI)", () => {
 
   it("proxies to content-gen /generations/examples via emailgen", () => {
     expect(content).toContain("externalServices.emailgen");
-    expect(content).toContain("`/generations/examples?${params}`");
+    expect(content).toContain("`/generations/examples${rawQueryString(req.originalUrl)}`");
   });
 
   it("uses buildInternalHeaders", () => {

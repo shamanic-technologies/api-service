@@ -5517,15 +5517,19 @@ registry.registerPath({
   summary: "List generated emails by brand",
   description:
     "List all generated emails across campaigns for a brand. Returns the same enriched shape as GET /campaigns/{id}/emails. " +
-    "Proxies to content-generation-service GET /generations with brandId filter.",
+    "Proxies to content-generation-service GET /generations. The query string is forwarded verbatim, so every filter " +
+    "content-generation-service accepts can be asked for; the parameters below are the ones it documents today, not a " +
+    "whitelist this gateway enforces. brandId is the one this gateway itself requires.",
   security: authed,
   request: {
-    query: z.object({
-      brandId: z.string().uuid().openapi({ description: "Brand ID (required)" }),
-      campaignId: z.string().uuid().optional().openapi({ description: "Optional campaign ID filter" }),
-      limit: z.coerce.number().int().optional().openapi({ description: "Max results to return" }),
-      offset: z.coerce.number().int().optional().openapi({ description: "Offset for pagination" }),
-    }),
+    query: z
+      .object({
+        brandId: z.string().uuid().openapi({ description: "Brand ID (required)" }),
+        campaignId: z.string().uuid().optional().openapi({ description: "Optional campaign ID filter" }),
+        limit: z.coerce.number().int().optional().openapi({ description: "Max results to return" }),
+        offset: z.coerce.number().int().optional().openapi({ description: "Offset for pagination" }),
+      })
+      .passthrough(),
   },
   responses: {
     200: {
@@ -5573,12 +5577,31 @@ registry.registerPath({
   description:
     "The generated email (subject + body + follow-up sequence) for a single lead. " +
     "Transparent proxy to content-generation-service GET /generations/by-lead/{leadId}; body forwarded verbatim. " +
+    "The query string is forwarded verbatim too, so the scope the caller asks for decides which of the person's " +
+    "generations comes back; the parameters below are the ones content-generation-service documents today, not a " +
+    "whitelist this gateway enforces. " +
     "Returns { generation: null } when no email has been generated for the lead yet (a normal empty state, not an error).",
   security: authed,
   request: {
     params: z.object({
       leadId: z.string().openapi({ description: "Lead ID" }),
     }),
+    query: z
+      .object({
+        brandId: z
+          .string()
+          .optional()
+          .describe("Scope the read to one brand — a person contacted by several brands of one org has one generation per brand"),
+        campaignId: z
+          .string()
+          .optional()
+          .describe(
+            "Scope the read to one campaign — a person contacted by several campaigns of one brand has one generation per " +
+              "campaign, and this returns that campaign's. Omit it and no campaign is inferred; the campaign a returned " +
+              "generation belongs to is always on the row as campaignId.",
+          ),
+      })
+      .passthrough(),
   },
   responses: {
     200: {
@@ -5605,15 +5628,18 @@ registry.registerPath({
   summary: "List example emails for a workflow",
   description:
     "Example emails per workflow for the workflow picker — a brand→org→global cascade of past generations. " +
-    "Transparent proxy to content-generation-service GET /generations/examples; body forwarded verbatim. " +
+    "Transparent proxy to content-generation-service GET /generations/examples; body and query string both forwarded " +
+    "verbatim — the parameters below are the ones content-generation-service documents today, not a whitelist. " +
     "Each example carries the email fields plus scope ('brand'|'org'|'global') and brandName.",
   security: authed,
   request: {
-    query: z.object({
-      workflowSlug: z.string().openapi({ description: "Workflow slug (required)" }),
-      brandId: z.string().uuid().optional().openapi({ description: "Optional brand ID for the brand-scoped cascade tier" }),
-      limit: z.coerce.number().int().optional().openapi({ description: "Max examples to return" }),
-    }),
+    query: z
+      .object({
+        workflowSlug: z.string().openapi({ description: "Workflow slug (required)" }),
+        brandId: z.string().uuid().optional().openapi({ description: "Optional brand ID for the brand-scoped cascade tier" }),
+        limit: z.coerce.number().int().optional().openapi({ description: "Max examples to return" }),
+      })
+      .passthrough(),
   },
   responses: {
     200: {
@@ -5743,16 +5769,19 @@ registry.registerPath({
   tags: ["Emails"],
   summary: "List manual reply qualifications (org-scoped audit history)",
   description:
-    "Returns the caller-org's manual qualification history, sorted by `qualifiedAt` DESC. Optionally filter by " +
-    "`campaign_id` and/or `email`. Cross-org rows are blocked at the instantly-service layer. " +
+    "Returns the caller-org's manual qualification history, sorted by `qualifiedAt` DESC. Cross-org rows are blocked " +
+    "at the instantly-service layer. The query string is forwarded verbatim, so any filter instantly-service accepts " +
+    "can be asked for; the parameters below are the ones it documents today, not a whitelist this gateway enforces. " +
     "Transparent proxy to email-gateway → instantly-service; the response shape is owned upstream.",
   security: authed,
   request: {
-    query: z.object({
-      campaign_id: z.string().min(1).optional().describe("Filter by logical campaign id"),
-      email: z.string().email().optional().describe("Filter by lead email"),
-      limit: z.coerce.number().int().optional().describe("Max rows to return (upstream default 200, max 500)"),
-    }),
+    query: z
+      .object({
+        campaign_id: z.string().min(1).optional().describe("Filter by logical campaign id"),
+        email: z.string().email().optional().describe("Filter by lead email"),
+        limit: z.coerce.number().int().optional().describe("Max rows to return (upstream default 200, max 500)"),
+      })
+      .passthrough(),
   },
   responses: {
     200: {
@@ -5805,6 +5834,123 @@ registry.registerPath({
     400: { description: "Validation error from upstream", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Nothing to withdraw for this (campaign, lead) pair in the caller's org", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/emails/opt-outs",
+  tags: ["Emails"],
+  summary: "Record that a person asked a human to stop contacting them",
+  description:
+    "A prospect rarely clicks the unsubscribe link: they send an SMS, they call, they reply to a thread somebody " +
+    "forwarded them, they say it in person. This records that statement — it is never inferred — and instantly-service " +
+    "then honours it: the sending stops and the person reads as unsubscribed on the delivery status. " +
+    "Scope is the PERSON, not a campaign, and the row is a consent record: who stated it, when, and through which channel. " +
+    "Re-recording a standing opt-out is idempotent. " +
+    "The body is forwarded byte-identical and this gateway never enumerates the channel vocabulary; instantly-service " +
+    "owns it, so a value it rejects comes back as its own refusal rather than a local 400. " +
+    "Transparent proxy to email-gateway → instantly-service; the response shape is owned upstream.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("OptOutCreateRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Opt-out recorded (or idempotent no-op), as returned upstream",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("OptOutCreateResponse"),
+        },
+      },
+    },
+    400: { description: "Validation error from upstream", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/emails/opt-outs",
+  tags: ["Emails"],
+  summary: "The org's recorded opt-out log",
+  description:
+    "Every opt-out recorded by a human for the caller's org, newest first. Withdrawn records are returned too and " +
+    "carry the withdrawal — hiding them would destroy the audit — so a surface reads that field rather than assuming " +
+    "every row still stands. Cross-org rows are blocked at the instantly-service layer. " +
+    "The query string is forwarded verbatim, so any filter instantly-service accepts can be asked for; the parameters " +
+    "below are the ones it documents today, not a whitelist this gateway enforces. " +
+    "Transparent proxy to email-gateway → instantly-service; the response shape is owned upstream.",
+  security: authed,
+  request: {
+    query: z
+      .object({
+        email: z.string().optional().describe("Filter by the person's email address"),
+        standing_only: z
+          .string()
+          .optional()
+          .describe("Return only records that still stand (upstream default false — withdrawn records are part of the audit)"),
+        limit: z.coerce.number().int().optional().describe("Max rows to return (upstream default 200, max 500)"),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: {
+      description: "The org's recorded opt-outs, as returned upstream",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("OptOutListResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/emails/opt-outs/withdrawals",
+  tags: ["Emails"],
+  summary: "Withdraw the standing recorded opt-out for a person",
+  description:
+    "The undo of POST /v1/emails/opt-outs, for an opt-out recorded on the wrong person or a prospect who came back " +
+    "and asked to hear from us again. After it the person stops reading as unsubscribed. " +
+    "It is a correction, not an erasure: the record stays on file carrying who withdrew it and when, and it releases " +
+    "the opt-out without resuming the sequences it stopped. " +
+    "The body is forwarded byte-identical. Withdrawing when nothing stands answers 404 with a `code` saying which, " +
+    "and that status and body reach the caller unchanged so a surface can tell it apart from a server failure. " +
+    "Transparent proxy to email-gateway → instantly-service; the response shape is owned upstream.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("OptOutWithdrawalRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "The standing opt-out was withdrawn, as returned upstream",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("OptOutWithdrawalResponse"),
+        },
+      },
+    },
+    400: { description: "Validation error from upstream", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Nothing to withdraw for this person in the caller's org", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
