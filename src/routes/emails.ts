@@ -21,32 +21,25 @@ function rawQueryString(originalUrl: string): string {
 
 /**
  * GET /v1/emails — list generated emails with filters (brand-level)
- * Proxies to content-generation-service GET /generations with brandId query param.
- * Returns the same enriched shape as GET /campaigns/:id/emails.
+ * Proxies to content-generation-service GET /generations. Returns the same enriched shape
+ * as GET /campaigns/:id/emails.
+ *
+ * `brandId` is read here only because this gateway 400s without it; the query string itself
+ * is forwarded verbatim (CLAUDE.md #11), so every filter content-generation-service accepts
+ * reaches it rather than the handful this file happens to name.
  */
 router.get("/emails", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const { brandId, campaignId, limit, offset } = req.query as {
-      brandId?: string;
-      campaignId?: string;
-      limit?: string;
-      offset?: string;
-    };
+    const { brandId } = req.query as { brandId?: string };
     if (!brandId) {
       return res.status(400).json({ error: "Missing required query parameter: brandId" });
     }
 
     const headers = buildInternalHeaders(req);
 
-    const params = new URLSearchParams();
-    params.set("brandId", brandId);
-    if (campaignId) params.set("campaignId", campaignId);
-    if (limit) params.set("limit", limit);
-    if (offset) params.set("offset", offset);
-
     const emailsResult = await callExternalService(
       externalServices.emailgen,
-      `/generations?${params}`,
+      `/generations${rawQueryString(req.originalUrl)}`,
       { headers }
     ) as { generations: Array<Record<string, unknown>> };
 
@@ -103,9 +96,12 @@ router.get("/emails", authenticate, requireOrg, requireUser, async (req: Authent
  * (org-scoped via identity headers). Body forwarded verbatim (CLAUDE.md #8 — downstream
  * owns the generation shape; no field re-declaration / stripping).
  *
- * When the caller passes ?brandId=<uuid> (the brand the user is viewing), it is forwarded
- * as brand scope so content-generation-service returns the brand-correct generation for a
- * lead contacted by multiple brands in one org. Without it, behavior is unchanged.
+ * The query string is forwarded verbatim (CLAUDE.md #11). A person is contacted by several
+ * brands of one org and by several campaigns of one brand, so the scope the caller asks for
+ * decides which of their generations comes back — `brandId`, `campaignId`, and whatever
+ * content-generation-service scopes by next, without teaching this gateway about it one
+ * parameter at a time. A whitelist here fails silently: the request is accepted, the scope
+ * is dropped at the edge, and the read answers about a campaign nobody asked about.
  *
  * Upstream 404 ("Generation not found") is a NORMAL empty state ("no email yet for this
  * lead"), so it maps to 200 { generation: null } — NOT a client-facing error. Any other
@@ -118,14 +114,9 @@ router.get(
   requireUser,
   async (req: AuthenticatedRequest, res) => {
     try {
-      const { brandId } = req.query as { brandId?: string };
-      const params = new URLSearchParams();
-      if (brandId) params.set("brandId", brandId);
-      const qs = params.toString();
-
       const result = await callExternalService(
         externalServices.emailgen,
-        `/generations/by-lead/${encodeURIComponent(req.params.leadId)}${qs ? `?${qs}` : ""}`,
+        `/generations/by-lead/${encodeURIComponent(req.params.leadId)}${rawQueryString(req.originalUrl)}`,
         { headers: buildInternalHeaders(req) },
       ) as { generation: Record<string, unknown> };
       res.json({ generation: result.generation });
@@ -173,7 +164,14 @@ router.post("/emails/send", authenticate, requireOrg, async (req: AuthenticatedR
 
 /**
  * GET /v1/emails/stats
- * Get email sending stats from the transactional-email service
+ * Get email sending stats from the transactional-email service.
+ *
+ * This is the one read in this file that does NOT forward the caller's query verbatim, and
+ * deliberately so: `orgId` is a QUERY parameter downstream, and this gateway supplies it from
+ * the authenticated session. Forwarding the raw string would let a caller name whose stats to
+ * read, so the parameters are copied one by one and the caller never contributes an `orgId`.
+ * A filter transactional-email-service ships later needs a line here; that cost buys the org
+ * boundary, which is not something CLAUDE.md #11 asks anyone to trade away.
  */
 router.get("/emails/stats", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
@@ -232,7 +230,8 @@ router.post(
 /**
  * GET /v1/emails/manual-qualifications
  * List manual reply qualifications for the caller's org.
- * Transparent proxy to email-gateway → instantly-service.
+ * Transparent proxy to email-gateway → instantly-service. The query string is forwarded
+ * verbatim (CLAUDE.md #11), so every filter instantly-service accepts can be asked for.
  */
 router.get(
   "/emails/manual-qualifications",
@@ -241,17 +240,9 @@ router.get(
   requireUser,
   async (req: AuthenticatedRequest, res) => {
     try {
-      const params = new URLSearchParams();
-      for (const key of ["campaign_id", "email", "limit"]) {
-        const v = req.query[key];
-        if (typeof v === "string" && v.length > 0) params.set(key, v);
-      }
-      const qs = params.toString();
-      const path = qs ? `/orgs/manual-qualifications?${qs}` : "/orgs/manual-qualifications";
-
       const result = await callExternalService(
         externalServices.emailGateway,
-        path,
+        `/orgs/manual-qualifications${rawQueryString(req.originalUrl)}`,
         { headers: buildInternalHeaders(req) },
       );
       res.json(result);
@@ -437,29 +428,22 @@ router.put("/emails/templates", authenticate, requireOrg, async (req: Authentica
 /**
  * GET /v1/workflow-examples — example emails per workflow for the workflow picker.
  * Transparent proxy to content-generation-service GET /generations/examples (a brand→org→global
- * cascade of past generations). Returns content-gen's body verbatim:
+ * cascade of past generations). `workflowSlug` is read here only because this gateway 400s
+ * without it; the query string itself is forwarded verbatim (CLAUDE.md #11).
+ * Returns content-gen's body verbatim:
  * { examples: Array<ExampleEmail> } where each carries the email fields + scope
  * ("brand"|"org"|"global") + brandName. No enrichment / no field re-declaration (CLAUDE.md #8).
  */
 router.get("/workflow-examples", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const { workflowSlug, brandId, limit } = req.query as {
-      workflowSlug?: string;
-      brandId?: string;
-      limit?: string;
-    };
+    const { workflowSlug } = req.query as { workflowSlug?: string };
     if (!workflowSlug) {
       return res.status(400).json({ error: "Missing required query parameter: workflowSlug" });
     }
 
-    const params = new URLSearchParams();
-    params.set("workflowSlug", workflowSlug);
-    if (brandId) params.set("brandId", brandId);
-    if (limit) params.set("limit", limit);
-
     const result = await callExternalService(
       externalServices.emailgen,
-      `/generations/examples?${params}`,
+      `/generations/examples${rawQueryString(req.originalUrl)}`,
       { headers: buildInternalHeaders(req) },
     );
     res.json(result);

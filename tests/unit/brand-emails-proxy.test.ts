@@ -26,14 +26,18 @@ describe("Brand-level GET /emails route", () => {
     expect(content).toContain('"Missing required query parameter: brandId"');
   });
 
-  it("should forward brandId and optional campaignId to emailgen service", () => {
-    expect(content).toContain('params.set("brandId", brandId)');
-    expect(content).toContain('params.set("campaignId", campaignId)');
+  it("should forward the caller's query verbatim rather than rebuilding it from named params", () => {
+    // A whitelist here strips every filter content-generation-service ships that this file
+    // does not name, and it does so silently: the request is accepted and the narrowing is
+    // dropped at the edge (CLAUDE.md #11). The behaviour is asserted over the wire in
+    // tests/unit/emails-query-passthrough.behavior.test.ts; this only guards the shape.
+    expect(content).toContain("rawQueryString(req.originalUrl)");
+    expect(content).not.toContain('params.set("brandId", brandId)');
   });
 
   it("should call content-generation-service /generations endpoint", () => {
     expect(content).toContain("externalServices.emailgen");
-    expect(content).toContain("`/generations?${params}`");
+    expect(content).toContain("`/generations${rawQueryString(req.originalUrl)}`");
   });
 
   it("should batch-fetch run costs via getRunsBatch", () => {
