@@ -378,6 +378,7 @@ export function buildDocument(
       { name: "Activity", description: "User activity tracking" },
       { name: "Chat", description: "AI chat with SSE streaming" },
       { name: "Billing", description: "Billing, credits, and checkout" },
+      { name: "Conversations", description: "The messages exchanged with a lead on a campaign (instantly-service proxy)" },
       { name: "Instantly", description: "Instantly sending-infrastructure audit (staff-only, instantly-service proxy)" },
       { name: "Internal", description: "Platform-level operations (API key auth, no identity headers)" },
       { name: "Platform", description: "Service discovery" },
