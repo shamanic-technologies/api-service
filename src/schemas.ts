@@ -5101,6 +5101,42 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/conversations",
+  tags: ["Conversations"],
+  summary: "Read the messages exchanged with a lead on a campaign",
+  description:
+    "Pass-through to instantly-service GET /orgs/conversations. Returns what the prospect wrote and what " +
+    "we sent for one (campaign, lead email) pair, oldest first, each message carrying direction, from, to, " +
+    "timestamp, subject and markup-stripped text. Covers both transports (Instantly Unibox and our own " +
+    "SMTP/IMAP self-send) behind one response shape. The org boundary is the authenticated org: a " +
+    "conversation belonging to another org is a 404. The whole query string is forwarded verbatim — the " +
+    "parameters listed here are the ones documented today, not a whitelist. Three refusals stay distinct " +
+    "and must not be collapsed: 404 `campaign_not_found` (no record of this conversation), 200 with an " +
+    "empty `messages` (the sequence exists, nothing exchanged yet), 502 `thread_unavailable` (the thread " +
+    "exists but could not be read). Upstream error bodies are forwarded field-for-field, `code` included. " +
+    "Declares no cost — it sends nothing.",
+  security: authed,
+  request: {
+    query: z.object({
+      campaign_id: z.string().openapi({ description: "Logical campaign id — the same key POST /orgs/replies takes" }),
+      email: z.string().openapi({ description: "The lead whose conversation to read" }),
+    }).passthrough(),
+  },
+  responses: {
+    200: {
+      description: "The conversation as returned by instantly-service, oldest first (possibly empty)",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("ConversationResponse") } },
+    },
+    400: { description: "Missing or invalid query parameters", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No conversation in this org for that (campaign, email) — `code: campaign_not_found`", content: errorContent },
+    502: { description: "The sequence exists but its thread could not be read — `code: thread_unavailable`", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/instantly/audit/sending-forecast",
   tags: ["Instantly"],
   summary: "Get the platform sending-forecast audit (staff only)",
