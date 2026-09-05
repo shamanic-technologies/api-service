@@ -568,6 +568,36 @@ router.put("/brands/:id/click-destination", authenticate, requireOrg, requireUse
 });
 
 /**
+ * GET|PUT|DELETE /v1/brands/:id/sales-rep-phone
+ * Proxy to brand-service {GET,PUT,DELETE} /orgs/brands/{brandId}/sales-rep-phone.
+ * The one number to ring when a prospect replies to one of the brand's campaigns
+ * saying they are interested. Read returns the saved value or null ("nobody to
+ * ring" is a first-class answer, not a 404); PUT states it; DELETE clears it.
+ * Body + response shapes, and what counts as a valid number, are owned by the
+ * downstream service — its refusals (400 unparseable / country-code-less, 403
+ * foreign brand, 404 unknown brand) propagate verbatim with their own status.
+ */
+for (const method of ["get", "put", "delete"] as const) {
+  router[method]("/brands/:id/sales-rep-phone", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.brand,
+        `/orgs/brands/${req.params.id}/sales-rep-phone`,
+        {
+          method: method.toUpperCase() as "GET" | "PUT" | "DELETE",
+          headers: buildInternalHeaders(req),
+          ...(method === "put" ? { body: req.body } : {}),
+        },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error(`[api-service] Sales rep phone (${method}) error:`, error.message);
+      respondUpstreamError(res, error, "Failed to reach the brand's sales rep phone");
+    }
+  });
+}
+
+/**
  * GET /v1/brands/:id/business-context
  * Proxy to brand-service GET /orgs/brands/:id/business-context.
  * Returns the pasted business context for a no-website brand (the alternative

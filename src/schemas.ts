@@ -2863,6 +2863,85 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – Sales Rep Phone (proxy to brand-service /orgs/brands/{brandId}/sales-rep-phone)
+// The one number to ring when a prospect replies interested. Downstream owns the
+// body + response shapes and what counts as a valid number — passthrough only,
+// so its refusals propagate verbatim with their own status (CLAUDE.md #7, #8).
+// ===================================================================
+const SalesRepPhoneRequestSchema = z
+  .object({})
+  .passthrough()
+  .openapi("SalesRepPhoneRequest");
+const SalesRepPhoneResponseSchema = z
+  .object({})
+  .passthrough()
+  .openapi("SalesRepPhoneResponse");
+
+const salesRepPhoneErrors = {
+  400: { description: "Invalid brand ID, or a number brand-service refuses (forwarded verbatim)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  403: { description: "Brand not in caller's org (forwarded verbatim)", content: errorContent },
+  404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+  500: { description: "Upstream error", content: errorContent },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/sales-rep-phone",
+  tags: ["Brand"],
+  summary: "Read a brand's sales rep phone",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{brandId}/sales-rep-phone. " +
+    "The one number to ring when a prospect replies to one of this brand's campaigns saying " +
+    "they are interested, or null when the brand never stated one — \"nobody to ring\" is a " +
+    "first-class answer, not a 404. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "The saved number, or null when unset", content: { "application/json": { schema: SalesRepPhoneResponseSchema } } },
+    ...salesRepPhoneErrors,
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/sales-rep-phone",
+  tags: ["Brand"],
+  summary: "Set a brand's sales rep phone",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{brandId}/sales-rep-phone. " +
+    "States (or changes) the one number to ring when a sales interest lands on this brand. " +
+    "Body + response shapes, and what counts as a valid number, are owned by the downstream " +
+    "service; it normalizes what it accepts and refuses the rest with a 400 that propagates verbatim.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: { content: { "application/json": { schema: SalesRepPhoneRequestSchema } } },
+  },
+  responses: {
+    200: { description: "The saved number", content: { "application/json": { schema: SalesRepPhoneResponseSchema } } },
+    ...salesRepPhoneErrors,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/brands/{id}/sales-rep-phone",
+  tags: ["Brand"],
+  summary: "Remove a brand's sales rep phone",
+  description:
+    "Proxy to brand-service DELETE /orgs/brands/{brandId}/sales-rep-phone. " +
+    "The brand goes back to having nobody to ring. Response shape is owned by the downstream " +
+    "service, which treats removing a number that was never stated as a success rather than a 404.",
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "Removed — the brand now has no number to ring", content: { "application/json": { schema: SalesRepPhoneResponseSchema } } },
+    ...salesRepPhoneErrors,
+  },
+});
+
+// ===================================================================
 // Brand – Business Context (proxy to brand-service /orgs/brands/:id/business-context)
 // The free-form business context field-extraction reads from when a brand has no
 // website. Downstream owns body + response shapes — passthrough only.
