@@ -2027,6 +2027,100 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/leads/{id}/followups",
+  tags: ["Leads"],
+  summary: "Read what we owe one lead next",
+  description:
+    "Pass-through to lead-service GET /orgs/leads/{id}/followups. What we owe this person on this campaign: " +
+    "when the next follow-up is due, whether a worker currently holds them, how many have gone out, and why the " +
+    "schedule is empty when it is. An empty due date is stated rather than implied, so \"nobody has scheduled " +
+    "anything\" and \"somebody stopped it\" do not read the same. " +
+    "`id` is the `id` a row of GET /v1/leads already carries, so the panel listing the lead needs nothing new. " +
+    "The read is org-scoped downstream from the authenticated identity, never from the caller's query. " +
+    "Refer to lead-service openapi.json for the exact response shape — api-service forwards it untransformed.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().openapi({
+        description: "The `id` of a lead as returned by GET /v1/leads.",
+      }),
+    }),
+  },
+  responses: {
+    200: {
+      description: "This lead's follow-up state, as returned by lead-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadFollowupResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid lead id", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead in this caller's org", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/leads/{id}/followups",
+  tags: ["Leads"],
+  summary: "State when the next follow-up to one lead is owed",
+  description:
+    "Pass-through to lead-service POST /orgs/leads/{id}/followups. States what was done for this person and when " +
+    "the next action is due — which is how a customer looking at a lead whose next answer is days away can say " +
+    "it is owed NOW: the write sets the due date and releases any claim, so the campaign picks that person up on " +
+    "its next turn instead of waiting the schedule out. The response IS the resulting state, so a caller never " +
+    "has to ask what its write did. " +
+    "`id` is the `id` a row of GET /v1/leads already carries — the same one the detail panel used to read the " +
+    "lead — so no identity field about the person is re-supplied. " +
+    "The body is forwarded VERBATIM: this gateway does not re-declare, narrow or enumerate lead-service's " +
+    "request shape, and lead-service owns which statements are legal, including its refusals (a date outside the " +
+    "accepted range, an unparseable one, a missing reason on a stop, a lead outside this org). Those refusals " +
+    "reach the caller with their own status and body, `code` included, so a surface can say WHY the request was " +
+    "refused rather than showing a generic failure. " +
+    "The caller's org AND user identity are forwarded; the org boundary is the authenticated one and is never " +
+    "read from the body or query. " +
+    "Refer to lead-service openapi.json for the exact request and response shapes.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().openapi({
+        description: "The `id` of a lead as returned by GET /v1/leads.",
+      }),
+    }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadFollowupRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "The resulting follow-up state, as returned by lead-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadFollowupWriteResponse"),
+        },
+      },
+    },
+    400: {
+      description:
+        "Invalid id or kind, a missing reason on a stop, or a due date that is unparseable or outside the " +
+        "accepted range. lead-service names which in `code` and carries the bounds where they apply.",
+      content: errorContent,
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead in this caller's org", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/leads/{id}/history",
   tags: ["Leads"],
   summary: "Everything that happened to one person, in order, in one place",
