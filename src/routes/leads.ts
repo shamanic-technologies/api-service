@@ -351,4 +351,164 @@ router.delete(
   }
 );
 
+/**
+ * GET /v1/leads/:id/followups — pass-through to lead-service
+ * GET /orgs/leads/{id}/followups.
+ *
+ * What we owe one person next on one campaign: when the next follow-up is due, whether
+ * a worker currently holds them, how many have gone out, and why the schedule is empty
+ * when it is. The detail panel already renders this state inside the lead's history;
+ * this route is the same state on its own, so a surface that wrote to the sibling POST
+ * can re-read what it now owes without pulling the whole timeline.
+ *
+ * `id` is the `id` a row of GET /v1/leads already carries, exactly as on `/leads/:id`
+ * and `/leads/:id/step-statements`.
+ *
+ * The org boundary is the authenticated one: `x-org-id` comes from
+ * `buildInternalHeaders(req)`, never from the caller, and lead-service scopes the
+ * lookup on it — a lead in another org is a 404 there, indistinguishable from one that
+ * does not exist. The query string is forwarded verbatim (rule #11); nothing is read
+ * out of it here.
+ *
+ * One row, forwarded through `callExternalService` rather than piped (rule #10's piping
+ * is for bodies measured in MB). The response shape is lead-service's and this gateway
+ * does not declare it (rule #8).
+ */
+router.get(
+  "/leads/:id/followups",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/followups${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) }
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Get lead follow-up state error:", error);
+      respondUpstreamError(res, error, "Failed to get lead follow-up state");
+    }
+  }
+);
+
+/**
+ * POST /v1/leads/:id/followups — pass-through to lead-service
+ * POST /orgs/leads/{id}/followups.
+ *
+ * States when the next follow-up to one person is owed. A customer looking at a lead
+ * whose next answer is days out can say it is owed NOW — lead-service writes the due
+ * date and releases any claim, so the campaign picks that person up on its next turn
+ * instead of waiting out the schedule. Before this route the whole follow-up surface
+ * was reachable only service-to-service, so no browser could state anything about it.
+ *
+ * `id` is the `id` a row of GET /v1/leads already carries — the same one the detail
+ * panel used to read the lead and its history — so the caller supplies no identity
+ * field about the person.
+ *
+ * The body is forwarded VERBATIM. This gateway does not re-declare, narrow or enumerate
+ * lead-service's request shape (rule #8's corollary): `kind`, the timestamps and the
+ * stop `reason` are its vocabulary, and a `z.enum` copied here would 400 a kind it
+ * accepts and need a gateway release for every one it adds. It owns which statements
+ * are legal, and its refusals are the reason this forwards untouched — a schedule that
+ * was stopped, a date outside the accepted range (`due_date_out_of_bounds`, which
+ * carries the bounds), an unparseable one (`due_date_unparseable`), a missing stop
+ * reason (`reason_required`), a lead that is not this org's (404). Each is rendered to
+ * the customer as the reason the button did nothing, which is only possible while
+ * `code` survives: `respondUpstreamError` re-emits the upstream JSON field-for-field
+ * under the upstream status, where rebuilding the envelope from the thrown Error would
+ * stringify the whole body into `error` (rule #7).
+ *
+ * The upstream STATUS is forwarded via `callExternalServiceWithStatus` rather than
+ * hardcoded, for the same reason as on the sibling write: lead-service answers 200
+ * today, and a status this gateway asserts is a downstream shape it does not own.
+ *
+ * `buildInternalHeaders(req)` carries the caller's org AND user — the org is the
+ * boundary lead-service scopes the row on, and it is never read from the caller's body
+ * or query.
+ */
+router.post(
+  "/leads/:id/followups",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/followups${rawQueryString(req.originalUrl)}`,
+        {
+          method: "POST",
+          headers: buildInternalHeaders(req),
+          body: req.body,
+        }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Record lead follow-up error:", error);
+      respondUpstreamError(res, error, "Failed to record lead follow-up");
+    }
+  }
+);
+
+/**
+ * GET /v1/leads/:id/history — pass-through to lead-service
+ * GET /orgs/leads/{id}/history.
+ *
+ * Everything that happened to one person, in order, in one place: both directions of
+ * every exchange WITH the message bodies, what was sent and when it was delivered,
+ * what the person did, what somebody recorded by hand, and what it converted into.
+ * lead-service merges and de-duplicates it across the services that own each fact, so
+ * this gateway forwards one ordered list and merges nothing (rule #2).
+ *
+ * `id` is the `id` a row of GET /v1/leads already carries, exactly as on `/leads/:id`
+ * and `/leads/:id/step-statements`, so the detail panel listing the lead can ask for
+ * its history with nothing new.
+ *
+ * Why the error path matters more here than on most reads: this endpoint deliberately
+ * distinguishes a source it could NOT read (`sources[].status: "unavailable"`,
+ * `complete: false`) from a fact that did not happen, and it says so in the body. A
+ * gateway that flattened or rewrote that body would turn "we could not read your
+ * mailbox" into "your prospect said nothing". `respondUpstreamError` re-emits the
+ * upstream JSON field-for-field under the upstream status, so the 400 on a bad `scope`
+ * and the 404 on a lead outside this org stay themselves.
+ *
+ * The query string is forwarded verbatim (rule #11): `scope` and `brandId` are the ones
+ * lead-service documents today, and any it adds tomorrow reaches it without a change
+ * here. Nothing is read out of it — this route has no guard of its own to raise.
+ *
+ * The org boundary is the authenticated one: `x-org-id` comes from
+ * `buildInternalHeaders(req)`, never from the caller, and lead-service scopes the
+ * lookup on it — a lead in another org is a 404 there.
+ *
+ * One person's history, forwarded through `callExternalService` rather than piped:
+ * bounded by one lead's own events, not by a brand's population (rule #10's piping is
+ * for bodies measured in MB). The response shape is lead-service's and this gateway
+ * does not declare it (rule #8).
+ */
+router.get(
+  "/leads/:id/history",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/history${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) }
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Get lead history error:", error);
+      respondUpstreamError(res, error, "Failed to get lead history");
+    }
+  }
+);
+
 export default router;
