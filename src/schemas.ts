@@ -258,6 +258,14 @@ const publicCostPerOutcomeDistributionQueryParams = z.object({
 // The parameters features-service documents today, not a whitelist: the handler
 // forwards the caller's raw query string, so anything it ships next arrives
 // without an edit here (CLAUDE.md #11).
+const publicReturnOnSpendQueryParams = z.object({
+  featureSlug: z.string().optional().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug the return is measured over."),
+  minSpendUsd: z.string().optional().openapi({ example: "100" }).describe("Spend floor in USD selecting the brand population the median is taken over. Producer-owned default; a non-numeric or negative value is a 400 at features-service."),
+}).passthrough();
+
+// The parameters features-service documents today, not a whitelist: the handler
+// forwards the caller's raw query string, so anything it ships next arrives
+// without an edit here (CLAUDE.md #11).
 const publicChannelFunnelEconomicsQueryParams = z.object({
   channelSlug: z.string().optional().openapi({ example: "sales-cold-email-outreach" }).describe("Narrow to one channel. Omitted returns every pair in the catalogue. An unknown slug is a 404 at features-service, never an empty pair list."),
 }).passthrough();
@@ -483,6 +491,25 @@ registry.registerPath({
     200: { description: "Public cost-per-outcome distribution — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicCostPerOutcomeDistributionResponse") } } },
     400: { description: "Bad request from features-service", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/features/return-on-spend",
+  tags: ["Features"],
+  summary: "Public median return on spend across client brands",
+  description:
+    "The median return on spend our clients get — each brand's own realized expected pipeline over its committed spend, taken per brand and then across brands — plus the number of brands that median was taken over and the spread around it. " +
+    "Public by design at the producer: the landing that renders it is statically generated for an anonymous visitor, so no identity is required here either. " +
+    "Proxied to features-service GET /public/stats/return-on-spend. The caller's query string is forwarded verbatim; the parameters documented below are the ones features-service publishes today, not a whitelist — the spend floor selects the population, so it is never defaulted or dropped here. " +
+    "Response is producer-owned and distinguishes a measured figure from the reasons it cannot be stated. No authentication required.",
+  request: { query: publicReturnOnSpendQueryParams },
+  responses: {
+    200: { description: "Fleet median return on spend, or the explicit unmeasurable answer — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicReturnOnSpendResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    404: { description: "Unknown feature slug", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
   },
 });
