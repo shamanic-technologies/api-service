@@ -247,6 +247,31 @@ router.get("/public/features/cost-per-outcome-distribution", async (req: Request
 });
 
 /**
+ * GET /v1/public/features/return-on-spend
+ * The median return on spend our clients get, plus the number of brands that
+ * median was taken over. Proxied to features-service GET /public/stats/return-on-spend.
+ *
+ * No identity of any kind: the public landing is statically rendered for an
+ * anonymous visitor. The caller's query string is forwarded verbatim — the
+ * producer's spend floor selects the POPULATION the median is taken over, so a
+ * stripped or defaulted parameter would state a figure over a population nobody
+ * asked for. The body is producer-owned: it distinguishes a measured figure from
+ * the two reasons it cannot be stated, and the landing branches on that.
+ */
+router.get("/public/features/return-on-spend", async (req: Request, res: Response) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/return-on-spend${rawQueryString(req.originalUrl)}`,
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public fleet return-on-spend error:", error.message);
+    respondUpstreamError(res, error, "Failed to get the public fleet return on spend");
+  }
+});
+
+/**
  * GET /v1/public/channels
  * The acquisition-channel catalogue: every channel a customer can book, its
  * commercial terms, the kinds of step it can produce and the sales funnels that
