@@ -272,6 +272,34 @@ router.get("/public/features/return-on-spend", async (req: Request, res: Respons
 });
 
 /**
+ * GET /v1/public/features/showcase-funnels
+ * The current funnel counts of the named client brands our public homepage states.
+ * Proxied to features-service GET /public/stats/showcase-funnels.
+ *
+ * No identity of any kind: the homepage is a static document read by an anonymous
+ * visitor, and this read is already public at the producer. It takes no parameter
+ * naming a brand and never will — the brands are a frozen server-side allowlist
+ * there, so nothing about WHICH brands are read is a caller's to choose here
+ * either. The caller's query string is still forwarded verbatim so a parameter
+ * features-service ships next needs no edit here (CLAUDE.md #11). The body is
+ * producer-owned: a step's peopleReached distinguishes a measured 0 from an
+ * unknown null, and a degraded brand names its own reason, so it is forwarded
+ * field-for-field rather than re-declared.
+ */
+router.get("/public/features/showcase-funnels", async (req: Request, res: Response) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/showcase-funnels${rawQueryString(req.originalUrl)}`,
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public showcase funnels error:", error.message);
+    respondUpstreamError(res, error, "Failed to get the public showcase funnel counts");
+  }
+});
+
+/**
  * GET /v1/public/channels
  * The acquisition-channel catalogue: every channel a customer can book, its
  * commercial terms, the kinds of step it can produce and the sales funnels that
