@@ -5040,6 +5040,80 @@ registry.registerPath({
   },
 });
 
+export const CardSetupRequestSchema = z
+  .object({
+    return_url: z
+      .string()
+      .url()
+      .optional()
+      .describe("Where the acquirer sends the customer back once the card is saved"),
+    currency: z.string().optional().describe("ISO currency the acquirer should set the order up in"),
+  })
+  .passthrough()
+  .openapi("CardSetupRequest");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/billing/accounts/card_setup",
+  tags: ["Billing"],
+  summary: "What the browser needs to render this org's card form",
+  description:
+    "Asks billing-service how THIS org's acquirer saves a card and passes the descriptor through untouched: " +
+    "`hosted_redirect` (send the customer to `url`) or `embedded_widget` (load `script_url`, initialise with the " +
+    "per-order PUBLIC `token`, mount the card field). No merchant credential is included — the card is typed in an " +
+    "iframe the acquirer hosts and never touches the page or this gateway. Nobody is charged for adding a card. " +
+    "Request body is forwarded verbatim; the fields documented here are the ones billing accepts today, not a whitelist.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: CardSetupRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Card-setup descriptor — pass-through from billing-service",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("CardSetupResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid request — propagated verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Billing account not found", content: errorContent },
+    502: { description: "Card setup could not be described", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/accounts/saved_payment_method",
+  tags: ["Billing"],
+  summary: "Does this org have a saved, chargeable card?",
+  description:
+    "Read live from whichever acquirer holds the org's cards. THREE answers, kept apart on purpose: " +
+    "200 `{saved:true, method}` there is one; 200 `{saved:false, reason}` the acquirer answered and there is none; " +
+    "502 we could not ask at all. A caller that collapses the last two would either tell a customer to re-enter a " +
+    "card we already hold, or arm a recurring charge off a timeout — so the gateway forwards the downstream status " +
+    "and body as they are.",
+  security: authed,
+  responses: {
+    200: {
+      description: "The acquirer answered — pass-through from billing-service",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("SavedPaymentMethodResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Billing account not found", content: errorContent },
+    502: { description: "Could not ask the acquirer — NOT the same as 'no card saved'", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "patch",
   path: "/v1/billing/accounts/auto_topup",
