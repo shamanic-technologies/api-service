@@ -266,6 +266,14 @@ const publicReturnOnSpendQueryParams = z.object({
 // The parameters features-service documents today, not a whitelist: the handler
 // forwards the caller's raw query string, so anything it ships next arrives
 // without an edit here (CLAUDE.md #11).
+const publicFunnelReturnOnSpendQueryParams = z.object({
+  channelSlug: z.string().optional().openapi({ example: "sales-cold-email-outreach" }).describe("Narrow to one acquisition channel. Omitted returns every published channel's pairs. An unknown slug is a 404 at features-service, never an empty pair list."),
+  minSpendUsd: z.string().optional().openapi({ example: "100" }).describe("Spend floor in USD selecting the brand population each pair's medians are taken over. Producer-owned default; a non-numeric or negative value is a 400 at features-service."),
+}).passthrough();
+
+// The parameters features-service documents today, not a whitelist: the handler
+// forwards the caller's raw query string, so anything it ships next arrives
+// without an edit here (CLAUDE.md #11).
 const publicChannelFunnelEconomicsQueryParams = z.object({
   channelSlug: z.string().optional().openapi({ example: "sales-cold-email-outreach" }).describe("Narrow to one channel. Omitted returns every pair in the catalogue. An unknown slug is a 404 at features-service, never an empty pair list."),
 }).passthrough();
@@ -510,6 +518,27 @@ registry.registerPath({
     200: { description: "Fleet median return on spend, or the explicit unmeasurable answer — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicReturnOnSpendResponse") } } },
     400: { description: "Bad request from features-service", content: errorContent },
     404: { description: "Unknown feature slug", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/features/funnel-return-on-spend",
+  tags: ["Features"],
+  summary: "Public median return on spend per (acquisition channel x sales funnel) pair",
+  description:
+    "What a dollar through one SALES FUNNEL came back as for our clients: per (acquisition channel x sales funnel), the MEDIAN across brands of each brand's own realized expected pipeline over its committed spend \u2014 the same ratio that brand reads as ROI on its own dashboard \u2014 with the quartiles and the median cost per paying client beside it. " +
+    "A median, never a mean, and nothing is pooled across channels or funnels: a pair with too few brands past the spend floor says so rather than borrowing a wider population. " +
+    "This is a REALIZED figure and is NOT the projected returnPerDollar on /v1/public/channel-funnel-economics (a pooled unit price through mean declared rates and a mean lifetime revenue); the two answer different questions and both are served. " +
+    "Public by design at the producer: the figures describe our clients in aggregate and name no brand, so no identity is required here either. " +
+    "Proxied to features-service GET /public/stats/funnel-return-on-spend. The caller's query string is forwarded verbatim; the parameters documented below are the ones features-service publishes today, not a whitelist \u2014 the spend floor selects the population, so it is never defaulted or dropped here. " +
+    "Response is producer-owned: every pair in the catalogue is listed, measured or not, and an unmeasured pair names which kind it is. No authentication required.",
+  request: { query: publicFunnelReturnOnSpendQueryParams },
+  responses: {
+    200: { description: "Per-pair median return on spend, each pair measured or explicitly unmeasurable \u2014 pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicFunnelReturnOnSpendResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    404: { description: "Unknown acquisition-channel slug", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
   },
 });

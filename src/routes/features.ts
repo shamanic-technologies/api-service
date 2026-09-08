@@ -272,6 +272,34 @@ router.get("/public/features/return-on-spend", async (req: Request, res: Respons
 });
 
 /**
+ * GET /v1/public/features/funnel-return-on-spend
+ * What a dollar through one SALES FUNNEL came back as for our clients, per
+ * (acquisition channel x sales funnel) — the median across brands, plus the
+ * median cost per paying client and the counts each was taken over. Proxied to
+ * features-service GET /public/stats/funnel-return-on-spend.
+ *
+ * No identity of any kind: the read is public at the producer because the
+ * figures describe our own clients in aggregate and name no brand. The caller's
+ * query string is forwarded verbatim — the spend floor selects the POPULATION
+ * each median is taken over, so a stripped or defaulted parameter would state a
+ * figure over a population nobody asked for. The body is producer-owned: it
+ * lists every pair in the catalogue and distinguishes a measured figure from the
+ * reasons it cannot be stated, and the consumer branches on that.
+ */
+router.get("/public/features/funnel-return-on-spend", async (req: Request, res: Response) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/funnel-return-on-spend${rawQueryString(req.originalUrl)}`,
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public funnel return-on-spend error:", error.message);
+    respondUpstreamError(res, error, "Failed to get the public per-funnel return on spend");
+  }
+});
+
+/**
  * GET /v1/public/features/showcase-funnels
  * The current funnel counts of the named client brands our public homepage states.
  * Proxied to features-service GET /public/stats/showcase-funnels.
