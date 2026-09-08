@@ -92,6 +92,65 @@ router.delete("/billing/accounts/auto_topup", authenticate, requireOrg, async (r
   }
 });
 
+/**
+ * POST /v1/billing/accounts/card_setup
+ * Proxy to billing-service POST /v1/accounts/card_setup.
+ *
+ * Answers what the BROWSER needs to render this org's card form on whichever
+ * acquirer holds its cards: `mode: "hosted_redirect"` (send the customer to
+ * `url`) or `mode: "embedded_widget"` (load `script_url`, initialise with the
+ * per-order PUBLIC `token`, mount the acquirer's own field). billing-service and
+ * stripe-service have both already stripped every credential from that
+ * descriptor, so the gateway adds nothing and removes nothing — re-declaring the
+ * body here would strip fields they deliberately put in it (CLAUDE.md #8).
+ *
+ * The request body is forwarded verbatim too: billing owns `return_url` /
+ * `currency` and whatever it accepts next, and a whitelist here would drop a
+ * field the caller sent (CLAUDE.md #8 corollary). A missing/invalid `return_url`
+ * is billing's 400 to raise, and rule #7 forwards it field-for-field.
+ */
+router.post("/billing/accounts/card_setup", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/card_setup",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to start card setup");
+  }
+});
+
+/**
+ * GET /v1/billing/accounts/saved_payment_method
+ * Proxy to billing-service GET /v1/accounts/saved_payment_method.
+ *
+ * THREE answers stay apart all the way to the caller, which is the entire point
+ * of the route:
+ *   200 {saved:true, method}  — a chargeable card is on file;
+ *   200 {saved:false, reason} — the acquirer answered and there is none;
+ *   502                       — we could not ask at all.
+ *
+ * Collapsing the last two either tells a customer to re-enter a card we already
+ * hold, or arms a recurring charge off a timeout. So the gateway does NOT map a
+ * downstream failure onto its own generic error: `respondUpstreamError` re-emits
+ * billing's status and its body field-for-field (CLAUDE.md #7), and the response
+ * schema is passthrough (#8).
+ */
+router.get("/billing/accounts/saved_payment_method", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/saved_payment_method",
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Could not confirm whether a card is saved");
+  }
+});
+
 // POST /v1/billing/checkout-sessions — create Stripe checkout session
 router.post("/billing/checkout-sessions", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
