@@ -516,6 +516,22 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/public/features/showcase-funnels",
+  tags: ["Features"],
+  summary: "Public funnel counts for the named client brands on our homepage",
+  description:
+    "The current funnel counts of the named client brands our public homepage states \u2014 how many people were contacted, and how many reached each subsequent step of that client's own funnel \u2014 so a static page renders them without computing anything. " +
+    "Takes NO parameter naming a brand, by design at the producer: the brands are a frozen server-side allowlist there, because a caller-supplied identifier would turn an unauthenticated read of clients we agreed to publish into a way to read any brand's funnel with no session. " +
+    "Counts only \u2014 no money, no rate. Two funnels share legs, so their chains overlap and must never be summed. " +
+    "Proxied to features-service GET /public/stats/showcase-funnels. Response is producer-owned and forwarded field-for-field: a step's peopleReached tells a measured 0 apart from an unknown null, and a brand nothing could be walked for names its own reason. No authentication required.",
+  responses: {
+    200: { description: "Ordered funnel counts for every allowlisted showcase brand \u2014 pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicShowcaseFunnelsResponse") } } },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/public/channels",
   tags: ["Features"],
   summary: "Public acquisition-channel catalogue",
