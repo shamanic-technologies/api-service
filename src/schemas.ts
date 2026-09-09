@@ -2893,6 +2893,69 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – Offer image (proxy to brand-service /orgs/brands/:id/offers/:offerId/image)
+// The offer READS carry the image already, because this gateway does not
+// re-declare offer response shapes. The WRITE is this route, and it is what the
+// dashboard's "Regenerate with AI" button presses.
+//
+// Downstream owns the body and the response — passthrough only, and its 402 is
+// the one refusal a consumer must be able to branch on: it means the org cannot
+// afford the generation, and the dashboard opens its recharge modal on exactly
+// that status. respondUpstreamError forwards it with its body (CLAUDE.md #7).
+// ===================================================================
+const OfferImageRequestSchema = z
+  .object({
+    prompt: z.string().min(1).optional().openapi({
+      description:
+        "Optional prompt override. Omit it (or send {}) to let brand-service build the " +
+        "prompt from the offer's own descriptors — the gateway supplies no default.",
+      example: "A brass compass resting on a folded map",
+    }),
+  })
+  .passthrough()
+  .openapi("OfferImageRequest");
+
+const OfferImageResponseSchema = z.object({}).passthrough().openapi("OfferImageResponse");
+
+const BrandOfferParams = z.object({
+  id: z.string().describe("Brand ID"),
+  offerId: z.string().describe("Offer ID"),
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/offers/{offerId}/image",
+  tags: ["Brand"],
+  summary: "(Re)generate an offer's image",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{brandId}/offers/{offerId}/image. Generates " +
+    "the picture that stands for this offer and stores the hosted URL on it; regenerating " +
+    "REPLACES whatever was there, since there is one image per offer. Answers { offer } — " +
+    "the same offer the reads serve, with `imageUrl` set. " +
+    "Send {} to generate from the offer's own descriptors, or { prompt } to say what to " +
+    "draw; the gateway invents neither. " +
+    "COST: chat-service is the terminal caller and owns both the image-gen spend and the " +
+    "affordability gate, billed to the REQUESTING ORG — the gateway declares nothing and " +
+    "only forwards the caller's identity. A 402 means that org cannot afford it and reaches " +
+    "you AS a 402 with its body; it is never swallowed and never a silent no-op.",
+  security: authed,
+  request: {
+    params: BrandOfferParams,
+    body: { content: { "application/json": { schema: OfferImageRequestSchema } } },
+  },
+  responses: {
+    200: { description: "The offer, with the freshly generated image on it", content: { "application/json": { schema: OfferImageResponseSchema } } },
+    400: { description: "Invalid brand or offer ID format (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    402: { description: "The org cannot afford the image generation (forwarded verbatim)", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "No such brand, or no such offer on it (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+    502: { description: "Image generation failed (forwarded verbatim)", content: errorContent },
+  },
+});
+
+// ===================================================================
 // Brand – Click Destination (proxy to brand-service /orgs/brands/:id/click-destination)
 // Downstream owns body + response shapes — passthrough only. No gateway
 // re-validation, so brand-service's 4xx errors propagate verbatim.
