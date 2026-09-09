@@ -266,6 +266,14 @@ const publicReturnOnSpendQueryParams = z.object({
 // The parameters features-service documents today, not a whitelist: the handler
 // forwards the caller's raw query string, so anything it ships next arrives
 // without an edit here (CLAUDE.md #11).
+const publicFunnelReturnOnSpendQueryParams = z.object({
+  channelSlug: z.string().optional().openapi({ example: "sales-cold-email-outreach" }).describe("Narrow to one acquisition channel. Omitted returns every published channel's pairs. An unknown slug is a 404 at features-service, never an empty pair list."),
+  minSpendUsd: z.string().optional().openapi({ example: "100" }).describe("Spend floor in USD selecting the brand population each pair's medians are taken over. Producer-owned default; a non-numeric or negative value is a 400 at features-service."),
+}).passthrough();
+
+// The parameters features-service documents today, not a whitelist: the handler
+// forwards the caller's raw query string, so anything it ships next arrives
+// without an edit here (CLAUDE.md #11).
 const publicChannelFunnelEconomicsQueryParams = z.object({
   channelSlug: z.string().optional().openapi({ example: "sales-cold-email-outreach" }).describe("Narrow to one channel. Omitted returns every pair in the catalogue. An unknown slug is a 404 at features-service, never an empty pair list."),
 }).passthrough();
@@ -510,6 +518,43 @@ registry.registerPath({
     200: { description: "Fleet median return on spend, or the explicit unmeasurable answer — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicReturnOnSpendResponse") } } },
     400: { description: "Bad request from features-service", content: errorContent },
     404: { description: "Unknown feature slug", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/features/funnel-return-on-spend",
+  tags: ["Features"],
+  summary: "Public median return on spend per (acquisition channel x sales funnel) pair",
+  description:
+    "What a dollar through one SALES FUNNEL came back as for our clients: per (acquisition channel x sales funnel), the MEDIAN across brands of each brand's own realized expected pipeline over its committed spend \u2014 the same ratio that brand reads as ROI on its own dashboard \u2014 with the quartiles and the median cost per paying client beside it. " +
+    "A median, never a mean, and nothing is pooled across channels or funnels: a pair with too few brands past the spend floor says so rather than borrowing a wider population. " +
+    "This is a REALIZED figure and is NOT the projected returnPerDollar on /v1/public/channel-funnel-economics (a pooled unit price through mean declared rates and a mean lifetime revenue); the two answer different questions and both are served. " +
+    "Public by design at the producer: the figures describe our clients in aggregate and name no brand, so no identity is required here either. " +
+    "Proxied to features-service GET /public/stats/funnel-return-on-spend. The caller's query string is forwarded verbatim; the parameters documented below are the ones features-service publishes today, not a whitelist \u2014 the spend floor selects the population, so it is never defaulted or dropped here. " +
+    "Response is producer-owned: every pair in the catalogue is listed, measured or not, and an unmeasured pair names which kind it is. No authentication required.",
+  request: { query: publicFunnelReturnOnSpendQueryParams },
+  responses: {
+    200: { description: "Per-pair median return on spend, each pair measured or explicitly unmeasurable \u2014 pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicFunnelReturnOnSpendResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    404: { description: "Unknown acquisition-channel slug", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/features/showcase-funnels",
+  tags: ["Features"],
+  summary: "Public funnel counts for the named client brands on our homepage",
+  description:
+    "The current funnel counts of the named client brands our public homepage states \u2014 how many people were contacted, and how many reached each subsequent step of that client's own funnel \u2014 so a static page renders them without computing anything. " +
+    "Takes NO parameter naming a brand, by design at the producer: the brands are a frozen server-side allowlist there, because a caller-supplied identifier would turn an unauthenticated read of clients we agreed to publish into a way to read any brand's funnel with no session. " +
+    "Counts only \u2014 no money, no rate. Two funnels share legs, so their chains overlap and must never be summed. " +
+    "Proxied to features-service GET /public/stats/showcase-funnels. Response is producer-owned and forwarded field-for-field: a step's peopleReached tells a measured 0 apart from an unknown null, and a brand nothing could be walked for names its own reason. No authentication required.",
+  responses: {
+    200: { description: "Ordered funnel counts for every allowlisted showcase brand \u2014 pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicShowcaseFunnelsResponse") } } },
     502: { description: "Upstream service error", content: errorContent },
   },
 });
@@ -2844,6 +2889,69 @@ registry.registerPath({
     403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
     404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+// ===================================================================
+// Brand – Offer image (proxy to brand-service /orgs/brands/:id/offers/:offerId/image)
+// The offer READS carry the image already, because this gateway does not
+// re-declare offer response shapes. The WRITE is this route, and it is what the
+// dashboard's "Regenerate with AI" button presses.
+//
+// Downstream owns the body and the response — passthrough only, and its 402 is
+// the one refusal a consumer must be able to branch on: it means the org cannot
+// afford the generation, and the dashboard opens its recharge modal on exactly
+// that status. respondUpstreamError forwards it with its body (CLAUDE.md #7).
+// ===================================================================
+const OfferImageRequestSchema = z
+  .object({
+    prompt: z.string().min(1).optional().openapi({
+      description:
+        "Optional prompt override. Omit it (or send {}) to let brand-service build the " +
+        "prompt from the offer's own descriptors — the gateway supplies no default.",
+      example: "A brass compass resting on a folded map",
+    }),
+  })
+  .passthrough()
+  .openapi("OfferImageRequest");
+
+const OfferImageResponseSchema = z.object({}).passthrough().openapi("OfferImageResponse");
+
+const BrandOfferParams = z.object({
+  id: z.string().describe("Brand ID"),
+  offerId: z.string().describe("Offer ID"),
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/offers/{offerId}/image",
+  tags: ["Brand"],
+  summary: "(Re)generate an offer's image",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{brandId}/offers/{offerId}/image. Generates " +
+    "the picture that stands for this offer and stores the hosted URL on it; regenerating " +
+    "REPLACES whatever was there, since there is one image per offer. Answers { offer } — " +
+    "the same offer the reads serve, with `imageUrl` set. " +
+    "Send {} to generate from the offer's own descriptors, or { prompt } to say what to " +
+    "draw; the gateway invents neither. " +
+    "COST: chat-service is the terminal caller and owns both the image-gen spend and the " +
+    "affordability gate, billed to the REQUESTING ORG — the gateway declares nothing and " +
+    "only forwards the caller's identity. A 402 means that org cannot afford it and reaches " +
+    "you AS a 402 with its body; it is never swallowed and never a silent no-op.",
+  security: authed,
+  request: {
+    params: BrandOfferParams,
+    body: { content: { "application/json": { schema: OfferImageRequestSchema } } },
+  },
+  responses: {
+    200: { description: "The offer, with the freshly generated image on it", content: { "application/json": { schema: OfferImageResponseSchema } } },
+    400: { description: "Invalid brand or offer ID format (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    402: { description: "The org cannot afford the image generation (forwarded verbatim)", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "No such brand, or no such offer on it (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+    502: { description: "Image generation failed (forwarded verbatim)", content: errorContent },
   },
 });
 
