@@ -514,6 +514,12 @@ const OFFER_ROUTES = [
   { method: "delete", path: "/brands/:id/offers/:offerId/sales-funnels/:funnelKey", suffix: "/sales-funnels", what: "undeclare offer sales funnel" },
   { method: "get", path: "/brands/:id/offers/:offerId/user-fields", suffix: "/user-fields", what: "get offer user fields" },
   { method: "put", path: "/brands/:id/offers/:offerId/user-fields", suffix: "/user-fields", what: "save offer user fields" },
+  // The offer's image, (re)generated. chat-service is the terminal caller and owns both
+  // the image-gen cost and the affordability gate, so the identity headers this loop
+  // already forwards are what makes the spend land on the requesting org. Its 402 —
+  // the org cannot afford it — reaches the caller AS a 402 through respondUpstreamError
+  // below, which the dashboard's billing guard keys on to open its recharge modal.
+  { method: "post", path: "/brands/:id/offers/:offerId/image", suffix: "/image", what: "generate offer image" },
 ] as const;
 
 for (const route of OFFER_ROUTES) {
