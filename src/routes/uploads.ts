@@ -1,15 +1,27 @@
 import { Router } from "express";
 import {
+  authenticate,
   authenticatePlatform,
+  requireOrg,
   requireStaff,
+  requireUser,
   AuthenticatedRequest,
 } from "../middleware/auth.js";
 import { callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
+import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 
 const router = Router();
 
 // ---------------------------------------------------------------------------
+// Image uploads — transparent proxies to cloudflare-service.
+//
+// TWO routes, and the split is OWNERSHIP, not convenience: `/v1/platform-uploads`
+// stores an asset that is OURS (staff-gated, org-less, platform-billed), and
+// `/v1/orgs/uploads` stores one that belongs to a CUSTOMER (their org, their run,
+// their cost). They live together so the difference is readable in one file
+// rather than inferred from two.
+//
 // Platform uploads — transparent proxy to cloudflare-service
 // POST /internal/upload/base64.
 //
@@ -84,6 +96,58 @@ router.post(
     } catch (error: any) {
       console.error("[api-service] Platform upload error:", error);
       respondUpstreamError(res, error, "Failed to upload platform file");
+    }
+  },
+);
+
+/**
+ * POST /v1/orgs/uploads → cloudflare-service POST /upload/base64
+ *
+ * The CUSTOMER-owned twin of the platform route above, and the difference is
+ * ownership, not convenience: a brand logo a customer replaces from Brand
+ * Settings is THEIR asset, so it goes to the org-scoped downstream route, which
+ * opens a run under their org and declares the storage cost against it. Routing
+ * it through `/v1/platform-uploads` would have filed a customer's file under the
+ * platform (wrong owner, wrong cost home) and, being staff-gated, would have
+ * refused every customer anyway.
+ *
+ * AUTH — `authenticate + requireOrg + requireUser`, the ordinary customer tier.
+ * The downstream route needs `x-org-id` / `x-user-id` / `x-run-id`, which is
+ * exactly what `buildInternalHeaders` forwards, so the org that pays is the org
+ * that asked.
+ *
+ * TRANSPARENT PASSTHROUGH (CLAUDE.md): `req.body` is forwarded as-is — no field
+ * whitelist — so `contentBase64` plus the optional `folder` / `filename` /
+ * `contentType` / `optimizeFor` cloudflare-service documents arrive exactly as
+ * sent, and a field it adds later needs no change here. Its response
+ * (`{ id, url, size, contentType }`) and its status come back untouched, so a
+ * 400 "contentBase64 must be valid non-empty base64" reaches the browser with
+ * its own `reason` rather than a sentence this gateway made up.
+ *
+ * BODY SIZE — the gateway's global `express.json({ limit: "10mb" })` binds
+ * first; base64 inflates a file by ~4/3, so ~7.5MB of image is the ceiling.
+ * Nothing is stored here.
+ */
+router.post(
+  "/orgs/uploads",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.cloudflare,
+        "/upload/base64",
+        {
+          method: "POST",
+          body: req.body,
+          headers: buildInternalHeaders(req),
+        },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Org upload error:", error);
+      respondUpstreamError(res, error, "Failed to upload file");
     }
   },
 );

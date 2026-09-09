@@ -18,7 +18,7 @@ vi.hoisted(() => {
   process.env.ADMIN_DISTRIBUTE_API_KEY = "admin-test-key";
 });
 
-import platformUploadsRouter from "../../src/routes/platform-uploads.js";
+import platformUploadsRouter from "../../src/routes/uploads.js";
 
 function buildApp() {
   const app = express();
