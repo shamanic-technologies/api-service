@@ -24,7 +24,7 @@ vi.hoisted(() => {
 const CLOUDFLARE_BASE = "http://cloudflare.test.local";
 const STAFF_EMAIL = "kevin.lourd@gmail.com";
 
-import platformUploadsRouter from "../../src/routes/platform-uploads.js";
+import platformUploadsRouter from "../../src/routes/uploads.js";
 
 function buildApp() {
   const app = express();

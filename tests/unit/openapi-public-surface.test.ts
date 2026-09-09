@@ -270,7 +270,7 @@ describe("the operations themselves keep working", () => {
       'app.use("/v1", promoCodesRoutes)',
       'app.use("/v1", instantlyRoutes)',
       'app.use("/v1", mailingListsRoutes)',
-      'app.use("/v1", platformUploadsRoutes)',
+      'app.use("/v1", uploadsRoutes)',
       'app.use("/v1", adminBrandsRoutes)',
       'app.use("/v1", featuresRoutes)',
     ]) {

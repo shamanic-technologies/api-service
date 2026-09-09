@@ -9061,6 +9061,46 @@ const CrmBrandIdQuery = z.object({
   brandId: z.string().uuid().openapi({ description: "Brand ID (required by crm-service)" }),
 });
 
+const OrgUploadRequest = z
+  .object({
+    contentBase64: z
+      .string()
+      .describe("The file's bytes, base64. A `data:` URL is accepted; its media type is used when contentType is omitted."),
+    folder: z.string().optional().describe("Key prefix in the bucket, e.g. `brand-logos`."),
+    filename: z.string().optional().describe("Object filename; a UUID is minted when omitted."),
+    contentType: z.string().optional().describe("MIME type; inferred from a data: URL when omitted."),
+  })
+  .passthrough()
+  .openapi("OrgUploadRequest");
+
+const OrgUploadResponse = z
+  .object({
+    id: z.string(),
+    url: z.string().describe("Permanent public URL — renders in an <img> with no auth."),
+    size: z.number(),
+    contentType: z.string(),
+  })
+  .passthrough()
+  .openapi("OrgUploadResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/uploads",
+  tags: ["Uploads"],
+  summary: "Upload an image the CUSTOMER owns and get its public URL",
+  description:
+    "Proxy to cloudflare-service POST /upload/base64, the ORG-scoped upload: the file belongs to the calling org, so a run is opened under it and the storage cost is declared against it. First caller is Brand Settings, where a customer replaces the logo their brand is shown with. The body is forwarded untransformed and the response shape (`{ id, url, size, contentType }`) is owned by cloudflare-service. Body size is bound by this gateway's 10mb JSON limit; base64 inflates a file by ~4/3, so roughly 7.5MB of image.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: OrgUploadRequest } } } },
+  responses: {
+    200: { description: "Stored; `url` is the public URL", content: { "application/json": { schema: OrgUploadResponse } } },
+    400: { description: "Invalid body, forwarded verbatim from cloudflare-service", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "cloudflare-service unreachable, or the upload failed", content: errorContent },
+  },
+});
+
 const crmErrorResponses = {
   400: { description: "Bad request, forwarded verbatim from crm-service", content: errorContent },
   401: { description: "Unauthorized", content: errorContent },

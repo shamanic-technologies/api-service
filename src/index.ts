@@ -53,7 +53,7 @@ import quotesRoutes from "./routes/quotes.js";
 import visibilityRoutes from "./routes/visibility.js";
 import audiencesRoutes from "./routes/audiences.js";
 import mailingListsRoutes from "./routes/mailing-lists.js";
-import platformUploadsRoutes from "./routes/platform-uploads.js";
+import uploadsRoutes from "./routes/uploads.js";
 import invitesRoutes from "./routes/invites.js";
 import waitlistRoutes from "./routes/waitlist.js";
 import publicStatsRoutes from "./routes/public-stats.js";
@@ -277,7 +277,7 @@ app.use("/v1", invitesRoutes);
 app.use("/v1", waitlistRoutes);
 app.use("/v1", audiencesRoutes);
 app.use("/v1", mailingListsRoutes);
-app.use("/v1", platformUploadsRoutes);
+app.use("/v1", uploadsRoutes);
 
 // 404 handler
 app.use((req, res) => {
