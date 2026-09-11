@@ -4277,13 +4277,26 @@ registry.registerPath({
     "This is the only read here that can name a superseded version: every other workflow read filters to active " +
     "versions, so a campaign pinned to an old versioned slug can be resolved to its dynasty only through this one. " +
     "Transparent proxy to workflow-service GET /workflows/dynasties — the caller's query string is forwarded " +
-    "verbatim, so any filter workflow-service accepts (a feature scope among them) is reachable without a gateway " +
-    "release. The parameter below is documented, not whitelisted. Response is producer-owned.",
+    "verbatim, so any filter workflow-service accepts is reachable without a gateway release. The parameters below " +
+    "are the ones it documents today, not a whitelist. Response is producer-owned.",
   security: authed,
   request: {
     query: z
       .object({
-        featureSlug: z.string().optional().describe("Scope the listing to one feature, when workflow-service supports it."),
+        featureSlug: z
+          .string()
+          .optional()
+          .describe(
+            "Restrict to the dynasties of this feature. Omitted, the listing is fleet-wide — the whole internal " +
+            "codename catalogue, which a customer-facing consumer should never receive. Pass it.",
+          ),
+        workflowSlug: z
+          .string()
+          .optional()
+          .describe(
+            "Restrict to the single dynasty this versioned workflow slug belongs to, including when the slug names " +
+            "a superseded or deprecated version. An unknown slug answers an empty list, not a 404.",
+          ),
       })
       .passthrough(),
   },
