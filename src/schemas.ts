@@ -5789,6 +5789,20 @@ registry.registerPath({
     },
     400: { description: "No Stripe customer found", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
+    402: {
+      description:
+        "Refused by billing-service: the org carries a negative balance and the settle " +
+        "charge failed, so it may not reach the portal to change its card. The body is " +
+        "billing-service's and reaches the caller field-for-field (CLAUDE.md #7) — it " +
+        "carries a stable `code` (`outstanding_balance_unsettled`) plus `owed_cents`, " +
+        "`balance_cents` and `reason`. Documented, not owned: billing-service may add " +
+        "fields without a change here.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("BillingPortalSessionRefusal"),
+        },
+      },
+    },
     500: { description: "Internal error", content: errorContent },
   },
 });
