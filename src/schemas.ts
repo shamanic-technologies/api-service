@@ -4267,6 +4267,38 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/workflows/dynasties",
+  tags: ["Workflows"],
+  summary: "List workflow dynasties with their versioned slugs",
+  description:
+    "Every workflow dynasty with the versioned workflow slugs that belong to it, DEPRECATED versions included. " +
+    "This is the only read here that can name a superseded version: every other workflow read filters to active " +
+    "versions, so a campaign pinned to an old versioned slug can be resolved to its dynasty only through this one. " +
+    "Transparent proxy to workflow-service GET /workflows/dynasties — the caller's query string is forwarded " +
+    "verbatim, so any filter workflow-service accepts (a feature scope among them) is reachable without a gateway " +
+    "release. The parameter below is documented, not whitelisted. Response is producer-owned.",
+  security: authed,
+  request: {
+    query: z
+      .object({
+        featureSlug: z.string().optional().describe("Scope the listing to one feature, when workflow-service supports it."),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: {
+      description: "Dynasties with their versioned workflow slugs — pass-through from workflow-service",
+      content: {
+        "application/json": { schema: z.object({}).passthrough().openapi("WorkflowDynastiesResponse") },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 export const WorkflowStatusRequestSchema = z
   .object({
     status: z.string().min(1).describe(
