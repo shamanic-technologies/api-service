@@ -56947,7 +56947,7 @@
           "Workflows"
         ],
         "summary": "List workflow dynasties with their versioned slugs",
-        "description": "Every workflow dynasty with the versioned workflow slugs that belong to it, DEPRECATED versions included. This is the only read here that can name a superseded version: every other workflow read filters to active versions, so a campaign pinned to an old versioned slug can be resolved to its dynasty only through this one. Transparent proxy to workflow-service GET /workflows/dynasties — the caller's query string is forwarded verbatim, so any filter workflow-service accepts (a feature scope among them) is reachable without a gateway release. The parameter below is documented, not whitelisted. Response is producer-owned.",
+        "description": "Every workflow dynasty with the versioned workflow slugs that belong to it, DEPRECATED versions included. This is the only read here that can name a superseded version: every other workflow read filters to active versions, so a campaign pinned to an old versioned slug can be resolved to its dynasty only through this one. Transparent proxy to workflow-service GET /workflows/dynasties — the caller's query string is forwarded verbatim, so any filter workflow-service accepts is reachable without a gateway release. The parameters below are the ones it documents today, not a whitelist. Response is producer-owned.",
         "security": [
           {
             "bearerAuth": []
@@ -56957,11 +56957,21 @@
           {
             "schema": {
               "type": "string",
-              "description": "Scope the listing to one feature, when workflow-service supports it."
+              "description": "Restrict to the dynasties of this feature. Omitted, the listing is fleet-wide — the whole internal codename catalogue, which a customer-facing consumer should never receive. Pass it."
             },
             "required": false,
-            "description": "Scope the listing to one feature, when workflow-service supports it.",
+            "description": "Restrict to the dynasties of this feature. Omitted, the listing is fleet-wide — the whole internal codename catalogue, which a customer-facing consumer should never receive. Pass it.",
             "name": "featureSlug",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Restrict to the single dynasty this versioned workflow slug belongs to, including when the slug names a superseded or deprecated version. An unknown slug answers an empty list, not a 404."
+            },
+            "required": false,
+            "description": "Restrict to the single dynasty this versioned workflow slug belongs to, including when the slug names a superseded or deprecated version. An unknown slug answers an empty list, not a 404.",
+            "name": "workflowSlug",
             "in": "query"
           },
           {
