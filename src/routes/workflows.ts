@@ -90,6 +90,17 @@ async function fetchKeySources(headers: Record<string, string>): Promise<KeySour
 // Proxy helper
 // ---------------------------------------------------------------------------
 
+/**
+ * The inbound query string, verbatim, including the leading `?` (empty when there
+ * is none). Read off `req.originalUrl` rather than re-serialized from `req.query`:
+ * re-serializing imposes this gateway's opinion on repeated keys, ordering and
+ * encoding, and silently drops anything the gateway does not know about.
+ */
+function rawQueryString(originalUrl: string): string {
+  const index = originalUrl.indexOf("?");
+  return index === -1 ? "" : originalUrl.slice(index);
+}
+
 /** Forward query params to workflow-service, building a URLSearchParams from the request. */
 function buildWorkflowParams(query: Record<string, unknown>, keys: string[]): URLSearchParams {
   const params = new URLSearchParams();
@@ -181,6 +192,36 @@ router.get("/workflows/best", authenticate, requireOrg, requireUser, async (req:
   } catch (error: any) {
     console.error("[api-service] Best workflows error:", error.message);
     res.status(500).json({ error: error.message || "Failed to get best workflows" });
+  }
+});
+
+/**
+ * GET /v1/workflows/dynasties
+ * Transparent proxy to workflow-service GET /workflows/dynasties — every dynasty with
+ * the versioned workflow slugs that belong to it, deprecated versions included. This is
+ * the only read that can name a SUPERSEDED version: every other workflow read proxied
+ * here filters to active versions, so a campaign pinned to an old versioned slug cannot
+ * be resolved to its dynasty through any of them.
+ *
+ * The caller's query string is forwarded verbatim rather than rebuilt from a closed list
+ * of known parameters — workflow-service owns the filter vocabulary (a feature scope
+ * among them), and a parameter it accepts must not need a gateway release to be reachable.
+ *
+ * Declared before `/workflows/:id`: Express matches a path parameter against any single
+ * segment, so a later declaration would swallow this and send `dynasties` downstream as
+ * a workflow id.
+ */
+router.get("/workflows/dynasties", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.workflow,
+      `/workflows/dynasties${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("List workflow dynasties error:", error.message);
+    respondUpstreamError(res, error, "Failed to list workflow dynasties");
   }
 });
 

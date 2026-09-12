@@ -40,7 +40,7 @@ router.get("/billing/accounts", authenticate, requireOrg, async (req: Authentica
     );
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message || "Failed to get billing account" });
+    respondUpstreamError(res, error, "Failed to get billing account");
   }
 });
 
@@ -58,7 +58,7 @@ router.get("/billing/accounts/balance", authenticate, requireOrg, async (req: Au
     );
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message || "Failed to get balance" });
+    respondUpstreamError(res, error, "Failed to get balance");
   }
 });
 
@@ -73,8 +73,7 @@ router.patch("/billing/accounts/auto_topup", authenticate, requireOrg, async (re
     );
     res.json(result);
   } catch (error: any) {
-    const status = error.statusCode || 500;
-    res.status(status).json({ error: error.message || "Failed to configure auto-topup" });
+    respondUpstreamError(res, error, "Failed to configure auto-topup");
   }
 });
 
@@ -88,7 +87,7 @@ router.delete("/billing/accounts/auto_topup", authenticate, requireOrg, async (r
     );
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message || "Failed to disable auto-topup" });
+    respondUpstreamError(res, error, "Failed to disable auto-topup");
   }
 });
 
@@ -174,11 +173,26 @@ router.post("/billing/checkout-sessions", authenticate, requireOrg, async (req: 
     );
     res.json(result);
   } catch (error: any) {
-    res.status(500).json({ error: error.message || "Failed to create checkout session" });
+    respondUpstreamError(res, error, "Failed to create checkout session");
   }
 });
 
-// POST /v1/billing/portal-sessions — create Stripe billing portal session
+/**
+ * POST /v1/billing/portal-sessions
+ * Proxy to billing-service POST /v1/portal-sessions — the Stripe billing portal
+ * session a customer uses to manage its payment methods.
+ *
+ * billing-service refuses with 402 when the org's balance is negative and the
+ * settle charge fails: a customer may not swap the card out from under an unpaid
+ * balance. That refusal is machine-readable — a stable `code`
+ * ("outstanding_balance_unsettled") plus `owed_cents`, `balance_cents`, `reason` —
+ * and the dashboard branches on `code` and renders `owed_cents`. So this catch
+ * MUST NOT rebuild an envelope out of `error.message` (which IS the whole upstream
+ * body as a string): `respondUpstreamError` re-emits the upstream JSON object
+ * field-for-field under the upstream status. CLAUDE.md #7 / #8 — the gateway does
+ * not own downstream shapes, and forwarding the status while flattening the body is
+ * not passthrough.
+ */
 router.post("/billing/portal-sessions", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
@@ -188,8 +202,7 @@ router.post("/billing/portal-sessions", authenticate, requireOrg, async (req: Au
     );
     res.json(result);
   } catch (error: any) {
-    const status = error.statusCode || 500;
-    res.status(status).json({ error: error.message || "Failed to create portal session" });
+    respondUpstreamError(res, error, "Failed to create portal session");
   }
 });
 
@@ -214,7 +227,7 @@ router.get("/billing/payments", authenticate, requireOrg, async (req: Authentica
     );
     res.json(result);
   } catch (error: any) {
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to get payments" });
+    respondUpstreamError(res, error, "Failed to get payments");
   }
 });
 

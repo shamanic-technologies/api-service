@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { authenticate, authenticatePlatform, requireOrg, requireUser, requireStaff, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, externalServices } from "../lib/service-client.js";
+import { callExternalService, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 
@@ -656,6 +656,86 @@ router.get("/features/audit/customer-success", authenticatePlatform, requireStaf
   } catch (error: any) {
     console.error("[api-service] Staff customer-success audit error:", error.message);
     res.status(error.statusCode || 502).json({ error: error.message || "Failed to get customer success" });
+  }
+});
+
+// ── Staff stated monthly amounts (platform key + STAFF_EMAILS) ───────────────
+//
+// Full CRUD over the staff-writable record of what a HUMAN says a brand is worth per month, over a
+// date range. Platform-wide staff data — the record is keyed on an (org, brand) pair carried in the
+// BODY, and no org identity is involved — so the gate is the same one the fleet-wide audit reads use
+// (authenticatePlatform + requireStaff, CLAUDE.md "Staff / admin gating"), and the only header
+// forwarded downstream is the verified staff email for actor attribution.
+//
+// All four are byte passthroughs via pipeExternalService: the caller gets features-service's own
+// status AND body unchanged — a 201 with the created row, a 204 on delete, a 404, and above all the
+// 409 whose `reason` names the range the write collided with. Re-emitting those as a gateway-built
+// envelope would destroy the reason a staff member needs to read (rule #7 + its corollary). The
+// query string and the request body are forwarded verbatim: this gateway declares no field of the
+// downstream's vocabulary (rules #8 and #11).
+//
+// These are declared BEFORE `/features/:slug/*` so Express matches the literal segment rather than
+// binding `stated-monthly-amounts` as a slug.
+
+const STATED_AMOUNTS_PATH = "/internal/stated-monthly-amounts";
+
+/** GET /v1/features/stated-monthly-amounts — list; optional orgId/brandId filters forwarded verbatim. */
+router.get("/features/stated-monthly-amounts", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.features,
+      `${STATED_AMOUNTS_PATH}${rawQueryString(req.originalUrl)}`,
+      { headers: staffHeaders(req), expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Staff stated-monthly-amounts list error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to list stated monthly amounts");
+  }
+});
+
+/** POST /v1/features/stated-monthly-amounts — create; body forwarded verbatim. */
+router.post("/features/stated-monthly-amounts", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.features,
+      STATED_AMOUNTS_PATH,
+      { method: "POST", body: req.body, headers: staffHeaders(req), expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Staff stated-monthly-amounts create error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to create stated monthly amount");
+  }
+});
+
+/** PATCH /v1/features/stated-monthly-amounts/:id — edit; body forwarded verbatim. */
+router.patch("/features/stated-monthly-amounts/:id", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.features,
+      `${STATED_AMOUNTS_PATH}/${encodeURIComponent(req.params.id)}`,
+      { method: "PATCH", body: req.body, headers: staffHeaders(req), expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Staff stated-monthly-amounts update error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to update stated monthly amount");
+  }
+});
+
+/** DELETE /v1/features/stated-monthly-amounts/:id — delete; 204 forwarded as-is. */
+router.delete("/features/stated-monthly-amounts/:id", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.features,
+      `${STATED_AMOUNTS_PATH}/${encodeURIComponent(req.params.id)}`,
+      { method: "DELETE", headers: staffHeaders(req), expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Staff stated-monthly-amounts delete error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to delete stated monthly amount");
   }
 });
 

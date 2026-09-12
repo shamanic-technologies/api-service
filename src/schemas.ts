@@ -709,6 +709,117 @@ registry.registerPath({
   },
 });
 
+// ── Staff stated monthly amounts (platform key + STAFF_EMAILS) ──────────────
+//
+// Transparent CRUD proxy to features-service /internal/stated-monthly-amounts. Request bodies and
+// responses are producer-owned passthroughs (rule #8) — this gateway declares no field of them. The
+// query object below documents the filters features-service serves TODAY; it is a doc, not a
+// whitelist (rule #11), and the caller's query string is forwarded verbatim.
+const statedMonthlyAmountsQueryParams = z
+  .object({
+    orgId: z.string().optional().describe("Restrict to one organization. Optional."),
+    brandId: z.string().optional().describe("Restrict to one brand. Optional."),
+  })
+  .passthrough();
+
+const StatedMonthlyAmountIdParam = z.object({
+  id: z.string().describe("Stated monthly amount ID"),
+});
+
+const statedAmountConflictContent = {
+  "application/json": {
+    schema: z.object({}).passthrough().openapi("StatedMonthlyAmountConflict"),
+  },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/stated-monthly-amounts",
+  tags: ["Features"],
+  summary: "List stated monthly amounts (staff only)",
+  description:
+    "STAFF-ONLY list of what a HUMAN has stated a brand is worth per month, over a date range. Platform-wide staff data, so gated by " +
+    "platform API key + STAFF_EMAILS x-email (same tier as GET /v1/features/audit/revenue); no org context is involved. The caller's query " +
+    "string is forwarded verbatim — `orgId` and `brandId` are the filters features-service serves today. Transparent proxy to " +
+    "features-service GET /internal/stated-monthly-amounts. Response is producer-owned.",
+  security: platformAuth,
+  request: { query: statedMonthlyAmountsQueryParams },
+  responses: {
+    200: { description: "Stated monthly amounts — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StatedMonthlyAmountsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/features/stated-monthly-amounts",
+  tags: ["Features"],
+  summary: "State what a brand is worth per month (staff only)",
+  description:
+    "STAFF-ONLY create of a stated monthly amount for an (org, brand) pair over a date range. Gated by platform API key + STAFF_EMAILS " +
+    "x-email. The body is forwarded verbatim; features-service owns its vocabulary and its validation, including the 409 it raises when the " +
+    "range overlaps another stated amount for the same brand — that refusal reaches the caller with its status and its body unchanged, " +
+    "reason included. Transparent proxy to features-service POST /internal/stated-monthly-amounts.",
+  security: platformAuth,
+  request: {
+    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("StatedMonthlyAmountCreateRequest") } } },
+  },
+  responses: {
+    201: { description: "Created stated monthly amount — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StatedMonthlyAmountResponse") } } },
+    400: { description: "Rejected by features-service — body forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    409: { description: "Overlaps a stated amount already in force for this brand — features-service's refusal, reason included", content: statedAmountConflictContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/features/stated-monthly-amounts/{id}",
+  tags: ["Features"],
+  summary: "Edit a stated monthly amount (staff only)",
+  description:
+    "STAFF-ONLY edit of one stated monthly amount. Gated by platform API key + STAFF_EMAILS x-email. The body is forwarded verbatim — which " +
+    "keys are PRESENT is what features-service reads, so an omitted key keeps its stored value while an explicit null opens that bound. A 404 " +
+    "for an unknown id and a 409 for an overlapping range both reach the caller unchanged. Transparent proxy to features-service " +
+    "PATCH /internal/stated-monthly-amounts/{id}.",
+  security: platformAuth,
+  request: {
+    params: StatedMonthlyAmountIdParam,
+    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("StatedMonthlyAmountUpdateRequest") } } },
+  },
+  responses: {
+    200: { description: "Updated stated monthly amount — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StatedMonthlyAmountUpdatedResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "No stated monthly amount with this id", content: errorContent },
+    409: { description: "Overlaps a stated amount already in force for this brand — features-service's refusal, reason included", content: statedAmountConflictContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/features/stated-monthly-amounts/{id}",
+  tags: ["Features"],
+  summary: "Delete a stated monthly amount (staff only)",
+  description:
+    "STAFF-ONLY delete of one stated monthly amount. Gated by platform API key + STAFF_EMAILS x-email. Answers features-service's own 204 on " +
+    "success and its 404 when no row carries the id. Transparent proxy to features-service DELETE /internal/stated-monthly-amounts/{id}.",
+  security: platformAuth,
+  request: { params: StatedMonthlyAmountIdParam },
+  responses: {
+    204: { description: "Deleted — no content, as features-service answers" },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "No stated monthly amount with this id", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
 // Authenticated endpoints — proxied to features-service
 registry.registerPath({
   method: "get",
@@ -4267,6 +4378,51 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/workflows/dynasties",
+  tags: ["Workflows"],
+  summary: "List workflow dynasties with their versioned slugs",
+  description:
+    "Every workflow dynasty with the versioned workflow slugs that belong to it, DEPRECATED versions included. " +
+    "This is the only read here that can name a superseded version: every other workflow read filters to active " +
+    "versions, so a campaign pinned to an old versioned slug can be resolved to its dynasty only through this one. " +
+    "Transparent proxy to workflow-service GET /workflows/dynasties — the caller's query string is forwarded " +
+    "verbatim, so any filter workflow-service accepts is reachable without a gateway release. The parameters below " +
+    "are the ones it documents today, not a whitelist. Response is producer-owned.",
+  security: authed,
+  request: {
+    query: z
+      .object({
+        featureSlug: z
+          .string()
+          .optional()
+          .describe(
+            "Restrict to the dynasties of this feature. Omitted, the listing is fleet-wide — the whole internal " +
+            "codename catalogue, which a customer-facing consumer should never receive. Pass it.",
+          ),
+        workflowSlug: z
+          .string()
+          .optional()
+          .describe(
+            "Restrict to the single dynasty this versioned workflow slug belongs to, including when the slug names " +
+            "a superseded or deprecated version. An unknown slug answers an empty list, not a 404.",
+          ),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: {
+      description: "Dynasties with their versioned workflow slugs — pass-through from workflow-service",
+      content: {
+        "application/json": { schema: z.object({}).passthrough().openapi("WorkflowDynastiesResponse") },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 export const WorkflowStatusRequestSchema = z
   .object({
     status: z.string().min(1).describe(
@@ -5744,6 +5900,20 @@ registry.registerPath({
     },
     400: { description: "No Stripe customer found", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
+    402: {
+      description:
+        "Refused by billing-service: the org carries a negative balance and the settle " +
+        "charge failed, so it may not reach the portal to change its card. The body is " +
+        "billing-service's and reaches the caller field-for-field (CLAUDE.md #7) — it " +
+        "carries a stable `code` (`outstanding_balance_unsettled`) plus `owed_cents`, " +
+        "`balance_cents` and `reason`. Documented, not owned: billing-service may add " +
+        "fields without a change here.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("BillingPortalSessionRefusal"),
+        },
+      },
+    },
     500: { description: "Internal error", content: errorContent },
   },
 });
@@ -9059,6 +9229,46 @@ const CrmUploadMultipartBody = z
 // is required downstream on every read; it is not the only param accepted.
 const CrmBrandIdQuery = z.object({
   brandId: z.string().uuid().openapi({ description: "Brand ID (required by crm-service)" }),
+});
+
+const OrgUploadRequest = z
+  .object({
+    contentBase64: z
+      .string()
+      .describe("The file's bytes, base64. A `data:` URL is accepted; its media type is used when contentType is omitted."),
+    folder: z.string().optional().describe("Key prefix in the bucket, e.g. `brand-logos`."),
+    filename: z.string().optional().describe("Object filename; a UUID is minted when omitted."),
+    contentType: z.string().optional().describe("MIME type; inferred from a data: URL when omitted."),
+  })
+  .passthrough()
+  .openapi("OrgUploadRequest");
+
+const OrgUploadResponse = z
+  .object({
+    id: z.string(),
+    url: z.string().describe("Permanent public URL — renders in an <img> with no auth."),
+    size: z.number(),
+    contentType: z.string(),
+  })
+  .passthrough()
+  .openapi("OrgUploadResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/uploads",
+  tags: ["Uploads"],
+  summary: "Upload an image the CUSTOMER owns and get its public URL",
+  description:
+    "Proxy to cloudflare-service POST /upload/base64, the ORG-scoped upload: the file belongs to the calling org, so a run is opened under it and the storage cost is declared against it. First caller is Brand Settings, where a customer replaces the logo their brand is shown with. The body is forwarded untransformed and the response shape (`{ id, url, size, contentType }`) is owned by cloudflare-service. Body size is bound by this gateway's 10mb JSON limit; base64 inflates a file by ~4/3, so roughly 7.5MB of image.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: OrgUploadRequest } } } },
+  responses: {
+    200: { description: "Stored; `url` is the public URL", content: { "application/json": { schema: OrgUploadResponse } } },
+    400: { description: "Invalid body, forwarded verbatim from cloudflare-service", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "cloudflare-service unreachable, or the upload failed", content: errorContent },
+  },
 });
 
 const crmErrorResponses = {
