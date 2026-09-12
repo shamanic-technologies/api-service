@@ -243,6 +243,30 @@
         "type": "object",
         "properties": {}
       },
+      "StatedMonthlyAmountsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "StatedMonthlyAmountResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "StatedMonthlyAmountConflict": {
+        "type": "object",
+        "properties": {}
+      },
+      "StatedMonthlyAmountCreateRequest": {
+        "type": "object",
+        "properties": {}
+      },
+      "StatedMonthlyAmountUpdatedResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "StatedMonthlyAmountUpdateRequest": {
+        "type": "object",
+        "properties": {}
+      },
       "MeResponse": {
         "type": "object",
         "properties": {
