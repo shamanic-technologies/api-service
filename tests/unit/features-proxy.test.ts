@@ -205,8 +205,11 @@ describe("Features proxy routes", () => {
       /router\.(get|post|put)\(/.test(l) &&
       l.includes('"/') &&
       !l.includes("/public/") &&
-      // Staff-only cross-org route: gated by authenticatePlatform + requireStaff, no org context.
-      !l.includes("/features/audit/")
+      // Staff-only cross-org route: gated by authenticatePlatform + requireStaff, which is a
+      // STRONGER gate than the org one (it demands the platform key AND an allowlisted staff
+      // email), and carries no org context at all — the audit reads and the stated-monthly-amounts
+      // CRUD both live there.
+      !l.includes("requireStaff")
     );
     expect(routeLines.length).toBeGreaterThan(0);
     for (const line of routeLines) {

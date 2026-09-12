@@ -709,6 +709,117 @@ registry.registerPath({
   },
 });
 
+// ── Staff stated monthly amounts (platform key + STAFF_EMAILS) ──────────────
+//
+// Transparent CRUD proxy to features-service /internal/stated-monthly-amounts. Request bodies and
+// responses are producer-owned passthroughs (rule #8) — this gateway declares no field of them. The
+// query object below documents the filters features-service serves TODAY; it is a doc, not a
+// whitelist (rule #11), and the caller's query string is forwarded verbatim.
+const statedMonthlyAmountsQueryParams = z
+  .object({
+    orgId: z.string().optional().describe("Restrict to one organization. Optional."),
+    brandId: z.string().optional().describe("Restrict to one brand. Optional."),
+  })
+  .passthrough();
+
+const StatedMonthlyAmountIdParam = z.object({
+  id: z.string().describe("Stated monthly amount ID"),
+});
+
+const statedAmountConflictContent = {
+  "application/json": {
+    schema: z.object({}).passthrough().openapi("StatedMonthlyAmountConflict"),
+  },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/stated-monthly-amounts",
+  tags: ["Features"],
+  summary: "List stated monthly amounts (staff only)",
+  description:
+    "STAFF-ONLY list of what a HUMAN has stated a brand is worth per month, over a date range. Platform-wide staff data, so gated by " +
+    "platform API key + STAFF_EMAILS x-email (same tier as GET /v1/features/audit/revenue); no org context is involved. The caller's query " +
+    "string is forwarded verbatim — `orgId` and `brandId` are the filters features-service serves today. Transparent proxy to " +
+    "features-service GET /internal/stated-monthly-amounts. Response is producer-owned.",
+  security: platformAuth,
+  request: { query: statedMonthlyAmountsQueryParams },
+  responses: {
+    200: { description: "Stated monthly amounts — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StatedMonthlyAmountsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/features/stated-monthly-amounts",
+  tags: ["Features"],
+  summary: "State what a brand is worth per month (staff only)",
+  description:
+    "STAFF-ONLY create of a stated monthly amount for an (org, brand) pair over a date range. Gated by platform API key + STAFF_EMAILS " +
+    "x-email. The body is forwarded verbatim; features-service owns its vocabulary and its validation, including the 409 it raises when the " +
+    "range overlaps another stated amount for the same brand — that refusal reaches the caller with its status and its body unchanged, " +
+    "reason included. Transparent proxy to features-service POST /internal/stated-monthly-amounts.",
+  security: platformAuth,
+  request: {
+    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("StatedMonthlyAmountCreateRequest") } } },
+  },
+  responses: {
+    201: { description: "Created stated monthly amount — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StatedMonthlyAmountResponse") } } },
+    400: { description: "Rejected by features-service — body forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    409: { description: "Overlaps a stated amount already in force for this brand — features-service's refusal, reason included", content: statedAmountConflictContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/features/stated-monthly-amounts/{id}",
+  tags: ["Features"],
+  summary: "Edit a stated monthly amount (staff only)",
+  description:
+    "STAFF-ONLY edit of one stated monthly amount. Gated by platform API key + STAFF_EMAILS x-email. The body is forwarded verbatim — which " +
+    "keys are PRESENT is what features-service reads, so an omitted key keeps its stored value while an explicit null opens that bound. A 404 " +
+    "for an unknown id and a 409 for an overlapping range both reach the caller unchanged. Transparent proxy to features-service " +
+    "PATCH /internal/stated-monthly-amounts/{id}.",
+  security: platformAuth,
+  request: {
+    params: StatedMonthlyAmountIdParam,
+    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("StatedMonthlyAmountUpdateRequest") } } },
+  },
+  responses: {
+    200: { description: "Updated stated monthly amount — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StatedMonthlyAmountUpdatedResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "No stated monthly amount with this id", content: errorContent },
+    409: { description: "Overlaps a stated amount already in force for this brand — features-service's refusal, reason included", content: statedAmountConflictContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/features/stated-monthly-amounts/{id}",
+  tags: ["Features"],
+  summary: "Delete a stated monthly amount (staff only)",
+  description:
+    "STAFF-ONLY delete of one stated monthly amount. Gated by platform API key + STAFF_EMAILS x-email. Answers features-service's own 204 on " +
+    "success and its 404 when no row carries the id. Transparent proxy to features-service DELETE /internal/stated-monthly-amounts/{id}.",
+  security: platformAuth,
+  request: { params: StatedMonthlyAmountIdParam },
+  responses: {
+    204: { description: "Deleted — no content, as features-service answers" },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "No stated monthly amount with this id", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
 // Authenticated endpoints — proxied to features-service
 registry.registerPath({
   method: "get",
