@@ -388,6 +388,7 @@ export function buildDocument(
       { name: "AI Visibility", description: "AI visibility-score audits (ai-visibility-score-service proxy)" },
       { name: "Invites", description: "Invite-only gate (Wave 0.5): validate codes, query org quota, claim rewards" },
       { name: "Waitlist", description: "Waitlist for users without an invite code" },
+      { name: "Rewards", description: "Customer reward tasks and their due counts (client-service proxy)" },
       { name: "Mailing Lists", description: "Staff mailing lists and written updates (transactional-email-service proxy, staff-only)" },
     ],
   }) as unknown as Record<string, unknown>;
