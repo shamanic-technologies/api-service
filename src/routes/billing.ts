@@ -151,6 +151,45 @@ router.get("/billing/accounts/saved_payment_method", authenticate, requireOrg, a
 });
 
 /**
+ * DELETE /v1/billing/accounts/saved_payment_method
+ * Proxy to billing-service DELETE /v1/accounts/saved_payment_method.
+ *
+ * A customer stops us holding their card, from their own billing page. The
+ * dashboard is the only caller and it only ever talks to this gateway, so this
+ * hop is the whole feature's reachability.
+ *
+ * The ORDER is billing-service's and it is already correct there: what is owed
+ * is collected first, on the card that is about to go, then the card goes
+ * whatever that collection did. The gateway adds no orchestration, no
+ * pre-check and no retry (CLAUDE.md #2).
+ *
+ * REFUSED FOR NOBODY here. Whether removal is allowed is billing's decision and
+ * it allows everybody at any balance — a gate of our own would trap the one
+ * customer it exists to protect us from. The org whose card goes is the
+ * AUTHENTICATED one: it travels in `x-org-id` from `buildInternalHeaders`, so a
+ * caller cannot name someone else's.
+ *
+ * Body and status pass through field-for-field via `respondUpstreamError`
+ * (CLAUDE.md #7/#8) — billing's counters (`removed`, `already_removed`,
+ * `auto_topup_disarmed`, `settled_cents`, `settle_skip_reason`) are what the
+ * page renders, and a field billing adds later reaches the dashboard with no
+ * edit here. A 502 means we could not tell whether the card is gone and must
+ * never read as a silent success.
+ */
+router.delete("/billing/accounts/saved_payment_method", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/saved_payment_method",
+      { method: "DELETE", headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to remove the saved card");
+  }
+});
+
+/**
  * POST /v1/billing/accounts/charge
  * Proxy to billing-service POST /internal/accounts/by-org/:orgId/charge.
  *

@@ -5420,6 +5420,36 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "delete",
+  path: "/v1/billing/accounts/saved_payment_method",
+  tags: ["Billing"],
+  summary: "Stop holding this org's card",
+  description:
+    "Removes the calling org's saved card. billing-service collects what is owed FIRST, on the card that is about " +
+    "to go, then removes it whatever that collection did — the gateway adds no ordering, no pre-check and no retry. " +
+    "Refused for nobody: no balance, no debt state and no failed charge blocks it, and an org with no card is not " +
+    "an error. Nothing is forgiven — a debt that could not be collected stays owed. The org is the authenticated " +
+    "one; a caller cannot name someone else's. Response is billing-service's, forwarded field-for-field.",
+  security: authed,
+  responses: {
+    200: {
+      description: "The card is gone — pass-through from billing-service",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("RemoveSavedPaymentMethodResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Billing account not found", content: errorContent },
+    502: {
+      description: "The removal could not be performed — retry; it is safe to repeat",
+      content: errorContent,
+    },
+  },
+});
+
+registry.registerPath({
   method: "patch",
   path: "/v1/billing/accounts/auto_topup",
   tags: ["Billing"],
