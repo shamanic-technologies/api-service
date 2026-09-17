@@ -9077,6 +9077,42 @@ registry.registerPath({
   },
 });
 
+// ---------------------------------------------------------------------------
+// Brand reward tasks — owned by CLIENT-SERVICE (the reward-task ledger).
+// Proxies to client-service /internal/brands/{brandId}/reward-tasks.
+// ---------------------------------------------------------------------------
+const BrandRewardTasksParam = z.object({
+  brandId: z.string().describe("Brand ID"),
+});
+
+// Passthrough — response shape owned by client-service (CLAUDE.md #8).
+const BrandRewardTasksResponseSchema = z
+  .object({})
+  .passthrough()
+  .openapi("BrandRewardTasksResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/reward-tasks",
+  tags: ["Rewards"],
+  summary: "Get a brand's reward tasks and its per-offer / per-brand due counts",
+  description:
+    "Proxy to client-service GET /internal/brands/{brandId}/reward-tasks. " +
+    "client-service owns the reward-task ledger; the org is the authenticated one, so a " +
+    "caller cannot read a brand another org owns. Response shape is owned by the " +
+    "downstream service and forwarded byte-for-byte.",
+  security: authed,
+  request: { params: BrandRewardTasksParam },
+  responses: {
+    200: {
+      description: "The brand's reward tasks",
+      content: { "application/json": { schema: BrandRewardTasksResponseSchema } },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // AUDIENCES (transparent proxy → human-service /orgs/audiences/*)
 // ===================================================================
