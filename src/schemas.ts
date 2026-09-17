@@ -939,6 +939,33 @@ export const CreateCampaignRequestSchema = z
     },
   });
 
+// The customer starts the campaign for a pair they have already funded.
+//
+// campaign-service's body is `.strict()` ON PURPOSE: a caller reaching for a workflow, a
+// campaign name or a per-campaign budget is TOLD no rather than having it silently stripped,
+// because each of those is a decision the browser does not own. So this gateway declares the
+// four fields the customer's own screen knows purely as DOCUMENTATION and carries
+// `.passthrough()` — the handler forwards `req.body` byte-identical and never parses against
+// this schema. A whitelist here would strip exactly the field campaign-service means to refuse,
+// turning its "no" into a silent acceptance of a different request (CLAUDE.md rule #8 corollary).
+export const StartFundedPairRequestSchema = z
+  .object({
+    brandId: z.string().uuid().describe("The brand whose funded pair is being started."),
+    offerId: z.string().uuid().nullable().optional().describe("The offer whose money funds this pair. Absent is the pre-offer population."),
+    funnelKey: z.string().min(1).describe("The sales funnel, in any spelling campaign-service accepts. Vocabulary owned downstream — not enumerated here."),
+    featureSlug: z.string().min(1).describe("The acquisition channel, as a features-service feature slug."),
+    legKey: z.string().min(1).nullable().optional().describe("Disambiguation only: a customer who funded TWO legs of one (funnel, channel, offer) has two campaigns to start, and this says which. Never required."),
+  })
+  .passthrough()
+  .openapi("StartFundedPairRequest", {
+    example: {
+      brandId: "75d7e3e8-6926-4f85-a557-976895400666",
+      offerId: "0f5f2b0a-6f34-4f2a-9a0c-2b53a5b9a111",
+      funnelKey: "visit_meeting",
+      featureSlug: "sales-cold-email-outreach",
+    },
+  });
+
 /** Known discovery workflow prefixes and their campaign types. */
 export const DISCOVERY_PREFIXES: Array<{ prefix: string; type: string }> = [
   { prefix: "outlets-database-discovery-", type: "outlets-database-discovery" },
@@ -1126,6 +1153,67 @@ registry.registerPath({
       content: errorContent,
     },
     401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/campaigns/start-funded-pair",
+  tags: ["Campaigns"],
+  summary: "Start the campaign for a funded pair",
+  description:
+    "Start the campaign for a (sales funnel x acquisition channel) pair the customer has already funded.\n\n" +
+    "Funding a pair states a ceiling and creates no campaign — money must not start anything on its own. " +
+    "This is the half a PERSON performs: the caller states only what its own screen knows (which brand, which " +
+    "offer, which sales funnel, which acquisition channel), plus an optional `legKey` when the customer funded " +
+    "two legs of the same pair and there are two campaigns to start.\n\n" +
+    "It CANNOT state a workflow, a campaign name or a per-campaign budget: the workflow is campaign-service's " +
+    "choice and is re-picked every run, the name is derived from the identity, and the money is billing's and is " +
+    "already set. campaign-service's body is strict, so a request carrying one of those is refused rather than " +
+    "having it stripped — this gateway forwards the body byte-identical and adds nothing.\n\n" +
+    "A pair that cannot be started is REFUSED with a sentence written for a person, in `error`, alongside a " +
+    "machine-readable `reason` code, under campaign-service's own status (400, 409 or 502). All three reach the " +
+    "caller unchanged: \"nothing can run that channel yet\", \"you haven't funded it\" and \"this channel doesn't " +
+    "sell that funnel\" are three different answers and the customer is owed the right one.",
+  security: authed,
+  request: {
+    body: {
+      content: { "application/json": { schema: StartFundedPairRequestSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description:
+        "The pair's campaign. `started: false, alreadyRunning: true` when it was already live; " +
+        "`started: true` when a stopped campaign was started again. Shape owned by campaign-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("StartFundedPairResponse"),
+        },
+      },
+    },
+    201: {
+      description: "A campaign was created for the pair and started. Shape owned by campaign-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("StartFundedPairCreatedResponse"),
+        },
+      },
+    },
+    400: {
+      description: "campaign-service's refusal, verbatim: a customer-facing `error` sentence plus a `reason` code.",
+      content: errorContent,
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    409: {
+      description: "campaign-service's refusal, verbatim: a customer-facing `error` sentence plus a `reason` code.",
+      content: errorContent,
+    },
+    502: {
+      description: "campaign-service's refusal, verbatim: a customer-facing `error` sentence plus a `reason` code.",
+      content: errorContent,
+    },
     500: { description: "Internal error", content: errorContent },
   },
 });
