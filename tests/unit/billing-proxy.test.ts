@@ -57,13 +57,13 @@ describe("Billing proxy routes", () => {
   });
 
   it("should use authenticate and requireOrg on all authenticated endpoints", () => {
-    // 14 single-line routes + 1 import = 15. The remaining route
+    // 15 single-line routes + 1 import = 16. The remaining route
     // (PATCH /brands/:brandId/funnel-budgets/:funnelKey) spreads its middleware over
     // several lines, so it is covered by funnel-budgets-auth.test.ts instead — that
     // file drives the real gate rather than reading the source (CLAUDE.md #7 corollary 3).
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    expect(authMatches!.length).toBe(15);
+    expect(authMatches!.length).toBe(16);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints (no x-key-source)", () => {
@@ -71,7 +71,7 @@ describe("Billing proxy routes", () => {
     expect(content).not.toContain('"x-key-source"');
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(15);
+    expect(headerMatches!.length).toBe(16);
   });
 
   it("should have GET /billing/payments endpoint sourced from stripe-service", () => {
