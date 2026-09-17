@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, externalServices } from "../lib/service-client.js";
+import { callExternalService, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 import { fetchDeliveryStats, EMPTY_DELIVERY_STATS } from "../lib/delivery-stats.js";
@@ -196,6 +196,54 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     // re-emit it field-for-field under its own status instead of flattening the JSON
     // body into an `error` string (CLAUDE.md rule #7, corollary).
     respondUpstreamError(res, error, "Failed to create campaign");
+  }
+});
+
+/**
+ * POST /v1/campaigns/start-funded-pair
+ *
+ * The CUSTOMER starts the campaign for a (sales funnel x acquisition channel) pair they have
+ * already funded. Since campaign-service removed auto-provisioning, funding a pair states a
+ * ceiling and creates no campaign — money must not start anything on its own. This is the way
+ * a person says "start it", and until this route existed the capability was live in prod with
+ * no way for a dashboard customer to reach it.
+ *
+ * Pure passthrough, and every part of that is load-bearing here:
+ *
+ *  - the BODY is forwarded byte-identical. campaign-service's body is `.strict()` on purpose,
+ *    so a caller reaching for a workflow, a name or a per-campaign budget must be TOLD no.
+ *    Parsing against a gateway schema would strip exactly the field it means to refuse and turn
+ *    that "no" into silent acceptance of a different request (CLAUDE.md rule #8 corollary). This
+ *    gateway adds, defaults and injects nothing.
+ *  - the REFUSAL is forwarded whole. campaign-service answers 400 / 409 / 502 with a sentence
+ *    written for a person in `error` plus a `reason` code, and the dashboard renders `error`
+ *    verbatim to the customer. `respondUpstreamError` re-emits that body field-for-field under
+ *    the upstream status; flattening it into a generic 500 is the single failure this route
+ *    exists to avoid.
+ *  - the STATUS is forwarded too, which is why this pipes rather than calls. campaign-service
+ *    answers 201 when it created the campaign and 200 when the pair already had one, and
+ *    `callExternalService` + `res.json` would silently normalise the 201 away.
+ *
+ * `requireUser` is not decoration: campaign-service refuses a start that does not state a full
+ * identity, because the workflow read behind it does. `buildInternalHeaders` carries the
+ * authenticated org, user and this request's own run id — a caller cannot name whose pair to start.
+ */
+router.post("/campaigns/start-funded-pair", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.campaign,
+      "/campaigns/start-funded-pair",
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+        expressRes: res,
+      }
+    );
+  } catch (error: any) {
+    console.error("[api-service] POST /v1/campaigns/start-funded-pair — FAILED:", error.message);
+    if (res.headersSent) return;
+    respondUpstreamError(res, error, "Failed to start the campaign for this funded pair");
   }
 });
 
