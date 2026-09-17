@@ -5282,6 +5282,20 @@ export const CreateCheckoutSessionRequestSchema = z
   })
   .openapi("CreateCheckoutSessionRequest");
 
+export const ChargeSavedPaymentMethodRequestSchema = z
+  .object({
+    amountCents: inboundCents.describe(
+      "Amount to charge in cents. Must be at least Stripe's minimum charge amount — billing-service answers 400 below it. No cap or floor is re-stated here.",
+    ),
+    idempotencyKey: z
+      .string()
+      .describe(
+        "Caller-supplied key that makes a retry of the SAME charge safe. Owned by billing-service.",
+      ),
+  })
+  .passthrough()
+  .openapi("ChargeSavedPaymentMethodRequest");
+
 export const CreatePortalSessionRequestSchema = z
   .object({
     return_url: z.string().url().describe("URL to redirect after the portal session ends"),
@@ -5871,6 +5885,96 @@ registry.registerPath({
       },
     },
     401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/billing/accounts/charge",
+  tags: ["Billing"],
+  summary: "Charge a stated amount against the org's saved card",
+  description:
+    "Charges `amountCents` against the card the calling org already saved, off-session — no " +
+    "redirect and no hosted page, so a customer paying for several things one at a time stays " +
+    "on the page after the first (hosted) payment saved the card. The org charged is the " +
+    "authenticated one (resolved from the Bearer key); no orgId is accepted in the body. " +
+    "Transparent proxy to billing-service POST /internal/accounts/by-org/{orgId}/charge — " +
+    "request body and response are owned by billing-service (passthrough). Every refusal " +
+    "carries a stable `code` and reaches the caller field-for-field under billing's own status " +
+    "(CLAUDE.md #7): 402 `charge_declined`, 409 `no_chargeable_payment_method`, 409 " +
+    "`card_not_chargeable_off_session`, 429 `charge_backoff`, 502 `upstream_error`. The gateway " +
+    "adds no retry or backoff of its own.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": { schema: ChargeSavedPaymentMethodRequestSchema },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description:
+        "Charge settled — pass-through from billing-service (`{ ok, charged, amountCents, reference }`)",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("ChargeSavedPaymentMethodResponse"),
+        },
+      },
+    },
+    400: { description: "Missing required field, or an amount below Stripe's minimum (billing-service)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    402: {
+      description:
+        "Card declined, no money taken. billing-service's body reaches the caller field-for-field " +
+        "and carries `code: \"charge_declined\"`. Documented, not owned.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("ChargeSavedPaymentMethodDeclined"),
+        },
+      },
+    },
+    409: {
+      description:
+        "Nothing chargeable: `code: \"no_chargeable_payment_method\"` (no card saved) or " +
+        "`code: \"card_not_chargeable_off_session\"` (issuing country cannot be charged " +
+        "off-session). Distinguish on `code`; both mean send the customer through hosted checkout.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("ChargeSavedPaymentMethodUnavailable"),
+        },
+      },
+    },
+    429: {
+      description:
+        "Two distinct refusals share this status and are told apart by the body: " +
+        "`code: \"charge_backoff\"` — billing-service is holding off after a recent failed " +
+        "charge on this card; or the gateway's own rate limiter (body `error: \"Rate limit " +
+        "exceeded\"`). Either way the caller decides when to retry — neither this gateway nor " +
+        "billing-service retries on its behalf.",
+      headers: {
+        "Retry-After": {
+          description: "Seconds to wait before retrying.",
+          schema: { type: "integer" as const },
+        },
+      },
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("ChargeSavedPaymentMethodBackoff"),
+        },
+      },
+    },
+    502: {
+      description:
+        "`code: \"upstream_error\"` — stripe-service unreachable. NOT a decline: no answer was " +
+        "obtained, so the charge may be retried.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("ChargeSavedPaymentMethodUpstreamError"),
+        },
+      },
+    },
     500: { description: "Internal error", content: errorContent },
   },
 });

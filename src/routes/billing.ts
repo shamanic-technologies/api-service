@@ -150,6 +150,58 @@ router.get("/billing/accounts/saved_payment_method", authenticate, requireOrg, a
   }
 });
 
+/**
+ * POST /v1/billing/accounts/charge
+ * Proxy to billing-service POST /internal/accounts/by-org/:orgId/charge.
+ *
+ * Charges a STATED amount against the card the org already saved, off-session —
+ * no redirect, no hosted page. Sell-first onboarding uses it for funnels 2..N:
+ * funnel 1 goes through hosted Checkout (which saves the card), every later
+ * funnel settles inline on a CTA press.
+ *
+ * The org charged is the AUTHENTICATED one (`req.orgId`, resolved from the
+ * Bearer key by `authenticate` + `requireOrg`) and is put in the downstream path
+ * here — a caller cannot name whose card to charge. Same shape as
+ * GET /v1/billing/payments above.
+ *
+ * Downstream is `/internal/*` (service-auth, x-api-key injected by
+ * callExternalService), so the browser could never reach it directly — which is
+ * exactly why this route exists (CLAUDE.md #3: internal routes are called
+ * server-side, never mounted for clients).
+ *
+ * Every refusal billing-service raises is machine-readable and the dashboard
+ * branches on it, so the status AND the body must survive field-for-field
+ * (CLAUDE.md #7, PR #933):
+ *   402 charge_declined                  — card declined, no money taken
+ *   409 no_chargeable_payment_method     — nothing saved to charge
+ *   409 card_not_chargeable_off_session  — issuing country blocks off-session
+ *   429 charge_backoff                   — recent failure, retry later
+ *   502 upstream_error                   — stripe-service unreachable
+ * A 402/409 sends the consumer back to hosted checkout; a 502 means "try again"
+ * and must never read as a decline. Rebuilding `{ error: message }` would
+ * destroy `code` and make both branches impossible, and the gateway adds NO
+ * retry/backoff of its own — `charge_backoff` is billing's answer and the caller
+ * decides.
+ *
+ * The body is forwarded verbatim: billing owns `amountCents` / `idempotencyKey`
+ * and whatever it accepts next, and a whitelist here would drop a field the
+ * caller sent (CLAUDE.md #8 corollary). The minimum charge amount is Stripe's
+ * and billing 400s below it — not a ceiling or floor this gateway re-states.
+ */
+router.post("/billing/accounts/charge", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!requireBodyFields(res, req.body, ["amountCents", "idempotencyKey"])) return;
+    const result = await callExternalService(
+      externalServices.billing,
+      `/internal/accounts/by-org/${encodeURIComponent(req.orgId!)}/charge`,
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to charge the saved payment method");
+  }
+});
+
 // POST /v1/billing/checkout-sessions — create Stripe checkout session
 router.post("/billing/checkout-sessions", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
