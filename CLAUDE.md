@@ -102,6 +102,32 @@ The Hetzner migration (2026-08-07/08) moved 24 services; the rest exist nowhere,
 
 **`src/routes/admin.ts` is NOT in this class.** Its `SERVICE_DB_REGISTRY` maps a service name to a `*_DATABASE_URL` and opens a Postgres pool directly — it never calls the service. Six of the retired services still have a restored database on the box, so those entries keep working. Read what a route actually reaches before removing it by name.
 
+### `list_service_endpoints` LAGS a downstream merge — read the producer's `origin/main` when a route is hours old
+
+The API registry indexes a service's PUBLISHED document, so a downstream route
+that merged this morning is absent from `list_service_endpoints`, from
+`search_endpoints`, and from the downstream CONTAINER's own `openapi.json`
+until the box's deploy cron picks the commit up. All three agree, which is what
+makes it convincing: the route reads as not existing rather than as not
+deployed yet, and the honest-looking next move is to tell whoever asked that
+the downstream half was never shipped.
+
+Settle it against the producer's source: on the box,
+`cd /root/distribute/repos/<svc> && git fetch origin main -q && git log origin/main --oneline -5`,
+then `git show origin/main:src/routes/<file>.ts` for the handler and
+`git show origin/main:src/schemas.ts` for the response it documents. That is
+the deployed contract a few minutes early, and it is the contract to proxy.
+The registry remains right for everything older than the last deploy tick, so
+keep using it first — this is the fallback for a route you were told is new.
+
+Verify after your own release by reading BOTH served artifacts, not the
+registry: the DELETE (or whatever you added) present in this gateway's
+container `openapi.json` AND in the downstream's. Shipped 2026-09-17 with
+v0.110.1 (`DELETE /v1/billing/accounts/saved_payment_method`): billing-service
+merged its half at 23:00 the previous evening, the box was still serving the
+commit before it, and the registry listed six `/v1/accounts` routes with no
+removal among them.
+
 ### Brand-service path convention
 
 - `/orgs/brands/*` (no ID in path) = org-scoped operations using `x-org-id` / `x-brand-id` headers (list, extract-fields, extract-images)
