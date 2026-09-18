@@ -27,6 +27,13 @@ const ROUTES: Array<[string, string]> = [
   ["post", "/v1/mailing-lists/updates/preview"],
   ["post", "/v1/mailing-lists/investors/updates"],
   ["get", "/v1/mailing-lists/investors/updates"],
+  ["post", "/v1/mailing-lists/investors/releases"],
+  ["get", "/v1/mailing-lists/investors/releases"],
+  ["get", "/v1/mailing-lists/releases/rel_1"],
+  ["patch", "/v1/mailing-lists/releases/rel_1/pace"],
+  ["post", "/v1/mailing-lists/releases/rel_1/pause"],
+  ["post", "/v1/mailing-lists/releases/rel_1/resume"],
+  ["post", "/v1/mailing-lists/releases/rel_1/cancel"],
 ];
 
 describe("/v1/mailing-lists — auth gate", () => {

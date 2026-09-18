@@ -10062,6 +10062,169 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Mailing-list releases (proxy to transactional-email-service
+// /mailing-lists/:slug/releases and /mailing-lists/releases/:releaseId/*)
+//
+// A release is one written update sent to a list over several days at a stated
+// daily pace — the only way to send the 30,013-address newsletter — watchable,
+// re-paceable, pausable, resumable and cancellable from the staff console.
+// STAFF-ONLY, same gate as the rest of the Mailing Lists family.
+//
+// Every request and response shape below is owned by transactional-email-service.
+// Passthrough only. The status codes are contract too: 201 means a release was
+// created, 200 means an identical live one already existed and was returned
+// instead, and 409 is a refusal whose words the caller has to be able to read.
+// ===================================================================
+const MailingListReleaseRequest = z
+  .object({})
+  .passthrough()
+  .openapi("MailingListReleaseRequest");
+
+const MailingListReleaseIdParam = z.object({
+  releaseId: z.string().describe("The release's id, as returned when it was created."),
+});
+
+const mailingListReleaseErrorResponses = {
+  ...mailingListErrorResponses,
+  409: {
+    description:
+      "The release refuses the transition, or refuses a pace it cannot deliver " +
+      "(forwarded verbatim, with the reason)",
+    content: errorContent,
+  },
+};
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/mailing-lists/{slug}/releases",
+  tags: ["Mailing Lists"],
+  summary: "Start a paced release of an update to a mailing list (staff only)",
+  description:
+    "Proxy to transactional-email-service POST /mailing-lists/{slug}/releases. The body " +
+    "carries the same subject and markdown body a single-request update takes, plus the " +
+    "daily limit the send is paced at; downstream enrols every subscriber and mails them " +
+    "over as many days as that pace needs, without holding a connection open. Answers 201 " +
+    "when a release was created and 200 when an identical one was already running — both " +
+    "cross unchanged. Body and response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    params: MailingListSlugParam,
+    body: { content: { "application/json": { schema: MailingListReleaseRequest } } },
+  },
+  responses: {
+    200: { description: "An identical live release already existed and is returned instead", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    201: { description: "The release was created and has started", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListReleaseErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/mailing-lists/{slug}/releases",
+  tags: ["Mailing Lists"],
+  summary: "Read a mailing list's releases (staff only)",
+  description:
+    "Proxy to transactional-email-service GET /mailing-lists/{slug}/releases. Response " +
+    "shape is owned by the downstream service.",
+  security: authed,
+  request: { params: MailingListSlugParam },
+  responses: {
+    200: { description: "The list's releases", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListReleaseErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/mailing-lists/releases/{releaseId}",
+  tags: ["Mailing Lists"],
+  summary: "Watch one release (staff only)",
+  description:
+    "Proxy to transactional-email-service GET /mailing-lists/releases/{releaseId}. Reports " +
+    "where the release has got to — how many addresses are done, how many are left, and at " +
+    "what pace. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: MailingListReleaseIdParam },
+  responses: {
+    200: { description: "The release's current state", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListReleaseErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/mailing-lists/releases/{releaseId}/pace",
+  tags: ["Mailing Lists"],
+  summary: "Change a release's daily pace (staff only)",
+  description:
+    "Proxy to transactional-email-service PATCH /mailing-lists/releases/{releaseId}/pace. " +
+    "Downstream refuses a pace it cannot deliver, and refuses to re-pace a release that is " +
+    "already finished; the refusal comes back as a 409 with its own words, which the caller " +
+    "needs to read. Body and response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    params: MailingListReleaseIdParam,
+    body: { content: { "application/json": { schema: MailingListReleaseRequest } } },
+  },
+  responses: {
+    200: { description: "The release at its new pace", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListReleaseErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/mailing-lists/releases/{releaseId}/pause",
+  tags: ["Mailing Lists"],
+  summary: "Hold a release (staff only)",
+  description:
+    "Proxy to transactional-email-service POST /mailing-lists/releases/{releaseId}/pause. " +
+    "Nothing further is sent until it is resumed. A release that is not in a pausable state " +
+    "refuses with a 409 forwarded verbatim. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: MailingListReleaseIdParam },
+  responses: {
+    200: { description: "The release, now held", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListReleaseErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/mailing-lists/releases/{releaseId}/resume",
+  tags: ["Mailing Lists"],
+  summary: "Let a held release continue (staff only)",
+  description:
+    "Proxy to transactional-email-service POST /mailing-lists/releases/{releaseId}/resume. " +
+    "A release that is not held refuses with a 409 forwarded verbatim. Response shape is " +
+    "owned by the downstream service.",
+  security: authed,
+  request: { params: MailingListReleaseIdParam },
+  responses: {
+    200: { description: "The release, sending again", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListReleaseErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/mailing-lists/releases/{releaseId}/cancel",
+  tags: ["Mailing Lists"],
+  summary: "Stop a release for good (staff only)",
+  description:
+    "Proxy to transactional-email-service POST /mailing-lists/releases/{releaseId}/cancel. " +
+    "Addresses that were never going to be mailed are settled rather than left pending. A " +
+    "cancelled release cannot be resumed — sending the rest of the update is a new release. " +
+    "Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: MailingListReleaseIdParam },
+  responses: {
+    200: { description: "The release, cancelled", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListReleaseErrorResponses,
+  },
+});
+
+// ===================================================================
 // Platform uploads (proxy to cloudflare-service POST /internal/upload/base64)
 //
 // A platform asset — ours, not any customer org's. Staff pick a file in the

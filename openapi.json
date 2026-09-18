@@ -7144,6 +7144,10 @@
         "type": "object",
         "properties": {}
       },
+      "MailingListReleaseRequest": {
+        "type": "object",
+        "properties": {}
+      },
       "PlatformUploadResponse": {
         "type": "object",
         "properties": {}
