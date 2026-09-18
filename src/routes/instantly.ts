@@ -4,7 +4,12 @@ import {
   requireStaff,
   AuthenticatedRequest,
 } from "../middleware/auth.js";
-import { callExternalService, externalServices } from "../lib/service-client.js";
+import {
+  callExternalService,
+  pipeExternalService,
+  externalServices,
+} from "../lib/service-client.js";
+import { respondUpstreamError } from "../lib/upstream-error.js";
 
 const router = Router();
 
@@ -232,6 +237,111 @@ router.get(
       res
         .status(error.statusCode || 500)
         .json({ error: error.message || "Failed to get instantly infra spend" });
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Unified-model ops reads (instantly-service#822, v0.82.17).
+//
+// Same staff tier as the audit and infra proxies above. These are the reads the
+// rebuilt admin "Audit → Instantly" page is built on: one row per domain, per
+// real mailbox, per sending address, the fleet rollup, the lifecycle rules as
+// data, and the inbox (threads / messages / one message body).
+//
+// Byte passthrough, not parse-and-re-emit: `pipeExternalService` copies the
+// upstream status, content-type and body straight through, so instantly-service's
+// own 400 (`limit` is REQUIRED on threads and messages — there is no default) and
+// its 404 on an unknown message reach the caller exactly as they left it. The
+// catch re-emits the upstream JSON field-for-field via respondUpstreamError
+// (CLAUDE.md rule #7 corollary), never flattened into one error string.
+//
+// The query string is forwarded VERBATIM off req.originalUrl (rule #11): these
+// reads take a dozen filters each and instantly-service owns that vocabulary, so
+// a filter it ships next needs no edit here. Nothing is read out of it at this
+// layer — `limit` missing is the downstream's 400 to raise, not the gateway's.
+// ---------------------------------------------------------------------------
+
+/**
+ * The inbound query string, verbatim, including the leading `?` (empty when there
+ * is none). Read off `req.originalUrl` rather than re-serialized from `req.query`:
+ * re-serializing imposes this gateway's opinion on repeated keys, ordering and
+ * encoding, and silently drops anything the gateway does not know about.
+ */
+function rawQueryString(originalUrl: string): string {
+  const index = originalUrl.indexOf("?");
+  return index === -1 ? "" : originalUrl.slice(index);
+}
+
+/**
+ * Register one staff-gated GET passthrough onto `/v1/instantly/ops/<name>` →
+ * instantly-service `/internal/ops/<name>`.
+ *
+ * Explicit per-endpoint registration (no catch-all): each call below names one
+ * downstream route this gateway knows about, and adding a downstream read means
+ * adding a line here plus its openapi entry.
+ */
+function registerOpsRead(name: string, label: string): void {
+  router.get(
+    `/instantly/ops/${name}`,
+    authenticatePlatform,
+    requireStaff,
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        await pipeExternalService(
+          externalServices.instantly,
+          `/internal/ops/${name}${rawQueryString(req.originalUrl)}`,
+          { headers: staffHeaders(req), expressRes: res },
+        );
+      } catch (error: any) {
+        console.error(`[api-service] Staff instantly ops ${name} error:`, error.message);
+        if (res.headersSent) {
+          res.end();
+          return;
+        }
+        respondUpstreamError(res, error, `Failed to get instantly ops ${label}`);
+      }
+    },
+  );
+}
+
+// GET /v1/instantly/ops/lifecycle-rules — the lifecycle rules as data (staff only).
+registerOpsRead("lifecycle-rules", "lifecycle rules");
+// GET /v1/instantly/ops/domains — one row per (provider, domain) (staff only).
+registerOpsRead("domains", "domains");
+// GET /v1/instantly/ops/mailboxes — one row per real mailbox (staff only).
+registerOpsRead("mailboxes", "mailboxes");
+// GET /v1/instantly/ops/addresses — one row per sending address (staff only).
+registerOpsRead("addresses", "addresses");
+// GET /v1/instantly/ops/infra — fleet totals and per-pool rollups (staff only).
+registerOpsRead("infra", "infra");
+// GET /v1/instantly/ops/threads — the inbox list; `limit` is required downstream (staff only).
+registerOpsRead("threads", "threads");
+// GET /v1/instantly/ops/messages — every email of every typology; `limit` required (staff only).
+registerOpsRead("messages", "messages");
+
+// GET /v1/instantly/ops/messages/:id/body — the body of ONE message, read from its
+// bronze source (staff only). Declared after the literal `messages` sibling above;
+// the two cannot collide (different segment counts), but the ordering keeps the
+// file readable as list-then-detail.
+router.get(
+  "/instantly/ops/messages/:id/body",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.instantly,
+        `/internal/ops/messages/${encodeURIComponent(req.params.id)}/body${rawQueryString(req.originalUrl)}`,
+        { headers: staffHeaders(req), expressRes: res },
+      );
+    } catch (error: any) {
+      console.error("[api-service] Staff instantly ops message body error:", error.message);
+      if (res.headersSent) {
+        res.end();
+        return;
+      }
+      respondUpstreamError(res, error, "Failed to get instantly ops message body");
     }
   },
 );

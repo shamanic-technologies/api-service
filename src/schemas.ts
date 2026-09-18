@@ -5980,6 +5980,226 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/lifecycle-rules",
+  tags: ["Instantly"],
+  summary: "Get the sending lifecycle rules as data (staff only)",
+  description:
+    "Platform-scoped staff read from instantly-service's unified sending model (cross-org ops "
+    + "data, NOT customer data) — powers the rebuilt staff 'Audit → Instantly' page. Staff-only "
+    + "(platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to instantly-service GET /internal/ops/lifecycle-rules: bars and "
+    + "limits per lifecycle state, ramp, placement cadence and warmup. Response owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Lifecycle rules — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsLifecycleRulesResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/domains",
+  tags: ["Instantly"],
+  summary: "Get one row per (provider, domain) with DNS, delivery, volume and cost (staff only)",
+  description:
+    "Platform-scoped staff read from instantly-service's unified sending model (cross-org ops "
+    + "data, NOT customer data) — powers the rebuilt staff 'Audit → Instantly' page. Staff-only "
+    + "(platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to instantly-service GET /internal/ops/domains: purchase and renewal, "
+    + "the latest SPF / DMARC / DKIM / MX photograph, pooled placement delivery, addresses by lifecycle, real "
+    + "mailboxes, 30-day volume and estimated cost paid to date. Response owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Domains — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsDomainsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/mailboxes",
+  tags: ["Instantly"],
+  summary: "Get one row per real mailbox with cap, ramp, volume and cost (staff only)",
+  description:
+    "Platform-scoped staff read from instantly-service's unified sending model (cross-org ops "
+    + "data, NOT customer data) — powers the rebuilt staff 'Audit → Instantly' page. Staff-only "
+    + "(platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to instantly-service GET /internal/ops/mailboxes: vendor, pool, "
+    + "subscription, dates, aliases, cap and ramp projection, volume, delivery and cost. Response owned by "
+    + "the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Mailboxes — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsMailboxesResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/addresses",
+  tags: ["Instantly"],
+  summary: "Get every sending address with health, transport, ramp and lifecycle history (staff only)",
+  description:
+    "Platform-scoped staff read from instantly-service's unified sending model (cross-org ops "
+    + "data, NOT customer data) — powers the rebuilt staff 'Audit → Instantly' page. Staff-only "
+    + "(platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to instantly-service GET /internal/ops/addresses: a SUPERSET of "
+    + "GET /internal/audit/account-health assembled from the same rows, plus mailbox login, send transport, "
+    + "evidence expiry, next seed test, ramp projection, 7-day volume by typology and the last lifecycle "
+    + "transitions. Response owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Addresses — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsAddressesResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/infra",
+  tags: ["Instantly"],
+  summary: "Get the sending-infrastructure rollup: fleet totals and one row per pool (staff only)",
+  description:
+    "Platform-scoped staff read from instantly-service's unified sending model (cross-org ops "
+    + "data, NOT customer data) — powers the rebuilt staff 'Audit → Instantly' page. Staff-only "
+    + "(platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to instantly-service GET /internal/ops/infra: fleet totals and one "
+    + "rollup per pool (capacity, lifecycle counts, queue, volume, placement) plus the manual exclusions. "
+    + "Response owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Infra — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsInfraResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/threads",
+  tags: ["Instantly"],
+  summary: "List sending threads, newest activity first — the ops inbox (staff only)",
+  description:
+    "Platform-scoped staff read from instantly-service's unified sending model (cross-org ops "
+    + "data, NOT customer data) — powers the rebuilt staff 'Audit → Instantly' page. Staff-only "
+    + "(platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to instantly-service GET /internal/ops/threads: one row per thread "
+    + "(a sequence and its replies for outreach, the message itself for warmup and seeds) with kind, subject, "
+    + "account, mailbox, counterparty, transport, counts, first and last activity, and the lead's delivery and "
+    + "reply classification. Cursor pagination on (lastAt, threadId). "
+    + "The query string is forwarded verbatim, so any filter instantly-service accepts can be asked for; "
+    + "the parameters below are the ones it documents today, not a whitelist this gateway enforces. "
+    + "`limit` is REQUIRED downstream (there is no silent default) — omitting it answers instantly-service's own 400.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      limit: z.coerce.number().int().describe("REQUIRED downstream. Page size — there is no default; a caller states how much it wants."),
+      cursor: z.string().optional().describe("Opaque, from the previous page's nextCursor"),
+      kind: z.string().optional().describe("outreach | manual_reply | warmup | warmup_reply | seed | reply | auto_reply | bounce"),
+      direction: z.string().optional().describe("in | out"),
+      account: z.string().optional().describe("Sending address"),
+      mailbox: z.string().optional().describe("Real mailbox login"),
+      domain: z.string().optional().describe("Sending domain"),
+      counterparty: z.string().optional().describe("Substring match on the other party"),
+      orgId: z.string().optional(),
+      campaignId: z.string().optional().describe("The caller campaign id"),
+      since: z.string().optional().describe("ISO timestamp, inclusive"),
+      until: z.string().optional().describe("ISO timestamp, exclusive"),
+      placement: z.string().optional().describe("inbox | spam | missing (warmup + seed)"),
+      hasInbound: z.string().optional().describe("true | false — threads with / without an answer"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Threads page — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsThreadsResponse") } } },
+    400: { description: "Downstream rejected the query (e.g. `limit` missing)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/messages",
+  tags: ["Instantly"],
+  summary: "List messages, newest first — every email of every typology (staff only)",
+  description:
+    "Platform-scoped staff read from instantly-service's unified sending model (cross-org ops "
+    + "data, NOT customer data) — powers the rebuilt staff 'Audit → Instantly' page. Staff-only "
+    + "(platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to instantly-service GET /internal/ops/messages: one row per message, "
+    + "with the same filters as threads plus `threadId`. The body is not inline — read it from "
+    + "GET /v1/instantly/ops/messages/{id}/body. "
+    + "The query string is forwarded verbatim, so any filter instantly-service accepts can be asked for; "
+    + "the parameters below are the ones it documents today, not a whitelist this gateway enforces. "
+    + "`limit` is REQUIRED downstream (there is no silent default) — omitting it answers instantly-service's own 400.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      limit: z.coerce.number().int().describe("REQUIRED downstream. Page size — there is no default; a caller states how much it wants."),
+      cursor: z.string().optional().describe("Opaque, from the previous page's nextCursor"),
+      kind: z.string().optional().describe("outreach | manual_reply | warmup | warmup_reply | seed | reply | auto_reply | bounce"),
+      direction: z.string().optional().describe("in | out"),
+      account: z.string().optional().describe("Sending address"),
+      mailbox: z.string().optional().describe("Real mailbox login"),
+      domain: z.string().optional().describe("Sending domain"),
+      counterparty: z.string().optional().describe("Substring match on the other party"),
+      orgId: z.string().optional(),
+      campaignId: z.string().optional().describe("The caller campaign id"),
+      since: z.string().optional().describe("ISO timestamp, inclusive"),
+      until: z.string().optional().describe("ISO timestamp, exclusive"),
+      placement: z.string().optional().describe("inbox | spam | missing (warmup + seed)"),
+      threadId: z.string().optional(),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Messages page — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsMessagesResponse") } } },
+    400: { description: "Downstream rejected the query (e.g. `limit` missing)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/messages/{id}/body",
+  tags: ["Instantly"],
+  summary: "Get the body of one message, read from its bronze source (staff only)",
+  description:
+    "Platform-scoped staff read from instantly-service's unified sending model (cross-org ops "
+    + "data, NOT customer data) — powers the rebuilt staff 'Audit → Instantly' page. Staff-only "
+    + "(platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to instantly-service GET /internal/ops/messages/{id}/body: the text and "
+    + "html of one message from whichever bronze row it came from, with `source` naming that table. Warmup and "
+    + "seed bodies are generated per send and not stored, so both read null. An unknown id answers the "
+    + "downstream's own 404. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    params: z.object({
+      id: z.string().describe("The message id from GET /v1/instantly/ops/messages"),
+    }),
+  },
+  responses: {
+    200: { description: "Message body — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsMessageBodyResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "No message with that id", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/billing/checkout-sessions",
   tags: ["Billing"],
