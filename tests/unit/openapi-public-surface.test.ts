@@ -79,6 +79,13 @@ const PLATFORM_OPERATIONS = [
   "post /v1/mailing-lists/updates/preview",
   "get /v1/mailing-lists/{slug}/updates",
   "post /v1/mailing-lists/{slug}/updates",
+  "post /v1/mailing-lists/{slug}/releases",
+  "get /v1/mailing-lists/{slug}/releases",
+  "get /v1/mailing-lists/releases/{releaseId}",
+  "patch /v1/mailing-lists/releases/{releaseId}/pace",
+  "post /v1/mailing-lists/releases/{releaseId}/pause",
+  "post /v1/mailing-lists/releases/{releaseId}/resume",
+  "post /v1/mailing-lists/releases/{releaseId}/cancel",
 ];
 
 type Doc = {
