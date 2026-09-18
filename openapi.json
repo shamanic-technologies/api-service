@@ -4585,6 +4585,38 @@
         "type": "object",
         "properties": {}
       },
+      "InstantlyOpsLifecycleRulesResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsDomainsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsMailboxesResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsAddressesResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsInfraResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsThreadsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsMessagesResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsMessageBodyResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "BillingCheckoutResponse": {
         "type": "object",
         "properties": {}
