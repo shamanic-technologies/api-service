@@ -3,6 +3,7 @@ import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { UpsertKeyRequestSchema, CreateApiKeyRequestSchema, SetKeySourceRequestSchema, ProviderRequirementsRequestSchema } from "../schemas.js";
+import { respondUpstreamError } from "../lib/upstream-error.js";
 
 const router = Router();
 
@@ -51,6 +52,84 @@ router.post("/keys", authenticate, async (req: AuthenticatedRequest, res) => {
     res.status(500).json({ error: error.message || "Failed to upsert key" });
   }
 });
+
+// -----------------------------------------------------------------------
+// Brand-scoped provider keys — key-service /keys/brands/* endpoints
+//
+// The same credential grain one notch finer: keyed on (org, brand, provider)
+// instead of (org, provider), so two brands of one org can each run on their own
+// GoHighLevel sub-account without either overwriting the other or the org-wide
+// key. The customer manages these from Brand Settings.
+//
+// The list is MASKED at key-service; the gateway forwards the response
+// untransformed and never re-declares its shape.
+//
+// ⚠️ key-service's `GET /keys/brands/{brandId}/{provider}/decrypt` resolves the
+// credential in CLEAR. It is service-to-service only — crm-service calls it to
+// reach GoHighLevel — and is deliberately NOT proxied here: nothing reachable
+// from a browser may return a customer's credential in plaintext. Do not add it.
+// `tests/unit/brand-keys-proxy.behavior.test.ts` asserts it 404s.
+// -----------------------------------------------------------------------
+
+/**
+ * GET /v1/keys/brands/:brandId
+ * List a brand's third-party keys (masked).
+ */
+router.get("/keys/brands/:brandId", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.key,
+      `/keys/brands/${encodeURIComponent(req.params.brandId)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] List brand keys error:", error);
+    respondUpstreamError(res, error, "Failed to list brand keys");
+  }
+});
+
+/**
+ * POST /v1/keys/brands/:brandId
+ * Add or update a brand's third-party key. Body forwarded verbatim —
+ * key-service owns the provider vocabulary and validates the shape.
+ */
+router.post("/keys/brands/:brandId", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.key,
+      `/keys/brands/${encodeURIComponent(req.params.brandId)}`,
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] Upsert brand key error:", error);
+    respondUpstreamError(res, error, "Failed to upsert brand key");
+  }
+});
+
+/**
+ * DELETE /v1/keys/brands/:brandId/:provider
+ * Delete a brand's third-party key.
+ */
+router.delete(
+  "/keys/brands/:brandId/:provider",
+  authenticate,
+  requireOrg,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.key,
+        `/keys/brands/${encodeURIComponent(req.params.brandId)}/${encodeURIComponent(req.params.provider)}`,
+        { method: "DELETE", headers: buildInternalHeaders(req) },
+      );
+      res.json(result);
+    } catch (error) {
+      console.error("[api-service] Delete brand key error:", error);
+      respondUpstreamError(res, error, "Failed to delete brand key");
+    }
+  },
+);
 
 /**
  * DELETE /v1/keys/:provider
