@@ -1632,6 +1632,90 @@ registry.registerPath({
 });
 
 // ===================================================================
+// BRAND-SCOPED PROVIDER KEYS
+//
+// The same credential one grain finer — keyed on (org, brand, provider) — so two
+// brands of one org can hold different credentials for the same provider. Request
+// and response shapes are owned by key-service and forwarded untransformed.
+//
+// key-service's `/keys/brands/{brandId}/{provider}/decrypt` is NOT proxied and is
+// not documented here: it resolves the credential in clear and is service-to-service
+// only.
+// ===================================================================
+
+const BrandKeyPassthroughResponse = z
+  .object({})
+  .passthrough()
+  .openapi("BrandKeyPassthroughResponse");
+
+const BrandKeyPassthroughRequest = z
+  .object({})
+  .passthrough()
+  .openapi("BrandKeyPassthroughRequest");
+
+const BrandKeyIdParam = z.object({
+  brandId: z.string().describe("Brand the credential is scoped to"),
+});
+
+const brandKeyErrorResponses = {
+  400: { description: "Bad request, forwarded verbatim from key-service", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  500: { description: "Internal error", content: errorContent },
+  502: { description: "key-service unreachable / not configured", content: errorContent },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/keys/brands/{brandId}",
+  tags: ["Keys"],
+  summary: "List a brand's third-party keys (masked)",
+  description:
+    "Proxy to key-service GET /keys/brands/{brandId}. Returns one entry per provider stored for this (org, brand) pair, each carrying a MASKED key — the clear value is never served to a client. Response shape owned by key-service.",
+  security: authed,
+  request: { params: BrandKeyIdParam },
+  responses: {
+    200: { description: "Brand keys as returned by key-service", content: { "application/json": { schema: BrandKeyPassthroughResponse } } },
+    ...brandKeyErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/keys/brands/{brandId}",
+  tags: ["Keys"],
+  summary: "Add or update a brand's third-party key",
+  description:
+    "Proxy to key-service POST /keys/brands/{brandId}. Body (`{ provider, apiKey }`) is forwarded verbatim — key-service owns the provider vocabulary and validates the shape. Upsert keyed on (org, brand, provider): storing one never overwrites another brand's credential, nor the org-wide key.",
+  security: authed,
+  request: {
+    params: BrandKeyIdParam,
+    body: { content: { "application/json": { schema: BrandKeyPassthroughRequest } } },
+  },
+  responses: {
+    200: { description: "Saved; the masked key as returned by key-service", content: { "application/json": { schema: BrandKeyPassthroughResponse } } },
+    ...brandKeyErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/keys/brands/{brandId}/{provider}",
+  tags: ["Keys"],
+  summary: "Delete a brand's third-party key",
+  description:
+    "Proxy to key-service DELETE /keys/brands/{brandId}/{provider}. Removes only this brand's credential for the provider; the org-wide key and other brands' keys are untouched. Response shape owned by key-service.",
+  security: authed,
+  request: {
+    params: BrandKeyIdParam.extend({ provider: z.string().describe("Provider name") }),
+  },
+  responses: {
+    200: { description: "Deletion result as returned by key-service", content: { "application/json": { schema: BrandKeyPassthroughResponse } } },
+    404: { description: "No such brand key (forwarded verbatim)", content: errorContent },
+    ...brandKeyErrorResponses,
+  },
+});
+
+// ===================================================================
 // KEY SOURCE PREFERENCES
 // ===================================================================
 
@@ -9891,6 +9975,111 @@ registry.registerPath({
   request: { query: CrmBrandIdQuery },
   responses: {
     200: { description: "Leads as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+// ── GoHighLevel mirror (crm-service proxy) ───────────────────────────────────
+// A brand's GoHighLevel sub-account, mirrored: its contacts and its sales
+// pipeline. The credential lives brand-scoped in key-service (see
+// /v1/keys/brands/{brandId}) and crm-service resolves it server-side — no token
+// crosses this surface. crm-service's /internal/gohighlevel/* sync + rebuild
+// triggers are cron-driven and are not exposed.
+const GhlConnectionIdParam = z.object({
+  id: z.string().uuid().openapi({ description: "Connection ID" }),
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/gohighlevel/connections",
+  tags: ["CRM Contacts"],
+  summary: "Connect a brand to GoHighLevel",
+  description:
+    "Proxy to crm-service POST /orgs/gohighlevel/connections. Body (`{ brandId, locationId }`) forwarded verbatim. Requires x-user-id: crm-service persists the creator so the sync cron can attribute the org run it opens. The connection is written only once the credential has been PROVEN against GoHighLevel, so a token GoHighLevel refuses comes back 400 carrying the vendor's own status and message (`vendorStatus`, `vendorError`) field-for-field — that body is what tells the customer which field to fix. Response shape owned by crm-service.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: CrmPassthroughRequest } } } },
+  responses: {
+    200: { description: "Connection as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/orgs/gohighlevel/connections/{id}",
+  tags: ["CRM Contacts"],
+  summary: "Pause or resume a GoHighLevel connection",
+  description:
+    "Proxy to crm-service PATCH /orgs/gohighlevel/connections/{id}. Body forwarded verbatim — crm-service owns the status vocabulary. A paused connection is skipped by every sync pass. Response shape owned by crm-service.",
+  security: authed,
+  request: {
+    params: GhlConnectionIdParam,
+    body: { content: { "application/json": { schema: CrmPassthroughRequest } } },
+  },
+  responses: {
+    200: { description: "Connection as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: { description: "No such connection (forwarded verbatim)", content: errorContent },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/orgs/gohighlevel/connections/{id}",
+  tags: ["CRM Contacts"],
+  summary: "Disconnect a brand from GoHighLevel",
+  description:
+    "Proxy to crm-service DELETE /orgs/gohighlevel/connections/{id}. The connection row goes and, with it, the mirrored records and the silver contacts derived from them. Response shape owned by crm-service.",
+  security: authed,
+  request: { params: GhlConnectionIdParam },
+  responses: {
+    200: { description: "Disconnection result as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: { description: "No such connection (forwarded verbatim)", content: errorContent },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/gohighlevel/connections",
+  tags: ["CRM Contacts"],
+  summary: "GoHighLevel connection health for a brand",
+  description:
+    "Proxy to crm-service GET /orgs/gohighlevel/connections — is it working, when did it last sync, why not. The whole query string is forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Connections as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/gohighlevel/contacts",
+  tags: ["CRM Contacts"],
+  summary: "A brand's mirrored GoHighLevel contacts",
+  description:
+    "Proxy to crm-service GET /orgs/gohighlevel/contacts. The whole query string is forwarded untransformed: `brandId` (required downstream), plus the `limit` / `offset` crm-service accepts today and anything it adds later. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Contacts as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/gohighlevel/opportunities",
+  tags: ["CRM Contacts"],
+  summary: "A brand's GoHighLevel sales pipeline",
+  description:
+    "Proxy to crm-service GET /orgs/gohighlevel/opportunities — opportunities grouped by pipeline then stage, exactly as GoHighLevel groups them. The whole query string is forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Pipeline view as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
     ...crmErrorResponses,
   },
 });
