@@ -1632,6 +1632,90 @@ registry.registerPath({
 });
 
 // ===================================================================
+// BRAND-SCOPED PROVIDER KEYS
+//
+// The same credential one grain finer — keyed on (org, brand, provider) — so two
+// brands of one org can hold different credentials for the same provider. Request
+// and response shapes are owned by key-service and forwarded untransformed.
+//
+// key-service's `/keys/brands/{brandId}/{provider}/decrypt` is NOT proxied and is
+// not documented here: it resolves the credential in clear and is service-to-service
+// only.
+// ===================================================================
+
+const BrandKeyPassthroughResponse = z
+  .object({})
+  .passthrough()
+  .openapi("BrandKeyPassthroughResponse");
+
+const BrandKeyPassthroughRequest = z
+  .object({})
+  .passthrough()
+  .openapi("BrandKeyPassthroughRequest");
+
+const BrandKeyIdParam = z.object({
+  brandId: z.string().describe("Brand the credential is scoped to"),
+});
+
+const brandKeyErrorResponses = {
+  400: { description: "Bad request, forwarded verbatim from key-service", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  500: { description: "Internal error", content: errorContent },
+  502: { description: "key-service unreachable / not configured", content: errorContent },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/keys/brands/{brandId}",
+  tags: ["Keys"],
+  summary: "List a brand's third-party keys (masked)",
+  description:
+    "Proxy to key-service GET /keys/brands/{brandId}. Returns one entry per provider stored for this (org, brand) pair, each carrying a MASKED key — the clear value is never served to a client. Response shape owned by key-service.",
+  security: authed,
+  request: { params: BrandKeyIdParam },
+  responses: {
+    200: { description: "Brand keys as returned by key-service", content: { "application/json": { schema: BrandKeyPassthroughResponse } } },
+    ...brandKeyErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/keys/brands/{brandId}",
+  tags: ["Keys"],
+  summary: "Add or update a brand's third-party key",
+  description:
+    "Proxy to key-service POST /keys/brands/{brandId}. Body (`{ provider, apiKey }`) is forwarded verbatim — key-service owns the provider vocabulary and validates the shape. Upsert keyed on (org, brand, provider): storing one never overwrites another brand's credential, nor the org-wide key.",
+  security: authed,
+  request: {
+    params: BrandKeyIdParam,
+    body: { content: { "application/json": { schema: BrandKeyPassthroughRequest } } },
+  },
+  responses: {
+    200: { description: "Saved; the masked key as returned by key-service", content: { "application/json": { schema: BrandKeyPassthroughResponse } } },
+    ...brandKeyErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/keys/brands/{brandId}/{provider}",
+  tags: ["Keys"],
+  summary: "Delete a brand's third-party key",
+  description:
+    "Proxy to key-service DELETE /keys/brands/{brandId}/{provider}. Removes only this brand's credential for the provider; the org-wide key and other brands' keys are untouched. Response shape owned by key-service.",
+  security: authed,
+  request: {
+    params: BrandKeyIdParam.extend({ provider: z.string().describe("Provider name") }),
+  },
+  responses: {
+    200: { description: "Deletion result as returned by key-service", content: { "application/json": { schema: BrandKeyPassthroughResponse } } },
+    404: { description: "No such brand key (forwarded verbatim)", content: errorContent },
+    ...brandKeyErrorResponses,
+  },
+});
+
+// ===================================================================
 // KEY SOURCE PREFERENCES
 // ===================================================================
 
@@ -9895,6 +9979,111 @@ registry.registerPath({
   },
 });
 
+// ── GoHighLevel mirror (crm-service proxy) ───────────────────────────────────
+// A brand's GoHighLevel sub-account, mirrored: its contacts and its sales
+// pipeline. The credential lives brand-scoped in key-service (see
+// /v1/keys/brands/{brandId}) and crm-service resolves it server-side — no token
+// crosses this surface. crm-service's /internal/gohighlevel/* sync + rebuild
+// triggers are cron-driven and are not exposed.
+const GhlConnectionIdParam = z.object({
+  id: z.string().uuid().openapi({ description: "Connection ID" }),
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/gohighlevel/connections",
+  tags: ["CRM Contacts"],
+  summary: "Connect a brand to GoHighLevel",
+  description:
+    "Proxy to crm-service POST /orgs/gohighlevel/connections. Body (`{ brandId, locationId }`) forwarded verbatim. Requires x-user-id: crm-service persists the creator so the sync cron can attribute the org run it opens. The connection is written only once the credential has been PROVEN against GoHighLevel, so a token GoHighLevel refuses comes back 400 carrying the vendor's own status and message (`vendorStatus`, `vendorError`) field-for-field — that body is what tells the customer which field to fix. Response shape owned by crm-service.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: CrmPassthroughRequest } } } },
+  responses: {
+    200: { description: "Connection as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/orgs/gohighlevel/connections/{id}",
+  tags: ["CRM Contacts"],
+  summary: "Pause or resume a GoHighLevel connection",
+  description:
+    "Proxy to crm-service PATCH /orgs/gohighlevel/connections/{id}. Body forwarded verbatim — crm-service owns the status vocabulary. A paused connection is skipped by every sync pass. Response shape owned by crm-service.",
+  security: authed,
+  request: {
+    params: GhlConnectionIdParam,
+    body: { content: { "application/json": { schema: CrmPassthroughRequest } } },
+  },
+  responses: {
+    200: { description: "Connection as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: { description: "No such connection (forwarded verbatim)", content: errorContent },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/orgs/gohighlevel/connections/{id}",
+  tags: ["CRM Contacts"],
+  summary: "Disconnect a brand from GoHighLevel",
+  description:
+    "Proxy to crm-service DELETE /orgs/gohighlevel/connections/{id}. The connection row goes and, with it, the mirrored records and the silver contacts derived from them. Response shape owned by crm-service.",
+  security: authed,
+  request: { params: GhlConnectionIdParam },
+  responses: {
+    200: { description: "Disconnection result as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: { description: "No such connection (forwarded verbatim)", content: errorContent },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/gohighlevel/connections",
+  tags: ["CRM Contacts"],
+  summary: "GoHighLevel connection health for a brand",
+  description:
+    "Proxy to crm-service GET /orgs/gohighlevel/connections — is it working, when did it last sync, why not. The whole query string is forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Connections as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/gohighlevel/contacts",
+  tags: ["CRM Contacts"],
+  summary: "A brand's mirrored GoHighLevel contacts",
+  description:
+    "Proxy to crm-service GET /orgs/gohighlevel/contacts. The whole query string is forwarded untransformed: `brandId` (required downstream), plus the `limit` / `offset` crm-service accepts today and anything it adds later. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Contacts as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/gohighlevel/opportunities",
+  tags: ["CRM Contacts"],
+  summary: "A brand's GoHighLevel sales pipeline",
+  description:
+    "Proxy to crm-service GET /orgs/gohighlevel/opportunities — opportunities grouped by pipeline then stage, exactly as GoHighLevel groups them. The whole query string is forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Pipeline view as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
 // ===================================================================
 // Mailing Lists (proxy to transactional-email-service /mailing-lists/:slug/*)
 //
@@ -10058,6 +10247,169 @@ registry.registerPath({
   responses: {
     200: { description: "Update history, newest first", content: { "application/json": { schema: MailingListPassthroughResponse } } },
     ...mailingListErrorResponses,
+  },
+});
+
+// ===================================================================
+// Mailing-list releases (proxy to transactional-email-service
+// /mailing-lists/:slug/releases and /mailing-lists/releases/:releaseId/*)
+//
+// A release is one written update sent to a list over several days at a stated
+// daily pace — the only way to send the 30,013-address newsletter — watchable,
+// re-paceable, pausable, resumable and cancellable from the staff console.
+// STAFF-ONLY, same gate as the rest of the Mailing Lists family.
+//
+// Every request and response shape below is owned by transactional-email-service.
+// Passthrough only. The status codes are contract too: 201 means a release was
+// created, 200 means an identical live one already existed and was returned
+// instead, and 409 is a refusal whose words the caller has to be able to read.
+// ===================================================================
+const MailingListReleaseRequest = z
+  .object({})
+  .passthrough()
+  .openapi("MailingListReleaseRequest");
+
+const MailingListReleaseIdParam = z.object({
+  releaseId: z.string().describe("The release's id, as returned when it was created."),
+});
+
+const mailingListReleaseErrorResponses = {
+  ...mailingListErrorResponses,
+  409: {
+    description:
+      "The release refuses the transition, or refuses a pace it cannot deliver " +
+      "(forwarded verbatim, with the reason)",
+    content: errorContent,
+  },
+};
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/mailing-lists/{slug}/releases",
+  tags: ["Mailing Lists"],
+  summary: "Start a paced release of an update to a mailing list (staff only)",
+  description:
+    "Proxy to transactional-email-service POST /mailing-lists/{slug}/releases. The body " +
+    "carries the same subject and markdown body a single-request update takes, plus the " +
+    "daily limit the send is paced at; downstream enrols every subscriber and mails them " +
+    "over as many days as that pace needs, without holding a connection open. Answers 201 " +
+    "when a release was created and 200 when an identical one was already running — both " +
+    "cross unchanged. Body and response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    params: MailingListSlugParam,
+    body: { content: { "application/json": { schema: MailingListReleaseRequest } } },
+  },
+  responses: {
+    200: { description: "An identical live release already existed and is returned instead", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    201: { description: "The release was created and has started", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListReleaseErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/mailing-lists/{slug}/releases",
+  tags: ["Mailing Lists"],
+  summary: "Read a mailing list's releases (staff only)",
+  description:
+    "Proxy to transactional-email-service GET /mailing-lists/{slug}/releases. Response " +
+    "shape is owned by the downstream service.",
+  security: authed,
+  request: { params: MailingListSlugParam },
+  responses: {
+    200: { description: "The list's releases", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListReleaseErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/mailing-lists/releases/{releaseId}",
+  tags: ["Mailing Lists"],
+  summary: "Watch one release (staff only)",
+  description:
+    "Proxy to transactional-email-service GET /mailing-lists/releases/{releaseId}. Reports " +
+    "where the release has got to — how many addresses are done, how many are left, and at " +
+    "what pace. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: MailingListReleaseIdParam },
+  responses: {
+    200: { description: "The release's current state", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListReleaseErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/mailing-lists/releases/{releaseId}/pace",
+  tags: ["Mailing Lists"],
+  summary: "Change a release's daily pace (staff only)",
+  description:
+    "Proxy to transactional-email-service PATCH /mailing-lists/releases/{releaseId}/pace. " +
+    "Downstream refuses a pace it cannot deliver, and refuses to re-pace a release that is " +
+    "already finished; the refusal comes back as a 409 with its own words, which the caller " +
+    "needs to read. Body and response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    params: MailingListReleaseIdParam,
+    body: { content: { "application/json": { schema: MailingListReleaseRequest } } },
+  },
+  responses: {
+    200: { description: "The release at its new pace", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListReleaseErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/mailing-lists/releases/{releaseId}/pause",
+  tags: ["Mailing Lists"],
+  summary: "Hold a release (staff only)",
+  description:
+    "Proxy to transactional-email-service POST /mailing-lists/releases/{releaseId}/pause. " +
+    "Nothing further is sent until it is resumed. A release that is not in a pausable state " +
+    "refuses with a 409 forwarded verbatim. Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: MailingListReleaseIdParam },
+  responses: {
+    200: { description: "The release, now held", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListReleaseErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/mailing-lists/releases/{releaseId}/resume",
+  tags: ["Mailing Lists"],
+  summary: "Let a held release continue (staff only)",
+  description:
+    "Proxy to transactional-email-service POST /mailing-lists/releases/{releaseId}/resume. " +
+    "A release that is not held refuses with a 409 forwarded verbatim. Response shape is " +
+    "owned by the downstream service.",
+  security: authed,
+  request: { params: MailingListReleaseIdParam },
+  responses: {
+    200: { description: "The release, sending again", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListReleaseErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/mailing-lists/releases/{releaseId}/cancel",
+  tags: ["Mailing Lists"],
+  summary: "Stop a release for good (staff only)",
+  description:
+    "Proxy to transactional-email-service POST /mailing-lists/releases/{releaseId}/cancel. " +
+    "Addresses that were never going to be mailed are settled rather than left pending. A " +
+    "cancelled release cannot be resumed — sending the rest of the update is a new release. " +
+    "Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: MailingListReleaseIdParam },
+  responses: {
+    200: { description: "The release, cancelled", content: { "application/json": { schema: MailingListPassthroughResponse } } },
+    ...mailingListReleaseErrorResponses,
   },
 });
 

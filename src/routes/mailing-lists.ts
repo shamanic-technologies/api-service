@@ -5,7 +5,11 @@ import {
   requireStaff,
   AuthenticatedRequest,
 } from "../middleware/auth.js";
-import { callExternalService, externalServices } from "../lib/service-client.js";
+import {
+  callExternalService,
+  pipeExternalService,
+  externalServices,
+} from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 
@@ -238,6 +242,198 @@ router.get(
       res.json(result);
     } catch (error) {
       respondUpstreamError(res, error, "Failed to read mailing list updates");
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Paced releases — transparent proxies to transactional-email-service
+// /mailing-lists/{slug}/releases and /mailing-lists/releases/{releaseId}/*
+// (its v0.24.1).
+//
+// A release is one written update sent to a list over SEVERAL DAYS at a stated
+// daily pace, instead of in the single request `POST /mailing-lists/:slug/updates`
+// uses — which is why the 30,013-address newsletter cannot be sent any other way.
+// It is watchable, re-paceable, pausable, resumable and cancellable, and until
+// these routes existed the only way to drive one was from inside the container.
+// The control that matters most on a send that size is being able to pause it
+// from a phone, and the staff console reaches backend services only through this
+// gateway.
+//
+// AUTH — identical to the subscriber/update routes above: `authenticate +
+// requireOrg + requireStaff`. Same reasoning, same allowlist, same 403 for a
+// customer. The downstream routes carry `requireApiKey + requireOrgIdOnly`, both
+// satisfied by `staffHeaders`.
+//
+// STATUS CODES CROSS UNCHANGED, which is why these use `pipeExternalService`
+// rather than `callExternalService` + `res.json`. The latter parses the upstream
+// body and re-emits it under a status this handler picks, so a 201 on create
+// silently becomes a 200. Downstream distinguishes 201 (a release was created)
+// from 200 (an identical live release already existed and was returned instead),
+// and answers 409 when a release refuses a transition or a re-pace its current
+// status cannot deliver. All of that is contract, so the bytes and the status
+// are copied through and `respondUpstreamError` re-emits a non-2xx body
+// field-for-field — a staff member re-pacing a finished release has to be able
+// to read exactly why it refused.
+//
+// NOT PROXIED: `POST /internal/mailing-lists/releases/tick`. It is the
+// service-to-service backstop for a dead worker and has no business behind a
+// staff gateway (CLAUDE.md rule #3 — `/internal/*` is never client-facing).
+// ---------------------------------------------------------------------------
+
+/** Downstream path for one release's subresource, with the id percent-encoded. */
+function releasePath(req: AuthenticatedRequest, action?: string): string {
+  const releaseId = encodeURIComponent(req.params.releaseId);
+  const suffix = action ? `/${action}` : "";
+  return `/mailing-lists/releases/${releaseId}${suffix}${rawQueryString(req.originalUrl)}`;
+}
+
+// POST /v1/mailing-lists/:slug/releases — start a paced release (staff only).
+// Proxies transactional-email-service POST /mailing-lists/{slug}/releases. Body
+// forwarded as-is: downstream owns the subject, the markdown body and the daily
+// limit, and answers 201 for a new release or 200 for an identical one already
+// running.
+//
+// Declared BEFORE `/mailing-lists/releases/:releaseId` below so that a list whose
+// slug is literally "releases" still reaches its own releases — Express matches a
+// path parameter against any single segment, and only that one path is ambiguous
+// between the two patterns.
+router.post(
+  "/mailing-lists/:slug/releases",
+  authenticate,
+  requireOrg,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.transactionalEmail,
+        `/mailing-lists/${encodeURIComponent(req.params.slug)}/releases${rawQueryString(req.originalUrl)}`,
+        { method: "POST", body: req.body, headers: staffHeaders(req), expressRes: res },
+      );
+    } catch (error) {
+      respondUpstreamError(res, error, "Failed to start the mailing list release");
+    }
+  },
+);
+
+// GET /v1/mailing-lists/:slug/releases — read a list's releases (staff only).
+// Proxies transactional-email-service GET /mailing-lists/{slug}/releases.
+router.get(
+  "/mailing-lists/:slug/releases",
+  authenticate,
+  requireOrg,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.transactionalEmail,
+        `/mailing-lists/${encodeURIComponent(req.params.slug)}/releases${rawQueryString(req.originalUrl)}`,
+        { headers: staffHeaders(req), expressRes: res },
+      );
+    } catch (error) {
+      respondUpstreamError(res, error, "Failed to read the mailing list releases");
+    }
+  },
+);
+
+// GET /v1/mailing-lists/releases/:releaseId — watch one release (staff only).
+// Proxies transactional-email-service GET /mailing-lists/releases/{releaseId}.
+router.get(
+  "/mailing-lists/releases/:releaseId",
+  authenticate,
+  requireOrg,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.transactionalEmail,
+        releasePath(req),
+        { headers: staffHeaders(req), expressRes: res },
+      );
+    } catch (error) {
+      respondUpstreamError(res, error, "Failed to read the mailing list release");
+    }
+  },
+);
+
+// PATCH /v1/mailing-lists/releases/:releaseId/pace — change the daily pace (staff only).
+// Proxies transactional-email-service PATCH /mailing-lists/releases/{releaseId}/pace.
+// Body forwarded as-is; downstream refuses a pace it cannot deliver, and refuses
+// to re-pace a release that is already finished, with its own 409 and its own words.
+router.patch(
+  "/mailing-lists/releases/:releaseId/pace",
+  authenticate,
+  requireOrg,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.transactionalEmail,
+        releasePath(req, "pace"),
+        { method: "PATCH", body: req.body, headers: staffHeaders(req), expressRes: res },
+      );
+    } catch (error) {
+      respondUpstreamError(res, error, "Failed to change the mailing list release pace");
+    }
+  },
+);
+
+// POST /v1/mailing-lists/releases/:releaseId/pause — hold a release (staff only).
+// Proxies transactional-email-service POST /mailing-lists/releases/{releaseId}/pause.
+router.post(
+  "/mailing-lists/releases/:releaseId/pause",
+  authenticate,
+  requireOrg,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.transactionalEmail,
+        releasePath(req, "pause"),
+        { method: "POST", body: req.body, headers: staffHeaders(req), expressRes: res },
+      );
+    } catch (error) {
+      respondUpstreamError(res, error, "Failed to pause the mailing list release");
+    }
+  },
+);
+
+// POST /v1/mailing-lists/releases/:releaseId/resume — let a held release continue (staff only).
+// Proxies transactional-email-service POST /mailing-lists/releases/{releaseId}/resume.
+router.post(
+  "/mailing-lists/releases/:releaseId/resume",
+  authenticate,
+  requireOrg,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.transactionalEmail,
+        releasePath(req, "resume"),
+        { method: "POST", body: req.body, headers: staffHeaders(req), expressRes: res },
+      );
+    } catch (error) {
+      respondUpstreamError(res, error, "Failed to resume the mailing list release");
+    }
+  },
+);
+
+// POST /v1/mailing-lists/releases/:releaseId/cancel — stop a release for good (staff only).
+// Proxies transactional-email-service POST /mailing-lists/releases/{releaseId}/cancel.
+router.post(
+  "/mailing-lists/releases/:releaseId/cancel",
+  authenticate,
+  requireOrg,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.transactionalEmail,
+        releasePath(req, "cancel"),
+        { method: "POST", body: req.body, headers: staffHeaders(req), expressRes: res },
+      );
+    } catch (error) {
+      respondUpstreamError(res, error, "Failed to cancel the mailing list release");
     }
   },
 );
