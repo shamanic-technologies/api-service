@@ -604,6 +604,41 @@ for (const method of ["get", "put", "delete"] as const) {
 }
 
 /**
+ * GET|PUT|DELETE /v1/brands/:id/sales-rep
+ * Proxy to brand-service {GET,PUT,DELETE} /orgs/brands/{brandId}/sales-rep.
+ * The one person to reach when a sales interest lands on this brand: the address
+ * to copy them on the prospect's own thread, and the number to ring. Read returns
+ * the saved rep with either fact null when unheld ("nobody to reach" is a
+ * first-class answer, not a 404); PUT states the whole rep in one write; DELETE
+ * removes it. Body + response shapes, and what counts as a valid rep — including
+ * the rule that a phone may not be stated without an email — are owned by the
+ * downstream service; its refusals (400, 403 foreign brand, 404 unknown brand)
+ * propagate verbatim with their own status and their own sentence.
+ *
+ * The older /sales-rep-phone proxy above stays mounted for as long as
+ * brand-service keeps serving it, so nothing has to deploy in a given order.
+ */
+for (const method of ["get", "put", "delete"] as const) {
+  router[method]("/brands/:id/sales-rep", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.brand,
+        `/orgs/brands/${req.params.id}/sales-rep`,
+        {
+          method: method.toUpperCase() as "GET" | "PUT" | "DELETE",
+          headers: buildInternalHeaders(req),
+          ...(method === "put" ? { body: req.body } : {}),
+        },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error(`[api-service] Sales rep (${method}) error:`, error.message);
+      respondUpstreamError(res, error, "Failed to reach the brand's sales rep");
+    }
+  });
+}
+
+/**
  * GET /v1/brands/:id/business-context
  * Proxy to brand-service GET /orgs/brands/:id/business-context.
  * Returns the pasted business context for a no-website brand (the alternative
