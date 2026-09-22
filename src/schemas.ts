@@ -2203,6 +2203,10 @@ registry.registerPath({
     "listed here are the ones documented today, not a whitelist. `brandId` / `campaignId` mean exactly what they mean " +
     "on the list — which scope the delivery overlay answers for. The read is org-scoped downstream: a lead outside the " +
     "caller's org is a 404, indistinguishable from one that does not exist. " +
+    "Because the segment is forwarded without being validated here, the literal paths lead-service registers ahead " +
+    "of its own lead-id parameter are reachable through this operation: GET /v1/leads/crm-pairings?brandId=… reads " +
+    "a brand's CRM contacts beside the leads we emailed for them, and GET /v1/leads/crm-pairing-counts?brandId=… " +
+    "reads that view's summary counts. Both answer their own shapes, documented by lead-service. " +
     "Refer to lead-service openapi.json for the exact response shape — api-service forwards it untransformed.",
   security: authed,
   request: {
@@ -2232,6 +2236,110 @@ registry.registerPath({
     400: { description: "Invalid lead id", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "No such lead in this caller's org (or brand, when brandId is given)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/leads/crm-pairings/rulings",
+  tags: ["Leads"],
+  summary: "Accept or deny a proposed pairing between a CRM contact and a lead we emailed",
+  description:
+    "Pass-through to lead-service POST /orgs/leads/crm-pairings/rulings. A human states that one of the brand's " +
+    "own CRM contacts is, or is not, the same person as one of the leads we emailed for them. The statement " +
+    "outranks both the matcher's signal and its judgment, survives a re-run of the matcher (it is keyed on the " +
+    "pair, not on a matcher run), and is correctable by restating it or by taking it back with the DELETE on the " +
+    "same path. " +
+    "The pairings themselves and their summary counts are read at GET /v1/leads/crm-pairings?brandId=… and " +
+    "GET /v1/leads/crm-pairing-counts?brandId=…, which this gateway forwards through its single-lead read — the " +
+    "segment is not validated here and the query string travels verbatim, and lead-service registers both literal " +
+    "paths ahead of its own lead-id parameter. " +
+    "The body is forwarded VERBATIM: this gateway does not re-declare, narrow or enumerate lead-service's request " +
+    "shape, so the `ruling` vocabulary stays authoritative in one place and a verdict it adds needs no release " +
+    "here. Its refusals (a missing or non-uuid `brandId`, a missing `crmContactId`, a `leadId` that is not a uuid, " +
+    "a `ruling` outside the vocabulary, a non-string `note`) reach the caller with their own status and body. " +
+    "The caller's org AND user identity are forwarded, because lead-service records WHO ruled. " +
+    "Refer to lead-service openapi.json for the exact request and response shapes.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("CrmPairingRulingRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: "The ruling as recorded by lead-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("CrmPairingRulingResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid ruling (lead-service states the reason)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead or brand in this caller's org", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/leads/crm-pairings/rulings",
+  tags: ["Leads"],
+  summary: "Take back a ruling somebody made about a CRM-contact-to-lead pairing",
+  description:
+    "Pass-through to lead-service DELETE /orgs/leads/crm-pairings/rulings — the undo of the POST on the same " +
+    "path. Nothing is deleted downstream: the row survives carrying both what was stated and the fact that it was " +
+    "withdrawn, and the pairing falls back to whatever the matcher's judgment and signal say. Withdrawing what is " +
+    "already withdrawn is a success, not an error; withdrawing something nobody ever ruled on is a 409 carrying " +
+    "`code: \"nothing_stated\"`, which reaches the caller field-for-field so a surface can tell it apart from a " +
+    "server failure. " +
+    "The pair is named in the query string, which is forwarded verbatim and read for nothing here — lead-service " +
+    "owns these parameters and raises its own 400 on each, and one it ships later needs no release here. " +
+    "The caller's org AND user identity are forwarded, because lead-service records who withdrew the ruling. " +
+    "Refer to lead-service openapi.json for the exact response shape.",
+  security: authed,
+  request: {
+    query: z
+      .object({
+        brandId: z.string().optional().openapi({
+          description: "The brand whose CRM the pairing belongs to.",
+        }),
+        crmContactId: z.string().optional().openapi({
+          description: "The contact id as it exists in the brand's own CRM.",
+        }),
+        leadId: z.string().optional().openapi({
+          description: "The `id` of the lead as returned by GET /v1/leads.",
+        }),
+      })
+      .passthrough()
+      .openapi({
+        description:
+          "The parameters lead-service documents today, not a whitelist: the caller's query string is forwarded " +
+          "verbatim, so anything it accepts reaches it. It is the one that decides which are required.",
+      }),
+  },
+  responses: {
+    200: {
+      description:
+        "The ruling was withdrawn (or was already withdrawn), as returned by lead-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("CrmPairingRulingWithdrawalResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid pair (lead-service states the reason)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: {
+      description: "Nobody ruled on this pairing, so there is nothing to withdraw",
+      content: errorContent,
+    },
     500: { description: "Internal error", content: errorContent },
   },
 });
@@ -3356,6 +3464,88 @@ registry.registerPath({
   responses: {
     200: { description: "Removed — the brand now has no number to ring", content: { "application/json": { schema: SalesRepPhoneResponseSchema } } },
     ...salesRepPhoneErrors,
+  },
+});
+
+// ===================================================================
+// Brand – Sales Rep (proxy to brand-service /orgs/brands/{brandId}/sales-rep)
+// The one person to reach when a sales interest lands on this brand: the address
+// to copy on the prospect's thread and the number to ring. Downstream owns the
+// body + response shapes and what counts as a valid rep — passthrough only, so
+// its refusals propagate verbatim with their own status (CLAUDE.md #7, #8).
+// ===================================================================
+const SalesRepRequestSchema = z
+  .object({})
+  .passthrough()
+  .openapi("SalesRepRequest");
+const SalesRepResponseSchema = z
+  .object({})
+  .passthrough()
+  .openapi("SalesRepResponse");
+
+const salesRepErrors = {
+  400: { description: "Invalid brand ID, or a rep brand-service refuses (forwarded verbatim)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  403: { description: "Brand not in caller's org (forwarded verbatim)", content: errorContent },
+  404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+  500: { description: "Upstream error", content: errorContent },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/sales-rep",
+  tags: ["Brand"],
+  summary: "Read a brand's sales rep",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{brandId}/sales-rep. " +
+    "The one person to reach when a prospect replies to one of this brand's campaigns saying " +
+    "they are interested. A brand that never stated a rep still answers 200 — \"nobody to " +
+    "reach\" is a first-class answer, not a 404, and either fact can be absent independently. " +
+    "Response shape is owned by the downstream service.",
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "The saved rep, or the unset answer when the brand never stated one", content: { "application/json": { schema: SalesRepResponseSchema } } },
+    ...salesRepErrors,
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/sales-rep",
+  tags: ["Brand"],
+  summary: "Set a brand's sales rep",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{brandId}/sales-rep. " +
+    "States (or changes) the whole rep in one write. Body + response shapes, and what counts " +
+    "as a valid rep — including brand-service's rule that a phone may not be stated without an " +
+    "email — are owned by the downstream service; it normalizes what it accepts and refuses the " +
+    "rest with a 400 whose status and sentence propagate verbatim.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: { content: { "application/json": { schema: SalesRepRequestSchema } } },
+  },
+  responses: {
+    200: { description: "The saved rep", content: { "application/json": { schema: SalesRepResponseSchema } } },
+    ...salesRepErrors,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/brands/{id}/sales-rep",
+  tags: ["Brand"],
+  summary: "Remove a brand's sales rep",
+  description:
+    "Proxy to brand-service DELETE /orgs/brands/{brandId}/sales-rep. " +
+    "The brand goes back to having nobody to reach. Response shape is owned by the downstream " +
+    "service, which treats removing a rep that was never stated as a success rather than a 404.",
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "Removed — the brand now has nobody to reach", content: { "application/json": { schema: SalesRepResponseSchema } } },
+    ...salesRepErrors,
   },
 });
 
