@@ -103,6 +103,127 @@ router.get("/leads/stats", authenticate, requireOrg, requireUser, async (req: Au
 });
 
 /**
+ * POST /v1/leads/crm-pairings/rulings — pass-through to lead-service
+ * POST /orgs/leads/crm-pairings/rulings.
+ *
+ * A human accepts or denies a proposed pairing between one of the brand's own CRM
+ * contacts and one of the leads we emailed for them. The statement outranks both the
+ * matcher's signal and its judgment, survives a re-run of the matcher (it is keyed on
+ * the pair, not on a matcher run), and is correctable by restating it or by taking it
+ * back through the DELETE below.
+ *
+ * Registered BEFORE `/leads/:id` and its `/leads/:id/...` siblings, and with a literal
+ * FIRST segment for the same reason `/leads/stats` is: a path parameter matches any
+ * single segment, so the ordering in this file is what keeps `crm-pairings` a literal
+ * here rather than something lead-service is handed as a lead id. Nothing may be
+ * inserted between these blocks and `/leads/:id` that is not itself literal-first.
+ *
+ * The two READS this feature needs — the paired view and its summary counts — are
+ * already reachable and deliberately have no route of their own: lead-service serves
+ * them at the literal paths `/orgs/leads/crm-pairings` and
+ * `/orgs/leads/crm-pairing-counts`, registered ahead of its own `/orgs/leads/:id`, and
+ * `GET /v1/leads/:id` below forwards its caller-supplied segment without validating it
+ * and with the query string intact. So `GET /v1/leads/crm-pairings?brandId=…` and
+ * `GET /v1/leads/crm-pairing-counts?brandId=…` resolve end to end today. Adding routes
+ * for them would be a second way to say the same thing;
+ * `tests/unit/lead-crm-pairings-proxy.test.ts` asserts the resolution instead, so an
+ * ordering change here that broke it would go red rather than quietly 404 a dashboard.
+ *
+ * The body is forwarded VERBATIM. This gateway does not re-declare, narrow or enumerate
+ * lead-service's request shape (rule #8's corollary): `ruling` is its vocabulary, and a
+ * `z.enum` copied here would 400 a verdict it accepts and need a gateway release for
+ * every one it adds. Its refusals are the reason the body goes untouched — a missing or
+ * non-uuid `brandId`, a missing `crmContactId`, a `leadId` that is not a uuid, a
+ * `ruling` outside the vocabulary, a `note` that is not a string — each reaches the
+ * caller with its own status and body so the surface can say WHY the button did
+ * nothing. `respondUpstreamError` re-emits the upstream JSON field-for-field under the
+ * upstream status, where rebuilding the envelope from the thrown Error would stringify
+ * the whole body into `error` (rule #7).
+ *
+ * The upstream STATUS is forwarded via `callExternalServiceWithStatus` rather than
+ * hardcoded: lead-service answers 201 today, and a status this gateway asserts is a
+ * downstream shape it does not own.
+ *
+ * `buildInternalHeaders(req)` carries the caller's org AND user — the user because
+ * lead-service records WHO ruled (`statedByUserId`), which is the whole point of a
+ * human ruling, and the org because it is the boundary the pair is scoped on. Neither
+ * is ever read from the caller's body or query.
+ */
+router.post(
+  "/leads/crm-pairings/rulings",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/leads/crm-pairings/rulings${rawQueryString(req.originalUrl)}`,
+        {
+          method: "POST",
+          headers: buildInternalHeaders(req),
+          body: req.body,
+        }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Record CRM pairing ruling error:", error);
+      respondUpstreamError(res, error, "Failed to record CRM pairing ruling");
+    }
+  }
+);
+
+/**
+ * DELETE /v1/leads/crm-pairings/rulings — pass-through to lead-service
+ * DELETE /orgs/leads/crm-pairings/rulings.
+ *
+ * A human takes their ruling back — the undo of the POST above. Nothing is deleted
+ * downstream: the row survives carrying both what was stated and the fact that it was
+ * withdrawn, and the pairing falls back to whatever the matcher's judgment and signal
+ * say. Withdrawing what is already withdrawn is a success, not an error.
+ *
+ * The pair is named in the QUERY STRING rather than in a body, because a DELETE has no
+ * body — and the query is forwarded verbatim off `req.originalUrl` (rule #11). Nothing
+ * is read out of it here: `brandId`, `crmContactId` and `leadId` are lead-service's
+ * parameters, it raises its own 400 on each, and a parameter it ships later reaches it
+ * with no edit here. A whitelist rebuilt from `req.query` would silently drop one and
+ * turn a refusal into a withdrawal of the wrong pair.
+ *
+ * Its refusals carry `code` — withdrawing something nobody ever ruled on is a 409
+ * `nothing_stated` — and `respondUpstreamError` re-emits the upstream JSON
+ * field-for-field under the upstream status so the surface can tell that apart from a
+ * server failure. The upstream STATUS is forwarded rather than hardcoded for the same
+ * reason as on the write.
+ *
+ * `buildInternalHeaders(req)` carries org AND user: lead-service records who withdrew
+ * the ruling, and scopes the pair on the authenticated org.
+ */
+router.delete(
+  "/leads/crm-pairings/rulings",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/leads/crm-pairings/rulings${rawQueryString(req.originalUrl)}`,
+        {
+          method: "DELETE",
+          headers: buildInternalHeaders(req),
+        }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Withdraw CRM pairing ruling error:", error);
+      respondUpstreamError(res, error, "Failed to withdraw CRM pairing ruling");
+    }
+  }
+);
+
+/**
  * GET /v1/leads/:id — pass-through to lead-service GET /orgs/leads/{id}.
  *
  * Registered AFTER the literal `/leads/stats` above: a path parameter matches any
