@@ -22,6 +22,7 @@ describe("gohighlevel + brand-key published surface", () => {
     ["patch", "/v1/orgs/gohighlevel/connections/{id}"],
     ["delete", "/v1/orgs/gohighlevel/connections/{id}"],
     ["get", "/v1/orgs/gohighlevel/contacts"],
+    ["get", "/v1/orgs/gohighlevel/contacts/origins"],
     ["get", "/v1/orgs/gohighlevel/opportunities"],
   ];
 

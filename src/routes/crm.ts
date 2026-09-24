@@ -315,6 +315,29 @@ router.get("/orgs/gohighlevel/contacts", ...orgChain, async (req: AuthenticatedR
   }
 });
 
+// GET /v1/orgs/gohighlevel/contacts/origins → crm-service GET /orgs/gohighlevel/contacts/origins
+// Where a brand's mirrored contacts came from (lead source, origin medium, contact
+// type, tags), counted over the whole mirrored population. A literal path: if a
+// `/orgs/gohighlevel/contacts/:id` route is ever added, declare it AFTER this one
+// or Express hands `origins` to it as an id.
+router.get(
+  "/orgs/gohighlevel/contacts/origins",
+  ...orgChain,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.crm,
+        `/orgs/gohighlevel/contacts/origins${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) },
+      );
+      res.json(result);
+    } catch (error) {
+      console.error("[api-service] Gohighlevel contact origins error:", error);
+      respondUpstreamError(res, error, "Gohighlevel contact origins error");
+    }
+  },
+);
+
 // GET /v1/orgs/gohighlevel/opportunities → crm-service GET /orgs/gohighlevel/opportunities
 router.get(
   "/orgs/gohighlevel/opportunities",
