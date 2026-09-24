@@ -123,6 +123,41 @@ describe("/v1/orgs/gohighlevel/* → crm-service", () => {
     );
   });
 
+  it("GET /orgs/gohighlevel/contacts/origins forwards brandId + org identity to its own path", async () => {
+    const res = await request(buildApp()).get(
+      "/v1/orgs/gohighlevel/contacts/origins?brandId=75d7e3e8-6926-4f85-a557-976895400666",
+    );
+    expect(res.status).toBe(200);
+    expect(calls[0].url).toBe(
+      `${CRM_BASE}/orgs/gohighlevel/contacts/origins?brandId=75d7e3e8-6926-4f85-a557-976895400666`,
+    );
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["X-API-Key"]).toBe("crm-test-key");
+  });
+
+  it("GET /orgs/gohighlevel/contacts/origins returns the upstream body untransformed", async () => {
+    const upstream = {
+      totalContacts: 2695,
+      leadSource: [{ value: "Facebook", count: 12 }],
+      originMedium: [],
+      contactType: [{ value: "lead", count: 2695 }],
+      tags: [],
+      somethingNew: { kept: true },
+    };
+    (global.fetch as any).mockImplementationOnce(async (url: string, options: any) => {
+      calls.push({ url, options });
+      return { ok: true, status: 200, json: () => Promise.resolve(upstream) };
+    });
+    const res = await request(buildApp()).get("/v1/orgs/gohighlevel/contacts/origins?brandId=b1");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(upstream);
+  });
+
+  it("GET /orgs/gohighlevel/contacts still reaches the list path, not origins", async () => {
+    await request(buildApp()).get("/v1/orgs/gohighlevel/contacts?brandId=b1");
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/gohighlevel/contacts?brandId=b1`);
+  });
+
   it("GET /orgs/gohighlevel/opportunities forwards brandId", async () => {
     const res = await request(buildApp()).get("/v1/orgs/gohighlevel/opportunities?brandId=b1");
     expect(res.status).toBe(200);
