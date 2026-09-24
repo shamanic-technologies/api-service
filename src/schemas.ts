@@ -10261,6 +10261,21 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/orgs/gohighlevel/contacts/origins",
+  tags: ["CRM Contacts"],
+  summary: "Where a brand's GoHighLevel contacts came from",
+  description:
+    "Proxy to crm-service GET /orgs/gohighlevel/contacts/origins — the brand's mirrored contacts counted by lead source, origin medium, contact type and tag, over the whole mirrored population. The whole query string is forwarded untransformed (`brandId` required downstream). Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Origin breakdown as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/orgs/gohighlevel/opportunities",
   tags: ["CRM Contacts"],
   summary: "A brand's GoHighLevel sales pipeline",
