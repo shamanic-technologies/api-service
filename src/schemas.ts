@@ -2583,6 +2583,187 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/leads/crm-evidence/sync",
+  tags: ["Leads"],
+  summary: "Reflect a brand's own CRM onto its leads' funnels now",
+  description:
+    "Pass-through to lead-service POST /orgs/leads/crm-evidence/sync. Reads the meetings booked, meetings attended " +
+    "and sales the brand's own CRM records against its paired leads and stores them as CRM evidence now, rather " +
+    "than on lead-service's periodic sweep. The query string is forwarded verbatim; lead-service owns the 400 on a " +
+    "missing or invalid `brandId` and the 502 naming a sibling it could not read. Scoped to the authenticated org. " +
+    "Refer to lead-service openapi.json for the exact response shape.",
+  security: authed,
+  request: {
+    query: z
+      .object({
+        brandId: z.string().openapi({ description: "The brand whose CRM is reflected (uuid)." }),
+      })
+      .passthrough()
+      .openapi("LeadCrmEvidenceSyncQuery"),
+  },
+  responses: {
+    200: {
+      description: "What the sync read and stored, as returned by lead-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadCrmEvidenceSyncResponse"),
+        },
+      },
+    },
+    400: { description: "Missing or invalid brandId", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "A service lead-service reads the CRM through could not answer", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/leads/{id}/crm-attribution",
+  tags: ["Leads"],
+  summary: "Whose win each step the customer's own CRM evidences on one lead was",
+  description:
+    "Pass-through to lead-service GET /orgs/leads/{id}/crm-attribution. For every funnel step the customer's own " +
+    "CRM evidences on this lead (meeting booked, meeting attended, sale): the evidence, the default rule's answer " +
+    "on whether our outreach caused it, a person's override if one was stated, and which one stands. " +
+    "The query string is forwarded verbatim; the read is org-scoped downstream on the authenticated org. " +
+    "Refer to lead-service openapi.json for the exact response shape.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().openapi({
+        description: "The `id` of a lead as returned by GET /v1/leads.",
+      }),
+    }),
+    query: z
+      .object({
+        brandId: z.string().optional().openapi({
+          description: "Which brand the lead is read under — the same scoping GET /v1/leads/{id} takes.",
+        }),
+      })
+      .passthrough()
+      .openapi("LeadCrmAttributionQuery"),
+  },
+  responses: {
+    200: {
+      description: "Per CRM-evidenced step attribution for this lead, as returned by lead-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadCrmAttributionResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid lead id", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead in this caller's org", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/leads/{id}/crm-attribution/{step}",
+  tags: ["Leads"],
+  summary: "State whether a CRM-evidenced step should be credited to our outreach",
+  description:
+    "Pass-through to lead-service PUT /orgs/leads/{id}/crm-attribution/{step}. A person states whether the meeting " +
+    "or sale the customer's own CRM records on this lead was caused by our outreach; the statement outranks the " +
+    "default rule until withdrawn through the DELETE on the same path. The body is forwarded VERBATIM and the step " +
+    "vocabulary is not enumerated here. Refusals reach the caller with their own status and body, `code` included — " +
+    "notably 409 `no_crm_evidence` when the CRM evidences no such step on this lead. The caller's org AND user are " +
+    "forwarded because lead-service records who stated it. Refer to lead-service openapi.json for the exact shapes.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().openapi({
+        description: "The `id` of a lead as returned by GET /v1/leads.",
+      }),
+      step: z.string().openapi({
+        description:
+          "A CRM-evidenced funnel step. lead-service owns this vocabulary and answers 400 naming the steps it " +
+          "accepts — refer to its openapi.json rather than to this line.",
+        example: "meeting_booked",
+      }),
+    }),
+    query: z
+      .object({
+        brandId: z.string().optional().openapi({
+          description: "Which brand the lead is read under — the same scoping GET /v1/leads/{id} takes.",
+        }),
+      })
+      .passthrough()
+      .openapi("LeadCrmAttributionWriteQuery"),
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadCrmAttributionRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "The step's attribution after the statement, as returned by lead-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadCrmAttributionStepResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid step or body (lead-service states the reason)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead in this caller's org", content: errorContent },
+    409: { description: "The customer's CRM evidences no such step on this lead (`code: no_crm_evidence`)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/leads/{id}/crm-attribution/{step}",
+  tags: ["Leads"],
+  summary: "Withdraw a statement about a CRM-evidenced step",
+  description:
+    "Pass-through to lead-service DELETE /orgs/leads/{id}/crm-attribution/{step} — the undo of the PUT on the same " +
+    "path, so the default rule's answer stands again. Withdrawing what is already withdrawn is a success " +
+    "(`alreadyWithdrawn: true`). Refusals reach the caller with their own status and body. " +
+    "Refer to lead-service openapi.json for the exact response shape.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().openapi({
+        description: "The `id` of a lead as returned by GET /v1/leads.",
+      }),
+      step: z.string().openapi({
+        description:
+          "A CRM-evidenced funnel step. lead-service owns this vocabulary and answers 400 naming the steps it " +
+          "accepts — refer to its openapi.json rather than to this line.",
+        example: "meeting_booked",
+      }),
+    }),
+    query: z
+      .object({
+        brandId: z.string().optional().openapi({
+          description: "Which brand the lead is read under — the same scoping GET /v1/leads/{id} takes.",
+        }),
+      })
+      .passthrough()
+      .openapi("LeadCrmAttributionWithdrawQuery"),
+  },
+  responses: {
+    200: {
+      description: "The step's attribution after the withdrawal, as returned by lead-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadCrmAttributionWithdrawalResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid step (lead-service states the reason)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead in this caller's org", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "get",
   path: "/v1/leads/{id}/history",
   tags: ["Leads"],

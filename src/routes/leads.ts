@@ -224,6 +224,51 @@ router.delete(
 );
 
 /**
+ * POST /v1/leads/crm-evidence/sync — pass-through to lead-service
+ * POST /orgs/leads/crm-evidence/sync.
+ *
+ * Reflects a brand's own CRM now, instead of waiting for lead-service's periodic sweep:
+ * the meetings booked, meetings attended and sales the customer's CRM records against a
+ * paired lead become CRM evidence on that lead's funnel. The dashboard calls it when a
+ * customer opens the attribution surface so what they rule on is current.
+ *
+ * Literal-first and registered BEFORE `/leads/:id`, like the crm-pairings writes above,
+ * so `crm-evidence` is never handed to lead-service as a lead id.
+ *
+ * The query string (`brandId`) is forwarded verbatim off `req.originalUrl` (rule #11) and
+ * nothing is read out of it: lead-service owns the 400 on a missing or non-uuid brand,
+ * and the 502 naming the sibling it could not read — both reach the caller field-for-field
+ * through `respondUpstreamError`. The upstream STATUS is forwarded rather than hardcoded.
+ *
+ * The org boundary is the authenticated one (`buildInternalHeaders(req)`); the caller
+ * cannot name another org's CRM to sync.
+ */
+router.post(
+  "/leads/crm-evidence/sync",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/leads/crm-evidence/sync${rawQueryString(req.originalUrl)}`,
+        {
+          method: "POST",
+          headers: buildInternalHeaders(req),
+          body: req.body,
+        }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Sync CRM evidence error:", error);
+      respondUpstreamError(res, error, "Failed to sync CRM evidence");
+    }
+  }
+);
+
+/**
  * GET /v1/leads/:id — pass-through to lead-service GET /orgs/leads/{id}.
  *
  * Registered AFTER the literal `/leads/stats` above: a path parameter matches any
@@ -628,6 +673,125 @@ router.get(
     } catch (error: any) {
       console.error("[api-service] Get lead history error:", error);
       respondUpstreamError(res, error, "Failed to get lead history");
+    }
+  }
+);
+
+/**
+ * GET /v1/leads/:id/crm-attribution — pass-through to lead-service
+ * GET /orgs/leads/{id}/crm-attribution.
+ *
+ * For every funnel step the customer's OWN CRM evidences on this lead (a meeting booked,
+ * a meeting attended, a sale): the evidence, what the default rule answers about whether
+ * our outreach caused it, a person's override if one was stated, and which of the two
+ * stands. `id` is the `id` a row of GET /v1/leads already carries.
+ *
+ * The org boundary is the authenticated one: `x-org-id` comes from
+ * `buildInternalHeaders(req)`, never from the caller, and lead-service scopes the lookup
+ * on it. The query string is forwarded verbatim (rule #11) — lead-service scopes the row
+ * on `brandId` there. One lead's handful of steps, so `callExternalService` rather than a
+ * pipe (rule #10); the response shape is lead-service's (rule #8).
+ */
+router.get(
+  "/leads/:id/crm-attribution",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/crm-attribution${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) }
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Get lead CRM attribution error:", error);
+      respondUpstreamError(res, error, "Failed to get lead CRM attribution");
+    }
+  }
+);
+
+/**
+ * PUT /v1/leads/:id/crm-attribution/:step — pass-through to lead-service
+ * PUT /orgs/leads/{id}/crm-attribution/{step}.
+ *
+ * A person states whose win a CRM-evidenced step was: whether a meeting or a sale their
+ * own CRM records should be credited to our outreach. The statement outranks the default
+ * rule and is taken back through the DELETE below.
+ *
+ * The body is forwarded VERBATIM (rule #8's corollary) and `step` is not enumerated here:
+ * `causedByOutreach` / `note` and the CRM-evidenced step vocabulary are lead-service's.
+ * Its refusals are why the body goes untouched — a 400 naming the steps it accepts, a
+ * 400 on a missing `causedByOutreach`, and above all the 409 `no_crm_evidence` when the
+ * CRM evidences no such step on this lead. `respondUpstreamError` re-emits that JSON
+ * field-for-field under the upstream status, so the browser can branch on `code`
+ * (rule #7). The upstream STATUS is forwarded rather than hardcoded.
+ *
+ * `buildInternalHeaders(req)` carries org AND user: lead-service records who stated it
+ * (`statedByUserId`), and neither is ever read from the caller's body or query.
+ */
+router.put(
+  "/leads/:id/crm-attribution/:step",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/crm-attribution/${encodeURIComponent(
+          req.params.step
+        )}${rawQueryString(req.originalUrl)}`,
+        {
+          method: "PUT",
+          headers: buildInternalHeaders(req),
+          body: req.body,
+        }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Set lead CRM attribution error:", error);
+      respondUpstreamError(res, error, "Failed to record lead CRM attribution");
+    }
+  }
+);
+
+/**
+ * DELETE /v1/leads/:id/crm-attribution/:step — pass-through to lead-service
+ * DELETE /orgs/leads/{id}/crm-attribution/{step}.
+ *
+ * Withdraws a person's statement about a CRM-evidenced step — the undo of the PUT above —
+ * so the default rule's answer stands again. Withdrawing what is already withdrawn is a
+ * 200 with `alreadyWithdrawn: true`, which is why the upstream STATUS is forwarded rather
+ * than hardcoded. The query string is forwarded verbatim (rule #11); refusals reach the
+ * caller field-for-field through `respondUpstreamError`. Org AND user are forwarded
+ * because lead-service records who withdrew it.
+ */
+router.delete(
+  "/leads/:id/crm-attribution/:step",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/crm-attribution/${encodeURIComponent(
+          req.params.step
+        )}${rawQueryString(req.originalUrl)}`,
+        {
+          method: "DELETE",
+          headers: buildInternalHeaders(req),
+        }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Withdraw lead CRM attribution error:", error);
+      respondUpstreamError(res, error, "Failed to withdraw lead CRM attribution");
     }
   }
 );
