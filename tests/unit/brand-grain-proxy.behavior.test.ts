@@ -12,7 +12,7 @@ const { FEATURES_BASE } = vi.hoisted(() => {
 });
 
 /**
- * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity} — BEHAVIOURAL cover.
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates} — BEHAVIOURAL cover.
  *
  * The offer-grain sibling's reasoning applies verbatim (see
  * offer-grain-proxy.behavior.test.ts): a source-substring test cannot see a template
@@ -106,10 +106,29 @@ const PIPELINE_ACTIVITY_BODY = {
   channels: CHANNELS,
 };
 
+// Brand-grain conversion rates carry no channel breakdown: one rate per (brand, funnel, arrow).
+const CONVERSION_RATES_BODY = {
+  brandId: BRAND_ID,
+  minMeasuredFromReached: 10,
+  contactedRecipients: 412,
+  funnels: [
+    {
+      funnelKey: "self-serve",
+      name: "Self-serve",
+      steps: ["contacted", "visited", "signed_up"],
+      arrows: [
+        { from: "contacted", to: "visited", ratePct: 3.1, source: "measured", median: { ratePct: 2.4, brandCount: 7 } },
+        { from: "visited", to: "signed_up", ratePct: 12, source: "manual", median: { ratePct: 9, brandCount: 7 } },
+      ],
+    },
+  ],
+};
+
 const READS = [
   { suffix: "revenue", body: REVENUE_BODY, query: "pricing=net" },
   { suffix: "audience-stats", body: AUDIENCE_STATS_BODY, query: "pricing=net" },
   { suffix: "pipeline-activity", body: PIPELINE_ACTIVITY_BODY, query: "days=7&timezone=America%2FNew_York" },
+  { suffix: "conversion-rates", body: CONVERSION_RATES_BODY, query: "funnel=self-serve" },
 ] as const;
 
 describe("GET /v1/brands/:brandId/* — over the wire", () => {
@@ -143,14 +162,13 @@ describe("GET /v1/brands/:brandId/* — over the wire", () => {
         expect(calls[0].options.headers["X-API-Key"]).toBe("features-test-key");
       });
 
-      it("returns features-service's body unchanged, per-channel breakdown included", async () => {
+      it("returns features-service's body unchanged", async () => {
         stubUpstream(body);
 
         const res = await request(buildApp()).get(`/v1/brands/${BRAND_ID}/${suffix}?${query}`);
 
         expect(res.status).toBe(200);
         expect(res.body).toEqual(body);
-        expect(res.body.channels).toHaveLength(2);
       });
 
       it("forwards every query param verbatim — no whitelist, nothing narrowed", async () => {

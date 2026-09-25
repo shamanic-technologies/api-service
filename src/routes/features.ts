@@ -1014,7 +1014,7 @@ const OFFER_FUNNEL_ROUTES = [
 // ── Brand grain ──────────────────────────────────────────────────────────────
 
 /**
- * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity}
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates}
  *
  * The offer grain above, one level further up. A brand holds several offers and
  * each of those runs several channels, so a brand screen built on a per-feature
@@ -1030,7 +1030,7 @@ const OFFER_FUNNEL_ROUTES = [
  * of ratios. So nothing is combined here, exactly as nothing is at the offer grain.
  *
  * NOTE ON ORDER: these mount with the rest of this router at `/v1`, AFTER
- * `brandRoutes`. No brand-service proxy claims these three suffixes, so nothing is
+ * `brandRoutes`. No brand-service proxy claims these suffixes, so nothing is
  * shadowed — but a future `/brands/:id/<one of these>` added to brand.ts would win,
  * so add there with that in mind.
  *
@@ -1043,6 +1043,11 @@ const GRAIN_SUFFIXES = [
   { suffix: "revenue", what: "revenue" },
   { suffix: "audience-stats", what: "audience stats" },
   { suffix: "pipeline-activity", what: "pipeline activity" },
+  // The EFFECTIVE conversion rate of every arrow of the brand's sales funnels and
+  // where each came from (measured / manual / cross-org median). Conversion rates are
+  // brand-grain since 2026-09-25; features-service resolves them, nothing is picked
+  // or defaulted here. `?funnel=` narrows to one funnel and rides the raw query.
+  { suffix: "conversion-rates", what: "conversion rates" },
 ] as const;
 
 for (const { suffix, what } of OFFER_ROUTES) {
