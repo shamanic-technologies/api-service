@@ -978,6 +978,11 @@ const OFFER_ROUTES = [
   // when the rename went live and the gateway path that fed it could only 404 from then on — it is
   // gone, and one word is left for one read.
   { suffix: "funnels", what: "offer sales funnels" },
+  // One row per OUTCOME the offer buys (a step at least one of our channels lands a leg
+  // on), each with its leg x channel breakdown. The offer page reads it now that the
+  // product retires the sales funnel as a concept. Same passthrough; features-service owns
+  // the rows, the figures and every refusal.
+  { suffix: "outcomes", what: "offer outcomes" },
 ] as const;
 
 // ── Sales-funnel grain, under the offer ──────────────────────────────────────

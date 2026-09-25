@@ -8687,6 +8687,31 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/offers/{offerId}/outcomes",
+  tags: ["Features"],
+  summary: "Offer outcomes",
+  description:
+    "One row per OUTCOME an offer buys (a step at least one of our channels lands a leg on), each with its count, spend, cost per outcome, value and return, and under it every leg x channel serving that outcome. " +
+    "Proxied to features-service GET /offers/{offerId}/outcomes. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer outcomes", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferOutcomesResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Offer not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/offers/{offerId}/audience-stats",
   tags: ["Features"],
   summary: "Offer audience stats",
