@@ -456,4 +456,70 @@ router.patch(
   }
 );
 
+/**
+ * Per-campaign daily ceilings — campaign = (offer × leg × acquisition channel),
+ * no funnel (billing-service #500). The funnel-free replacement for the
+ * funnel-budgets routes above, which stay untouched for callers still on funnels.
+ *
+ *   GET /v1/brands/:brandId/campaign-budgets  → every campaign's ceiling (sums to the brand total)
+ *   GET /v1/brands/:brandId/campaign-budget?offerId=&legKey=&featureSlug=  → one campaign (null = unfunded)
+ *   PUT /v1/brands/:brandId/campaign-budget   { offerId, legKey, featureSlug, dailyBudgetCents }
+ *
+ * Passthrough only: billing owns the three-part key, the minimums and the
+ * consolidation rule; the query string is forwarded verbatim off originalUrl
+ * (CLAUDE.md #11) and billing's 400 on a missing key part reaches the caller as-is.
+ */
+function rawQueryString(originalUrl: string): string {
+  const i = originalUrl.indexOf("?");
+  return i === -1 ? "" : originalUrl.slice(i);
+}
+
+router.get("/brands/:brandId/campaign-budgets", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!isUuid(req.params.brandId)) {
+      return res.status(400).json({ error: "Invalid brand ID — expected a UUID" });
+    }
+    const result = await callExternalService(
+      externalServices.billing,
+      `/v1/brands/${req.params.brandId}/campaign-budgets`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to get campaign budgets");
+  }
+});
+
+router.get("/brands/:brandId/campaign-budget", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!isUuid(req.params.brandId)) {
+      return res.status(400).json({ error: "Invalid brand ID — expected a UUID" });
+    }
+    const result = await callExternalService(
+      externalServices.billing,
+      `/v1/brands/${req.params.brandId}/campaign-budget${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to get campaign budget");
+  }
+});
+
+router.put("/brands/:brandId/campaign-budget", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    if (!isUuid(req.params.brandId)) {
+      return res.status(400).json({ error: "Invalid brand ID — expected a UUID" });
+    }
+    const result = await callExternalService(
+      externalServices.billing,
+      `/v1/brands/${req.params.brandId}/campaign-budget`,
+      { method: "PUT", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to set campaign budget");
+  }
+});
+
 export default router;

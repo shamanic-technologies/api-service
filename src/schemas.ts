@@ -3333,6 +3333,104 @@ registry.registerPath({
   },
 });
 
+// Brand – Leg rates + per-offer economics (proxy to brand-service)
+// Funnel-free model: org > brand > offer > outcome > leg. A leg moves a lead from one
+// step to another; brand-service owns the leg vocabulary, rate bounds and both shapes.
+const LegRatesResponseSchema = z.object({}).passthrough().openapi("LegRatesResponse");
+const LegRatesRequestSchema = z.object({}).passthrough().openapi("LegRatesRequest");
+const OfferEconomicsResponseSchema = z.object({}).passthrough().openapi("OfferEconomicsResponse");
+const OfferEconomicsRequestSchema = z.object({}).passthrough().openapi("OfferEconomicsRequest");
+const BrandOfferParam = z.object({
+  id: z.string().describe("Brand ID"),
+  offerId: z.string().describe("Offer ID"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/leg-rates",
+  tags: ["Brand"],
+  summary: "Get a brand's conversion rate per leg",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{id}/leg-rates. Returns the brand's conversion rate for each leg " +
+    "(a leg moves a lead from one step to another). Response shape is owned by the downstream service.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+  },
+  responses: {
+    200: { description: "Downstream body, untouched", content: { "application/json": { schema: LegRatesResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/leg-rates",
+  tags: ["Brand"],
+  summary: "Save a brand's conversion rates per leg",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{id}/leg-rates. Body + response shapes, the leg vocabulary and " +
+    "rate bounds are owned by the downstream service; its 4xx errors propagate verbatim.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: { content: { "application/json": { schema: LegRatesRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Downstream body, untouched", content: { "application/json": { schema: LegRatesResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}/economics",
+  tags: ["Brand"],
+  summary: "Get one offer's economics",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{id}/offers/{offerId}/economics. Returns the offer's economics " +
+    "(e.g. lifetime revenue per customer). Response shape is owned by the downstream service.",
+  security: authed,
+  request: {
+    params: BrandOfferParam,
+  },
+  responses: {
+    200: { description: "Downstream body, untouched", content: { "application/json": { schema: OfferEconomicsResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/offers/{offerId}/economics",
+  tags: ["Brand"],
+  summary: "Save one offer's economics",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{id}/offers/{offerId}/economics. Body + response shapes are " +
+    "owned by the downstream service; its 4xx errors propagate verbatim.",
+  security: authed,
+  request: {
+    params: BrandOfferParam,
+    body: { content: { "application/json": { schema: OfferEconomicsRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Downstream body, untouched", content: { "application/json": { schema: OfferEconomicsResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // Brand – Sales Funnels (proxy to brand-service /orgs/brands/:id/sales-funnels[/:funnelKey])
 // The funnels a brand DECLARES it sells through, each carrying its own economics.
@@ -7045,6 +7143,84 @@ registry.registerPath({
     200: { description: "Stored per-funnel ceilings + the resulting brand total", content: { "application/json": { schema: FunnelBudgetsResponseSchema } } },
     400: { description: "Validation error (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+// Brand – Per-campaign daily budgets (proxy to billing-service, #500)
+// Campaign = (offer × leg × acquisition channel), no funnel. billing owns the three-part key,
+// the minimums and the consolidation rule — the gateway declares none of it (CLAUDE.md #4/#8).
+const CampaignBudgetsResponseSchema = z.object({}).passthrough().openapi("CampaignBudgetsResponse");
+const CampaignBudgetResponseSchema = z.object({}).passthrough().openapi("CampaignBudgetResponse");
+const CampaignBudgetRequestSchema = z.object({}).passthrough().openapi("CampaignBudgetRequest");
+const CampaignBudgetQuery = z
+  .object({
+    offerId: z.string().optional().describe("Offer ID (required by billing-service)"),
+    legKey: z.string().optional().describe("Leg key (required by billing-service)"),
+    featureSlug: z.string().optional().describe("Acquisition channel feature slug (required by billing-service)"),
+  })
+  .passthrough();
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/campaign-budgets",
+  tags: ["Billing"],
+  summary: "List a brand's per-campaign daily budgets",
+  description:
+    "Proxy to billing-service GET /v1/brands/{brandId}/campaign-budgets. Every campaign (offer x leg x channel) " +
+    "daily ceiling for the calling org + brand, summing to the brand total. Response shape owned downstream.",
+  security: authed,
+  request: {
+    params: BrandFunnelBudgetsParam,
+  },
+  responses: {
+    200: { description: "Downstream body, untouched", content: { "application/json": { schema: CampaignBudgetsResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/campaign-budget",
+  tags: ["Billing"],
+  summary: "Get one campaign's daily budget",
+  description:
+    "Proxy to billing-service GET /v1/brands/{brandId}/campaign-budget. One campaign's daily ceiling, keyed by " +
+    "?offerId=&legKey=&featureSlug= (null when unfunded). Query forwarded verbatim; these are the params documented today, not a whitelist.",
+  security: authed,
+  request: {
+    params: BrandFunnelBudgetsParam, query: CampaignBudgetQuery,
+  },
+  responses: {
+    200: { description: "Downstream body, untouched", content: { "application/json": { schema: CampaignBudgetResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{brandId}/campaign-budget",
+  tags: ["Billing"],
+  summary: "Set one campaign's daily budget",
+  description:
+    "Proxy to billing-service PUT /v1/brands/{brandId}/campaign-budget. Body { offerId, legKey, featureSlug, " +
+    "dailyBudgetCents }; key vocabulary, minimums and consolidation are owned downstream; its 4xx propagate verbatim.",
+  security: authed,
+  request: {
+    params: BrandFunnelBudgetsParam,
+    body: { content: { "application/json": { schema: CampaignBudgetRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Downstream body, untouched", content: { "application/json": { schema: CampaignBudgetResponseSchema } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Not found (forwarded verbatim)", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
   },
 });

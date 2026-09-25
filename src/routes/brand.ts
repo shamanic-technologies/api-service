@@ -352,6 +352,74 @@ router.put("/brands/:id/sales-economics", authenticate, requireOrg, requireUser,
 });
 
 /**
+ * Leg rates + per-offer economics — the funnel-free replacements for
+ * sales-economics / sales-funnels (org > brand > offer > outcome > leg).
+ *
+ *   GET|PUT /v1/brands/:id/leg-rates                  → brand-service /orgs/brands/:id/leg-rates
+ *   GET|PUT /v1/brands/:id/offers/:offerId/economics  → brand-service /orgs/brands/:id/offers/:offerId/economics
+ *
+ * Pure passthroughs: brand-service owns the leg vocabulary, the rate bounds and
+ * both shapes (CLAUDE.md #8); its 4xx reach the caller field-for-field via
+ * respondUpstreamError (CLAUDE.md #7). The org is the authenticated one from
+ * buildInternalHeaders. The /internal/* twins stay unproxied (CLAUDE.md #3).
+ */
+router.get("/brands/:id/leg-rates", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/leg-rates`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Get leg rates error:", error.message);
+    respondUpstreamError(res, error, "Failed to get leg rates");
+  }
+});
+
+router.put("/brands/:id/leg-rates", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/leg-rates`,
+      { method: "PUT", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Save leg rates error:", error.message);
+    respondUpstreamError(res, error, "Failed to save leg rates");
+  }
+});
+
+router.get("/brands/:id/offers/:offerId/economics", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/offers/${encodeURIComponent(req.params.offerId)}/economics`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Get offer economics error:", error.message);
+    respondUpstreamError(res, error, "Failed to get offer economics");
+  }
+});
+
+router.put("/brands/:id/offers/:offerId/economics", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/offers/${encodeURIComponent(req.params.offerId)}/economics`,
+      { method: "PUT", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Save offer economics error:", error.message);
+    respondUpstreamError(res, error, "Failed to save offer economics");
+  }
+});
+
+/**
  * Brand sales funnels — the funnels a brand DECLARES it sells through, each
  * carrying its own economics.
  *
