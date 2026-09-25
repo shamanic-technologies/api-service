@@ -8933,6 +8933,32 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/conversion-rates",
+  tags: ["Features"],
+  summary: "Brand conversion rates",
+  description:
+    "The effective conversion rate of every arrow of the brand's sales funnels, and where each came from " +
+    "(measured on the brand's own leads, else the brand's manual statement, else the cross-org median). " +
+    "Proxied to features-service GET /brands/{brandId}/conversion-rates. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID") }),
+    query: z.object({
+      funnel: z.string().optional().openapi({ example: "self-serve" }).describe("Narrow to one sales funnel. Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Brand conversion rates", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandConversionRatesResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // Every offer of a brand, each with its own money combined across every channel it
 // is sold through — the read a brand Overview's offer table is built on. NOT mounted
 // at /v1/brands/{brandId}/offers: that path is brand-service's offer CATALOG, served
