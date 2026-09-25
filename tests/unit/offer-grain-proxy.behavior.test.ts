@@ -144,11 +144,22 @@ const FUNNELS_BODY = {
   unattributedCampaignIds: ["campaign-d"],
 };
 
+// Stand-in for features-service's per-outcome read: the gateway owns none of this shape
+// and only has to hand it through untouched.
+const OUTCOMES_BODY = {
+  offerId: OFFER_ID,
+  outcomes: [
+    { step: "website_visit", recipientsReached: 47, spentUsd: 120.5, legs: [{ featureSlug: "sales-cold-email-outreach" }] },
+    { step: "conversation", recipientsReached: 9, spentUsd: 251.9, legs: [{ featureSlug: "sales-cold-email-outreach" }] },
+  ],
+};
+
 const READS = [
   { suffix: "revenue", body: REVENUE_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
   { suffix: "audience-stats", body: AUDIENCE_STATS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
   { suffix: "pipeline-activity", body: PIPELINE_ACTIVITY_BODY, query: `brandId=${BRAND_ID}&timezone=America%2FNew_York`, channelsOf: (b: any) => b.channels },
   { suffix: "funnels", body: FUNNELS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.funnels[0].channels },
+  { suffix: "outcomes", body: OUTCOMES_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.outcomes },
 ] as const;
 
 describe("GET /v1/offers/:offerId/* — over the wire", () => {
