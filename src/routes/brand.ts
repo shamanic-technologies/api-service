@@ -463,6 +463,45 @@ router.delete("/brands/:id/sales-funnels/:funnelKey", authenticate, requireOrg, 
 });
 
 /**
+ * BRAND-GRAIN FUNNEL RATES — /v1/brands/:id/funnel-rates[/:funnelKey]
+ *
+ * A conversion rate describes how a BRAND sells, so brand-service stores ONE
+ * rate per (brand, funnel, arrow), shared by every offer of the brand. Transparent
+ * proxies of brand-service's routes of the same name under `/orgs`: the WHOLE
+ * query is forwarded (`?funnelKey=`), the body verbatim, and the downstream's
+ * status and body come back untouched (CLAUDE.md #8). The service-auth
+ * `/internal/brands/:id/funnel-rates` read is deliberately NOT proxied — its
+ * consumer (features-service) calls brand-service directly.
+ */
+router.get("/brands/:id/funnel-rates", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/funnel-rates${offerQuery(req)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Get brand funnel rates error:", error.message);
+    respondUpstreamError(res, error, "Failed to get brand funnel rates");
+  }
+});
+
+router.put("/brands/:id/funnel-rates/:funnelKey", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/funnel-rates/${encodeURIComponent(req.params.funnelKey)}`,
+      { method: "PUT", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Save brand funnel rates error:", error.message);
+    respondUpstreamError(res, error, "Failed to save brand funnel rates");
+  }
+});
+
+/**
  * OFFERS — /v1/brands/:id/offers[/:offerId[/…]]
  *
  * An OFFER is one distinct thing a brand sells: the value it promises and the
