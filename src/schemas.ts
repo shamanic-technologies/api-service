@@ -3464,6 +3464,59 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/funnel-rates",
+  tags: ["Brand"],
+  summary: "Read a brand's stated conversion rates, per funnel and arrow",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{id}/funnel-rates. A conversion rate describes " +
+    "how a BRAND sells, so there is ONE stated rate per (brand, funnel, arrow), shared by every " +
+    "offer of the brand. Returns { funnels: [{ funnelKey, name, steps, arrows: [{ fromStep, " +
+    "toStep, ratePct, stated, statedAt }] }] }. An arrow the brand never stated reads " +
+    "`stated: false` with `ratePct: null` — never a number. `?funnelKey=` narrows to one funnel " +
+    "and is forwarded verbatim. Response shape is owned by the downstream service.",
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    query: z.object({ funnelKey: z.string().optional().describe("Narrow to one funnel") }),
+  },
+  responses: {
+    200: { description: "Every funnel (or the one asked for)", content: { "application/json": { schema: z.object({}).passthrough() } } },
+    400: { description: "Invalid brand ID or unknown funnel key (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/funnel-rates/{funnelKey}",
+  tags: ["Brand"],
+  summary: "State or clear a brand's conversion rates for arrows of one funnel",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{id}/funnel-rates/{funnelKey}. Body " +
+    "{ arrowRates: [{ fromStep, toStep, ratePct | null }] }. PARTIAL: an arrow omitted is left " +
+    "as stored; `ratePct: null` clears it. Applies to every offer of the brand. Returns " +
+    "{ funnel }. Body + response shapes are owned by the downstream service; its 4xx propagate " +
+    "verbatim.",
+  security: authed,
+  request: {
+    params: BrandFunnelKeyParams,
+    body: { content: { "application/json": { schema: z.object({}).passthrough() } } },
+  },
+  responses: {
+    200: { description: "The funnel, as read after the write", content: { "application/json": { schema: z.object({}).passthrough() } } },
+    400: { description: "Invalid brand ID, unknown funnel key, or an arrow that names nothing (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // Brand – Offer image (proxy to brand-service /orgs/brands/:id/offers/:offerId/image)
 // The offer READS carry the image already, because this gateway does not
