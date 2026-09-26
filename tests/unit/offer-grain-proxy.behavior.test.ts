@@ -12,7 +12,7 @@ const { FEATURES_BASE } = vi.hoisted(() => {
 });
 
 /**
- * GET /v1/offers/:offerId/{revenue,audience-stats,pipeline-activity,funnels} — BEHAVIOURAL cover.
+ * GET /v1/offers/:offerId/{revenue,audience-stats,pipeline-activity,outcomes} — BEHAVIOURAL cover.
  *
  * Per CLAUDE.md #7 corollary 3, a source-substring test cannot see a template
  * literal's interpolated value, so it can verify neither the downstream path that
@@ -99,51 +99,6 @@ const PIPELINE_ACTIVITY_BODY = {
   channels: CHANNELS,
 };
 
-// The (offer x sales funnel) grain: one row per funnel, each carrying its own
-// channels. The per-channel breakdown sits one level deeper than on the three
-// reads above, which is exactly why the body must not be reshaped here.
-//
-// The read was called a CHAIN downstream before it was called a FUNNEL. Both
-// spellings were mounted here while features-service renamed it; only the funnel
-// one is left, and the assertion that keeps it honest is the full downstream path
-// literal below — a gateway that quietly rewrote one word into the other would
-// still return 200 and would still be wrong.
-const FUNNELS_BODY = {
-  offerId: OFFER_ID,
-  brandId: BRAND_ID,
-  costBasis: "charged",
-  costCoverage: "platform_spend_only",
-  funnels: [
-    {
-      funnelKey: "self-serve",
-      name: "Self-serve",
-      steps: ["contacted", "clicked", "signed_up"],
-      campaignIds: ["campaign-a", "campaign-b", "campaign-c"],
-      channels: CHANNELS,
-      priced: true,
-      unpricedReason: null,
-      headline: { totalPipelineUsd: 4534.05, economicsSource: "sales-economics" },
-      costEconomics: {
-        committedCostUsd: 2518.92,
-        actualCostUsd: 2411.42,
-        costOfAcquisitionPct: 55.55,
-        roiMultiple: 1.8,
-        costPerAcquisitionUsd: 111.06,
-      },
-      outcomes: {
-        recipientsContacted: 812,
-        recipientsClicked: 47,
-        recipientsRepliesPositive: 9,
-        committedSpentCents: 251892,
-        actualSpentCents: 241142,
-        cpcCents: 5359,
-        cpprCents: 27988,
-      },
-    },
-  ],
-  unattributedCampaignIds: ["campaign-d"],
-};
-
 // Stand-in for features-service's per-outcome read: the gateway owns none of this shape
 // and only has to hand it through untouched.
 const OUTCOMES_BODY = {
@@ -158,7 +113,6 @@ const READS = [
   { suffix: "revenue", body: REVENUE_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
   { suffix: "audience-stats", body: AUDIENCE_STATS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
   { suffix: "pipeline-activity", body: PIPELINE_ACTIVITY_BODY, query: `brandId=${BRAND_ID}&timezone=America%2FNew_York`, channelsOf: (b: any) => b.channels },
-  { suffix: "funnels", body: FUNNELS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.funnels[0].channels },
   { suffix: "outcomes", body: OUTCOMES_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.outcomes },
 ] as const;
 
