@@ -5,16 +5,15 @@ import express from "express";
 /**
  * POST /v1/campaigns — the request body is a passthrough.
  *
- * campaign-service owns the create contract. A sales-outreach campaign must state the
- * sales funnel it sells (`funnelKey`) or campaign-service 400s: the funnel is what the
- * campaign is paced and priced on, and nothing infers one from a goal any more.
+ * campaign-service owns the create contract. A sales-outreach campaign states the offer it
+ * sells (`offerId`) and the leg it is bought for (`legKey`); campaign-service 400s what it
+ * does not accept.
  *
  * The gateway used to validate the body against a WHITELIST and forward only the fields
- * it re-declared, so a funnel the dashboard sent was silently dropped and campaign-service
- * saw a create with no funnel — every sales campaign creation through the gateway 400'd.
- * These tests pin the passthrough: whatever campaign-service accepts reaches it unchanged,
- * the gateway invents no funnel when the caller states none, and campaign-service's own
- * rejection comes back to the caller field-for-field.
+ * it re-declared, so a field the dashboard sent was silently dropped and every sales
+ * campaign creation through the gateway 400'd. These tests pin the passthrough: whatever
+ * campaign-service accepts reaches it unchanged, the gateway invents nothing when the
+ * caller states nothing, and campaign-service's own rejection comes back field-for-field.
  */
 
 vi.mock("../../src/middleware/auth.js", () => ({
@@ -88,30 +87,27 @@ describe("POST /v1/campaigns request-body passthrough", () => {
     return fetchCalls.find((c) => c.url.includes("/campaigns") && c.method === "POST");
   }
 
-  // The four funnels brand-service and billing-service already speak.
-  for (const funnelKey of ["reply_meeting", "visit_meeting", "visit_signup", "visit_form"]) {
-    it(`forwards funnelKey "${funnelKey}" to campaign-service unchanged`, async () => {
-      const res = await request(createApp())
-        .post("/v1/campaigns")
-        .send({ ...BASE_BODY, funnelKey });
+  it("forwards offerId + legKey to campaign-service unchanged", async () => {
+    const res = await request(createApp())
+      .post("/v1/campaigns")
+      .send({ ...BASE_BODY, offerId: "d5ecba00-783a-4939-b5bd-f85b9e6b7d9e", legKey: "reply_to_meeting" });
 
-      expect(res.status).toBe(200);
-      expect(createCall()!.body!.funnelKey).toBe(funnelKey);
-    });
-  }
+    expect(res.status).toBe(200);
+    expect(createCall()!.body).toMatchObject({ offerId: "d5ecba00-783a-4939-b5bd-f85b9e6b7d9e", legKey: "reply_to_meeting" });
+  });
 
-  it("does not invent a funnel when the caller states none", async () => {
+  it("does not invent a leg when the caller states none", async () => {
     const res = await request(createApp()).post("/v1/campaigns").send(BASE_BODY);
 
     expect(res.status).toBe(200);
-    expect(createCall()!.body).not.toHaveProperty("funnelKey");
+    expect(createCall()!.body).not.toHaveProperty("legKey");
   });
 
-  it("does not validate the funnel vocabulary itself — an unknown key reaches campaign-service", async () => {
-    // Only campaign-service knows which funnel keys exist; the gateway must not 400 first.
-    await request(createApp()).post("/v1/campaigns").send({ ...BASE_BODY, funnelKey: "not_a_real_funnel" });
+  it("does not validate the leg vocabulary itself — an unknown key reaches campaign-service", async () => {
+    // Only features-service / campaign-service know which legs exist; the gateway must not 400 first.
+    await request(createApp()).post("/v1/campaigns").send({ ...BASE_BODY, legKey: "not_a_real_leg" });
 
-    expect(createCall()!.body!.funnelKey).toBe("not_a_real_funnel");
+    expect(createCall()!.body!.legKey).toBe("not_a_real_leg");
   });
 
   it("forwards any other field campaign-service accepts, including ones the gateway never declared", async () => {
@@ -119,7 +115,7 @@ describe("POST /v1/campaigns request-body passthrough", () => {
       .post("/v1/campaigns")
       .send({
         ...BASE_BODY,
-        funnelKey: "visit_signup",
+        legKey: "visit_to_signup",
         dailyBudgetCents: 2500,
         startDate: "2026-09-01",
         notifyChannel: "email",
@@ -128,7 +124,7 @@ describe("POST /v1/campaigns request-body passthrough", () => {
       });
 
     expect(createCall()!.body).toMatchObject({
-      funnelKey: "visit_signup",
+      legKey: "visit_to_signup",
       dailyBudgetCents: 2500,
       startDate: "2026-09-01",
       notifyChannel: "email",
@@ -143,11 +139,11 @@ describe("POST /v1/campaigns request-body passthrough", () => {
     expect(createCall()!.body!.goal).toBe("salesQualifiedLead");
   });
 
-  it("surfaces campaign-service's 400 for a sales create with no funnel, body field-for-field", async () => {
+  it("surfaces campaign-service's 400 for a sales create with no leg, body field-for-field", async () => {
     const upstream400 = {
-      error: "A sales-outreach campaign must state the sales funnel it sells",
-      code: "FUNNEL_REQUIRED",
-      details: { acceptedFunnelKeys: ["reply_meeting", "visit_meeting", "visit_signup", "visit_form"] },
+      error: "A sales-outreach campaign must state the leg it is bought for",
+      code: "LEG_REQUIRED",
+      details: { offerId: null },
     };
     campaignCreateResponse = () => ({
       ok: false,

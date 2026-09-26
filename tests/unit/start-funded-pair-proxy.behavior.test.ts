@@ -65,8 +65,8 @@ const OFFER_ID = "0f5f2b0a-6f34-4f2a-9a0c-2b53a5b9a111";
 const VALID_BODY = {
   brandId: BRAND_ID,
   offerId: OFFER_ID,
-  funnelKey: "visit_meeting",
   featureSlug: "sales-cold-email-outreach",
+  legKey: "visit_to_meeting",
 };
 
 const CREATED_BODY = {
@@ -75,9 +75,8 @@ const CREATED_BODY = {
     status: "ongoing",
     brandIds: [BRAND_ID],
     offerId: OFFER_ID,
-    funnelKey: "visit_meeting",
     featureSlug: "sales-cold-email-outreach",
-    legKey: null,
+    legKey: "visit_to_meeting",
     workflowSlug: "sales-email-cold-outreach-sienna-v3",
     name: "Sales cold email outreach — visit_meeting",
   },
