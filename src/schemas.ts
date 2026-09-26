@@ -883,8 +883,8 @@ registry.registerPath({
 // The gateway declares ONLY the fields it needs for its own work: the required-field
 // check it 400s on, the brandUrls→brandIds upsert, the workflow slug it derives the
 // campaign type + tracking header from, and the featureInputs it key-presence-validates
-// against features-service. Everything else campaign-service accepts — `funnelKey`, and
-// any field it adds next — rides through `.passthrough()` untouched. A whitelist here
+// against features-service. Everything else campaign-service accepts — `offerId`, `legKey`,
+// and any field it adds next — rides through `.passthrough()` untouched. A whitelist here
 // would silently DROP those fields (the create reaching campaign-service without them),
 // which is the gateway owning a downstream shape it does not own (CLAUDE.md rule #8).
 // So: never re-declare a field just to let it through, and never validate a downstream
@@ -913,8 +913,8 @@ export const CreateCampaignRequestSchema = z
     servicesOffered: z.array(z.string().min(1)).nullable().optional().describe("Services offered by this campaign"),
     clickDestinationUrl: z.string().min(1).nullable().optional().describe("Campaign's click-destination URL"),
   })
-  // Forward every other field campaign-service accepts — `funnelKey` (the sales funnel a
-  // sales campaign is paced and priced on) and whatever it adds next — byte-identical.
+  // Forward every other field campaign-service accepts — `offerId` + `legKey` (what a sales
+  // campaign sells and the leg it is bought for) and whatever it adds next — byte-identical.
   .passthrough()
   .refine(
     (d) => d.workflowSlug || d.workflowDynastySlug,
@@ -944,7 +944,7 @@ export const CreateCampaignRequestSchema = z
 // campaign-service's body is `.strict()` ON PURPOSE: a caller reaching for a workflow, a
 // campaign name or a per-campaign budget is TOLD no rather than having it silently stripped,
 // because each of those is a decision the browser does not own. So this gateway declares the
-// four fields the customer's own screen knows purely as DOCUMENTATION and carries
+// fields the customer's own screen knows purely as DOCUMENTATION and carries
 // `.passthrough()` — the handler forwards `req.body` byte-identical and never parses against
 // this schema. A whitelist here would strip exactly the field campaign-service means to refuse,
 // turning its "no" into a silent acceptance of a different request (CLAUDE.md rule #8 corollary).
@@ -952,17 +952,16 @@ export const StartFundedPairRequestSchema = z
   .object({
     brandId: z.string().uuid().describe("The brand whose funded pair is being started."),
     offerId: z.string().uuid().nullable().optional().describe("The offer whose money funds this pair. Absent is the pre-offer population."),
-    funnelKey: z.string().min(1).describe("The sales funnel, in any spelling campaign-service accepts. Vocabulary owned downstream — not enumerated here."),
     featureSlug: z.string().min(1).describe("The acquisition channel, as a features-service feature slug."),
-    legKey: z.string().min(1).nullable().optional().describe("Disambiguation only: a customer who funded TWO legs of one (funnel, channel, offer) has two campaigns to start, and this says which. Never required."),
+    legKey: z.string().min(1).nullable().optional().describe("The leg the campaign is bought for, as published on features-service's channel catalogue. Stated together with offerId. Vocabulary owned downstream — not enumerated here."),
   })
   .passthrough()
   .openapi("StartFundedPairRequest", {
     example: {
       brandId: "75d7e3e8-6926-4f85-a557-976895400666",
       offerId: "0f5f2b0a-6f34-4f2a-9a0c-2b53a5b9a111",
-      funnelKey: "visit_meeting",
       featureSlug: "sales-cold-email-outreach",
+      legKey: "visit_to_meeting",
     },
   });
 
@@ -1129,10 +1128,9 @@ registry.registerPath({
     "Use `workflowSlug`/`featureSlug` only to pin to a specific version. " +
     "Feature inputs are validated by key-presence against features-service (api-service never inspects values).\n\n" +
     "The body is a PASSTHROUGH: the fields below are the ones the gateway itself needs, and every other field " +
-    "campaign-service accepts is forwarded unchanged. A sales-outreach campaign must state the sales funnel it " +
-    "sells as `funnelKey` (`reply_meeting` | `visit_meeting` | `visit_signup` | `visit_form`) — that is what the " +
-    "campaign is paced and priced on. The gateway neither infers nor defaults one: state no funnel on a sales " +
-    "feature and campaign-service's own 400 comes back verbatim.",
+    "campaign-service accepts is forwarded unchanged. A sales-outreach campaign states what it sells as `offerId` " +
+    "plus the leg it is bought for as `legKey` — that is what the campaign is paced and priced on. The gateway " +
+    "neither infers nor defaults either: campaign-service's own 400 comes back verbatim.",
   security: authed,
   request: {
     body: {
@@ -3427,190 +3425,6 @@ registry.registerPath({
     400: { description: "Validation error (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-// ===================================================================
-// Brand – Sales Funnels (proxy to brand-service /orgs/brands/:id/sales-funnels[/:funnelKey])
-// The funnels a brand DECLARES it sells through, each carrying its own economics.
-// Downstream owns body + response shapes — passthrough only, no gateway
-// re-validation, so brand-service's 4xx propagate verbatim.
-//
-// The read answers { declared, funnels }, and `declared` is load-bearing:
-// `declared: false` with an empty list means no set has ever been stated,
-// `declared: true` with an empty list means the brand stated it sells through
-// none. Opposite answers, and the flag is the only thing separating them.
-//
-// The service-auth GET /internal/brands/{id}/sales-funnels is NOT proxied:
-// features-service reads it service-to-service.
-// ===================================================================
-const SalesFunnelsResponseSchema = z.object({}).passthrough().openapi("SalesFunnelsResponse");
-const SalesFunnelsSetRequestSchema = z.object({}).passthrough().openapi("SalesFunnelsSetRequest");
-const SalesFunnelRequestSchema = z.object({}).passthrough().openapi("SalesFunnelRequest");
-
-const BrandFunnelKeyParams = z.object({
-  id: z.string().describe("Brand ID"),
-  funnelKey: z
-    .string()
-    .describe("Funnel key: reply_meeting | visit_meeting | visit_signup | visit_form"),
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/brands/{id}/sales-funnels",
-  tags: ["Brand"],
-  summary: "Get the sales funnels a brand has declared it sells through",
-  description:
-    "Proxy to brand-service GET /orgs/brands/{id}/sales-funnels. Returns " +
-    "{ declared, funnels }: the funnels the brand declared, in catalogue order, each with " +
-    "its own conversion rates, lifetime revenue, landing page and booking link. Read " +
-    "`declared` BEFORE `funnels` — `declared: true` with an empty list means the brand " +
-    "STATED it sells through none, while `declared: false` means it has never told us " +
-    "anything. Nothing is defaulted: a value the brand never declared reads null, which " +
-    "never means zero. Response shape is owned by the downstream service.",
-  security: authed,
-  request: { params: BrandIdParam },
-  responses: {
-    200: { description: "The declared funnels (possibly empty)", content: { "application/json": { schema: SalesFunnelsResponseSchema } } },
-    400: { description: "Invalid brand ID format (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
-    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "put",
-  path: "/v1/brands/{id}/sales-funnels",
-  tags: ["Brand"],
-  summary: "State the whole set of funnels a brand sells through",
-  description:
-    "Proxy to brand-service PUT /orgs/brands/{id}/sales-funnels. States the WHOLE set at " +
-    "once (body { funnelKeys }): exactly these funnels, no others. Funnels already in the " +
-    "set keep the economics they were priced with; funnels dropped from it lose their " +
-    "declaration and their economics together. `{ \"funnelKeys\": [] }` is legal and is the " +
-    "only way a brand can state it sells through NOTHING. The set is validated whole before " +
-    "anything is written, so a rejected set leaves nothing half-applied. Body + response " +
-    "shapes are owned by the downstream service; its 4xx propagate verbatim.",
-  security: authed,
-  request: {
-    params: BrandIdParam,
-    body: { content: { "application/json": { schema: SalesFunnelsSetRequestSchema } } },
-  },
-  responses: {
-    200: { description: "The stated set", content: { "application/json": { schema: SalesFunnelsResponseSchema } } },
-    400: { description: "Invalid brand ID, unknown funnel key, or a website-led funnel on a brand with no website (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
-    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "put",
-  path: "/v1/brands/{id}/sales-funnels/{funnelKey}",
-  tags: ["Brand"],
-  summary: "Declare a sales funnel and write its economics",
-  description:
-    "Proxy to brand-service PUT /orgs/brands/{id}/sales-funnels/{funnelKey}. Declares that " +
-    "the brand sells through this funnel and writes what the body carries of its economics. " +
-    "Idempotent — the declaration IS the row, and a body with no fields declares the funnel " +
-    "without pricing it yet. PARTIAL: an omitted field is left exactly as stored, an explicit " +
-    "null CLEARS the value back to never-declared. brand-service rejects a rate outside this " +
-    "funnel's own legs, a destination the funnel has no use for, an off-domain page " +
-    "destination, and a website-led funnel on a brand with no website; the gateway adds no " +
-    "validation of its own. Body + response shapes are owned by the downstream service.",
-  security: authed,
-  request: {
-    params: BrandFunnelKeyParams,
-    body: { content: { "application/json": { schema: SalesFunnelRequestSchema } } },
-  },
-  responses: {
-    200: { description: "The declared funnel", content: { "application/json": { schema: SalesFunnelsResponseSchema } } },
-    400: { description: "Invalid brand ID or funnel key, a rate outside this funnel's own legs, a destination the funnel has no use for, or a website-led funnel on a brand with no website (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
-    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "delete",
-  path: "/v1/brands/{id}/sales-funnels/{funnelKey}",
-  tags: ["Brand"],
-  summary: "Undeclare a sales funnel",
-  description:
-    "Proxy to brand-service DELETE /orgs/brands/{id}/sales-funnels/{funnelKey}. The brand no " +
-    "longer sells through this funnel, and removing the declaration removes its economics " +
-    "with it. Idempotent — undeclaring a funnel that was never declared is a 200 with the " +
-    "unchanged set. Does NOT un-state the set: a brand that removes its LAST funnel keeps " +
-    "`declared: true`, because it has stated it sells through none. Returns the set that is " +
-    "left. Response shape is owned by the downstream service.",
-  security: authed,
-  request: { params: BrandFunnelKeyParams },
-  responses: {
-    200: { description: "The funnels still declared", content: { "application/json": { schema: SalesFunnelsResponseSchema } } },
-    400: { description: "Invalid brand ID format or unknown funnel key (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
-    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/brands/{id}/funnel-rates",
-  tags: ["Brand"],
-  summary: "Read a brand's stated conversion rates, per funnel and arrow",
-  description:
-    "Proxy to brand-service GET /orgs/brands/{id}/funnel-rates. A conversion rate describes " +
-    "how a BRAND sells, so there is ONE stated rate per (brand, funnel, arrow), shared by every " +
-    "offer of the brand. Returns { funnels: [{ funnelKey, name, steps, arrows: [{ fromStep, " +
-    "toStep, ratePct, stated, statedAt }] }] }. An arrow the brand never stated reads " +
-    "`stated: false` with `ratePct: null` — never a number. `?funnelKey=` narrows to one funnel " +
-    "and is forwarded verbatim. Response shape is owned by the downstream service.",
-  security: authed,
-  request: {
-    params: BrandIdParam,
-    query: z.object({ funnelKey: z.string().optional().describe("Narrow to one funnel") }),
-  },
-  responses: {
-    200: { description: "Every funnel (or the one asked for)", content: { "application/json": { schema: z.object({}).passthrough() } } },
-    400: { description: "Invalid brand ID or unknown funnel key (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
-    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "put",
-  path: "/v1/brands/{id}/funnel-rates/{funnelKey}",
-  tags: ["Brand"],
-  summary: "State or clear a brand's conversion rates for arrows of one funnel",
-  description:
-    "Proxy to brand-service PUT /orgs/brands/{id}/funnel-rates/{funnelKey}. Body " +
-    "{ arrowRates: [{ fromStep, toStep, ratePct | null }] }. PARTIAL: an arrow omitted is left " +
-    "as stored; `ratePct: null` clears it. Applies to every offer of the brand. Returns " +
-    "{ funnel }. Body + response shapes are owned by the downstream service; its 4xx propagate " +
-    "verbatim.",
-  security: authed,
-  request: {
-    params: BrandFunnelKeyParams,
-    body: { content: { "application/json": { schema: z.object({}).passthrough() } } },
-  },
-  responses: {
-    200: { description: "The funnel, as read after the write", content: { "application/json": { schema: z.object({}).passthrough() } } },
-    400: { description: "Invalid brand ID, unknown funnel key, or an arrow that names nothing (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
-    404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
   },
 });
@@ -7063,93 +6877,12 @@ registry.registerPath({
   },
 });
 
-// Brand – Per-funnel Daily Budgets (proxy to billing-service)
-// A brand can fund each of its sales funnels separately: one daily ceiling per funnel
-// instead of a single brand-level pot. Once per-funnel ceilings exist the brand-level
-// daily budget is their SUM and PATCH /v1/brands/{brandId}/daily-budget is refused (409).
-// billing owns the funnel-key vocabulary, the per-funnel product minimums and the
-// atomic all-or-nothing write — the gateway declares none of it (CLAUDE.md #4/#8).
-const BrandFunnelBudgetsParam = z.object({
-  brandId: z.string().uuid().describe("Brand ID"),
-});
-const BrandFunnelBudgetParam = z.object({
-  brandId: z.string().uuid().describe("Brand ID"),
-  funnelKey: z.string().describe("Sales-funnel key — vocabulary owned by billing-service"),
-});
-const FunnelBudgetsResponseSchema = z.object({}).passthrough().openapi("FunnelBudgetsResponse");
-const FunnelBudgetsRequestSchema = z.object({}).passthrough().openapi("FunnelBudgetsRequest");
-const FunnelBudgetRequestSchema = z.object({}).passthrough().openapi("FunnelBudgetRequest");
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/brands/{brandId}/funnel-budgets",
-  tags: ["Billing"],
-  summary: "Get a brand's per-funnel daily budgets",
-  description:
-    "Proxy to billing-service GET /v1/brands/{brandId}/funnel-budgets. " +
-    "Returns the calling org's per-funnel daily ceilings for the brand plus the brand-level " +
-    "total. A brand with no per-funnel ceilings returns an empty funnel list. Response shape " +
-    "is owned by the downstream service.",
-  security: authed,
-  request: { params: BrandFunnelBudgetsParam },
-  responses: {
-    200: { description: "Per-funnel ceilings + brand total", content: { "application/json": { schema: FunnelBudgetsResponseSchema } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "put",
-  path: "/v1/brands/{brandId}/funnel-budgets",
-  tags: ["Billing"],
-  summary: "Set a brand's whole per-funnel daily budget set (atomic)",
-  description:
-    "Proxy to billing-service PUT /v1/brands/{brandId}/funnel-budgets. " +
-    "Writes every per-funnel daily ceiling for this org + brand in one transaction — signup " +
-    "checkout uses this. Body { funnels: [{ funnelKey, dailyBudgetCents }] }; funnel keys, " +
-    "per-funnel minimums and the all-or-nothing semantics are owned by the downstream " +
-    "service, which validates the payload. Its 4xx errors propagate verbatim.",
-  security: authed,
-  request: {
-    params: BrandFunnelBudgetsParam,
-    body: { content: { "application/json": { schema: FunnelBudgetsRequestSchema } } },
-  },
-  responses: {
-    200: { description: "Stored per-funnel ceilings + the resulting brand total", content: { "application/json": { schema: FunnelBudgetsResponseSchema } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "patch",
-  path: "/v1/brands/{brandId}/funnel-budgets/{funnelKey}",
-  tags: ["Billing"],
-  summary: "Set one funnel's daily budget for a brand",
-  description:
-    "Proxy to billing-service PATCH /v1/brands/{brandId}/funnel-budgets/{funnelKey}. " +
-    "Sets a single sales funnel's daily spend ceiling — brand Settings changes them one at a " +
-    "time; untouched funnels keep theirs. Body { dailyBudgetCents }. Funnel-key vocabulary and " +
-    "per-funnel minimums are owned by the downstream service; its 4xx errors propagate verbatim.",
-  security: authed,
-  request: {
-    params: BrandFunnelBudgetParam,
-    body: { content: { "application/json": { schema: FunnelBudgetRequestSchema } } },
-  },
-  responses: {
-    200: { description: "Stored per-funnel ceilings + the resulting brand total", content: { "application/json": { schema: FunnelBudgetsResponseSchema } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
 // Brand – Per-campaign daily budgets (proxy to billing-service, #500)
 // Campaign = (offer × leg × acquisition channel), no funnel. billing owns the three-part key,
 // the minimums and the consolidation rule — the gateway declares none of it (CLAUDE.md #4/#8).
+const BrandBudgetParam = z.object({
+  brandId: z.string().uuid().describe("Brand ID"),
+});
 const CampaignBudgetsResponseSchema = z.object({}).passthrough().openapi("CampaignBudgetsResponse");
 const CampaignBudgetResponseSchema = z.object({}).passthrough().openapi("CampaignBudgetResponse");
 const CampaignBudgetRequestSchema = z.object({}).passthrough().openapi("CampaignBudgetRequest");
@@ -7171,7 +6904,7 @@ registry.registerPath({
     "daily ceiling for the calling org + brand, summing to the brand total. Response shape owned downstream.",
   security: authed,
   request: {
-    params: BrandFunnelBudgetsParam,
+    params: BrandBudgetParam,
   },
   responses: {
     200: { description: "Downstream body, untouched", content: { "application/json": { schema: CampaignBudgetsResponseSchema } } },
@@ -7192,7 +6925,7 @@ registry.registerPath({
     "?offerId=&legKey=&featureSlug= (null when unfunded). Query forwarded verbatim; these are the params documented today, not a whitelist.",
   security: authed,
   request: {
-    params: BrandFunnelBudgetsParam, query: CampaignBudgetQuery,
+    params: BrandBudgetParam, query: CampaignBudgetQuery,
   },
   responses: {
     200: { description: "Downstream body, untouched", content: { "application/json": { schema: CampaignBudgetResponseSchema } } },
@@ -7213,7 +6946,7 @@ registry.registerPath({
     "dailyBudgetCents }; key vocabulary, minimums and consolidation are owned downstream; its 4xx propagate verbatim.",
   security: authed,
   request: {
-    params: BrandFunnelBudgetsParam,
+    params: BrandBudgetParam,
     body: { content: { "application/json": { schema: CampaignBudgetRequestSchema } } },
   },
   responses: {

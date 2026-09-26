@@ -10,7 +10,7 @@ const router = Router();
  * What a brand may actually spend today.
  *
  * Owned by CAMPAIGN-SERVICE, not brand-service: the answer is the join of the
- * campaign STATUS (campaign-service) with the per-funnel CEILING (billing-service),
+ * campaign STATUS (campaign-service) with the per-campaign CEILING (billing-service),
  * and campaign-service is the only place that holds the first half. The client-facing
  * path stays under /v1/brands/* because that is the downstream path (rule #1, no path
  * renaming) — so this router MUST be mounted BEFORE brandRoutes in src/index.ts, like

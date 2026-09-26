@@ -353,7 +353,7 @@ router.put("/brands/:id/sales-economics", authenticate, requireOrg, requireUser,
 
 /**
  * Leg rates + per-offer economics — the funnel-free replacements for
- * sales-economics / sales-funnels (org > brand > offer > outcome > leg).
+ * sales-economics / the retired sales funnels (org > brand > offer > outcome > leg).
  *
  *   GET|PUT /v1/brands/:id/leg-rates                  → brand-service /orgs/brands/:id/leg-rates
  *   GET|PUT /v1/brands/:id/offers/:offerId/economics  → brand-service /orgs/brands/:id/offers/:offerId/economics
@@ -420,163 +420,12 @@ router.put("/brands/:id/offers/:offerId/economics", authenticate, requireOrg, re
 });
 
 /**
- * Brand sales funnels — the funnels a brand DECLARES it sells through, each
- * carrying its own economics.
- *
- * Four org-scoped passthroughs sitting beside the sales-economics proxies above,
- * with the same auth and the same downstream path shape
- * (/orgs/brands/:id/sales-funnels[/:funnelKey] → /v1/brands/:id/...).
- *
- * `declared` is the one semantic worth naming here, because flattening it is
- * easy and lies about user data: `declared: false` with an empty list means the
- * brand has never stated a set, `declared: true` with an empty list means it
- * stated it sells through none. Both come back untouched — brand-service owns
- * the shape (CLAUDE.md #8) and this layer re-declares nothing.
- *
- * No validation here either (CLAUDE.md rule: no gateway re-validation).
- * brand-service already rejects a rate outside a funnel's own legs, a
- * destination the funnel has no use for, and a website-led funnel on a brand
- * with no website; its 400s reach the caller with status and body intact via
- * callExternalServiceWithStatus + respondUpstreamError.
- *
- * The service-auth GET /internal/brands/:id/sales-funnels is deliberately NOT
- * proxied: features-service reads it service-to-service, and an internal route
- * is never mounted client-facing (CLAUDE.md rule #3).
- */
-
-/**
- * GET /v1/brands/:id/sales-funnels
- * Proxy to brand-service GET /orgs/brands/:id/sales-funnels. Returns
- * { declared, funnels } — the funnels the brand declared, in catalogue order,
- * each with its own rates, lifetime revenue, landing page and booking link.
- * Response shape is owned by the downstream service — passthrough only.
- */
-router.get("/brands/:id/sales-funnels", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { status, data } = await callExternalServiceWithStatus(
-      externalServices.brand,
-      `/orgs/brands/${req.params.id}/sales-funnels`,
-      { headers: buildInternalHeaders(req) },
-    );
-    res.status(status).json(data);
-  } catch (error: any) {
-    console.error("[api-service] Get brand sales funnels error:", error.message);
-    respondUpstreamError(res, error, "Failed to get brand sales funnels");
-  }
-});
-
-/**
- * PUT /v1/brands/:id/sales-funnels
- * Proxy to brand-service PUT /orgs/brands/:id/sales-funnels. States the WHOLE
- * set at once (body { funnelKeys }); `{ "funnelKeys": [] }` is the only way a
- * brand can state it sells through nothing. Body + response shapes are owned by
- * the downstream service; its 4xx propagate verbatim — passthrough only.
- */
-router.put("/brands/:id/sales-funnels", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { status, data } = await callExternalServiceWithStatus(
-      externalServices.brand,
-      `/orgs/brands/${req.params.id}/sales-funnels`,
-      { method: "PUT", headers: buildInternalHeaders(req), body: req.body },
-    );
-    res.status(status).json(data);
-  } catch (error: any) {
-    console.error("[api-service] Save brand sales funnels error:", error.message);
-    respondUpstreamError(res, error, "Failed to save brand sales funnels");
-  }
-});
-
-/**
- * PUT /v1/brands/:id/sales-funnels/:funnelKey
- * Proxy to brand-service PUT /orgs/brands/:id/sales-funnels/:funnelKey.
- * Declares one funnel and writes what the body carries of its economics
- * (partial: an omitted field is left as stored, an explicit null clears it).
- * Body + response shapes are owned by the downstream service; its 4xx
- * propagate verbatim — passthrough only.
- */
-router.put("/brands/:id/sales-funnels/:funnelKey", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { status, data } = await callExternalServiceWithStatus(
-      externalServices.brand,
-      `/orgs/brands/${req.params.id}/sales-funnels/${encodeURIComponent(req.params.funnelKey)}`,
-      { method: "PUT", headers: buildInternalHeaders(req), body: req.body },
-    );
-    res.status(status).json(data);
-  } catch (error: any) {
-    console.error("[api-service] Declare brand sales funnel error:", error.message);
-    respondUpstreamError(res, error, "Failed to declare brand sales funnel");
-  }
-});
-
-/**
- * DELETE /v1/brands/:id/sales-funnels/:funnelKey
- * Proxy to brand-service DELETE /orgs/brands/:id/sales-funnels/:funnelKey. The
- * brand no longer sells through this funnel, and its economics go with the
- * declaration. Returns the set that is left; a brand that removes its last
- * funnel keeps `declared: true`. Response shape is owned by the downstream
- * service — passthrough only.
- */
-router.delete("/brands/:id/sales-funnels/:funnelKey", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { status, data } = await callExternalServiceWithStatus(
-      externalServices.brand,
-      `/orgs/brands/${req.params.id}/sales-funnels/${encodeURIComponent(req.params.funnelKey)}`,
-      { method: "DELETE", headers: buildInternalHeaders(req) },
-    );
-    res.status(status).json(data);
-  } catch (error: any) {
-    console.error("[api-service] Undeclare brand sales funnel error:", error.message);
-    respondUpstreamError(res, error, "Failed to undeclare brand sales funnel");
-  }
-});
-
-/**
- * BRAND-GRAIN FUNNEL RATES — /v1/brands/:id/funnel-rates[/:funnelKey]
- *
- * A conversion rate describes how a BRAND sells, so brand-service stores ONE
- * rate per (brand, funnel, arrow), shared by every offer of the brand. Transparent
- * proxies of brand-service's routes of the same name under `/orgs`: the WHOLE
- * query is forwarded (`?funnelKey=`), the body verbatim, and the downstream's
- * status and body come back untouched (CLAUDE.md #8). The service-auth
- * `/internal/brands/:id/funnel-rates` read is deliberately NOT proxied — its
- * consumer (features-service) calls brand-service directly.
- */
-router.get("/brands/:id/funnel-rates", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { status, data } = await callExternalServiceWithStatus(
-      externalServices.brand,
-      `/orgs/brands/${req.params.id}/funnel-rates${offerQuery(req)}`,
-      { headers: buildInternalHeaders(req) },
-    );
-    res.status(status).json(data);
-  } catch (error: any) {
-    console.error("[api-service] Get brand funnel rates error:", error.message);
-    respondUpstreamError(res, error, "Failed to get brand funnel rates");
-  }
-});
-
-router.put("/brands/:id/funnel-rates/:funnelKey", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { status, data } = await callExternalServiceWithStatus(
-      externalServices.brand,
-      `/orgs/brands/${req.params.id}/funnel-rates/${encodeURIComponent(req.params.funnelKey)}`,
-      { method: "PUT", headers: buildInternalHeaders(req), body: req.body },
-    );
-    res.status(status).json(data);
-  } catch (error: any) {
-    console.error("[api-service] Save brand funnel rates error:", error.message);
-    respondUpstreamError(res, error, "Failed to save brand funnel rates");
-  }
-});
-
-/**
  * OFFERS — /v1/brands/:id/offers[/:offerId[/…]]
  *
- * An OFFER is one distinct thing a brand sells: the value it promises and the
- * sales funnels it is sold through. A brand is an IDENTITY (a name, a domain, a
+ * An OFFER is one distinct thing a brand sells: the value it promises. A brand is an IDENTITY (a name, a domain, a
  * logo); the offer is the PROPOSITION, and a brand can hold several. Every
  * route below is a transparent proxy of the brand-service route of the same
- * name under `/orgs`, exactly like the sales-funnels block above.
+ * name under `/orgs`.
  *
  * These are what makes the dashboard's offer level reachable at all. Without
  * them every offer read 404s at the gateway and the customer's brand Overview
@@ -615,10 +464,6 @@ const OFFER_ROUTES = [
   { method: "post", path: "/brands/:id/offers", suffix: "", what: "create brand offer" },
   { method: "get", path: "/brands/:id/offers/:offerId", suffix: "", what: "get brand offer" },
   { method: "patch", path: "/brands/:id/offers/:offerId", suffix: "", what: "rename brand offer" },
-  { method: "get", path: "/brands/:id/offers/:offerId/sales-funnels", suffix: "/sales-funnels", what: "get offer sales funnels" },
-  { method: "put", path: "/brands/:id/offers/:offerId/sales-funnels", suffix: "/sales-funnels", what: "state offer sales funnels" },
-  { method: "put", path: "/brands/:id/offers/:offerId/sales-funnels/:funnelKey", suffix: "/sales-funnels", what: "declare offer sales funnel" },
-  { method: "delete", path: "/brands/:id/offers/:offerId/sales-funnels/:funnelKey", suffix: "/sales-funnels", what: "undeclare offer sales funnel" },
   { method: "get", path: "/brands/:id/offers/:offerId/user-fields", suffix: "/user-fields", what: "get offer user fields" },
   { method: "put", path: "/brands/:id/offers/:offerId/user-fields", suffix: "/user-fields", what: "save offer user fields" },
   // The offer's image, (re)generated. chat-service is the terminal caller and owns both
@@ -632,19 +477,13 @@ const OFFER_ROUTES = [
 for (const route of OFFER_ROUTES) {
   router[route.method](route.path, authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
     try {
-      // The funnel key is a path segment on two of these, and it is the brand's
-      // own vocabulary: forwarded as given so an unknown key comes back as
-      // brand-service's 400 rather than a gateway-invented one (CLAUDE.md #8).
-      const suffix = req.params.funnelKey
-        ? `${route.suffix}/${encodeURIComponent(req.params.funnelKey)}`
-        : route.suffix;
       const { status, data } = await callExternalServiceWithStatus(
         externalServices.brand,
-        offerPath(req, suffix),
+        offerPath(req, route.suffix),
         {
-          method: route.method.toUpperCase() as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
+          method: route.method.toUpperCase() as "GET" | "POST" | "PUT" | "PATCH",
           headers: buildInternalHeaders(req),
-          ...(route.method === "get" || route.method === "delete" ? {} : { body: req.body }),
+          ...(route.method === "get" ? {} : { body: req.body }),
         },
       );
       res.status(status).json(data);
