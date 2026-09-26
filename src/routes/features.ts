@@ -1007,7 +1007,7 @@ const OFFER_ROUTES = [
 // ── Brand grain ──────────────────────────────────────────────────────────────
 
 /**
- * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates}
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value}
  *
  * The offer grain above, one level further up. A brand holds several offers and
  * each of those runs several channels, so a brand screen built on a per-feature
@@ -1045,6 +1045,10 @@ const GRAIN_SUFFIXES = [
   // (LTR × P(paid | contacted)), per lead and as a company-level total. A separate
   // figure, added to no pipeline. Paging (`limit`/`cursor`/`leadIds`) rides the raw query.
   { suffix: "contacted-value", what: "contacted value" },
+  // The dollar value of each Deals-board column (Interested, Won; Disqualified / Opt-out /
+  // Not placed state no value with a reason), per column and per card. A separate figure,
+  // added to no pipeline. Column membership and pricing are features-service's.
+  { suffix: "deals-value", what: "deals value" },
 ] as const;
 
 for (const { suffix, what } of OFFER_ROUTES) {

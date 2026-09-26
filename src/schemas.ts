@@ -4379,6 +4379,46 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/runs/stats/run-outcomes",
+  tags: ["Runs"],
+  summary: "How the org's runs ended and how long they took, per group",
+  description:
+    "Proxies runs-service GET /v1/stats/run-outcomes for the authenticated org. Per group (default one per campaignId): runCount, completedCount, failedCount, runningCount, successRate, medianDurationMs (null when no completed run), minStartedAt, maxStartedAt. The query string is forwarded verbatim; the parameters below are the ones runs-service documents today, not a whitelist. The org always comes from the caller's authentication, never from the query.",
+  security: authed,
+  request: {
+    query: z
+      .object({
+        groupBy: z.string().optional().describe("Comma-separated: campaignId, workflowSlug, featureSlug, serviceName, taskName. Default campaignId."),
+        scope: z.string().optional().describe("entry (default): runs the agent started. all: every matching run."),
+        brandId: z.string().optional().describe("Runs where this brand is in brandIds"),
+        campaignId: z.string().optional().describe("Filter by campaign ID"),
+        campaignIds: z.string().optional().describe("Comma-separated campaign ids (a campaign family), at most 500"),
+        workflowSlug: z.string().optional(),
+        featureSlug: z.string().optional(),
+        serviceName: z.string().optional(),
+        taskName: z.string().optional(),
+        startedAfter: z.string().optional().describe("Inclusive lower bound on run startedAt (ISO date-time)"),
+        startedBefore: z.string().optional().describe("Inclusive upper bound on run startedAt (ISO date-time)"),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: {
+      description: "Run outcome groups, forwarded unchanged from runs-service",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("RunOutcomesResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid groupBy, scope, campaignIds or date (runs-service error forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // RUN EVENTS
 // ===================================================================
@@ -8827,6 +8867,29 @@ registry.registerPath({
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Brand has no channels", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/deals-value",
+  tags: ["Features"],
+  summary: "Brand Deals column values",
+  description:
+    "The dollar value of each Deals-board column (Interested, Won), per column and per card; Disqualified, opted out and not placed state no value, with a reason. " +
+    "A separate figure: it is added to no pipeline, ROI or cost figure. The Contacted column's value is GET /v1/brands/{brandId}/contacted-value. " +
+    "Proxied to features-service GET /brands/{brandId}/deals-value. The gateway forwards EVERY query param verbatim.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID") }),
+  },
+  responses: {
+    200: { description: "Brand Deals column values", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandDealsValueResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand has no channels", content: errorContent },
+    409: { description: "The brand's channels price differently", content: errorContent },
     500: { description: "Internal error", content: errorContent },
     502: { description: "Upstream error", content: errorContent },
   },

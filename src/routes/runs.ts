@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest, authenticatePlatform } from "../middleware/auth.js";
 import { callExternalService, externalServices, streamExternalService } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
+import { respondUpstreamError } from "../lib/upstream-error.js";
 
 const router = Router();
 
@@ -79,6 +80,41 @@ router.get("/runs/stats/costs", authenticate, requireOrg, requireUser, async (re
   } catch (error: any) {
     console.error("Get runs stats costs error:", error);
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to get runs stats" });
+  }
+});
+
+/**
+ * Everything after the first `?` of the original URL, `?` included (or "").
+ * Forwarded verbatim so repeated keys, ordering and the caller's encoding survive
+ * byte-identical (CLAUDE.md rule #11).
+ */
+function rawQueryString(originalUrl: string): string {
+  const index = originalUrl.indexOf("?");
+  return index === -1 ? "" : originalUrl.slice(index);
+}
+
+/**
+ * GET /v1/runs/stats/run-outcomes → runs-service GET /v1/stats/run-outcomes
+ *
+ * How the org's runs ended (completed / failed / running, success rate) and the
+ * median duration of the completed ones, per group (default one per campaign).
+ * Pure passthrough: the query string is forwarded verbatim (campaignIds,
+ * startedAfter, groupBy, scope and whatever runs-service accepts next), and the
+ * body comes back untouched. The org is NOT a query parameter: runs-service scopes
+ * on the `x-org-id` header, which `buildInternalHeaders` sets from the
+ * authenticated identity only.
+ */
+router.get("/runs/stats/run-outcomes", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const data = await callExternalService(
+      externalServices.runs,
+      `/v1/stats/run-outcomes${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(data);
+  } catch (error: any) {
+    console.error("[api-service] Get run outcomes error:", error);
+    respondUpstreamError(res, error, "Failed to get run outcomes");
   }
 });
 
