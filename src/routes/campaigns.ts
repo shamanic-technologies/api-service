@@ -447,7 +447,9 @@ router.patch("/campaigns/:id", authenticate, requireOrg, requireUser, async (req
     res.json(result);
   } catch (error: any) {
     console.error("Update campaign error:", error);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to update campaign" });
+    // A refusal (409 payment_declined, 502 billing_unavailable, ...) carries campaign-service's
+    // own customer-facing `error` plus `reason` / `blockedReason` — forward it field-for-field.
+    respondUpstreamError(res, error, "Failed to update campaign");
   }
 });
 
@@ -479,7 +481,7 @@ router.patch("/brands/:brandId/campaigns/daily-budget", authenticate, requireOrg
     res.json(result);
   } catch (error: any) {
     console.error("Set brand campaigns daily budget error:", error);
-    res.status(error.statusCode || 500).json({ error: error.message || "Failed to set brand campaigns daily budget" });
+    respondUpstreamError(res, error, "Failed to set brand campaigns daily budget");
   }
 });
 
@@ -504,7 +506,7 @@ router.post("/campaigns/:id/stop", authenticate, requireOrg, requireUser, async 
     res.json(result);
   } catch (error: any) {
     console.error("Stop campaign error:", error);
-    res.status(500).json({ error: error.message || "Failed to stop campaign" });
+    respondUpstreamError(res, error, "Failed to stop campaign");
   }
 });
 
