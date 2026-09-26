@@ -328,6 +328,52 @@ router.get("/public/features/showcase-funnels", async (req: Request, res: Respon
 });
 
 /**
+ * GET /v1/public/features/outcome-return-on-spend
+ * The funnel-free twin of /v1/public/features/funnel-return-on-spend: the fleet
+ * MEDIAN realized return per (channel x leg) and (channel x outcome). Proxied to
+ * features-service GET /public/stats/outcome-return-on-spend.
+ *
+ * Public at the producer, so no identity here. The query string is forwarded
+ * verbatim — the spend floor selects the population each median is taken over.
+ * The body is producer-owned and forwarded field-for-field.
+ */
+router.get("/public/features/outcome-return-on-spend", async (req: Request, res: Response) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/outcome-return-on-spend${rawQueryString(req.originalUrl)}`,
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public outcome return-on-spend error:", error.message);
+    respondUpstreamError(res, error, "Failed to get the public per-outcome return on spend");
+  }
+});
+
+/**
+ * GET /v1/public/features/showcase-outcomes
+ * The funnel-free twin of /v1/public/features/showcase-funnels: the homepage's
+ * named clients per OUTCOME. Proxied to features-service GET
+ * /public/stats/showcase-outcomes.
+ *
+ * No identity, no brand parameter — the brands are a frozen allowlist at the
+ * producer. The query string is still forwarded verbatim (CLAUDE.md #11) and
+ * the body is producer-owned.
+ */
+router.get("/public/features/showcase-outcomes", async (req: Request, res: Response) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/showcase-outcomes${rawQueryString(req.originalUrl)}`,
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public showcase outcomes error:", error.message);
+    respondUpstreamError(res, error, "Failed to get the public showcase outcomes");
+  }
+});
+
+/**
  * GET /v1/public/channels
  * The acquisition-channel catalogue: every channel a customer can book, its
  * commercial terms, the kinds of step it can produce and the sales funnels that
@@ -369,6 +415,28 @@ router.get("/public/channel-funnel-economics", async (req: Request, res: Respons
   } catch (error: any) {
     console.error("[api-service] Public channel-funnel economics error:", error.message);
     respondUpstreamError(res, error, "Failed to get the public channel-funnel economics");
+  }
+});
+
+/**
+ * GET /v1/public/channel-outcome-economics
+ * The funnel-free twin of /v1/public/channel-funnel-economics: PROJECTED channel
+ * economics per outcome and per leg. Proxied to features-service GET
+ * /public/channel-outcome-economics.
+ *
+ * Public at the producer, so no identity here. The query is forwarded verbatim
+ * — a stripped channelSlug would render the whole catalogue with no error.
+ */
+router.get("/public/channel-outcome-economics", async (req: Request, res: Response) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/channel-outcome-economics${rawQueryString(req.originalUrl)}`,
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public channel-outcome economics error:", error.message);
+    respondUpstreamError(res, error, "Failed to get the public channel-outcome economics");
   }
 });
 
