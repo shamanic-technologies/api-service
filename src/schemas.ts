@@ -8834,6 +8834,29 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/brands/{brandId}/deals-value",
+  tags: ["Features"],
+  summary: "Brand Deals column values",
+  description:
+    "The dollar value of each Deals-board column (Interested, Won), per column and per card; Disqualified, opted out and not placed state no value, with a reason. " +
+    "A separate figure: it is added to no pipeline, ROI or cost figure. The Contacted column's value is GET /v1/brands/{brandId}/contacted-value. " +
+    "Proxied to features-service GET /brands/{brandId}/deals-value. The gateway forwards EVERY query param verbatim.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID") }),
+  },
+  responses: {
+    200: { description: "Brand Deals column values", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandDealsValueResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand has no channels", content: errorContent },
+    409: { description: "The brand's channels price differently", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/brands/{brandId}/conversion-rates",
   tags: ["Features"],
   summary: "Brand conversion rates",
