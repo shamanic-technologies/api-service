@@ -1041,6 +1041,10 @@ const GRAIN_SUFFIXES = [
   // brand-grain since 2026-09-25; features-service resolves them, nothing is picked
   // or defaulted here. `?funnel=` narrows to one funnel and rides the raw query.
   { suffix: "conversion-rates", what: "conversion rates" },
+  // What the brand's contacted-but-not-yet-engaged leads are worth in expectation
+  // (LTR × P(paid | contacted)), per lead and as a company-level total. A separate
+  // figure, added to no pipeline. Paging (`limit`/`cursor`/`leadIds`) rides the raw query.
+  { suffix: "contacted-value", what: "contacted value" },
 ] as const;
 
 for (const { suffix, what } of OFFER_ROUTES) {

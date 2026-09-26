@@ -8805,6 +8805,35 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/brands/{brandId}/contacted-value",
+  tags: ["Features"],
+  summary: "Brand contacted value",
+  description:
+    "What the brand's contacted-but-not-yet-engaged leads are worth in expectation (LTR × P(paid client | contacted)), " +
+    "per lead (paged) and as a company-level total. A separate figure: it is added to no pipeline, ROI or cost figure. " +
+    "Proxied to features-service GET /brands/{brandId}/contacted-value. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID") }),
+    query: z.object({
+      limit: z.string().optional().describe("Rows per page, 1..5000, default 1000"),
+      cursor: z.string().optional().describe("The nextCursor of the previous page"),
+      leadIds: z.string().optional().describe("Comma-separated lead ids (≤1000) — return only those rows"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Brand contacted value", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandContactedValueResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand has no channels", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/brands/{brandId}/conversion-rates",
   tags: ["Features"],
   summary: "Brand conversion rates",
