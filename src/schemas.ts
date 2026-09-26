@@ -8836,33 +8836,6 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/offers/{offerId}/funnels",
-  tags: ["Features"],
-  summary: "Offer sales funnels",
-  description:
-    "What each of an offer's sales funnels cost and returned — one row per funnel, each with its own spend, pipeline, return per dollar and cost of acquisition. " +
-    "The grain under the offer, and the one that survives one campaign per STEP of a funnel: a campaign then buys a single step and has no return of its own, because the lifetime revenue sits at the end of the funnel. " +
-    "Proxied to features-service GET /offers/{offerId}/funnels. " +
-    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
-  security: authed,
-  request: {
-    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
-    query: z.object({
-      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
-      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default, undiscounted) | net (the org's discounted figures). Owned and validated by features-service"),
-    }).passthrough(),
-  },
-  responses: {
-    200: { description: "Offer sales funnels", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferFunnelsResponse") } } },
-    400: { description: "Validation error", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Offer not found", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/v1/offers/{offerId}/outcomes",
   tags: ["Features"],
   summary: "Offer outcomes",
@@ -8943,105 +8916,6 @@ registry.registerPath({
     500: { description: "Internal error", content: errorContent },
   },
 });
-
-// ── Sales-funnel grain, under the offer ──────────────────────────────────────
-// The three offer reads above, asked of ONE of the offer's sales funnels.
-// /offers/{offerId}/funnels answers the comparison across funnels; these answer
-// the same substance for the funnel a customer picked out of it. Same passthrough
-// rules as every read on this file: the query object documents the params known
-// today and is never a whitelist (CLAUDE.md #11), and the response is
-// downstream-owned (CLAUDE.md #8). A funnel the offer does not sell is
-// features-service's 404, and it reaches the caller with its reason intact.
-
-const offerFunnelParams = z.object({
-  offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID"),
-  funnelKey: z.string().openapi({ example: "self-serve" }).describe("Sales-funnel key, as returned by GET /v1/offers/{offerId}/funnels. A key the offer does not sell is features-service's 404"),
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/offers/{offerId}/funnels/{funnelKey}/revenue",
-  tags: ["Features"],
-  summary: "Offer sales-funnel revenue overview",
-  description:
-    "What ONE of an offer's sales funnels cost and returned, with the per-channel breakdown beside it. " +
-    "The offer read one grain down: the same substance, for the single funnel a customer picked. " +
-    "Proxied to features-service GET /offers/{offerId}/funnels/{funnelKey}/revenue. " +
-    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
-  security: authed,
-  request: {
-    params: offerFunnelParams,
-    query: z.object({
-      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
-      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default, undiscounted) | net (the org's discounted figures). Owned and validated by features-service"),
-    }).passthrough(),
-  },
-  responses: {
-    200: { description: "Offer sales-funnel revenue overview", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferFunnelRevenueResponse") } } },
-    400: { description: "Validation error", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Offer or sales funnel not found", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/offers/{offerId}/funnels/{funnelKey}/audience-stats",
-  tags: ["Features"],
-  summary: "Offer sales-funnel audience stats",
-  description:
-    "The per-audience economics of ONE of an offer's sales funnels, across every channel that funnel is sold through. " +
-    "Proxied to features-service GET /offers/{offerId}/funnels/{funnelKey}/audience-stats. " +
-    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
-  security: authed,
-  request: {
-    params: offerFunnelParams,
-    query: z.object({
-      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required)"),
-      goal: z.string().optional().openapi({ example: "signup" }).describe("Optimization goal. Owned and validated by features-service"),
-      statuses: z.string().optional().openapi({ example: "active,paused,archived" }).describe("Comma-separated audience statuses (features-service owns the default)"),
-      limit: z.string().optional().openapi({ example: "3" }).describe("Maximum number of audience rows"),
-      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for money metrics: gross (default) | net. Owned and validated by features-service"),
-    }).passthrough(),
-  },
-  responses: {
-    200: { description: "Offer sales-funnel audience stats", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferFunnelAudienceStatsResponse") } } },
-    400: { description: "Validation error", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Offer or sales funnel not found", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/offers/{offerId}/funnels/{funnelKey}/pipeline-activity",
-  tags: ["Features"],
-  summary: "Offer sales-funnel pipeline activity",
-  description:
-    "The per-day activity of ONE of an offer's sales funnels, day buckets merged across every channel that funnel is sold through. " +
-    "Proxied to features-service GET /offers/{offerId}/funnels/{funnelKey}/pipeline-activity. " +
-    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
-  security: authed,
-  request: {
-    params: offerFunnelParams,
-    query: z.object({
-      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required)"),
-      timezone: z.string().openapi({ example: "America/New_York" }).describe("IANA timezone used for calendar day ordering (required)"),
-      days: z.string().optional().openapi({ example: "7" }).describe("Number of days to return (features-service owns the default)"),
-      pricing: z.string().optional().openapi({ example: "net" }).describe("Accepted for parity with the sibling reads. Owned and validated by features-service"),
-    }).passthrough(),
-  },
-  responses: {
-    200: { description: "Offer sales-funnel pipeline activity", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferFunnelPipelineActivityResponse") } } },
-    400: { description: "Validation error", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Offer or sales funnel not found", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
 
 // ── Brand grain ──────────────────────────────────────────────────────────────
 // The three reads above, one grain further up: a brand holds SEVERAL offers and
@@ -9217,32 +9091,6 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/features/{featureSlug}/goal-arbitration",
-  tags: ["Features"],
-  summary: "Feature goal arbitration",
-  description:
-    "The goal features-service elects for a brand out of the sales funnels that brand declared — the same arbitration campaign-service reads service-to-service, so a client can show the goal that actually runs instead of the brand's stored optimizationGoal. " +
-    "Proxied to features-service GET /features/{featureSlug}/goal-arbitration; every query param is forwarded and the response shape is downstream-owned and passed through. " +
-    "The upstream status AND body both survive: a 502 with reason='authorized_goals_unavailable' (this brand never stated a funnel set) is distinguishable from a 200 whose arbitration.reason='no_authorized_goals' (it stated it sells through none).",
-  security: authed,
-  request: {
-    params: z.object({ featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug") }),
-    query: z.object({
-      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — the authorized goal set and the economics are brand-scoped"),
-      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis for every money metric: omit or 'gross' for undiscounted figures (default), 'net' for the org's discounted ones"),
-    }),
-  },
-  responses: {
-    200: { description: "Feature goal arbitration", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureGoalArbitrationResponse") } } },
-    400: { description: "Validation error", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Feature not found", content: errorContent },
-    502: { description: "Downstream service error, or the brand's declared sales funnels could not be read", content: errorContent },
   },
 });
 

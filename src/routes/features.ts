@@ -898,43 +898,6 @@ router.get("/features/:slug/workflow-projection", authenticate, requireOrg, requ
   }
 });
 
-/**
- * GET /v1/features/:slug/goal-arbitration
- * The goal features-service elects for a brand out of the sales funnels that brand
- * declared — the same arbitration campaign-service reads service-to-service, so the
- * dashboard can show the goal that actually runs instead of the brand's stored
- * optimizationGoal. Scoped by brandId; `pricing` selects the gross/net basis.
- *
- * Forwards ALL query params transparently to features-service
- * GET /features/:slug/goal-arbitration — no whitelist, so a new downstream param
- * needs no api-service edit, and `pricing` can never be silently dropped.
- *
- * Errors go through respondUpstreamError so the upstream STATUS and BODY both
- * survive the hop (CLAUDE.md #7): the consumer branches on the difference between a
- * 502 reason='authorized_goals_unavailable' (this brand never stated a funnel set)
- * and a 200 arbitration.reason='no_authorized_goals' (it stated it sells through
- * none) to decide whether to fall back to the stored brand goal. Flattening either
- * one would erase that distinction.
- */
-router.get("/features/:slug/goal-arbitration", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(req.query)) {
-      if (typeof value === "string") params.set(key, value);
-    }
-    const qs = params.toString() ? `?${params.toString()}` : "";
-    const result = await callExternalService(
-      externalServices.features,
-      `/features/${encodeURIComponent(req.params.slug)}/goal-arbitration${qs}`,
-      { headers: buildInternalHeaders(req) },
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("Feature goal-arbitration error:", error.message);
-    respondUpstreamError(res, error, "Failed to get feature goal arbitration");
-  }
-});
-
 // ── Offer grain ──────────────────────────────────────────────────────────────
 
 /**
@@ -966,54 +929,11 @@ const OFFER_ROUTES = [
   { suffix: "revenue", what: "offer revenue" },
   { suffix: "audience-stats", what: "offer audience stats" },
   { suffix: "pipeline-activity", what: "offer pipeline activity" },
-  // The grain UNDER the offer: what each of its SALES FUNNELS cost and returned. It matters as the
-  // product moves to one campaign per STEP of a funnel — a campaign then buys a single step and has no
-  // return of its own, because the lifetime revenue sits at the end of the funnel. Same passthrough as
-  // its siblings; features-service owns the shape, the pricing and every refusal.
-  //
-  // The read shipped downstream under the word CHAIN and was renamed to FUNNEL, which is the only word
-  // the product uses for it: the entity key is `funnelKey` and the catalogue is brand-service's sales
-  // funnels. Both spellings were mounted while that rename was in flight, each forwarding to its own
-  // downstream spelling. features-service carries no alias, so `/offers/{id}/chains` stopped existing
-  // when the rename went live and the gateway path that fed it could only 404 from then on — it is
-  // gone, and one word is left for one read.
-  { suffix: "funnels", what: "offer sales funnels" },
   // One row per OUTCOME the offer buys (a step at least one of our channels lands a leg
   // on), each with its leg x channel breakdown. The offer page reads it now that the
   // product retires the sales funnel as a concept. Same passthrough; features-service owns
   // the rows, the figures and every refusal.
   { suffix: "outcomes", what: "offer outcomes" },
-] as const;
-
-// ── Sales-funnel grain, under the offer ──────────────────────────────────────
-
-/**
- * GET /v1/offers/:offerId/funnels/:funnelKey/{revenue,audience-stats,pipeline-activity}
- *
- * The offer reads above, asked of ONE of the offer's sales funnels. `/offers/{id}/funnels`
- * answers the comparison — every funnel side by side, one row each — and a customer who
- * picks a row then wants the same substance the offer screen already gives them, for that
- * funnel alone: what it cost, which audiences it reached, what it did day by day.
- *
- * features-service answers all three at that grain, so these forward per suffix exactly as
- * their offer-grain siblings do — same identity, same org scoping, same verbatim query
- * (CLAUDE.md #11), same downstream-owned body (CLAUDE.md #8). Nothing is combined and
- * nothing is narrowed here; a funnel is a slice features-service owns, not one this gateway
- * could reconstruct from the offer's answer.
- *
- * A funnel the offer does not sell is features-service's 404 to raise, and it reaches the
- * caller with its reason intact via respondUpstreamError (CLAUDE.md #7) — not flattened
- * into a generic gateway error, which would leave a consumer unable to tell "wrong funnel"
- * from "features-service is down".
- *
- * ORDER: these are five path segments where `/offers/:offerId/funnels` is three, so the
- * sibling above cannot shadow them and they cannot shadow it. The behaviour test asserts
- * both still reach their own downstream path (CLAUDE.md #13).
- */
-const OFFER_FUNNEL_ROUTES = [
-  { suffix: "revenue", what: "offer funnel revenue" },
-  { suffix: "audience-stats", what: "offer funnel audience stats" },
-  { suffix: "pipeline-activity", what: "offer funnel pipeline activity" },
 ] as const;
 
 // ── Brand grain ──────────────────────────────────────────────────────────────
@@ -1066,28 +986,6 @@ for (const { suffix, what } of OFFER_ROUTES) {
         const result = await callExternalService(
           externalServices.features,
           `/offers/${encodeURIComponent(req.params.offerId)}/${suffix}${rawQueryString(req.originalUrl)}`,
-          { headers: buildInternalHeaders(req) },
-        );
-        res.json(result);
-      } catch (error: any) {
-        console.error(`Failed to get ${what}:`, error.message);
-        respondUpstreamError(res, error, `Failed to get ${what}`);
-      }
-    },
-  );
-}
-
-for (const { suffix, what } of OFFER_FUNNEL_ROUTES) {
-  router.get(
-    `/offers/:offerId/funnels/:funnelKey/${suffix}`,
-    authenticate,
-    requireOrg,
-    requireUser,
-    async (req: AuthenticatedRequest, res) => {
-      try {
-        const result = await callExternalService(
-          externalServices.features,
-          `/offers/${encodeURIComponent(req.params.offerId)}/funnels/${encodeURIComponent(req.params.funnelKey)}/${suffix}${rawQueryString(req.originalUrl)}`,
           { headers: buildInternalHeaders(req) },
         );
         res.json(result);
