@@ -70,7 +70,7 @@ const UPSTREAM_BODY = {
       campaignId: "4a2f4a2f-4a2f-4a2f-4a2f-4a2f4a2f4a2f",
       status: "ongoing",
       running: true,
-      funnelKey: "sales_meetings_from_conversation",
+      legKey: "reply_to_meeting",
       featureSlug: "sales-cold-email-outreach",
       offerId: "d5ecba00-783a-4939-b5bd-f85b9e6b7d9e",
       configuredDailyBudgetCents: 5000,
@@ -80,7 +80,7 @@ const UPSTREAM_BODY = {
       campaignId: "5b3f5b3f-5b3f-5b3f-5b3f-5b3f5b3f5b3f",
       status: "stopped",
       running: false,
-      funnelKey: "sales_meetings_from_conversation",
+      legKey: "reply_to_meeting",
       featureSlug: "feedback-request-cold-email-outreach",
       offerId: null,
       configuredDailyBudgetCents: 1000,
@@ -89,7 +89,7 @@ const UPSTREAM_BODY = {
   ],
   rows: [
     {
-      funnelKey: "sales_meetings_from_conversation",
+      legKey: "reply_to_meeting",
       featureSlug: "sales-cold-email-outreach",
       offerId: "d5ecba00-783a-4939-b5bd-f85b9e6b7d9e",
       resolvedOfferId: "d5ecba00-783a-4939-b5bd-f85b9e6b7d9e",

@@ -113,7 +113,7 @@ const CONVERSION_RATES_BODY = {
   contactedRecipients: 412,
   funnels: [
     {
-      funnelKey: "self-serve",
+      key: "self-serve",
       name: "Self-serve",
       steps: ["contacted", "visited", "signed_up"],
       arrows: [

@@ -191,8 +191,8 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
     res.json(result);
   } catch (error: any) {
     console.error("[api-service] POST /v1/campaigns — FAILED:", error.message, error.stack);
-    // campaign-service rejects a create it cannot accept — a sales campaign that states
-    // no funnel, an unknown funnel key. That rejection is its contract, body included:
+    // campaign-service rejects a create it cannot accept — a sales campaign missing its
+    // offer, leg or channel. That rejection is its contract, body included:
     // re-emit it field-for-field under its own status instead of flattening the JSON
     // body into an `error` string (CLAUDE.md rule #7, corollary).
     respondUpstreamError(res, error, "Failed to create campaign");
@@ -202,7 +202,7 @@ router.post("/campaigns", authenticate, requireOrg, requireUser, async (req: Aut
 /**
  * POST /v1/campaigns/start-funded-pair
  *
- * The CUSTOMER starts the campaign for a (sales funnel x acquisition channel) pair they have
+ * The CUSTOMER starts the campaign for an (offer x leg x acquisition channel) pair they have
  * already funded. Since campaign-service removed auto-provisioning, funding a pair states a
  * ceiling and creates no campaign — money must not start anything on its own. This is the way
  * a person says "start it", and until this route existed the capability was live in prod with

@@ -61,7 +61,7 @@ const UPSTREAM_BODY = {
         type: "sales_funnel",
         brandId: BRAND_ID,
         offerId: "d5ecba00-783a-4939-b5bd-f85b9e6b7d9e",
-        funnelKey: "website_purchases",
+        legKey: "visit_to_purchase",
       },
       rewardCents: 100,
       due: true,
