@@ -278,6 +278,18 @@ const publicChannelFunnelEconomicsQueryParams = z.object({
   channelSlug: z.string().optional().openapi({ example: "sales-cold-email-outreach" }).describe("Narrow to one channel. Omitted returns every pair in the catalogue. An unknown slug is a 404 at features-service, never an empty pair list."),
 }).passthrough();
 
+// The parameters features-service documents today, not a whitelist: the handler
+// forwards the caller's raw query string (CLAUDE.md #11).
+const publicOutcomeReturnOnSpendQueryParams = z.object({
+  channelSlug: z.string().optional().openapi({ example: "sales-cold-email-outreach" }).describe("Narrow to one acquisition channel. An unknown slug is a 404 at features-service."),
+  minSpendUsd: z.string().optional().openapi({ example: "100" }).describe("Spend floor in USD selecting the brand population each median is taken over. Producer-owned default; a non-numeric or negative value is a 400 at features-service."),
+}).passthrough();
+
+// The parameters features-service documents today, not a whitelist (CLAUDE.md #11).
+const publicChannelOutcomeEconomicsQueryParams = z.object({
+  channelSlug: z.string().optional().openapi({ example: "sales-cold-email-outreach" }).describe("Narrow to one channel. An unknown slug is a 404 at features-service."),
+}).passthrough();
+
 const auditSendForecastQueryParams = z.object({
   days: z.coerce.number().int().optional().openapi({ example: 14 }).describe("Future horizon in days (1..90). A 7-day past tail is always included. Optional; downstream defaults to 14."),
 });
@@ -561,6 +573,39 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/public/features/outcome-return-on-spend",
+  tags: ["Features"],
+  summary: "Public median realized return per (channel x leg) and (channel x outcome)",
+  description:
+    "The funnel-free twin of /v1/public/features/funnel-return-on-spend: the fleet MEDIAN realized return per (acquisition channel x leg) and (acquisition channel x outcome), taken over brands past the spend floor. " +
+    "REALIZED, and NOT the projected returnPerDollar on /v1/public/channel-outcome-economics. Public by design at the producer, so no identity is required here either. " +
+    "Proxied to features-service GET /public/stats/outcome-return-on-spend. The caller's query string is forwarded verbatim; the parameters documented below are the ones features-service publishes today, not a whitelist. Response is producer-owned. No authentication required.",
+  request: { query: publicOutcomeReturnOnSpendQueryParams },
+  responses: {
+    200: { description: "Per-leg / per-outcome realized medians \u2014 pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicOutcomeReturnOnSpendResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    404: { description: "Unknown acquisition-channel slug", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/features/showcase-outcomes",
+  tags: ["Features"],
+  summary: "Public per-outcome figures for the named client brands on our homepage",
+  description:
+    "The funnel-free twin of /v1/public/features/showcase-funnels: the homepage's named clients, one row per outcome, plus one realized return per client. " +
+    "Takes NO parameter naming a brand, by design at the producer: the brands are a frozen server-side allowlist there. " +
+    "Proxied to features-service GET /public/stats/showcase-outcomes. Response is producer-owned and forwarded field-for-field. No authentication required.",
+  responses: {
+    200: { description: "Showcase clients per outcome \u2014 pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicShowcaseOutcomesResponse") } } },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/public/channels",
   tags: ["Features"],
   summary: "Public acquisition-channel catalogue",
@@ -585,6 +630,23 @@ registry.registerPath({
   request: { query: publicChannelFunnelEconomicsQueryParams },
   responses: {
     200: { description: "Per-pair economics — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicChannelFunnelEconomicsResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    404: { description: "Unknown channel slug", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/channel-outcome-economics",
+  tags: ["Features"],
+  summary: "Public projected channel economics per outcome and per leg",
+  description:
+    "The funnel-free twin of /v1/public/channel-funnel-economics: PROJECTED channel economics per outcome and per leg, or an explicit not-enough-data answer. Public by design at the producer, so no identity is required here either. " +
+    "Proxied to features-service GET /public/channel-outcome-economics. The caller's query string is forwarded verbatim; the documented parameter below is the one features-service publishes today, not a whitelist. Response is producer-owned. No authentication required.",
+  request: { query: publicChannelOutcomeEconomicsQueryParams },
+  responses: {
+    200: { description: "Per-outcome / per-leg economics \u2014 pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicChannelOutcomeEconomicsResponse") } } },
     400: { description: "Bad request from features-service", content: errorContent },
     404: { description: "Unknown channel slug", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
