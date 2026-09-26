@@ -4379,6 +4379,46 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/runs/stats/run-outcomes",
+  tags: ["Runs"],
+  summary: "How the org's runs ended and how long they took, per group",
+  description:
+    "Proxies runs-service GET /v1/stats/run-outcomes for the authenticated org. Per group (default one per campaignId): runCount, completedCount, failedCount, runningCount, successRate, medianDurationMs (null when no completed run), minStartedAt, maxStartedAt. The query string is forwarded verbatim; the parameters below are the ones runs-service documents today, not a whitelist. The org always comes from the caller's authentication, never from the query.",
+  security: authed,
+  request: {
+    query: z
+      .object({
+        groupBy: z.string().optional().describe("Comma-separated: campaignId, workflowSlug, featureSlug, serviceName, taskName. Default campaignId."),
+        scope: z.string().optional().describe("entry (default): runs the agent started. all: every matching run."),
+        brandId: z.string().optional().describe("Runs where this brand is in brandIds"),
+        campaignId: z.string().optional().describe("Filter by campaign ID"),
+        campaignIds: z.string().optional().describe("Comma-separated campaign ids (a campaign family), at most 500"),
+        workflowSlug: z.string().optional(),
+        featureSlug: z.string().optional(),
+        serviceName: z.string().optional(),
+        taskName: z.string().optional(),
+        startedAfter: z.string().optional().describe("Inclusive lower bound on run startedAt (ISO date-time)"),
+        startedBefore: z.string().optional().describe("Inclusive upper bound on run startedAt (ISO date-time)"),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: {
+      description: "Run outcome groups, forwarded unchanged from runs-service",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("RunOutcomesResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid groupBy, scope, campaignIds or date (runs-service error forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // RUN EVENTS
 // ===================================================================
