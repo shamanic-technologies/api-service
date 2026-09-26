@@ -12,7 +12,7 @@ const { FEATURES_BASE } = vi.hoisted(() => {
 });
 
 /**
- * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates} — BEHAVIOURAL cover.
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value} — BEHAVIOURAL cover.
  *
  * The offer-grain sibling's reasoning applies verbatim (see
  * offer-grain-proxy.behavior.test.ts): a source-substring test cannot see a template
@@ -124,11 +124,30 @@ const CONVERSION_RATES_BODY = {
   ],
 };
 
+const CONTACTED_VALUE_BODY = {
+  brandId: BRAND_ID,
+  totalValueUsd: 1234.5,
+  leads: [{ leadId: "lead-1", valueUsd: 12.3 }],
+  nextCursor: null,
+};
+
+// Deals-board column values: valued columns carry cards, the others state no value.
+const DEALS_VALUE_BODY = {
+  brandId: BRAND_ID,
+  columns: [
+    { standing: "sales_interest", valueUsd: 840.25, unpricedLeadCount: 0, leads: [{ leadId: "lead-1", valueUsd: 840.25 }] },
+    { standing: "customer", valueUsd: 5000, unpricedLeadCount: null, leads: [{ leadId: "lead-2", valueUsd: 5000, valueSource: "stated_amount" }] },
+    { standing: "disqualified", valueUsd: null, noValueReason: "disqualified", leads: [] },
+  ],
+};
+
 const READS = [
   { suffix: "revenue", body: REVENUE_BODY, query: "pricing=net" },
   { suffix: "audience-stats", body: AUDIENCE_STATS_BODY, query: "pricing=net" },
   { suffix: "pipeline-activity", body: PIPELINE_ACTIVITY_BODY, query: "days=7&timezone=America%2FNew_York" },
   { suffix: "conversion-rates", body: CONVERSION_RATES_BODY, query: "funnel=self-serve" },
+  { suffix: "contacted-value", body: CONTACTED_VALUE_BODY, query: "cursor=lead-0" },
+  { suffix: "deals-value", body: DEALS_VALUE_BODY, query: "refresh=1" },
 ] as const;
 
 describe("GET /v1/brands/:brandId/* — over the wire", () => {
@@ -231,4 +250,18 @@ describe("GET /v1/brands/:brandId/* — over the wire", () => {
       });
     });
   }
+
+  it("/deals-value forwards a 409 refusal with its status and body intact", async () => {
+    const refusal = { error: "channels price differently", reason: "brand_channels_price_differently", brandId: BRAND_ID };
+    global.fetch = vi.fn().mockImplementation(async (url: string, options: any) => {
+      calls.push({ url, options });
+      return { ok: false, status: 409, text: () => Promise.resolve(JSON.stringify(refusal)), json: () => Promise.resolve(refusal) };
+    });
+
+    const res = await request(buildApp()).get(`/v1/brands/${BRAND_ID}/deals-value`);
+
+    expect(calls[0].url).toBe(`${FEATURES_BASE}/brands/${BRAND_ID}/deals-value`);
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual(refusal);
+  });
 });
