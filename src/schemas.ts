@@ -4955,6 +4955,71 @@ export const WorkflowDynastyStatusRequestSchema = z
   })
   .openapi("WorkflowDynastyStatusRequest", { example: { status: "deprecated" } });
 
+const workflowPromptEditDescription =
+  "STAFF ONLY: requires the platform API key AND an x-email in the STAFF_EMAILS allowlist, on top of " +
+  "the usual org + user identity — an `upgrade` changes what every campaign on the dynasty sends, for " +
+  "every client. Body `{ action: \"upgrade\" | \"fork\", prompt }` is forwarded verbatim to workflow-service " +
+  "and the response (201 + the new `workflow`) and every refusal (400 / 404 / 409 / 422 / 502) come back " +
+  "with the producer's status and body byte-for-byte. A 422 means the edited prompt adds or removes a " +
+  "{{variable}}: its readable `error` sentence and droppedVariables / addedVariables / requiredVariables " +
+  "reach the caller intact.";
+
+const workflowPromptEditResponses = {
+  201: {
+    description: "Upgraded or forked — pass-through from workflow-service",
+    content: { "application/json": { schema: z.object({}).passthrough().openapi("WorkflowPromptEditResponse") } },
+  },
+  400: { description: "Invalid body, prompt unchanged or invalid DAG (forwarded verbatim)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  403: { description: "Not staff", content: errorContent },
+  404: { description: "Workflow / dynasty not found (forwarded verbatim)", content: errorContent },
+  409: { description: "Upgrade on a superseded version, no fixed template, or duplicate (forwarded verbatim)", content: errorContent },
+  422: { description: "Edited prompt breaks the {{variable}} contract (forwarded verbatim)", content: errorContent },
+  502: { description: "Upstream failure (forwarded verbatim)", content: errorContent },
+};
+
+const WorkflowPromptEditRequestSchema = z
+  .object({
+    action: z.string().describe("\"upgrade\" (new version of the same dynasty) or \"fork\" (new dynasty). Validated by workflow-service."),
+    prompt: z.string().describe("The full edited prompt template text."),
+  })
+  .passthrough()
+  .openapi("WorkflowPromptEditRequest");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/workflows/{id}/prompt-edit",
+  tags: ["Workflows"],
+  summary: "Upgrade or fork a workflow version with an edited prompt (staff only)",
+  description:
+    "Transparent proxy to workflow-service POST /workflows/{id}/prompt-edit. `fork` branches from exactly " +
+    "this version; `upgrade` requires it to be the dynasty's active version (409 otherwise). " +
+    workflowPromptEditDescription,
+  security: platformAuth,
+  request: {
+    params: z.object({ id: z.string().uuid().describe("Workflow version id") }),
+    body: { content: { "application/json": { schema: WorkflowPromptEditRequestSchema } } },
+  },
+  responses: workflowPromptEditResponses,
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/workflows/dynasty/{workflowDynastySlug}/prompt-edit",
+  tags: ["Workflows"],
+  summary: "Upgrade or fork a workflow dynasty with an edited prompt (staff only)",
+  description:
+    "Transparent proxy to workflow-service POST /workflows/dynasty/{workflowDynastySlug}/prompt-edit. " +
+    "The dynasty slug resolves to its currently-active version, which both actions build on. " +
+    workflowPromptEditDescription,
+  security: platformAuth,
+  request: {
+    params: z.object({ workflowDynastySlug: z.string().describe("Stable dynasty slug") }),
+    body: { content: { "application/json": { schema: WorkflowPromptEditRequestSchema } } },
+  },
+  responses: workflowPromptEditResponses,
+});
+
 registry.registerPath({
   method: "put",
   path: "/v1/workflows/dynasty/{workflowDynastySlug}/status",

@@ -3804,6 +3804,27 @@
           "valid"
         ]
       },
+      "WorkflowPromptEditResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "WorkflowPromptEditRequest": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "description": "\"upgrade\" (new version of the same dynasty) or \"fork\" (new dynasty). Validated by workflow-service."
+          },
+          "prompt": {
+            "type": "string",
+            "description": "The full edited prompt template text."
+          }
+        },
+        "required": [
+          "action",
+          "prompt"
+        ]
+      },
       "WorkflowDynastyStatusResponse": {
         "type": "object",
         "properties": {}
