@@ -61,6 +61,8 @@ const PLATFORM_OPERATIONS = [
   "get /v1/billing/usage-discount",
   "put /v1/billing/usage-discount",
   "delete /v1/billing/usage-discount",
+  "get /v1/billing/accounts/by-org/{orgId}/payment-mode",
+  "put /v1/billing/accounts/by-org/{orgId}/payment-mode",
   "get /v1/instantly/audit/sending-forecast",
   "get /v1/instantly/audit/account-health",
   "get /v1/instantly/audit/account-detail",
