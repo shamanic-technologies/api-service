@@ -257,6 +257,33 @@ export const externalServices = {
   },
 };
 
+/**
+ * Build the downstream URL, refusing any path that carries a dot-segment.
+ *
+ * Express DECODES path params, so `%2F` in a caller's URL arrives in `req.params`
+ * as a literal `/`, and a route that interpolates that param without
+ * `encodeURIComponent` builds `/brands/../../internal/...`. `fetch` then
+ * normalises the `..` away and the request lands on a downstream `/internal/*`
+ * route no gateway handler was meant to reach — including staff-only reads
+ * (margin data). Checking here, once, covers every route that forwards through
+ * this module instead of trusting each of them to encode.
+ *
+ * A segment is refused if it is `.`/`..` in any spelling the WHATWG URL parser
+ * treats as a dot-segment (`%2e`, case-insensitive), and `\` is treated as a
+ * separator because the parser does the same for http(s). Only the path is
+ * checked; the query string is data, not a location.
+ */
+export function downstreamUrl(baseUrl: string, path: string): string {
+  const pathOnly = path.split(/[?#]/, 1)[0];
+  for (const segment of pathOnly.split(/[\\/]/)) {
+    const normalized = segment.toLowerCase().replace(/%2e/g, ".");
+    if (normalized === "." || normalized === "..") {
+      throw Object.assign(new Error("Invalid path: dot-segments are not allowed"), { statusCode: 400 });
+    }
+  }
+  return `${baseUrl}${path}`;
+}
+
 interface ServiceCallOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
@@ -281,7 +308,7 @@ export async function callExternalServiceWithStatus<T>(
 ): Promise<{ status: number; data: T }> {
   const { method = "GET", body, headers = {} } = options;
 
-  const url = `${service.url}${path}`;
+  const url = downstreamUrl(service.url, path);
 
   try {
     const init: RequestInit & { dispatcher?: Dispatcher } = {
@@ -361,7 +388,7 @@ export async function pipeExternalService(
   options: ServiceCallOptions & { expressRes: import("express").Response },
 ): Promise<void> {
   const { method = "GET", body, headers = {}, expressRes } = options;
-  const url = `${service.url}${path}`;
+  const url = downstreamUrl(service.url, path);
 
   const controller = new AbortController();
   const abortOnClose = () => controller.abort();
@@ -424,7 +451,7 @@ export async function streamExternalService(
   options: ServiceCallOptions & { expressRes: import("express").Response }
 ): Promise<void> {
   const { method = "POST", body, headers = {}, expressRes } = options;
-  const url = `${service.url}${path}`;
+  const url = downstreamUrl(service.url, path);
 
   // Abort the upstream fetch the moment the client socket closes. Without this,
   // a client that disconnects mid-stream (closed tab, navigation, network drop)
@@ -520,7 +547,7 @@ export async function forwardMultipartUpload<T>(
   options: { req: import("express").Request; headers?: Record<string, string> },
 ): Promise<{ status: number; data: T }> {
   const { req, headers = {} } = options;
-  const url = `${service.url}${path}`;
+  const url = downstreamUrl(service.url, path);
 
   // Buffer the entire multipart body. `express.json()` skips non-JSON content
   // types, so the multipart stream reaches here untouched and fully readable.

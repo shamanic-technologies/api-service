@@ -6165,6 +6165,10 @@
         "type": "object",
         "properties": {}
       },
+      "FeatureActualCostRevenueResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "FeatureAudienceStatsResponse": {
         "type": "object",
         "properties": {}
