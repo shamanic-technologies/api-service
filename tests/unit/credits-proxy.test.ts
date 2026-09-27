@@ -33,7 +33,8 @@ describe("Credit-grant proxy routes (source)", () => {
     // Only POST /billing/credits/grant uses the staff org-resolving chain now.
     const matches = content.match(/authenticate,\s*requireOrg,\s*requireStaff/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(1);
+    // POST grant + POST debit.
+    expect(matches!.length).toBe(2);
   });
 
   it("should gate the per-org grants ledger with normal org auth (NO requireStaff)", () => {
@@ -53,7 +54,8 @@ describe("Credit-grant proxy routes (source)", () => {
     expect(content).toContain("authenticatePlatform,");
     const matches = content.match(/authenticatePlatform,\s*requireStaff/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBe(1);
+    // grants/all + debits/all.
+    expect(matches!.length).toBe(2);
   });
 
   it("staff gate (requireStaff) remains on exactly the mutating grant + cross-org ledger", () => {
@@ -61,7 +63,8 @@ describe("Credit-grant proxy routes (source)", () => {
     // word lack the trailing comma, so this counts code references only.
     const matches = content.match(/requireStaff,/g);
     // 1 import + 2 route usages (POST grant, GET grants/all). The per-org GET grants dropped it.
-    expect(matches!.length).toBe(3);
+    // + POST debit, GET debits/all.
+    expect(matches!.length).toBe(5);
   });
 
   it("should forward correct LOCKED downstream billing paths", () => {
@@ -80,6 +83,26 @@ describe("Credit-grant proxy routes (source)", () => {
 
   it("should forward the verified staff x-email downstream", () => {
     expect(content).toContain('headers["x-email"] = req.staffEmail');
+  });
+});
+
+describe("Staff debit proxy routes (source)", () => {
+  it("proxies POST /billing/credits/debit (staff) to billing POST /v1/credits/debit", () => {
+    expect(content).toContain('"/billing/credits/debit"');
+    expect(content).toContain('"/v1/credits/debit"');
+  });
+
+  it("proxies the org's own debits and the staff cross-org ledger", () => {
+    expect(content).toContain('"/billing/credits/debits"');
+    expect(content).toContain('"/v1/credits/debits"');
+    expect(content).toContain('"/billing/credits/debits/all"');
+    expect(content).toContain('"/internal/credits/debits"');
+  });
+
+  it("registers the three debit paths in OpenAPI", () => {
+    expect(schemaContent).toContain('path: "/v1/billing/credits/debit"');
+    expect(schemaContent).toContain('path: "/v1/billing/credits/debits"');
+    expect(schemaContent).toContain('path: "/v1/billing/credits/debits/all"');
   });
 });
 

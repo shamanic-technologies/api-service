@@ -119,6 +119,35 @@ router.get("/runs/stats/run-outcomes", authenticate, requireOrg, requireUser, as
 });
 
 /**
+ * GET /v1/runs/:id → runs-service GET /v1/runs/:id
+ *
+ * One run by id, with its cost roll-up and its descendants, forwarded untouched.
+ * runs-service keys this read on the id alone and does not scope it to an org, so
+ * the gateway does: a run whose `organizationId` is not the caller's authenticated
+ * org is answered exactly as runs-service answers an unknown id (404 "Run not
+ * found"), so another org's run is neither readable nor distinguishable from a
+ * missing one. The comparison reads one field; the body is never altered.
+ *
+ * Declared after the literal `/runs/stats/*` siblings (CLAUDE.md rule #13).
+ */
+router.get("/runs/:id", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const run = await callExternalService<{ organizationId?: string | null }>(
+      externalServices.runs,
+      `/v1/runs/${encodeURIComponent(req.params.id as string)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    if (!run || run.organizationId !== req.orgId) {
+      return res.status(404).json({ error: "Run not found" });
+    }
+    res.json(run);
+  } catch (error: any) {
+    console.error("[api-service] Get run error:", error);
+    respondUpstreamError(res, error, "Failed to get run");
+  }
+});
+
+/**
  * GET /v1/events
  * Cross-run event listing from runs-service for the authenticated org.
  * orgId is injected from the auth context — never trusted from client query.
