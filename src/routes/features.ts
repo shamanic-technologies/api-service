@@ -912,6 +912,47 @@ router.get("/features/:slug/revenue", authenticate, requireOrg, requireUser, asy
 });
 
 /**
+ * GET /v1/features/:slug/revenue/actual-cost — STAFF ONLY.
+ * The same return curve as /v1/features/:slug/revenue, costed at what the vendors
+ * actually charged us before markup instead of what the customer was billed. It
+ * reveals our margin, so a non-staff caller must never reach it.
+ *
+ * Gate order is deliberate: `authenticatePlatform` + `requireStaff` first, which
+ * need no network at all, so a non-staff caller is refused before ANY downstream
+ * call (including the client-service identity resolve `authenticate` performs).
+ * Then `authenticate` + `requireOrg` + `requireUser` resolve the org being viewed,
+ * because features-service scopes this read by the same identity headers
+ * /features/:slug/revenue takes.
+ *
+ * Transparent proxy to features-service GET /internal/features/:slug/revenue/actual-cost:
+ * query forwarded verbatim off req.originalUrl (CLAUDE.md #11), status + body piped
+ * byte-for-byte, errors forwarded field-for-field (#7). The downstream path lives
+ * ONLY in this handler — no other gateway route can address it, and service-client
+ * refuses any downstream path carrying a dot-segment, so a crafted slug or id on
+ * another route cannot climb into /internal/.
+ */
+router.get(
+  "/features/:slug/revenue/actual-cost",
+  authenticatePlatform,
+  requireStaff,
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.features,
+        `/internal/features/${encodeURIComponent(req.params.slug)}/revenue/actual-cost${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req), expressRes: res },
+      );
+    } catch (error: any) {
+      console.error("Feature actual-cost revenue error:", error.message);
+      if (!res.headersSent) respondUpstreamError(res, error, "Failed to get feature actual-cost revenue");
+    }
+  },
+);
+
+/**
  * GET /v1/features/:slug/audience-stats
  * Audience-level cost and outcome evidence for a feature, scoped by brandId and
  * goal (+ optional campaignId / offerId).
