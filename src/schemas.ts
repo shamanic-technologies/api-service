@@ -6449,6 +6449,71 @@ registry.registerPath({
   },
 });
 
+const CreditDebitRequestSchema = z
+  .object({
+    amountCents: z.number().openapi({ description: "Amount to take off the org's balance, in cents (positive integer)", example: 14319 }),
+    note: z.string().openapi({ description: "Why — mandatory, stored with the debit", example: "Spend on the brand under the agency org before the handover" }),
+    idempotencyKey: z.string().openapi({ description: "Idempotency key: a retry with the same key debits once", example: "debit-2026-09-27-abc" }),
+  })
+  .passthrough()
+  .openapi("CreditDebitRequest");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/billing/credits/debit",
+  tags: ["Billing"],
+  summary: "Take credit off an org's balance, with a note (staff only)",
+  description:
+    "The mirror of the staff grant: removes an amount from the org in context's balance with a " +
+    "mandatory note, recorded against the staff member. Never charges a card. Staff-only: requires " +
+    "the platform API key AND an x-email in the STAFF_EMAILS allowlist. Transparent proxy to " +
+    "billing-service POST /v1/credits/debit; body forwarded as-is, response owned by the downstream service.",
+  security: platformAuth,
+  request: { body: { content: { "application/json": { schema: CreditDebitRequestSchema } } } },
+  responses: {
+    200: { description: "Debit recorded — pass-through from billing-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CreditDebitResponse") } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    409: { description: "idempotencyKey reused with a different amount (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/credits/debits",
+  tags: ["Billing"],
+  summary: "Get the org's own staff debits",
+  description:
+    "Every staff debit on the org in context (amount, note, who, when), newest first. Normal org " +
+    "auth; billing-service scopes the response to the caller's x-org-id. Transparent proxy to " +
+    "billing-service GET /v1/credits/debits.",
+  security: authed,
+  responses: {
+    200: { description: "Org debits — pass-through from billing-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CreditDebitsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/credits/debits/all",
+  tags: ["Billing"],
+  summary: "Get the platform-wide staff debits ledger (staff only)",
+  description:
+    "Staff debits across ALL orgs. Staff-only (platform API key + STAFF_EMAILS x-email); no org " +
+    "context. Transparent proxy to billing-service GET /internal/credits/debits.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Platform debits ledger — pass-through from billing-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PlatformCreditDebitsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Payment mode (prepaid | postpaid). The customer reads/sets its own org's mode;
 // staff read/set a GIVEN org's mode (orgId in path). Transparent proxy to

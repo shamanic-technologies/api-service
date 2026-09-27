@@ -122,6 +122,72 @@ router.get(
   },
 );
 
+// POST /v1/billing/credits/debit — take credit OFF the org in context, with a note (staff
+// only). The mirror of the grant. Body { amountCents, note, idempotencyKey } forwarded as-is
+// to billing-service POST /v1/credits/debit (which owns validation, requires the staff
+// x-email, and never charges a card). Refusals (400 / 409) forwarded verbatim.
+router.post(
+  "/billing/credits/debit",
+  authenticate,
+  requireOrg,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.billing,
+        "/v1/credits/debit",
+        {
+          method: "POST",
+          body: req.body,
+          headers: staffHeaders(req, buildInternalHeaders(req)),
+        },
+      );
+      res.json(result);
+    } catch (error: unknown) {
+      respondUpstreamError(res, error, "Failed to debit credit");
+    }
+  },
+);
+
+// GET /v1/billing/credits/debits — the org's OWN staff debits (normal org auth), so the
+// customer can see why its balance was lowered. Scoped downstream to x-org-id.
+router.get(
+  "/billing/credits/debits",
+  authenticate,
+  requireOrg,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.billing,
+        "/v1/credits/debits",
+        { headers: buildInternalHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: unknown) {
+      respondUpstreamError(res, error, "Failed to get debits ledger");
+    }
+  },
+);
+
+// GET /v1/billing/credits/debits/all — every org's staff debits (staff only, no org).
+router.get(
+  "/billing/credits/debits/all",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.billing,
+        "/internal/credits/debits",
+        { headers: staffHeaders(req, {}) },
+      );
+      res.json(result);
+    } catch (error: unknown) {
+      respondUpstreamError(res, error, "Failed to get platform debits ledger");
+    }
+  },
+);
+
 // GET /v1/billing/credits/grants/all — platform-wide cross-org grants ledger (staff only).
 // NO org context (cross-org read); gated by authenticatePlatform + requireStaff.
 router.get(
