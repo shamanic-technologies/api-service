@@ -481,6 +481,52 @@ registry.registerPath({
   },
 });
 
+const workflowReturnHistoryQueryParams = z
+  .object({
+    featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required downstream)."),
+    workflowDynastySlug: z.string().describe("Workflow dynasty (all its versions), the key workflow-cost-per-outcome rows carry (required downstream)."),
+  })
+  .passthrough();
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/features/workflow-return-history",
+  tags: ["Features"],
+  summary: "Public per-workflow return history (billed basis)",
+  description:
+    "One workflow dynasty's fleet-wide dated spend, value and return on spend across every client org, on the billed basis. " +
+    "Proxied to features-service GET /public/stats/workflow-return-history; query forwarded verbatim (featureSlug and workflowDynastySlug are the ones documented today, not a whitelist). " +
+    "Response is producer-owned. No authentication required.",
+  request: { query: workflowReturnHistoryQueryParams },
+  responses: {
+    200: { description: "Workflow return history — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicWorkflowReturnHistoryResponse") } } },
+    400: { description: "Missing parameters", content: errorContent },
+    404: { description: "Feature or workflow dynasty not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/workflow-return-history/actual-cost",
+  tags: ["Features"],
+  summary: "Per-workflow return history at actual vendor cost (staff only)",
+  description:
+    "The /v1/public/features/workflow-return-history curve with its spend leg at what vendors actually charged, before markup. " +
+    "Reveals margin, so staff-only: platform API key + a STAFF_EMAILS x-email, refused with 403 before any downstream call. Fleet-wide, no org context. " +
+    "Transparent proxy to features-service GET /internal/stats/workflow-return-history/actual-cost; query forwarded verbatim; response owned by features-service.",
+  security: platformAuth,
+  request: { query: workflowReturnHistoryQueryParams },
+  responses: {
+    200: { description: "Actual-cost workflow return history — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("WorkflowReturnHistoryActualCostResponse") } } },
+    400: { description: "Missing parameters", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "Feature or workflow dynasty not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/public/features/cost-per-outcome-lifetime",
