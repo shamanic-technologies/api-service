@@ -462,6 +462,13 @@ function offerPath(req: AuthenticatedRequest, suffix = ""): string {
 const OFFER_ROUTES = [
   { method: "get", path: "/brands/:id/offers", suffix: "", what: "list brand offers" },
   { method: "post", path: "/brands/:id/offers", suffix: "", what: "create brand offer" },
+  // Offers PROPOSED from free text (one LLM call + a typed judgment at brand-service, can
+  // take up to a minute — the default service-client timeout is 300s, same as every
+  // sibling), then the ones the customer kept CONFIRMED. Literal segments, so they are
+  // declared before the :offerId routes. brand-service's 422 (the description names
+  // nothing to sell) reaches the caller field for field through respondUpstreamError.
+  { method: "post", path: "/brands/:id/offers/proposals", suffix: "/proposals", what: "propose brand offers" },
+  { method: "post", path: "/brands/:id/offers/confirm", suffix: "/confirm", what: "confirm brand offers" },
   { method: "get", path: "/brands/:id/offers/:offerId", suffix: "", what: "get brand offer" },
   { method: "patch", path: "/brands/:id/offers/:offerId", suffix: "", what: "rename brand offer" },
   { method: "get", path: "/brands/:id/offers/:offerId/user-fields", suffix: "/user-fields", what: "get offer user fields" },

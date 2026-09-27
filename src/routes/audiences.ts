@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, externalServices } from "../lib/service-client.js";
+import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
+import { respondUpstreamError } from "../lib/upstream-error.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
 /**
@@ -58,6 +59,29 @@ router.post("/orgs/audiences/suggest", ...authChain, async (req: AuthenticatedRe
     fail(res, error, "Suggest audiences error");
   }
 });
+
+// POST /v1/orgs/audiences/split → human-service POST /orgs/audiences/split
+// POST /v1/orgs/audiences/split/confirm → human-service POST /orgs/audiences/split/confirm
+// A target sentence split into segments (one LLM call + a typed judgment — up to a
+// minute, well inside the default 300s service-client timeout /suggest also runs on),
+// then the kept segments created as audiences. The downstream status (201, 409 on a
+// name conflict, 502 on an LLM error) and its body are forwarded field for field via
+// respondUpstreamError — not the flattened `fail` envelope older siblings use.
+for (const suffix of ["/split", "/split/confirm"] as const) {
+  router.post(`/orgs/audiences${suffix}`, ...authChain, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.human,
+        `/orgs/audiences${suffix}`,
+        { method: "POST", headers: buildInternalHeaders(req), body: req.body },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error(`[api-service] Audience ${suffix} error:`, error.message);
+      respondUpstreamError(res, error, `Failed to call audiences${suffix}`);
+    }
+  });
+}
 
 // POST /v1/orgs/audiences/stats → human-service POST /orgs/audiences/stats
 router.post("/orgs/audiences/stats", ...authChain, async (req: AuthenticatedRequest, res) => {
