@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { authenticate, requireOrg, AuthenticatedRequest } from "../middleware/auth.js";
+import {
+  authenticate,
+  authenticatePlatform,
+  requireOrg,
+  requireStaff,
+  AuthenticatedRequest,
+} from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
@@ -188,6 +194,103 @@ router.delete("/billing/accounts/saved_payment_method", authenticate, requireOrg
     respondUpstreamError(res, error, "Failed to remove the saved card");
   }
 });
+
+/**
+ * GET|PUT /v1/billing/accounts/payment_mode
+ * Proxy to billing-service GET|PUT /v1/accounts/payment_mode.
+ *
+ * The customer (org in context) reads and sets its own payment mode, prepaid or
+ * postpaid, from the Billing page switch and from onboarding. The org is the
+ * AUTHENTICATED one (`x-org-id` from `buildInternalHeaders`); a caller cannot
+ * name another org.
+ *
+ * Pure passthrough (CLAUDE.md #4/#7/#8): the body `{payment_mode}` is forwarded
+ * as-is (billing owns the vocabulary and 400s a bad value), and every refusal
+ * reaches the dashboard field-for-field via `respondUpstreamError` — above all
+ * the 409 `{error, code, owed_cents}` billing answers when a postpaid org that
+ * owes money could not settle before switching to prepaid. That body is
+ * customer-facing: the dashboard renders `owed_cents` and branches on `code`.
+ */
+router.get("/billing/accounts/payment_mode", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/payment_mode",
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to read payment mode");
+  }
+});
+
+router.put("/billing/accounts/payment_mode", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/payment_mode",
+      { method: "PUT", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to set payment mode");
+  }
+});
+
+/**
+ * GET|PUT /v1/billing/accounts/by-org/:orgId/payment-mode   (STAFF ONLY)
+ * Proxy to billing-service GET|PUT /internal/accounts/by-org/:orgId/payment-mode.
+ *
+ * The admin console reads and sets the payment mode of a GIVEN org — not the
+ * org in context — so the org travels in the path, exactly as billing's route
+ * takes it. Gated `authenticatePlatform + requireStaff`: the platform key alone
+ * is shared with the customer dashboard's server-side proxy, so the STAFF_EMAILS
+ * x-email is what keeps a customer from naming another org here. No
+ * `requireOrg`: no org identity is involved, the target is the path param.
+ *
+ * Downstream is `/internal/*` (x-api-key injected by callExternalService);
+ * billing validates the orgId (400) and answers 404 when the org has no billing
+ * account. Status and body pass through unchanged (CLAUDE.md #7), the 409
+ * settle refusal included.
+ */
+function paymentModeByOrgPath(orgId: string): string {
+  return `/internal/accounts/by-org/${encodeURIComponent(orgId)}/payment-mode`;
+}
+
+router.get(
+  "/billing/accounts/by-org/:orgId/payment-mode",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.billing,
+        paymentModeByOrgPath(req.params.orgId as string)
+      );
+      res.json(result);
+    } catch (error: any) {
+      respondUpstreamError(res, error, "Failed to read payment mode");
+    }
+  }
+);
+
+router.put(
+  "/billing/accounts/by-org/:orgId/payment-mode",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.billing,
+        paymentModeByOrgPath(req.params.orgId as string),
+        { method: "PUT", body: req.body }
+      );
+      res.json(result);
+    } catch (error: any) {
+      respondUpstreamError(res, error, "Failed to set payment mode");
+    }
+  }
+);
 
 /**
  * POST /v1/billing/accounts/charge
