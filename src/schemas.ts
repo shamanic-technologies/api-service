@@ -3538,6 +3538,62 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – Offer proposals + confirm (proxy to brand-service
+// /orgs/brands/:brandId/offers/{proposals,confirm}). Downstream owns both shapes.
+// ===================================================================
+const OfferProposalsResponseSchema = z.object({}).passthrough().openapi("OfferProposalsResponse");
+const OfferConfirmResponseSchema = z.object({}).passthrough().openapi("OfferConfirmResponse");
+const OfferPassthroughBody = z.object({}).passthrough();
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/offers/proposals",
+  tags: ["Brand"],
+  summary: "Propose offers for a brand from a free-text description",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{brandId}/offers/proposals. Persists nothing. One LLM " +
+    "call plus a typed judgment, so it can take up to a minute. Request + response shapes are owned by " +
+    "brand-service. A 422 (the description names nothing to sell) and a 502 (LLM error) reach the caller " +
+    "with their body intact.",
+  security: authed,
+  request: {
+    params: z.object({ id: z.string().describe("Brand ID") }),
+    body: { content: { "application/json": { schema: OfferPassthroughBody } } },
+  },
+  responses: {
+    200: { description: "Proposed offers (brand-service shape)", content: { "application/json": { schema: OfferProposalsResponseSchema } } },
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such brand (forwarded verbatim)", content: errorContent },
+    422: { description: "The description names nothing to sell (forwarded verbatim)", content: errorContent },
+    502: { description: "LLM error (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/offers/confirm",
+  tags: ["Brand"],
+  summary: "Create the offers the customer kept from a proposal",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{brandId}/offers/confirm. Request + response shapes are " +
+    "owned by brand-service; downstream status and body are forwarded verbatim.",
+  security: authed,
+  request: {
+    params: z.object({ id: z.string().describe("Brand ID") }),
+    body: { content: { "application/json": { schema: OfferPassthroughBody } } },
+  },
+  responses: {
+    200: { description: "Created offers (brand-service shape)", content: { "application/json": { schema: OfferConfirmResponseSchema } } },
+    201: { description: "Created offers (brand-service shape)", content: { "application/json": { schema: OfferConfirmResponseSchema } } },
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such brand (forwarded verbatim)", content: errorContent },
+    409: { description: "Conflict (forwarded verbatim)", content: errorContent },
+  },
+});
+
+// ===================================================================
 // Brand – Offer image (proxy to brand-service /orgs/brands/:id/offers/:offerId/image)
 // The offer READS carry the image already, because this gateway does not
 // re-declare offer response shapes. The WRITE is this route, and it is what the
@@ -10099,6 +10155,51 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
     502: { description: "human-service unreachable / not configured", content: errorContent },
+  },
+});
+
+const AudienceSplitResponse = z.object({}).passthrough().openapi("AudienceSplitResponse");
+const AudienceSplitConfirmResponse = z.object({}).passthrough().openapi("AudienceSplitConfirmResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/audiences/split",
+  tags: ["Audiences"],
+  summary: "Propose a split of a target audience into segments",
+  description:
+    "Proxy to human-service POST /orgs/audiences/split. Turns a target sentence into up to a few " +
+    "non-overlapping segments; persists nothing. One LLM call plus a typed judgment, so it can take " +
+    "up to a minute. Request + response shapes are owned by human-service. Downstream status and body " +
+    "(400 validation, 502 on an LLM error) are forwarded verbatim.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: AudiencePassthroughBody } } } },
+  responses: {
+    200: { description: "Proposed segments (human-service shape)", content: { "application/json": { schema: AudienceSplitResponse } } },
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    402: { description: "The org cannot afford the LLM call (forwarded verbatim)", content: errorContent },
+    502: { description: "LLM error / human-service unreachable (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/audiences/split/confirm",
+  tags: ["Audiences"],
+  summary: "Create the kept segments of a split as audiences",
+  description:
+    "Proxy to human-service POST /orgs/audiences/split/confirm. Creates the segments the customer kept " +
+    "as audiences under (brand, offer), all or nothing. Request + response shapes are owned by " +
+    "human-service. Downstream status and body (400, 409 name conflict) are forwarded verbatim.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: AudiencePassthroughBody } } } },
+  responses: {
+    200: { description: "Created audiences (human-service shape)", content: { "application/json": { schema: AudienceSplitConfirmResponse } } },
+    201: { description: "Created audiences (human-service shape)", content: { "application/json": { schema: AudienceSplitConfirmResponse } } },
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: { description: "An audience with one of these names already exists (forwarded verbatim)", content: errorContent },
+    502: { description: "human-service unreachable (forwarded verbatim)", content: errorContent },
   },
 });
 
