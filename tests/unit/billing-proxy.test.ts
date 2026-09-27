@@ -57,10 +57,10 @@ describe("Billing proxy routes", () => {
   });
 
   it("should use authenticate and requireOrg on all authenticated endpoints", () => {
-    // 16 single-line routes + 1 import = 17.
+    // 18 single-line routes (the import is multi-line and does not match).
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    expect(authMatches!.length).toBe(17);
+    expect(authMatches!.length).toBe(18);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints (no x-key-source)", () => {
@@ -68,7 +68,7 @@ describe("Billing proxy routes", () => {
     expect(content).not.toContain('"x-key-source"');
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(16);
+    expect(headerMatches!.length).toBe(18);
   });
 
   it("should have GET /billing/payments endpoint sourced from stripe-service", () => {

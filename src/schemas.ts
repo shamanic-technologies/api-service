@@ -6450,6 +6450,109 @@ registry.registerPath({
 });
 
 // ---------------------------------------------------------------------------
+// Payment mode (prepaid | postpaid). The customer reads/sets its own org's mode;
+// staff read/set a GIVEN org's mode (orgId in path). Transparent proxy to
+// billing-service: body forwarded as-is (billing owns the vocabulary), responses
+// passthrough (CLAUDE.md #8), refusals forwarded field-for-field (CLAUDE.md #7).
+// ---------------------------------------------------------------------------
+const SetPaymentModeRequestSchema = z
+  .object({
+    payment_mode: z.string().openapi({ description: "\"prepaid\" or \"postpaid\". Validated downstream (400 on anything else).", example: "prepaid" }),
+  })
+  .passthrough()
+  .openapi("SetPaymentModeRequest");
+
+const PaymentModeResponseSchema = z.object({}).passthrough().openapi("PaymentModeResponse");
+const SetPaymentModeResponseSchema = z.object({}).passthrough().openapi("SetPaymentModeResponse");
+
+const paymentModeSettleRefusal = {
+  description:
+    "A postpaid org that owes money could not settle before switching to prepaid. Body { error, code, owed_cents } " +
+    "forwarded field-for-field from billing-service (customer-facing).",
+  content: errorContent,
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/accounts/payment_mode",
+  tags: ["Billing"],
+  summary: "Read this org's payment mode (prepaid or postpaid)",
+  description:
+    "Transparent proxy to billing-service GET /v1/accounts/payment_mode for the authenticated org. " +
+    "Response { org_id, payment_mode } owned by the downstream service.",
+  security: authed,
+  responses: {
+    200: { description: "Payment mode — pass-through from billing-service", content: { "application/json": { schema: PaymentModeResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/billing/accounts/payment_mode",
+  tags: ["Billing"],
+  summary: "Set this org's payment mode (prepaid or postpaid)",
+  description:
+    "Transparent proxy to billing-service PUT /v1/accounts/payment_mode for the authenticated org; body forwarded as-is. " +
+    "Switching a postpaid org that owes money to prepaid settles the debt first; if that settle fails billing answers " +
+    "409 and the org stays postpaid. Status and body forwarded unchanged.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: SetPaymentModeRequestSchema } } } },
+  responses: {
+    200: { description: "Mode set — { org_id, payment_mode, settled_cents, auto_topup_enabled }, pass-through", content: { "application/json": { schema: SetPaymentModeResponseSchema } } },
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: paymentModeSettleRefusal,
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/accounts/by-org/{orgId}/payment-mode",
+  tags: ["Billing"],
+  summary: "Read a given org's payment mode (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email). Transparent proxy to billing-service " +
+    "GET /internal/accounts/by-org/{orgId}/payment-mode. Response { org_id, payment_mode } owned by the downstream service.",
+  security: platformAuth,
+  request: { params: z.object({ orgId: z.string().openapi({ description: "Internal org UUID" }) }) },
+  responses: {
+    200: { description: "Payment mode — pass-through from billing-service", content: { "application/json": { schema: PaymentModeResponseSchema } } },
+    400: { description: "Invalid orgId (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "Org has no billing account", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/billing/accounts/by-org/{orgId}/payment-mode",
+  tags: ["Billing"],
+  summary: "Set a given org's payment mode (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email). Transparent proxy to billing-service " +
+    "PUT /internal/accounts/by-org/{orgId}/payment-mode; body forwarded as-is, status and body forwarded unchanged.",
+  security: platformAuth,
+  request: {
+    params: z.object({ orgId: z.string().openapi({ description: "Internal org UUID" }) }),
+    body: { content: { "application/json": { schema: SetPaymentModeRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Mode set — pass-through from billing-service", content: { "application/json": { schema: SetPaymentModeResponseSchema } } },
+    400: { description: "Invalid orgId or body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "Org has no billing account", content: errorContent },
+    409: paymentModeSettleRefusal,
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+// ---------------------------------------------------------------------------
 // Per-org platform-usage discount (staff-only) — set / read / remove an org's
 // usage-discount percentage. Gated by requireStaff (platform API key + x-email
 // in the STAFF_EMAILS allowlist); a customer can never reach these. Transparent
