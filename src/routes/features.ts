@@ -207,6 +207,31 @@ router.get("/public/features/workflow-cost-per-outcome", async (req: Request, re
 });
 
 /**
+ * GET /v1/public/features/workflow-return-history
+ * One workflow dynasty's fleet-wide dated spend, value and return on spend, across every
+ * client org, on the BILLED basis (what clients were charged). The dated twin of
+ * /v1/public/features/workflow-cost-per-outcome. Proxied to features-service
+ * GET /public/stats/workflow-return-history.
+ *
+ * No identity of any kind (the producer route is public). The query string is forwarded
+ * verbatim (CLAUDE.md #11) — featureSlug and workflowDynastySlug are the parameters
+ * documented today, not a whitelist — and a downstream error is forwarded field-for-field
+ * (#7). The body is producer-owned (#8).
+ */
+router.get("/public/features/workflow-return-history", async (req: Request, res: Response) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/workflow-return-history${rawQueryString(req.originalUrl)}`,
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public workflow return history error:", error.message);
+    respondUpstreamError(res, error, "Failed to get the public workflow return history");
+  }
+});
+
+/**
  * GET /v1/public/features/cost-per-outcome-lifetime
  * Public lifetime (all-history) cross-org average cost-per-outcome across all objectives for a feature.
  * Proxied to features-service GET /public/stats/cost-per-outcome-lifetime.
@@ -806,6 +831,38 @@ router.delete("/features/stated-monthly-amounts/:id", authenticatePlatform, requ
     respondUpstreamError(res, error, "Failed to delete stated monthly amount");
   }
 });
+
+/**
+ * GET /v1/features/workflow-return-history/actual-cost — STAFF ONLY.
+ * The /v1/public/features/workflow-return-history curve with its spend leg at what the
+ * vendors actually charged us before markup. It reveals our margin, so it is gated by
+ * authenticatePlatform + requireStaff — both network-free, so a non-staff caller is
+ * refused before any downstream call. Fleet-wide (every org), so no org identity is
+ * involved and requireOrg is deliberately absent; only the verified staff email is
+ * forwarded, for attribution.
+ *
+ * Byte passthrough to features-service GET /internal/stats/workflow-return-history/actual-cost:
+ * query verbatim (#11), status + body piped (#10), errors field-for-field (#7). Declared
+ * BEFORE `/features/:slug/*` so `workflow-return-history` is never bound as a slug.
+ */
+router.get(
+  "/features/workflow-return-history/actual-cost",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.features,
+        `/internal/stats/workflow-return-history/actual-cost${rawQueryString(req.originalUrl)}`,
+        { headers: staffHeaders(req), expressRes: res },
+      );
+    } catch (error: any) {
+      console.error("[api-service] Staff workflow return history actual-cost error:", error.message);
+      if (res.headersSent) { res.end(); return; }
+      respondUpstreamError(res, error, "Failed to get the workflow return history on actual cost");
+    }
+  },
+);
 
 /**
  * GET /v1/features/:slug/pipeline-activity
