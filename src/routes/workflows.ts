@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
+import { authenticate, requireOrg, requireUser, requireStaff, AuthenticatedRequest } from "../middleware/auth.js";
+import { callExternalService, callExternalServiceWithStatus, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 import { CreateWorkflowRequestSchema, UpgradeWorkflowRequestSchema, UpdateWorkflowRequestSchema, WorkflowDynastyStatusRequestSchema } from "../schemas.js";
@@ -421,6 +421,54 @@ router.post("/workflows/:id/validate", authenticate, requireOrg, requireUser, as
     console.error("Validate workflow error:", error.message);
     const status = error.statusCode || 500;
     res.status(status).json({ error: error.message || "Failed to validate workflow" });
+  }
+});
+
+/**
+ * POST /v1/workflows/:id/prompt-edit
+ * POST /v1/workflows/dynasty/:workflowDynastySlug/prompt-edit
+ *
+ * Upgrade or fork a workflow with an edited prompt template. Transparent proxy to
+ * workflow-service POST /workflows/{id}/prompt-edit and its dynasty twin.
+ *
+ * STAFF ONLY (`requireStaff`, on top of org + user): an `upgrade` changes what every
+ * campaign on the dynasty sends, for every client.
+ *
+ * Byte passthrough via `pipeExternalService`: the 201 stays a 201, and the
+ * deliberate refusals (400 / 404 / 409 / 422 with `droppedVariables` /
+ * `addedVariables` / `requiredVariables` / 502) reach the dashboard with their
+ * status and body field-for-field through `respondUpstreamError`. The body is not
+ * validated here — workflow-service owns `{ action, prompt }` and refuses what it
+ * does not accept.
+ */
+router.post("/workflows/dynasty/:workflowDynastySlug/prompt-edit", authenticate, requireOrg, requireUser, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.workflow,
+      `/workflows/dynasty/${encodeURIComponent(req.params.workflowDynastySlug)}/prompt-edit`,
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body, expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("Workflow dynasty prompt-edit error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to edit workflow prompt");
+  }
+});
+
+router.post("/workflows/:id/prompt-edit", authenticate, requireOrg, requireUser, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
+
+    await pipeExternalService(
+      externalServices.workflow,
+      `/workflows/${id}/prompt-edit`,
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body, expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("Workflow prompt-edit error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to edit workflow prompt");
   }
 });
 
