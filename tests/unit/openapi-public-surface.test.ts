@@ -38,6 +38,8 @@ import { authenticatePlatform } from "../../src/middleware/auth.js";
 
 const PLATFORM_OPERATIONS = [
   "get /v1/features/audit/send-forecast",
+  "post /v1/workflows/{id}/prompt-edit",
+  "post /v1/workflows/dynasty/{workflowDynastySlug}/prompt-edit",
   "get /v1/features/audit/accounts",
   "get /v1/features/audit/active-users",
   "get /v1/features/audit/active-users-by-user",
@@ -312,12 +314,14 @@ describe("staff-gated families stay accounted for", () => {
   //   mailing-lists.ts  → STAFF_ONLY_TAGS (its schemas declare `bearerAuth`)
   //   usage-discount.ts → its schemas declare `apiKeyAuth`, which is what the
   //   credits.ts          platform-keyed admin console actually sends on these
+  //   workflows.ts        (prompt-edit pair)
   //                       routes (`authenticate` accepts that key and sets
   //                       `authType: "admin"`, which is what `requireStaff` reads)
   const KNOWN_STAFF_BEARER_ROUTE_FILES = [
     "mailing-lists.ts",
     "usage-discount.ts",
     "credits.ts",
+    "workflows.ts",
   ];
 
   it("finds no bearer + requireStaff route file outside the known list", () => {
