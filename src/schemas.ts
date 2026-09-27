@@ -8607,6 +8607,39 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/{featureSlug}/revenue/actual-cost",
+  tags: ["Features"],
+  summary: "Feature return curve at actual vendor cost (staff only)",
+  description:
+    "The /v1/features/{featureSlug}/revenue return curve costed at what vendors actually charged, before markup. " +
+    "Reveals margin, so staff-only: platform API key + a STAFF_EMAILS x-email, refused with 403 before any downstream call; " +
+    "org + user identity (x-org-id/x-user-id or x-external-org-id/x-external-user-id) select the org being viewed. " +
+    "Transparent proxy to features-service GET /internal/features/{featureSlug}/revenue/actual-cost; query forwarded verbatim " +
+    "(brandId, workflow, campaignId, offerId, cause are the ones documented today, not a whitelist); response owned by features-service.",
+  security: platformAuth,
+  request: {
+    params: z.object({ featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug") }),
+    query: z
+      .object({
+        brandId: z.string().describe("Brand UUID (required downstream)"),
+        workflow: z.string().describe("Workflow the curve is drawn for (required downstream)"),
+        campaignId: z.string().optional().describe("Narrow to one campaign"),
+        offerId: z.string().optional().describe("Narrow to one offer"),
+        cause: z.string().optional().describe("Narrow to one cause"),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "Actual-cost return curve — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureActualCostRevenueResponse") } } },
+    400: { description: "Missing or invalid query parameters", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/features/{featureSlug}/audience-stats",
   tags: ["Features"],
   summary: "Feature audience stats",
