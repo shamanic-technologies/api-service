@@ -4521,6 +4521,32 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/runs/{id}",
+  tags: ["Runs"],
+  summary: "One run by id, with its cost roll-up and its descendant runs",
+  description:
+    "Proxies runs-service GET /v1/runs/{id} for the authenticated org and forwards its body unchanged: the run, its own costs, the rolled-up cost totals over its whole tree, and its descendant runs. A run belonging to another organization is answered 404 \"Run not found\", identical to an unknown id.",
+  security: authed,
+  request: {
+    params: z.object({ id: z.string().describe("Run id") }),
+  },
+  responses: {
+    200: {
+      description: "The run, forwarded unchanged from runs-service",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("RunDetailResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No run with this id in the caller's organization", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // RUN EVENTS
 // ===================================================================
