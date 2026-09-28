@@ -9428,6 +9428,77 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/{featureSlug}/workflow-projection/actual-cost",
+  tags: ["Features"],
+  summary: "Feature workflow projection at actual vendor cost (staff only)",
+  description:
+    "The /v1/features/{featureSlug}/workflow-projection ladder with every money figure at what vendors actually charged, before markup. " +
+    "Reveals margin, so staff-only: platform API key + a STAFF_EMAILS x-email, refused with 403 before any downstream call; " +
+    "org + user identity (x-org-id/x-user-id or x-external-org-id/x-external-user-id) select the org being viewed. " +
+    "Transparent proxy to features-service GET /internal/features/{featureSlug}/workflow-projection/actual-cost; query forwarded verbatim " +
+    "(the parameters below are the ones documented today, not a whitelist); response owned by features-service.",
+  security: platformAuth,
+  request: {
+    params: z.object({ featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug") }),
+    query: z
+      .object({
+        brandId: z.string().describe("Brand UUID (required downstream)"),
+        goal: z.string().optional().describe("Optimization goal selecting the outcome metric"),
+        objective: z.string().optional().describe("Alias of `goal`"),
+        audienceId: z.string().optional().describe("Optional audience UUID context"),
+        budgetUsd: z.string().optional().describe("Optional budget context"),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "Actual-cost workflow projection — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("WorkflowProjectionActualCostResponse") } } },
+    400: { description: "Missing or invalid query parameters", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/runs/vendor",
+  tags: ["Runs"],
+  summary: "List runs with vendor cost (staff only)",
+  description:
+    "The GET /v1/runs list (same query parameters, same runs, same order) with each run's cost also stated at what vendors charged, before markup — own and subtree totals. " +
+    "Reveals margin, so staff-only: platform API key + a STAFF_EMAILS x-email, refused with 403 before any downstream call; " +
+    "org + user identity select the org whose runs are listed, and the gateway forwards that org as runs-service's `orgId` query parameter (a caller-supplied `orgId` is ignored). " +
+    "Transparent proxy to runs-service GET /internal/runs/vendor; every other query parameter forwarded verbatim; response owned by runs-service.",
+  security: platformAuth,
+  request: {
+    query: z
+      .object({
+        campaignId: z.string().optional(),
+        brandId: z.string().optional(),
+        workflowSlug: z.string().optional(),
+        featureSlug: z.string().optional(),
+        serviceName: z.string().optional(),
+        taskName: z.string().optional(),
+        status: z.string().optional(),
+        startedAfter: z.string().optional(),
+        startedBefore: z.string().optional(),
+        limit: z.string().optional(),
+        offset: z.string().optional(),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "Runs with vendor cost — pass-through from runs-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("ListRunsVendorResponse") } } },
+    400: { description: "Invalid query parameters", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // ---------------------------------------------------------------------------
 // PUBLIC STATS (no auth — landing page endpoints)
 // ---------------------------------------------------------------------------

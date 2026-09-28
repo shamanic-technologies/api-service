@@ -1064,6 +1064,40 @@ router.get("/features/:slug/workflow-projection", authenticate, requireOrg, requ
   }
 });
 
+/**
+ * GET /v1/features/:slug/workflow-projection/actual-cost — STAFF ONLY.
+ * The /v1/features/:slug/workflow-projection ladder with every money figure at what the
+ * vendors actually charged us before markup. It reveals our margin, so the gate is the
+ * same as /v1/features/:slug/revenue/actual-cost: `authenticatePlatform` + `requireStaff`
+ * first (network-free, so a non-staff caller reaches no service at all), then
+ * `authenticate` + `requireOrg` + `requireUser` to resolve the org being viewed, which
+ * features-service scopes this read by exactly as it scopes the customer projection.
+ *
+ * Byte passthrough to features-service GET /internal/features/:slug/workflow-projection/actual-cost:
+ * query verbatim (#11), status + body piped (#10), errors field-for-field (#7).
+ */
+router.get(
+  "/features/:slug/workflow-projection/actual-cost",
+  authenticatePlatform,
+  requireStaff,
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.features,
+        `/internal/features/${encodeURIComponent(req.params.slug)}/workflow-projection/actual-cost${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req), expressRes: res },
+      );
+    } catch (error: any) {
+      console.error("Feature actual-cost workflow-projection error:", error.message);
+      if (res.headersSent) { res.end(); return; }
+      respondUpstreamError(res, error, "Failed to get feature actual-cost workflow projection");
+    }
+  },
+);
+
 // ── Offer grain ──────────────────────────────────────────────────────────────
 
 /**
