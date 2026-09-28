@@ -188,6 +188,41 @@ router.get("/orgs/audiences/:id/preview", ...authChain, async (req: Authenticate
   }
 });
 
+// GET /v1/orgs/audiences/:id/preview/email-checks → human-service GET /orgs/audiences/{id}/preview/email-checks
+// Where the preview's email check stands, per sampled person (pending / found /
+// not found, by which finder). Free, never an address. Upstream status + body
+// forwarded field-for-field (CLAUDE.md #7 corollary).
+router.get("/orgs/audiences/:id/preview/email-checks", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.human,
+      `/orgs/audiences/${encodeURIComponent(req.params.id)}/preview/email-checks`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Audience preview email-checks error:", error?.message);
+    respondUpstreamError(res, error, "Failed to read audience preview email checks");
+  }
+});
+
+// POST /v1/orgs/audiences/:id/preview/email-checks/next → human-service POST /orgs/audiences/{id}/preview/email-checks/next
+// Reveal + verify ONE more sampled person, billed to the caller's org downstream
+// (the forwarded identity is the authenticated one). Body forwarded as-is.
+router.post("/orgs/audiences/:id/preview/email-checks/next", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.human,
+      `/orgs/audiences/${encodeURIComponent(req.params.id)}/preview/email-checks/next`,
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Audience preview email-checks next error:", error?.message);
+    respondUpstreamError(res, error, "Failed to check the next audience preview email");
+  }
+});
+
 // PATCH /v1/orgs/audiences/:id/status → human-service PATCH /orgs/audiences/{id}/status
 router.patch("/orgs/audiences/:id/status", ...authChain, async (req: AuthenticatedRequest, res) => {
   try {

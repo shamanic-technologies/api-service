@@ -164,3 +164,76 @@ describe("POST /v1/content/preview-email", () => {
     expect(res.body).toEqual({ error: "The brand sells several offers; name one with offerId" });
   });
 });
+
+describe("GET /v1/orgs/audiences/:id/preview/email-checks", () => {
+  const STATE = {
+    audienceId: AUDIENCE_ID,
+    done: false,
+    people: [{ personId: "p1", status: "pending", finder: null }],
+    summary: { checked: 0, deliverable: 0 },
+  };
+
+  it("reaches human-service's own path with the authenticated identity and passes the body through", async () => {
+    stubFetch(200, STATE);
+    const res = await request(buildApp())
+      .get(`/v1/orgs/audiences/${AUDIENCE_ID}/preview/email-checks`)
+      .set("x-org-id", "org_ATTACKER");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(STATE);
+    expect(captured).toHaveLength(1);
+    expect(captured[0].url).toBe(`${HUMAN_BASE}/orgs/audiences/${AUDIENCE_ID}/preview/email-checks`);
+    expect(captured[0].method).toBe("GET");
+    expect(captured[0].headers["x-org-id"]).toBe("org_test456");
+    expect(captured[0].headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("forwards a downstream 404 with its status and body", async () => {
+    stubFetch(404, { error: "Audience not found" });
+    const res = await request(buildApp()).get(`/v1/orgs/audiences/${AUDIENCE_ID}/preview/email-checks`);
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Audience not found" });
+  });
+});
+
+describe("POST /v1/orgs/audiences/:id/preview/email-checks/next", () => {
+  const STATE = {
+    audienceId: AUDIENCE_ID,
+    done: false,
+    people: [{ personId: "p1", status: "found", verified: true, finder: "apollo" }],
+    summary: { checked: 1, deliverable: 1 },
+  };
+
+  it("reaches human-service's /next with the authenticated identity + run and passes the body through", async () => {
+    stubFetch(200, STATE);
+    const res = await request(buildApp())
+      .post(`/v1/orgs/audiences/${AUDIENCE_ID}/preview/email-checks/next`)
+      .set("x-org-id", "org_ATTACKER")
+      .send({});
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(STATE);
+    expect(captured).toHaveLength(1);
+    expect(captured[0].url).toBe(`${HUMAN_BASE}/orgs/audiences/${AUDIENCE_ID}/preview/email-checks/next`);
+    expect(captured[0].method).toBe("POST");
+    expect(captured[0].headers["x-org-id"]).toBe("org_test456");
+    expect(captured[0].headers["x-user-id"]).toBe("user_test123");
+    expect(captured[0].headers["x-run-id"]).toBe("run_test789");
+  });
+
+  it("forwards a 502 provider error with its status and body field-for-field", async () => {
+    const ERR = { error: "Provider error", details: "apollo reveal failed" };
+    stubFetch(502, ERR);
+    const res = await request(buildApp()).post(`/v1/orgs/audiences/${AUDIENCE_ID}/preview/email-checks/next`).send({});
+    expect(res.status).toBe(502);
+    expect(res.body).toEqual(ERR);
+  });
+
+  it("forwards a 402 as a 402", async () => {
+    const REFUSAL = { error: "Insufficient credits", balance_cents: 1, required_cents: 12 };
+    stubFetch(402, REFUSAL);
+    const res = await request(buildApp()).post(`/v1/orgs/audiences/${AUDIENCE_ID}/preview/email-checks/next`).send({});
+    expect(res.status).toBe(402);
+    expect(res.body).toEqual(REFUSAL);
+  });
+});

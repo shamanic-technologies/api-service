@@ -10693,6 +10693,49 @@ registry.registerPath({
   },
 });
 
+const AudiencePreviewEmailChecksResponse = z.object({}).passthrough().openapi("AudiencePreviewEmailChecksResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/audiences/{id}/preview/email-checks",
+  tags: ["Audiences"],
+  summary: "Where the email check of an audience preview stands",
+  description:
+    "Proxy to human-service GET /orgs/audiences/{id}/preview/email-checks. For the preview's first people: whether a " +
+    "deliverable email was found and verified, by which finder. Free, never runs a reveal, never returns an address. " +
+    "Response shape owned by human-service. Forwarded untransformed; upstream errors are forwarded with their status and body.",
+  security: authed,
+  request: { params: AudienceIdParam },
+  responses: {
+    200: { description: "Current state as returned by human-service", content: { "application/json": { schema: AudiencePreviewEmailChecksResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Audience not found for this org (forwarded verbatim)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / provider error (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/audiences/{id}/preview/email-checks/next",
+  tags: ["Audiences"],
+  summary: "Check one more person of an audience preview (billed)",
+  description:
+    "Proxy to human-service POST /orgs/audiences/{id}/preview/email-checks/next. Runs the billed email reveal + verification " +
+    "for the next pending sampled person, charged to the caller's org, and returns the whole state. Call in a loop until done. " +
+    "Never returns an address. Response shape owned by human-service. Forwarded untransformed; upstream errors are forwarded " +
+    "with their status and body.",
+  security: authed,
+  request: { params: AudienceIdParam },
+  responses: {
+    200: { description: "State after this check, as returned by human-service", content: { "application/json": { schema: AudiencePreviewEmailChecksResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Audience not found for this org (forwarded verbatim)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / provider or verification error (forwarded verbatim)", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/orgs/audiences/{id}",
