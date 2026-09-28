@@ -10736,6 +10736,84 @@ registry.registerPath({
   },
 });
 
+const AudiencePreviewCompaniesResponse = z.object({}).passthrough().openapi("AudiencePreviewCompaniesResponse");
+const AudiencePreviewCompanyEmailChecksResponse = z
+  .object({})
+  .passthrough()
+  .openapi("AudiencePreviewCompanyEmailChecksResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/audiences/{id}/preview/companies",
+  tags: ["Audiences"],
+  summary: "A page of the real companies an audience reaches",
+  description:
+    "Proxy to human-service GET /orgs/audiences/{id}/preview/companies. Free. The whole query string is forwarded verbatim " +
+    "(offset and limit are the parameters documented today, not a whitelist). Response shape owned by human-service. Forwarded untransformed; upstream errors are forwarded with their status and body.",
+  security: authed,
+  request: {
+    params: AudienceIdParam,
+    query: z.object({
+      offset: z.string().optional().describe("Forwarded verbatim to human-service"),
+      limit: z.string().optional().describe("Forwarded verbatim to human-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Page as returned by human-service", content: { "application/json": { schema: AudiencePreviewCompaniesResponse } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Audience not found for this org (forwarded verbatim)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / provider error (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/audiences/{id}/preview/companies/email-checks",
+  tags: ["Audiences"],
+  summary: "Where the per-company email check of an audience preview stands",
+  description:
+    "Proxy to human-service GET /orgs/audiences/{id}/preview/companies/email-checks. Free, never runs a reveal, never returns " +
+    "an address. Response shape owned by human-service. Forwarded untransformed; upstream errors are forwarded with their status and body.",
+  security: authed,
+  request: { params: AudienceIdParam },
+  responses: {
+    200: { description: "Current state as returned by human-service", content: { "application/json": { schema: AudiencePreviewCompanyEmailChecksResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Audience not found for this org (forwarded verbatim)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / provider error (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/audiences/{id}/preview/companies/{index}/email-check",
+  tags: ["Audiences"],
+  summary: "Check the email of the person to write to at one preview company (billed)",
+  description:
+    "Proxy to human-service POST /orgs/audiences/{id}/preview/companies/{index}/email-check. Runs the billed email reveal + " +
+    "verification for that company's person, charged to the caller's org. No request body. Never returns an address. Response " +
+    "shape owned by human-service. Forwarded untransformed; upstream errors are forwarded with their status and body.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().describe("Audience ID"),
+      index: z.string().describe("Company index in the preview, forwarded verbatim"),
+    }),
+  },
+  responses: {
+    200: { description: "Result as returned by human-service", content: { "application/json": { schema: AudiencePreviewCompanyEmailChecksResponse } } },
+    400: { description: "Invalid index (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    402: { description: "Insufficient credits (forwarded verbatim)", content: errorContent },
+    404: { description: "Audience or company not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / provider or verification error (forwarded verbatim)", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/orgs/audiences/{id}",

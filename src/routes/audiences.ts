@@ -23,6 +23,12 @@ const router = Router();
 
 const authChain = [authenticate, requireOrg, requireUser] as const;
 
+// Raw query string (from the first `?`), forwarded byte-identical (CLAUDE.md rule #11).
+function rawQueryString(originalUrl: string): string {
+  const index = originalUrl.indexOf("?");
+  return index === -1 ? "" : originalUrl.slice(index);
+}
+
 // Forward EVERY query param untouched. No `.max()` / `.default()` caps here —
 // human-service owns the caps (CLAUDE.md "no-limit-defaults" rule) — and no
 // whitelist either: the gateway does not own downstream shapes (CLAUDE.md #8),
@@ -220,6 +226,57 @@ router.post("/orgs/audiences/:id/preview/email-checks/next", ...authChain, async
   } catch (error: any) {
     console.error("[api-service] Audience preview email-checks next error:", error?.message);
     respondUpstreamError(res, error, "Failed to check the next audience preview email");
+  }
+});
+
+// GET /v1/orgs/audiences/:id/preview/companies → human-service GET /orgs/audiences/{id}/preview/companies
+// A page of the real companies the audience reaches (offset/limit forwarded verbatim).
+// Free. Upstream status + body forwarded field-for-field (CLAUDE.md #7 corollary).
+router.get("/orgs/audiences/:id/preview/companies", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.human,
+      `/orgs/audiences/${encodeURIComponent(req.params.id)}/preview/companies${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Audience preview companies error:", error?.message);
+    respondUpstreamError(res, error, "Failed to read audience preview companies");
+  }
+});
+
+// GET /v1/orgs/audiences/:id/preview/companies/email-checks → human-service GET /orgs/audiences/{id}/preview/companies/email-checks
+// Where the per-company email check stands. Free, never an address. Upstream status +
+// body forwarded field-for-field.
+router.get("/orgs/audiences/:id/preview/companies/email-checks", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.human,
+      `/orgs/audiences/${encodeURIComponent(req.params.id)}/preview/companies/email-checks`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Audience preview companies email-checks error:", error?.message);
+    respondUpstreamError(res, error, "Failed to read audience preview company email checks");
+  }
+});
+
+// POST /v1/orgs/audiences/:id/preview/companies/:index/email-check → human-service POST /orgs/audiences/{id}/preview/companies/{index}/email-check
+// Find + verify the email of the one person to write to at company #index, billed to the
+// caller's org downstream (the forwarded identity is the authenticated one). No body.
+router.post("/orgs/audiences/:id/preview/companies/:index/email-check", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.human,
+      `/orgs/audiences/${encodeURIComponent(req.params.id)}/preview/companies/${encodeURIComponent(req.params.index)}/email-check`,
+      { method: "POST", headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Audience preview company email-check error:", error?.message);
+    respondUpstreamError(res, error, "Failed to check the audience preview company email");
   }
 });
 
