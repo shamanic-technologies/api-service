@@ -42,6 +42,8 @@ vi.mock("../../src/middleware/auth.js", () => ({
     req.authType = "admin";
     next();
   },
+  // runs.ts imports requireStaff for GET /v1/runs/vendor; this file does not exercise it.
+  requireStaff: (_req: any, res: any) => res.status(403).json({ error: "Staff access required" }),
   AuthenticatedRequest: {},
 }));
 

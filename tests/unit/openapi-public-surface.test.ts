@@ -47,6 +47,8 @@ const PLATFORM_OPERATIONS = [
   "get /v1/features/audit/revenue",
   "get /v1/features/{featureSlug}/revenue/actual-cost",
   "get /v1/features/workflow-return-history/actual-cost",
+  "get /v1/features/{featureSlug}/workflow-projection/actual-cost",
+  "get /v1/runs/vendor",
   "get /v1/features/stated-monthly-amounts",
   "post /v1/features/stated-monthly-amounts",
   "patch /v1/features/stated-monthly-amounts/{id}",

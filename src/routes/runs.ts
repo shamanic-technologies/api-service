@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { authenticate, requireOrg, requireUser, AuthenticatedRequest, authenticatePlatform } from "../middleware/auth.js";
-import { callExternalService, externalServices, streamExternalService } from "../lib/service-client.js";
+import { authenticate, requireOrg, requireUser, requireStaff, AuthenticatedRequest, authenticatePlatform } from "../middleware/auth.js";
+import { callExternalService, externalServices, pipeExternalService, streamExternalService } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 
@@ -117,6 +117,62 @@ router.get("/runs/stats/run-outcomes", authenticate, requireOrg, requireUser, as
     respondUpstreamError(res, error, "Failed to get run outcomes");
   }
 });
+
+/**
+ * The caller's query with every `orgId` parameter dropped and the authenticated org
+ * appended as the only one. Everything else is kept byte-identical (#11); the org is
+ * the one identity the gateway owns, so a caller-supplied `orgId` never chooses it.
+ */
+function queryWithOrgId(originalUrl: string, orgId: string): string {
+  const raw = rawQueryString(originalUrl).slice(1);
+  const kept = raw
+    .split("&")
+    .filter((pair) => {
+      if (pair === "") return false;
+      const key = pair.split("=")[0];
+      let decoded = key;
+      try { decoded = decodeURIComponent(key.replace(/\+/g, " ")); } catch { /* keep the raw key */ }
+      return decoded !== "orgId";
+    });
+  kept.push(`orgId=${encodeURIComponent(orgId)}`);
+  return `?${kept.join("&")}`;
+}
+
+/**
+ * GET /v1/runs/vendor → runs-service GET /internal/runs/vendor — STAFF ONLY.
+ *
+ * The GET /v1/runs list with each run's cost ALSO stated at what the vendors charged
+ * us before markup (own + subtree). It reveals our margin, so `authenticatePlatform` +
+ * `requireStaff` run first (no network, so a non-staff caller reaches no service), then
+ * `authenticate` + `requireOrg` + `requireUser` resolve the org being viewed — the same
+ * org GET /v1/runs lists. runs-service takes that org as the `orgId` QUERY parameter, so
+ * the gateway sets it from the authenticated org and drops any caller-supplied one; the
+ * rest of the query is forwarded verbatim (#11), status + body piped (#10), errors
+ * field-for-field (#7).
+ *
+ * Declared before `/runs/:id` so `vendor` is never bound as a run id (#13).
+ */
+router.get(
+  "/runs/vendor",
+  authenticatePlatform,
+  requireStaff,
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.runs,
+        `/internal/runs/vendor${queryWithOrgId(req.originalUrl, req.orgId as string)}`,
+        { headers: buildInternalHeaders(req), expressRes: res },
+      );
+    } catch (error: any) {
+      console.error("[api-service] List runs at vendor cost error:", error.message);
+      if (res.headersSent) { res.end(); return; }
+      respondUpstreamError(res, error, "Failed to list runs at vendor cost");
+    }
+  },
+);
 
 /**
  * GET /v1/runs/:id → runs-service GET /v1/runs/:id
