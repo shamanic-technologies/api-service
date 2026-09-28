@@ -170,6 +170,24 @@ router.get("/orgs/audiences/:id/members", ...authChain, async (req: Authenticate
   }
 });
 
+// GET /v1/orgs/audiences/:id/preview → human-service GET /orgs/audiences/{id}/preview
+// A free sample of who the audience reaches (companies + people, no emails). The
+// signed-out onboarding reads it on its anonymous org like any other org. Upstream
+// status + body are forwarded field-for-field (CLAUDE.md #7 corollary).
+router.get("/orgs/audiences/:id/preview", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.human,
+      `/orgs/audiences/${encodeURIComponent(req.params.id)}/preview`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Audience preview error:", error?.message);
+    respondUpstreamError(res, error, "Failed to preview audience");
+  }
+});
+
 // PATCH /v1/orgs/audiences/:id/status → human-service PATCH /orgs/audiences/{id}/status
 router.patch("/orgs/audiences/:id/status", ...authChain, async (req: AuthenticatedRequest, res) => {
   try {

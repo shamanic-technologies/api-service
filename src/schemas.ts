@@ -8671,6 +8671,36 @@ registry.registerPath({
   },
 });
 
+// Content – Preview Email (proxy to content-generation-service)
+// Downstream owns body + response shapes — passthrough only.
+const PreviewEmailRequestSchema = z.object({}).passthrough().openapi("PreviewEmailRequest");
+const PreviewEmailResponseSchema = z.object({}).passthrough().openapi("PreviewEmailResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/content/preview-email",
+  tags: ["Content"],
+  summary: "Write one cold email for a brand and a sample recipient",
+  description:
+    "Proxy to content-generation-service POST /preview-email. Writes the first email of the sequence the product " +
+    "would send, for a brand of the calling org and a sample recipient, before any campaign exists. The LLM spend is " +
+    "billed to the calling org; an org that cannot afford it gets 402 with the downstream body forwarded field-for-field. " +
+    "Body + response shapes are owned by the downstream service.",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: PreviewEmailRequestSchema } } },
+  },
+  responses: {
+    200: { description: "The written email", content: { "application/json": { schema: PreviewEmailResponseSchema } } },
+    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    402: { description: "The org cannot afford the completion (forwarded verbatim)", content: errorContent },
+    404: { description: "Brand or offer not found for this org (forwarded verbatim)", content: errorContent },
+    409: { description: "The brand sells several offers; name one with offerId (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream failure (forwarded verbatim)", content: errorContent },
+  },
+});
+
 // Content – Get Platform Prompt (proxy to content-generation-service)
 // Downstream owns response shape — passthrough only.
 const PlatformPromptResponseSchema = z.object({}).passthrough().openapi("PlatformPromptResponse");
@@ -10636,6 +10666,28 @@ registry.registerPath({
   responses: {
     200: { description: "Members as returned by human-service", content: { "application/json": { schema: AudienceMembersResponse } } },
     401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "human-service unreachable / not configured", content: errorContent },
+  },
+});
+
+const AudiencePreviewResponse = z.object({}).passthrough().openapi("AudiencePreviewResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/audiences/{id}/preview",
+  tags: ["Audiences"],
+  summary: "A free sample of who an audience reaches",
+  description:
+    "Proxy to human-service GET /orgs/audiences/{id}/preview. Up to ~10 real companies and ~20 real people " +
+    "matching the audience, never an email or a phone. Response shape owned by human-service. Forwarded untransformed; " +
+    "upstream errors are forwarded with their status and body.",
+  security: authed,
+  request: { params: AudienceIdParam },
+  responses: {
+    200: { description: "Sample as returned by human-service", content: { "application/json": { schema: AudiencePreviewResponse } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Audience not found for this org (forwarded verbatim)", content: errorContent },
     500: { description: "Internal error", content: errorContent },
     502: { description: "human-service unreachable / not configured", content: errorContent },
   },
