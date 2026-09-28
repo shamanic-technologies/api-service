@@ -479,6 +479,12 @@ const OFFER_ROUTES = [
   // the org cannot afford it — reaches the caller AS a 402 through respondUpstreamError
   // below, which the dashboard's billing guard keys on to open its recharge modal.
   { method: "post", path: "/brands/:id/offers/:offerId/image", suffix: "/image", what: "generate offer image" },
+  // ARCHIVE / UNARCHIVE an offer the owner no longer sells. brand-service's 409
+  // (`reason: "offer_has_ongoing_campaign"`, `campaignIds`) reaches the caller field for
+  // field through respondUpstreamError, so the dashboard can say why in plain words.
+  // The list hides archived offers unless `?includeArchived=true`, forwarded by offerQuery.
+  { method: "post", path: "/brands/:id/offers/:offerId/archive", suffix: "/archive", what: "archive brand offer" },
+  { method: "post", path: "/brands/:id/offers/:offerId/unarchive", suffix: "/unarchive", what: "unarchive brand offer" },
 ] as const;
 
 for (const route of OFFER_ROUTES) {
