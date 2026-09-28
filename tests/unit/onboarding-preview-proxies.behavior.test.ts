@@ -237,3 +237,70 @@ describe("POST /v1/orgs/audiences/:id/preview/email-checks/next", () => {
     expect(res.body).toEqual(REFUSAL);
   });
 });
+
+describe("GET /v1/orgs/audiences/:id/preview/companies", () => {
+  const PAGE = { audienceId: AUDIENCE_ID, status: "ready", total: 100, companies: [{ index: 0, name: "Acme" }] };
+
+  it("forwards the raw query string verbatim with the authenticated identity and passes the body through", async () => {
+    stubFetch(200, PAGE);
+    const res = await request(buildApp())
+      .get(`/v1/orgs/audiences/${AUDIENCE_ID}/preview/companies?offset=10&limit=1`)
+      .set("x-org-id", "org_ATTACKER");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(PAGE);
+    expect(captured).toHaveLength(1);
+    expect(captured[0].url).toBe(`${HUMAN_BASE}/orgs/audiences/${AUDIENCE_ID}/preview/companies?offset=10&limit=1`);
+    expect(captured[0].method).toBe("GET");
+    expect(captured[0].headers["x-org-id"]).toBe("org_test456");
+    expect(captured[0].headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("forwards a downstream 400 with its status and body", async () => {
+    stubFetch(400, { error: "limit must be <= 100" });
+    const res = await request(buildApp()).get(`/v1/orgs/audiences/${AUDIENCE_ID}/preview/companies?limit=500`);
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: "limit must be <= 100" });
+  });
+});
+
+describe("GET /v1/orgs/audiences/:id/preview/companies/email-checks", () => {
+  const STATE = { audienceId: AUDIENCE_ID, companies: [{ index: 0, status: "pending" }] };
+
+  it("reaches human-service's own path and passes the body through", async () => {
+    stubFetch(200, STATE);
+    const res = await request(buildApp()).get(`/v1/orgs/audiences/${AUDIENCE_ID}/preview/companies/email-checks`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(STATE);
+    expect(captured[0].url).toBe(`${HUMAN_BASE}/orgs/audiences/${AUDIENCE_ID}/preview/companies/email-checks`);
+    expect(captured[0].method).toBe("GET");
+  });
+});
+
+describe("POST /v1/orgs/audiences/:id/preview/companies/:index/email-check", () => {
+  const RESULT = { index: 3, status: "found", maskedEmail: "***@acme.com", deliverable: true };
+
+  it("reaches human-service's path with the index, the authenticated identity + run, and no body", async () => {
+    stubFetch(200, RESULT);
+    const res = await request(buildApp())
+      .post(`/v1/orgs/audiences/${AUDIENCE_ID}/preview/companies/3/email-check`)
+      .set("x-org-id", "org_ATTACKER");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(RESULT);
+    expect(captured).toHaveLength(1);
+    expect(captured[0].url).toBe(`${HUMAN_BASE}/orgs/audiences/${AUDIENCE_ID}/preview/companies/3/email-check`);
+    expect(captured[0].method).toBe("POST");
+    expect(captured[0].body).toBeUndefined();
+    expect(captured[0].headers["x-org-id"]).toBe("org_test456");
+    expect(captured[0].headers["x-run-id"]).toBe("run_test789");
+  });
+
+  it("forwards a 402 as a 402", async () => {
+    const REFUSAL = { error: "Insufficient credits", balance_cents: 1, required_cents: 12 };
+    stubFetch(402, REFUSAL);
+    const res = await request(buildApp()).post(`/v1/orgs/audiences/${AUDIENCE_ID}/preview/companies/3/email-check`);
+    expect(res.status).toBe(402);
+    expect(res.body).toEqual(REFUSAL);
+  });
+});
