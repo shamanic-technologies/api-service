@@ -3657,6 +3657,59 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – Offer archive / unarchive (proxy to brand-service
+// /orgs/brands/:id/offers/:offerId/archive|unarchive). Passthrough: brand-service owns
+// the { offer } body (with `status` + `archivedAt`) and the 409 refusal.
+// ===================================================================
+const OfferArchiveResponseSchema = z.object({}).passthrough().openapi("OfferArchiveResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/offers/{offerId}/archive",
+  tags: ["Brand"],
+  summary: "Archive an offer",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{brandId}/offers/{offerId}/archive. Retires an " +
+    "offer the org no longer sells: it leaves the default offer listing " +
+    "(GET /v1/brands/{id}/offers; pass includeArchived=true to see it). Nothing is deleted and " +
+    "unarchive restores it. Answers { offer } with status \"archived\" and archivedAt. " +
+    "Refused 409 with reason \"offer_has_ongoing_campaign\" and campaignIds while a campaign " +
+    "on the offer is ongoing (forwarded verbatim).",
+  security: authed,
+  request: { params: BrandOfferParams },
+  responses: {
+    200: { description: "The archived offer", content: { "application/json": { schema: OfferArchiveResponseSchema } } },
+    400: { description: "Invalid brand or offer ID format (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "No such brand, or no such offer on it (forwarded verbatim)", content: errorContent },
+    409: { description: "An ongoing campaign runs on this offer: reason offer_has_ongoing_campaign (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+    502: { description: "campaign-service could not be asked (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/offers/{offerId}/unarchive",
+  tags: ["Brand"],
+  summary: "Unarchive an offer",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{brandId}/offers/{offerId}/unarchive. Brings an " +
+    "archived offer back into the default listing. Answers { offer } with status \"active\".",
+  security: authed,
+  request: { params: BrandOfferParams },
+  responses: {
+    200: { description: "The active offer", content: { "application/json": { schema: OfferArchiveResponseSchema } } },
+    400: { description: "Invalid brand or offer ID format (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "No such brand, or no such offer on it (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+// ===================================================================
 // Brand – Click Destination (proxy to brand-service /orgs/brands/:id/click-destination)
 // Downstream owns body + response shapes — passthrough only. No gateway
 // re-validation, so brand-service's 4xx errors propagate verbatim.
