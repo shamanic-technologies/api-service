@@ -3,6 +3,7 @@ import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { ContentComposeRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
+import { respondUpstreamError } from "../lib/upstream-error.js";
 
 const router = Router();
 
@@ -53,6 +54,32 @@ router.post("/content/generate-expert-quote-pitch", authenticate, requireOrg, re
     res.json(result);
   } catch (error: any) {
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to generate expert quote pitch" });
+  }
+});
+
+/**
+ * POST /v1/content/preview-email
+ * Proxy to content-generation-service POST /preview-email: one cold email written for
+ * a brand of the calling org and a sample recipient, before any campaign exists.
+ * Body + response shapes are owned by the downstream service — passthrough only.
+ * A 402 (org cannot afford the completion) reaches the caller with its status and
+ * body field-for-field: the dashboard branches on it.
+ */
+router.post("/content/preview-email", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.emailgen,
+      "/preview-email",
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+      },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Preview email error:", error?.message);
+    respondUpstreamError(res, error, "Failed to preview email");
   }
 });
 
