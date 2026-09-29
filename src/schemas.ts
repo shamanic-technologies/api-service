@@ -667,6 +667,21 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/public/outcome-prices",
+  tags: ["Features"],
+  summary: "Public expected price of one outcome",
+  description:
+    "The expected price of one outcome (a website visit, a booked meeting) for a brand with no data yet, as shown by the signed-out onboarding. " +
+    "Proxied to features-service GET /public/stats/outcome-prices. The caller's query string is forwarded verbatim. Response is producer-owned. No authentication required.",
+  responses: {
+    200: { description: "Expected outcome prices — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicOutcomePricesResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/public/channel-funnel-economics",
   tags: ["Features"],
   summary: "Public per-(sales funnel, channel) economics",
@@ -7541,6 +7556,61 @@ registry.registerPath({
     404: { description: "Not found (forwarded verbatim)", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
   },
+});
+
+const SalesBudgetResponseSchema = z.object({}).passthrough().openapi("SalesBudgetResponse");
+const SalesBudgetRequestSchema = z.object({}).passthrough().openapi("SalesBudgetRequest");
+const salesBudgetResponses = {
+  200: { description: "Downstream body, untouched", content: { "application/json": { schema: SalesBudgetResponseSchema } } },
+  400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  500: { description: "Upstream error", content: errorContent },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/sales-budget",
+  tags: ["Billing"],
+  summary: "Get a brand's funding mode and global sales budget",
+  description:
+    "Proxy to billing-service GET /v1/brands/{brandId}/sales-budget. { mode: global|campaigns, dailyBudgetCents, updatedAt }. Response shape owned downstream.",
+  security: authed,
+  request: { params: BrandBudgetParam },
+  responses: salesBudgetResponses,
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{brandId}/sales-budget",
+  tags: ["Billing"],
+  summary: "State a brand's one daily sales budget (global mode)",
+  description:
+    "Proxy to billing-service PUT /v1/brands/{brandId}/sales-budget. Body { dailyBudgetCents } (>= 0). Campaign ceilings untouched; 4xx propagate verbatim.",
+  security: authed,
+  request: { params: BrandBudgetParam, body: { content: { "application/json": { schema: SalesBudgetRequestSchema } } } },
+  responses: salesBudgetResponses,
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/brands/{brandId}/sales-budget",
+  tags: ["Billing"],
+  summary: "Clear a brand's global sales budget (back to campaign ceilings)",
+  description: "Proxy to billing-service DELETE /v1/brands/{brandId}/sales-budget. Idempotent.",
+  security: authed,
+  request: { params: BrandBudgetParam },
+  responses: salesBudgetResponses,
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/sales-budget/history",
+  tags: ["Billing"],
+  summary: "Every state and clear of a brand's global sales budget",
+  description: "Proxy to billing-service GET /v1/brands/{brandId}/sales-budget/history.",
+  security: authed,
+  request: { params: BrandBudgetParam },
+  responses: salesBudgetResponses,
 });
 
 // ===================================================================

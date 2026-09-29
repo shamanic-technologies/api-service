@@ -547,4 +547,39 @@ router.put("/brands/:brandId/campaign-budget", authenticate, requireOrg, async (
   }
 });
 
+/**
+ * A brand's ONE daily sales budget ("global" mode) — billing-service
+ * /v1/brands/:brandId/sales-budget. Passthrough only: billing owns the mode, the
+ * amount validation and the history.
+ *
+ *   GET    /v1/brands/:brandId/sales-budget          → { mode, dailyBudgetCents, updatedAt }
+ *   PUT    /v1/brands/:brandId/sales-budget          { dailyBudgetCents } → global mode
+ *   DELETE /v1/brands/:brandId/sales-budget          → back to campaign ceilings
+ *   GET    /v1/brands/:brandId/sales-budget/history  → every state and clear
+ */
+function salesBudgetProxy(method: "GET" | "PUT" | "DELETE", suffix: string, failure: string) {
+  return async (req: AuthenticatedRequest, res: any) => {
+    try {
+      if (!isUuid(req.params.brandId)) {
+        return res.status(400).json({ error: "Invalid brand ID — expected a UUID" });
+      }
+      const result = await callExternalService(
+        externalServices.billing,
+        `/v1/brands/${req.params.brandId}/sales-budget${suffix}`,
+        method === "PUT"
+          ? { method, body: req.body, headers: buildInternalHeaders(req) }
+          : { method, headers: buildInternalHeaders(req) }
+      );
+      res.json(result);
+    } catch (error: any) {
+      respondUpstreamError(res, error, failure);
+    }
+  };
+}
+
+router.get("/brands/:brandId/sales-budget", authenticate, requireOrg, salesBudgetProxy("GET", "", "Failed to get sales budget"));
+router.put("/brands/:brandId/sales-budget", authenticate, requireOrg, salesBudgetProxy("PUT", "", "Failed to set sales budget"));
+router.delete("/brands/:brandId/sales-budget", authenticate, requireOrg, salesBudgetProxy("DELETE", "", "Failed to clear sales budget"));
+router.get("/brands/:brandId/sales-budget/history", authenticate, requireOrg, salesBudgetProxy("GET", "/history", "Failed to get sales budget history"));
+
 export default router;

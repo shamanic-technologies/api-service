@@ -421,6 +421,28 @@ router.get("/public/channels", async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /v1/public/outcome-prices
+ * The expected price of one outcome (a website visit, a booked meeting) for a
+ * brand with no data yet — what the signed-out onboarding shows a new customer
+ * choosing what to buy. Proxied to features-service GET /public/stats/outcome-prices.
+ *
+ * No identity of any kind: the onboarding visitor is anonymous. The caller's
+ * query string is forwarded verbatim; the response is producer-owned.
+ */
+router.get("/public/outcome-prices", async (req: Request, res: Response) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/outcome-prices${rawQueryString(req.originalUrl)}`,
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public outcome prices error:", error.message);
+    respondUpstreamError(res, error, "Failed to get the public outcome prices");
+  }
+});
+
+/**
  * GET /v1/public/channel-funnel-economics
  * Measured economics per (sales funnel, acquisition channel) pair, or the
  * explicit not-enough-data answer naming the missing ingredient.
