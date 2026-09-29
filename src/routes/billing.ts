@@ -6,7 +6,7 @@ import {
   requireStaff,
   AuthenticatedRequest,
 } from "../middleware/auth.js";
-import { callExternalService, externalServices } from "../lib/service-client.js";
+import { callExternalService, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 
@@ -291,6 +291,48 @@ router.put(
     }
   }
 );
+
+/**
+ * GET /v1/billing/revenue/fleet             (STAFF ONLY)
+ * GET /v1/billing/revenue/by-org/:orgId     (STAFF ONLY)
+ * Proxy to billing-service GET /internal/revenue/fleet and
+ * GET /internal/revenue/by-org/:orgId.
+ *
+ * Our SaaS revenue split into recurring (DRR/MRR/ARR), one-off prepaid run-out
+ * and cash flow, fleet-wide or for one org. Cross-org fleet financials, so the
+ * same tier as /v1/features/audit/accounts: `authenticatePlatform + requireStaff`
+ * (the platform key alone is shared with the customer dashboard's proxy; the
+ * STAFF_EMAILS x-email is the staff signal). No `requireOrg`: the org read is the
+ * path param, not the caller's.
+ *
+ * Byte passthrough via pipeExternalService: billing's status, content-type and
+ * body reach the admin app unchanged, and the query string (`cashHorizonDays`
+ * today) is forwarded verbatim off originalUrl (rule #11) — billing's 400 on an
+ * out-of-range horizon is billing's to raise.
+ */
+router.get("/billing/revenue/fleet", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.billing,
+      `/internal/revenue/fleet${rawQueryString(req.originalUrl)}`,
+      { expressRes: res }
+    );
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to read fleet revenue");
+  }
+});
+
+router.get("/billing/revenue/by-org/:orgId", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.billing,
+      `/internal/revenue/by-org/${encodeURIComponent(req.params.orgId as string)}${rawQueryString(req.originalUrl)}`,
+      { expressRes: res }
+    );
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to read org revenue");
+  }
+});
 
 /**
  * POST /v1/billing/accounts/charge

@@ -6780,6 +6780,56 @@ registry.registerPath({
   },
 });
 
+export const BillingRevenueResponseSchema = z.object({}).passthrough().openapi("BillingRevenueResponse");
+
+const revenueQuery = z
+  .object({
+    cashHorizonDays: z.string().optional().openapi({ description: "Cash-flow horizon in days (billing-service validates the range). Documented today, not a whitelist: the query string is forwarded verbatim." }),
+  })
+  .passthrough();
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/revenue/fleet",
+  tags: ["Billing"],
+  summary: "Fleet revenue: recurring, prepaid run-out and cash flow (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email). Byte passthrough to billing-service " +
+    "GET /internal/revenue/fleet; query string forwarded verbatim, status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: revenueQuery },
+  responses: {
+    200: { description: "Fleet revenue — pass-through from billing-service", content: { "application/json": { schema: BillingRevenueResponseSchema } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/revenue/by-org/{orgId}",
+  tags: ["Billing"],
+  summary: "One org's revenue: recurring, prepaid run-out and cash flow (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email). Byte passthrough to billing-service " +
+    "GET /internal/revenue/by-org/{orgId}; query string forwarded verbatim, status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    params: z.object({ orgId: z.string().openapi({ description: "Internal org UUID" }) }),
+    query: revenueQuery,
+  },
+  responses: {
+    200: { description: "Org revenue — pass-through from billing-service", content: { "application/json": { schema: BillingRevenueResponseSchema } } },
+    400: { description: "Invalid orgId or query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "Not found (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Per-org platform-usage discount (staff-only) — set / read / remove an org's
 // usage-discount percentage. Gated by requireStaff (platform API key + x-email
@@ -9303,6 +9353,31 @@ registry.registerPath({
   },
   responses: {
     200: { description: "Offer outcomes", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferOutcomesResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Offer not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/offers/{offerId}/sales-paths",
+  tags: ["Features"],
+  summary: "Offer sales paths",
+  description:
+    "Every sales path an offer can sell through (a chain of the legs ticked for the offer, from an entry leg to a paying client), ranked by ROI, each with its per-leg breakdown: rate retained and its source, the channel chosen for each platform leg, cost per paying client, lifetime revenue and ROI. " +
+    "Proxied to features-service GET /offers/{offerId}/sales-paths, which states the formula. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer sales paths", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferSalesPathsResponse") } } },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Offer not found", content: errorContent },
