@@ -1156,6 +1156,10 @@ const OFFER_ROUTES = [
   // product retires the sales funnel as a concept. Same passthrough; features-service owns
   // the rows, the figures and every refusal.
   { suffix: "outcomes", what: "offer outcomes" },
+  // Every sales path the offer can sell through (chains of its ticked legs from an entry leg to a
+  // paying client), ranked by ROI with the per-leg breakdown. Same passthrough; features-service
+  // owns the paths, the math and every refusal.
+  { suffix: "sales-paths", what: "offer sales paths" },
 ] as const;
 
 // ── Brand grain ──────────────────────────────────────────────────────────────
