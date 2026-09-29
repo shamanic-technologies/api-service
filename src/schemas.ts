@@ -667,6 +667,21 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/public/outcome-prices",
+  tags: ["Features"],
+  summary: "Public expected price of one outcome",
+  description:
+    "The expected price of one outcome (a website visit, a booked meeting) for a brand with no data yet, as shown by the signed-out onboarding. " +
+    "Proxied to features-service GET /public/stats/outcome-prices. The caller's query string is forwarded verbatim. Response is producer-owned. No authentication required.",
+  responses: {
+    200: { description: "Expected outcome prices — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicOutcomePricesResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/public/channel-funnel-economics",
   tags: ["Features"],
   summary: "Public per-(sales funnel, channel) economics",
