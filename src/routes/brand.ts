@@ -485,6 +485,10 @@ const OFFER_ROUTES = [
   // The list hides archived offers unless `?includeArchived=true`, forwarded by offerQuery.
   { method: "post", path: "/brands/:id/offers/:offerId/archive", suffix: "/archive", what: "archive brand offer" },
   { method: "post", path: "/brands/:id/offers/:offerId/unarchive", suffix: "/unarchive", what: "unarchive brand offer" },
+  // HOW AN OFFER SELLS: the funnel steps and legs the customer selected for this offer
+  // (features-service step keys + leg keys, stored as given). `stated: false` = never stated.
+  { method: "get", path: "/brands/:id/offers/:offerId/sales-path", suffix: "/sales-path", what: "get offer sales path" },
+  { method: "put", path: "/brands/:id/offers/:offerId/sales-path", suffix: "/sales-path", what: "save offer sales path" },
 ] as const;
 
 for (const route of OFFER_ROUTES) {

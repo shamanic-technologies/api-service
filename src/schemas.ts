@@ -3657,6 +3657,75 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – Offer sales path (proxy to brand-service
+// /orgs/brands/:id/offers/:offerId/sales-path). Passthrough: brand-service owns the body.
+// ===================================================================
+const OfferSalesPathSchema = z
+  .object({
+    offerId: z.string().uuid(),
+    stated: z.boolean(),
+    steps: z.array(z.string()).nullable(),
+    legKeys: z.array(z.string()).nullable(),
+    statedAt: z.string().nullable(),
+  })
+  .passthrough()
+  .openapi("OfferSalesPath");
+
+const PutOfferSalesPathBodySchema = z
+  .object({
+    steps: z.array(z.string()),
+    legKeys: z.array(z.string()),
+  })
+  .passthrough()
+  .openapi("PutOfferSalesPathBody");
+
+const OFFER_SALES_PATH_NOTE =
+  "How an offer sells, as the customer states it: the funnel steps it goes through and the legs " +
+  "between them that apply (features-service step keys and leg keys, stored as given). " +
+  "stated: false (steps and legKeys null) = never stated, distinct from stated: true with empty lists.";
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}/sales-path",
+  tags: ["Brand"],
+  summary: "Read the funnel steps and legs selected for an offer",
+  description: "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/sales-path. " + OFFER_SALES_PATH_NOTE,
+  security: authed,
+  request: { params: BrandOfferParams },
+  responses: {
+    200: { description: "The selection (or not stated)", content: { "application/json": { schema: OfferSalesPathSchema } } },
+    400: { description: "Invalid brand or offer ID format (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "No such brand, or no such offer on it (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/offers/{offerId}/sales-path",
+  tags: ["Brand"],
+  summary: "Replace the funnel steps and legs selected for an offer",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{brandId}/offers/{offerId}/sales-path. Replaces the whole " +
+    "selection (both lists required, may be empty) and answers it as read back. " + OFFER_SALES_PATH_NOTE,
+  security: authed,
+  request: {
+    params: BrandOfferParams,
+    body: { content: { "application/json": { schema: PutOfferSalesPathBodySchema } } },
+  },
+  responses: {
+    200: { description: "The selection, as read after the write", content: { "application/json": { schema: OfferSalesPathSchema } } },
+    400: { description: "Invalid ID or body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "No such brand, or no such offer on it (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+// ===================================================================
 // Brand – Offer archive / unarchive (proxy to brand-service
 // /orgs/brands/:id/offers/:offerId/archive|unarchive). Passthrough: brand-service owns
 // the { offer } body (with `status` + `archivedAt`) and the 409 refusal.
