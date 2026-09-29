@@ -109,11 +109,22 @@ const OUTCOMES_BODY = {
   ],
 };
 
+// Stand-in for features-service's sales-paths read, handed through untouched.
+const SALES_PATHS_BODY = {
+  offerId: OFFER_ID,
+  status: "ok",
+  paths: [
+    { rank: 1, pathKey: "a", entryLegKey: "start_to_website_visit", roi: 3 },
+    { rank: 2, pathKey: "b", entryLegKey: "start_to_conversation", roi: 1.5 },
+  ],
+};
+
 const READS = [
   { suffix: "revenue", body: REVENUE_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
   { suffix: "audience-stats", body: AUDIENCE_STATS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
   { suffix: "pipeline-activity", body: PIPELINE_ACTIVITY_BODY, query: `brandId=${BRAND_ID}&timezone=America%2FNew_York`, channelsOf: (b: any) => b.channels },
   { suffix: "outcomes", body: OUTCOMES_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.outcomes },
+  { suffix: "sales-paths", body: SALES_PATHS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.paths },
 ] as const;
 
 describe("GET /v1/offers/:offerId/* — over the wire", () => {
