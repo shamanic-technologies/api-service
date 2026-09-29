@@ -6780,6 +6780,56 @@ registry.registerPath({
   },
 });
 
+export const BillingRevenueResponseSchema = z.object({}).passthrough().openapi("BillingRevenueResponse");
+
+const revenueQuery = z
+  .object({
+    cashHorizonDays: z.string().optional().openapi({ description: "Cash-flow horizon in days (billing-service validates the range). Documented today, not a whitelist: the query string is forwarded verbatim." }),
+  })
+  .passthrough();
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/revenue/fleet",
+  tags: ["Billing"],
+  summary: "Fleet revenue: recurring, prepaid run-out and cash flow (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email). Byte passthrough to billing-service " +
+    "GET /internal/revenue/fleet; query string forwarded verbatim, status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: revenueQuery },
+  responses: {
+    200: { description: "Fleet revenue — pass-through from billing-service", content: { "application/json": { schema: BillingRevenueResponseSchema } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/revenue/by-org/{orgId}",
+  tags: ["Billing"],
+  summary: "One org's revenue: recurring, prepaid run-out and cash flow (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email). Byte passthrough to billing-service " +
+    "GET /internal/revenue/by-org/{orgId}; query string forwarded verbatim, status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    params: z.object({ orgId: z.string().openapi({ description: "Internal org UUID" }) }),
+    query: revenueQuery,
+  },
+  responses: {
+    200: { description: "Org revenue — pass-through from billing-service", content: { "application/json": { schema: BillingRevenueResponseSchema } } },
+    400: { description: "Invalid orgId or query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "Not found (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Per-org platform-usage discount (staff-only) — set / read / remove an org's
 // usage-discount percentage. Gated by requireStaff (platform API key + x-email
