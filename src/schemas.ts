@@ -490,6 +490,29 @@ const workflowReturnHistoryQueryParams = z
 
 registry.registerPath({
   method: "get",
+  path: "/v1/public/features/leg-workflow-ranking",
+  tags: ["Features"],
+  summary: "Public fleet ranking of every workflow on one leg",
+  description:
+    "Every workflow on one leg across every client org: cost per outcome, maturity, conversion, outcomes, spend and return, in the owner's order (the best mature workflow holds the money, learning ones cheaper than it above it). " +
+    "Proxied to features-service GET /public/stats/leg-workflow-ranking; query forwarded verbatim (featureSlug and leg are the ones documented today, not a whitelist). " +
+    "Response is producer-owned. No authentication required.",
+  request: {
+    query: z.object({
+      featureSlug: z.string().openapi({ description: "Feature slug (required)." }),
+      leg: z.string().openapi({ description: "Funnel leg key, e.g. start_to_conversation (required)." }),
+    }),
+  },
+  responses: {
+    200: { description: "Leg workflow ranking — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicLegWorkflowRankingResponse") } } },
+    400: { description: "Missing or unknown parameters", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/public/features/workflow-return-history",
   tags: ["Features"],
   summary: "Public per-workflow return history (billed basis)",

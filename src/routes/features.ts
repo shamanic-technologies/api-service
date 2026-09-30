@@ -232,6 +232,29 @@ router.get("/public/features/workflow-return-history", async (req: Request, res:
 });
 
 /**
+ * GET /v1/public/features/leg-workflow-ranking
+ * Every workflow on one leg, ranked at the fleet grain (every org's campaigns on the leg),
+ * for the dashboard's Research pages, which name no org, brand, offer, campaign or audience.
+ * Proxied to features-service GET /public/stats/leg-workflow-ranking.
+ *
+ * No identity of any kind (the producer route is public). The query string is forwarded
+ * verbatim (featureSlug and leg are the documented parameters, not a whitelist), a
+ * downstream error field-for-field, and the body is producer-owned.
+ */
+router.get("/public/features/leg-workflow-ranking", async (req: Request, res: Response) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/stats/leg-workflow-ranking${rawQueryString(req.originalUrl)}`,
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public leg workflow ranking error:", error.message);
+    respondUpstreamError(res, error, "Failed to get the public leg workflow ranking");
+  }
+});
+
+/**
  * GET /v1/public/features/cost-per-outcome-lifetime
  * Public lifetime (all-history) cross-org average cost-per-outcome across all objectives for a feature.
  * Proxied to features-service GET /public/stats/cost-per-outcome-lifetime.
