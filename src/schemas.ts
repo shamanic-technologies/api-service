@@ -9559,6 +9559,23 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/orgs/usage",
+  tags: ["Features"],
+  summary: "Org usage by activity",
+  description:
+    "The org's net spend grouped into activities a customer recognises (setup, finding contacts, writing emails, sending emails, reading replies, notifications, other). " +
+    "totalBilledUsd equals billing's Billed figure. Proxied to features-service GET /orgs/usage; the org is the authenticated one.",
+  security: authed,
+  responses: {
+    200: { description: "Org usage", content: { "application/json": { schema: z.object({}).passthrough().openapi("OrgUsageResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/brands/{brandId}/contacted-value",
   tags: ["Features"],
   summary: "Brand contacted value",
