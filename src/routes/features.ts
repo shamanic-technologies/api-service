@@ -1277,6 +1277,26 @@ for (const { suffix, what } of GRAIN_SUFFIXES) {
 }
 
 /**
+ * GET /v1/features/orgs/usage — where the caller's org's money went, by activity
+ * (setup, finding contacts, writing emails, sending emails, reading replies,
+ * notifications, other). Transparent proxy to features-service GET /orgs/usage,
+ * which owns the classification; the org is the AUTHENTICATED one.
+ */
+router.get("/features/orgs/usage", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/orgs/usage${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Failed to get org usage:", error.message);
+    respondUpstreamError(res, error, "Failed to get org usage");
+  }
+});
+
+/**
  * GET /v1/features/brands/:brandId/offers
  *
  * The brand grain's fourth read, and the one a brand Overview's offer table is
