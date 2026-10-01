@@ -294,17 +294,21 @@ router.put(
 
 /**
  * Subscription payment mode ($99/month, 3-day free trial, card required).
+ * Billing-owned on any acquirer: checkout_session records the plan and returns
+ * the card form (card_setup descriptor), start begins the subscription once the
+ * card is saved.
  *
  * GET   /v1/billing/accounts/subscription                  -> billing GET   /v1/accounts/subscription
  * POST  /v1/billing/accounts/subscription/checkout_session -> billing POST  /v1/accounts/subscription/checkout_session
+ * POST  /v1/billing/accounts/subscription/start            -> billing POST  /v1/accounts/subscription/start
  * PATCH /v1/billing/accounts/subscription                  -> billing PATCH /v1/accounts/subscription
  * POST  /v1/billing/accounts/subscription/cancel           -> billing POST  /v1/accounts/subscription/cancel
  * POST  /v1/billing/accounts/subscription/resume           -> billing POST  /v1/accounts/subscription/resume
  *
  * The org is the AUTHENTICATED one (`x-org-id` from `buildInternalHeaders`).
  * Pure passthrough (CLAUDE.md #4/#7/#8): no local body validation (billing
- * owns `ui_mode` / `success_url` / `cancel_url` / `monthly_amount_cents` and an
- * empty checkout body is valid), and every refusal — the 400/409
+ * owns `ui_mode` / `return_url` / `monthly_amount_cents` and an empty
+ * checkout or start body is valid), and every refusal — the 400/409
  * `{error, code}` — reaches the dashboard field-for-field via
  * `respondUpstreamError`.
  */
@@ -331,6 +335,19 @@ router.post("/billing/accounts/subscription/checkout_session", authenticate, req
     res.json(result);
   } catch (error: any) {
     respondUpstreamError(res, error, "Failed to create the subscription checkout");
+  }
+});
+
+router.post("/billing/accounts/subscription/start", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/subscription/start",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to start the subscription");
   }
 });
 
