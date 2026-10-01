@@ -102,9 +102,15 @@ describe("customer — /v1/billing/accounts/subscription*", () => {
   });
 
   it("POST checkout_session forwards the body byte-identical", async () => {
-    const body = { mode: "hosted", session_id: "cs_1", url: "https://x", trial_days: 3, monthly_amount_cents: 9900 };
+    const body = {
+      monthly_amount_cents: 9900,
+      currency: "usd",
+      trial_days: 3,
+      card_required: true,
+      card_setup: { mode: "embedded_widget", token: "tok_1" },
+    };
     upstreamOk(body);
-    const sent = { ui_mode: "hosted", success_url: "https://a", cancel_url: "https://b", future_field: 1 };
+    const sent = { ui_mode: "hosted", return_url: "https://a", monthly_amount_cents: 9900, future_field: 1 };
 
     const res = await request(buildApp()).post("/v1/billing/accounts/subscription/checkout_session").send(sent);
 
@@ -117,7 +123,7 @@ describe("customer — /v1/billing/accounts/subscription*", () => {
   });
 
   it("POST checkout_session with an EMPTY body is not refused locally (billing defaults to embedded)", async () => {
-    upstreamOk({ mode: "embedded", client_secret: "cs_secret" });
+    upstreamOk({ monthly_amount_cents: 9900, card_required: false, card_setup: null });
     const res = await request(buildApp()).post("/v1/billing/accounts/subscription/checkout_session").send({});
     expect(res.status).toBe(200);
     expect(calls).toHaveLength(1);
@@ -129,6 +135,57 @@ describe("customer — /v1/billing/accounts/subscription*", () => {
     const res = await request(buildApp()).post("/v1/billing/accounts/subscription/checkout_session").send({});
     expect(res.status).toBe(409);
     expect(res.body).toEqual(REFUSAL);
+  });
+
+  it("POST start forwards to billing's start path: method, identity headers, body byte-identical, body back unchanged", async () => {
+    const body = { org_id: "org_test456", payment_mode: "subscription", subscription: { status: "trialing" }, future: [2] };
+    upstreamOk(body);
+    const sent = { monthly_amount_cents: 19900, future_field: "x" };
+
+    const res = await request(buildApp())
+      .post("/v1/billing/accounts/subscription/start")
+      .set("x-org-id", "someone-elses-org")
+      .send(sent);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(body);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${BILLING_BASE}/v1/accounts/subscription/start`);
+    expect(calls[0].options.method).toBe("POST");
+    expect(JSON.parse(calls[0].options.body)).toEqual(sent);
+    expectCustomerIdentity(calls[0].options);
+  });
+
+  it("POST start with an EMPTY body is not refused locally", async () => {
+    upstreamOk({ subscription: { status: "trialing" } });
+    const res = await request(buildApp()).post("/v1/billing/accounts/subscription/start").send({});
+    expect(res.status).toBe(200);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${BILLING_BASE}/v1/accounts/subscription/start`);
+    expect(JSON.parse(calls[0].options.body)).toEqual({});
+  });
+
+  for (const refusal of [
+    { error: "Save a card before starting the subscription", code: "card_required" },
+    { error: "Your card was declined", code: "first_charge_declined" },
+  ]) {
+    it(`POST start forwards billing's 409 ${refusal.code} byte-equal`, async () => {
+      upstreamFail(409, refusal);
+      const res = await request(buildApp()).post("/v1/billing/accounts/subscription/start").send({});
+      expect(res.status).toBe(409);
+      expect(res.body).toEqual(refusal);
+    });
+  }
+
+  it("POST start forwards billing's 400 and 502 verbatim", async () => {
+    upstreamFail(400, { error: "monthly_amount_cents must be 9900 + a multiple of 10000" });
+    let res = await request(buildApp()).post("/v1/billing/accounts/subscription/start").send({ monthly_amount_cents: 1 });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: "monthly_amount_cents must be 9900 + a multiple of 10000" });
+    upstreamFail(502, { error: "Failed to start the subscription" });
+    res = await request(buildApp()).post("/v1/billing/accounts/subscription/start").send({});
+    expect(res.status).toBe(502);
+    expect(res.body).toEqual({ error: "Failed to start the subscription" });
   });
 
   it("PATCH forwards the body byte-identical, and billing's 400 verbatim", async () => {
