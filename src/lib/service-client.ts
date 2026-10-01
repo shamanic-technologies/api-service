@@ -254,6 +254,28 @@ export const externalServices = {
       }
       return v;
     },
+  },  // google-service: org-scoped Gmail/People mirror (Google CRM). Lazy getters
+  // with a 502 on a missing var, like crm: a deploy landing before the env is set
+  // degrades these routes only, never the boot.
+  google: {
+    get url(): string {
+      const v = process.env.GOOGLE_SERVICE_URL;
+      if (!v) {
+        const err = new Error("GOOGLE_SERVICE_URL env var is required") as Error & { statusCode: number };
+        err.statusCode = 502;
+        throw err;
+      }
+      return v;
+    },
+    get apiKey(): string {
+      const v = process.env.GOOGLE_SERVICE_API_KEY;
+      if (!v) {
+        const err = new Error("GOOGLE_SERVICE_API_KEY env var is required") as Error & { statusCode: number };
+        err.statusCode = 502;
+        throw err;
+      }
+      return v;
+    },
   },
 };
 
