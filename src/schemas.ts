@@ -7208,6 +7208,25 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/costs/email-send-price",
+  tags: ["Costs"],
+  summary: "Price of one cold email sent to a lead, over time (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to costs-service GET /internal/email-send-price: the series of what one cold email sent to a lead costs us, computed from the bank ledger. Before its first refresh the downstream answers 503 with { error, lastRefresh }, forwarded as-is. Query string forwarded verbatim; status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({}).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("EmailSendPriceResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+    503: { description: "Not computed yet (forwarded verbatim from the downstream)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/costs/vendor-costs",
   tags: ["Costs"],
   summary: "Every price version per cost name with its vendor cost (staff only)",

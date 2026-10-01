@@ -74,6 +74,7 @@ const PLATFORM_OPERATIONS = [
   "get /v1/costs/vendor-costs",
   "get /v1/runs/stats/costs/margin/timeseries",
   "get /v1/costs/provider-payment-sources",
+  "get /v1/costs/email-send-price",
   "get /v1/instantly/stats",
   "get /v1/billing/revenue/by-org/{orgId}",
   "get /v1/instantly/audit/sending-forecast",

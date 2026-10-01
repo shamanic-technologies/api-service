@@ -56,4 +56,26 @@ router.get("/v1/costs/provider-payment-sources", authenticatePlatform, requireSt
   }
 });
 
+/**
+ * GET /v1/costs/email-send-price → costs-service GET /internal/email-send-price — STAFF ONLY.
+ *
+ * The price of one cold email sent to a lead, as a series costs-service computes
+ * from the bank ledger. Before its first refresh costs-service answers 503
+ * `{ error, lastRefresh }`; that status and body come back verbatim like the 200.
+ * The upstream `POST /internal/email-send-price/refresh` is deliberately not proxied.
+ */
+router.get("/v1/costs/email-send-price", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.costs,
+      `/internal/email-send-price${rawQueryString(req.originalUrl)}`,
+      { expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Email send price proxy error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to read the email send price");
+  }
+});
+
 export default router;
