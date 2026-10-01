@@ -50,7 +50,7 @@ describe("OpenAPI spec — info description", () => {
   });
 
   it("should document error codes for auth failures", () => {
-    expect(description).toContain("Organization context required");
+    expect(description).toContain("org_target_required");
     expect(description).toContain("Identity resolution failed");
   });
 

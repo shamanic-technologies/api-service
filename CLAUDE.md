@@ -85,6 +85,16 @@ The gateway's public surface is consumed by LLM function-calling layers and codi
 
 Do NOT invent a new staff-role flag. Do NOT gate a staff-only route with `authenticatePlatform` alone — a customer's dashboard session carries the same admin key, so it would leak. Use `requireStaff` for the staff signal.
 
+### A user API key belongs to the USER, across their organizations (`src/lib/org-scope.ts`)
+
+Owner decision 2026-10-01: a `distrib.usr_*` key is NOT bound to the org active when it was created. `authenticate` ignores key-service's stored `orgId` and picks the request's org among the user's CURRENT organizations (client-service membership read, every request; staff emails in `src/lib/staff.ts` count as members of every org):
+
+- **Target**: `x-org-id` / `?orgId` / `:orgId`, or a brand (`x-brand-id`, `?brandId`, `brandId`/`brandIds` in a JSON body, `:brandId`, the `:id` of a `/brands/:id…` route) → the one of the user's orgs holding every named brand (`/internal/brands/all`). A single-org user naming nothing acts in that org (zero change for them). Multi-org or staff naming nothing → `400 org_target_required` with `organizations`. Never a default org. A staff key naming a brand held by several orgs picks among the staff user's REAL memberships first (a popular domain like distribute.you is claimed by 10 orgs), widening to all orgs only when none of them holds it.
+- **Refusals carry `code` + `fix`** (`org_not_member`, `brand_not_found`, `brand_in_several_orgs`, `brands_span_orgs`, `no_organization`, `membership_unavailable` 503). Never fall back to the key's stored org.
+- **No staff power through a key**: staff status only widens WHICH orgs a key may name; `requireStaff`/`authenticatePlatform` refuse a Bearer key regardless. A route that lets a BODY field override `x-org-id` (`/v1/qualify` `sourceOrgId`) must refuse it for `user_key`.
+- `GET /v1/me` uses `authenticateUser` (answers a multi-org caller with no target, `organization: null`) and lists every reachable org with its brands. Any other route that answers about the user rather than one org uses it too.
+- Tests: `tests/unit/user-key-cross-org.behavior.test.ts` drives the real middleware.
+
 ### Identity-enrichment headers forwarded on `/internal/resolve`
 
 On the admin path, `authenticate` resolves `x-external-org-id` / `x-external-user-id` to internal UUIDs via client-service `POST /internal/resolve`, and forwards five OPTIONAL enrichment headers into that body when present: `x-email` → `email`, `x-first-name` → `firstName`, `x-last-name` → `lastName`, `x-org-slug` → `orgSlug`, `x-org-name` → `orgName`. The dashboard/admin proxy reads them off the caller's session (Next.js `auth()` — `sessionClaims` for the profile fields, `orgSlug` for the slug) and sends them on every `/v1/*` request. `orgName` is what lets `GET /v1/me` name the organization a user key acts in: on 2026-10-01, 189 of 192 orgs had a NULL `orgs.name` because no caller had ever sent it.

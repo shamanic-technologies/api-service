@@ -98,8 +98,9 @@ describe("Auth middleware — key-service validation (user keys only)", () => {
     expect(content).toContain("encodeURIComponent(apiKey)");
   });
 
-  it("should use orgId directly from key-service for user keys", () => {
-    expect(content).toContain("validation.orgId");
+  it("should NOT act in the org stored on the key (a key belongs to its user, across orgs)", () => {
+    expect(content).not.toMatch(/req\.orgId\s*=\s*validation\.orgId/);
+    expect(content).toContain("resolveTargetOrg");
   });
 
   it("should set authType to user_key for user key authentication", () => {

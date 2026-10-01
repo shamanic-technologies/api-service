@@ -26,6 +26,33 @@ const mockCall = vi.mocked(callExternalService);
 
 const ADMIN_KEY = "test-admin-distribute-key";
 
+beforeEach(() => {
+  mockCall.mockReset();
+});
+
+/**
+ * Route the downstream reads a user-key request makes: key-service /validate,
+ * then client-service for the user (staff?) and their organizations.
+ * The key's stored org is deliberately different from the membership: it must
+ * never be what the request acts in.
+ */
+function mockUserKey(opts: {
+  orgs: Array<{ id: string; name: string | null }>;
+  email?: string;
+  brands?: Array<{ id: string; orgId: string }>;
+}) {
+  mockCall.mockImplementation(async (_svc: unknown, path: string) => {
+    if (path.startsWith("/validate")) return { valid: true, orgId: "org-stored-on-key", userId: "user-uuid-direct" };
+    if (path === "/internal/users/user-uuid-direct") return { user: { id: "user-uuid-direct", email: opts.email ?? "someone@acme.com" } };
+    if (path === "/internal/users/user-uuid-direct/orgs") return { organizations: opts.orgs.map((o) => ({ orgId: o.id, name: o.name })) };
+    if (path === "/internal/brands/all") {
+      return { brands: (opts.brands ?? []).map((b) => ({ ...b, name: b.id, domain: null })) };
+    }
+    if (path === "/internal/orgs/names") return { orgs: opts.orgs.map((o) => ({ orgId: o.id, name: o.name })), notFound: [] };
+    throw new Error(`unexpected downstream call ${path}`);
+  });
+}
+
 function createApp() {
   const app = express();
   app.use(express.json());
@@ -370,12 +397,8 @@ describe("Auth middleware — user key via Bearer", () => {
     app = createApp();
   });
 
-  it("should set orgId, userId from key-service without client-service call", async () => {
-    mockCall.mockResolvedValueOnce({
-      valid: true,
-      orgId: "org-uuid-direct",
-      userId: "user-uuid-direct",
-    });
+  it("acts in the user's only organization, never the org stored on the key", async () => {
+    mockUserKey({ orgs: [{ id: "org-uuid-direct", name: "Acme" }] });
 
     const res = await request(app)
       .get("/v1/me")
@@ -384,16 +407,13 @@ describe("Auth middleware — user key via Bearer", () => {
     expect(res.status).toBe(200);
     expect(res.body.orgId).toBe("org-uuid-direct");
     expect(res.body.authType).toBe("user_key");
-    // Only one callExternalService call for /validate, none for /resolve
-    expect(mockCall).toHaveBeenCalledTimes(1);
+    // /validate + the user + their organizations; never /resolve
+    expect(mockCall).toHaveBeenCalledTimes(3);
+    expect(mockCall.mock.calls.map((c) => c[1])).not.toContain("/internal/resolve");
   });
 
   it("should pass requireOrg and requireUser when user key carries full identity", async () => {
-    mockCall.mockResolvedValueOnce({
-      valid: true,
-      orgId: "org-uuid-direct",
-      userId: "user-uuid-direct",
-    });
+    mockUserKey({ orgs: [{ id: "org-uuid-direct", name: "Acme" }] });
 
     const res = await request(app)
       .get("/v1/workflows")
@@ -405,7 +425,7 @@ describe("Auth middleware — user key via Bearer", () => {
       userId: "user-uuid-direct",
       authType: "user_key",
     });
-    expect(mockCall).toHaveBeenCalledTimes(1);
+    expect(mockCall).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -516,11 +536,7 @@ describe("Auth middleware — run creation is mandatory", () => {
     vi.mocked(createRun).mockRejectedValueOnce(new Error("Connection refused"));
 
     // User key auth succeeds
-    mockCall.mockResolvedValueOnce({
-      valid: true,
-      orgId: "org-uuid-direct",
-      userId: "user-uuid-direct",
-    });
+    mockUserKey({ orgs: [{ id: "org-uuid-direct", name: "Acme" }] });
 
     const res = await request(app)
       .get("/v1/workflows")
@@ -598,11 +614,7 @@ describe("Auth middleware — run creation is mandatory", () => {
     const mockCreateRun = vi.mocked(createRun);
     mockCreateRun.mockResolvedValueOnce({ id: "run-no-context" } as never);
 
-    mockCall.mockResolvedValueOnce({
-      valid: true,
-      orgId: "org-uuid-direct",
-      userId: "user-uuid-direct",
-    });
+    mockUserKey({ orgs: [{ id: "org-uuid-direct", name: "Acme" }] });
 
     const res = await request(app)
       .get("/v1/workflows")

@@ -88,9 +88,9 @@ const identityParams = [
     required: false,
     schema: { type: "string" as const },
     description:
-      "External organization ID (e.g. Clerk org ID `org_2xyz...`). " +
-      "Required when using an app key (`distrib.app_*`) on endpoints that need org context. " +
-      "Ignored when using a user key (`distrib.usr_*`).",
+      "With a user key (`distrib.usr_*`): the organization this request acts in, one of the key user's " +
+      "organizations (GET /v1/me lists them). Same as the `orgId` query parameter. Needed only when the user " +
+      "belongs to several organizations and the request names no brand; otherwise optional.",
   },
   {
     name: "x-user-id",
@@ -117,9 +117,9 @@ const identityParams = [
     required: false,
     schema: { type: "string" as const, example: "uuid1,uuid2,uuid3" },
     description:
-      "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. " +
-      "Automatically injected by workflow-service on workflow HTTP calls. " +
-      "Optional — forwarded to downstream services for tracking.",
+      "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Forwarded to downstream services. " +
+      "With a user key it also selects the organization the request acts in: the one of the user's organizations " +
+      "holding every named brand (same for `brandId` in the query or a JSON body).",
   },
   {
     name: "x-workflow-slug",
@@ -243,14 +243,21 @@ const DESCRIPTION = `API Gateway for distribute.you.
 Authorization: Bearer distrib.usr_abc123...
 \`\`\`
 
-Your key carries your org and user identity. All endpoints work out of the box.
-\`Authorization\` is the only header a key goes in; any other header is refused.
+Your key carries your user identity and reaches every organization you are a member of.
+\`Authorization\` is the only header a key goes in.
 
-**First call: \`GET /v1/me\`.** It says which user the key acts as, the ONE organization it
-acts in (by name) and every brand that organization holds. A key belongs to one user in one
-organization (the one active when the key was created), covers all of that organization's
-brands and nothing else, and never carries staff, admin or beta powers. The dashboard is at
+**First call: \`GET /v1/me\`.** It says which user the key acts as and lists every organization
+the key can act in (by name), each with its brands. A key belongs to its USER, not to one
+organization: membership is checked on every request, so leaving an organization removes it
+from the key. A key never carries staff, admin or beta powers. The dashboard is at
 https://dashboard.distribute.you.
+
+**Each request acts in ONE organization.** Name a brand (\`?brandId=<id>\`, the \`x-brand-id\`
+header, or \`brandId\` in a JSON body; brand routes like \`/v1/brands/{id}\` name it in the path),
+which selects the organization holding it, or name the organization (\`?orgId=<id>\` or the
+\`x-org-id\` header). If you belong to exactly one organization you need to name nothing. If you
+belong to several and name nothing, the request is refused with \`400 org_target_required\` and
+the list of your organizations; no organization is ever picked by default.
 
 ## Storing provider keys (BYOK)
 
@@ -269,7 +276,10 @@ Authorization: Bearer distrib.usr_abc123...
 |------|---------|
 | 401 | Missing or invalid Bearer token. The body's \`code\` says which: \`missing_credentials\`, \`wrong_header\` (key sent in a header other than \`Authorization\`), \`invalid_admin_key\`, \`malformed_key\`, \`key_not_recognized\` (mistyped OR revoked: revoked keys are erased, so the two cannot be told apart); \`fix\` says what to do |
 | 503 | \`key_validation_unavailable\`: the key could not be checked right now; retry, do not replace the key |
-| 400 | Organization context required (missing \`x-org-id\` — app key only) |
+| 400 | \`org_target_required\`: you belong to several organizations and the request named none (\`organizations\` lists them); \`brand_in_several_orgs\`: the brand is held by several of your organizations, add \`orgId\`; \`brands_span_orgs\`: the named brands are not in one organization |
+| 403 | \`org_not_member\`: the named organization is not one of yours; \`no_organization\`: the key's user belongs to no organization |
+| 404 | \`brand_not_found\`: none of your organizations holds that brand |
+| 503 | \`membership_unavailable\`: your organizations could not be checked right now; retry |
 | 429 | Rate limit exceeded — see below |
 | 502 | Identity resolution failed (internal service unreachable) |
 
