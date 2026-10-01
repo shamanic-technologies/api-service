@@ -175,6 +175,51 @@ router.get(
 );
 
 /**
+ * GET /v1/runs/stats/costs/vendor → runs-service GET /internal/stats/costs/vendor — STAFF ONLY.
+ *
+ * The fleet-wide grouped cost aggregation on the VENDOR-cost basis (what the
+ * committed cost rows cost us before markup). It reveals our margin across every
+ * org, so `authenticatePlatform` + `requireStaff` and nothing else: no org is
+ * resolved, and runs-service treats an absent `orgId` as the whole fleet. The
+ * query string (`groupBy`, and whatever runs-service accepts next) is forwarded
+ * verbatim (#11), status + body piped byte-for-byte (#10), errors field-for-field (#7).
+ */
+router.get("/runs/stats/costs/vendor", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.runs,
+      `/internal/stats/costs/vendor${rawQueryString(req.originalUrl)}`,
+      { expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Fleet vendor cost stats error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to read fleet vendor cost stats");
+  }
+});
+
+/**
+ * GET /v1/runs/stats/costs/margin → runs-service GET /internal/stats/costs/margin — STAFF ONLY.
+ *
+ * Platform-billed spend with its vendor cost and margin, fleet-wide (or one org
+ * via runs-service's own optional `orgId` query parameter). Same gate and same
+ * passthrough as the vendor read above.
+ */
+router.get("/runs/stats/costs/margin", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.runs,
+      `/internal/stats/costs/margin${rawQueryString(req.originalUrl)}`,
+      { expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Fleet cost margin stats error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to read fleet cost margin stats");
+  }
+});
+
+/**
  * GET /v1/runs/:id → runs-service GET /v1/runs/:id
  *
  * One run by id, with its cost roll-up and its descendants, forwarded untouched.

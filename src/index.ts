@@ -60,6 +60,7 @@ import waitlistRoutes from "./routes/waitlist.js";
 import publicStatsRoutes from "./routes/public-stats.js";
 import conversionsRoutes from "./routes/conversions.js";
 import costsRoutes from "./routes/costs.js";
+import costsStaffRoutes from "./routes/costs-staff.js";
 import adminRoutes from "./routes/admin.js";
 import adminBrandsRoutes from "./routes/admin-brands.js";
 import { rateLimit } from "./middleware/rate-limit.js";
@@ -231,6 +232,7 @@ app.use(featuresRoutes);  // public features endpoints (no auth)
 app.use(publicStatsRoutes); // public stats endpoints (no auth)
 app.use(conversionsRoutes); // public conversion-tracking ingest (no Clerk auth — token in header)
 app.use(costsRoutes); // public costs endpoints (no auth) — declares full /v1/costs/* paths
+app.use(costsStaffRoutes); // staff-only costs reads (authenticatePlatform + requireStaff) — declares full /v1...
 
 // Internal platform routes (API key only, no identity)
 app.use("/internal", adminRoutes);
