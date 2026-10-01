@@ -9,7 +9,7 @@
  * field stays where it was between them.
  *
  * Nothing here computes a metric: each value is a figure a producer already
- * served (email-gateway recipient stats, the cost the route already returns),
+ * served (email-gateway recipient stats including its deliveryRate, the cost the route already returns),
  * copied under a success-first name. What no producer serves is `null` and
  * named in `notServed` with the service that would have to serve it, so a
  * reader sees the gap instead of a silent omission. A `null` count means the
@@ -23,11 +23,12 @@ interface RecipientLike {
   unsubscribed: number;
   repliesPositive: number;
   repliesNegative: number;
+  /** delivered/sent ratio (0..1) served by email-gateway; null when sent=0 or delivered>sent. */
+  deliveryRate?: number | null;
   repliesDetail?: Record<string, number> | { meetingBooked?: number };
 }
 
 export const NOT_SERVED = [
-  "deliveryRate: email-gateway serves delivered and sent counts but no delivered/sent rate",
   "moneyEarnedInUsdCents / roi: no service serves realized money earned per campaign; features-service serves EXPECTED pipeline revenue per campaign at GET /v1/features/{slug}/revenue?groupBy=campaign",
 ];
 
@@ -42,7 +43,9 @@ export function buildHeadline(
     positiveReplies: recipient ? recipient.repliesPositive : null,
     moneyEarnedInUsdCents: null,
     roi: null,
-    deliveryRate: null,
+    // email-gateway's own ratio, copied. A campaign with no email-gateway group
+    // carries the empty default (sent=0), for which the producer also says null.
+    deliveryRate: recipient ? recipient.deliveryRate ?? null : null,
     delivered: recipient ? recipient.delivered : null,
     sent: recipient ? recipient.sent : null,
     costInUsdCents,

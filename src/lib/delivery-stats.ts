@@ -12,6 +12,7 @@ interface RecipientStats {
   contacted: number; sent: number; delivered: number; opened: number;
   bounced: number; clicked: number; unsubscribed: number;
   repliesPositive: number; repliesNegative: number; repliesNeutral: number; repliesAutoReply: number;
+  deliveryRate?: number | null;
   repliesDetail: RepliesDetail;
 }
 
