@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import {
   callExternalService,
+  callExternalServiceWithStatus,
   forwardMultipartUpload,
   externalServices,
 } from "../lib/service-client.js";
@@ -38,7 +39,7 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
  * untouched readable stream.
  *
  * crm-service's `/internal/*` routes — `contacts/promote`, `matrix/sync`,
- * `matrix/rebuild`, `gohighlevel/sync`, `gohighlevel/rebuild` — are deliberately
+ * `matrix/rebuild`, `gohighlevel/sync`, `gohighlevel/rebuild`, `people/sync` — are deliberately
  * NOT proxied. They are its service-to-service
  * tier, driven by a cron on the box, not by a browser (CLAUDE.md rule #3).
  *
@@ -356,5 +357,63 @@ router.get(
     }
   },
 );
+
+// ─── People: one person, every channel, one thread ──────────────────────────
+//
+// crm-service merges every channel a person reached the brand on (Gmail, cold
+// email, WhatsApp / Telegram / Discord, GoHighLevel) into ONE person with one
+// state. All three routes are `requireOrgAndUser` at crm-service: the first read
+// opens the brand's scope attributed to the user, so they carry `requireUser`
+// here too. `personKey` values contain `:` `@` `+`, which is exactly why the query
+// string is byte-copied and never re-serialized from `req.query`. crm-service's
+// `/internal/people/sync` is its cron tier and is not proxied.
+
+// GET /v1/orgs/people → crm-service GET /orgs/people
+router.get("/orgs/people", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.crm,
+      `/orgs/people${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] List people error:", error);
+    respondUpstreamError(res, error, "List people error");
+  }
+});
+
+// GET /v1/orgs/people/timeline → crm-service GET /orgs/people/timeline
+// crm-service's 404 `{ reason: "person_not_found" }` reaches the caller verbatim.
+router.get("/orgs/people/timeline", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.crm,
+      `/orgs/people/timeline${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] Person timeline error:", error);
+    respondUpstreamError(res, error, "Person timeline error");
+  }
+});
+
+// POST /v1/orgs/people/sync → crm-service POST /orgs/people/sync
+// crm-service answers 202 (accepted, runs in the background); the upstream status
+// crosses unchanged.
+router.post("/orgs/people/sync", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.crm,
+      "/orgs/people/sync",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error) {
+    console.error("[api-service] People sync error:", error);
+    respondUpstreamError(res, error, "People sync error");
+  }
+});
 
 export default router;

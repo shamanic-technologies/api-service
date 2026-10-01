@@ -11708,6 +11708,64 @@ registry.registerPath({
   },
 });
 
+// ── People (crm-service proxy) ───────────────────────────────────────────────
+// One person, every channel (Gmail, cold email, WhatsApp / Telegram / Discord,
+// GoHighLevel) merged into one thread with one state. crm-service requires
+// x-user-id on all three. Its /internal/people/sync cron trigger is not exposed.
+const CrmPeopleListQuery = CrmBrandIdQuery.extend({
+  limit: z.string().optional().openapi({ description: "Page size, validated by crm-service" }),
+  offset: z.string().optional().openapi({ description: "Page offset, validated by crm-service" }),
+  source: z.string().optional().openapi({ description: "Channel filter, vocabulary owned by crm-service" }),
+});
+const CrmPeopleTimelineQuery = CrmBrandIdQuery.extend({
+  personKey: z.string().openapi({ description: "Person key as returned by GET /v1/orgs/people (URL-encode it, e.g. email%3Aalice%40acme.com)" }),
+});
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/people",
+  tags: ["CRM Contacts"],
+  summary: "A brand's people, every channel merged",
+  description:
+    "Proxy to crm-service GET /orgs/people — one row per person, every channel they reached the brand on merged into one state. The whole query string is forwarded untransformed (`brandId` required downstream, plus `limit`, `offset`, `source`). Requires x-user-id. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmPeopleListQuery },
+  responses: {
+    200: { description: "People as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/people/timeline",
+  tags: ["CRM Contacts"],
+  summary: "One person's merged thread across every channel",
+  description:
+    "Proxy to crm-service GET /orgs/people/timeline. The whole query string is forwarded byte-for-byte (`brandId`, `personKey` — a personKey such as `email:alice@acme.com` must be URL-encoded). Requires x-user-id. An unknown person comes back 404 with crm-service's body verbatim. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmPeopleTimelineQuery },
+  responses: {
+    200: { description: "Timeline as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: { description: "Person not found (forwarded verbatim)", content: errorContent },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/people/sync",
+  tags: ["CRM Contacts"],
+  summary: "Refresh a brand's merged people now",
+  description:
+    "Proxy to crm-service POST /orgs/people/sync. Body (`{ brandId }`) forwarded verbatim. Requires x-user-id. crm-service accepts the work and runs it in the background, answering 202; the status crosses unchanged. Response shape owned by crm-service.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: CrmPassthroughRequest } } } },
+  responses: {
+    202: { description: "Accepted, as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
 // ===================================================================
 // Mailing Lists (proxy to transactional-email-service /mailing-lists/:slug/*)
 //
