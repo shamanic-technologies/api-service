@@ -24,6 +24,7 @@ const { RUNS_BASE, COSTS_BASE, INSTANTLY_BASE } = vi.hoisted(() => {
  *   GET /v1/runs/stats/costs/margin/timeseries → runs-service GET /internal/stats/costs/margin/timeseries
  *   GET /v1/costs/vendor-costs      → costs-service     GET /internal/vendor-costs
  *   GET /v1/costs/provider-payment-sources → costs-service GET /internal/provider-payment-sources
+ *   GET /v1/costs/email-send-price  → costs-service     GET /internal/email-send-price
  *   GET /v1/instantly/stats         → instantly-service GET /public/stats
  *
  * No auth mock: the real authenticatePlatform + requireStaff run, and every refusal
@@ -92,6 +93,12 @@ const ROUTES = [
     key: "costs-test-key",
   },
   {
+    path: "/v1/costs/email-send-price",
+    query: "?x=a",
+    downstream: `${COSTS_BASE}/internal/email-send-price`,
+    key: "costs-test-key",
+  },
+  {
     path: "/v1/instantly/stats",
     query: "?groupBy=featureSlug",
     downstream: `${INSTANTLY_BASE}/public/stats`,
@@ -155,6 +162,23 @@ for (const r of ROUTES) {
     });
   });
 }
+
+describe("staff — GET /v1/costs/email-send-price before the first refresh", () => {
+  it("passes the downstream 503 through with its body byte-for-byte", async () => {
+    const raw = '{"error":"email send price not computed yet","lastRefresh":null}';
+    upstream(503, raw);
+    const res = await request(buildApp()).get("/v1/costs/email-send-price").set(STAFF);
+    expect(res.status).toBe(503);
+    expect(res.text).toBe(raw);
+  });
+
+  it("does not expose the upstream refresh", async () => {
+    upstream(200, "{}");
+    const res = await request(buildApp()).post("/v1/costs/email-send-price/refresh").set(STAFF);
+    expect(res.status).toBe(404);
+    expect(calls).toHaveLength(0);
+  });
+});
 
 describe("staff — the hand-edited payment-source routes are gone (costs-service reads the bank ledger)", () => {
   for (const [method, path] of [
