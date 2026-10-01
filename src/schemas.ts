@@ -490,6 +490,29 @@ const workflowReturnHistoryQueryParams = z
 
 registry.registerPath({
   method: "get",
+  path: "/v1/public/features/leg-workflow-ranking",
+  tags: ["Features"],
+  summary: "Public fleet ranking of every workflow on one leg",
+  description:
+    "Every workflow on one leg across every client org: cost per outcome, maturity, conversion, outcomes, spend and return, in the owner's order (the best mature workflow holds the money, learning ones cheaper than it above it). " +
+    "Proxied to features-service GET /public/stats/leg-workflow-ranking; query forwarded verbatim (featureSlug and leg are the ones documented today, not a whitelist). " +
+    "Response is producer-owned. No authentication required.",
+  request: {
+    query: z.object({
+      featureSlug: z.string().openapi({ description: "Feature slug (required)." }),
+      leg: z.string().openapi({ description: "Funnel leg key, e.g. start_to_conversation (required)." }),
+    }),
+  },
+  responses: {
+    200: { description: "Leg workflow ranking — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicLegWorkflowRankingResponse") } } },
+    400: { description: "Missing or unknown parameters", content: errorContent },
+    404: { description: "Feature not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/public/features/workflow-return-history",
   tags: ["Features"],
   summary: "Public per-workflow return history (billed basis)",
@@ -6830,6 +6853,82 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/runs/stats/costs/vendor",
+  tags: ["Runs"],
+  summary: "Fleet cost stats on the vendor-cost basis (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to runs-service GET /internal/stats/costs/vendor: grouped committed cost at what vendors charged before markup, plus the billed amount of rows whose vendor cost is unknown. Query string forwarded verbatim (the parameters below are the ones documented today, not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({ groupBy: z.string().openapi({ description: "Comma-separated grouping keys (runs-service validates them)" }) }).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("FleetVendorCostStatsResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/runs/stats/costs/margin",
+  tags: ["Runs"],
+  summary: "Platform-billed spend with vendor cost and margin (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide unless runs-service's own `orgId` query parameter is sent. " +
+    "Byte passthrough to runs-service GET /internal/stats/costs/margin. Query string forwarded verbatim (the parameters below are the ones documented today, not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({ orgId: z.string().optional().openapi({ description: "Internal org UUID; absent = whole fleet" }) }).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("FleetCostMarginStatsResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/costs/vendor-costs",
+  tags: ["Costs"],
+  summary: "Every price version per cost name with its vendor cost (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to costs-service GET /internal/vendor-costs: billed unit price and vendor unit cost for every price version, all plans and dates. Query string forwarded verbatim (the parameters below are the ones documented today, not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({ names: z.string().optional().openapi({ description: "Comma-separated cost names to restrict to" }) }).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("VendorCostVersionsResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/stats",
+  tags: ["Instantly"],
+  summary: "Fleet-wide email counters since inception (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to instantly-service GET /public/stats: emails sent, opened, replied and the rest, across every org. Query string forwarded verbatim (the parameters below are the ones documented today, not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({}).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyFleetStatsResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Per-org platform-usage discount (staff-only) — set / read / remove an org's
 // usage-discount percentage. Gated by requireStaff (platform API key + x-email
@@ -9531,6 +9630,23 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Brand not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/orgs/usage",
+  tags: ["Features"],
+  summary: "Org usage by activity",
+  description:
+    "The org's net spend grouped into activities a customer recognises (setup, finding contacts, writing emails, sending emails, reading replies, notifications, other). " +
+    "totalBilledUsd equals billing's Billed figure. Proxied to features-service GET /orgs/usage; the org is the authenticated one.",
+  security: authed,
+  responses: {
+    200: { description: "Org usage", content: { "application/json": { schema: z.object({}).passthrough().openapi("OrgUsageResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
   },
 });
 
