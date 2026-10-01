@@ -5185,6 +5185,10 @@
         "type": "object",
         "properties": {}
       },
+      "InstantlyOpsSentPerPeriodResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "InstantlyOpsMessageBodyResponse": {
         "type": "object",
         "properties": {}

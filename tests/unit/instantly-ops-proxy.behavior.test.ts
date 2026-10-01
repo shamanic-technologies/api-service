@@ -48,6 +48,7 @@ const READS: Array<[string, string]> = [
   ["infra", "infra"],
   ["threads", "threads"],
   ["messages", "messages"],
+  ["sent-per-period", "sent-per-period"],
 ];
 
 describe("/v1/instantly/ops/* — over the wire", () => {
@@ -102,6 +103,16 @@ describe("/v1/instantly/ops/* — over the wire", () => {
 
     expect(calls[0].url).toBe(
       `${INSTANTLY_BASE}/internal/ops/messages?limit=100&threadId=thr_1&mailbox=a%40b.com&direction=in`,
+    );
+  });
+
+  it("forwards the sent-per-period query string verbatim (grain + since)", async () => {
+    await request(buildApp())
+      .get("/v1/instantly/ops/sent-per-period?grain=day&since=2026-09-01T00%3A00%3A00Z")
+      .set(STAFF);
+
+    expect(calls[0].url).toBe(
+      `${INSTANTLY_BASE}/internal/ops/sent-per-period?grain=day&since=2026-09-01T00%3A00%3A00Z`,
     );
   });
 

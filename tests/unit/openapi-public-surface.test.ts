@@ -89,6 +89,7 @@ const PLATFORM_OPERATIONS = [
   "get /v1/instantly/ops/threads",
   "get /v1/instantly/ops/messages",
   "get /v1/instantly/ops/messages/{id}/body",
+  "get /v1/instantly/ops/sent-per-period",
   "put /internal/emails/templates",
   "get /v1/admin/brands",
   "post /v1/platform-uploads",
