@@ -31,6 +31,8 @@ vi.mock("../../src/middleware/auth.js", () => ({
     if (!req.userId) return res.status(401).json({ error: "User identity required" });
     next();
   },
+  // keys.ts mounts GET/DELETE /api-keys on authenticateUser; unused by these tests
+  authenticateUser: (_req: any, _res: any, next: any) => next(),
   AuthenticatedRequest: {},
 }));
 

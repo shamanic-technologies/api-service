@@ -2173,8 +2173,10 @@ registry.registerPath({
   method: "get",
   path: "/v1/api-keys",
   tags: ["Authentication"],
-  summary: "List API keys",
-  description: "List all API keys for the organization",
+  summary: "List your API keys",
+  description:
+    "List YOUR API keys, across every organization you minted one in (each item carries the `orgId` that was active at creation). " +
+    "A key belongs to its user, not to an organization, so no organization context is needed and other members' keys are never listed.",
   security: authed,
   responses: {
     200: {
@@ -2233,7 +2235,8 @@ registry.registerPath({
   path: "/v1/api-keys/{id}",
   tags: ["Authentication"],
   summary: "Revoke an API key",
-  description: "Delete/revoke an API key by ID",
+  description:
+    "Revoke one of YOUR API keys by ID, whatever organization it was minted in. A key you do not own answers 404 (same as an unknown id).",
   security: authed,
   request: {
     params: z.object({ id: z.string().describe("API key ID") }),
@@ -2245,11 +2248,14 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             message: z.string().describe("Confirmation message"),
+            id: z.string().optional().describe("Revoked key ID"),
+            orgId: z.string().optional().describe("Organization that was active when the key was minted"),
           }).openapi("RevokeApiKeyResponse"),
         },
       },
     },
     401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No key with this ID belongs to you", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
