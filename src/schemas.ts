@@ -6815,12 +6815,19 @@ const SubscriptionActionResponseSchema = z.object({}).passthrough().openapi("Sub
 
 const SubscriptionCheckoutRequestSchema = z
   .object({
-    ui_mode: z.string().optional().openapi({ description: "\"embedded\" (default) or \"hosted\". Validated downstream.", example: "embedded" }),
-    success_url: z.string().optional().openapi({ description: "Required downstream when ui_mode is hosted." }),
-    cancel_url: z.string().optional().openapi({ description: "Required downstream when ui_mode is hosted." }),
+    monthly_amount_cents: z.number().optional().openapi({ description: "The plan picked ($99 + a multiple of $100). Default 9900. Validated downstream.", example: 9900 }),
+    ui_mode: z.string().optional().openapi({ description: "How the card form is presented, as POST card_setup: \"embedded\" (default) or \"hosted\". Validated downstream.", example: "embedded" }),
+    return_url: z.string().optional().openapi({ description: "Where a hosted card form returns to. Required downstream when ui_mode is hosted." }),
   })
   .passthrough()
   .openapi("SubscriptionCheckoutRequest");
+
+const StartSubscriptionRequestSchema = z
+  .object({
+    monthly_amount_cents: z.number().optional().openapi({ description: "Optional plan override ($99 + a multiple of $100). Validated downstream.", example: 9900 }),
+  })
+  .passthrough()
+  .openapi("StartSubscriptionRequest");
 
 const RaiseSubscriptionRequestSchema = z
   .object({
@@ -6854,14 +6861,40 @@ registry.registerPath({
   method: "post",
   path: "/v1/billing/accounts/subscription/checkout_session",
   tags: ["Billing"],
-  summary: "Start the subscription checkout (card required, 3-day free trial)",
+  summary: "Prepare the subscription: record the plan and get the card form (no charge)",
   description:
     "Transparent proxy to billing-service POST /v1/accounts/subscription/checkout_session for the authenticated org; " +
-    "body forwarded as-is (an empty body is valid: embedded checkout). Status and body forwarded unchanged.",
+    "body forwarded as-is (an empty body is valid: $99 plan, embedded card form). Billing records the plan and returns " +
+    "{monthly_amount_cents, currency, trial_days, card_required, card_setup}, where card_setup is the card form of " +
+    "whichever acquirer holds the org (same descriptor as POST /v1/billing/accounts/card_setup). Nothing is charged. " +
+    "Once the card is saved (or when card_required is false) call POST /v1/billing/accounts/subscription/start. " +
+    "Status and body forwarded unchanged.",
   security: authed,
   request: { body: { content: { "application/json": { schema: SubscriptionCheckoutRequestSchema } } } },
   responses: {
     200: { description: "Checkout session — pass-through from billing-service", content: { "application/json": { schema: SubscriptionCheckoutResponseSchema } } },
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: subscriptionRefusal,
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/billing/accounts/subscription/start",
+  tags: ["Billing"],
+  summary: "Start the subscription once the card is saved",
+  description:
+    "Transparent proxy to billing-service POST /v1/accounts/subscription/start for the authenticated org; " +
+    "body forwarded as-is (an empty body is valid). First subscription: 3-day free trial, nothing charged; an org " +
+    "that already had its trial is charged the first month now. Returns the same body as GET " +
+    "/v1/billing/accounts/subscription. 409 {error, code} (card_required, first_charge_declined, subscription_exists, " +
+    "existing_paying_org) and 400 forwarded field-for-field. Status and body forwarded unchanged.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: StartSubscriptionRequestSchema } } } },
+  responses: {
+    200: { description: "Started — pass-through from billing-service", content: { "application/json": { schema: SubscriptionResponseSchema } } },
     400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     409: subscriptionRefusal,
