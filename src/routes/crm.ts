@@ -19,6 +19,8 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
  *                              into the Matrix homeserver on the box
  *   - `/orgs/gohighlevel/*`  — a brand's GoHighLevel sub-account, mirrored:
  *                              its contacts and its sales pipeline
+ *   - `/orgs/posthog/connections*`, `/orgs/stripe/connections*` — a brand's
+ *                              PostHog visits + Stripe payments (read-only)
  *
  * Every sub-path is forwarded verbatim — no path rename, no body transform, no
  * field stripping, no aggregation, no query-param whitelist (CLAUDE.md rules
@@ -415,5 +417,80 @@ router.post("/orgs/people/sync", ...orgUserChain, async (req: AuthenticatedReque
     respondUpstreamError(res, error, "People sync error");
   }
 });
+
+// ─── PostHog visits + Stripe payments (read-only sources of the person thread) ─
+//
+// Same shape as the GoHighLevel connection routes above: the brand stores its
+// credential through the EXISTING /v1/keys/brands/:brandId route (provider
+// `posthog` / `stripe`), crm-service resolves it server-side, and these routes
+// only create / pause / resume / disconnect / read the connection. The create
+// route proves the credential against the vendor first; a refusal comes back 400
+// as `{ type, error, vendorStatus?, vendorError? }`, relayed field-for-field via
+// `respondUpstreamError`. crm-service's `/internal/posthog/*` + `/internal/stripe/*`
+// tier stays unproxied.
+for (const provider of ["posthog", "stripe"] as const) {
+  const base = `/orgs/${provider}/connections`;
+
+  // POST /v1/orgs/{provider}/connections → crm-service POST /orgs/{provider}/connections
+  // Requires x-user-id: crm-service persists the creator for the cron's org run.
+  router.post(base, ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(externalServices.crm, base, {
+        method: "POST",
+        body: req.body,
+        headers: buildInternalHeaders(req),
+      });
+      res.json(result);
+    } catch (error) {
+      console.error(`[api-service] Create ${provider} connection error:`, error);
+      respondUpstreamError(res, error, `Create ${provider} connection error`);
+    }
+  });
+
+  // PATCH /v1/orgs/{provider}/connections/:id → crm-service PATCH /orgs/{provider}/connections/{id}
+  router.patch(`${base}/:id`, ...orgChain, async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.crm,
+        `${base}/${encodeURIComponent(req.params.id)}`,
+        { method: "PATCH", body: req.body, headers: buildInternalHeaders(req) },
+      );
+      res.json(result);
+    } catch (error) {
+      console.error(`[api-service] Update ${provider} connection error:`, error);
+      respondUpstreamError(res, error, `Update ${provider} connection error`);
+    }
+  });
+
+  // DELETE /v1/orgs/{provider}/connections/:id → crm-service DELETE /orgs/{provider}/connections/{id}
+  router.delete(`${base}/:id`, ...orgChain, async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.crm,
+        `${base}/${encodeURIComponent(req.params.id)}`,
+        { method: "DELETE", headers: buildInternalHeaders(req) },
+      );
+      res.json(result);
+    } catch (error) {
+      console.error(`[api-service] Delete ${provider} connection error:`, error);
+      respondUpstreamError(res, error, `Delete ${provider} connection error`);
+    }
+  });
+
+  // GET /v1/orgs/{provider}/connections → crm-service GET /orgs/{provider}/connections
+  router.get(base, ...orgChain, async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.crm,
+        `${base}${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) },
+      );
+      res.json(result);
+    } catch (error) {
+      console.error(`[api-service] List ${provider} connections error:`, error);
+      respondUpstreamError(res, error, `List ${provider} connections error`);
+    }
+  });
+}
 
 export default router;
