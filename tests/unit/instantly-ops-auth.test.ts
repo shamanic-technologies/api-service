@@ -29,6 +29,7 @@ const ROUTES = [
   "/v1/instantly/ops/threads?limit=10",
   "/v1/instantly/ops/messages?limit=10",
   "/v1/instantly/ops/messages/abc/body",
+  "/v1/instantly/ops/sent-per-period?grain=month",
 ];
 
 describe("/v1/instantly/ops/* — staff gate", () => {
