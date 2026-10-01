@@ -6853,6 +6853,82 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/runs/stats/costs/vendor",
+  tags: ["Runs"],
+  summary: "Fleet cost stats on the vendor-cost basis (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to runs-service GET /internal/stats/costs/vendor: grouped committed cost at what vendors charged before markup, plus the billed amount of rows whose vendor cost is unknown. Query string forwarded verbatim (the parameters below are the ones documented today, not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({ groupBy: z.string().openapi({ description: "Comma-separated grouping keys (runs-service validates them)" }) }).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("FleetVendorCostStatsResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/runs/stats/costs/margin",
+  tags: ["Runs"],
+  summary: "Platform-billed spend with vendor cost and margin (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide unless runs-service's own `orgId` query parameter is sent. " +
+    "Byte passthrough to runs-service GET /internal/stats/costs/margin. Query string forwarded verbatim (the parameters below are the ones documented today, not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({ orgId: z.string().optional().openapi({ description: "Internal org UUID; absent = whole fleet" }) }).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("FleetCostMarginStatsResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/costs/vendor-costs",
+  tags: ["Costs"],
+  summary: "Every price version per cost name with its vendor cost (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to costs-service GET /internal/vendor-costs: billed unit price and vendor unit cost for every price version, all plans and dates. Query string forwarded verbatim (the parameters below are the ones documented today, not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({ names: z.string().optional().openapi({ description: "Comma-separated cost names to restrict to" }) }).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("VendorCostVersionsResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/stats",
+  tags: ["Instantly"],
+  summary: "Fleet-wide email counters since inception (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to instantly-service GET /public/stats: emails sent, opened, replied and the rest, across every org. Query string forwarded verbatim (the parameters below are the ones documented today, not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({}).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyFleetStatsResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Per-org platform-usage discount (staff-only) — set / read / remove an org's
 // usage-discount percentage. Gated by requireStaff (platform API key + x-email

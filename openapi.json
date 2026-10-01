@@ -4771,6 +4771,22 @@
         "type": "object",
         "properties": {}
       },
+      "FleetVendorCostStatsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "FleetCostMarginStatsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "VendorCostVersionsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyFleetStatsResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "UsageDiscountResponse": {
         "type": "object",
         "properties": {}

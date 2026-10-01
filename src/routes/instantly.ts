@@ -346,4 +346,29 @@ router.get(
   },
 );
 
+// GET /v1/instantly/stats — fleet-wide email counters (sent, opened, replied…) with
+// no org scoping (staff only). Proxy to instantly-service GET /public/stats, which
+// sits behind its serviceAuth; query string forwarded verbatim, body piped.
+router.get(
+  "/instantly/stats",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.instantly,
+        `/public/stats${rawQueryString(req.originalUrl)}`,
+        { headers: staffHeaders(req), expressRes: res },
+      );
+    } catch (error: any) {
+      console.error("[api-service] Staff instantly fleet stats error:", error.message);
+      if (res.headersSent) {
+        res.end();
+        return;
+      }
+      respondUpstreamError(res, error, "Failed to get instantly fleet stats");
+    }
+  },
+);
+
 export default router;
