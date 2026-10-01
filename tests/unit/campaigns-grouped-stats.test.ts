@@ -179,7 +179,7 @@ describe("GET /v1/campaigns/stats", () => {
           groups: [{
             key: "c1",
             broadcast: makeBroadcast({
-              sent: 531, delivered: 518, bounced: 13, unsubscribed: 2, repliesPositive: 0, repliesNegative: 4,
+              sent: 531, delivered: 518, deliveryRate: 0.9755, bounced: 13, unsubscribed: 2, repliesPositive: 0, repliesNegative: 4,
               repliesDetail: { ...EMPTY_REPLIES_DETAIL, meetingBooked: 0 },
             }),
             transactional: null,
@@ -201,13 +201,13 @@ describe("GET /v1/campaigns/stats", () => {
     expect(c1.headline).toMatchObject({
       meetingsBooked: 0,
       positiveReplies: 0,
-      deliveryRate: null,
+      deliveryRate: 0.9755,
       delivered: 518,
       sent: 531,
       costInUsdCents: "900",
       unavailable: [],
     });
-    expect(c1.headline.notServed.join(" ")).toMatch(/deliveryRate/);
+    expect(c1.headline.notServed.join(" ")).not.toMatch(/deliveryRate/);
     expect(c1.failureDetails).toEqual({ bounced: 13, unsubscribed: 2, negativeReplies: 4 });
     // Every pre-existing field is still there, unchanged.
     expect(c1.recipientStats.bounced).toBe(13);
@@ -229,6 +229,7 @@ describe("GET /v1/campaigns/stats", () => {
     expect(c1.headline.positiveReplies).toBeNull();
     expect(c1.headline.sent).toBeNull();
     expect(c1.headline.unavailable).toEqual(["email-gateway"]);
+    expect(c1.headline.deliveryRate).toBeNull();
     expect(c1.failureDetails.bounced).toBeNull();
   });
 
