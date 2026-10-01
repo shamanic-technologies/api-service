@@ -213,6 +213,63 @@ router.get("/orgs/matrix/leads", ...orgChain, async (req: AuthenticatedRequest, 
   }
 });
 
+// ─── Self-serve channel linking (WhatsApp QR / pairing code) ─────────────────
+//
+// The dashboard links a brand's WhatsApp (Telegram/Discord later) by asking
+// crm-service to start a bridge login, then polls the link while the user scans.
+// Refusals carry the user-facing reason in the body — 409
+// `{ type: "channel_unavailable", channel, error }`, 422
+// `{ type: "bridge", bridgeError, link }` — so every status AND body crosses
+// field-for-field via `respondUpstreamError`. The POST can take ~60s (phone
+// pairing code); the default crm dispatcher's timeout is far above that.
+
+// POST /v1/orgs/matrix/links → crm-service POST /orgs/matrix/links
+// Requires x-user-id, like the connection create. brandId stays in the body:
+// crm-service resolves it itself.
+router.post("/orgs/matrix/links", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.crm,
+      "/orgs/matrix/links",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error) {
+    console.error("[api-service] Create matrix link error:", error);
+    respondUpstreamError(res, error, "Create matrix link error");
+  }
+});
+
+// GET /v1/orgs/matrix/links → crm-service GET /orgs/matrix/links
+router.get("/orgs/matrix/links", ...orgChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.crm,
+      `/orgs/matrix/links${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] List matrix links error:", error);
+    respondUpstreamError(res, error, "List matrix links error");
+  }
+});
+
+// DELETE /v1/orgs/matrix/links/:channel → crm-service DELETE /orgs/matrix/links/{channel}
+router.delete("/orgs/matrix/links/:channel", ...orgChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.crm,
+      `/orgs/matrix/links/${encodeURIComponent(req.params.channel)}${rawQueryString(req.originalUrl)}`,
+      { method: "DELETE", headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] Delete matrix link error:", error);
+    respondUpstreamError(res, error, "Delete matrix link error");
+  }
+});
+
 // ─── GoHighLevel mirror (contacts + sales pipeline) ──────────────────────────
 //
 // crm-service mirrors a brand's GoHighLevel sub-account: its contacts, its
