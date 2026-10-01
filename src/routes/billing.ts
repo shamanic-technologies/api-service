@@ -293,6 +293,110 @@ router.put(
 );
 
 /**
+ * Subscription payment mode ($99/month, 3-day free trial, card required).
+ *
+ * GET   /v1/billing/accounts/subscription                  -> billing GET   /v1/accounts/subscription
+ * POST  /v1/billing/accounts/subscription/checkout_session -> billing POST  /v1/accounts/subscription/checkout_session
+ * PATCH /v1/billing/accounts/subscription                  -> billing PATCH /v1/accounts/subscription
+ * POST  /v1/billing/accounts/subscription/cancel           -> billing POST  /v1/accounts/subscription/cancel
+ * POST  /v1/billing/accounts/subscription/resume           -> billing POST  /v1/accounts/subscription/resume
+ *
+ * The org is the AUTHENTICATED one (`x-org-id` from `buildInternalHeaders`).
+ * Pure passthrough (CLAUDE.md #4/#7/#8): no local body validation (billing
+ * owns `ui_mode` / `success_url` / `cancel_url` / `monthly_amount_cents` and an
+ * empty checkout body is valid), and every refusal — the 400/409
+ * `{error, code}` — reaches the dashboard field-for-field via
+ * `respondUpstreamError`.
+ */
+router.get("/billing/accounts/subscription", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/subscription",
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to read the subscription");
+  }
+});
+
+router.post("/billing/accounts/subscription/checkout_session", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/subscription/checkout_session",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to create the subscription checkout");
+  }
+});
+
+router.patch("/billing/accounts/subscription", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/subscription",
+      { method: "PATCH", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to change the subscription amount");
+  }
+});
+
+router.post("/billing/accounts/subscription/cancel", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/subscription/cancel",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to cancel the subscription");
+  }
+});
+
+router.post("/billing/accounts/subscription/resume", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/subscription/resume",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to resume the subscription");
+  }
+});
+
+/**
+ * GET /v1/billing/accounts/by-org/:orgId/subscription   (STAFF ONLY)
+ * Proxy to billing-service GET /internal/accounts/by-org/:orgId/subscription.
+ * Same gate and shape as the staff payment-mode read above: org in the path,
+ * no identity headers, status + body forwarded unchanged.
+ */
+router.get(
+  "/billing/accounts/by-org/:orgId/subscription",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.billing,
+        `/internal/accounts/by-org/${encodeURIComponent(req.params.orgId as string)}/subscription`
+      );
+      res.json(result);
+    } catch (error: any) {
+      respondUpstreamError(res, error, "Failed to read the subscription");
+    }
+  }
+);
+
+/**
  * GET /v1/billing/revenue/fleet             (STAFF ONLY)
  * GET /v1/billing/revenue/by-org/:orgId     (STAFF ONLY)
  * Proxy to billing-service GET /internal/revenue/fleet and
