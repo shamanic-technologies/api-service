@@ -56,12 +56,25 @@ export const AuthFailureResponseSchema = z
         "malformed_key",
         "key_not_recognized",
         "key_validation_unavailable",
+        "org_target_required",
+        "org_not_member",
+        "org_not_found",
+        "brand_not_found",
+        "brand_in_several_orgs",
+        "brands_span_orgs",
+        "no_organization",
+        "membership_unavailable",
       ])
       .describe(
-        "Why authentication failed. `wrong_header` = a user key was sent in a header other than `Authorization`. `key_not_recognized` covers both a mistyped key and a revoked one: revoked keys are erased, so the two cannot be told apart. `key_validation_unavailable` (HTTP 503) means the key could not be checked and says nothing about its validity.",
+        "Why the request was refused before reaching a service. The `org_*` / `brand_*` / `no_organization` / `membership_unavailable` codes are about WHICH organization a user-key request acts in: name a brand (`brandId`) or an organization (`orgId`); `organizations` lists the choices when relevant. " +
+        "The other codes say why authentication failed. `wrong_header` = a user key was sent in a header other than `Authorization`. `key_not_recognized` covers both a mistyped key and a revoked one: revoked keys are erased, so the two cannot be told apart. `key_validation_unavailable` (HTTP 503) means the key could not be checked and says nothing about its validity.",
       ),
     message: z.string().describe("What happened, in plain words"),
     fix: z.string().describe("What to do next"),
+    organizations: z
+      .array(z.object({ id: z.string(), name: z.string().nullable() }))
+      .optional()
+      .describe("For organization-target refusals: the organizations the caller can name with `orgId`"),
   })
   .openapi("AuthFailureResponse");
 
@@ -1049,11 +1062,13 @@ registry.registerPath({
   tags: ["User"],
   summary: "Who am I acting as",
   description:
-    "Call this first. Returns which user this request acts as, the ONE organization it acts in (by name), " +
-    "every brand that organization holds, and what the key covers. A distribute.you API key belongs to one user " +
-    "in one organization (the one active when the key was created), covers all of that organization's brands and " +
-    "nothing else, and never carries staff, admin or beta powers. Authenticate with `Authorization: Bearer <key>`. " +
-    "On 401 the body's `code` says why (wrong header, malformed key, key not recognized) and `fix` says what to do.",
+    "Call this first. Returns which user this request acts as, every organization the access can act in (by name, " +
+    "each with its brands), and the organization THIS request acts in when one is named or implied. A distribute.you API key " +
+    "belongs to its USER and reaches every organization that user is a member of (checked on every request; staff count as " +
+    "members of every organization). Each request acts in ONE organization: name a brand (`?brandId=`, `x-brand-id`, or " +
+    "`brandId` in a JSON body) or the organization (`?orgId=` or `x-org-id`); a user in exactly one organization needs to name " +
+    "nothing. This endpoint answers even when no organization is named. A key never carries staff, admin or beta powers. " +
+    "Authenticate with `Authorization: Bearer <key>`. On 401 the body's `code` says why and `fix` says what to do.",
   security: authed,
   responses: {
     200: {
@@ -1062,7 +1077,7 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              summary: z.string().describe("One sentence: which user, which organization by name, which brands, and that the access covers that one organization only"),
+              summary: z.string().describe("Plain sentences: which user, every organization the access reaches (by name, with its brands), and which organization this request acts in, or that each request must name one"),
               user: z
                 .object({
                   id: z.string(),
@@ -1072,18 +1087,28 @@ registry.registerPath({
                 })
                 .nullable()
                 .describe("null when the lookup failed (see lookupErrors)"),
+              organizations: z
+                .array(
+                  z.object({
+                    id: z.string(),
+                    name: z.string().nullable(),
+                    brands: z.array(z.object({ id: z.string(), name: z.string().nullable(), domain: z.string().nullable() })),
+                  }),
+                )
+                .nullable()
+                .describe("Every organization this access can act in, each with its brands. For a staff user's key: every organization that holds a brand. null = lookup failed (see lookupErrors)"),
               organization: z
                 .object({ id: z.string(), name: z.string().nullable() })
                 .nullable()
-                .describe("The ONE organization this request acts in. null when the lookup failed (see lookupErrors)"),
+                .describe("The organization THIS request acts in. null when the request named none and the user belongs to several organizations, or when the lookup failed"),
               brands: z
                 .array(z.object({ id: z.string(), name: z.string().nullable(), domain: z.string().nullable() }))
                 .nullable()
-                .describe("Every brand of that organization; the key covers all of them. [] = no brand yet; null = lookup failed"),
+                .describe("The brands of `organization`. [] = no brand yet; null = no organization targeted, or lookup failed"),
               keyScope: z
                 .string()
                 .nullable()
-                .describe("For a user API key: what the key covers (one user, one organization, never staff/admin/beta powers). null for dashboard sessions"),
+                .describe("For a user API key: what the key covers (its user, across that user's organizations; how to name the organization of a request; never staff/admin/beta powers). null for dashboard sessions"),
               lookupErrors: z
                 .array(z.object({ source: z.string(), error: z.string() }))
                 .describe("Lookups that failed, with the upstream message. Empty when everything resolved"),
@@ -1096,6 +1121,9 @@ registry.registerPath({
       },
     },
     401: { description: "Authentication failed; `code` says why", content: authFailureContent },
+    403: { description: "`org_not_member`: the named organization is not one of the key user's; `no_organization`", content: authFailureContent },
+    404: { description: "`brand_not_found`: none of the user's organizations holds the named brand", content: authFailureContent },
+    503: { description: "`key_validation_unavailable` or `membership_unavailable`: retry", content: authFailureContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
@@ -7157,66 +7185,17 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/costs/payment-sources",
-  tags: ["Costs"],
-  summary: "Our payment accounts a vendor can be paid from (staff only)",
-  description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email). " +
-    "Byte passthrough to costs-service GET /internal/payment-sources: the vocabulary of our own payment accounts (key, display name, logo domain). Status and body owned by the downstream service.",
-  security: platformAuth,
-  responses: {
-    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PaymentSourcesResponse") } } },
-    401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/v1/costs/provider-payment-sources",
   tags: ["Costs"],
   summary: "Which of our payment accounts pays each provider (staff only)",
   description:
     "Staff-only (platform API key + STAFF_EMAILS x-email). " +
-    "Byte passthrough to costs-service GET /internal/provider-payment-sources: one entry per catalogue provider with the payment sources that pay it. Status and body owned by the downstream service.",
+    "Byte passthrough to costs-service GET /internal/provider-payment-sources: one entry per catalogue provider with the accounts that pay it, read live from the bank ledger (unmatched providers marked so; a ledger failure is a 502). Status and body owned by the downstream service.",
   security: platformAuth,
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("ProviderPaymentSourcesResponse") } } },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "put",
-  path: "/v1/costs/provider-payment-sources/{provider}",
-  tags: ["Costs"],
-  summary: "Set the payment accounts that pay one provider (staff only)",
-  description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email). " +
-    "Byte passthrough to costs-service PUT /internal/provider-payment-sources/{provider}: replaces the provider's set of payment sources (`[]` clears). Body forwarded as-is; an unknown source key (400) or provider (404) is returned with the downstream's status and body.",
-  security: platformAuth,
-  request: {
-    params: z.object({ provider: z.string() }),
-    body: {
-      content: {
-        "application/json": {
-          schema: z
-            .object({ sources: z.array(z.string()).openapi({ description: "Payment source keys (costs-service validates them)" }) })
-            .passthrough()
-            .openapi("SetProviderPaymentSourcesRequest"),
-        },
-      },
-    },
-  },
-  responses: {
-    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("ProviderPaymentSourcesEntryResponse") } } },
-    400: { description: "Invalid body or unknown source key (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    404: { description: "Unknown provider (forwarded verbatim)", content: errorContent },
     502: { description: "Upstream error", content: errorContent },
   },
 });

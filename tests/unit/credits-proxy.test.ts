@@ -141,11 +141,13 @@ describe("Credit routes mounted in index.ts", () => {
 describe("requireStaff middleware is defined in auth.ts", () => {
   it("should export requireStaff and source a hardcoded STAFF_EMAILS allowlist", () => {
     expect(authContent).toContain("export function requireStaff");
-    expect(authContent).toContain("STAFF_EMAILS");
-    // Allowlist is hardcoded in source, NOT read from the environment.
-    expect(authContent).not.toContain("process.env.STAFF_EMAILS");
-    expect(authContent).toContain("kevin.lourd@gmail.com");
-    expect(authContent).toContain("kevin@distribute.you");
+    expect(authContent).toContain("staffEmailAllowlist");
+    // Allowlist is hardcoded in source (src/lib/staff.ts), NOT read from the environment.
+    const staffContent = fs.readFileSync(path.join(__dirname, "../../src/lib/staff.ts"), "utf-8");
+    expect(staffContent).toContain("STAFF_EMAILS");
+    expect(staffContent).not.toContain("process.env");
+    expect(staffContent).toContain("kevin.lourd@gmail.com");
+    expect(staffContent).toContain("kevin@distribute.you");
   });
 });
 
