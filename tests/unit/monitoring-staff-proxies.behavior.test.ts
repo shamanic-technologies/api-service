@@ -23,9 +23,7 @@ const { RUNS_BASE, COSTS_BASE, INSTANTLY_BASE } = vi.hoisted(() => {
  *   GET /v1/runs/stats/costs/margin → runs-service      GET /internal/stats/costs/margin
  *   GET /v1/runs/stats/costs/margin/timeseries → runs-service GET /internal/stats/costs/margin/timeseries
  *   GET /v1/costs/vendor-costs      → costs-service     GET /internal/vendor-costs
- *   GET /v1/costs/payment-sources   → costs-service     GET /internal/payment-sources
  *   GET /v1/costs/provider-payment-sources → costs-service GET /internal/provider-payment-sources
- *   PUT /v1/costs/provider-payment-sources/:provider → costs-service PUT same path under /internal
  *   GET /v1/instantly/stats         → instantly-service GET /public/stats
  *
  * No auth mock: the real authenticatePlatform + requireStaff run, and every refusal
@@ -80,12 +78,6 @@ const ROUTES = [
     query: "?orgId=0b2d6f1e-3c4a-4d5e-8f60-718293a4b5c6",
     downstream: `${RUNS_BASE}/internal/stats/costs/margin/timeseries`,
     key: "runs-test-key",
-  },
-  {
-    path: "/v1/costs/payment-sources",
-    query: "?x=a&x=b",
-    downstream: `${COSTS_BASE}/internal/payment-sources`,
-    key: "costs-test-key",
   },
   {
     path: "/v1/costs/provider-payment-sources",
@@ -164,69 +156,16 @@ for (const r of ROUTES) {
   });
 }
 
-describe("staff — PUT /v1/costs/provider-payment-sources/:provider", () => {
-  const PATH = "/v1/costs/provider-payment-sources/deepseek";
-  const DOWNSTREAM = `${COSTS_BASE}/internal/provider-payment-sources/deepseek`;
-  const BODY = { sources: ["revolut_business", "qonto"], futureField: 1 };
-
-  it("forwards method and body as-is and returns the body byte-for-byte", async () => {
-    const raw = '{"provider":"deepseek", "providerDomain":"deepseek.com","sources":[{"key":"qonto"}]}';
-    upstream(200, raw);
-    const res = await request(buildApp()).put(PATH).set(STAFF).send(BODY);
-
-    expect(res.status).toBe(200);
-    expect(res.text).toBe(raw);
-    expect(calls).toHaveLength(1);
-    expect(calls[0].url).toBe(DOWNSTREAM);
-    expect(calls[0].options.method).toBe("PUT");
-    expect(JSON.parse(calls[0].options.body)).toEqual(BODY);
-    expect(calls[0].options.headers["X-API-Key"]).toBe("costs-test-key");
-    expect(calls[0].options.headers["x-org-id"]).toBeUndefined();
-  });
-
-  it("returns the producer's 400 for an unknown source key unchanged", async () => {
-    const raw =
-      '{"error":"Unknown payment source(s): paypal. Known sources: qonto, revolut_business, revolut_personal, stripe. Add a new one with PUT /internal/payment-sources/:key first."}';
-    upstream(400, raw);
-    const res = await request(buildApp()).put(PATH).set(STAFF).send({ sources: ["paypal"] });
-    expect(res.status).toBe(400);
-    expect(res.body).toEqual(JSON.parse(raw));
-  });
-
-  it("returns the producer's 404 for an unknown provider unchanged", async () => {
-    const raw = '{"error":"Provider not found: nope"}';
-    upstream(404, raw);
-    const res = await request(buildApp()).put("/v1/costs/provider-payment-sources/nope").set(STAFF).send({ sources: [] });
-    expect(res.status).toBe(404);
-    expect(res.body).toEqual(JSON.parse(raw));
-    expect(calls[0].url).toBe(`${COSTS_BASE}/internal/provider-payment-sources/nope`);
-  });
-
-  it("encodes the provider so it cannot escape the downstream path", async () => {
-    upstream(200, "{}");
-    await request(buildApp()).put("/v1/costs/provider-payment-sources/a%3Fx%3D1").set(STAFF).send({ sources: [] });
-    expect(calls[0].url).toBe(`${COSTS_BASE}/internal/provider-payment-sources/a%3Fx%3D1`);
-  });
-
-  it("refuses the platform key without a staff email (403) and calls nothing", async () => {
-    upstream(200, "{}");
-    const res = await request(buildApp())
-      .put(PATH)
-      .set("X-API-Key", "admin-test-key")
-      .set("x-email", "customer@example.com")
-      .send(BODY);
-    expect(res.status).toBe(403);
-    expect(calls).toHaveLength(0);
-  });
-
-  it("refuses a customer bearer key (401) and calls nothing", async () => {
-    upstream(200, "{}");
-    const res = await request(buildApp())
-      .put(PATH)
-      .set("Authorization", "Bearer distrib.usr_customer")
-      .set("x-email", "kevin@distribute.you")
-      .send(BODY);
-    expect(res.status).toBe(401);
-    expect(calls).toHaveLength(0);
-  });
+describe("staff — the hand-edited payment-source routes are gone (costs-service reads the bank ledger)", () => {
+  for (const [method, path] of [
+    ["get", "/v1/costs/payment-sources"],
+    ["put", "/v1/costs/provider-payment-sources/deepseek"],
+  ] as const) {
+    it(`${method.toUpperCase()} ${path} is not routed and calls nothing`, async () => {
+      upstream(200, "{}");
+      const res = await request(buildApp())[method](path).set(STAFF).send({ sources: [] });
+      expect(res.status).toBe(404);
+      expect(calls).toHaveLength(0);
+    });
+  }
 });

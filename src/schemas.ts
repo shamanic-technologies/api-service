@@ -7157,66 +7157,17 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/costs/payment-sources",
-  tags: ["Costs"],
-  summary: "Our payment accounts a vendor can be paid from (staff only)",
-  description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email). " +
-    "Byte passthrough to costs-service GET /internal/payment-sources: the vocabulary of our own payment accounts (key, display name, logo domain). Status and body owned by the downstream service.",
-  security: platformAuth,
-  responses: {
-    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PaymentSourcesResponse") } } },
-    401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/v1/costs/provider-payment-sources",
   tags: ["Costs"],
   summary: "Which of our payment accounts pays each provider (staff only)",
   description:
     "Staff-only (platform API key + STAFF_EMAILS x-email). " +
-    "Byte passthrough to costs-service GET /internal/provider-payment-sources: one entry per catalogue provider with the payment sources that pay it. Status and body owned by the downstream service.",
+    "Byte passthrough to costs-service GET /internal/provider-payment-sources: one entry per catalogue provider with the accounts that pay it, read live from the bank ledger (unmatched providers marked so; a ledger failure is a 502). Status and body owned by the downstream service.",
   security: platformAuth,
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("ProviderPaymentSourcesResponse") } } },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "put",
-  path: "/v1/costs/provider-payment-sources/{provider}",
-  tags: ["Costs"],
-  summary: "Set the payment accounts that pay one provider (staff only)",
-  description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email). " +
-    "Byte passthrough to costs-service PUT /internal/provider-payment-sources/{provider}: replaces the provider's set of payment sources (`[]` clears). Body forwarded as-is; an unknown source key (400) or provider (404) is returned with the downstream's status and body.",
-  security: platformAuth,
-  request: {
-    params: z.object({ provider: z.string() }),
-    body: {
-      content: {
-        "application/json": {
-          schema: z
-            .object({ sources: z.array(z.string()).openapi({ description: "Payment source keys (costs-service validates them)" }) })
-            .passthrough()
-            .openapi("SetProviderPaymentSourcesRequest"),
-        },
-      },
-    },
-  },
-  responses: {
-    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("ProviderPaymentSourcesEntryResponse") } } },
-    400: { description: "Invalid body or unknown source key (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    404: { description: "Unknown provider (forwarded verbatim)", content: errorContent },
     502: { description: "Upstream error", content: errorContent },
   },
 });
