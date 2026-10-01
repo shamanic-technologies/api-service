@@ -6708,7 +6708,7 @@ registry.registerPath({
 // ---------------------------------------------------------------------------
 const SetPaymentModeRequestSchema = z
   .object({
-    payment_mode: z.string().openapi({ description: "\"prepaid\" or \"postpaid\". Validated downstream (400 on anything else).", example: "prepaid" }),
+    payment_mode: z.string().openapi({ description: "\"prepaid\", \"postpaid\" or \"subscription\". Validated downstream (400 on anything else) — the gateway does not enumerate the vocabulary.", example: "prepaid" }),
   })
   .passthrough()
   .openapi("SetPaymentModeRequest");
@@ -6799,6 +6799,130 @@ registry.registerPath({
     403: { description: "Not staff", content: errorContent },
     404: { description: "Org has no billing account", content: errorContent },
     409: paymentModeSettleRefusal,
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Subscription payment mode ($99/month, 3-day free trial, card required).
+// Transparent proxy to billing-service: bodies forwarded as-is (billing owns the
+// fields and their validation), responses passthrough (CLAUDE.md #8), refusals
+// {error, code} forwarded field-for-field (CLAUDE.md #7).
+// ---------------------------------------------------------------------------
+const SubscriptionResponseSchema = z.object({}).passthrough().openapi("SubscriptionResponse");
+const SubscriptionCheckoutResponseSchema = z.object({}).passthrough().openapi("SubscriptionCheckoutResponse");
+const SubscriptionActionResponseSchema = z.object({}).passthrough().openapi("SubscriptionActionResponse");
+
+const SubscriptionCheckoutRequestSchema = z
+  .object({
+    ui_mode: z.string().optional().openapi({ description: "\"embedded\" (default) or \"hosted\". Validated downstream.", example: "embedded" }),
+    success_url: z.string().optional().openapi({ description: "Required downstream when ui_mode is hosted." }),
+    cancel_url: z.string().optional().openapi({ description: "Required downstream when ui_mode is hosted." }),
+  })
+  .passthrough()
+  .openapi("SubscriptionCheckoutRequest");
+
+const RaiseSubscriptionRequestSchema = z
+  .object({
+    monthly_amount_cents: z.number().openapi({ description: "New monthly amount in cents ($99 + a multiple of $100). Validated downstream.", example: 19900 }),
+  })
+  .passthrough()
+  .openapi("RaiseSubscriptionRequest");
+
+const subscriptionRefusal = {
+  description: "Refused by billing-service — body { error, code } forwarded field-for-field.",
+  content: errorContent,
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/accounts/subscription",
+  tags: ["Billing"],
+  summary: "Read this org's subscription",
+  description:
+    "Transparent proxy to billing-service GET /v1/accounts/subscription for the authenticated org. " +
+    "Response owned by the downstream service.",
+  security: authed,
+  responses: {
+    200: { description: "Subscription — pass-through from billing-service", content: { "application/json": { schema: SubscriptionResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/billing/accounts/subscription/checkout_session",
+  tags: ["Billing"],
+  summary: "Start the subscription checkout (card required, 3-day free trial)",
+  description:
+    "Transparent proxy to billing-service POST /v1/accounts/subscription/checkout_session for the authenticated org; " +
+    "body forwarded as-is (an empty body is valid: embedded checkout). Status and body forwarded unchanged.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: SubscriptionCheckoutRequestSchema } } } },
+  responses: {
+    200: { description: "Checkout session — pass-through from billing-service", content: { "application/json": { schema: SubscriptionCheckoutResponseSchema } } },
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: subscriptionRefusal,
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/billing/accounts/subscription",
+  tags: ["Billing"],
+  summary: "Change this org's monthly subscription amount",
+  description:
+    "Transparent proxy to billing-service PATCH /v1/accounts/subscription for the authenticated org; body forwarded as-is. " +
+    "Status and body forwarded unchanged.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: RaiseSubscriptionRequestSchema } } } },
+  responses: {
+    200: { description: "Subscription updated — pass-through from billing-service", content: { "application/json": { schema: SubscriptionActionResponseSchema } } },
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: subscriptionRefusal,
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+for (const action of ["cancel", "resume"] as const) {
+  registry.registerPath({
+    method: "post",
+    path: `/v1/billing/accounts/subscription/${action}`,
+    tags: ["Billing"],
+    summary: action === "cancel" ? "Cancel this org's subscription" : "Resume this org's cancelled subscription",
+    description:
+      `Transparent proxy to billing-service POST /v1/accounts/subscription/${action} for the authenticated org. ` +
+      "No body. Status and body forwarded unchanged.",
+    security: authed,
+    responses: {
+      200: { description: "Subscription updated — pass-through from billing-service", content: { "application/json": { schema: SubscriptionActionResponseSchema } } },
+      401: { description: "Unauthorized", content: errorContent },
+      409: subscriptionRefusal,
+      502: { description: "Upstream error", content: errorContent },
+    },
+  });
+}
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/accounts/by-org/{orgId}/subscription",
+  tags: ["Billing"],
+  summary: "Read a given org's subscription (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email). Transparent proxy to billing-service " +
+    "GET /internal/accounts/by-org/{orgId}/subscription. Response owned by the downstream service.",
+  security: platformAuth,
+  request: { params: z.object({ orgId: z.string().openapi({ description: "Internal org UUID" }) }) },
+  responses: {
+    200: { description: "Subscription — pass-through from billing-service", content: { "application/json": { schema: SubscriptionResponseSchema } } },
+    400: { description: "Invalid orgId (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "Org has no billing account", content: errorContent },
     502: { description: "Upstream error", content: errorContent },
   },
 });
