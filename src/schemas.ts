@@ -7672,6 +7672,37 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/instantly/ops/sent-per-period",
+  tags: ["Instantly"],
+  summary: "Count emails sent per day / week / month, to leads apart from warmup and seeds (staff only)",
+  description:
+    "Platform-scoped staff read from instantly-service's unified sending model (cross-org ops "
+    + "data, NOT customer data) — powers the staff 'Monitoring → Emails' page. Staff-only "
+    + "(platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to instantly-service GET /internal/ops/sent-per-period: every UTC period "
+    + "from the first send (or `since`) to the current one, zeros included, with the count of emails sent per "
+    + "purpose (toLeads, manualReplies, warmup, warmupReplies, seeds), distinct leads emailed, and `inProgress` "
+    + "on the current period. The query string is forwarded verbatim; the parameters below are the ones "
+    + "instantly-service documents today, not a whitelist. `grain` is REQUIRED downstream — omitting it "
+    + "answers instantly-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      grain: z.string().describe("REQUIRED downstream. day | week | month (UTC; a week starts Monday)"),
+      since: z.string().optional().describe("ISO timestamp; the series starts at the period containing it"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Periods — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsSentPerPeriodResponse") } } },
+    400: { description: "Downstream rejected the query (e.g. `grain` missing)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/instantly/ops/messages/{id}/body",
   tags: ["Instantly"],
   summary: "Get the body of one message, read from its bronze source (staff only)",

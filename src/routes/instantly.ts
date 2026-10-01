@@ -319,6 +319,9 @@ registerOpsRead("infra", "infra");
 registerOpsRead("threads", "threads");
 // GET /v1/instantly/ops/messages — every email of every typology; `limit` required (staff only).
 registerOpsRead("messages", "messages");
+// GET /v1/instantly/ops/sent-per-period — emails sent per day/week/month by purpose
+// (to leads / manual replies / warmup / warmup replies / seeds); `grain` required downstream (staff only).
+registerOpsRead("sent-per-period", "sent per period");
 
 // GET /v1/instantly/ops/messages/:id/body — the body of ONE message, read from its
 // bronze source (staff only). Declared after the literal `messages` sibling above;
