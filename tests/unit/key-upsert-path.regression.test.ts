@@ -29,7 +29,10 @@ describe("provider key routes forward to /keys (no /internal/ prefix)", () => {
   });
 
   it("should NOT use /internal/ prefix for any key-service calls", () => {
-    const internalCalls = src.match(/\/internal\//g);
+    // One exception, by design: a user's OWN API keys are keyed on the user
+    // across every org (key-service v0.7.4 `/internal/user-api-keys/by-user/:userId`),
+    // so they cannot live under an org-scoped route.
+    const internalCalls = src.replace(/\/internal\/user-api-keys\/by-user\//g, "").match(/\/internal\//g);
     expect(internalCalls).toBeNull();
   });
 

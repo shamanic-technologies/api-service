@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
+import { authenticate, authenticateUser, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { UpsertKeyRequestSchema, CreateApiKeyRequestSchema, SetKeySourceRequestSchema, ProviderRequirementsRequestSchema } from "../schemas.js";
@@ -308,43 +308,50 @@ router.post("/api-keys", authenticate, requireOrg, requireUser, async (req: Auth
 });
 
 /**
- * GET /v1/api-keys
- * List API keys for the organization
+ * The caller's OWN API keys live in key-service under their user UUID, across
+ * every org they minted one in (`/internal/user-api-keys/by-user/:userId`).
+ * A user key belongs to its user, not to the org that was active when it was
+ * created (owner decision 2026-10-01), so listing and revoking never filter on
+ * an org, and the user id ALWAYS comes from this gateway's own authentication
+ * (`req.userId`), never from the request. Key-service's org-scoped
+ * `GET /api-keys` returned every member's keys in the active org: never call it
+ * to answer "my keys".
  */
-router.get("/api-keys", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+function userApiKeysPath(userId: string, keyId?: string): string {
+  const base = `/internal/user-api-keys/by-user/${encodeURIComponent(userId)}`;
+  return keyId === undefined ? base : `${base}/${encodeURIComponent(keyId)}`;
+}
+
+/**
+ * GET /v1/api-keys
+ * List the caller's own API keys, in every org (no org context needed).
+ */
+router.get("/api-keys", authenticateUser, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const result = await callExternalService(
-      externalServices.key,
-      "/api-keys",
-      { headers: buildInternalHeaders(req) },
-    );
+    const result = await callExternalService(externalServices.key, userApiKeysPath(req.userId!));
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("List API keys error:", error);
-    res.status(500).json({ error: error.message || "Failed to list API keys" });
+    respondUpstreamError(res, error, "Failed to list API keys");
   }
 });
 
 /**
  * DELETE /v1/api-keys/:id
- * Revoke an API key
+ * Revoke one of the caller's own API keys, whatever org it was minted in.
+ * Someone else's key is a 404 from key-service, forwarded as is.
  */
-router.delete("/api-keys/:id", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.delete("/api-keys/:id", authenticateUser, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
-    const { id } = req.params;
-
     const result = await callExternalService(
       externalServices.key,
-      `/api-keys/${id}`,
-      {
-        method: "DELETE",
-        headers: buildInternalHeaders(req),
-      }
+      userApiKeysPath(req.userId!, req.params.id),
+      { method: "DELETE" },
     );
     res.json(result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Delete API key error:", error);
-    res.status(500).json({ error: error.message || "Failed to delete API key" });
+    respondUpstreamError(res, error, "Failed to delete API key");
   }
 });
 
