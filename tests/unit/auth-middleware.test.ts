@@ -44,11 +44,11 @@ function mockUserKey(opts: {
   mockCall.mockImplementation(async (_svc: unknown, path: string) => {
     if (path.startsWith("/validate")) return { valid: true, orgId: "org-stored-on-key", userId: "user-uuid-direct" };
     if (path === "/internal/users/user-uuid-direct") return { user: { id: "user-uuid-direct", email: opts.email ?? "someone@acme.com" } };
-    if (path === "/internal/users/user-uuid-direct/organizations") return { organizations: opts.orgs };
+    if (path === "/internal/users/user-uuid-direct/orgs") return { organizations: opts.orgs.map((o) => ({ orgId: o.id, name: o.name })) };
     if (path === "/internal/brands/all") {
       return { brands: (opts.brands ?? []).map((b) => ({ ...b, name: b.id, domain: null })) };
     }
-    if (path === "/internal/orgs/names") return { organizations: opts.orgs };
+    if (path === "/internal/orgs/names") return { orgs: opts.orgs.map((o) => ({ orgId: o.id, name: o.name })), notFound: [] };
     throw new Error(`unexpected downstream call ${path}`);
   });
 }

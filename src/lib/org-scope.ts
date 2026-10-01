@@ -84,6 +84,16 @@ export async function loadUserKeyScope(userId: string): Promise<UserKeyScope | T
     ]);
     return { isStaff: isStaffEmail(user.user.email), memberships };
   } catch (err) {
+    if ((err as { statusCode?: number }).statusCode === 404) {
+      // The key outlived its user (client-service no longer knows them).
+      return {
+        status: 403,
+        code: "no_organization",
+        error: "No organization",
+        message: `This key's user no longer exists in distribute.you, so the key can act on nothing: ${(err as Error).message}`,
+        fix: "Create a new key from the distribute.you dashboard while signed in.",
+      };
+    }
     console.error("[org-scope] membership lookup failed:", (err as Error).message);
     return {
       status: 503,
@@ -95,24 +105,29 @@ export async function loadUserKeyScope(userId: string): Promise<UserKeyScope | T
   }
 }
 
-/** The user's current organizations, from client-service (identity provider truth). */
+/**
+ * The user's current organizations, from client-service (identity provider
+ * truth, cached there at most 60s, so a removed member loses access within 60s).
+ * Clerk orgs client-service has no internal id for yet (`unresolved`) cannot be
+ * targeted by id and are left out until the org is first resolved.
+ */
 export async function fetchUserOrganizations(userId: string): Promise<ScopeOrg[]> {
-  const result = await callExternalService<{ organizations: ScopeOrg[] }>(
+  const result = await callExternalService<{ organizations: Array<{ orgId: string; name: string | null }> }>(
     externalServices.client,
-    `/internal/users/${encodeURIComponent(userId)}/organizations`,
+    `/internal/users/${encodeURIComponent(userId)}/orgs`,
   );
-  return result.organizations.map((o) => ({ id: o.id, name: o.name ?? null }));
+  return result.organizations.map((o) => ({ id: o.orgId, name: o.name ?? null }));
 }
 
 /** Display names for a set of organizations, one call. */
 export async function fetchOrganizationNames(orgIds: string[]): Promise<ScopeOrg[]> {
   if (orgIds.length === 0) return [];
-  const result = await callExternalService<{ organizations: ScopeOrg[] }>(
+  const result = await callExternalService<{ orgs: Array<{ orgId: string; name: string | null }>; notFound: string[] }>(
     externalServices.client,
     "/internal/orgs/names",
     { method: "POST", body: { orgIds } },
   );
-  return result.organizations.map((o) => ({ id: o.id, name: o.name ?? null }));
+  return result.orgs.map((o) => ({ id: o.orgId, name: o.name ?? null }));
 }
 
 /** Every (brand, org) membership on the platform, from brand-service. */

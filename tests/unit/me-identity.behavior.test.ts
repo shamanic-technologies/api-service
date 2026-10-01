@@ -64,7 +64,7 @@ const happy: Handler = (url, init) => {
   if (url.endsWith("/internal/orgs/names")) {
     const ids: string[] = JSON.parse(init.body).orgIds;
     const names: Record<string, string> = { "org-1": "distribute.you", "org-2": "Living Vital", "org-9": "Stranger Inc" };
-    return { status: 200, body: { organizations: ids.map((id) => ({ id, name: names[id] ?? null })) } };
+    return { status: 200, body: { orgs: ids.map((orgId) => ({ orgId, name: names[orgId] ?? null })), notFound: [] } };
   }
   if (url.includes("/internal/orgs/org-1")) return { status: 200, body: { id: "org-1", externalId: "org_x", name: "distribute.you" } };
   if (url.includes("/orgs/brands")) {

@@ -47,14 +47,15 @@ function stub(opts: { orgs: Array<{ id: string; name: string | null }>; email?: 
   mockCall.mockImplementation(async (_svc: unknown, path: string, init?: any) => {
     if (path.startsWith("/validate")) return { valid: true, orgId: LIVING_VITAL.id, userId: "user-1" };
     if (path === "/internal/users/user-1") return { user: { id: "user-1", email: opts.email ?? "someone@acme.com" } };
-    if (path === "/internal/users/user-1/organizations") {
+    if (path === "/internal/users/user-1/orgs") {
       if (membershipFails) throw Object.assign(new Error("identity provider unreachable"), { statusCode: 502 });
-      return { organizations: opts.orgs };
+      return { organizations: opts.orgs.map((o) => ({ orgId: o.id, name: o.name })) };
     }
     if (path === "/internal/brands/all") return { brands: BRANDS.map((b) => ({ ...b, name: b.id, domain: null })) };
     if (path === "/internal/orgs/names") {
       const all = [LIVING_VITAL, DISTRIBUTE, OTHER];
-      return { organizations: all.filter((o) => init.body.orgIds.includes(o.id)) };
+      const found = all.filter((o) => init.body.orgIds.includes(o.id));
+      return { orgs: found.map((o) => ({ orgId: o.id, name: o.name })), notFound: init.body.orgIds.filter((id: string) => !found.some((o) => o.id === id)) };
     }
     throw new Error(`unexpected downstream call ${path}`);
   });
@@ -266,6 +267,17 @@ describe("user key — staff user", () => {
 });
 
 describe("user key — membership cannot be read", () => {
+  it("a key whose user no longer exists is a 403 no_organization", async () => {
+    mockCall.mockImplementation(async (_svc: unknown, path: string) => {
+      if (path.startsWith("/validate")) return { valid: true, orgId: LIVING_VITAL.id, userId: "user-1" };
+      throw Object.assign(new Error('{"error":"User not found","reason":"user_not_found"}'), { statusCode: 404 });
+    });
+    const res = await request(app()).get("/v1/campaigns").set("Authorization", KEY);
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("no_organization");
+    expect(res.body.message).toMatch(/no longer exists/);
+  });
+
   it("is a 503 membership_unavailable, never a silent default org", async () => {
     stub({ orgs: [DISTRIBUTE] });
     membershipFails = true;
