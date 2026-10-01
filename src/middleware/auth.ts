@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { timingSafeEqual } from "crypto";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { createRun, updateRun } from "@distribute/runs-client";
+import { looksLikeUserKey, respondAuthFailure } from "../lib/auth-failure.js";
 
 /**
  * Timing-safe comparison of two strings.
@@ -56,7 +57,9 @@ export async function authenticate(
       // ── Path 1: Admin auth via X-API-Key ──
       const expectedKey = process.env.ADMIN_DISTRIBUTE_API_KEY;
       if (!expectedKey || !safeCompare(apiKey, expectedKey)) {
-        return res.status(401).json({ error: "Invalid admin key" });
+        // The commonest mistake of a third-party assistant: a user key in the
+        // header it guessed. Say so instead of "Invalid admin key".
+        return respondAuthFailure(res, looksLikeUserKey(apiKey) ? "wrong_header" : "invalid_admin_key");
       }
       req.authType = "admin";
 
@@ -101,10 +104,16 @@ export async function authenticate(
 
     } else if (authHeader?.startsWith("Bearer ")) {
       // ── Path 2: User key auth via Bearer ──
-      const key = authHeader.slice(7);
+      const key = authHeader.slice(7).trim();
+      if (!looksLikeUserKey(key)) {
+        return respondAuthFailure(res, "malformed_key");
+      }
       const validation = await validateKey(key);
+      if (validation === "unavailable") {
+        return respondAuthFailure(res, "key_validation_unavailable");
+      }
       if (!validation) {
-        return res.status(401).json({ error: "Invalid API key" });
+        return respondAuthFailure(res, "key_not_recognized");
       }
 
       req.orgId = validation.orgId;
@@ -112,7 +121,7 @@ export async function authenticate(
       req.authType = "user_key";
 
     } else {
-      return res.status(401).json({ error: "Missing authentication" });
+      return respondAuthFailure(res, "missing_credentials");
     }
 
     // Extract optional workflow tracking headers (injected by workflow-service)
@@ -165,12 +174,16 @@ export async function authenticate(
 }
 
 /**
- * Validate user API key against key-service /validate
+ * Validate user API key against key-service /validate.
+ *
+ * `null` = key-service looked the key up and refused it (4xx, or `valid: false`).
+ * `"unavailable"` = key-service could not be asked (network error, 5xx): the key
+ * may be perfectly valid, so this must never be reported as an invalid key.
  */
 async function validateKey(apiKey: string): Promise<{
   orgId?: string;
   userId?: string;
-} | null> {
+} | null | "unavailable"> {
   try {
     const result = await callExternalService<{
       valid: boolean;
@@ -184,8 +197,10 @@ async function validateKey(apiKey: string): Promise<{
     if (!result.valid) return null;
     return result;
   } catch (error) {
-    console.error("[auth] key-service /validate error:", (error as Error).message);
-    return null;
+    const statusCode = (error as { statusCode?: unknown }).statusCode;
+    console.error("[auth] key-service /validate error:", statusCode, (error as Error).message);
+    if (typeof statusCode === "number" && statusCode >= 400 && statusCode < 500) return null;
+    return "unavailable";
   }
 }
 

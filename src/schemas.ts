@@ -45,6 +45,55 @@ const errorContent = {
   "application/json": { schema: ErrorResponseSchema },
 };
 
+export const AuthFailureResponseSchema = z
+  .object({
+    error: z.string().describe("Short error, unchanged from earlier versions (e.g. \"Invalid API key\")"),
+    code: z
+      .enum([
+        "missing_credentials",
+        "wrong_header",
+        "invalid_admin_key",
+        "malformed_key",
+        "key_not_recognized",
+        "key_validation_unavailable",
+      ])
+      .describe(
+        "Why authentication failed. `wrong_header` = a user key was sent in a header other than `Authorization`. `key_not_recognized` covers both a mistyped key and a revoked one: revoked keys are erased, so the two cannot be told apart. `key_validation_unavailable` (HTTP 503) means the key could not be checked and says nothing about its validity.",
+      ),
+    message: z.string().describe("What happened, in plain words"),
+    fix: z.string().describe("What to do next"),
+  })
+  .openapi("AuthFailureResponse");
+
+const authFailureContent = {
+  "application/json": { schema: AuthFailureResponseSchema },
+};
+
+/** Success-first block placed FIRST in campaign stats responses (src/lib/stats-headline.ts). */
+const StatsHeadlineSchema = z
+  .object({
+    meetingsBooked: z.number().nullable().describe("Replies classified as meeting booked (email-gateway repliesDetail.meetingBooked)"),
+    positiveReplies: z.number().nullable().describe("Positive replies (email-gateway recipientStats.repliesPositive). 0 is shown as 0."),
+    moneyEarnedInUsdCents: z.null().describe("Not served yet, see notServed"),
+    roi: z.null().describe("Not served yet, see notServed"),
+    deliveryRate: z.null().describe("Not served yet by email-gateway, see notServed. delivered and sent are the served counts."),
+    delivered: z.number().nullable().describe("Recipients delivered (email-gateway recipientStats.delivered)"),
+    sent: z.number().nullable().describe("Recipients sent (email-gateway recipientStats.sent)"),
+    costInUsdCents: z.string().nullable().describe("Same value as the response's totalCostInUsdCents"),
+    notServed: z.array(z.string()).describe("Figures no producer serves yet, each naming the service that would serve it"),
+    unavailable: z.array(z.string()).describe("Producers that could not be reached for this response; their figures are null, not zero"),
+  })
+  .openapi("StatsHeadline");
+
+/** Failure counts placed LAST in campaign stats responses. Same values as recipientStats. */
+const StatsFailureDetailsSchema = z
+  .object({
+    bounced: z.number().nullable(),
+    unsubscribed: z.number().nullable(),
+    negativeReplies: z.number().nullable(),
+  })
+  .openapi("StatsFailureDetails");
+
 const CampaignIdParam = z.object({
   id: z.string().describe("Campaign ID"),
 });
@@ -997,8 +1046,13 @@ registry.registerPath({
   method: "get",
   path: "/v1/me",
   tags: ["User"],
-  summary: "Get current user info",
-  description: "Returns the authenticated user and organization details",
+  summary: "Who am I acting as",
+  description:
+    "Call this first. Returns which user this request acts as, the ONE organization it acts in (by name), " +
+    "every brand that organization holds, and what the key covers. A distribute.you API key belongs to one user " +
+    "in one organization (the one active when the key was created), covers all of that organization's brands and " +
+    "nothing else, and never carries staff, admin or beta powers. Authenticate with `Authorization: Bearer <key>`. " +
+    "On 401 the body's `code` says why (wrong header, malformed key, key not recognized) and `fix` says what to do.",
   security: authed,
   responses: {
     200: {
@@ -1007,6 +1061,31 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
+              summary: z.string().describe("One sentence: which user, which organization by name, which brands, and that the access covers that one organization only"),
+              user: z
+                .object({
+                  id: z.string(),
+                  email: z.string().nullable(),
+                  firstName: z.string().nullable(),
+                  lastName: z.string().nullable(),
+                })
+                .nullable()
+                .describe("null when the lookup failed (see lookupErrors)"),
+              organization: z
+                .object({ id: z.string(), name: z.string().nullable() })
+                .nullable()
+                .describe("The ONE organization this request acts in. null when the lookup failed (see lookupErrors)"),
+              brands: z
+                .array(z.object({ id: z.string(), name: z.string().nullable(), domain: z.string().nullable() }))
+                .nullable()
+                .describe("Every brand of that organization; the key covers all of them. [] = no brand yet; null = lookup failed"),
+              keyScope: z
+                .string()
+                .nullable()
+                .describe("For a user API key: what the key covers (one user, one organization, never staff/admin/beta powers). null for dashboard sessions"),
+              lookupErrors: z
+                .array(z.object({ source: z.string(), error: z.string() }))
+                .describe("Lookups that failed, with the upstream message. Empty when everything resolved"),
               userId: z.string().optional(),
               orgId: z.string().optional(),
               authType: z.enum(["user_key", "admin"]).optional(),
@@ -1015,7 +1094,7 @@ registry.registerPath({
         },
       },
     },
-    401: { description: "Unauthorized", content: errorContent },
+    401: { description: "Authentication failed; `code` says why", content: authFailureContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
@@ -1527,7 +1606,10 @@ registry.registerPath({
   tags: ["Campaigns"],
   summary: "Get campaign stats",
   description:
-    "Get campaign statistics (leads served/buffered/skipped, apollo metrics, emails sent/opened/clicked, reply aggregates, etc.)",
+    "Get campaign statistics. `headline` comes first and leads with success (meetings booked, positive replies, " +
+    "delivered/sent, cost); figures no service serves yet are null and listed in `headline.notServed`. Failure counts " +
+    "(bounces, unsubscribes, negative replies) are repeated last under `failureDetails`. All earlier fields are unchanged " +
+    "(leads served/buffered/skipped, emails generated, recipientStats, emailStats, cost breakdown).",
   security: authed,
   request: { params: CampaignIdParam },
   responses: {
@@ -1537,6 +1619,7 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
+              headline: StatsHeadlineSchema,
               campaignId: z.string(),
               leadsServed: z.number(),
               leadsContacted: z.number().describe("Count of unique leads that received at least one email"),
@@ -1560,6 +1643,7 @@ registry.registerPath({
                 provisionedCostInUsdCents: z.string(),
                 totalQuantity: z.string(),
               })).optional().describe("Per-cost-name breakdown from runs-service"),
+              failureDetails: StatsFailureDetailsSchema,
             })
             .openapi("CampaignStatsResponse"),
         },
@@ -1577,7 +1661,8 @@ registry.registerPath({
   summary: "Get stats for all campaigns (grouped)",
   description:
     "Aggregates stats from email-gateway, lead-service, content-generation, and runs-service " +
-    "using groupBy=campaignId. Returns one entry per campaign. " +
+    "using groupBy=campaignId. Returns one entry per campaign, each starting with a success-first `headline` " +
+    "and ending with `failureDetails` (see GET /v1/campaigns/{id}/stats). " +
     "Supports filtering by brandId, workflowSlug, featureSlug, workflowDynastySlug, or featureDynastySlug. " +
     "Replaces the old POST /v1/campaigns/stats/batch endpoint.",
   security: authed,
@@ -1599,6 +1684,7 @@ registry.registerPath({
             .object({
               campaigns: z.array(
                 z.object({
+                  headline: StatsHeadlineSchema,
                   campaignId: z.string(),
                   leadsServed: z.number(),
                   leadsContacted: z.number().describe("Count of unique leads that received at least one email"),
@@ -1609,6 +1695,7 @@ registry.registerPath({
                   emailStats: EmailStatsSchema,
                   totalCostInUsdCents: z.string().nullable(),
                   runCount: z.number(),
+                  failureDetails: StatsFailureDetailsSchema,
                 }),
               ),
             })

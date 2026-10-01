@@ -244,6 +244,13 @@ Authorization: Bearer distrib.usr_abc123...
 \`\`\`
 
 Your key carries your org and user identity. All endpoints work out of the box.
+\`Authorization\` is the only header a key goes in; any other header is refused.
+
+**First call: \`GET /v1/me\`.** It says which user the key acts as, the ONE organization it
+acts in (by name) and every brand that organization holds. A key belongs to one user in one
+organization (the one active when the key was created), covers all of that organization's
+brands and nothing else, and never carries staff, admin or beta powers. The dashboard is at
+https://dashboard.distribute.you.
 
 ## Storing provider keys (BYOK)
 
@@ -260,7 +267,8 @@ Authorization: Bearer distrib.usr_abc123...
 
 | Code | Meaning |
 |------|---------|
-| 401 | Missing or invalid Bearer token |
+| 401 | Missing or invalid Bearer token. The body's \`code\` says which: \`missing_credentials\`, \`wrong_header\` (key sent in a header other than \`Authorization\`), \`invalid_admin_key\`, \`malformed_key\`, \`key_not_recognized\` (mistyped OR revoked: revoked keys are erased, so the two cannot be told apart); \`fix\` says what to do |
+| 503 | \`key_validation_unavailable\`: the key could not be checked right now; retry, do not replace the key |
 | 400 | Organization context required (missing \`x-org-id\` — app key only) |
 | 429 | Rate limit exceeded — see below |
 | 502 | Identity resolution failed (internal service unreachable) |

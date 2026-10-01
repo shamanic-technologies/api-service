@@ -310,6 +310,7 @@ describe("Auth middleware — admin key via X-API-Key", () => {
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe("Invalid admin key");
+    expect(res.body.code).toBe("invalid_admin_key");
     expect(mockCall).not.toHaveBeenCalled();
   });
 
@@ -327,14 +328,13 @@ describe("Auth middleware — admin key via X-API-Key", () => {
   });
 
   it("should no longer accept admin key via Bearer token", async () => {
-    mockCall.mockResolvedValueOnce({ valid: false });
-
     const res = await request(app)
       .get("/v1/me")
       .set("Authorization", `Bearer ${ADMIN_KEY}`);
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe("Invalid API key");
+    expect(mockCall).not.toHaveBeenCalled();
   });
 });
 
@@ -406,22 +406,76 @@ describe("Auth middleware — error cases", () => {
 
     const res = await request(app)
       .get("/v1/me")
-      .set("Authorization", "Bearer mcpf_invalid");
+      .set("Authorization", "Bearer distrib.usr_unknown");
 
     expect(res.status).toBe(401);
     expect(res.body.error).toBe("Invalid API key");
+    expect(res.body.code).toBe("key_not_recognized");
   });
 
-  it("should return 401 when key-service call fails", async () => {
-    mockCall.mockRejectedValueOnce(new Error("Service call failed: 401"));
+  it("should return 401 key_not_recognized when key-service refuses the key with a 401", async () => {
+    mockCall.mockRejectedValueOnce(Object.assign(new Error('{"error":"Invalid API key"}'), { statusCode: 401 }));
 
     const res = await request(app)
       .get("/v1/me")
-      .set("Authorization", "Bearer mcpf_invalid");
+      .set("Authorization", "Bearer distrib.usr_revoked");
 
     expect(res.status).toBe(401);
-    expect(res.body.error).toBe("Invalid API key");
+    expect(res.body).toMatchObject({ error: "Invalid API key", code: "key_not_recognized" });
+    expect(res.body.message).toMatch(/revoked/);
+    expect(res.body.fix).toMatch(/dashboard\.distribute\.you/);
+    expect(res.headers["www-authenticate"]).toMatch(/^Bearer/);
     expect(mockCall).toHaveBeenCalledTimes(1);
+  });
+
+  it("should return 503 key_validation_unavailable (never 'Invalid API key') when key-service is unreachable", async () => {
+    mockCall.mockRejectedValueOnce(new Error("fetch failed"));
+
+    const res = await request(app)
+      .get("/v1/me")
+      .set("Authorization", "Bearer distrib.usr_maybevalid");
+
+    expect(res.status).toBe(503);
+    expect(res.body.code).toBe("key_validation_unavailable");
+    expect(res.body.error).not.toBe("Invalid API key");
+  });
+
+  it("should return 503 when key-service answers 5xx", async () => {
+    mockCall.mockRejectedValueOnce(Object.assign(new Error("boom"), { statusCode: 500 }));
+
+    const res = await request(app)
+      .get("/v1/me")
+      .set("Authorization", "Bearer distrib.usr_maybevalid");
+
+    expect(res.status).toBe(503);
+    expect(res.body.code).toBe("key_validation_unavailable");
+  });
+
+  it("should return 401 malformed_key without calling key-service when the Bearer is not a user key", async () => {
+    const res = await request(app)
+      .get("/v1/me")
+      .set("Authorization", "Bearer sk-not-ours");
+
+    expect(res.status).toBe(401);
+    expect(res.body).toMatchObject({ error: "Invalid API key", code: "malformed_key" });
+    expect(mockCall).not.toHaveBeenCalled();
+  });
+
+  it("should say a user key was sent in X-API-Key instead of a bare 'Invalid admin key'", async () => {
+    const res = await request(app)
+      .get("/v1/me")
+      .set("X-API-Key", "distrib.usr_abc123");
+
+    expect(res.status).toBe(401);
+    expect(res.body).toMatchObject({ error: "Invalid admin key", code: "wrong_header" });
+    expect(res.body.fix).toMatch(/Authorization: Bearer/);
+    expect(mockCall).not.toHaveBeenCalled();
+  });
+
+  it("should carry code missing_credentials when nothing is sent", async () => {
+    const res = await request(app).get("/v1/me");
+    expect(res.status).toBe(401);
+    expect(res.body).toMatchObject({ error: "Missing authentication", code: "missing_credentials" });
   });
 });
 
