@@ -25,6 +25,7 @@ const { RUNS_BASE, COSTS_BASE, INSTANTLY_BASE } = vi.hoisted(() => {
  *   GET /v1/costs/vendor-costs      → costs-service     GET /internal/vendor-costs
  *   GET /v1/costs/provider-payment-sources → costs-service GET /internal/provider-payment-sources
  *   GET /v1/costs/email-send-price  → costs-service     GET /internal/email-send-price
+ *   GET /v1/costs/subscription-costs → costs-service    GET /internal/subscription-costs
  *   GET /v1/instantly/stats         → instantly-service GET /public/stats
  *
  * No auth mock: the real authenticatePlatform + requireStaff run, and every refusal
@@ -96,6 +97,12 @@ const ROUTES = [
     path: "/v1/costs/email-send-price",
     query: "?x=a",
     downstream: `${COSTS_BASE}/internal/email-send-price`,
+    key: "costs-test-key",
+  },
+  {
+    path: "/v1/costs/subscription-costs",
+    query: "?x=a",
+    downstream: `${COSTS_BASE}/internal/subscription-costs`,
     key: "costs-test-key",
   },
   {
@@ -175,6 +182,23 @@ describe("staff — GET /v1/costs/email-send-price before the first refresh", ()
   it("does not expose the upstream refresh", async () => {
     upstream(200, "{}");
     const res = await request(buildApp()).post("/v1/costs/email-send-price/refresh").set(STAFF);
+    expect(res.status).toBe(404);
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("staff — GET /v1/costs/subscription-costs before the first refresh", () => {
+  it("passes the downstream 503 through with its body byte-for-byte", async () => {
+    const raw = '{"error":"subscription costs not computed yet","lastRefresh":null}';
+    upstream(503, raw);
+    const res = await request(buildApp()).get("/v1/costs/subscription-costs").set(STAFF);
+    expect(res.status).toBe(503);
+    expect(res.text).toBe(raw);
+  });
+
+  it("does not expose the upstream refresh", async () => {
+    upstream(200, "{}");
+    const res = await request(buildApp()).post("/v1/costs/subscription-costs/refresh").set(STAFF);
     expect(res.status).toBe(404);
     expect(calls).toHaveLength(0);
   });
