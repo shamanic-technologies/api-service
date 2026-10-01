@@ -24,6 +24,9 @@ describe("gohighlevel + brand-key published surface", () => {
     ["get", "/v1/orgs/gohighlevel/contacts"],
     ["get", "/v1/orgs/gohighlevel/contacts/origins"],
     ["get", "/v1/orgs/gohighlevel/opportunities"],
+    ["get", "/v1/orgs/people"],
+    ["get", "/v1/orgs/people/timeline"],
+    ["post", "/v1/orgs/people/sync"],
   ];
 
   it("publishes every new operation to the customer document", () => {
