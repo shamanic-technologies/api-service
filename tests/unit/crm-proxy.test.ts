@@ -217,6 +217,71 @@ describe("/v1/orgs/contacts/* + /v1/orgs/matrix/* → crm-service", () => {
     expect(res.status).toBe(502);
   });
 
+  it("POST /orgs/matrix/links forwards the body verbatim with identity", async () => {
+    const body = { brandId: "b1", channel: "whatsapp", method: "phone", phoneNumber: "+33612345678" };
+    const res = await request(buildApp()).post("/v1/orgs/matrix/links").send(body);
+    expect(res.status).toBe(200);
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/matrix/links`);
+    expect(calls[0].options.method).toBe("POST");
+    expect(JSON.parse(calls[0].options.body)).toEqual(body);
+    expect(calls[0].options.headers["X-API-Key"]).toBe("crm-test-key");
+  });
+
+  it("POST /orgs/matrix/links relays a 409 channel_unavailable with the same JSON body", async () => {
+    const upstream = { type: "channel_unavailable", channel: "telegram", error: "Telegram linking is not available yet" };
+    (global.fetch as any).mockImplementationOnce(async (url: string, options: any) => {
+      calls.push({ url, options });
+      return { ok: false, status: 409, text: () => Promise.resolve(JSON.stringify(upstream)) };
+    });
+    const res = await request(buildApp())
+      .post("/v1/orgs/matrix/links")
+      .send({ brandId: "b1", channel: "telegram", method: "qr" });
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual(upstream);
+  });
+
+  it("POST /orgs/matrix/links relays a 422 bridge refusal with the same JSON body", async () => {
+    const upstream = {
+      type: "bridge",
+      error: "WhatsApp refused the pairing",
+      bridgeStatus: 400,
+      bridgeError: { code: "M_BAD_PHONE", message: "invalid phone" },
+      link: { channel: "whatsapp", state: "failed" },
+    };
+    (global.fetch as any).mockImplementationOnce(async (url: string, options: any) => {
+      calls.push({ url, options });
+      return { ok: false, status: 422, text: () => Promise.resolve(JSON.stringify(upstream)) };
+    });
+    const res = await request(buildApp())
+      .post("/v1/orgs/matrix/links")
+      .send({ brandId: "b1", channel: "whatsapp", method: "phone", phoneNumber: "x" });
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual(upstream);
+  });
+
+  it("GET /orgs/matrix/links forwards the query string verbatim", async () => {
+    const res = await request(buildApp()).get("/v1/orgs/matrix/links?brandId=b1&channel=whatsapp");
+    expect(res.status).toBe(200);
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/matrix/links?brandId=b1&channel=whatsapp`);
+  });
+
+  it("DELETE /orgs/matrix/links/:channel forwards channel + brandId", async () => {
+    const res = await request(buildApp()).delete("/v1/orgs/matrix/links/whatsapp?brandId=b1");
+    expect(res.status).toBe(200);
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/matrix/links/whatsapp?brandId=b1`);
+    expect(calls[0].options.method).toBe("DELETE");
+  });
+
+  it("DELETE /orgs/matrix/links/:channel relays a 404 verbatim", async () => {
+    (global.fetch as any).mockImplementationOnce(async (url: string, options: any) => {
+      calls.push({ url, options });
+      return { ok: false, status: 404, text: () => Promise.resolve('{"error":"no link"}') };
+    });
+    const res = await request(buildApp()).delete("/v1/orgs/matrix/links/discord?brandId=b1");
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "no link" });
+  });
+
   it("exposes no /internal/* crm path", async () => {
     // crm-service's /internal tier (contacts/promote, matrix/sync, matrix/rebuild)
     // is cron-driven service-to-service and must never be reachable through here.

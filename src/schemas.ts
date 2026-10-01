@@ -11900,6 +11900,57 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/matrix/links",
+  tags: ["CRM Contacts"],
+  summary: "Start linking a brand's WhatsApp / Telegram / Discord account",
+  description:
+    "Proxy to crm-service POST /orgs/matrix/links. Body `{ brandId, channel: whatsapp|telegram|discord, method: qr|phone, phoneNumber? }` forwarded verbatim. Starts a bridge login and answers the link with its current QR or pairing code. Phone pairing can take up to ~60s. Requires x-user-id. Response shape owned by crm-service; every refusal body is forwarded verbatim under its own status.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: CrmPassthroughRequest } } } },
+  responses: {
+    200: { description: "Link as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    409: { description: "Channel unavailable (`{ type: \"channel_unavailable\", channel, error }`), forwarded verbatim", content: errorContent },
+    422: { description: "Bridge refused the login (`{ type: \"bridge\", error, bridgeStatus, bridgeError, link }`), forwarded verbatim", content: errorContent },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/matrix/links",
+  tags: ["CRM Contacts"],
+  summary: "A brand's account links and their live state (QR / pairing code / done / failed)",
+  description:
+    "Proxy to crm-service GET /orgs/matrix/links. Polled every few seconds while the user scans. The whole query string is forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Links as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/orgs/matrix/links/{channel}",
+  tags: ["CRM Contacts"],
+  summary: "Unlink a brand's WhatsApp / Telegram / Discord account",
+  description:
+    "Proxy to crm-service DELETE /orgs/matrix/links/{channel}. The whole query string (`brandId`) is forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: {
+    params: z.object({ channel: z.string().openapi({ description: "whatsapp | telegram | discord" }) }),
+    query: CrmBrandIdQuery,
+  },
+  responses: {
+    200: { description: "Unlink result as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: { description: "No such link (forwarded verbatim)", content: errorContent },
+    ...crmErrorResponses,
+  },
+});
+
 // ── GoHighLevel mirror (crm-service proxy) ───────────────────────────────────
 // A brand's GoHighLevel sub-account, mirrored: its contacts and its sales
 // pipeline. The credential lives brand-scoped in key-service (see

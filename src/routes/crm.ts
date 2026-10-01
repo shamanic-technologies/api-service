@@ -213,6 +213,67 @@ router.get("/orgs/matrix/leads", ...orgChain, async (req: AuthenticatedRequest, 
   }
 });
 
+// ─── Matrix account linking (self-serve WhatsApp / Telegram / Discord) ───────
+//
+// A signed-in user links a brand's messaging account from the dashboard: the
+// create starts a bridge login (QR or phone pairing code), the list is polled
+// every few seconds while the user scans, the delete unlinks. Every refusal body
+// carries the user-facing reason (409 `{ type: "channel_unavailable", ... }`,
+// 422 `{ type: "bridge", bridgeError, link, ... }`), so it crosses field-for-field
+// under its own status via `respondUpstreamError`. The phone-pairing create can
+// take ~60s upstream; no shorter timeout is set here than on any other crm proxy.
+
+// POST /v1/orgs/matrix/links → crm-service POST /orgs/matrix/links
+// Requires x-user-id, like the connection create: crm-service persists the creator.
+router.post("/orgs/matrix/links", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(externalServices.crm, "/orgs/matrix/links", {
+      method: "POST",
+      body: req.body,
+      headers: buildInternalHeaders(req),
+    });
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] Create matrix link error:", error);
+    respondUpstreamError(res, error, "Create matrix link error");
+  }
+});
+
+// GET /v1/orgs/matrix/links → crm-service GET /orgs/matrix/links
+router.get("/orgs/matrix/links", ...orgChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.crm,
+      `/orgs/matrix/links${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] List matrix links error:", error);
+    respondUpstreamError(res, error, "List matrix links error");
+  }
+});
+
+// DELETE /v1/orgs/matrix/links/:channel → crm-service DELETE /orgs/matrix/links/{channel}
+// `brandId` rides the byte-copied query string.
+router.delete(
+  "/orgs/matrix/links/:channel",
+  ...orgChain,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.crm,
+        `/orgs/matrix/links/${encodeURIComponent(req.params.channel)}${rawQueryString(req.originalUrl)}`,
+        { method: "DELETE", headers: buildInternalHeaders(req) },
+      );
+      res.json(result);
+    } catch (error) {
+      console.error("[api-service] Delete matrix link error:", error);
+      respondUpstreamError(res, error, "Delete matrix link error");
+    }
+  },
+);
+
 // ─── GoHighLevel mirror (contacts + sales pipeline) ──────────────────────────
 //
 // crm-service mirrors a brand's GoHighLevel sub-account: its contacts, its
