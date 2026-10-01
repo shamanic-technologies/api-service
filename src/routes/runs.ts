@@ -220,6 +220,26 @@ router.get("/runs/stats/costs/margin", authenticatePlatform, requireStaff, async
 });
 
 /**
+ * GET /v1/runs/stats/costs/margin/timeseries → runs-service GET /internal/stats/costs/margin/timeseries — STAFF ONLY.
+ *
+ * The margin read above split into UTC calendar months, every provider in one
+ * response (the Monitoring > Cost drawer chart). Same gate, same passthrough.
+ */
+router.get("/runs/stats/costs/margin/timeseries", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.runs,
+      `/internal/stats/costs/margin/timeseries${rawQueryString(req.originalUrl)}`,
+      { expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Fleet cost margin timeseries error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to read fleet cost margin timeseries");
+  }
+});
+
+/**
  * GET /v1/runs/:id → runs-service GET /v1/runs/:id
  *
  * One run by id, with its cost roll-up and its descendants, forwarded untouched.
