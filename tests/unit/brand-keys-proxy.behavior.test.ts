@@ -29,6 +29,8 @@ vi.mock("../../src/middleware/auth.js", () => ({
   },
   requireOrg: (_req: any, _res: any, next: any) => next(),
   requireUser: (_req: any, _res: any, next: any) => next(),
+  // keys.ts mounts GET/DELETE /api-keys on authenticateUser; unused by these tests
+  authenticateUser: (_req: any, _res: any, next: any) => next(),
   AuthenticatedRequest: {},
 }));
 

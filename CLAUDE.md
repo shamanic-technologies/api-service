@@ -93,6 +93,7 @@ Owner decision 2026-10-01: a `distrib.usr_*` key is NOT bound to the org active 
 - **Refusals carry `code` + `fix`** (`org_not_member`, `brand_not_found`, `brand_in_several_orgs`, `brands_span_orgs`, `no_organization`, `membership_unavailable` 503). Never fall back to the key's stored org.
 - **No staff power through a key**: staff status only widens WHICH orgs a key may name; `requireStaff`/`authenticatePlatform` refuse a Bearer key regardless. A route that lets a BODY field override `x-org-id` (`/v1/qualify` `sourceOrgId`) must refuse it for `user_key`.
 - `GET /v1/me` uses `authenticateUser` (answers a multi-org caller with no target, `organization: null`) and lists every reachable org with its brands. Any other route that answers about the user rather than one org uses it too.
+- **`GET`/`DELETE /v1/api-keys` are the caller's OWN keys across every org** (`authenticateUser`, no org needed): they call key-service `/internal/user-api-keys/by-user/{req.userId}`, never the org-scoped `GET /api-keys` (it returns every member's keys in the org). The user id comes from auth only; someone else's key is key-service's 404, forwarded. `POST` still stamps the active org (harmless). Tests: `tests/unit/keys-identity.test.ts`.
 - Tests: `tests/unit/user-key-cross-org.behavior.test.ts` drives the real middleware.
 
 ### Identity-enrichment headers forwarded on `/internal/resolve`
