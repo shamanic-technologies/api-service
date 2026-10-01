@@ -4,6 +4,7 @@ import { callExternalService, pipeExternalService, externalServices } from "../l
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 import { fetchDeliveryStats, EMPTY_DELIVERY_STATS } from "../lib/delivery-stats.js";
+import { buildHeadline, buildFailureDetails } from "../lib/stats-headline.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import {
   CreateCampaignRequestSchema,
@@ -398,7 +399,18 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
       }
     }
 
-    res.json({ campaigns: Array.from(merged.values()) });
+    // Success-first framing per campaign: headline FIRST, failure counts LAST
+    // (src/lib/stats-headline.ts). A campaign email-gateway returned no group for
+    // has sent nothing, so its zero counts are real; only a failed call is null.
+    const campaigns = Array.from(merged.values()).map((stats) => {
+      const recipient = deliveryGroups ? (stats.recipientStats as Parameters<typeof buildHeadline>[0]) : null;
+      return {
+        headline: buildHeadline(recipient, (stats.totalCostInUsdCents as string | null) ?? null),
+        ...stats,
+        failureDetails: buildFailureDetails(recipient),
+      };
+    });
+    res.json({ campaigns });
   } catch (error: any) {
     console.error("Get campaigns stats error:", error);
     res.status(500).json({ error: error.message || "Failed to get campaigns stats" });
@@ -615,7 +627,12 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
         }));
     }
 
-    res.json(stats);
+    // Success-first framing: headline FIRST, failure counts LAST (src/lib/stats-headline.ts).
+    res.json({
+      headline: buildHeadline(delivery?.recipientStats ?? null, stats.totalCostInUsdCents ?? null),
+      ...stats,
+      failureDetails: buildFailureDetails(delivery?.recipientStats ?? null),
+    });
   } catch (error: any) {
     console.error("Get campaign stats error:", error);
     res.status(500).json({ error: error.message || "Failed to get campaign stats" });

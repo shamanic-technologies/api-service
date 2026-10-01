@@ -171,6 +171,67 @@ describe("GET /v1/campaigns/stats", () => {
     expect(c2.totalCostInUsdCents).toBe("1200");
   });
 
+  it("leads each campaign with a success-first headline and ends with failureDetails", async () => {
+    const app = createApp();
+    mockCallExternalService.mockImplementation((service: any) => {
+      if (service.url === "http://mock-email-gw") {
+        return Promise.resolve({
+          groups: [{
+            key: "c1",
+            broadcast: makeBroadcast({
+              sent: 531, delivered: 518, bounced: 13, unsubscribed: 2, repliesPositive: 0, repliesNegative: 4,
+              repliesDetail: { ...EMPTY_REPLIES_DETAIL, meetingBooked: 0 },
+            }),
+            transactional: null,
+          }],
+        });
+      }
+      if (service.url === "http://mock-runs") {
+        return Promise.resolve({ groups: [{ dimensions: { campaignId: "c1" }, totalCostInUsdCents: "900", runCount: 3 }] });
+      }
+      return Promise.resolve({ groups: [] });
+    });
+
+    const res = await request(app).get("/v1/campaigns/stats?brandId=brand-1");
+    const c1 = res.body.campaigns[0];
+    const keys = Object.keys(c1);
+
+    expect(keys[0]).toBe("headline");
+    expect(keys[keys.length - 1]).toBe("failureDetails");
+    expect(c1.headline).toMatchObject({
+      meetingsBooked: 0,
+      positiveReplies: 0,
+      deliveryRate: null,
+      delivered: 518,
+      sent: 531,
+      costInUsdCents: "900",
+      unavailable: [],
+    });
+    expect(c1.headline.notServed.join(" ")).toMatch(/deliveryRate/);
+    expect(c1.failureDetails).toEqual({ bounced: 13, unsubscribed: 2, negativeReplies: 4 });
+    // Every pre-existing field is still there, unchanged.
+    expect(c1.recipientStats.bounced).toBe(13);
+    expect(c1.totalCostInUsdCents).toBe("900");
+  });
+
+  it("headline says null + unavailable (not 0) when email-gateway could not be reached", async () => {
+    const app = createApp();
+    mockCallExternalService.mockImplementation((service: any) => {
+      if (service.url === "http://mock-email-gw") return Promise.reject(new Error("fetch failed"));
+      if (service.url === "http://mock-lead") {
+        return Promise.resolve({ groups: [{ key: "c1", totalLeads: 5, byOutreachStatus: { contacted: 2 }, buffered: 0, skipped: 0 }] });
+      }
+      return Promise.resolve({ groups: [] });
+    });
+
+    const res = await request(app).get("/v1/campaigns/stats?brandId=brand-1");
+    const c1 = res.body.campaigns[0];
+    expect(c1.headline.positiveReplies).toBeNull();
+    expect(c1.headline.sent).toBeNull();
+    expect(c1.headline.unavailable).toEqual(["email-gateway"]);
+    expect(c1.failureDetails.bounced).toBeNull();
+  });
+
   it("should make exactly 4 service calls", async () => {
     const app = createApp();
 
