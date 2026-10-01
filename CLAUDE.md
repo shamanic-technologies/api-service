@@ -87,7 +87,7 @@ Do NOT invent a new staff-role flag. Do NOT gate a staff-only route with `authen
 
 ### Identity-enrichment headers forwarded on `/internal/resolve`
 
-On the admin path, `authenticate` resolves `x-external-org-id` / `x-external-user-id` to internal UUIDs via client-service `POST /internal/resolve`, and forwards four OPTIONAL enrichment headers into that body when present: `x-email` → `email`, `x-first-name` → `firstName`, `x-last-name` → `lastName`, `x-org-slug` → `orgSlug`. The dashboard/admin proxy reads all four off the caller's session (Next.js `auth()` — `sessionClaims` for the profile fields, `orgSlug` for the slug) and sends them on every `/v1/*` request.
+On the admin path, `authenticate` resolves `x-external-org-id` / `x-external-user-id` to internal UUIDs via client-service `POST /internal/resolve`, and forwards five OPTIONAL enrichment headers into that body when present: `x-email` → `email`, `x-first-name` → `firstName`, `x-last-name` → `lastName`, `x-org-slug` → `orgSlug`, `x-org-name` → `orgName`. The dashboard/admin proxy reads them off the caller's session (Next.js `auth()` — `sessionClaims` for the profile fields, `orgSlug` for the slug) and sends them on every `/v1/*` request. `orgName` is what lets `GET /v1/me` name the organization a user key acts in: on 2026-10-01, 189 of 192 orgs had a NULL `orgs.name` because no caller had ever sent it.
 
 Rules for this set:
 

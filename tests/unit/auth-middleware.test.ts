@@ -187,6 +187,29 @@ describe("Auth middleware — admin key via X-API-Key", () => {
     );
   });
 
+  // x-org-name → resolve body `orgName`: the org's display name, which is what
+  // lets GET /v1/me name the organization a key acts in. Forwarded verbatim.
+  it("should forward x-org-name to POST /resolve as orgName", async () => {
+    mockCall.mockResolvedValueOnce({ orgId: "org-uuid-123", userId: "user-uuid-456" });
+
+    const res = await request(app)
+      .get("/v1/workflows")
+      .set("X-API-Key", ADMIN_KEY)
+      .set("x-external-org-id", "ext_org_123")
+      .set("x-external-user-id", "ext_user_456")
+      .set("x-org-name", "Living Vital");
+
+    expect(res.status).toBe(200);
+    expect(mockCall).toHaveBeenCalledWith(
+      expect.objectContaining({ url: "http://client-service" }),
+      "/internal/resolve",
+      {
+        method: "POST",
+        body: { externalOrgId: "ext_org_123", externalUserId: "ext_user_456", orgName: "Living Vital" },
+      },
+    );
+  });
+
   it("should forward x-org-slug alongside the profile headers", async () => {
     mockCall.mockResolvedValueOnce({
       orgId: "org-uuid-123",

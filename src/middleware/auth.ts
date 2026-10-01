@@ -216,6 +216,10 @@ async function validateKey(apiKey: string): Promise<{
  * code (client-service `/invites/*` reads `orgs.slug`), so without it the referral
  * link does not exist. Absent header = absent field: the org resolves and
  * authenticates exactly as before.
+ *
+ * `x-org-name` is forwarded the same way as `orgName`: the org's display name
+ * from the identity provider. client-service stores it on the org row, which is
+ * what lets `GET /v1/me` name the organization a user key acts in.
  */
 async function resolveExternalIds(
   externalOrgId: string,
@@ -229,11 +233,13 @@ async function resolveExternalIds(
     const firstName = req.headers["x-first-name"] as string | undefined;
     const lastName = req.headers["x-last-name"] as string | undefined;
     const orgSlug = req.headers["x-org-slug"] as string | undefined;
+    const orgName = req.headers["x-org-name"] as string | undefined;
 
     if (email) body.email = email;
     if (firstName) body.firstName = firstName;
     if (lastName) body.lastName = lastName;
     if (orgSlug) body.orgSlug = orgSlug;
+    if (orgName) body.orgName = orgName;
 
     const result = await callExternalService<{
       orgId: string;

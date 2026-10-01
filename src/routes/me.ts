@@ -78,12 +78,14 @@ function buildSummary(user: MeUser | null, org: MeOrg | null, brands: MeBrand[] 
     ? [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || user.id
     : "an unknown user (lookup failed)";
   const email = user?.email && who !== user.email ? ` (${user.email})` : "";
-  const orgName = org ? (org.name ? `"${org.name}"` : `an unnamed organization (${org.id})`) : "an unknown organization (lookup failed)";
+  const orgPart = org
+    ? org.name ? `the organization "${org.name}"` : `organization ${org.id} (its name is not recorded)`
+    : "an unknown organization (lookup failed)";
   let brandPart: string;
   if (!brands) brandPart = "Its brands could not be listed (lookup failed).";
   else if (brands.length === 0) brandPart = "It holds no brand yet.";
   else brandPart = `It holds ${brands.length} brand${brands.length === 1 ? "" : "s"}: ${brands.map((b) => b.name || b.domain || b.id).join(", ")}.`;
-  return `Acting as ${who}${email} in the organization ${orgName}. ${brandPart} This access covers this one organization only.`;
+  return `Acting as ${who}${email} in ${orgPart}. ${brandPart} This access covers this one organization only.`;
 }
 
 export default router;

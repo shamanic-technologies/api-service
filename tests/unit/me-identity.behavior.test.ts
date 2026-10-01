@@ -113,10 +113,20 @@ describe("GET /v1/me — identity for a user key", () => {
     expect(res.body.brands).toEqual([]);
     expect(res.body.organization).toBeNull();
     expect(res.body.summary).toMatch(/an unknown organization \(lookup failed\)/);
+    expect(res.body.summary).toMatch(/^Acting as Kevin Lourd \(kevin@distribute\.you\) in an unknown organization/);
     expect(res.body.summary).toMatch(/It holds no brand yet\./);
     expect(res.body.lookupErrors).toHaveLength(1);
     expect(res.body.lookupErrors[0].source).toMatch(/client-service \/internal\/orgs/);
     expect(res.body.lookupErrors[0].error).toMatch(/db down/);
+  });
+
+  it("says the org name is not recorded instead of a broken sentence", async () => {
+    stubFetch((url) => {
+      if (url.includes("/internal/orgs/")) return { status: 200, body: { id: "org-1", externalId: "org_x", name: null } };
+      return happy(url);
+    });
+    const res = await request(buildApp()).get("/v1/me");
+    expect(res.body.summary).toMatch(/^Acting as Kevin Lourd \(kevin@distribute\.you\) in organization org-1 \(its name is not recorded\)\. /);
   });
 
   it("keyScope is null for a dashboard session", async () => {
