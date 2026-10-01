@@ -11708,6 +11708,79 @@ registry.registerPath({
   },
 });
 
+// ── PostHog + Stripe connections (crm-service proxy) ─────────────────────────
+// A brand's PostHog project (visits) and Stripe account (payments), read-only
+// sources of the person thread. The credential is stored through
+// /v1/keys/brands/{brandId} (provider `posthog` / `stripe`); crm-service resolves
+// it server-side. Its /internal/posthog/* + /internal/stripe/* tier is not exposed.
+for (const [provider, label, createBody] of [
+  ["posthog", "PostHog", "`{ brandId, projectId, region }` (region `us` | `eu`)"],
+  ["stripe", "Stripe", "`{ brandId }`"],
+] as const) {
+  registry.registerPath({
+    method: "post",
+    path: `/v1/orgs/${provider}/connections`,
+    tags: ["CRM Contacts"],
+    summary: `Connect a brand to ${label}`,
+    description:
+      `Proxy to crm-service POST /orgs/${provider}/connections. Body (${createBody}) forwarded verbatim. Requires x-user-id: crm-service persists the creator so the sync cron can attribute the org run it opens. The connection is written only once the credential has been PROVEN against ${label}, so a credential ${label} refuses comes back 400 carrying \`{ type, error, vendorStatus, vendorError }\` field-for-field. Response shape owned by crm-service.`,
+    security: authed,
+    request: { body: { content: { "application/json": { schema: CrmPassthroughRequest } } } },
+    responses: {
+      200: { description: "Connection as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+      ...crmErrorResponses,
+    },
+  });
+
+  registry.registerPath({
+    method: "patch",
+    path: `/v1/orgs/${provider}/connections/{id}`,
+    tags: ["CRM Contacts"],
+    summary: `Pause or resume a ${label} connection`,
+    description:
+      `Proxy to crm-service PATCH /orgs/${provider}/connections/{id}. Body (\`{ status }\`) forwarded verbatim — crm-service owns the status vocabulary. Response shape owned by crm-service.`,
+    security: authed,
+    request: {
+      params: GhlConnectionIdParam,
+      body: { content: { "application/json": { schema: CrmPassthroughRequest } } },
+    },
+    responses: {
+      200: { description: "Connection as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+      404: { description: "No such connection (forwarded verbatim)", content: errorContent },
+      ...crmErrorResponses,
+    },
+  });
+
+  registry.registerPath({
+    method: "delete",
+    path: `/v1/orgs/${provider}/connections/{id}`,
+    tags: ["CRM Contacts"],
+    summary: `Disconnect a brand from ${label}`,
+    description: `Proxy to crm-service DELETE /orgs/${provider}/connections/{id}. Response shape owned by crm-service.`,
+    security: authed,
+    request: { params: GhlConnectionIdParam },
+    responses: {
+      200: { description: "Disconnection result as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+      404: { description: "No such connection (forwarded verbatim)", content: errorContent },
+      ...crmErrorResponses,
+    },
+  });
+
+  registry.registerPath({
+    method: "get",
+    path: `/v1/orgs/${provider}/connections`,
+    tags: ["CRM Contacts"],
+    summary: `${label} connection health for a brand`,
+    description: `Proxy to crm-service GET /orgs/${provider}/connections. The whole query string is forwarded untransformed. Response shape owned by crm-service.`,
+    security: authed,
+    request: { query: CrmBrandIdQuery },
+    responses: {
+      200: { description: "Connections as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+      ...crmErrorResponses,
+    },
+  });
+}
+
 // ── People (crm-service proxy) ───────────────────────────────────────────────
 // One person, every channel (Gmail, cold email, WhatsApp / Telegram / Discord,
 // GoHighLevel) merged into one thread with one state. crm-service requires
