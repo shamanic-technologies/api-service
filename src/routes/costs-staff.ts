@@ -100,4 +100,42 @@ router.get("/v1/costs/subscription-costs", authenticatePlatform, requireStaff, a
   }
 });
 
+/**
+ * Real-cost / proposed-price / price-comparison reads — STAFF ONLY, byte passthrough:
+ *   GET /v1/costs/real-costs            → costs-service GET /internal/real-costs
+ *   GET /v1/costs/real-costs/:costName  → costs-service GET /internal/real-costs/:costName
+ *   GET /v1/costs/price-lists           → costs-service GET /internal/price-lists
+ *   GET /v1/costs/price-comparison      → costs-service GET /internal/price-comparison
+ * Query string forwarded verbatim (#11); 200/400/404 and the pre-refresh 503
+ * `{ error, lastRefresh }` come back with their bodies untouched.
+ * The upstream `POST /internal/real-costs/refresh` is deliberately not proxied.
+ */
+function proxyCostsRead(downstream: (req: AuthenticatedRequest) => string, label: string) {
+  return async (req: AuthenticatedRequest, res: any) => {
+    try {
+      await pipeExternalService(
+        externalServices.costs,
+        `${downstream(req)}${rawQueryString(req.originalUrl)}`,
+        { expressRes: res },
+      );
+    } catch (error: any) {
+      console.error(`[api-service] ${label} proxy error:`, error.message);
+      if (res.headersSent) { res.end(); return; }
+      respondUpstreamError(res, error, `Failed to read ${label}`);
+    }
+  };
+}
+
+router.get("/v1/costs/real-costs", authenticatePlatform, requireStaff,
+  proxyCostsRead(() => "/internal/real-costs", "real costs"));
+
+router.get("/v1/costs/real-costs/:costName", authenticatePlatform, requireStaff,
+  proxyCostsRead((req) => `/internal/real-costs/${encodeURIComponent(req.params.costName)}`, "the real cost"));
+
+router.get("/v1/costs/price-lists", authenticatePlatform, requireStaff,
+  proxyCostsRead(() => "/internal/price-lists", "price lists"));
+
+router.get("/v1/costs/price-comparison", authenticatePlatform, requireStaff,
+  proxyCostsRead(() => "/internal/price-comparison", "the price comparison"));
+
 export default router;

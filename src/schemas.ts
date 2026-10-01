@@ -7227,6 +7227,87 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/costs/real-costs",
+  tags: ["Costs"],
+  summary: "Real cost of every cost name (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide. " +
+    "Byte passthrough to costs-service GET /internal/real-costs. Optional ?day=YYYY-MM-DD. Before its first refresh the downstream answers 503 with { error, lastRefresh }, forwarded as-is. Query string forwarded verbatim; status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({}).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("RealCostsResponse") } } },
+    400: { description: "Bad query (forwarded verbatim from the downstream)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+    503: { description: "Not computed yet (forwarded verbatim from the downstream)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/costs/real-costs/{costName}",
+  tags: ["Costs"],
+  summary: "Real cost of one cost name (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide. " +
+    "Byte passthrough to costs-service GET /internal/real-costs/{costName}. Before its first refresh the downstream answers 503 with { error, lastRefresh }, forwarded as-is. Query string forwarded verbatim; status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { params: z.object({ costName: z.string() }), query: z.object({}).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("RealCostResponse") } } },
+    400: { description: "Bad query (forwarded verbatim from the downstream)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "Unknown cost name (forwarded verbatim from the downstream)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+    503: { description: "Not computed yet (forwarded verbatim from the downstream)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/costs/price-lists",
+  tags: ["Costs"],
+  summary: "Catalogue or proposed price list at a date (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide. " +
+    "Byte passthrough to costs-service GET /internal/price-lists. Query: source=catalogue|proposed, date=YYYY-MM-DD. Before its first refresh the downstream answers 503 with { error, lastRefresh }, forwarded as-is. Query string forwarded verbatim; status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({}).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PriceListsResponse") } } },
+    400: { description: "Bad query (forwarded verbatim from the downstream)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+    503: { description: "Not computed yet (forwarded verbatim from the downstream)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/costs/price-comparison",
+  tags: ["Costs"],
+  summary: "Comparison of two price lists (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide. " +
+    "Byte passthrough to costs-service GET /internal/price-comparison. Query: list1/list2=<source>:<date>, optional orgId, brandId, interval=day|week|month. Before its first refresh the downstream answers 503 with { error, lastRefresh }, forwarded as-is. Query string forwarded verbatim; status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({}).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PriceComparisonResponse") } } },
+    400: { description: "Bad query (forwarded verbatim from the downstream)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+    503: { description: "Not computed yet (forwarded verbatim from the downstream)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/costs/email-send-price",
   tags: ["Costs"],
   summary: "Price of one cold email sent to a lead, over time (staff only)",
