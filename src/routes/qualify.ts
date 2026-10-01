@@ -28,6 +28,17 @@ router.post("/qualify", authenticate, async (req: AuthenticatedRequest, res) => 
       byokApiKey,
     } = parsed.data;
 
+    // A user key acts only in the organization its request targets: a body
+    // `sourceOrgId` naming any other org is a cross-org write, refused here.
+    // The override below is for the platform key's service callers only.
+    if (req.authType === "user_key" && sourceOrgId && sourceOrgId !== req.orgId) {
+      return res.status(403).json({
+        error: "sourceOrgId is not the organization this request targets",
+        code: "org_not_member",
+        fix: "Omit sourceOrgId, or name that organization with `?orgId=<id>` (it must be one of your organizations).",
+      });
+    }
+
     // Use orgId from auth if not provided
     const orgId = sourceOrgId || req.orgId;
 

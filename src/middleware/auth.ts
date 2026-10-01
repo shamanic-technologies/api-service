@@ -3,6 +3,8 @@ import { timingSafeEqual } from "crypto";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { createRun, updateRun } from "@distribute/runs-client";
 import { looksLikeUserKey, respondAuthFailure } from "../lib/auth-failure.js";
+import { staffEmailAllowlist } from "../lib/staff.js";
+import { loadUserKeyScope, resolveTargetOrg, respondTargetFailure, UserKeyScope } from "../lib/org-scope.js";
 
 /**
  * Timing-safe comparison of two strings.
@@ -32,6 +34,11 @@ export interface AuthenticatedRequest extends Request {
   featureSlug?: string;
   /** Normalized staff email, set by requireStaff after allowlist match */
   staffEmail?: string;
+  /**
+   * User-key requests only: which organizations the key's user can act in
+   * (see `lib/org-scope.ts`). Set before the target org is resolved.
+   */
+  userKeyScope?: UserKeyScope;
 }
 
 /**
@@ -42,12 +49,39 @@ export interface AuthenticatedRequest extends Request {
  *    Optional profile headers (x-email, x-first-name, x-last-name, x-org-slug) are forwarded.
  *
  * 2. User key (distrib.usr_*) → Authorization: Bearer validated via key-service.
- *    Identity comes from the key itself.
+ *    The key names the USER only. The organization is the request's target among
+ *    the user's current organizations (`lib/org-scope.ts`): named by brand or
+ *    org, or implied when the user belongs to exactly one. An ambiguous or
+ *    out-of-scope target is refused with a legible `code` and the choices.
  */
 export async function authenticate(
   req: AuthenticatedRequest,
   res: Response,
   next: NextFunction
+) {
+  return authenticateImpl(req, res, next, true);
+}
+
+/**
+ * Same as `authenticate`, but a user-key request that names no organization and
+ * whose user belongs to several is let through WITHOUT an org (`req.orgId`
+ * unset) instead of refused. Only for routes that answer about the user rather
+ * than about one organization (`GET /v1/me`). A target that IS named is still
+ * resolved and still refused when out of scope.
+ */
+export async function authenticateUser(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+) {
+  return authenticateImpl(req, res, next, false);
+}
+
+async function authenticateImpl(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+  requireTarget: boolean,
 ) {
   try {
     const apiKey = req.headers["x-api-key"] as string | undefined;
@@ -116,9 +150,24 @@ export async function authenticate(
         return respondAuthFailure(res, "key_not_recognized");
       }
 
-      req.orgId = validation.orgId;
+      if (!validation.userId) {
+        console.error("[auth] key-service /validate returned no userId");
+        return respondAuthFailure(res, "key_validation_unavailable");
+      }
       req.userId = validation.userId;
       req.authType = "user_key";
+
+      // The key's stored org (active when it was created) is deliberately
+      // ignored: a key belongs to its user, across the user's organizations.
+      const scope = await loadUserKeyScope(validation.userId);
+      if ("code" in scope) return respondTargetFailure(res, scope);
+      req.userKeyScope = scope;
+      const target = await resolveTargetOrg(req, scope);
+      if ("code" in target) {
+        if (requireTarget || target.code !== "org_target_required") return respondTargetFailure(res, target);
+      } else {
+        req.orgId = target.orgId;
+      }
 
     } else {
       return respondAuthFailure(res, "missing_credentials");
@@ -276,25 +325,6 @@ export async function authenticatePlatform(
   }
   req.authType = "admin";
   return next();
-}
-
-/**
- * Canonical staff allowlist — hardcoded in source (NOT an env var), so the
- * staff set lives in the repo and cannot drift / be forgotten on Railway.
- * These are the only emails that pass `requireStaff`.
- */
-const STAFF_EMAILS = [
-  "kevin.lourd@gmail.com",
-  "kevin@distribute.you",
-] as const;
-
-/**
- * Normalized lowercase Set of the hardcoded staff allowlist.
- */
-function staffEmailAllowlist(): Set<string> {
-  return new Set(
-    STAFF_EMAILS.map((e) => e.trim().toLowerCase()).filter((e) => e.length > 0),
-  );
 }
 
 /**
