@@ -5187,6 +5187,22 @@
         "type": "object",
         "properties": {}
       },
+      "RealCostsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "RealCostResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "PriceListsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "PriceComparisonResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "EmailSendPriceResponse": {
         "type": "object",
         "properties": {}
