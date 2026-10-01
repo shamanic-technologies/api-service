@@ -5183,6 +5183,10 @@
         "type": "object",
         "properties": {}
       },
+      "EmailSendPriceResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "VendorCostVersionsResponse": {
         "type": "object",
         "properties": {}
