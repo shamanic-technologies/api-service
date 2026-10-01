@@ -78,4 +78,26 @@ router.get("/v1/costs/email-send-price", authenticatePlatform, requireStaff, asy
   }
 });
 
+/**
+ * GET /v1/costs/subscription-costs → costs-service GET /internal/subscription-costs — STAFF ONLY.
+ *
+ * The real cost per credit of each vendor subscription, as a series costs-service
+ * computes. Before its first refresh costs-service answers 503 `{ error, lastRefresh }`;
+ * that status and body come back verbatim like the 200.
+ * The upstream `POST /internal/subscription-costs/refresh` is deliberately not proxied.
+ */
+router.get("/v1/costs/subscription-costs", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.costs,
+      `/internal/subscription-costs${rawQueryString(req.originalUrl)}`,
+      { expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Subscription costs proxy error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to read subscription costs");
+  }
+});
+
 export default router;
