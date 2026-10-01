@@ -106,6 +106,30 @@ const ROUTES = [
     key: "costs-test-key",
   },
   {
+    path: "/v1/costs/real-costs",
+    query: "?day=2026-09-30",
+    downstream: `${COSTS_BASE}/internal/real-costs`,
+    key: "costs-test-key",
+  },
+  {
+    path: "/v1/costs/real-costs/instantly-email-sent",
+    query: "?x=a&x=b",
+    downstream: `${COSTS_BASE}/internal/real-costs/instantly-email-sent`,
+    key: "costs-test-key",
+  },
+  {
+    path: "/v1/costs/price-lists",
+    query: "?source=proposed&date=2026-10-01",
+    downstream: `${COSTS_BASE}/internal/price-lists`,
+    key: "costs-test-key",
+  },
+  {
+    path: "/v1/costs/price-comparison",
+    query: "?list1=catalogue:2026-09-01&list2=proposed:2026-10-01&orgId=0b2d6f1e-3c4a-4d5e-8f60-718293a4b5c6&brandId=b%201&interval=week",
+    downstream: `${COSTS_BASE}/internal/price-comparison`,
+    key: "costs-test-key",
+  },
+  {
     path: "/v1/instantly/stats",
     query: "?groupBy=featureSlug",
     downstream: `${INSTANTLY_BASE}/public/stats`,
@@ -216,4 +240,32 @@ describe("staff — the hand-edited payment-source routes are gone (costs-servic
       expect(calls).toHaveLength(0);
     });
   }
+});
+
+describe("staff — real-costs / price-lists / price-comparison downstream statuses", () => {
+  for (const path of ["/v1/costs/real-costs", "/v1/costs/price-lists", "/v1/costs/price-comparison"]) {
+    it(`${path} passes the downstream 503 through with its body byte-for-byte`, async () => {
+      const raw = '{"error":"real costs not computed yet","lastRefresh":null}';
+      upstream(503, raw);
+      const res = await request(buildApp()).get(path).set(STAFF);
+      expect(res.status).toBe(503);
+      expect(res.text).toBe(raw);
+    });
+  }
+
+  it("passes an unknown cost name's 404 through with its body byte-for-byte", async () => {
+    const raw = '{"error":"Unknown cost name: nope"}';
+    upstream(404, raw);
+    const res = await request(buildApp()).get("/v1/costs/real-costs/nope").set(STAFF);
+    expect(res.status).toBe(404);
+    expect(res.text).toBe(raw);
+    expect(calls[0].url).toBe(`${COSTS_BASE}/internal/real-costs/nope`);
+  });
+
+  it("does not expose the upstream real-costs refresh", async () => {
+    upstream(200, "{}");
+    const res = await request(buildApp()).post("/v1/costs/real-costs/refresh").set(STAFF);
+    expect(res.status).toBe(404);
+    expect(calls).toHaveLength(0);
+  });
 });
