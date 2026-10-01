@@ -11615,6 +11615,145 @@ registry.registerPath({
   },
 });
 
+// ─── Google CRM (google-service /orgs/google/*) ─────────────────────────────
+// Transparent passthrough: request and response bodies are owned by
+// google-service (CLAUDE.md rule #8 and its request-body corollary). Query
+// strings are byte-copied, so the params documented here are the ones known
+// today, not a whitelist.
+const GooglePassthroughResponse = z.object({}).passthrough().openapi("GooglePassthroughResponse");
+const GooglePassthroughRequest = z.object({}).passthrough().openapi("GooglePassthroughRequest");
+const googleErrorResponses = {
+  400: { description: "Bad request, forwarded verbatim from google-service", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  404: { description: "Not found, forwarded verbatim from google-service (body carries a `reason`)", content: errorContent },
+  500: { description: "Internal error", content: errorContent },
+  502: { description: "google-service unreachable / not configured", content: errorContent },
+};
+
+const googleRoutes: Array<{
+  method: "get" | "post" | "put" | "delete";
+  path: string;
+  summary: string;
+  description: string;
+  status?: number;
+  body?: boolean;
+  params?: z.AnyZodObject;
+  query?: z.AnyZodObject;
+}> = [
+  {
+    method: "post",
+    path: "/v1/orgs/google/auth/start",
+    summary: "Start connecting a Gmail mailbox (Google OAuth)",
+    description:
+      "Proxy to google-service POST /orgs/google/auth/start. Body `{ redirectUri? }` forwarded untransformed; returns `{ url, state }` where `url` is the Google consent screen. Requires x-user-id.",
+    body: true,
+  },
+  {
+    method: "get",
+    path: "/v1/orgs/google/auth/callback",
+    summary: "Complete Google OAuth (exchange code, store the mailbox)",
+    description:
+      "Proxy to google-service GET /orgs/google/auth/callback. The query string (`code`, `state`) is forwarded byte-identical.",
+    query: z.object({ code: z.string().optional(), state: z.string().optional() }).passthrough(),
+  },
+  {
+    method: "get",
+    path: "/v1/orgs/google/accounts",
+    summary: "List the org's connected Google mailboxes",
+    description: "Proxy to google-service GET /orgs/google/accounts. Response `{ accounts: [...] }` owned by google-service.",
+  },
+  {
+    method: "delete",
+    path: "/v1/orgs/google/accounts/{email}",
+    summary: "Disconnect a Google mailbox",
+    description:
+      "Proxy to google-service DELETE /orgs/google/accounts/{email}. Revokes the Google grant and deletes the mailbox and its mirror. The email is URL-encoded in the path. 404 `{ reason: \"account_not_found\" }` forwarded verbatim.",
+    params: z.object({ email: z.string().openapi({ description: "Connected Google account email (URL-encoded)" }) }),
+  },
+  {
+    method: "post",
+    path: "/v1/orgs/google/sync",
+    summary: "Start an async Gmail + contacts sync",
+    description:
+      "Proxy to google-service POST /orgs/google/sync. Answers 202 `{ jobId, status: \"running\" }`; the status is relayed as-is. Poll GET /v1/orgs/google/sync/{jobId}.",
+    status: 202,
+    body: true,
+  },
+  {
+    method: "get",
+    path: "/v1/orgs/google/sync/{jobId}",
+    summary: "Poll a Google sync job",
+    description: "Proxy to google-service GET /orgs/google/sync/{jobId}. 404 when the job belongs to another org.",
+    params: z.object({ jobId: z.string() }),
+  },
+  {
+    method: "get",
+    path: "/v1/orgs/google/messages",
+    summary: "List mirrored Gmail messages",
+    description: "Proxy to google-service GET /orgs/google/messages. The whole query string is forwarded untransformed.",
+    query: z
+      .object({ limit: z.string().optional(), cursor: z.string().optional(), participant: z.string().optional() })
+      .passthrough(),
+  },
+  {
+    method: "get",
+    path: "/v1/orgs/google/contacts",
+    summary: "List mirrored Google contacts",
+    description: "Proxy to google-service GET /orgs/google/contacts. The whole query string is forwarded untransformed.",
+    query: z
+      .object({ limit: z.string().optional(), cursor: z.string().optional(), query: z.string().optional() })
+      .passthrough(),
+  },
+  {
+    method: "get",
+    path: "/v1/orgs/google/conversation",
+    summary: "Read the whole exchange with one person from the mirror",
+    description:
+      "Proxy to google-service GET /orgs/google/conversation. `email` is required by google-service; the whole query string is forwarded untransformed. 404 reasons (`no_google_account_connected`, `no_messages`) forwarded verbatim.",
+    query: z.object({ email: z.string().optional(), limit: z.string().optional() }).passthrough(),
+  },
+  {
+    method: "get",
+    path: "/v1/orgs/google/correspondents",
+    summary: "List people the connected mailbox is in conversation with",
+    description: "Proxy to google-service GET /orgs/google/correspondents. The whole query string is forwarded untransformed.",
+    query: z.object({ limit: z.string().optional(), offset: z.string().optional() }).passthrough(),
+  },
+  {
+    method: "put",
+    path: "/v1/orgs/google/contact-links",
+    summary: "Set the CRM links of a Google contact",
+    description:
+      "Proxy to google-service PUT /orgs/google/contact-links. Body `{ resourceName, orgIds, brandIds, featureSlugs, status? }` forwarded untransformed.",
+    body: true,
+  },
+];
+
+for (const route of googleRoutes) {
+  registry.registerPath({
+    method: route.method,
+    path: route.path,
+    tags: ["Google CRM"],
+    summary: route.summary,
+    description: route.description,
+    security: authed,
+    request: {
+      ...(route.params ? { params: route.params } : {}),
+      ...(route.query ? { query: route.query } : {}),
+      ...(route.body
+        ? { body: { content: { "application/json": { schema: GooglePassthroughRequest } } } }
+        : {}),
+    },
+    responses: {
+      [route.status ?? 200]: {
+        description: "As returned by google-service",
+        content: { "application/json": { schema: GooglePassthroughResponse } },
+      },
+      ...googleErrorResponses,
+    },
+  });
+}
+
 const crmErrorResponses = {
   400: { description: "Bad request, forwarded verbatim from crm-service", content: errorContent },
   401: { description: "Unauthorized", content: errorContent },
