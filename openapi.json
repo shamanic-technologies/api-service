@@ -5096,32 +5096,9 @@
         "type": "object",
         "properties": {}
       },
-      "PaymentSourcesResponse": {
-        "type": "object",
-        "properties": {}
-      },
       "ProviderPaymentSourcesResponse": {
         "type": "object",
         "properties": {}
-      },
-      "ProviderPaymentSourcesEntryResponse": {
-        "type": "object",
-        "properties": {}
-      },
-      "SetProviderPaymentSourcesRequest": {
-        "type": "object",
-        "properties": {
-          "sources": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "Payment source keys (costs-service validates them)"
-          }
-        },
-        "required": [
-          "sources"
-        ]
       },
       "VendorCostVersionsResponse": {
         "type": "object",
