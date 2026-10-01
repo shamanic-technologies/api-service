@@ -1075,8 +1075,9 @@
             "description": "Not served yet, see notServed"
           },
           "deliveryRate": {
+            "type": "number",
             "nullable": true,
-            "description": "Not served yet by email-gateway, see notServed. delivered and sent are the served counts."
+            "description": "delivered/sent as a 0..1 ratio, served by email-gateway (recipientStats.deliveryRate). null when nothing was sent, or when email-gateway could not be reached (see unavailable)"
           },
           "delivered": {
             "type": "number",
@@ -1178,6 +1179,11 @@
           "delivered": {
             "type": "number",
             "description": "Recipients with at least one delivered email"
+          },
+          "deliveryRate": {
+            "type": "number",
+            "nullable": true,
+            "description": "delivered/sent as a 0..1 ratio, served by email-gateway; null when sent=0"
           },
           "opened": {
             "type": "number",
