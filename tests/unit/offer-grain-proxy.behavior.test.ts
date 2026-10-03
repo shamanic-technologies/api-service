@@ -119,12 +119,26 @@ const SALES_PATHS_BODY = {
   ],
 };
 
+// Stand-ins for features-service's offer-grain contacted-value / deals-value reads.
+const CONTACTED_VALUE_BODY = {
+  offerId: OFFER_ID,
+  totalUsd: 412.5,
+  leads: [{ leadId: "l1", valueUsd: 200 }, { leadId: "l2", valueUsd: 212.5 }],
+  nextCursor: null,
+};
+const DEALS_VALUE_BODY = {
+  offerId: OFFER_ID,
+  columns: [{ column: "interested", valueUsd: 1500 }, { column: "won", valueUsd: 3000 }],
+};
+
 const READS = [
   { suffix: "revenue", body: REVENUE_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
   { suffix: "audience-stats", body: AUDIENCE_STATS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
   { suffix: "pipeline-activity", body: PIPELINE_ACTIVITY_BODY, query: `brandId=${BRAND_ID}&timezone=America%2FNew_York`, channelsOf: (b: any) => b.channels },
   { suffix: "outcomes", body: OUTCOMES_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.outcomes },
   { suffix: "sales-paths", body: SALES_PATHS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.paths },
+  { suffix: "contacted-value", body: CONTACTED_VALUE_BODY, query: `brandId=${BRAND_ID}&cursor=abc`, channelsOf: (b: any) => b.leads },
+  { suffix: "deals-value", body: DEALS_VALUE_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.columns },
 ] as const;
 
 describe("GET /v1/offers/:offerId/* — over the wire", () => {
@@ -217,6 +231,26 @@ describe("GET /v1/offers/:offerId/* — over the wire", () => {
         expect(res.body).toEqual({ error: "brandId is required", code: "MISSING_BRAND_ID" });
       });
     });
+  }
+
+  for (const suffix of ["contacted-value", "deals-value"]) {
+    for (const [status, payload] of [
+      [404, { error: "Offer has no channels", code: "offer_has_no_channels" }],
+      [409, { error: "Offer belongs to another brand", code: "conflict" }],
+    ] as const) {
+      it(`/${suffix} relays features-service's ${status} with its body intact`, async () => {
+        global.fetch = vi.fn().mockImplementation(async (url: string, options: any) => {
+          calls.push({ url, options });
+          return { ok: false, status, text: () => Promise.resolve(JSON.stringify(payload)), json: () => Promise.resolve({}) };
+        });
+
+        const res = await request(buildApp()).get(`/v1/offers/${OFFER_ID}/${suffix}?brandId=${BRAND_ID}`);
+
+        expect(calls[0].url).toBe(`${FEATURES_BASE}/offers/${OFFER_ID}/${suffix}?brandId=${BRAND_ID}`);
+        expect(res.status).toBe(status);
+        expect(res.body).toEqual(payload);
+      });
+    }
   }
 
   it("keeps the caller's repeated keys and ordering byte-identical", async () => {

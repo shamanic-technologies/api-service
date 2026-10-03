@@ -9951,6 +9951,63 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/offers/{offerId}/deals-value",
+  tags: ["Features"],
+  summary: "Offer deals value",
+  description:
+    "The dollar value of each Deals-board column for one offer (Interested, Won; Disqualified / Opt-out / Not placed carry no value with a reason), per column and per card. A separate figure, added to no pipeline. " +
+    "Proxied to features-service GET /offers/{offerId}/deals-value. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis: gross (default) | net (the org's discounted figures). Owned and validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer deals value", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferDealsValueResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Offer not found, or offer has no channels", content: errorContent },
+    409: { description: "Conflict reported by features-service", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/offers/{offerId}/contacted-value",
+  tags: ["Features"],
+  summary: "Offer contacted value",
+  description:
+    "What one offer's contacted-but-not-yet-engaged leads are worth in expectation (LTR x P(paid | contacted)), per lead and as a total. A separate figure, added to no pipeline. " +
+    "Proxied to features-service GET /offers/{offerId}/contacted-value. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("Pricing basis: gross (default) | net (the org's discounted figures). Owned and validated by features-service"),
+      limit: z.string().optional().openapi({ example: "50" }).describe("Page size. Owned and validated by features-service"),
+      cursor: z.string().optional().describe("Opaque paging cursor from the previous page"),
+      leadIds: z.string().optional().describe("Comma-separated lead ids to value instead of paging"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer contacted value", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferContactedValueResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Offer not found, or offer has no channels", content: errorContent },
+    409: { description: "Conflict reported by features-service", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/offers/{offerId}/audience-stats",
   tags: ["Features"],
   summary: "Offer audience stats",
