@@ -5122,7 +5122,7 @@
         "properties": {
           "monthly_amount_cents": {
             "type": "number",
-            "description": "The plan picked ($99 + a multiple of $100). Default 9900. Validated downstream.",
+            "description": "The plan picked, in cents. Any whole-dollar amount from $29 (2900 cents); validated downstream: below 2900 → 400 {error, code: \"amount_below_minimum\"}, not a multiple of 100 → 400 {error, code: \"amount_not_whole_dollars\"}. Default 9900 ($99) when omitted.",
             "example": 9900
           },
           "ui_mode": {
@@ -5141,7 +5141,7 @@
         "properties": {
           "monthly_amount_cents": {
             "type": "number",
-            "description": "Optional plan override ($99 + a multiple of $100). Validated downstream.",
+            "description": "Optional plan override, in cents. Any whole-dollar amount from $29 (2900 cents); validated downstream: below 2900 → 400 {error, code: \"amount_below_minimum\"}, not a multiple of 100 → 400 {error, code: \"amount_not_whole_dollars\"}. Default 9900 ($99) when omitted.",
             "example": 9900
           }
         }
@@ -5155,7 +5155,7 @@
         "properties": {
           "monthly_amount_cents": {
             "type": "number",
-            "description": "New monthly amount in cents ($99 + a multiple of $100). Validated downstream.",
+            "description": "New monthly amount in cents. Any whole-dollar amount from $29 (2900 cents); validated downstream: below 2900 → 400 {error, code: \"amount_below_minimum\"}, not a multiple of 100 → 400 {error, code: \"amount_not_whole_dollars\"}.",
             "example": 19900
           }
         },
@@ -5197,7 +5197,7 @@
           },
           "monthly_amount_cents": {
             "type": "number",
-            "description": "Monthly amount in cents ($99 + a multiple of $100). Validated downstream.",
+            "description": "Monthly amount in cents. Any whole-dollar amount from $29 (2900 cents); validated downstream: below 2900 → 400 {error, code: \"amount_below_minimum\"}, not a multiple of 100 → 400 {error, code: \"amount_not_whole_dollars\"}.",
             "example": 9900
           }
         },
@@ -85381,7 +85381,7 @@
           "Billing"
         ],
         "summary": "Cancel this org's subscription",
-        "description": "Transparent proxy to billing-service POST /v1/accounts/subscription/cancel for the authenticated org. No body. Status and body forwarded unchanged.",
+        "description": "Transparent proxy to billing-service POST /v1/accounts/subscription/cancel for the authenticated org. No body. Cancel stops sending at once; the plan still ends at period end and is not charged again. The response carries sending_stopped (bool) and sending_stopped_reason (\"plan_canceled\" | \"plan_paused\" | null) at top level, and each plan view carries sending_stopped. Status and body forwarded unchanged.",
         "security": [
           {
             "bearerAuth": []
@@ -85833,7 +85833,7 @@
           "Billing"
         ],
         "summary": "Resume this org's cancelled subscription",
-        "description": "Transparent proxy to billing-service POST /v1/accounts/subscription/resume for the authenticated org. No body. Status and body forwarded unchanged.",
+        "description": "Transparent proxy to billing-service POST /v1/accounts/subscription/resume for the authenticated org. No body. Resume restarts sending. The response carries sending_stopped (bool) and sending_stopped_reason (\"plan_canceled\" | \"plan_paused\" | null) at top level, and each plan view carries sending_stopped. Status and body forwarded unchanged.",
         "security": [
           {
             "bearerAuth": []
@@ -89041,7 +89041,7 @@
           "Billing"
         ],
         "summary": "Cancel one plan",
-        "description": "Transparent proxy to billing-service POST /v1/accounts/subscriptions/{subscriptionId}/cancel for the authenticated org. No body. Status and body forwarded unchanged.",
+        "description": "Transparent proxy to billing-service POST /v1/accounts/subscriptions/{subscriptionId}/cancel for the authenticated org. No body. Cancel stops sending at once; the plan still ends at period end and is not charged again. The response carries sending_stopped (bool) and sending_stopped_reason (\"plan_canceled\" | \"plan_paused\" | null) at top level, and each plan view carries sending_stopped. Status and body forwarded unchanged.",
         "security": [
           {
             "bearerAuth": []
@@ -89568,7 +89568,7 @@
           "Billing"
         ],
         "summary": "Resume one cancelled plan",
-        "description": "Transparent proxy to billing-service POST /v1/accounts/subscriptions/{subscriptionId}/resume for the authenticated org. No body. Status and body forwarded unchanged.",
+        "description": "Transparent proxy to billing-service POST /v1/accounts/subscriptions/{subscriptionId}/resume for the authenticated org. No body. Resume restarts sending. The response carries sending_stopped (bool) and sending_stopped_reason (\"plan_canceled\" | \"plan_paused\" | null) at top level, and each plan view carries sending_stopped. Status and body forwarded unchanged.",
         "security": [
           {
             "bearerAuth": []
