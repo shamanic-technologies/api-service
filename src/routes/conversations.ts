@@ -78,4 +78,58 @@ router.get(
   },
 );
 
+/**
+ * GET /v1/sending-schedule — pass-through to instantly-service GET /orgs/sending-schedule.
+ *
+ * When we may email ONE lead: the weekdays, the local start/end hour and the lead's
+ * timezone (with `timezoneIsDefault` when we hold no zone for them), plus whether a
+ * sequence exists. Powers the "when we may email" line on the dashboard person page.
+ * Read-only, declares no cost. Never 404s downstream: a lead we hold nothing for
+ * reads as the default schedule.
+ *
+ * The org boundary is the authenticated `x-org-id` from `buildInternalHeaders`
+ * (instantly-service scopes its query on it). The query string (`email`, optional
+ * `brand_id`) is forwarded verbatim (rule #11); the only thing read out of it here
+ * is the `email` presence check this gateway 400s on, and `brand_id`, promoted to
+ * the `x-brand-id` identity header because `buildInternalHeaders` only knows the
+ * camelCase `brandId` spelling (an identity value rides a header, not only the query).
+ */
+router.get(
+  "/sending-schedule",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { email, brand_id: brandIdParam } = req.query as {
+        email?: string;
+        brand_id?: string;
+      };
+      if (!email) {
+        return res.status(400).json({ error: "Missing required query parameter: email" });
+      }
+
+      const headers = buildInternalHeaders(req);
+      if (brandIdParam) {
+        if (headers["x-brand-id"] && headers["x-brand-id"] !== brandIdParam) {
+          return res.status(400).json({
+            error: `Conflict: x-brand-id (${headers["x-brand-id"]}) does not match brand_id (${brandIdParam})`,
+          });
+        }
+        headers["x-brand-id"] = brandIdParam;
+      }
+
+      const result = await callExternalService(
+        externalServices.instantly,
+        `/orgs/sending-schedule${rawQueryString(req.originalUrl)}`,
+        { headers },
+      );
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Get sending schedule error:", error);
+      respondUpstreamError(res, error, "Failed to get sending schedule");
+    }
+  },
+);
+
 export default router;
