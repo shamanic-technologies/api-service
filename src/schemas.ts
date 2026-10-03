@@ -11403,6 +11403,31 @@ registry.registerPath({
   },
 });
 
+const AudiencePortfolioResponse = z.object({}).passthrough().openapi("AudiencePortfolioResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/audiences/portfolio",
+  tags: ["Audiences"],
+  summary: "Build the active audience portfolio of a brand + offer from its ICP",
+  description:
+    "Proxy to human-service POST /orgs/audiences/portfolio. Derives the active audiences (cold split " +
+    "audiences + buying-signal audiences) for a brand + offer from the ICP text the customer validated. " +
+    "A first call runs an Apollo exploration of the whole ICP and can take 3-4 minutes; the gateway " +
+    "waits up to 10 minutes. A replay of the same brand + offer, or a call made while one is in flight, " +
+    "returns the same set without re-spending. Request + response shapes are owned by human-service; " +
+    "downstream status and body (400, 409, 502) are forwarded verbatim.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: AudiencePassthroughBody } } } },
+  responses: {
+    200: { description: "The portfolio (human-service shape)", content: { "application/json": { schema: AudiencePortfolioResponse } } },
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: { description: "Conflict (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error / human-service unreachable (forwarded verbatim)", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/v1/orgs/audiences/stats",

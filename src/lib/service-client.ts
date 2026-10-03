@@ -16,6 +16,18 @@ const JOURNALISTS_QUOTES_DISPATCHER: Dispatcher = new Agent({
   bodyTimeout: 600_000,
 });
 
+// Per-ROUTE long-call dispatcher, for a single slow endpoint on a service whose
+// other routes stay on the default 300s undici timeouts. Pass it as
+// `{ ...service, dispatcher: LONG_CALL_DISPATCHER }` from the route — read the
+// service's lazy url/apiKey getters inside the route's try so a missing env var
+// still degrades to that route's 502. First user: human-service
+// POST /orgs/audiences/portfolio, whose first call runs an Apollo exploration of
+// a whole ICP (3-4 minutes, close enough to 300s that a slow day would be cut).
+export const LONG_CALL_DISPATCHER: Dispatcher = new Agent({
+  headersTimeout: 600_000,
+  bodyTimeout: 600_000,
+});
+
 const TRANSIENT_FETCH_ERROR_CODES = new Set([
   "EAI_AGAIN",
   "ECONNREFUSED",
