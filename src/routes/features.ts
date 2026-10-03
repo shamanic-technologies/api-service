@@ -1183,6 +1183,12 @@ const OFFER_ROUTES = [
   // paying client), ranked by ROI with the per-leg breakdown. Same passthrough; features-service
   // owns the paths, the math and every refusal.
   { suffix: "sales-paths", what: "offer sales paths" },
+  // The brand-grain contacted-value and deals-value reads below, at the offer grain: the
+  // dashboard is scoped to ONE offer, so its Deals board reads these. Paging
+  // (`limit`/`cursor`/`leadIds`) and `pricing` ride the raw query; features-service owns
+  // column membership, pricing and every refusal (400, 404 offer_has_no_channels, 409).
+  { suffix: "contacted-value", what: "offer contacted value" },
+  { suffix: "deals-value", what: "offer deals value" },
 ] as const;
 
 // ── Brand grain ──────────────────────────────────────────────────────────────
