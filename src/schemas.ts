@@ -7062,6 +7062,104 @@ for (const action of ["cancel", "resume"] as const) {
   });
 }
 
+const StartPlanRequestSchema = z
+  .object({
+    brand_id: z.string().openapi({ description: "Brand the plan is for. Validated downstream." }),
+    offer_id: z.string().openapi({ description: "Offer of that brand the plan is for. Validated downstream." }),
+    monthly_amount_cents: z.number().openapi({ description: "Monthly amount in cents ($99 + a multiple of $100). Validated downstream.", example: 9900 }),
+  })
+  .passthrough()
+  .openapi("StartPlanRequest");
+
+const PlansResponseSchema = z.object({}).passthrough().openapi("PlansResponse");
+const PlanResponseSchema = z.object({}).passthrough().openapi("PlanResponse");
+
+const subscriptionIdParams = z.object({
+  subscriptionId: z.string().openapi({ description: "Plan id, as listed by GET /v1/billing/accounts/subscriptions" }),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/accounts/subscriptions",
+  tags: ["Billing"],
+  summary: "List every plan of this org (one per brand x offer)",
+  description:
+    "Transparent proxy to billing-service GET /v1/accounts/subscriptions for the authenticated org. " +
+    "Response owned by the downstream service.",
+  security: authed,
+  responses: {
+    200: { description: "Plans — pass-through from billing-service", content: { "application/json": { schema: PlansResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/billing/accounts/subscriptions",
+  tags: ["Billing"],
+  summary: "Start a plan for one brand x offer (no trial, first month charged now)",
+  description:
+    "Transparent proxy to billing-service POST /v1/accounts/subscriptions for the authenticated org; body " +
+    "{brand_id, offer_id, monthly_amount_cents} forwarded as-is. 4xx {error, code} (plan_exists_for_offer, card_required, " +
+    "first_charge_declined, charge_unavailable, offer_not_found, existing_paying_org, ...) forwarded field-for-field. " +
+    "Status and body forwarded unchanged.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: StartPlanRequestSchema } } } },
+  responses: {
+    200: { description: "Plan started — pass-through from billing-service", content: { "application/json": { schema: PlanResponseSchema } } },
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: subscriptionRefusal,
+    409: subscriptionRefusal,
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/billing/accounts/subscriptions/{subscriptionId}",
+  tags: ["Billing"],
+  summary: "Change one plan's monthly amount",
+  description:
+    "Transparent proxy to billing-service PATCH /v1/accounts/subscriptions/{subscriptionId} for the authenticated org; " +
+    "body forwarded as-is. Status and body forwarded unchanged.",
+  security: authed,
+  request: {
+    params: subscriptionIdParams,
+    body: { content: { "application/json": { schema: RaiseSubscriptionRequestSchema } } },
+  },
+  responses: {
+    200: { description: "Plan updated — pass-through from billing-service", content: { "application/json": { schema: PlanResponseSchema } } },
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: subscriptionRefusal,
+    409: subscriptionRefusal,
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+for (const action of ["cancel", "resume"] as const) {
+  registry.registerPath({
+    method: "post",
+    path: `/v1/billing/accounts/subscriptions/{subscriptionId}/${action}`,
+    tags: ["Billing"],
+    summary: action === "cancel" ? "Cancel one plan" : "Resume one cancelled plan",
+    description:
+      `Transparent proxy to billing-service POST /v1/accounts/subscriptions/{subscriptionId}/${action} for the authenticated org. ` +
+      "No body. Status and body forwarded unchanged.",
+    security: authed,
+    request: { params: subscriptionIdParams },
+    responses: {
+      200: { description: "Plan updated — pass-through from billing-service", content: { "application/json": { schema: PlanResponseSchema } } },
+      401: { description: "Unauthorized", content: errorContent },
+      404: subscriptionRefusal,
+      409: subscriptionRefusal,
+      502: { description: "Upstream error", content: errorContent },
+    },
+  });
+}
+
 registry.registerPath({
   method: "get",
   path: "/v1/billing/accounts/by-org/{orgId}/subscription",

@@ -228,6 +228,93 @@ describe("customer — /v1/billing/accounts/subscription*", () => {
   });
 });
 
+describe("customer — /v1/billing/accounts/subscriptions* (per brand x offer plans)", () => {
+  const PLAN_ID = "7a1c2e3f-0000-4000-8000-000000000001";
+
+  it("GET lists plans: billing's path, authenticated identity, body unchanged", async () => {
+    const body = { subscriptions: [{ id: PLAN_ID, brand_id: "b1", offer_id: "o1", status: "active" }], future: true };
+    upstreamOk(body);
+    const res = await request(buildApp()).get("/v1/billing/accounts/subscriptions").set("x-org-id", "someone-elses-org");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(body);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${BILLING_BASE}/v1/accounts/subscriptions`);
+    expect(calls[0].options.method).toBe("GET");
+    expectCustomerIdentity(calls[0].options);
+  });
+
+  it("POST starts a plan: body forwarded byte-identical, body back unchanged", async () => {
+    const body = { id: PLAN_ID, brand_id: "b1", offer_id: "o1", status: "active", monthly_amount_cents: 9900 };
+    upstreamOk(body);
+    const sent = { brand_id: "b1", offer_id: "o1", monthly_amount_cents: 9900, future_field: "x" };
+    const res = await request(buildApp()).post("/v1/billing/accounts/subscriptions").send(sent);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(body);
+    expect(calls[0].url).toBe(`${BILLING_BASE}/v1/accounts/subscriptions`);
+    expect(calls[0].options.method).toBe("POST");
+    expect(JSON.parse(calls[0].options.body)).toEqual(sent);
+    expectCustomerIdentity(calls[0].options);
+  });
+
+  for (const refusal of [
+    { status: 409, body: { error: "A plan already exists for this offer", code: "plan_exists_for_offer" } },
+    { status: 409, body: { error: "Your card was declined", code: "first_charge_declined" } },
+    { status: 404, body: { error: "Offer not found", code: "offer_not_found" } },
+  ]) {
+    it(`POST start relays billing's ${refusal.status} ${refusal.body.code} byte-equal`, async () => {
+      upstreamFail(refusal.status, refusal.body);
+      const res = await request(buildApp()).post("/v1/billing/accounts/subscriptions").send({ brand_id: "b1", offer_id: "o1" });
+      expect(res.status).toBe(refusal.status);
+      expect(res.body).toEqual(refusal.body);
+    });
+  }
+
+  it("PATCH forwards to that plan's path with the body byte-identical", async () => {
+    upstreamOk({ id: PLAN_ID, monthly_amount_cents: 19900 });
+    const res = await request(buildApp()).patch(`/v1/billing/accounts/subscriptions/${PLAN_ID}`).send({ monthly_amount_cents: 19900 });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ id: PLAN_ID, monthly_amount_cents: 19900 });
+    expect(calls[0].url).toBe(`${BILLING_BASE}/v1/accounts/subscriptions/${PLAN_ID}`);
+    expect(calls[0].options.method).toBe("PATCH");
+    expect(JSON.parse(calls[0].options.body)).toEqual({ monthly_amount_cents: 19900 });
+    expectCustomerIdentity(calls[0].options);
+  });
+
+  it("forwards the :subscriptionId path param ENCODED (a decoded %2F does not become a path separator)", async () => {
+    upstreamOk({});
+    const res = await request(buildApp()).post("/v1/billing/accounts/subscriptions/a%2Fb%20c/cancel");
+    expect(res.status).toBe(200);
+    expect(calls[0].url).toBe(`${BILLING_BASE}/v1/accounts/subscriptions/a%2Fb%20c/cancel`);
+  });
+
+  for (const action of ["cancel", "resume"]) {
+    it(`POST ${action} forwards to that plan's ${action} path, body back unchanged`, async () => {
+      const body = { id: PLAN_ID, status: action === "cancel" ? "canceling" : "active" };
+      upstreamOk(body);
+      const res = await request(buildApp()).post(`/v1/billing/accounts/subscriptions/${PLAN_ID}/${action}`);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(body);
+      expect(calls[0].url).toBe(`${BILLING_BASE}/v1/accounts/subscriptions/${PLAN_ID}/${action}`);
+      expect(calls[0].options.method).toBe("POST");
+      expectCustomerIdentity(calls[0].options);
+    });
+
+    it(`POST ${action} relays billing's 409 no_subscription byte-equal`, async () => {
+      const refusal = { error: "No such plan", code: "no_subscription" };
+      upstreamFail(409, refusal);
+      const res = await request(buildApp()).post(`/v1/billing/accounts/subscriptions/${PLAN_ID}/${action}`);
+      expect(res.status).toBe(409);
+      expect(res.body).toEqual(refusal);
+    });
+  }
+
+  it("does not shadow the org-level /subscription routes", async () => {
+    upstreamOk({ subscription: null });
+    await request(buildApp()).get("/v1/billing/accounts/subscription");
+    expect(calls[0].url).toBe(`${BILLING_BASE}/v1/accounts/subscription`);
+  });
+});
+
 describe("staff — /v1/billing/accounts/by-org/:orgId/subscription", () => {
   const STAFF = { "X-API-Key": "admin-test-key", "x-email": "kevin@distribute.you" };
 
