@@ -7062,6 +7062,51 @@ for (const action of ["cancel", "resume"] as const) {
   });
 }
 
+const PauseSubscriptionRequestSchema = z
+  .object({
+    months: z.number().openapi({ description: "How many months to pause: 1, 2 or 3. Validated downstream (400 otherwise).", example: 1 }),
+  })
+  .passthrough()
+  .openapi("PauseSubscriptionRequest");
+
+const pauseRefusal = {
+  description:
+    "Refused by billing-service — body { error, code } forwarded field-for-field. Codes: subscription_paused, " +
+    "subscription_not_paused, subscription_ended, subscription_not_active, subscription_cancel_pending.",
+  content: errorContent,
+};
+
+const pauseNotFound = {
+  description: "No subscription — body { error, code: \"no_subscription\" } forwarded field-for-field.",
+  content: errorContent,
+};
+
+for (const action of ["pause", "unpause"] as const) {
+  registry.registerPath({
+    method: "post",
+    path: `/v1/billing/accounts/subscription/${action}`,
+    tags: ["Billing"],
+    summary: action === "pause" ? "Pause this org's monthly plan for 1-3 months" : "Unpause this org's paused monthly plan",
+    description:
+      `Transparent proxy to billing-service POST /v1/accounts/subscription/${action} for the authenticated org. ` +
+      (action === "pause" ? "Body {months: 1|2|3} forwarded as-is. " : "No body. ") +
+      "Returns the same body as cancel/resume ({org_id, subscription, credits_remaining_cents}); the subscription view " +
+      "carries paused, paused_at, pause_ends_at, can_pause, can_unpause. Status and body forwarded unchanged.",
+    security: authed,
+    ...(action === "pause"
+      ? { request: { body: { content: { "application/json": { schema: PauseSubscriptionRequestSchema } } } } }
+      : {}),
+    responses: {
+      200: { description: "Subscription updated — pass-through from billing-service", content: { "application/json": { schema: SubscriptionActionResponseSchema } } },
+      400: { description: "Invalid months (forwarded verbatim)", content: errorContent },
+      401: { description: "Unauthorized", content: errorContent },
+      404: pauseNotFound,
+      409: pauseRefusal,
+      502: { description: "Upstream error", content: errorContent },
+    },
+  });
+}
+
 const StartPlanRequestSchema = z
   .object({
     brand_id: z.string().openapi({ description: "Brand the plan is for. Validated downstream." }),
@@ -7155,6 +7200,34 @@ for (const action of ["cancel", "resume"] as const) {
       401: { description: "Unauthorized", content: errorContent },
       404: subscriptionRefusal,
       409: subscriptionRefusal,
+      502: { description: "Upstream error", content: errorContent },
+    },
+  });
+}
+
+for (const action of ["pause", "unpause"] as const) {
+  registry.registerPath({
+    method: "post",
+    path: `/v1/billing/accounts/subscriptions/{subscriptionId}/${action}`,
+    tags: ["Billing"],
+    summary: action === "pause" ? "Pause one plan for 1-3 months" : "Unpause one paused plan",
+    description:
+      `Transparent proxy to billing-service POST /v1/accounts/subscriptions/{subscriptionId}/${action} for the authenticated org. ` +
+      (action === "pause" ? "Body {months: 1|2|3} forwarded as-is. " : "No body. ") +
+      "Status and body forwarded unchanged.",
+    security: authed,
+    request: {
+      params: subscriptionIdParams,
+      ...(action === "pause"
+        ? { body: { content: { "application/json": { schema: PauseSubscriptionRequestSchema } } } }
+        : {}),
+    },
+    responses: {
+      200: { description: "Plan updated — pass-through from billing-service", content: { "application/json": { schema: PlanResponseSchema } } },
+      400: { description: "Invalid months (forwarded verbatim)", content: errorContent },
+      401: { description: "Unauthorized", content: errorContent },
+      404: pauseNotFound,
+      409: pauseRefusal,
       502: { description: "Upstream error", content: errorContent },
     },
   });
