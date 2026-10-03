@@ -11403,6 +11403,32 @@ registry.registerPath({
   },
 });
 
+const AudienceSignalResponse = z.object({}).passthrough().openapi("AudienceSignalResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/audiences/signal",
+  tags: ["Audiences"],
+  summary: "Create a buying-signal audience",
+  description:
+    "Proxy to human-service POST /orgs/audiences/signal. Creates an audience of people showing a buying " +
+    "signal (first type: linkedin_engagement, people who engaged with competitor LinkedIn posts). Body " +
+    "{ brandId, offerId?, name?, nlPrompt, status?, signal: { type, windowDays, competitorPages? } }; the " +
+    "body's brandId is also forwarded as the x-brand-id identity header. Request + response shapes are owned " +
+    "by human-service. Downstream status and body (400, 409 name conflict, the signal provider's named 4xx " +
+    "such as a malformed competitor page) are forwarded verbatim.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: AudiencePassthroughBody } } } },
+  responses: {
+    201: { description: "Created audience (human-service { audience })", content: { "application/json": { schema: AudienceSignalResponse } } },
+    400: { description: "Invalid body, or body brandId conflicts with x-brand-id (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: { description: "An audience with this name already exists (forwarded verbatim)", content: errorContent },
+    422: { description: "Signal criterion rejected by the provider (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error / human-service unreachable (forwarded verbatim)", content: errorContent },
+  },
+});
+
 const AudiencePortfolioResponse = z.object({}).passthrough().openapi("AudiencePortfolioResponse");
 
 registry.registerPath({
