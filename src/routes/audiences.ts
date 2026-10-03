@@ -94,6 +94,38 @@ for (const suffix of ["/split", "/split/confirm"] as const) {
   });
 }
 
+// POST /v1/orgs/audiences/signal → human-service POST /orgs/audiences/signal
+// A buying-signal audience (first type: linkedin_engagement). Body forwarded
+// untransformed; the body's brandId ALSO rides `x-brand-id` (an identity value
+// rides a header, never only the body), unless the caller already named the
+// brand in the header/query, in which case a different body brandId is a 400.
+// Status (201, 409 name conflict, apollo-service's named 4xx relayed by
+// human-service) and body forwarded field for field.
+router.post("/orgs/audiences/signal", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const headers = buildInternalHeaders(req);
+    const bodyBrandId = req.body?.brandId;
+    if (typeof bodyBrandId === "string" && bodyBrandId.length > 0) {
+      if (headers["x-brand-id"] && headers["x-brand-id"] !== bodyBrandId) {
+        res.status(400).json({
+          error: `Conflict: x-brand-id (${headers["x-brand-id"]}) does not match body brandId (${bodyBrandId})`,
+        });
+        return;
+      }
+      headers["x-brand-id"] = bodyBrandId;
+    }
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.human,
+      "/orgs/audiences/signal",
+      { method: "POST", headers, body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Audience signal error:", error.message);
+    respondUpstreamError(res, error, "Failed to call audiences/signal");
+  }
+});
+
 // POST /v1/orgs/audiences/portfolio → human-service POST /orgs/audiences/portfolio
 // The ACTIVE audience portfolio (cold split + buying-signal audiences) for a
 // brand + offer, derived from the ICP text the customer validated; the dashboard
