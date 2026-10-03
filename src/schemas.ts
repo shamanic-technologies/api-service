@@ -6937,7 +6937,7 @@ const SubscriptionActionResponseSchema = z.object({}).passthrough().openapi("Sub
 
 const SubscriptionCheckoutRequestSchema = z
   .object({
-    monthly_amount_cents: z.number().optional().openapi({ description: "The plan picked ($99 + a multiple of $100). Default 9900. Validated downstream.", example: 9900 }),
+    monthly_amount_cents: z.number().optional().openapi({ description: "The plan picked, in cents. Any whole-dollar amount from $29 (2900 cents); validated downstream: below 2900 → 400 {error, code: \"amount_below_minimum\"}, not a multiple of 100 → 400 {error, code: \"amount_not_whole_dollars\"}. Default 9900 ($99) when omitted.", example: 9900 }),
     ui_mode: z.string().optional().openapi({ description: "How the card form is presented, as POST card_setup: \"embedded\" (default) or \"hosted\". Validated downstream.", example: "embedded" }),
     return_url: z.string().optional().openapi({ description: "Where a hosted card form returns to. Required downstream when ui_mode is hosted." }),
   })
@@ -6946,17 +6946,26 @@ const SubscriptionCheckoutRequestSchema = z
 
 const StartSubscriptionRequestSchema = z
   .object({
-    monthly_amount_cents: z.number().optional().openapi({ description: "Optional plan override ($99 + a multiple of $100). Validated downstream.", example: 9900 }),
+    monthly_amount_cents: z.number().optional().openapi({ description: "Optional plan override, in cents. Any whole-dollar amount from $29 (2900 cents); validated downstream: below 2900 → 400 {error, code: \"amount_below_minimum\"}, not a multiple of 100 → 400 {error, code: \"amount_not_whole_dollars\"}. Default 9900 ($99) when omitted.", example: 9900 }),
   })
   .passthrough()
   .openapi("StartSubscriptionRequest");
 
 const RaiseSubscriptionRequestSchema = z
   .object({
-    monthly_amount_cents: z.number().openapi({ description: "New monthly amount in cents ($99 + a multiple of $100). Validated downstream.", example: 19900 }),
+    monthly_amount_cents: z.number().openapi({ description: "New monthly amount in cents. Any whole-dollar amount from $29 (2900 cents); validated downstream: below 2900 → 400 {error, code: \"amount_below_minimum\"}, not a multiple of 100 → 400 {error, code: \"amount_not_whole_dollars\"}.", example: 19900 }),
   })
   .passthrough()
   .openapi("RaiseSubscriptionRequest");
+
+// Cancel stops sending at once (the plan still ends at period end, no further
+// charge); resume restarts it. Both fields are pass-through from billing-service.
+const subscriptionSendingNote = (action: "cancel" | "resume") =>
+  (action === "cancel"
+    ? "Cancel stops sending at once; the plan still ends at period end and is not charged again. "
+    : "Resume restarts sending. ") +
+  "The response carries sending_stopped (bool) and sending_stopped_reason (\"plan_canceled\" | \"plan_paused\" | null) " +
+  "at top level, and each plan view carries sending_stopped. ";
 
 const subscriptionRefusal = {
   description: "Refused by billing-service — body { error, code } forwarded field-for-field.",
@@ -7051,7 +7060,7 @@ for (const action of ["cancel", "resume"] as const) {
     summary: action === "cancel" ? "Cancel this org's subscription" : "Resume this org's cancelled subscription",
     description:
       `Transparent proxy to billing-service POST /v1/accounts/subscription/${action} for the authenticated org. ` +
-      "No body. Status and body forwarded unchanged.",
+      "No body. " + subscriptionSendingNote(action) + "Status and body forwarded unchanged.",
     security: authed,
     responses: {
       200: { description: "Subscription updated — pass-through from billing-service", content: { "application/json": { schema: SubscriptionActionResponseSchema } } },
@@ -7111,7 +7120,7 @@ const StartPlanRequestSchema = z
   .object({
     brand_id: z.string().openapi({ description: "Brand the plan is for. Validated downstream." }),
     offer_id: z.string().openapi({ description: "Offer of that brand the plan is for. Validated downstream." }),
-    monthly_amount_cents: z.number().openapi({ description: "Monthly amount in cents ($99 + a multiple of $100). Validated downstream.", example: 9900 }),
+    monthly_amount_cents: z.number().openapi({ description: "Monthly amount in cents. Any whole-dollar amount from $29 (2900 cents); validated downstream: below 2900 → 400 {error, code: \"amount_below_minimum\"}, not a multiple of 100 → 400 {error, code: \"amount_not_whole_dollars\"}.", example: 9900 }),
   })
   .passthrough()
   .openapi("StartPlanRequest");
@@ -7192,7 +7201,7 @@ for (const action of ["cancel", "resume"] as const) {
     summary: action === "cancel" ? "Cancel one plan" : "Resume one cancelled plan",
     description:
       `Transparent proxy to billing-service POST /v1/accounts/subscriptions/{subscriptionId}/${action} for the authenticated org. ` +
-      "No body. Status and body forwarded unchanged.",
+      "No body. " + subscriptionSendingNote(action) + "Status and body forwarded unchanged.",
     security: authed,
     request: { params: subscriptionIdParams },
     responses: {

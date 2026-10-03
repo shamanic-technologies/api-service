@@ -178,10 +178,10 @@ describe("customer — /v1/billing/accounts/subscription*", () => {
   }
 
   it("POST start forwards billing's 400 and 502 verbatim", async () => {
-    upstreamFail(400, { error: "monthly_amount_cents must be 9900 + a multiple of 10000" });
+    upstreamFail(400, { error: "monthly_amount_cents must be at least 2900 ($29)", code: "amount_below_minimum" });
     let res = await request(buildApp()).post("/v1/billing/accounts/subscription/start").send({ monthly_amount_cents: 1 });
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: "monthly_amount_cents must be 9900 + a multiple of 10000" });
+    expect(res.body).toEqual({ error: "monthly_amount_cents must be at least 2900 ($29)", code: "amount_below_minimum" });
     upstreamFail(502, { error: "Failed to start the subscription" });
     res = await request(buildApp()).post("/v1/billing/accounts/subscription/start").send({});
     expect(res.status).toBe(502);
@@ -189,10 +189,10 @@ describe("customer — /v1/billing/accounts/subscription*", () => {
   });
 
   it("PATCH forwards the body byte-identical, and billing's 400 verbatim", async () => {
-    upstreamFail(400, { error: "monthly_amount_cents must be 9900 + a multiple of 10000 ($99, $199, $299, ...)" });
+    upstreamFail(400, { error: "monthly_amount_cents must be whole dollars (a multiple of 100)", code: "amount_not_whole_dollars" });
     const res = await request(buildApp()).patch("/v1/billing/accounts/subscription").send({ monthly_amount_cents: 12345 });
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: "monthly_amount_cents must be 9900 + a multiple of 10000 ($99, $199, $299, ...)" });
+    expect(res.body).toEqual({ error: "monthly_amount_cents must be whole dollars (a multiple of 100)", code: "amount_not_whole_dollars" });
     expect(calls[0].url).toBe(`${BILLING_BASE}/v1/accounts/subscription`);
     expect(calls[0].options.method).toBe("PATCH");
     expect(JSON.parse(calls[0].options.body)).toEqual({ monthly_amount_cents: 12345 });
