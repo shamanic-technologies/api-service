@@ -7653,6 +7653,37 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/sending-schedule",
+  tags: ["Conversations"],
+  summary: "When we may email one lead (weekdays, local hours, timezone)",
+  description:
+    "Pass-through to instantly-service GET /orgs/sending-schedule. Returns the weekdays and the local " +
+    "start/end hour we may email this lead in, the lead's timezone (`timezoneIsDefault` when we hold no " +
+    "zone for them) and whether a sequence exists. Never a 404: a lead this org holds nothing for reads as " +
+    "the default schedule. The org boundary is the authenticated org. `brand_id` is also forwarded as the " +
+    "`x-brand-id` identity header. The whole query string is forwarded verbatim — the parameters listed " +
+    "here are the ones documented today, not a whitelist. Upstream error bodies are forwarded " +
+    "field-for-field. Declares no cost — it sends nothing.",
+  security: authed,
+  request: {
+    query: z.object({
+      email: z.string().openapi({ description: "The lead's email" }),
+      brand_id: z.string().optional().openapi({ description: "Optional brand id (uuid) to scope the lookup" }),
+    }).passthrough(),
+  },
+  responses: {
+    200: {
+      description: "The lead's sending schedule as returned by instantly-service",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("SendingScheduleResponse") } },
+    },
+    400: { description: "Missing or invalid query parameters", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/instantly/audit/sending-forecast",
   tags: ["Instantly"],
   summary: "Get the platform sending-forecast audit (staff only)",
