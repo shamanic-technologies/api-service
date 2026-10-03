@@ -11403,6 +11403,30 @@ registry.registerPath({
   },
 });
 
+const AudienceSignalResponse = z.object({}).passthrough().openapi("AudienceSignalResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/audiences/signal",
+  tags: ["Audiences"],
+  summary: "Create a linkedin_engagement buying-signal audience",
+  description:
+    "Proxy to human-service POST /orgs/audiences/signal. Creates an audience of people who recently " +
+    "reacted to or commented on the posts of 1-3 competitor LinkedIn company pages. Request + response " +
+    "shapes are owned by human-service. Downstream status and body (400 validation, including " +
+    "apollo-service's 400 relayed with provider and upstream detail, 409 name conflict, 502) are " +
+    "forwarded verbatim.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: AudiencePassthroughBody } } } },
+  responses: {
+    201: { description: "Audience created (human-service shape)", content: { "application/json": { schema: AudienceSignalResponse } } },
+    400: { description: "Invalid request, ours or apollo-service's (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: { description: "An audience with this name already exists for this brand and offer (forwarded verbatim)", content: errorContent },
+    502: { description: "apollo-service failed / human-service unreachable (forwarded verbatim)", content: errorContent },
+  },
+});
+
 const AudiencePortfolioResponse = z.object({}).passthrough().openapi("AudiencePortfolioResponse");
 
 registry.registerPath({

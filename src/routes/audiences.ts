@@ -94,6 +94,26 @@ for (const suffix of ["/split", "/split/confirm"] as const) {
   });
 }
 
+// POST /v1/orgs/audiences/signal → human-service POST /orgs/audiences/signal
+// Creates a linkedin_engagement buying-signal audience (people who reacted to or
+// commented on 1-3 competitor LinkedIn company pages' posts). The downstream
+// status (201, 400 incl. apollo-service's relayed `{error, provider,
+// upstreamStatus, upstream}`, 409 name conflict, 502) and its body are forwarded
+// field for field. No `POST /orgs/audiences/:id` exists, so nothing shadows it.
+router.post("/orgs/audiences/signal", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.human,
+      "/orgs/audiences/signal",
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Audience signal error:", error.message);
+    respondUpstreamError(res, error, "Failed to call audiences/signal");
+  }
+});
+
 // POST /v1/orgs/audiences/portfolio → human-service POST /orgs/audiences/portfolio
 // The ACTIVE audience portfolio (cold split + buying-signal audiences) for a
 // brand + offer, derived from the ICP text the customer validated; the dashboard
