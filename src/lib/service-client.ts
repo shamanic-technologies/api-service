@@ -21,8 +21,8 @@ const JOURNALISTS_QUOTES_DISPATCHER: Dispatcher = new Agent({
 // `{ ...service, dispatcher: LONG_CALL_DISPATCHER }` from the route — read the
 // service's lazy url/apiKey getters inside the route's try so a missing env var
 // still degrades to that route's 502. First user: human-service
-// POST /orgs/audiences/portfolio, whose first call runs an Apollo exploration of
-// a whole ICP (3-4 minutes, close enough to 300s that a slow day would be cut).
+// POST /orgs/audiences/portfolio, whose cold phase runs an Apollo exploration of
+// a whole ICP (seconds today, minutes in its first design).
 export const LONG_CALL_DISPATCHER: Dispatcher = new Agent({
   headersTimeout: 600_000,
   bodyTimeout: 600_000,

@@ -97,10 +97,11 @@ for (const suffix of ["/split", "/split/confirm"] as const) {
 // POST /v1/orgs/audiences/portfolio → human-service POST /orgs/audiences/portfolio
 // The ACTIVE audience portfolio (cold split + buying-signal audiences) for a
 // brand + offer, derived from the ICP text the customer validated; the dashboard
-// calls it once at launch. A FIRST call runs an Apollo exploration of the whole
-// ICP and takes 3-4 minutes, so it rides LONG_CALL_DISPATCHER (10 min) instead of
-// the default 300s. A replay of the same brand + offer (or a call made while one
-// is in flight) returns the same set without re-spending, which also makes the
+// calls it at launch and polls it until `status: "ready"`. human-service answers
+// once the cold audiences exist (seconds) and finishes the buying-signal audiences
+// in the background; LONG_CALL_DISPATCHER (10 min) stays as headroom over the
+// default 300s should a cold phase ever run long. A replay of the same brand +
+// offer returns the current set without re-spending, which also makes the
 // transient-network retry in callExternalServiceWithStatus safe here. Status and
 // body (409, 502 `{error}`) forwarded field for field.
 router.post("/orgs/audiences/portfolio", ...authChain, async (req: AuthenticatedRequest, res) => {
