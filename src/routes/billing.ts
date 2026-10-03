@@ -391,6 +391,75 @@ router.post("/billing/accounts/subscription/resume", authenticate, requireOrg, a
 });
 
 /**
+ * Per brand x offer plans (owner decision 2026-10-03: a plan is per brand x offer,
+ * not per org). Same contract as the org-level routes above: authenticated org,
+ * body forwarded as-is, every refusal (`{error, code}`) relayed field-for-field.
+ *
+ * GET   /v1/billing/accounts/subscriptions                          -> billing GET   /v1/accounts/subscriptions
+ * POST  /v1/billing/accounts/subscriptions                          -> billing POST  /v1/accounts/subscriptions
+ * PATCH /v1/billing/accounts/subscriptions/:subscriptionId          -> billing PATCH /v1/accounts/subscriptions/:subscriptionId
+ * POST  /v1/billing/accounts/subscriptions/:subscriptionId/cancel   -> billing POST  /v1/accounts/subscriptions/:subscriptionId/cancel
+ * POST  /v1/billing/accounts/subscriptions/:subscriptionId/resume   -> billing POST  /v1/accounts/subscriptions/:subscriptionId/resume
+ */
+function planPath(subscriptionId: string, suffix = ""): string {
+  return `/v1/accounts/subscriptions/${encodeURIComponent(subscriptionId)}${suffix}`;
+}
+
+router.get("/billing/accounts/subscriptions", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/subscriptions",
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to list the plans");
+  }
+});
+
+router.post("/billing/accounts/subscriptions", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/subscriptions",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to start the plan");
+  }
+});
+
+router.patch("/billing/accounts/subscriptions/:subscriptionId", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      planPath(req.params.subscriptionId as string),
+      { method: "PATCH", body: req.body, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to change the plan amount");
+  }
+});
+
+for (const action of ["cancel", "resume"] as const) {
+  router.post(`/billing/accounts/subscriptions/:subscriptionId/${action}`, authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.billing,
+        planPath(req.params.subscriptionId as string, `/${action}`),
+        { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+      );
+      res.json(result);
+    } catch (error: any) {
+      respondUpstreamError(res, error, `Failed to ${action} the plan`);
+    }
+  });
+}
+
+/**
  * GET /v1/billing/accounts/by-org/:orgId/subscription   (STAFF ONLY)
  * Proxy to billing-service GET /internal/accounts/by-org/:orgId/subscription.
  * Same gate and shape as the staff payment-mode read above: org in the path,
