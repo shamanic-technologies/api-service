@@ -391,6 +391,32 @@ router.post("/billing/accounts/subscription/resume", authenticate, requireOrg, a
 });
 
 /**
+ * Pause / unpause a monthly plan ("I need a break" in the dashboard cancel flow).
+ * Same contract as cancel/resume: authenticated org, body forwarded as-is
+ * (pause takes {months: 1|2|3}, validated downstream; unpause has none), every
+ * refusal (400 / 404 no_subscription / 409 {error, code}) relayed field-for-field.
+ *
+ * POST /v1/billing/accounts/subscription/pause                       -> billing POST /v1/accounts/subscription/pause
+ * POST /v1/billing/accounts/subscription/unpause                     -> billing POST /v1/accounts/subscription/unpause
+ * POST /v1/billing/accounts/subscriptions/:subscriptionId/pause      -> billing POST /v1/accounts/subscriptions/:subscriptionId/pause
+ * POST /v1/billing/accounts/subscriptions/:subscriptionId/unpause    -> billing POST /v1/accounts/subscriptions/:subscriptionId/unpause
+ */
+for (const action of ["pause", "unpause"] as const) {
+  router.post(`/billing/accounts/subscription/${action}`, authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.billing,
+        `/v1/accounts/subscription/${action}`,
+        { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+      );
+      res.json(result);
+    } catch (error: any) {
+      respondUpstreamError(res, error, `Failed to ${action} the subscription`);
+    }
+  });
+}
+
+/**
  * Per brand x offer plans (owner decision 2026-10-03: a plan is per brand x offer,
  * not per org). Same contract as the org-level routes above: authenticated org,
  * body forwarded as-is, every refusal (`{error, code}`) relayed field-for-field.
@@ -445,6 +471,21 @@ router.patch("/billing/accounts/subscriptions/:subscriptionId", authenticate, re
 });
 
 for (const action of ["cancel", "resume"] as const) {
+  router.post(`/billing/accounts/subscriptions/:subscriptionId/${action}`, authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.billing,
+        planPath(req.params.subscriptionId as string, `/${action}`),
+        { method: "POST", body: req.body, headers: buildInternalHeaders(req) }
+      );
+      res.json(result);
+    } catch (error: any) {
+      respondUpstreamError(res, error, `Failed to ${action} the plan`);
+    }
+  });
+}
+
+for (const action of ["pause", "unpause"] as const) {
   router.post(`/billing/accounts/subscriptions/:subscriptionId/${action}`, authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
     try {
       const result = await callExternalService(
