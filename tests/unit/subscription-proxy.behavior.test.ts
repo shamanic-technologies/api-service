@@ -373,3 +373,73 @@ describe("staff payment-mode PUT passes \"subscription\" through unchanged", () 
     expect(JSON.parse(calls[0].options.body)).toEqual({ payment_mode: "subscription" });
   });
 });
+
+describe("customer — pause / unpause a monthly plan", () => {
+  const PLAN_ID = "7a1c2e3f-0000-4000-8000-000000000002";
+  const cases = [
+    { gateway: "/v1/billing/accounts/subscription", billing: "/v1/accounts/subscription" },
+    { gateway: `/v1/billing/accounts/subscriptions/${PLAN_ID}`, billing: `/v1/accounts/subscriptions/${PLAN_ID}` },
+  ];
+
+  for (const { gateway, billing } of cases) {
+    it(`POST ${gateway}/pause forwards {months} byte-identical with the authenticated identity, body back unchanged`, async () => {
+      const body = {
+        org_id: "org_test456",
+        subscription: { status: "active", paused: true, paused_at: "2026-10-03T00:00:00Z", pause_ends_at: "2026-11-03T00:00:00Z", can_pause: false, can_unpause: true },
+        credits_remaining_cents: "1234.0000000000",
+      };
+      upstreamOk(body);
+      const res = await request(buildApp()).post(`${gateway}/pause`).set("x-org-id", "someone-elses-org").send({ months: 2 });
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(body);
+      expect(calls).toHaveLength(1);
+      expect(calls[0].url).toBe(`${BILLING_BASE}${billing}/pause`);
+      expect(calls[0].options.method).toBe("POST");
+      expect(JSON.parse(calls[0].options.body)).toEqual({ months: 2 });
+      expectCustomerIdentity(calls[0].options);
+    });
+
+    it(`POST ${gateway}/unpause forwards to billing's unpause path, body back unchanged`, async () => {
+      const body = { org_id: "org_test456", subscription: { status: "active", paused: false, can_pause: true, can_unpause: false } };
+      upstreamOk(body);
+      const res = await request(buildApp()).post(`${gateway}/unpause`);
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(body);
+      expect(calls[0].url).toBe(`${BILLING_BASE}${billing}/unpause`);
+      expect(calls[0].options.method).toBe("POST");
+      expectCustomerIdentity(calls[0].options);
+    });
+
+    for (const refusal of [
+      { status: 400, body: { error: "months must be 1, 2 or 3" } },
+      { status: 404, body: { error: "No subscription", code: "no_subscription" } },
+      { status: 409, body: { error: "Already paused", code: "subscription_paused" } },
+      { status: 409, body: { error: "Not paused", code: "subscription_not_paused" } },
+      { status: 409, body: { error: "Cancel pending", code: "subscription_cancel_pending" } },
+      { status: 502, body: { error: "Failed to pause the subscription" } },
+    ]) {
+      it(`relays billing's ${refusal.status} ${"code" in refusal.body ? refusal.body.code : ""} on ${gateway}/pause byte-equal`, async () => {
+        upstreamFail(refusal.status, refusal.body);
+        const res = await request(buildApp()).post(`${gateway}/pause`).send({ months: 9 });
+        expect(res.status).toBe(refusal.status);
+        expect(res.body).toEqual(refusal.body);
+      });
+    }
+
+    it(`relays billing's 409 subscription_not_paused on ${gateway}/unpause byte-equal`, async () => {
+      const refusal = { error: "Not paused", code: "subscription_not_paused" };
+      upstreamFail(409, refusal);
+      const res = await request(buildApp()).post(`${gateway}/unpause`);
+      expect(res.status).toBe(409);
+      expect(res.body).toEqual(refusal);
+    });
+  }
+
+  it("pause/unpause do not shadow the cancel/resume siblings", async () => {
+    upstreamOk({});
+    await request(buildApp()).post("/v1/billing/accounts/subscription/cancel");
+    await request(buildApp()).post(`/v1/billing/accounts/subscriptions/${PLAN_ID}/resume`);
+    expect(calls[0].url).toBe(`${BILLING_BASE}/v1/accounts/subscription/cancel`);
+    expect(calls[1].url).toBe(`${BILLING_BASE}/v1/accounts/subscriptions/${PLAN_ID}/resume`);
+  });
+});
