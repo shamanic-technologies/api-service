@@ -1,6 +1,11 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
+import {
+  callExternalService,
+  callExternalServiceWithStatus,
+  externalServices,
+  LONG_CALL_DISPATCHER,
+} from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 
@@ -88,6 +93,31 @@ for (const suffix of ["/split", "/split/confirm"] as const) {
     }
   });
 }
+
+// POST /v1/orgs/audiences/portfolio → human-service POST /orgs/audiences/portfolio
+// The ACTIVE audience portfolio (cold split + buying-signal audiences) for a
+// brand + offer, derived from the ICP text the customer validated; the dashboard
+// calls it at launch and polls it until `status: "ready"`. human-service answers
+// once the cold audiences exist (seconds) and finishes the buying-signal audiences
+// in the background; LONG_CALL_DISPATCHER (10 min) stays as headroom over the
+// default 300s should a cold phase ever run long. A replay of the same brand +
+// offer returns the current set without re-spending, which also makes the
+// transient-network retry in callExternalServiceWithStatus safe here. Status and
+// body (409, 502 `{error}`) forwarded field for field.
+router.post("/orgs/audiences/portfolio", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const human = externalServices.human;
+    const { status, data } = await callExternalServiceWithStatus(
+      { url: human.url, apiKey: human.apiKey, dispatcher: LONG_CALL_DISPATCHER },
+      "/orgs/audiences/portfolio",
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Audience portfolio error:", error.message);
+    respondUpstreamError(res, error, "Failed to call audiences/portfolio");
+  }
+});
 
 // POST /v1/orgs/audiences/stats → human-service POST /orgs/audiences/stats
 router.post("/orgs/audiences/stats", ...authChain, async (req: AuthenticatedRequest, res) => {
