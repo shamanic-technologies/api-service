@@ -10,10 +10,9 @@ const { BRAND_BASE } = vi.hoisted(() => {
 });
 
 /**
- * Offer channels + active sales paths: BEHAVIOURAL cover over the real router with a
- * stubbed fetch. Each route reaches brand-service's own path with the authenticated
- * identity; the 201 on activate and the 409 SALES_PATH_ENTRY_TAKEN come back as sent,
- * body included (the dashboard offers "replace" off that body).
+ * Offer channels: BEHAVIOURAL cover over the real router with a stubbed fetch. Each
+ * route reaches brand-service's own path with the authenticated identity. The per-offer
+ * active-sales-paths routes were withdrawn (owner 2026-10-04) and must stay unrouted.
  */
 
 vi.mock("../../src/middleware/auth.js", async () => {
@@ -45,7 +44,7 @@ const BRAND_ID = "75d7e3e8-6926-4f85-a557-976895400666";
 const OFFER_ID = "0d3d1f2c-8f4a-4a2e-9d1b-2f0f6a7c5b31";
 const OFFER = `/brands/${BRAND_ID}/offers/${OFFER_ID}`;
 
-describe("offer channels + active sales paths proxies", () => {
+describe("offer channels proxies", () => {
   let calls: Array<{ url: string; options: any }>;
 
   function stub(status: number, body: unknown) {
@@ -64,11 +63,7 @@ describe("offer channels + active sales paths proxies", () => {
     calls = [];
   });
 
-  it.each([
-    ["get", "/channels"],
-    ["get", "/active-sales-paths"],
-    ["get", "/active-sales-paths/history"],
-  ] as const)("%s %s reaches brand-service's own path with the identity", async (_m, suffix) => {
+  it.each([["get", "/channels"]] as const)("%s %s reaches brand-service's own path with the identity", async (_m, suffix) => {
     const body = { offerId: OFFER_ID, marker: suffix };
     stub(200, body);
     const res = await request(buildApp()).get(`/v1${OFFER}${suffix}`);
@@ -90,33 +85,15 @@ describe("offer channels + active sales paths proxies", () => {
     expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
   });
 
-  it("POST activate forwards the body and returns brand-service's 201", async () => {
-    const sent = { combinationKey: "a@b+c", entryChannelSlug: "b", entryLegKey: "a", replace: true };
-    const body = { activated: true, activeSalesPath: { combinationKey: "a@b+c" }, replaced: null };
-    stub(201, body);
-    const res = await request(buildApp()).post(`/v1${OFFER}/active-sales-paths`).send(sent);
-    expect(res.status).toBe(201);
-    expect(res.body).toEqual(body);
-    expect(calls[0].url).toBe(`${BRAND_BASE}/orgs${OFFER}/active-sales-paths`);
-    expect(calls[0].options.method).toBe("POST");
-    expect(JSON.parse(calls[0].options.body)).toEqual(sent);
-  });
-
-  it("forwards the 409 SALES_PATH_ENTRY_TAKEN with its body", async () => {
-    const body = { error: "taken", code: "SALES_PATH_ENTRY_TAKEN", activeSalesPath: { combinationKey: "x" } };
-    stub(409, body);
-    const res = await request(buildApp())
-      .post(`/v1${OFFER}/active-sales-paths`)
-      .send({ combinationKey: "y", entryChannelSlug: "b", entryLegKey: "a" });
-    expect(res.status).toBe(409);
-    expect(res.body).toEqual(body);
-  });
-
-  it("POST deactivate reaches its own path, not the activate one", async () => {
-    stub(200, { deactivated: { combinationKey: "x" } });
-    const res = await request(buildApp()).post(`/v1${OFFER}/active-sales-paths/deactivate`).send({ combinationKey: "x" });
-    expect(res.status).toBe(200);
-    expect(calls[0].url).toBe(`${BRAND_BASE}/orgs${OFFER}/active-sales-paths/deactivate`);
-    expect(JSON.parse(calls[0].options.body)).toEqual({ combinationKey: "x" });
+  it.each([
+    ["get", "/active-sales-paths"],
+    ["get", "/active-sales-paths/history"],
+    ["post", "/active-sales-paths"],
+    ["post", "/active-sales-paths/deactivate"],
+  ] as const)("%s %s is no longer routed", async (method, suffix) => {
+    stub(200, {});
+    const res = await (request(buildApp()) as any)[method](`/v1${OFFER}${suffix}`).send({});
+    expect(res.status).toBe(404);
+    expect(calls).toHaveLength(0);
   });
 });
