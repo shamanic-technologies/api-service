@@ -8586,6 +8586,68 @@ registry.registerPath({
   responses: salesBudgetResponses,
 });
 
+// Brand x offer – per-campaign budgets (proxy to billing-service). billing owns the
+// items, minimums, caps and refusal codes; the gateway declares none of it (#4/#8).
+const OfferCampaignBudgetsParams = z.object({
+  brandId: z.string().describe("Brand ID"),
+  offerId: z.string().describe("Offer ID"),
+});
+const OfferCampaignBudgetsRequestSchema = z.object({}).passthrough().openapi("OfferCampaignBudgetsRequest");
+const OfferCampaignBudgetsResponseSchema = z.object({}).passthrough().openapi("OfferCampaignBudgetsResponse");
+const offerCampaignBudgetsResponses = {
+  200: { description: "Billing's body, forwarded untouched", content: { "application/json": { schema: OfferCampaignBudgetsResponseSchema } } },
+  400: { description: "Refused by billing (e.g. code below_minimum, reactive_above_cap, entry_item_required), body forwarded verbatim", content: errorContent },
+  409: { description: "Conflict from billing (e.g. code no_plan_for_offer, reactive_charge_declined), body forwarded verbatim", content: errorContent },
+  502: { description: "Billing dependency unavailable (e.g. code minimums_unavailable, campaign_status_unavailable, charge_unavailable), body forwarded verbatim", content: errorContent },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/offers/{offerId}/campaign-budgets",
+  tags: ["Billing"],
+  summary: "Read the budget of each campaign (channel x leg) of an offer",
+  description:
+    "Proxy to billing-service GET /v1/brands/{brandId}/offers/{offerId}/campaign-budgets. The query string is forwarded verbatim; documented params are today's, not a whitelist. Response shape owned downstream.",
+  security: authed,
+  request: {
+    params: OfferCampaignBudgetsParams,
+    query: z.object({ campaigns: z.string().optional().describe("Comma-separated featureSlug:legKey pairs to narrow the read") }).passthrough(),
+  },
+  responses: offerCampaignBudgetsResponses,
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{brandId}/offers/{offerId}/campaign-budgets",
+  tags: ["Billing"],
+  summary: "Set the budgets of campaigns (channel x leg) of an offer",
+  description:
+    "Proxy to billing-service PUT /v1/brands/{brandId}/offers/{offerId}/campaign-budgets. Body { items: [{ featureSlug, legKey, budgetCents }] }, forwarded untouched. Status and body (with code) of every refusal propagate verbatim.",
+  security: authed,
+  request: { params: OfferCampaignBudgetsParams, body: { content: { "application/json": { schema: OfferCampaignBudgetsRequestSchema } } } },
+  responses: offerCampaignBudgetsResponses,
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/brands/{brandId}/offers/{offerId}/campaign-budgets",
+  tags: ["Billing"],
+  summary: "Remove the budget of one campaign (channel x leg) of an offer",
+  description:
+    "Proxy to billing-service DELETE /v1/brands/{brandId}/offers/{offerId}/campaign-budgets?featureSlug=&legKey=. The query string is forwarded verbatim.",
+  security: authed,
+  request: {
+    params: OfferCampaignBudgetsParams,
+    query: z
+      .object({
+        featureSlug: z.string().optional().describe("Channel feature slug (required by billing-service)"),
+        legKey: z.string().optional().describe("Leg key (required by billing-service)"),
+      })
+      .passthrough(),
+  },
+  responses: offerCampaignBudgetsResponses,
+});
+
 // ===================================================================
 // TRANSACTIONAL EMAILS
 // ===================================================================
