@@ -3886,6 +3886,154 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – Offer channels + active sales paths (proxy to brand-service
+// /orgs/brands/:id/offers/:offerId/channels and .../active-sales-paths). Passthrough:
+// brand-service owns every body.
+// ===================================================================
+const OfferChannelsSchema = z.object({}).passthrough().openapi("OfferChannels");
+const PutOfferChannelsBodySchema = z
+  .object({ channelSlugs: z.array(z.string()) })
+  .passthrough()
+  .openapi("PutOfferChannelsBody");
+const OfferActiveSalesPathsSchema = z.object({}).passthrough().openapi("OfferActiveSalesPaths");
+const OfferActiveSalesPathHistorySchema = z.object({}).passthrough().openapi("OfferActiveSalesPathHistory");
+const ActivateSalesPathBodySchema = z
+  .object({
+    combinationKey: z.string(),
+    entryChannelSlug: z.string(),
+    entryLegKey: z.string(),
+    replace: z.boolean().optional(),
+  })
+  .passthrough()
+  .openapi("ActivateSalesPathBody");
+const ActivateSalesPathResponseSchema = z.object({}).passthrough().openapi("ActivateSalesPathResponse");
+const DeactivateSalesPathBodySchema = z
+  .object({ combinationKey: z.string() })
+  .passthrough()
+  .openapi("DeactivateSalesPathBody");
+const DeactivateSalesPathResponseSchema = z.object({}).passthrough().openapi("DeactivateSalesPathResponse");
+
+const OFFER_CHANNELS_NOTE =
+  "The channels an offer accepts (features-service channel slugs, stored as given). " +
+  "stated: false (channelSlugs null) = never stated, distinct from stated: true with an empty list.";
+const ACTIVE_SALES_PATHS_NOTE =
+  "The sales paths the customer activated on an offer: a features-service combinationKey plus its entry " +
+  "(entryChannelSlug x entryLegKey). At most one active path per entry and per combination. History is " +
+  "append-only (status active | deactivated | replaced, who and when). No money here: budgets are billing-service's.";
+
+const offerProxyErrors = {
+  400: { description: "Invalid ID or body (forwarded verbatim)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+  404: { description: "No such brand, or no such offer on it (forwarded verbatim)", content: errorContent },
+  500: { description: "Upstream error", content: errorContent },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}/channels",
+  tags: ["Brand"],
+  summary: "Read the channels an offer accepts",
+  description: "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/channels. " + OFFER_CHANNELS_NOTE,
+  security: authed,
+  request: { params: BrandOfferParams },
+  responses: {
+    200: { description: "The channels (or not stated)", content: { "application/json": { schema: OfferChannelsSchema } } },
+    ...offerProxyErrors,
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/offers/{offerId}/channels",
+  tags: ["Brand"],
+  summary: "Replace the channels an offer accepts",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{brandId}/offers/{offerId}/channels. Replaces the whole list " +
+    "(may be empty; a slug twice is a 400) and answers it as read back. " + OFFER_CHANNELS_NOTE,
+  security: authed,
+  request: {
+    params: BrandOfferParams,
+    body: { content: { "application/json": { schema: PutOfferChannelsBodySchema } } },
+  },
+  responses: {
+    200: { description: "The channels, as read after the write", content: { "application/json": { schema: OfferChannelsSchema } } },
+    ...offerProxyErrors,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}/active-sales-paths",
+  tags: ["Brand"],
+  summary: "Read the sales paths active on an offer",
+  description: "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/active-sales-paths. " + ACTIVE_SALES_PATHS_NOTE,
+  security: authed,
+  request: { params: BrandOfferParams },
+  responses: {
+    200: { description: "{ offerId, activeSalesPaths } (may be empty)", content: { "application/json": { schema: OfferActiveSalesPathsSchema } } },
+    ...offerProxyErrors,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}/active-sales-paths/history",
+  tags: ["Brand"],
+  summary: "Read every activation, deactivation and replacement of sales paths on an offer",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/active-sales-paths/history. " + ACTIVE_SALES_PATHS_NOTE,
+  security: authed,
+  request: { params: BrandOfferParams },
+  responses: {
+    200: { description: "{ offerId, history } newest first", content: { "application/json": { schema: OfferActiveSalesPathHistorySchema } } },
+    ...offerProxyErrors,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/offers/{offerId}/active-sales-paths",
+  tags: ["Brand"],
+  summary: "Activate a sales path on an offer (optionally replacing the one on its entry)",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{brandId}/offers/{offerId}/active-sales-paths. An entry already held " +
+    "by another active path is a 409 SALES_PATH_ENTRY_TAKEN naming the holder, unless replace: true, which ends the " +
+    "holder and activates this path atomically. The exact path already active = 200, nothing written; activated = 201. " +
+    ACTIVE_SALES_PATHS_NOTE,
+  security: authed,
+  request: {
+    params: BrandOfferParams,
+    body: { content: { "application/json": { schema: ActivateSalesPathBodySchema } } },
+  },
+  responses: {
+    200: { description: "Already active, nothing written", content: { "application/json": { schema: ActivateSalesPathResponseSchema } } },
+    201: { description: "Activated", content: { "application/json": { schema: ActivateSalesPathResponseSchema } } },
+    409: { description: "Entry taken (no replace) or combination active on another entry (forwarded verbatim)", content: errorContent },
+    ...offerProxyErrors,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/offers/{offerId}/active-sales-paths/deactivate",
+  tags: ["Brand"],
+  summary: "Deactivate a sales path on an offer",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{brandId}/offers/{offerId}/active-sales-paths/deactivate. A path that " +
+    "is not active is a 404 SALES_PATH_NOT_ACTIVE. " + ACTIVE_SALES_PATHS_NOTE,
+  security: authed,
+  request: {
+    params: BrandOfferParams,
+    body: { content: { "application/json": { schema: DeactivateSalesPathBodySchema } } },
+  },
+  responses: {
+    200: { description: "{ deactivated }", content: { "application/json": { schema: DeactivateSalesPathResponseSchema } } },
+    ...offerProxyErrors,
+  },
+});
+
+// ===================================================================
 // Brand – Offer archive / unarchive (proxy to brand-service
 // /orgs/brands/:id/offers/:offerId/archive|unarchive). Passthrough: brand-service owns
 // the { offer } body (with `status` + `archivedAt`) and the 409 refusal.
