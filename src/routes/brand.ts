@@ -489,6 +489,16 @@ const OFFER_ROUTES = [
   // (features-service step keys + leg keys, stored as given). `stated: false` = never stated.
   { method: "get", path: "/brands/:id/offers/:offerId/sales-path", suffix: "/sales-path", what: "get offer sales path" },
   { method: "put", path: "/brands/:id/offers/:offerId/sales-path", suffix: "/sales-path", what: "save offer sales path" },
+  // WHICH CHANNELS the offer accepts (features-service channel slugs). `stated: false` = never stated.
+  { method: "get", path: "/brands/:id/offers/:offerId/channels", suffix: "/channels", what: "get offer channels" },
+  { method: "put", path: "/brands/:id/offers/:offerId/channels", suffix: "/channels", what: "save offer channels" },
+  // The sales paths the customer ACTIVATED on the offer: one per entry (channel x entry leg).
+  // brand-service's 409 SALES_PATH_ENTRY_TAKEN (names the holder; re-send with replace: true)
+  // and its 201-on-activate reach the caller as sent.
+  { method: "get", path: "/brands/:id/offers/:offerId/active-sales-paths", suffix: "/active-sales-paths", what: "get offer active sales paths" },
+  { method: "get", path: "/brands/:id/offers/:offerId/active-sales-paths/history", suffix: "/active-sales-paths/history", what: "get offer active sales path history" },
+  { method: "post", path: "/brands/:id/offers/:offerId/active-sales-paths", suffix: "/active-sales-paths", what: "activate offer sales path" },
+  { method: "post", path: "/brands/:id/offers/:offerId/active-sales-paths/deactivate", suffix: "/active-sales-paths/deactivate", what: "deactivate offer sales path" },
 ] as const;
 
 for (const route of OFFER_ROUTES) {
