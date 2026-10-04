@@ -4,6 +4,7 @@ import {
   authenticatePlatform,
   requireOrg,
   requireStaff,
+  requireUser,
   AuthenticatedRequest,
 } from "../middleware/auth.js";
 import { callExternalService, pipeExternalService, externalServices } from "../lib/service-client.js";
@@ -854,5 +855,38 @@ router.get("/brands/:brandId/sales-budget", authenticate, requireOrg, salesBudge
 router.put("/brands/:brandId/sales-budget", authenticate, requireOrg, salesBudgetProxy("PUT", "", "Failed to set sales budget"));
 router.delete("/brands/:brandId/sales-budget", authenticate, requireOrg, salesBudgetProxy("DELETE", "", "Failed to clear sales budget"));
 router.get("/brands/:brandId/sales-budget/history", authenticate, requireOrg, salesBudgetProxy("GET", "/history", "Failed to get sales budget history"));
+
+/**
+ * A budget per campaign (channel x leg) of an offer — billing-service
+ * /v1/brands/:brandId/offers/:offerId/campaign-budgets. Passthrough only:
+ * billing owns the items, the minimums, the reactive cap and every refusal
+ * (400/409/502 with `code`), which reach the caller untouched.
+ *
+ *   GET    …/campaign-budgets[?campaigns=slug:leg,…]       → query forwarded verbatim
+ *   PUT    …/campaign-budgets   { items: [{ featureSlug, legKey, budgetCents }] }
+ *   DELETE …/campaign-budgets?featureSlug=&legKey=          → query forwarded verbatim
+ */
+function offerCampaignBudgetsProxy(method: "GET" | "PUT" | "DELETE", failure: string) {
+  return async (req: AuthenticatedRequest, res: any) => {
+    try {
+      const path = `/v1/brands/${req.params.brandId}/offers/${req.params.offerId}/campaign-budgets`;
+      const result = await callExternalService(
+        externalServices.billing,
+        method === "PUT" ? path : `${path}${rawQueryString(req.originalUrl)}`,
+        method === "PUT"
+          ? { method, body: req.body, headers: buildInternalHeaders(req) }
+          : { method, headers: buildInternalHeaders(req) }
+      );
+      res.json(result);
+    } catch (error: any) {
+      respondUpstreamError(res, error, failure);
+    }
+  };
+}
+
+const OFFER_CAMPAIGN_BUDGETS = "/brands/:brandId/offers/:offerId/campaign-budgets";
+router.get(OFFER_CAMPAIGN_BUDGETS, authenticate, requireOrg, requireUser, offerCampaignBudgetsProxy("GET", "Failed to get offer campaign budgets"));
+router.put(OFFER_CAMPAIGN_BUDGETS, authenticate, requireOrg, requireUser, offerCampaignBudgetsProxy("PUT", "Failed to set offer campaign budgets"));
+router.delete(OFFER_CAMPAIGN_BUDGETS, authenticate, requireOrg, requireUser, offerCampaignBudgetsProxy("DELETE", "Failed to remove offer campaign budget"));
 
 export default router;
