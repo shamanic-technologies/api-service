@@ -296,7 +296,7 @@ const MOCK_WORKFLOW_REVENUE = {
   groups: [
     {
       workflowSlug: "sales-email-cold-outreach-mintaka-v3",
-      headline: { totalPipelineUsd: 42000, economicsSource: "sales-economics" },
+      headline: { totalPipelineUsd: 42000, unpricedReason: null },
       costEconomics: { totalCostUsd: 210, costOfAcquisitionPct: 0.5, roiMultiple: 200 },
     },
   ],

@@ -282,78 +282,8 @@ router.get("/brands/:id/runs", authenticate, requireOrg, requireUser, async (req
 });
 
 /**
- * GET /v1/brands/:id/sales-economics-effective
- * Proxy to brand-service GET /orgs/brands/:id/sales-economics-effective.
- * Returns the brand's "gold" effective sales conversion-economics: its own saved
- * economics, or the org's cross-brand average when the brand has saved nothing,
- * plus a `source` provenance field ({ economics: { ...5 metrics } | null,
- * source: "user" | "cross-brand-average" | null }). Used by the dashboard
- * "new campaign" page to prefill inputs. Response shape is owned by the
- * downstream service — passthrough only.
- */
-router.get("/brands/:id/sales-economics-effective", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.brand,
-      `/orgs/brands/${req.params.id}/sales-economics-effective`,
-      { headers: buildInternalHeaders(req) },
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("[api-service] Get sales economics effective error:", error.message);
-    respondUpstreamError(res, error, "Failed to get effective sales economics");
-  }
-});
-
-/**
- * GET /v1/brands/:id/sales-economics
- * Proxy to brand-service GET /orgs/brands/:id/sales-economics.
- * Returns the brand's sales conversion-economics metrics (5 numbers) or
- * { salesEconomics: null } when unset. Response shape is owned by the
- * downstream service — passthrough only.
- */
-router.get("/brands/:id/sales-economics", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.brand,
-      `/orgs/brands/${req.params.id}/sales-economics`,
-      { headers: buildInternalHeaders(req) },
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("[api-service] Get sales economics error:", error.message);
-    respondUpstreamError(res, error, "Failed to get sales economics");
-  }
-});
-
-/**
- * PUT /v1/brands/:id/sales-economics
- * Proxy to brand-service PUT /orgs/brands/:id/sales-economics.
- * Saves the brand's 5 sales conversion-economics metrics. Body + response
- * shapes are owned by the downstream service; its 4xx validation errors
- * propagate verbatim — passthrough only.
- */
-router.put("/brands/:id/sales-economics", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const result = await callExternalService(
-      externalServices.brand,
-      `/orgs/brands/${req.params.id}/sales-economics`,
-      {
-        method: "PUT",
-        headers: buildInternalHeaders(req),
-        body: req.body,
-      },
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("[api-service] Save sales economics error:", error.message);
-    respondUpstreamError(res, error, "Failed to save sales economics");
-  }
-});
-
-/**
  * Leg rates + per-offer economics — the funnel-free replacements for
- * sales-economics / the retired sales funnels (org > brand > offer > outcome > leg).
+ * the retired brand-level sales economics / sales funnels (org > brand > offer > outcome > leg).
  *
  *   GET|PUT /v1/brands/:id/leg-rates                  → brand-service /orgs/brands/:id/leg-rates
  *   GET|PUT /v1/brands/:id/offers/:offerId/economics  → brand-service /orgs/brands/:id/offers/:offerId/economics
@@ -857,7 +787,7 @@ router.get("/brand-transfers/incoming", authenticate, requireOrg, async (req: Au
 // ---------------------------------------------------------------------------
 // ICP Suggest (transparent proxy to brand-service)
 //
-// Mirror the sales-economics proxies above exactly: downstream /orgs/brands/:id/X
+// Mirror the leg-rates proxies above exactly: downstream /orgs/brands/:id/X
 // → gateway /v1/brands/:id/X (the gateway strips /orgs per repo convention; the
 // dashboard's api lib calls /v1/brands/:id/...). Auth + identity forwarding are
 // identical (authenticate + requireOrg + requireUser + buildInternalHeaders).
