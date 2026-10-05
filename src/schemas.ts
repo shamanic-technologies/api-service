@@ -3942,6 +3942,64 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – Offer selected sales paths (proxy to brand-service
+// /orgs/brands/:id/offers/:offerId/selected-sales-paths). Passthrough:
+// brand-service owns every body.
+// ===================================================================
+const OfferSelectedSalesPathsSchema = z.object({}).passthrough().openapi("OfferSelectedSalesPaths");
+const PutOfferSelectedSalesPathsBodySchema = z
+  .object({ combinationKeys: z.array(z.string()) })
+  .passthrough()
+  .openapi("PutOfferSelectedSalesPathsBody");
+
+const OFFER_SELECTED_SALES_PATHS_NOTE =
+  "The sales paths the customer selected on an offer (features-service combinationKeys, stored as given; " +
+  "several may share a campaign, no money). stated: false (combinationKeys null) = never stated, distinct " +
+  "from stated: true with an empty list.";
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}/selected-sales-paths",
+  tags: ["Brand"],
+  summary: "Read the sales paths selected on an offer",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/selected-sales-paths. " +
+    OFFER_SELECTED_SALES_PATHS_NOTE,
+  security: authed,
+  request: { params: BrandOfferParams },
+  responses: {
+    200: {
+      description: "The selected paths (or not stated)",
+      content: { "application/json": { schema: OfferSelectedSalesPathsSchema } },
+    },
+    ...offerProxyErrors,
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/offers/{offerId}/selected-sales-paths",
+  tags: ["Brand"],
+  summary: "Replace the sales paths selected on an offer",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{brandId}/offers/{offerId}/selected-sales-paths. Replaces the " +
+    "whole list (may be empty; a key twice is a 400) and answers it as read back. " +
+    OFFER_SELECTED_SALES_PATHS_NOTE,
+  security: authed,
+  request: {
+    params: BrandOfferParams,
+    body: { content: { "application/json": { schema: PutOfferSelectedSalesPathsBodySchema } } },
+  },
+  responses: {
+    200: {
+      description: "The selected paths, as read after the write",
+      content: { "application/json": { schema: OfferSelectedSalesPathsSchema } },
+    },
+    ...offerProxyErrors,
+  },
+});
+
+// ===================================================================
 // Brand – Offer archive / unarchive (proxy to brand-service
 // /orgs/brands/:id/offers/:offerId/archive|unarchive). Passthrough: brand-service owns
 // the { offer } body (with `status` + `archivedAt`) and the 409 refusal.
