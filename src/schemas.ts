@@ -1470,6 +1470,66 @@ registry.registerPath({
   },
 });
 
+// POST /v1/offers/{offerId}/reactive-defaults -> campaign-service POST /offers/{offerId}/reactive-defaults.
+// Passthrough: campaign-service owns the strict body and every response.
+const ReactiveDefaultsRequestSchema = z
+  .object({ brandId: z.string().uuid() })
+  .openapi("ReactiveDefaultsRequest");
+const ReactiveDefaultsResponseSchema = z
+  .object({
+    offerId: z.string(),
+    basis: z.enum(["stated", "roi_above_1"]),
+    tickedCombinationKeys: z.array(z.string()),
+    started: z.array(
+      z.object({
+        id: z.string(),
+        name: z.string(),
+        featureSlug: z.string().nullable(),
+        legKey: z.string().nullable(),
+      }),
+    ),
+    alreadyOn: z.array(z.string()),
+    keptOff: z.array(z.string()),
+    skipped: z.array(z.object({ legKey: z.string(), featureSlug: z.string(), reason: z.string() })),
+  })
+  .passthrough()
+  .openapi("ReactiveDefaultsResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/offers/{offerId}/reactive-defaults",
+  tags: ["Campaigns"],
+  summary: "Switch on the reactive campaigns the offer's ticked sales paths use",
+  description:
+    "Proxy to campaign-service POST /offers/{offerId}/reactive-defaults. Call after a PERSON saved the offer's " +
+    "sales paths (PUT /v1/brands/{id}/offers/{offerId}/selected-sales-paths). Ticked paths = the stated " +
+    "combinationKeys, or the paths with roi > 1 when never stated (`basis`). Every reactive leg of a ticked path " +
+    "with NO campaign yet is created ON (`started`); one already ON is left (`alreadyOn`); a STOPPED one stays " +
+    "stopped (`keptOff`): a person's off is never re-enabled. Nothing is ever stopped. `skipped` names pairs " +
+    "nothing can run. Body `{ brandId }` forwarded untouched; brandId also rides `x-brand-id` downstream (a " +
+    "different brandId in header/query is a 400). Status and body forwarded verbatim.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string() }),
+    body: { content: { "application/json": { schema: ReactiveDefaultsRequestSchema } } },
+  },
+  responses: {
+    200: {
+      description: "Applied",
+      content: { "application/json": { schema: ReactiveDefaultsResponseSchema } },
+    },
+    400: { description: "Validation error (e.g. missing brandId), forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: { description: "Payment hold, forwarded verbatim", content: errorContent },
+    502: {
+      description:
+        "Sales paths, selected paths or channel catalogue unreadable (`reason: sales_paths_unavailable`); nothing written",
+      content: errorContent,
+    },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/campaigns/{id}",
