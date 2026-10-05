@@ -10986,6 +10986,60 @@ registry.registerPath({
   },
 });
 
+const audienceSnapshotParams = z.object({ brandId: z.string().openapi({ description: "Brand UUID" }) });
+const audienceSnapshotQuery = z
+  .object({ orgId: z.string().optional().openapi({ description: "Optional internal org UUID to scope the snapshot" }) })
+  .passthrough();
+const heldEntitiesQuery = z
+  .object({
+    orgId: z.string().optional().openapi({ description: "Optional internal org UUID" }),
+    limit: z.string().optional().openapi({ description: "Page size (human-service owns the range and default)" }),
+    offset: z.string().optional().openapi({ description: "Page offset" }),
+    acceptedOnly: z.string().optional().openapi({ description: "true | false: only rows a target audience accepted" }),
+  })
+  .passthrough();
+
+for (const read of [
+  {
+    suffix: "",
+    summary: "What we hold in a brand's audiences, per list (staff only)",
+    query: audienceSnapshotQuery,
+    schema: z.object({}).passthrough().openapi("BrandAudienceSnapshot"),
+  },
+  {
+    suffix: "/people",
+    summary: "People held for a brand's audiences, paginated (staff only)",
+    query: heldEntitiesQuery,
+    schema: z.object({}).passthrough().openapi("BrandHeldPeople"),
+  },
+  {
+    suffix: "/companies",
+    summary: "Companies held for a brand's audiences, paginated (staff only)",
+    query: heldEntitiesQuery,
+    schema: z.object({}).passthrough().openapi("BrandHeldCompanies"),
+  },
+]) {
+  registry.registerPath({
+    method: "get",
+    path: `/v1/admin/brands/{brandId}/audience-snapshot${read.suffix}`,
+    tags: ["Admin"],
+    summary: read.summary,
+    description:
+      "Staff-only (platform API key + STAFF_EMAILS x-email); cross-org data, no org context required. " +
+      `Byte passthrough to human-service GET /internal/brands/{brandId}/audience-snapshot${read.suffix}; ` +
+      "query string forwarded verbatim (the params documented here are today's, not a whitelist), status and body owned by the downstream service.",
+    security: platformAuth,
+    request: { params: audienceSnapshotParams, query: read.query },
+    responses: {
+      200: { description: "Pass-through from human-service", content: { "application/json": { schema: read.schema } } },
+      400: { description: "Invalid brand id or query (forwarded verbatim)", content: errorContent },
+      401: { description: "Unauthorized", content: errorContent },
+      403: { description: "Not staff", content: errorContent },
+      502: { description: "Upstream error", content: errorContent },
+    },
+  });
+}
+
 // ===================================================================
 // EXPERT QUOTES (journalists-quotes-service proxy)
 // ===================================================================
