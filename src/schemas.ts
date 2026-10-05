@@ -11098,6 +11098,93 @@ for (const read of [
   });
 }
 
+// Customer twins of the two staff families above: same six reads for an ordinary org
+// member, scoped to the authenticated org (brand ownership checked at brand-service,
+// human-service snapshot forced to orgId=<that org>, features-service on x-org-id),
+// and the sourcing investment bodies stripped of every vendorUsd (our vendor cost).
+const customerOrgScopeNote =
+  "Scoped to the caller's organization: the brand must belong to it (else 404 brand_not_in_org) and only that organization's data is returned. ";
+const customerHeldEntitiesQuery = z
+  .object({
+    limit: z.string().optional().openapi({ description: "Page size (human-service owns the range and default)" }),
+    offset: z.string().optional().openapi({ description: "Page offset" }),
+    acceptedOnly: z.string().optional().openapi({ description: "true | false: only rows a target audience accepted" }),
+  })
+  .passthrough();
+const customerInvestedCompaniesQuery = z
+  .object({
+    limit: z.string().optional().openapi({ description: "Page size (features-service owns the range and default)" }),
+    offset: z.string().optional().openapi({ description: "Page offset" }),
+    companyKeys: z.string().optional().openapi({ description: "Comma-separated company keys to read (exclusive with domains)" }),
+    domains: z.string().optional().openapi({ description: "Comma-separated company domains to read" }),
+  })
+  .passthrough();
+
+for (const read of [
+  {
+    path: "audience-snapshot",
+    summary: "The lists a brand's people are sourced from, and what each holds",
+    query: z.object({}).passthrough(),
+    schema: "CustomerBrandAudienceSnapshot",
+    downstream: "human-service GET /internal/brands/{brandId}/audience-snapshot",
+  },
+  {
+    path: "audience-snapshot/people",
+    summary: "People held for a brand's audiences, paginated",
+    query: customerHeldEntitiesQuery,
+    schema: "CustomerBrandHeldPeople",
+    downstream: "human-service GET /internal/brands/{brandId}/audience-snapshot/people",
+  },
+  {
+    path: "audience-snapshot/companies",
+    summary: "Companies held for a brand's audiences, paginated",
+    query: customerHeldEntitiesQuery,
+    schema: "CustomerBrandHeldCompanies",
+    downstream: "human-service GET /internal/brands/{brandId}/audience-snapshot/companies",
+  },
+  {
+    path: "sourcing-investment",
+    summary: "What was invested to source a brand's audiences: total and per audience",
+    query: z.object({}).passthrough(),
+    schema: "CustomerBrandSourcingInvestment",
+    downstream: "features-service GET /brands/{brandId}/sourcing-investment (vendorUsd removed)",
+  },
+  {
+    path: "sourcing-investment/people",
+    summary: "What acquiring each person of a brand cost, paginated",
+    query: sourcingInvestedPeopleQuery,
+    schema: "CustomerBrandSourcingInvestmentPeople",
+    downstream: "features-service GET /brands/{brandId}/sourcing-investment/people (vendorUsd removed)",
+  },
+  {
+    path: "sourcing-investment/companies",
+    summary: "What each company's people of a brand cost to acquire, paginated",
+    query: customerInvestedCompaniesQuery,
+    schema: "CustomerBrandSourcingInvestmentCompanies",
+    downstream: "features-service GET /brands/{brandId}/sourcing-investment/companies (vendorUsd removed)",
+  },
+]) {
+  registry.registerPath({
+    method: "get",
+    path: `/v1/brands/{brandId}/${read.path}`,
+    tags: ["Brand"],
+    summary: read.summary,
+    description:
+      customerOrgScopeNote +
+      `Proxy to ${read.downstream}; query string forwarded (the params documented here are today's, not a whitelist), ` +
+      "response shape owned by the downstream service.",
+    security: authed,
+    request: { params: audienceSnapshotParams, query: read.query },
+    responses: {
+      200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi(read.schema) } } },
+      400: { description: "Invalid brand id or query (forwarded verbatim)", content: errorContent },
+      401: { description: "Unauthorized", content: errorContent },
+      404: { description: "Brand not in the caller's organization", content: errorContent },
+      502: { description: "Upstream error", content: errorContent },
+    },
+  });
+}
+
 // ===================================================================
 // EXPERT QUOTES (journalists-quotes-service proxy)
 // ===================================================================
