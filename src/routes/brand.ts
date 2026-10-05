@@ -492,6 +492,10 @@ const OFFER_ROUTES = [
   // WHICH CHANNELS the offer accepts (features-service channel slugs). `stated: false` = never stated.
   { method: "get", path: "/brands/:id/offers/:offerId/channels", suffix: "/channels", what: "get offer channels" },
   { method: "put", path: "/brands/:id/offers/:offerId/channels", suffix: "/channels", what: "save offer channels" },
+  // WHICH SALES PATHS the customer selected on the offer (features-service combinationKeys,
+  // stored as given; several may share a campaign, no money). `stated: false` = never stated.
+  { method: "get", path: "/brands/:id/offers/:offerId/selected-sales-paths", suffix: "/selected-sales-paths", what: "get offer selected sales paths" },
+  { method: "put", path: "/brands/:id/offers/:offerId/selected-sales-paths", suffix: "/selected-sales-paths", what: "save offer selected sales paths" },
 ] as const;
 
 for (const route of OFFER_ROUTES) {
