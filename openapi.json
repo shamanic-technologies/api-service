@@ -7151,6 +7151,18 @@
         "type": "object",
         "properties": {}
       },
+      "BrandSourcingInvestment": {
+        "type": "object",
+        "properties": {}
+      },
+      "BrandSourcingInvestmentPeople": {
+        "type": "object",
+        "properties": {}
+      },
+      "BrandSourcingInvestmentCompanies": {
+        "type": "object",
+        "properties": {}
+      },
       "QuoteRequest": {
         "type": "object",
         "properties": {
