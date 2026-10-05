@@ -11040,6 +11040,64 @@ for (const read of [
   });
 }
 
+const sourcingInvestmentQuery = z.object({}).passthrough();
+const sourcingInvestedPeopleQuery = z
+  .object({
+    limit: z.string().optional().openapi({ description: "Page size (features-service owns the range and default)" }),
+    offset: z.string().optional().openapi({ description: "Page offset" }),
+    apolloPersonIds: z.string().optional().openapi({ description: "Comma-separated Apollo person ids to read" }),
+  })
+  .passthrough();
+const sourcingInvestedCompaniesQuery = z
+  .object({
+    limit: z.string().optional().openapi({ description: "Page size (features-service owns the range and default)" }),
+    offset: z.string().optional().openapi({ description: "Page offset" }),
+    domains: z.string().optional().openapi({ description: "Comma-separated company domains to read" }),
+  })
+  .passthrough();
+
+for (const read of [
+  {
+    suffix: "",
+    summary: "What we invested to source a brand's audiences, per audience (staff only)",
+    query: sourcingInvestmentQuery,
+    schema: z.object({}).passthrough().openapi("BrandSourcingInvestment"),
+  },
+  {
+    suffix: "/people",
+    summary: "Sourcing investment per acquired person of a brand, paginated (staff only)",
+    query: sourcingInvestedPeopleQuery,
+    schema: z.object({}).passthrough().openapi("BrandSourcingInvestmentPeople"),
+  },
+  {
+    suffix: "/companies",
+    summary: "Sourcing investment per company of a brand, paginated (staff only)",
+    query: sourcingInvestedCompaniesQuery,
+    schema: z.object({}).passthrough().openapi("BrandSourcingInvestmentCompanies"),
+  },
+]) {
+  registry.registerPath({
+    method: "get",
+    path: `/v1/admin/brands/{brandId}/sourcing-investment${read.suffix}`,
+    tags: ["Admin"],
+    summary: read.summary,
+    description:
+      "Staff-only (platform API key + STAFF_EMAILS x-email), carries our vendor cost. Needs the viewed org's identity " +
+      "(x-org-id/x-user-id or x-external-org-id/x-external-user-id). " +
+      `Byte passthrough to features-service GET /brands/{brandId}/sourcing-investment${read.suffix}; ` +
+      "query string forwarded verbatim (the params documented here are today's, not a whitelist), status and body owned by the downstream service.",
+    security: platformAuth,
+    request: { params: audienceSnapshotParams, query: read.query },
+    responses: {
+      200: { description: "Pass-through from features-service", content: { "application/json": { schema: read.schema } } },
+      400: { description: "Invalid brand id, query or identity headers (forwarded verbatim)", content: errorContent },
+      401: { description: "Unauthorized", content: errorContent },
+      403: { description: "Not staff", content: errorContent },
+      502: { description: "Upstream error", content: errorContent },
+    },
+  });
+}
+
 // ===================================================================
 // EXPERT QUOTES (journalists-quotes-service proxy)
 // ===================================================================

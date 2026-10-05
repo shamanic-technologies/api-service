@@ -1,6 +1,14 @@
 import { Router } from "express";
-import { authenticatePlatform, requireStaff, AuthenticatedRequest } from "../middleware/auth.js";
+import {
+  authenticate,
+  authenticatePlatform,
+  requireOrg,
+  requireStaff,
+  requireUser,
+  AuthenticatedRequest,
+} from "../middleware/auth.js";
 import { callExternalService, pipeExternalService, externalServices } from "../lib/service-client.js";
+import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 
 const router = Router();
@@ -62,6 +70,46 @@ for (const { suffix, label } of AUDIENCE_SNAPSHOT_READS) {
           { expressRes: res }
         );
       } catch (error: any) {
+        respondUpstreamError(res, error, `Failed to read ${label}`);
+      }
+    }
+  );
+}
+
+// GET /v1/admin/brands/:brandId/sourcing-investment[/people|/companies] — staff-only
+// view of what we INVESTED to source a brand's audiences: $ per audience, per person,
+// per company, billed AND vendor basis. The vendor basis reveals our margin.
+//
+// Byte passthrough to features-service GET /brands/{brandId}/sourcing-investment*.
+// That read is org-scoped (x-org-id), so unlike audience-snapshot it needs the org
+// being viewed: the gate is authenticatePlatform + requireStaff FIRST (network-free,
+// so a non-staff caller reaches no service at all), then authenticate + requireOrg +
+// requireUser resolve the viewed org's identity headers (same chain as
+// /v1/features/:slug/revenue/actual-cost). Query string (limit, offset,
+// apolloPersonIds, domains) forwarded verbatim; features-service owns caps and 400s.
+const SOURCING_INVESTMENT_READS = [
+  { suffix: "", label: "brand sourcing investment" },
+  { suffix: "/people", label: "brand sourcing investment per person" },
+  { suffix: "/companies", label: "brand sourcing investment per company" },
+] as const;
+
+for (const { suffix, label } of SOURCING_INVESTMENT_READS) {
+  router.get(
+    `/admin/brands/:brandId/sourcing-investment${suffix}`,
+    authenticatePlatform,
+    requireStaff,
+    authenticate,
+    requireOrg,
+    requireUser,
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        await pipeExternalService(
+          externalServices.features,
+          `/brands/${encodeURIComponent(req.params.brandId as string)}/sourcing-investment${suffix}${rawQueryString(req.originalUrl)}`,
+          { headers: buildInternalHeaders(req), expressRes: res }
+        );
+      } catch (error: any) {
+        if (res.headersSent) { res.end(); return; }
         respondUpstreamError(res, error, `Failed to read ${label}`);
       }
     }
