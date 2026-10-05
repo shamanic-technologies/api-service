@@ -7139,6 +7139,18 @@
         "type": "object",
         "properties": {}
       },
+      "BrandAudienceSnapshot": {
+        "type": "object",
+        "properties": {}
+      },
+      "BrandHeldPeople": {
+        "type": "object",
+        "properties": {}
+      },
+      "BrandHeldCompanies": {
+        "type": "object",
+        "properties": {}
+      },
       "QuoteRequest": {
         "type": "object",
         "properties": {
