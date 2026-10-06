@@ -19,6 +19,7 @@ const { HUMAN_BASE, CONTENT_BASE } = vi.hoisted(() => {
  * real routers with a stubbed fetch:
  *  - GET  /v1/orgs/audiences/:id/preview → human-service GET /orgs/audiences/{id}/preview
  *  - POST /v1/content/preview-email      → content-generation-service POST /preview-email
+ *  - POST /v1/content/preview-email/prepare → content-generation-service POST /preview-email/prepare
  *
  * Asserted: the exact downstream URL, the AUTHENTICATED identity (a caller-supplied
  * x-org-id must not override it), the byte-identical body both ways, and — the one the
@@ -162,6 +163,43 @@ describe("POST /v1/content/preview-email", () => {
     const res = await request(buildApp()).post("/v1/content/preview-email").send(REQUEST);
     expect(res.status).toBe(409);
     expect(res.body).toEqual({ error: "The brand sells several offers; name one with offerId" });
+  });
+});
+
+describe("POST /v1/content/preview-email/prepare", () => {
+  const REQUEST = { brandId: BRAND_ID, offerId: "0b6f1c2e-1d3a-4f6b-9c7e-2a5d8e9f0a12" };
+
+  it("reaches content-generation's /preview-email/prepare with identity + run, a byte-identical body, and keeps the 202", async () => {
+    const ACK = { brandId: BRAND_ID, status: "started" };
+    stubFetch(202, ACK);
+    const res = await request(buildApp())
+      .post("/v1/content/preview-email/prepare")
+      .set("x-org-id", "org_ATTACKER")
+      .send(REQUEST);
+
+    expect(res.status).toBe(202);
+    expect(res.body).toEqual(ACK);
+    expect(captured).toHaveLength(1);
+    expect(captured[0].url).toBe(`${CONTENT_BASE}/preview-email/prepare`);
+    expect(captured[0].method).toBe("POST");
+    expect(captured[0].body).toEqual(REQUEST);
+    expect(captured[0].headers["x-org-id"]).toBe("org_test456");
+    expect(captured[0].headers["x-user-id"]).toBe("user_test123");
+    expect(captured[0].headers["x-run-id"]).toBe("run_test789");
+  });
+
+  it("is not swallowed by the POST /v1/content/preview-email sibling", async () => {
+    stubFetch(202, { brandId: BRAND_ID, status: "ready" });
+    await request(buildApp()).post("/v1/content/preview-email/prepare").send(REQUEST);
+    expect(captured[0].url).toBe(`${CONTENT_BASE}/preview-email/prepare`);
+  });
+
+  it("forwards the producer's 400 with its status and body field-for-field", async () => {
+    const INVALID = { error: "Invalid request", details: { fieldErrors: { brandId: ["Invalid uuid"] } } };
+    stubFetch(400, INVALID);
+    const res = await request(buildApp()).post("/v1/content/preview-email/prepare").send({ brandId: "nope" });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual(INVALID);
   });
 });
 
