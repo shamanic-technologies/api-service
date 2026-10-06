@@ -73,12 +73,14 @@ router.post("/orgs/audiences/suggest", ...authChain, async (req: AuthenticatedRe
 
 // POST /v1/orgs/audiences/split → human-service POST /orgs/audiences/split
 // POST /v1/orgs/audiences/split/confirm → human-service POST /orgs/audiences/split/confirm
+// POST /v1/orgs/audiences/split/estimate → human-service POST /orgs/audiences/split/estimate
 // A target sentence split into segments (one LLM call + a typed judgment — up to a
 // minute, well inside the default 300s service-client timeout /suggest also runs on),
-// then the kept segments created as audiences. The downstream status (201, 409 on a
+// then the kept segments created as audiences; /split/estimate sizes proposed
+// segments (estimated people per segment) without persisting anything. The downstream status (201, 409 on a
 // name conflict, 502 on an LLM error) and its body are forwarded field for field via
 // respondUpstreamError — not the flattened `fail` envelope older siblings use.
-for (const suffix of ["/split", "/split/confirm"] as const) {
+for (const suffix of ["/split", "/split/confirm", "/split/estimate"] as const) {
   router.post(`/orgs/audiences${suffix}`, ...authChain, async (req: AuthenticatedRequest, res) => {
     try {
       const { status, data } = await callExternalServiceWithStatus(
