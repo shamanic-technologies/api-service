@@ -11952,6 +11952,7 @@ registry.registerPath({
 
 const AudienceSplitResponse = z.object({}).passthrough().openapi("AudienceSplitResponse");
 const AudienceSplitConfirmResponse = z.object({}).passthrough().openapi("AudienceSplitConfirmResponse");
+const AudienceSplitEstimateResponse = z.object({}).passthrough().openapi("AudienceSplitEstimateResponse");
 
 registry.registerPath({
   method: "post",
@@ -11992,6 +11993,26 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
     409: { description: "An audience with one of these names already exists (forwarded verbatim)", content: errorContent },
     502: { description: "human-service unreachable (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/audiences/split/estimate",
+  tags: ["Audiences"],
+  summary: "Estimate how many people each proposed segment holds",
+  description:
+    "Proxy to human-service POST /orgs/audiences/split/estimate. Body { brandId, offerId?, segments: " +
+    "[{ name, description }] } (1 to 8 segments); returns { estimates: [{ name, estimatedPeople, " +
+    "unavailableReason }] }. Persists nothing. Request + response shapes are owned by human-service. " +
+    "Downstream status and body (400 validation, 502 on an outage) are forwarded verbatim.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: AudiencePassthroughBody } } } },
+  responses: {
+    200: { description: "Per-segment estimates (human-service shape)", content: { "application/json": { schema: AudienceSplitEstimateResponse } } },
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Estimate provider / human-service unreachable (forwarded verbatim)", content: errorContent },
   },
 });
 

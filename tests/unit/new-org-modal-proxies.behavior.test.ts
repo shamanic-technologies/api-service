@@ -14,10 +14,11 @@ const { HUMAN_BASE, BRAND_BASE } = vi.hoisted(() => {
 });
 
 /**
- * The four routes the dashboard's "New organization" modal needs, driven over the
+ * The routes the dashboard's "New organization" modal needs, driven over the
  * wire (CLAUDE.md #7 corollaries 2/3):
  *   POST /v1/orgs/audiences/split           → human-service POST /orgs/audiences/split
  *   POST /v1/orgs/audiences/split/confirm   → human-service POST /orgs/audiences/split/confirm
+ *   POST /v1/orgs/audiences/split/estimate  → human-service POST /orgs/audiences/split/estimate
  *   POST /v1/brands/:id/offers/proposals    → brand-service POST /orgs/brands/{id}/offers/proposals
  *   POST /v1/brands/:id/offers/confirm      → brand-service POST /orgs/brands/{id}/offers/confirm
  * Asserted: the full downstream URL, the authenticated identity, the byte-identical body
@@ -83,6 +84,11 @@ const CASES = [
   {
     gateway: "/v1/orgs/audiences/split/confirm",
     downstream: `${HUMAN_BASE}/orgs/audiences/split/confirm`,
+    body: { brandId: BRAND_ID, offerId: "offer-a", segments: [{ name: "Paris", description: "x" }] },
+  },
+  {
+    gateway: "/v1/orgs/audiences/split/estimate",
+    downstream: `${HUMAN_BASE}/orgs/audiences/split/estimate`,
     body: { brandId: BRAND_ID, offerId: "offer-a", segments: [{ name: "Paris", description: "x" }] },
   },
   {
