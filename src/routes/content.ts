@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, externalServices } from "../lib/service-client.js";
+import { callExternalService, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { ContentComposeRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
@@ -80,6 +80,31 @@ router.post("/content/preview-email", authenticate, requireOrg, requireUser, asy
   } catch (error: any) {
     console.error("[api-service] Preview email error:", error?.message);
     respondUpstreamError(res, error, "Failed to preview email");
+  }
+});
+
+/**
+ * POST /v1/content/preview-email/prepare
+ * Proxy to content-generation-service POST /preview-email/prepare: warms the brand-intel
+ * read POST /preview-email will need, so the first preview only waits for the model.
+ * Same auth, identity headers and run as POST /v1/content/preview-email. The downstream
+ * answers 202 at once; piped so that status (and the body bytes) reach the caller as-is.
+ */
+router.post("/content/preview-email/prepare", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.emailgen,
+      "/preview-email/prepare",
+      {
+        method: "POST",
+        headers: buildInternalHeaders(req),
+        body: req.body,
+        expressRes: res,
+      },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Preview email prepare error:", error?.message);
+    respondUpstreamError(res, error, "Failed to prepare preview email");
   }
 });
 

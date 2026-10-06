@@ -9816,6 +9816,37 @@ registry.registerPath({
   },
 });
 
+// Content – Preview Email Prepare (proxy to content-generation-service)
+// Downstream owns body + response shapes — passthrough only.
+const PreviewEmailPrepareRequestSchema = z.object({}).passthrough().openapi("PreviewEmailPrepareRequest");
+const PreviewEmailPrepareResponseSchema = z.object({}).passthrough().openapi("PreviewEmailPrepareResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/content/preview-email/prepare",
+  tags: ["Content"],
+  summary: "Get ready to write preview emails for a brand (fire and forget)",
+  description:
+    "Proxy to content-generation-service POST /preview-email/prepare. Starts, in the background, the brand read " +
+    "POST /v1/content/preview-email will need for this brand, so the first preview only waits for the model. " +
+    "Answers 202 at once with the downstream body and status forwarded as-is; idempotent per org + brand. " +
+    "The brand read is billed to the calling org. Body + response shapes are owned by the downstream service " +
+    "(today: body { brandId, offerId? }, response { brandId, status }).",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: PreviewEmailPrepareRequestSchema } } },
+  },
+  responses: {
+    202: {
+      description: "Warm-up started, already running, or recently completed",
+      content: { "application/json": { schema: PreviewEmailPrepareResponseSchema } },
+    },
+    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream failure (forwarded verbatim)", content: errorContent },
+  },
+});
+
 // Content – Get Platform Prompt (proxy to content-generation-service)
 // Downstream owns response shape — passthrough only.
 const PlatformPromptResponseSchema = z.object({}).passthrough().openapi("PlatformPromptResponse");
