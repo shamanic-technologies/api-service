@@ -44,7 +44,7 @@ describe("Dynasty slug forwarding — runs/stats/costs", () => {
       runsRoute.indexOf('"/runs/stats/costs"'),
       runsRoute.indexOf('"/events"'),
     );
-    for (const param of ["workflowDynastySlug", "workflowSlug", "featureSlug"]) {
+    for (const param of ["workflowDynastySlug", "workflowSlug", "featureSlug", "featureSlugs"]) {
       expect(runsStatsSection).toContain(`"${param}"`);
     }
     expect(runsStatsSection).not.toContain(`"featureDynastySlug"`);
@@ -199,6 +199,7 @@ describe("Dynasty slug params in generated openapi.json", () => {
     expect(paramNames).toContain("workflowDynastySlug");
     expect(paramNames).toContain("workflowSlug");
     expect(paramNames).toContain("featureSlug");
+    expect(paramNames).toContain("featureSlugs");
     expect(paramNames).not.toContain("featureDynastySlug");
   });
 
