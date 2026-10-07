@@ -4222,6 +4222,87 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – own LinkedIn page (proxy to brand-service /orgs/brands/{brandId}/linkedin-page)
+// Customer surface (any member of the brand's org, no staff gate). Passthrough:
+// brand-service owns every body and what counts as a company page.
+// ===================================================================
+const BrandLinkedinPageSchema = z.object({}).passthrough().openapi("BrandLinkedinPage");
+const SetBrandLinkedinPageBodySchema = z
+  .object({ linkedinUrl: z.string() })
+  .passthrough()
+  .openapi("SetBrandLinkedinPageBody");
+
+const BRAND_LINKEDIN_PAGE_NOTE =
+  "The brand's own LinkedIn company page. Answers { brandId, status: not_computed | found | not_found, " +
+  "linkedinUrl (https://www.linkedin.com/company/<slug>/ or null), discoveredAt, noneFoundReason, provenance: " +
+  "{ method: brand_website_link | apollo_company_lookup | set_by_user, source: brand_website | apollo | user | null, " +
+  "setBy: { userId, orgId, at } | null, foundOnUrl, pagesRead, runId, apollo: { asked, askedAt, outcome, linkedinUrl } } " +
+  "| null }. not_computed = nothing decided yet (provenance null). A page a person set (source user) wins over every " +
+  "automatic source and no later discovery overwrites it.";
+
+const brandLinkedinPageErrors = {
+  400: { description: "Invalid brand ID, or not a LinkedIn company page: { error, reason } (forwarded verbatim)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  403: { description: "Brand not in caller's org (forwarded verbatim)", content: errorContent },
+  404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+  500: { description: "Upstream error", content: errorContent },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/linkedin-page",
+  tags: ["Brand"],
+  summary: "Read the brand's own LinkedIn company page",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{brandId}/linkedin-page. Reads what is stored: never starts a " +
+    "discovery, never spends. " + BRAND_LINKEDIN_PAGE_NOTE,
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "The stored answer (or not_computed)", content: { "application/json": { schema: BrandLinkedinPageSchema } } },
+    ...brandLinkedinPageErrors,
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/linkedin-page",
+  tags: ["Brand"],
+  summary: "Set the brand's own LinkedIn company page",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{brandId}/linkedin-page. Body { linkedinUrl } as pasted (no scheme, a " +
+    "country subdomain or a trailing /about/ are fine); stored as https://www.linkedin.com/company/<slug>/ with " +
+    "provenance.source user. Not a company page = 400 { error, reason: empty | not_a_url | not_linkedin | " +
+    "personal_profile | not_company_page }, error is a sentence to show as is; nothing stored. " + BRAND_LINKEDIN_PAGE_NOTE,
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: { content: { "application/json": { schema: SetBrandLinkedinPageBodySchema } } },
+  },
+  responses: {
+    200: { description: "The page as stored", content: { "application/json": { schema: BrandLinkedinPageSchema } } },
+    ...brandLinkedinPageErrors,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/brands/{id}/linkedin-page",
+  tags: ["Brand"],
+  summary: "Clear a LinkedIn page a person set",
+  description:
+    "Proxy to brand-service DELETE /orgs/brands/{brandId}/linkedin-page. Removes a page a person set: the brand is " +
+    "back to not_computed and the next discovery decides automatically. An automatic answer is left as is. " +
+    BRAND_LINKEDIN_PAGE_NOTE,
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "The stored answer after clearing", content: { "application/json": { schema: BrandLinkedinPageSchema } } },
+    ...brandLinkedinPageErrors,
+  },
+});
+
+// ===================================================================
 // Brand – Sales Rep (proxy to brand-service /orgs/brands/{brandId}/sales-rep)
 // The one person to reach when a sales interest lands on this brand: the address
 // to copy on the prospect's thread and the number to ring. Downstream owns the
