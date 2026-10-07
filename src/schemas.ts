@@ -4825,7 +4825,7 @@ registry.registerPath({
   tags: ["Runs"],
   summary: "Get cost stats from runs-service",
   description:
-    "Get cost statistics grouped by a dimension. Supports groupBy=brandId, costName, campaignId, serviceName, workflowDynastySlug. Filter by brandId, campaignId, taskName, workflowSlug, featureSlug, workflowDynastySlug, startedAfter, startedBefore.",
+    "Get cost statistics grouped by a dimension. Supports groupBy=brandId, costName, campaignId, serviceName, workflowDynastySlug. Filter by brandId, campaignId, taskName, workflowSlug, featureSlug, featureSlugs (comma-separated, matches any), workflowDynastySlug, startedAfter, startedBefore.",
   security: authed,
   request: {
     query: z.object({
@@ -4835,6 +4835,7 @@ registry.registerPath({
       taskName: z.string().optional().describe("Filter by task name (e.g. lead-serve)"),
       workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
       featureSlug: z.string().optional().describe("Filter by exact feature slug"),
+      featureSlugs: z.string().optional().describe("Comma-separated feature slugs; matches runs whose feature slug is any of them (e.g. a channel slug plus its sourcing origin slugs)"),
       workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
       startedAfter: z.string().optional().describe("Filter by run startedAt >= this ISO date-time"),
       startedBefore: z.string().optional().describe("Filter by run startedAt < this ISO date-time"),

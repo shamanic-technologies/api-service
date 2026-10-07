@@ -38,6 +38,10 @@ router.get("/runs", authenticate, requireOrg, requireUser, async (req: Authentic
  * - brandId: filter by brand
  * - campaignId: filter by campaign
  * - taskName: filter by task name (e.g. "lead-serve")
+ * - featureSlug: filter by one exact feature slug
+ * - featureSlugs: comma-separated feature slugs (runs-service `IN (...)`), e.g. a channel
+ *   slug plus its sourcing origin slugs. Without it here, a multi-slug caller got the
+ *   UNFILTERED total back with a 200.
  * - startedAfter / startedBefore: filter by run start window (ISO date-time)
  */
 router.get("/runs/stats/costs", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
@@ -61,6 +65,7 @@ router.get("/runs/stats/costs", authenticate, requireOrg, requireUser, async (re
       "taskName",
       "workflowSlug",
       "featureSlug",
+      "featureSlugs",
       "workflowDynastySlug",
       "startedAfter",
       "startedBefore",
