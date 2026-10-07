@@ -3990,6 +3990,64 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – Offer selected sourcing origins (proxy to brand-service
+// /orgs/brands/:id/offers/:offerId/selected-sourcing-origins). Passthrough:
+// brand-service owns every body.
+// ===================================================================
+const OfferSelectedSourcingOriginsSchema = z.object({}).passthrough().openapi("OfferSelectedSourcingOrigins");
+const PutOfferSelectedSourcingOriginsBodySchema = z
+  .object({ originSlugs: z.array(z.string()) })
+  .passthrough()
+  .openapi("PutOfferSelectedSourcingOriginsBody");
+
+const OFFER_SELECTED_SOURCING_ORIGINS_NOTE =
+  "The sourcing origins the customer selected on an offer (features-service sourcing origin slugs such as " +
+  "sourcing-apollo-cold-filters, stored as given; no money). Answers { offerId, stated, originSlugs, statedAt, " +
+  "statedByUserId }. stated: false (originSlugs null) = never stated, distinct from stated: true with an empty list.";
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}/selected-sourcing-origins",
+  tags: ["Brand"],
+  summary: "Read the sourcing origins selected on an offer",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/selected-sourcing-origins. " +
+    OFFER_SELECTED_SOURCING_ORIGINS_NOTE,
+  security: authed,
+  request: { params: BrandOfferParams },
+  responses: {
+    200: {
+      description: "The selected sourcing origins (or not stated)",
+      content: { "application/json": { schema: OfferSelectedSourcingOriginsSchema } },
+    },
+    ...offerProxyErrors,
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/offers/{offerId}/selected-sourcing-origins",
+  tags: ["Brand"],
+  summary: "Replace the sourcing origins selected on an offer",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{brandId}/offers/{offerId}/selected-sourcing-origins. Replaces " +
+    "the whole list (may be empty; a slug twice is a 400) and answers it as read back. " +
+    OFFER_SELECTED_SOURCING_ORIGINS_NOTE,
+  security: authed,
+  request: {
+    params: BrandOfferParams,
+    body: { content: { "application/json": { schema: PutOfferSelectedSourcingOriginsBodySchema } } },
+  },
+  responses: {
+    200: {
+      description: "The selected sourcing origins, as read after the write",
+      content: { "application/json": { schema: OfferSelectedSourcingOriginsSchema } },
+    },
+    ...offerProxyErrors,
+  },
+});
+
+// ===================================================================
 // Brand – Offer archive / unarchive (proxy to brand-service
 // /orgs/brands/:id/offers/:offerId/archive|unarchive). Passthrough: brand-service owns
 // the { offer } body (with `status` + `archivedAt`) and the 409 refusal.
@@ -13534,4 +13592,128 @@ registry.registerPath({
     403: { description: "Staff access required — the caller is not on the staff allowlist", content: errorContent },
     502: { description: "Upload failed (forwarded verbatim), or the cloudflare-service env vars are unset", content: errorContent },
   },
+});
+
+// ===================================================================
+// Qualification (proxy to lead-service /orgs/qualification/catalog,
+// /orgs/brands/:brandId/offers/:offerId/qualification/*, /orgs/leads/:id/qualification).
+// Downstream owns every body and response shape (rule #8).
+// ===================================================================
+const QualificationResponseSchema = z.object({}).passthrough().openapi("QualificationResponse");
+const QualificationPassthroughBody = z.object({}).passthrough();
+const QualificationOfferParams = z.object({
+  id: z.string().describe("Brand ID (also forwarded as x-brand-id)"),
+  offerId: z.string().describe("Offer ID"),
+});
+const QualificationCriterionParams = QualificationOfferParams.extend({
+  criterionId: z.string().describe("Criterion ID"),
+});
+const qualificationResponses = (ok: number, okDescription: string) => ({
+  [ok]: { description: okDescription, content: { "application/json": { schema: QualificationResponseSchema } } },
+  400: { description: "Validation error (forwarded verbatim), or x-brand-id conflicting with the path", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  402: { description: "Insufficient credit (forwarded verbatim, spending routes)", content: errorContent },
+  404: { description: "Not found (forwarded verbatim)", content: errorContent },
+  500: { description: "Upstream error", content: errorContent },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/qualification/catalog",
+  tags: ["Leads"],
+  summary: "Qualification check catalogue, with estimated cost per lead",
+  description: "Pass-through to lead-service GET /orgs/qualification/catalog. Response shape is owned by lead-service.",
+  security: authed,
+  responses: qualificationResponses(200, "Downstream body, untouched"),
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/offers/{offerId}/qualification/suggestions",
+  tags: ["Leads"],
+  summary: "Suggest qualification criteria for an offer (spends; written OFF)",
+  description:
+    "Pass-through to lead-service POST /orgs/brands/{brandId}/offers/{offerId}/qualification/suggestions. " +
+    "Spends on the org's behalf under a child run of the caller's run.",
+  security: authed,
+  request: { params: QualificationOfferParams, body: { content: { "application/json": { schema: QualificationPassthroughBody } } } },
+  responses: qualificationResponses(200, "Downstream body, untouched"),
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/offers/{offerId}/qualification/criteria",
+  tags: ["Leads"],
+  summary: "Create a qualification criterion on an offer",
+  description:
+    "Pass-through to lead-service POST /orgs/brands/{brandId}/offers/{offerId}/qualification/criteria. Body is " +
+    "forwarded verbatim; lead-service owns its shape and its 400 `unusable_probe`.",
+  security: authed,
+  request: { params: QualificationOfferParams, body: { content: { "application/json": { schema: QualificationPassthroughBody } } } },
+  responses: qualificationResponses(201, "Created (downstream body, untouched)"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}/qualification/criteria",
+  tags: ["Leads"],
+  summary: "List an offer's qualification criteria, with on/off, mode and pass rate",
+  description: "Pass-through to lead-service GET /orgs/brands/{brandId}/offers/{offerId}/qualification/criteria.",
+  security: authed,
+  request: { params: QualificationOfferParams },
+  responses: qualificationResponses(200, "Downstream body, untouched"),
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/brands/{id}/offers/{offerId}/qualification/criteria/{criterionId}",
+  tags: ["Leads"],
+  summary: "Turn a qualification criterion on/off or change its mode",
+  description:
+    "Pass-through to lead-service PATCH /orgs/brands/{brandId}/offers/{offerId}/qualification/criteria/{criterionId}.",
+  security: authed,
+  request: { params: QualificationCriterionParams, body: { content: { "application/json": { schema: QualificationPassthroughBody } } } },
+  responses: qualificationResponses(200, "Downstream body, untouched"),
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/brands/{id}/offers/{offerId}/qualification/criteria/{criterionId}",
+  tags: ["Leads"],
+  summary: "Archive a qualification criterion",
+  description:
+    "Pass-through to lead-service DELETE /orgs/brands/{brandId}/offers/{offerId}/qualification/criteria/{criterionId}.",
+  security: authed,
+  request: { params: QualificationCriterionParams },
+  responses: qualificationResponses(200, "Downstream body, untouched"),
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/offers/{offerId}/qualification/criteria/{criterionId}/sample",
+  tags: ["Leads"],
+  summary: "Run a qualification criterion on a sample of real leads (spends)",
+  description:
+    "Pass-through to lead-service POST /orgs/brands/{brandId}/offers/{offerId}/qualification/criteria/{criterionId}/sample. " +
+    "Body `{limit}` or `{leadIds}` is forwarded verbatim. Spends on the org's behalf under a child run of the caller's run.",
+  security: authed,
+  request: { params: QualificationCriterionParams, body: { content: { "application/json": { schema: QualificationPassthroughBody } } } },
+  responses: qualificationResponses(200, "Downstream body, untouched"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/leads/{id}/qualification",
+  tags: ["Leads"],
+  summary: "What the qualification checks say about one lead",
+  description:
+    "Pass-through to lead-service GET /orgs/leads/{id}/qualification: per enabled criterion, the verdict, the " +
+    "evidence and the screenshot. The query string is forwarded verbatim (lead-service documents `brandId`, " +
+    "required, and `offerId`, optional, today).",
+  security: authed,
+  request: {
+    params: z.object({ id: z.string().describe("Lead ID") }),
+    query: z.object({ brandId: z.string().describe("Brand ID"), offerId: z.string().optional().describe("Offer ID") }).passthrough(),
+  },
+  responses: qualificationResponses(200, "Downstream body, untouched"),
 });
