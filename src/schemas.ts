@@ -7659,6 +7659,35 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/social/me/linkedin-posts",
+  tags: ["Social"],
+  summary: "The signed-in user's own LinkedIn profile posts, LinkedIn-card shaped (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email, refused with 403 before any identity resolution or downstream call): fetching spends platform money. " +
+    "The user is the one authenticated (x-user-id or x-external-org-id + x-external-user-id resolved by the gateway), never named in the path. " +
+    "Byte passthrough to social-service GET /internal/users/{userId}/linkedin-posts with the authenticated internal user id: the profile client-service names for the user, its posts newest first, the same card and paging as /v1/social/brands/{brandId}/linkedin-posts. " +
+    "`status` is ready | pending (first fetch running: poll) | failed | no_linkedin_profile | linkedin_profile_unresolved. Query string forwarded verbatim (the parameters below are the ones documented today, not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z
+      .object({
+        limit: z.string().optional().openapi({ description: "Posts per page (social-service: 1-50, default 10)" }),
+        cursor: z.string().optional().openapi({ description: "`nextCursor` of the previous page" }),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("UserLinkedinPostsResponse") } } },
+    400: { description: "Missing identity headers or invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "Unknown user (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/instantly/stats",
   tags: ["Instantly"],
   summary: "Fleet-wide email counters since inception (staff only)",

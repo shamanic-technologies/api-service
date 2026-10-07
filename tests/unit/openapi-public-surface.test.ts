@@ -73,6 +73,7 @@ const PLATFORM_OPERATIONS = [
   "get /v1/runs/stats/costs/margin",
   "get /v1/costs/vendor-costs",
   "get /v1/social/brands/{brandId}/linkedin-posts",
+  "get /v1/social/me/linkedin-posts",
   "get /v1/runs/stats/costs/margin/timeseries",
   "get /v1/costs/provider-payment-sources",
   "get /v1/costs/email-send-price",
