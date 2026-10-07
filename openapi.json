@@ -5391,6 +5391,10 @@
         "type": "object",
         "properties": {}
       },
+      "UserLinkedinPostsResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "InstantlyFleetStatsResponse": {
         "type": "object",
         "properties": {}
