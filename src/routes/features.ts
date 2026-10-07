@@ -444,6 +444,29 @@ router.get("/public/channels", async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /v1/public/sourcing-origins
+ * The sourcing-origin catalogue: every place leads can come from (Apollo cold
+ * filters, LinkedIn engagement signals, ...), the read that names the origins the
+ * offer sourcing split reports on. Proxied to features-service GET
+ * /public/sourcing-origins.
+ *
+ * No identity of any kind, exactly like /v1/public/channels. The caller's query
+ * string is forwarded verbatim; the response is producer-owned.
+ */
+router.get("/public/sourcing-origins", async (req: Request, res: Response) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/public/sourcing-origins${rawQueryString(req.originalUrl)}`,
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("[api-service] Public sourcing-origin catalogue error:", error.message);
+    respondUpstreamError(res, error, "Failed to get the public sourcing-origin catalogue");
+  }
+});
+
+/**
  * GET /v1/public/outcome-prices
  * The expected price of one outcome (a website visit, a booked meeting) for a
  * brand with no data yet — what the signed-out onboarding shows a new customer
@@ -1189,6 +1212,11 @@ const OFFER_ROUTES = [
   // column membership, pricing and every refusal (400, 404 offer_has_no_channels, 409).
   { suffix: "contacted-value", what: "offer contacted value" },
   { suffix: "deals-value", what: "offer deals value" },
+  // Where the offer's leads come from (the sourcing origin: Apollo cold filters, LinkedIn
+  // engagement signals, ...) apart from the outreach channel, each origin with its own cost
+  // and ROI, per campaign and in total. `pricing=gross|net` rides the raw query;
+  // features-service owns the origins, the money and every refusal.
+  { suffix: "sourcing", what: "offer sourcing" },
 ] as const;
 
 // ── Brand grain ──────────────────────────────────────────────────────────────
