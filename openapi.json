@@ -5383,6 +5383,10 @@
         "type": "object",
         "properties": {}
       },
+      "BrandLinkedinPostsResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "InstantlyFleetStatsResponse": {
         "type": "object",
         "properties": {}
