@@ -508,6 +508,37 @@ for (const method of ["get", "put", "delete"] as const) {
 }
 
 /**
+ * GET|PUT|DELETE /v1/brands/:id/linkedin-page
+ * Proxy to brand-service {GET,PUT,DELETE} /orgs/brands/{brandId}/linkedin-page.
+ * The brand's OWN LinkedIn company page, for any member of the brand's org
+ * (customer surface: no staff gate; brand-service's ownership check answers
+ * 403/404). GET reads what is stored and never triggers a discovery or any
+ * spend; PUT `{ linkedinUrl }` sets it (a person's page wins over every
+ * automatic source); DELETE clears a page a person set. Shapes and what counts
+ * as a company page are brand-service's: its 400 `{ error, reason }` reaches
+ * the caller verbatim.
+ */
+for (const method of ["get", "put", "delete"] as const) {
+  router[method]("/brands/:id/linkedin-page", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.brand,
+        `/orgs/brands/${req.params.id}/linkedin-page`,
+        {
+          method: method.toUpperCase() as "GET" | "PUT" | "DELETE",
+          headers: buildInternalHeaders(req),
+          ...(method === "put" ? { body: req.body } : {}),
+        },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error(`[api-service] Brand LinkedIn page (${method}) error:`, error.message);
+      respondUpstreamError(res, error, "Failed to reach the brand's LinkedIn page");
+    }
+  });
+}
+
+/**
  * GET|PUT|DELETE /v1/brands/:id/sales-rep
  * Proxy to brand-service {GET,PUT,DELETE} /orgs/brands/{brandId}/sales-rep.
  * The one person to reach when a sales interest lands on this brand: the address
