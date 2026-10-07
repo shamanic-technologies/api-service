@@ -3990,6 +3990,64 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – Offer selected sourcing origins (proxy to brand-service
+// /orgs/brands/:id/offers/:offerId/selected-sourcing-origins). Passthrough:
+// brand-service owns every body.
+// ===================================================================
+const OfferSelectedSourcingOriginsSchema = z.object({}).passthrough().openapi("OfferSelectedSourcingOrigins");
+const PutOfferSelectedSourcingOriginsBodySchema = z
+  .object({ originSlugs: z.array(z.string()) })
+  .passthrough()
+  .openapi("PutOfferSelectedSourcingOriginsBody");
+
+const OFFER_SELECTED_SOURCING_ORIGINS_NOTE =
+  "The sourcing origins the customer selected on an offer (features-service sourcing origin slugs such as " +
+  "sourcing-apollo-cold-filters, stored as given; no money). Answers { offerId, stated, originSlugs, statedAt, " +
+  "statedByUserId }. stated: false (originSlugs null) = never stated, distinct from stated: true with an empty list.";
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}/selected-sourcing-origins",
+  tags: ["Brand"],
+  summary: "Read the sourcing origins selected on an offer",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/selected-sourcing-origins. " +
+    OFFER_SELECTED_SOURCING_ORIGINS_NOTE,
+  security: authed,
+  request: { params: BrandOfferParams },
+  responses: {
+    200: {
+      description: "The selected sourcing origins (or not stated)",
+      content: { "application/json": { schema: OfferSelectedSourcingOriginsSchema } },
+    },
+    ...offerProxyErrors,
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/offers/{offerId}/selected-sourcing-origins",
+  tags: ["Brand"],
+  summary: "Replace the sourcing origins selected on an offer",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{brandId}/offers/{offerId}/selected-sourcing-origins. Replaces " +
+    "the whole list (may be empty; a slug twice is a 400) and answers it as read back. " +
+    OFFER_SELECTED_SOURCING_ORIGINS_NOTE,
+  security: authed,
+  request: {
+    params: BrandOfferParams,
+    body: { content: { "application/json": { schema: PutOfferSelectedSourcingOriginsBodySchema } } },
+  },
+  responses: {
+    200: {
+      description: "The selected sourcing origins, as read after the write",
+      content: { "application/json": { schema: OfferSelectedSourcingOriginsSchema } },
+    },
+    ...offerProxyErrors,
+  },
+});
+
+// ===================================================================
 // Brand – Offer archive / unarchive (proxy to brand-service
 // /orgs/brands/:id/offers/:offerId/archive|unarchive). Passthrough: brand-service owns
 // the { offer } body (with `status` + `archivedAt`) and the 409 refusal.

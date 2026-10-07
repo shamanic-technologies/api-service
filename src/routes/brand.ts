@@ -426,6 +426,10 @@ const OFFER_ROUTES = [
   // stored as given; several may share a campaign, no money). `stated: false` = never stated.
   { method: "get", path: "/brands/:id/offers/:offerId/selected-sales-paths", suffix: "/selected-sales-paths", what: "get offer selected sales paths" },
   { method: "put", path: "/brands/:id/offers/:offerId/selected-sales-paths", suffix: "/selected-sales-paths", what: "save offer selected sales paths" },
+  // WHICH SOURCING ORIGINS the customer selected on the offer (features-service sourcing
+  // origin slugs, stored as given, no money). `stated: false` = never stated.
+  { method: "get", path: "/brands/:id/offers/:offerId/selected-sourcing-origins", suffix: "/selected-sourcing-origins", what: "get offer selected sourcing origins" },
+  { method: "put", path: "/brands/:id/offers/:offerId/selected-sourcing-origins", suffix: "/selected-sourcing-origins", what: "save offer selected sourcing origins" },
 ] as const;
 
 for (const route of OFFER_ROUTES) {
