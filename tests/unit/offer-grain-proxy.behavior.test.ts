@@ -131,6 +131,14 @@ const DEALS_VALUE_BODY = {
   columns: [{ column: "interested", valueUsd: 1500 }, { column: "won", valueUsd: 3000 }],
 };
 
+// Stand-in for features-service's sourcing split, handed through untouched.
+const SOURCING_BODY = {
+  offerId: OFFER_ID,
+  origins: [{ slug: "apollo-cold-filters", spentUsd: 40 }, { slug: "linkedin-engagement-signals", spentUsd: 12 }],
+  campaigns: [{ campaignId: "c1", origins: [] }],
+  totals: { spentUsd: 52 },
+};
+
 const READS = [
   { suffix: "revenue", body: REVENUE_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
   { suffix: "audience-stats", body: AUDIENCE_STATS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.channels },
@@ -139,6 +147,7 @@ const READS = [
   { suffix: "sales-paths", body: SALES_PATHS_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.paths },
   { suffix: "contacted-value", body: CONTACTED_VALUE_BODY, query: `brandId=${BRAND_ID}&cursor=abc`, channelsOf: (b: any) => b.leads },
   { suffix: "deals-value", body: DEALS_VALUE_BODY, query: `brandId=${BRAND_ID}`, channelsOf: (b: any) => b.columns },
+  { suffix: "sourcing", body: SOURCING_BODY, query: `brandId=${BRAND_ID}&pricing=net`, channelsOf: (b: any) => b.origins },
 ] as const;
 
 describe("GET /v1/offers/:offerId/* — over the wire", () => {

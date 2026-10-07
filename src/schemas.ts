@@ -753,6 +753,21 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/public/sourcing-origins",
+  tags: ["Features"],
+  summary: "Public sourcing-origin catalogue",
+  description:
+    "The published sourcing-origin catalogue: every place leads can come from (for example Apollo cold filters or LinkedIn engagement signals), the origins the offer sourcing split (GET /v1/offers/{offerId}/sourcing) reports on. " +
+    "Proxied to features-service GET /public/sourcing-origins. The caller's query string is forwarded verbatim. Response is producer-owned. No authentication required.",
+  responses: {
+    200: { description: "Sourcing-origin catalogue — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicSourcingOriginCatalogueResponse") } } },
+    400: { description: "Bad request from features-service", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/public/outcome-prices",
   tags: ["Features"],
   summary: "Public expected price of one outcome",
@@ -10339,6 +10354,32 @@ registry.registerPath({
   },
   responses: {
     200: { description: "Offer outcomes", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferOutcomesResponse") } } },
+    400: { description: "Validation error", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Offer not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/offers/{offerId}/sourcing",
+  tags: ["Features"],
+  summary: "Offer sourcing split",
+  description:
+    "Where an offer's leads come from (the sourcing origin, e.g. Apollo cold filters, LinkedIn engagement signals), separately from the outreach channel, each origin with its own cost and ROI, per campaign and in total. " +
+    "Proxied to features-service GET /offers/{offerId}/sourcing. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("gross | net — validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer sourcing split", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferSourcingResponse") } } },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Offer not found", content: errorContent },
