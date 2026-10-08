@@ -4991,6 +4991,48 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/runs/stats/costs/timeseries",
+  tags: ["Runs"],
+  summary: "The org's run counts and spend per day, week or month",
+  description:
+    "Proxies runs-service GET /v1/stats/costs/timeseries for the authenticated org: run counts and spend per dated bucket in the caller's timezone, optionally per campaign. One call replaces one GET /v1/runs/stats/costs per day. The query string is forwarded verbatim; the parameters below are the ones runs-service documents today, not a whitelist. The org always comes from the caller's authentication, never from the query.",
+  security: authed,
+  request: {
+    query: z
+      .object({
+        interval: z.string().optional().describe("day (default), week or month"),
+        tz: z.string().optional().describe("IANA timezone the buckets are cut in. Default UTC."),
+        groupBy: z.string().optional().describe("campaignId: one series per campaign inside each bucket"),
+        brandId: z.string().optional(),
+        campaignId: z.string().optional(),
+        campaignIds: z.string().optional().describe("Comma-separated campaign ids"),
+        featureSlug: z.string().optional(),
+        featureSlugs: z.string().optional().describe("Comma-separated feature slugs"),
+        workflowSlug: z.string().optional(),
+        serviceName: z.string().optional(),
+        taskName: z.string().optional(),
+        startedAfter: z.string().optional().describe("Lower bound on run startedAt (ISO date-time)"),
+        startedBefore: z.string().optional().describe("Upper bound on run startedAt (ISO date-time)"),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: {
+      description: "Dated buckets, forwarded unchanged from runs-service",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("RunsCostTimeseriesResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid interval, tz, groupBy or date (runs-service error forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/runs/{id}",
   tags: ["Runs"],
   summary: "One run by id, with its cost roll-up and its descendant runs",
