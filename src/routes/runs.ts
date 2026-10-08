@@ -124,6 +124,33 @@ router.get("/runs/stats/run-outcomes", authenticate, requireOrg, requireUser, as
 });
 
 /**
+ * GET /v1/runs/stats/costs/timeseries → runs-service GET /v1/stats/costs/timeseries
+ *
+ * The org's run counts and spend per dated bucket (interval=day|week|month in the
+ * caller's `tz`, optionally per campaign with groupBy=campaignId): one read for a chart
+ * that used to call GET /v1/runs/stats/costs once per local day. Same identity as that
+ * sibling; the org is NOT a query parameter, runs-service scopes on the `x-org-id`
+ * header `buildInternalHeaders` sets from the authenticated identity. Query forwarded
+ * verbatim (#11), body untouched, errors field-for-field (#7).
+ *
+ * Distinct literal path from the staff-only `/runs/stats/costs/margin/timeseries`
+ * below, so neither can shadow the other.
+ */
+router.get("/runs/stats/costs/timeseries", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const data = await callExternalService(
+      externalServices.runs,
+      `/v1/stats/costs/timeseries${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(data);
+  } catch (error: any) {
+    console.error("[api-service] Get cost timeseries error:", error);
+    respondUpstreamError(res, error, "Failed to get cost timeseries");
+  }
+});
+
+/**
  * The caller's query with every `orgId` parameter dropped and the authenticated org
  * appended as the only one. Everything else is kept byte-identical (#11); the org is
  * the one identity the gateway owns, so a caller-supplied `orgId` never chooses it.
