@@ -3167,6 +3167,57 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/leads/{id}/timeline",
+  tags: ["Leads"],
+  summary: "One person's stored timeline for a brand, every item labelled, with the conversation's tags",
+  description:
+    "Pass-through to lead-service GET /orgs/leads/{id}/timeline. The person's stored timeline for one brand " +
+    "(and optionally one offer): every item carries the fact it records, and `tags` states the conversation's " +
+    "last word and the furthest step reached, flagged attributable to our outreach or not. lead-service builds " +
+    "and stores it; api-service forwards the answer untransformed and aggregates nothing. " +
+    "`id` is the `id` a row of GET /v1/leads already carries, exactly as on GET /v1/leads/{id}/history. " +
+    "The query parameters below are the ones lead-service documents today, not a whitelist: the caller's query " +
+    "string is forwarded verbatim. The read is org-scoped downstream on the authenticated org. " +
+    "Refer to lead-service openapi.json for the exact response shape.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().openapi({
+        description: "The `id` of a lead as returned by GET /v1/leads.",
+      }),
+    }),
+    query: z
+      .object({
+        brandId: z.string().optional().openapi({
+          description:
+            "Which brand the timeline is about. Required by lead-service (it answers 400 without it); a brand " +
+            "this row is not part of answers 404, exactly as an absent row does.",
+        }),
+        offerId: z.string().optional().openapi({
+          description: "Narrow the timeline to one offer of the brand.",
+        }),
+      })
+      .passthrough()
+      .openapi("LeadTimelineQuery"),
+  },
+  responses: {
+    200: {
+      description: "The person's labelled timeline and the conversation's tags, as returned by lead-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadTimelineResponse"),
+        },
+      },
+    },
+    400: { description: "No brandId, or an invalid lead id (lead-service states the reason)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead in this caller's org, or a brand the row is not part of", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // QUALIFY
 // ===================================================================

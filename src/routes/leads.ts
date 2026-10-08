@@ -678,6 +678,47 @@ router.get(
 );
 
 /**
+ * GET /v1/leads/:id/timeline — pass-through to lead-service
+ * GET /orgs/leads/{id}/timeline.
+ *
+ * One person's STORED timeline for a brand (and optionally one offer): every item
+ * carries its fact label, plus the conversation's tags (last word, furthest step and
+ * whether that step is attributable to our outreach). lead-service builds and stores
+ * it; this gateway forwards it and merges nothing (rule #2).
+ *
+ * `id` is the `id` a row of GET /v1/leads already carries, exactly as on
+ * `/leads/:id/history`. `brandId` is required by lead-service (400 without it), `offerId`
+ * optional; the query string is forwarded verbatim (rule #11) and nothing is read out
+ * of it here, so lead-service answers its own 400s.
+ *
+ * The org boundary is the authenticated one: `x-org-id` comes from
+ * `buildInternalHeaders(req)`; a foreign row or a brand the row is not part of is
+ * lead-service's 404, re-emitted field-for-field by `respondUpstreamError`. One
+ * person's timeline is small, so `callExternalService` rather than a pipe (rule #10);
+ * the response shape is lead-service's (rule #8).
+ */
+router.get(
+  "/leads/:id/timeline",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/timeline${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) }
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Get lead timeline error:", error);
+      respondUpstreamError(res, error, "Failed to get lead timeline");
+    }
+  }
+);
+
+/**
  * GET /v1/leads/:id/crm-attribution — pass-through to lead-service
  * GET /orgs/leads/{id}/crm-attribution.
  *
