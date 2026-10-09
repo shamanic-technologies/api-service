@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, streamExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
+import { respondUpstreamError } from "../lib/upstream-error.js";
 
 const router = Router();
 
@@ -18,6 +19,41 @@ router.put("/chat/config", authenticate, requireOrg, requireUser, async (req: Au
     res.status(500).json({ error: error.message || "Failed to register chat config" });
   }
 });
+
+// The raw query string (with its leading "?") or "" — forwarded verbatim per
+// CLAUDE.md rule #11, never rebuilt from a destructured whitelist.
+function rawQueryString(originalUrl: string): string {
+  const index = originalUrl.indexOf("?");
+  return index === -1 ? "" : originalUrl.slice(index);
+}
+
+// GET /v1/chat/sessions/latest?configKey=<key> — the caller's most recently active
+// chat session for one chat config key, with its full history (same body as the
+// per-id read). Lets a chat panel restore the same conversation on any device.
+// chat-service scopes the lookup on the forwarded org AND user identity.
+//
+// MUST be registered BEFORE "/chat/sessions/:sessionId" (CLAUDE.md rule #13):
+// Express would otherwise capture "latest" as a sessionId and drop the query.
+// Upstream status + body are forwarded as-is: 404 = "this user has no session for
+// that key yet" (a normal first visit), 400 = configKey missing.
+router.get(
+  "/chat/sessions/latest",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.chat,
+        `/sessions/latest${rawQueryString(req.originalUrl)}`,
+        { method: "GET", headers: buildInternalHeaders(req) }
+      );
+      res.json(result);
+    } catch (error: unknown) {
+      respondUpstreamError(res, error, "Failed to fetch latest chat session");
+    }
+  }
+);
 
 // GET /v1/chat/sessions/:sessionId — read a chat session's stored conversation
 // history. Lets the dashboard "Edit with AI" panel restore its visible chat

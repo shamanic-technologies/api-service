@@ -6326,6 +6326,48 @@ export const SessionHistoryResponseSchema = z
   .passthrough()
   .openapi("SessionHistoryResponse");
 
+const LatestSessionQuery = z
+  .object({
+    configKey: z
+      .string()
+      .describe(
+        "Chat config key (e.g. the key the chat panel sends as `configKey` on POST /v1/chat). " +
+          "Required: chat-service answers 400 without it.",
+      ),
+  })
+  .passthrough();
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/chat/sessions/latest",
+  tags: ["Chat"],
+  summary: "Get the latest chat session for a config key",
+  description:
+    "Read the caller's most recently active chat session for one chat config key, with its " +
+    "full stored history (same body as GET /v1/chat/sessions/{sessionId}). Scoped to the " +
+    "authenticated org AND user, so a chat panel shows the same conversation on any device. " +
+    "Read-only. 404 means this user has no session for that key in this org yet (a normal " +
+    "first visit), not a failure. The query string is forwarded verbatim; `configKey` is the " +
+    "parameter documented today, not a whitelist.",
+  security: authed,
+  request: { query: LatestSessionQuery },
+  responses: {
+    200: {
+      description: "Session metadata and the full ordered conversation.",
+      content: {
+        "application/json": { schema: SessionHistoryResponseSchema },
+      },
+    },
+    400: { description: "configKey missing", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: {
+      description: "No session for this config key for this user in this org",
+      content: errorContent,
+    },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/chat/sessions/{sessionId}",
