@@ -5418,6 +5418,54 @@
         "type": "object",
         "properties": {}
       },
+      "CopilotSkillListResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CopilotSkillResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CopilotSkillWriteResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CopilotSkillWriteRequest": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Markdown body."
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "parentSlug": {
+            "type": "string"
+          },
+          "position": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "content"
+        ]
+      },
+      "CopilotSkillVersionListResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CopilotSkillVersionResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CopilotStaffRequestListResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "BrandLinkedinPostsResponse": {
         "type": "object",
         "properties": {}
