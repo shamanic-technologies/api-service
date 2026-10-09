@@ -73,7 +73,7 @@ describe("Chat proxy routes", () => {
     expect(content).toContain("buildInternalHeaders");
     const headerMatches = content.match(/buildInternalHeaders\(req\)/g);
     expect(headerMatches).not.toBeNull();
-    expect(headerMatches!.length).toBe(3);
+    expect(headerMatches!.length).toBe(4);
   });
 
   it("should handle errors after headers sent for SSE", () => {
