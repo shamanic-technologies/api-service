@@ -284,6 +284,38 @@ router.post("/offers/:offerId/reactive-defaults", authenticate, requireOrg, requ
   }
 });
 
+/** Raw query string of the caller's URL, `?` included (empty when none): forwarded verbatim. */
+function rawQueryString(originalUrl: string): string {
+  const index = originalUrl.indexOf("?");
+  return index === -1 ? "" : originalUrl.slice(index);
+}
+
+/**
+ * GET /v1/offers/:offerId/trigger-events/summary → campaign-service GET /internal/offers/{offerId}/trigger-events/summary
+ * GET /v1/offers/:offerId/trigger-events         → campaign-service GET /internal/offers/{offerId}/trigger-events
+ *
+ * The offer's trigger events (owner 2026-10-09): per trigger type how many fired / ran / were skipped (by
+ * reason) / are pending, and the latest events newest first. The downstream routes are org-scoped by
+ * `x-org-id`, which is ALWAYS the authenticated org (buildInternalHeaders), never one the browser names.
+ * Query (`brandId`, `from`, `to`, `limit`) forwarded verbatim; campaign-service owns its validation (400)
+ * and the body. Status + body relayed verbatim, a failing upstream keeps its status and named body.
+ */
+for (const tail of ["/trigger-events/summary", "/trigger-events"]) {
+  router.get(`/offers/:offerId${tail}`, authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.campaign,
+        `/internal/offers/${encodeURIComponent(req.params.offerId)}${tail}${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error(`[api-service] GET /v1/offers/:offerId${tail} — FAILED:`, error.message);
+      respondUpstreamError(res, error, "Failed to read the offer's trigger events");
+    }
+  });
+}
+
 /**
  * GET /v1/campaigns/stats
  * Get aggregated stats for all campaigns, grouped by campaignId.

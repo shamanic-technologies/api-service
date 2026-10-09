@@ -1545,6 +1545,86 @@ registry.registerPath({
   },
 });
 
+// GET /v1/offers/{offerId}/trigger-events[/summary] -> campaign-service GET /internal/offers/{offerId}/trigger-events[/summary].
+// Passthrough: campaign-service owns the query validation and both bodies.
+const OfferTriggerEventsSummaryResponseSchema = z
+  .object({})
+  .passthrough()
+  .openapi("OfferTriggerEventsSummaryResponse");
+const OfferTriggerEventsListResponseSchema = z
+  .object({})
+  .passthrough()
+  .openapi("OfferTriggerEventsListResponse");
+
+const triggerEventsDescription =
+  "Trigger events (owner 2026-10-09): a REACTIVE leg runs when a trigger fires (a positive reply received, a lead " +
+  "requested, a meeting booked...). Each occurrence is recorded with what it did: `ran` (campaigns run) or `skipped` " +
+  "with one named reason (e.g. `campaign_off`, `no_campaign`, `unfunded`, `run_in_flight`). The org is the " +
+  "authenticated one (never a header/query the caller names). Query forwarded verbatim; campaign-service owns its " +
+  "validation (400) and the body. Status and body relayed verbatim.";
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/offers/{offerId}/trigger-events/summary",
+  tags: ["Campaigns"],
+  summary: "Per trigger type, over a window: events fired, ran, skipped (by reason), pending",
+  description:
+    "Proxy to campaign-service GET /internal/offers/{offerId}/trigger-events/summary. " +
+    triggerEventsDescription +
+    " Groups the offer's events with `occurredAt` in [from, to] (to absent = now) by trigger type; a type with no " +
+    "event in the window is absent. `recordedSince` = when recording started: before it, absence means not recorded.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string() }),
+    query: z
+      .object({
+        brandId: z.string().uuid(),
+        from: z.string().openapi({ description: "Window start (ISO date-time), required" }),
+        to: z.string().optional().openapi({ description: "Window end (ISO date-time); absent = now" }),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: {
+      description: "Per-trigger counts",
+      content: { "application/json": { schema: OfferTriggerEventsSummaryResponseSchema } },
+    },
+    400: { description: "Malformed query (e.g. missing brandId/from), forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/offers/{offerId}/trigger-events",
+  tags: ["Campaigns"],
+  summary: "The offer's latest trigger events, newest first",
+  description:
+    "Proxy to campaign-service GET /internal/offers/{offerId}/trigger-events. " +
+    triggerEventsDescription +
+    " `limit` 1-200, absent = campaign-service's default (50).",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string() }),
+    query: z
+      .object({
+        brandId: z.string().uuid(),
+        limit: z.string().optional().openapi({ description: "1-200; absent = downstream default" }),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: {
+      description: "The events",
+      content: { "application/json": { schema: OfferTriggerEventsListResponseSchema } },
+    },
+    400: { description: "Malformed query (e.g. missing brandId), forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/campaigns/{id}",
