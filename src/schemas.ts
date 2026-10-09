@@ -7925,6 +7925,155 @@ registry.registerPath({
   },
 });
 
+// Copilot skill tree + staff requests (staff) — chat-service /internal/skills, /internal/staff-requests
+const CopilotSkillSlugParams = z.object({ slug: z.string().openapi({ description: "Skill slug (stable id). The root is `index`." }) });
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/chat/skills",
+  tags: ["Chat"],
+  summary: "List the Copilot skill tree (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to chat-service GET /internal/skills: every skill of the dashboard Copilot (slug, parent, title, description, position, version, updatedBy, updatedAt), no content. Status and body owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CopilotSkillListResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/chat/skills/{slug}",
+  tags: ["Chat"],
+  summary: "Read one Copilot skill with its markdown (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to chat-service GET /internal/skills/{slug}. Status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { params: CopilotSkillSlugParams },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CopilotSkillResponse") } } },
+    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+    404: { description: "Unknown skill or version (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/chat/skills/{slug}",
+  tags: ["Chat"],
+  summary: "Create or update a Copilot skill (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Passthrough to chat-service PUT /internal/skills/{slug}. The body is forwarded as sent EXCEPT `editedBy`, which the gateway always sets to the signed-in staff email (any value the caller sends is replaced). A new version is recorded when the content changes. Safe to call every few seconds (autosave): no extra rate limit applies. Status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    params: CopilotSkillSlugParams,
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              content: z.string().openapi({ description: "Markdown body." }),
+              title: z.string().optional(),
+              description: z.string().optional(),
+              parentSlug: z.string().optional(),
+              position: z.number().int().optional(),
+            })
+            .passthrough()
+            .openapi("CopilotSkillWriteRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CopilotSkillWriteResponse") } } },
+    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+    404: { description: "Unknown skill or version (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/chat/skills/{slug}/versions",
+  tags: ["Chat"],
+  summary: "List a Copilot skill's versions (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to chat-service GET /internal/skills/{slug}/versions. To restore a version, PUT its content back to /v1/chat/skills/{slug}. Status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { params: CopilotSkillSlugParams },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CopilotSkillVersionListResponse") } } },
+    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+    404: { description: "Unknown skill or version (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/chat/skills/{slug}/versions/{version}",
+  tags: ["Chat"],
+  summary: "Read one version of a Copilot skill (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to chat-service GET /internal/skills/{slug}/versions/{version}. Status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    params: z.object({
+      slug: z.string().openapi({ description: "Skill slug (stable id). The root is `index`." }),
+      version: z.string().openapi({ description: "Version number (1 = first)." }),
+    }),
+  },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CopilotSkillVersionResponse") } } },
+    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+    404: { description: "Unknown skill or version (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/chat/staff-requests",
+  tags: ["Chat"],
+  summary: "List the Copilot's staff requests (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to chat-service GET /internal/staff-requests: requests the dashboard Copilot escalated to staff, newest first. Query string forwarded verbatim (the parameters below are the ones documented today, not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z
+      .object({
+        orgId: z.string().optional().openapi({ description: "Restrict to one organization (internal UUID)" }),
+        limit: z.string().optional().openapi({ description: "Max rows (downstream default 50)" }),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CopilotStaffRequestListResponse") } } },
+    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/social/brands/{brandId}/linkedin-posts",
