@@ -3,7 +3,7 @@ import request from "supertest";
 import express from "express";
 
 /**
- * /v1/orgs/{posthog,stripe}/connections* must forward to crm-service's own /orgs/{posthog,stripe}/connections*
+ * /v1/orgs/{posthog,stripe,clerk}/connections* must forward to crm-service's own /orgs/{posthog,stripe,clerk}/connections*
  * — path preserved, query string byte-copied, body forwarded verbatim, response
  * and error body returned untransformed.
  *
@@ -40,6 +40,7 @@ const BRAND = "bbbbbbbb-1111-4111-8111-000000000001";
 describe.each([
   ["posthog", { brandId: BRAND, projectId: "12345", region: "eu" }],
   ["stripe", { brandId: BRAND }],
+  ["clerk", { brandId: BRAND }],
 ] as const)("/v1/orgs/%s/connections* → crm-service", (provider, createBody) => {
   let calls: Array<{ url: string; options: any }>;
 
