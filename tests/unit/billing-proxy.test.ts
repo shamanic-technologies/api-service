@@ -61,10 +61,10 @@ describe("Billing proxy routes", () => {
     // incl. the 4 sales-budget and 6 subscription routes, and the 5 per-plan
     // routes (cancel/resume share one handler in a loop: 4 occurrences),
     // plus the 2 pause/unpause loops (org-level + per-plan), and the 3
-    // offer campaign-budgets routes.
+    // offer campaign-budgets routes, and the 4 sales funnel caps routes.
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    expect(authMatches!.length).toBe(37);
+    expect(authMatches!.length).toBe(41);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints (no x-key-source)", () => {
@@ -74,8 +74,9 @@ describe("Billing proxy routes", () => {
     expect(headerMatches).not.toBeNull();
     // 24 routes + the shared salesBudgetProxy helper (2 branches) behind the 4 sales-budget routes
     // + the 4 per-plan handlers (cancel/resume share one) + the 2 pause/unpause loops
-    // + the shared offerCampaignBudgetsProxy helper (2 branches).
-    expect(headerMatches!.length).toBe(34);
+    // + the shared offerCampaignBudgetsProxy helper (2 branches)
+    // + the shared salesFunnelCapsProxy helper (2 branches) + the brand sales-funnel-caps list.
+    expect(headerMatches!.length).toBe(37);
   });
 
   it("should have GET /billing/payments endpoint sourced from stripe-service", () => {

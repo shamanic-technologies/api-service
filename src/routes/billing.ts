@@ -7,7 +7,7 @@ import {
   requireUser,
   AuthenticatedRequest,
 } from "../middleware/auth.js";
-import { callExternalService, pipeExternalService, externalServices } from "../lib/service-client.js";
+import { callExternalService, callExternalServiceWithStatus, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 
@@ -888,5 +888,53 @@ const OFFER_CAMPAIGN_BUDGETS = "/brands/:brandId/offers/:offerId/campaign-budget
 router.get(OFFER_CAMPAIGN_BUDGETS, authenticate, requireOrg, requireUser, offerCampaignBudgetsProxy("GET", "Failed to get offer campaign budgets"));
 router.put(OFFER_CAMPAIGN_BUDGETS, authenticate, requireOrg, requireUser, offerCampaignBudgetsProxy("PUT", "Failed to set offer campaign budgets"));
 router.delete(OFFER_CAMPAIGN_BUDGETS, authenticate, requireOrg, requireUser, offerCampaignBudgetsProxy("DELETE", "Failed to remove offer campaign budget"));
+
+/**
+ * MAX BUDGET + MAX VOLUME of a sales funnel campaign (owner 2026-10-10) — billing-service, same paths:
+ *
+ *   GET|PUT|DELETE /v1/brands/:brandId/offers/:offerId/sales-funnels/:salesFunnelId/caps
+ *   GET            /v1/brands/:brandId/sales-funnel-caps[?offerId=]   (query verbatim)
+ *
+ * `salesFunnelId` is features-service's combinationKey (`@`, `+` inside): Express decodes the param, so it is
+ * re-encoded for the downstream path. Body, read shape (consumed / remaining / reached) and refusals
+ * (404 sales_funnel_not_found, 502 sales_funnel_catalogue_unavailable) are billing's, relayed verbatim.
+ */
+function salesFunnelCapsProxy(method: "GET" | "PUT" | "DELETE", failure: string) {
+  return async (req: AuthenticatedRequest, res: any) => {
+    try {
+      const path =
+        `/v1/brands/${encodeURIComponent(req.params.brandId)}/offers/${encodeURIComponent(req.params.offerId)}` +
+        `/sales-funnels/${encodeURIComponent(req.params.salesFunnelId)}/caps`;
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.billing,
+        path,
+        method === "PUT"
+          ? { method, body: req.body, headers: buildInternalHeaders(req) }
+          : { method, headers: buildInternalHeaders(req) },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      respondUpstreamError(res, error, failure);
+    }
+  };
+}
+
+const SALES_FUNNEL_CAPS = "/brands/:brandId/offers/:offerId/sales-funnels/:salesFunnelId/caps";
+router.get(SALES_FUNNEL_CAPS, authenticate, requireOrg, requireUser, salesFunnelCapsProxy("GET", "Failed to read the sales funnel caps"));
+router.put(SALES_FUNNEL_CAPS, authenticate, requireOrg, requireUser, salesFunnelCapsProxy("PUT", "Failed to set the sales funnel caps"));
+router.delete(SALES_FUNNEL_CAPS, authenticate, requireOrg, requireUser, salesFunnelCapsProxy("DELETE", "Failed to clear the sales funnel caps"));
+
+router.get("/brands/:brandId/sales-funnel-caps", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.billing,
+      `/v1/brands/${encodeURIComponent(req.params.brandId)}/sales-funnel-caps${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to read the brand's sales funnel caps");
+  }
+});
 
 export default router;
