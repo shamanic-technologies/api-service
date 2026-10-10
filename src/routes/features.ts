@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { authenticate, authenticatePlatform, requireOrg, requireUser, requireStaff, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, pipeExternalService, externalServices } from "../lib/service-client.js";
+import { callExternalService, callExternalServiceWithStatus, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 
@@ -1439,6 +1439,36 @@ router.get(
     } catch (error: any) {
       console.error("Failed to get brand offers:", error.message);
       respondUpstreamError(res, error, "Failed to get brand offers");
+    }
+  },
+);
+
+
+/**
+ * GET /v1/features/brands/:brandId/sales-funnel-campaigns → features-service GET /brands/{brandId}/sales-funnel-campaigns
+ *
+ * The dashboard's Campaigns table (owner 2026-10-11): one row per sales funnel campaign with its name,
+ * face, type, type label ("Daily" or its trigger), structured path, invested since inception and ROI,
+ * all served by features-service (CLAUDE.md #2: nothing combined here). `/v1/{service-name}/...` shape
+ * because `/v1/brands/:id/...` is brand-service's namespace (see the offers route above). The org is the
+ * authenticated one; the query (`offerId`, `pricing`) rides verbatim (#11); status and body relayed (#7).
+ */
+router.get(
+  "/features/brands/:brandId/sales-funnel-campaigns",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.features,
+        `/brands/${encodeURIComponent(req.params.brandId)}/sales-funnel-campaigns${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("Failed to get brand sales funnel campaigns:", error.message);
+      respondUpstreamError(res, error, "Failed to get brand sales funnel campaigns");
     }
   },
 );

@@ -1577,6 +1577,31 @@ const salesFunnelCampaignDescription =
   "(GET /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps); no max budget = held unfunded. " +
   "The org is the authenticated one. Status and body (with `reason` on a refusal) relayed verbatim.";
 
+const BrandSalesFunnelCampaignRowsResponseSchema = z.object({}).passthrough().openapi("BrandSalesFunnelCampaignRowsResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/brands/{brandId}/sales-funnel-campaigns",
+  tags: ["Campaigns"],
+  summary: "A brand's sales funnel campaigns as the Campaigns table reads them",
+  description:
+    "Proxy to features-service GET /brands/{brandId}/sales-funnel-campaigns. One row per sales funnel campaign: name, face, " +
+    "type and its label (Daily or the trigger), structured path, money invested since inception and ROI, all served by " +
+    "features-service. The org is the authenticated one. Query forwarded verbatim (documented today: offerId, pricing; " +
+    "not a whitelist). Status and body relayed verbatim.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string() }),
+    query: z.object({ offerId: z.string().optional(), pricing: z.string().optional() }).passthrough(),
+  },
+  responses: {
+    200: { description: "{ salesFunnelCampaigns: [...] }", content: { "application/json": { schema: BrandSalesFunnelCampaignRowsResponseSchema } } },
+    400: { description: "Refused by features-service, forwarded verbatim", content: errorContent },
+    404: { description: "brand_not_found, forwarded verbatim", content: errorContent },
+    502: { description: "campaign-service unreadable, forwarded verbatim", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/sales-funnel-campaigns",
