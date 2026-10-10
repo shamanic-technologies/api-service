@@ -1324,6 +1324,35 @@ for (const { suffix, what } of OFFER_ROUTES) {
   );
 }
 
+/**
+ * GET /v1/offers/:offerId/sales-funnels → features-service GET /internal/catalogue/sales-funnels
+ * ?offerId=<path>&runnable=true&<the caller's query>, with the AUTHENTICATED org (x-org-id).
+ *
+ * The sales funnels we can run today, each priced for THIS offer (its own client value and rates:
+ * features-service v0.179.133 `offer {...}` block + per-row roi). Read by the signup's "Your
+ * campaign" step and its wall (owner 2026-10-10: the wall shows this offer's return, never the
+ * fleet's). The offer is the path's; `runnable` is forced on (a customer is never served a draft);
+ * the rest of the query (brandId, containsChannels, paths, limit) rides verbatim (#11) and
+ * features-service owns every refusal (400 brand_required/org_required, 404 offer_not_found).
+ */
+router.get("/offers/:offerId/sales-funnels", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const rest = new URLSearchParams(rawQueryString(req.originalUrl).slice(1));
+    rest.delete("offerId");
+    rest.delete("runnable");
+    const tail = rest.toString();
+    const result = await callExternalService(
+      externalServices.features,
+      `/internal/catalogue/sales-funnels?offerId=${encodeURIComponent(req.params.offerId)}&runnable=true${tail ? `&${tail}` : ""}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Failed to get offer sales funnels:", error.message);
+    respondUpstreamError(res, error, "Failed to get offer sales funnels");
+  }
+});
+
 for (const { suffix, what } of GRAIN_SUFFIXES) {
   router.get(
     `/brands/:brandId/${suffix}`,

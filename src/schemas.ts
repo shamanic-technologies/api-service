@@ -11097,6 +11097,32 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/offers/{offerId}/sales-funnels",
+  tags: ["Features"],
+  summary: "The sales funnels we can run today, priced for one offer",
+  description:
+    "Proxied to features-service GET /internal/catalogue/sales-funnels?offerId={offerId}&runnable=true with the authenticated org: one page of runnable sales funnels (id, name, face, line, type, costUsd, costPer, roi, status, ...), ROI first, each priced on THIS offer's own client value and rates (an `offer` block names them). " +
+    "The rest of the query is forwarded verbatim (brandId required downstream, containsChannels, paths, q, limit); refusals come back as served (400 brand_required, 404 offer_not_found).",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+      containsChannels: z.string().optional().describe("Comma list of channel slugs: funnels containing at least one"),
+      limit: z.string().optional().describe("1..25"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "One page of runnable funnels priced for the offer", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferSalesFunnelsResponse") } } },
+    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Offer not found", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/offers/{offerId}/deals-value",
   tags: ["Features"],
   summary: "Offer deals value",
