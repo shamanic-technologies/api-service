@@ -37,6 +37,7 @@ import workflowsRoutes from "./routes/workflows.js";
 import promptsRoutes from "./routes/prompts.js";
 import chatRoutes from "./routes/chat.js";
 import chatSkillsStaffRoutes from "./routes/chat-skills-staff.js";
+import catalogueStaffRoutes from "./routes/catalogue-staff.js";
 import billingRoutes from "./routes/billing.js";
 import creditsRoutes from "./routes/credits.js";
 import usageDiscountRoutes from "./routes/usage-discount.js";
@@ -240,6 +241,7 @@ app.use(costsRoutes); // public costs endpoints (no auth) — declares full /v1/
 app.use(costsStaffRoutes); // staff-only costs reads (authenticatePlatform + requireStaff) — declares full /v1...
 app.use(socialRoutes); // staff-only social-service reads (authenticatePlatform + requireStaff), full /v1 paths
 app.use(chatSkillsStaffRoutes); // staff-only Copilot skills + staff requests (authenticatePlatform + requireStaff), full /v1 paths
+app.use(catalogueStaffRoutes); // staff-only agent catalogue reads (authenticatePlatform + requireStaff), full /v1 paths
 
 // Internal platform routes (API key only, no identity)
 app.use("/internal", adminRoutes);
