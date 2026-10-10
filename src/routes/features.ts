@@ -444,6 +444,25 @@ router.get("/public/channels", async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /v1/public/catalogue/faces/:file
+ * The face of a sales funnel name: an SVG drawn from the NAME alone (same name, same
+ * face), `<URL-encoded name>.svg`. Proxied to features-service GET
+ * /public/catalogue/faces/:file. The catalogue rows name it in `face`.
+ *
+ * Public at the producer, so public here (rule #3): no identity of any kind. The body
+ * is an image, piped byte-for-byte with its content-type (#10), never parsed.
+ */
+router.get("/public/catalogue/faces/:file", async (req: Request, res: Response) => {
+  try {
+    await pipeExternalService(externalServices.features, `/public/catalogue/faces/${encodeURIComponent(req.params.file)}`, { expressRes: res });
+  } catch (error: any) {
+    console.error("[api-service] Public catalogue face error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to get the catalogue face");
+  }
+});
+
+/**
  * GET /v1/public/sourcing-origins
  * The sourcing-origin catalogue: every place leads can come from (Apollo cold
  * filters, LinkedIn engagement signals, ...), the read that names the origins the
