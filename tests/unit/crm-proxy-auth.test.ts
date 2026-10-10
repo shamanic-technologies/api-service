@@ -31,6 +31,7 @@ const READ_PATHS = [
   "/v1/orgs/people?brandId=b1",
   "/v1/orgs/posthog/connections?brandId=b1",
   "/v1/orgs/stripe/connections?brandId=b1",
+  "/v1/orgs/clerk/connections?brandId=b1",
   "/v1/orgs/people/timeline?brandId=b1&personKey=email%3Aalice%40acme.com",
 ];
 
@@ -41,6 +42,7 @@ const WRITE_PATHS = [
   "/v1/orgs/people/sync",
   "/v1/orgs/posthog/connections",
   "/v1/orgs/stripe/connections",
+  "/v1/orgs/clerk/connections",
 ];
 
 describe("crm proxy — auth gate", () => {

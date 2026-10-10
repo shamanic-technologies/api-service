@@ -13707,14 +13707,15 @@ registry.registerPath({
   },
 });
 
-// ── PostHog + Stripe connections (crm-service proxy) ─────────────────────────
+// ── PostHog + Stripe + Clerk connections (crm-service proxy) ─────────────────────────
 // A brand's PostHog project (visits) and Stripe account (payments), read-only
 // sources of the person thread. The credential is stored through
-// /v1/keys/brands/{brandId} (provider `posthog` / `stripe`); crm-service resolves
-// it server-side. Its /internal/posthog/* + /internal/stripe/* tier is not exposed.
+// /v1/keys/brands/{brandId} (provider `posthog` / `stripe` / `clerk`); crm-service
+// resolves it server-side. Its /internal/{posthog,stripe,clerk}/* tier is not exposed.
 for (const [provider, label, createBody] of [
   ["posthog", "PostHog", "`{ brandId, projectId, region }` (region `us` | `eu`)"],
   ["stripe", "Stripe", "`{ brandId }`"],
+  ["clerk", "Clerk", "`{ brandId }`"],
 ] as const) {
   registry.registerPath({
     method: "post",
