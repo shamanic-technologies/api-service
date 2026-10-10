@@ -317,6 +317,75 @@ for (const tail of ["/trigger-events/summary", "/trigger-events"]) {
 }
 
 /**
+ * SALES FUNNEL CAMPAIGNS (owner 2026-10-10): a campaign is brand x offer x sales funnel, run or paused as one.
+ *
+ *   GET   /v1/sales-funnel-campaigns        → campaign-service GET   /sales-funnel-campaigns (query verbatim)
+ *   POST  /v1/sales-funnel-campaigns        → campaign-service POST  /sales-funnel-campaigns (201 / 200 relayed)
+ *   GET   /v1/sales-funnel-campaigns/:id    → campaign-service GET   /sales-funnel-campaigns/{id}
+ *   PATCH /v1/sales-funnel-campaigns/:id    → campaign-service PATCH /sales-funnel-campaigns/{id} ({status: activate|stop})
+ *
+ * Org-scoped by `x-org-id`, ALWAYS the authenticated org (buildInternalHeaders). Bodies, query vocabulary,
+ * status codes and refusals (`reason`) are campaign-service's, relayed verbatim (#4, #7, #8, #11).
+ */
+const SALES_FUNNEL_CAMPAIGNS = "/sales-funnel-campaigns";
+
+router.get(SALES_FUNNEL_CAMPAIGNS, authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.campaign,
+      `/sales-funnel-campaigns${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] GET /v1/sales-funnel-campaigns — FAILED:", error.message);
+    respondUpstreamError(res, error, "Failed to list sales funnel campaigns");
+  }
+});
+
+router.post(SALES_FUNNEL_CAMPAIGNS, authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.campaign,
+      "/sales-funnel-campaigns",
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] POST /v1/sales-funnel-campaigns — FAILED:", error.message);
+    respondUpstreamError(res, error, "Failed to launch the sales funnel campaign");
+  }
+});
+
+router.get(`${SALES_FUNNEL_CAMPAIGNS}/:id`, authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.campaign,
+      `/sales-funnel-campaigns/${encodeURIComponent(req.params.id)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] GET /v1/sales-funnel-campaigns/:id — FAILED:", error.message);
+    respondUpstreamError(res, error, "Failed to read the sales funnel campaign");
+  }
+});
+
+router.patch(`${SALES_FUNNEL_CAMPAIGNS}/:id`, authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.campaign,
+      `/sales-funnel-campaigns/${encodeURIComponent(req.params.id)}`,
+      { method: "PATCH", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] PATCH /v1/sales-funnel-campaigns/:id — FAILED:", error.message);
+    respondUpstreamError(res, error, "Failed to run or pause the sales funnel campaign");
+  }
+});
+
+/**
  * GET /v1/campaigns/stats
  * Get aggregated stats for all campaigns, grouped by campaignId.
  * Calls 4 services in parallel with groupBy=campaignId:

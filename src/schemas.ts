@@ -1625,6 +1625,103 @@ registry.registerPath({
   },
 });
 
+// /v1/sales-funnel-campaigns[/{id}] -> campaign-service /sales-funnel-campaigns[/{id}], same paths.
+// Passthrough: campaign-service owns the bodies, the query vocabulary and every refusal `reason`.
+const SalesFunnelCampaignRequestSchema = z.object({}).passthrough().openapi("SalesFunnelCampaignRequest");
+const SalesFunnelCampaignResponseSchema = z.object({}).passthrough().openapi("SalesFunnelCampaignResponse");
+const SalesFunnelCampaignListResponseSchema = z.object({}).passthrough().openapi("SalesFunnelCampaignListResponse");
+const salesFunnelCampaignDescription =
+  "A SALES FUNNEL CAMPAIGN (owner 2026-10-10) is brand x offer x sales funnel: it owns one unit (an ordinary " +
+  "campaign) per pipe of the funnel and is run or paused as a whole. Its money is the funnel's caps at billing " +
+  "(GET /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps); no max budget = held unfunded. " +
+  "The org is the authenticated one. Status and body (with `reason` on a refusal) relayed verbatim.";
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/sales-funnel-campaigns",
+  tags: ["Campaigns"],
+  summary: "List the org's sales funnel campaigns, each with its units",
+  description:
+    "Proxy to campaign-service GET /sales-funnel-campaigns. " +
+    salesFunnelCampaignDescription +
+    " Query forwarded verbatim (documented today: brandId, offerId, salesFunnelId, status; not a whitelist).",
+  security: authed,
+  request: {
+    query: z
+      .object({
+        brandId: z.string().optional(),
+        offerId: z.string().optional(),
+        salesFunnelId: z.string().optional(),
+        status: z.string().optional().openapi({ description: "ongoing | stopped (campaign-service's vocabulary)" }),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "{ salesFunnelCampaigns: [...] }", content: { "application/json": { schema: SalesFunnelCampaignListResponseSchema } } },
+    400: { description: "Refused by campaign-service, forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/sales-funnel-campaigns",
+  tags: ["Campaigns"],
+  summary: "Launch a sales funnel as one campaign (brand x offer x sales funnel)",
+  description:
+    "Proxy to campaign-service POST /sales-funnel-campaigns. " +
+    salesFunnelCampaignDescription +
+    " Body { brandId, offerId, salesFunnelId, status: ongoing | stopped } forwarded untouched. 201 when created, 200 for an existing identity.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: SalesFunnelCampaignRequestSchema } } } },
+  responses: {
+    200: { description: "Existing campaign", content: { "application/json": { schema: SalesFunnelCampaignResponseSchema } } },
+    201: { description: "Created", content: { "application/json": { schema: SalesFunnelCampaignResponseSchema } } },
+    400: { description: "Refused (reason unknown_sales_funnel | no_pipe | pipe_not_runnable), forwarded verbatim", content: errorContent },
+    409: { description: "Refused (reason no_workflow | payment_declined | no_payment_method), forwarded verbatim", content: errorContent },
+    502: { description: "Dependency unavailable, forwarded verbatim", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/sales-funnel-campaigns/{id}",
+  tags: ["Campaigns"],
+  summary: "One sales funnel campaign with its units",
+  description: "Proxy to campaign-service GET /sales-funnel-campaigns/{id}. " + salesFunnelCampaignDescription,
+  security: authed,
+  request: { params: z.object({ id: z.string() }) },
+  responses: {
+    200: { description: "{ salesFunnelCampaign }", content: { "application/json": { schema: SalesFunnelCampaignResponseSchema } } },
+    404: { description: "Not found in this org, forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/sales-funnel-campaigns/{id}",
+  tags: ["Campaigns"],
+  summary: "Run or pause the whole sales funnel campaign",
+  description:
+    "Proxy to campaign-service PATCH /sales-funnel-campaigns/{id}. " +
+    salesFunnelCampaignDescription +
+    " Body { status: activate | stop } forwarded untouched; every unit moves with it.",
+  security: authed,
+  request: {
+    params: z.object({ id: z.string() }),
+    body: { content: { "application/json": { schema: SalesFunnelCampaignRequestSchema } } },
+  },
+  responses: {
+    200: { description: "{ salesFunnelCampaign } after the move", content: { "application/json": { schema: SalesFunnelCampaignResponseSchema } } },
+    400: { description: "Refused by campaign-service, forwarded verbatim", content: errorContent },
+    404: { description: "Not found in this org, forwarded verbatim", content: errorContent },
+    409: { description: "Payment hold (reason payment_declined | no_payment_method), forwarded verbatim", content: errorContent },
+    502: { description: "billing_unavailable, forwarded verbatim", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/campaigns/{id}",
@@ -9368,6 +9465,72 @@ registry.registerPath({
       .passthrough(),
   },
   responses: offerCampaignBudgetsResponses,
+});
+
+// Sales funnel caps (proxy to billing-service, same paths): MAX BUDGET + MAX VOLUME of a sales funnel
+// campaign and what it consumed this period. billing owns the body, periods and refusal codes (#4/#8).
+const SalesFunnelCapsParams = z.object({
+  brandId: z.string().describe("Brand ID"),
+  offerId: z.string().describe("Offer ID"),
+  salesFunnelId: z.string().describe("features-service sales funnel id (its combinationKey), URL-encoded"),
+});
+const SalesFunnelCapsRequestSchema = z.object({}).passthrough().openapi("SalesFunnelCapsRequest");
+const SalesFunnelCapsResponseSchema = z.object({}).passthrough().openapi("SalesFunnelCapsResponse");
+const salesFunnelCapsResponses = {
+  200: { description: "Billing's read (caps, consumed, remaining, reached), forwarded untouched", content: { "application/json": { schema: SalesFunnelCapsResponseSchema } } },
+  400: { description: "Invalid ids or body, forwarded verbatim", content: errorContent },
+  404: { description: "sales_funnel_not_found, forwarded verbatim", content: errorContent },
+  502: { description: "sales_funnel_catalogue_unavailable, forwarded verbatim", content: errorContent },
+};
+const salesFunnelCapsPath = "/v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps";
+
+registry.registerPath({
+  method: "get",
+  path: salesFunnelCapsPath,
+  tags: ["Billing"],
+  summary: "Read a sales funnel's max budget + max volume and what it consumed this period",
+  description: "Proxy to billing-service GET " + salesFunnelCapsPath + ". `reached` is the stop verdict; a consumption billing cannot measure is null with a named reason.",
+  security: authed,
+  request: { params: SalesFunnelCapsParams },
+  responses: salesFunnelCapsResponses,
+});
+
+registry.registerPath({
+  method: "put",
+  path: salesFunnelCapsPath,
+  tags: ["Billing"],
+  summary: "State a sales funnel's MAX BUDGET and MAX VOLUME",
+  description:
+    "Proxy to billing-service PUT " + salesFunnelCapsPath + ". Body { maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }, " +
+    "period one_off | daily | weekly | monthly, forwarded untouched. Charges nothing. Answers the read's shape.",
+  security: authed,
+  request: { params: SalesFunnelCapsParams, body: { content: { "application/json": { schema: SalesFunnelCapsRequestSchema } } } },
+  responses: salesFunnelCapsResponses,
+});
+
+registry.registerPath({
+  method: "delete",
+  path: salesFunnelCapsPath,
+  tags: ["Billing"],
+  summary: "Clear both caps of a sales funnel",
+  description: "Proxy to billing-service DELETE " + salesFunnelCapsPath + " (idempotent).",
+  security: authed,
+  request: { params: SalesFunnelCapsParams },
+  responses: salesFunnelCapsResponses,
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/sales-funnel-caps",
+  tags: ["Billing"],
+  summary: "Every sales funnel of this brand with a stated cap",
+  description: "Proxy to billing-service GET /v1/brands/{brandId}/sales-funnel-caps. Query forwarded verbatim (documented today: offerId).",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().describe("Brand ID") }),
+    query: z.object({ offerId: z.string().optional() }).passthrough(),
+  },
+  responses: salesFunnelCapsResponses,
 });
 
 // ===================================================================
