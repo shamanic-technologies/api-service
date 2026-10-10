@@ -19,7 +19,7 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
  *                              into the Matrix homeserver on the box
  *   - `/orgs/gohighlevel/*`  — a brand's GoHighLevel sub-account, mirrored:
  *                              its contacts and its sales pipeline
- *   - `/orgs/posthog/connections*`, `/orgs/stripe/connections*` — a brand's
+ *   - `/orgs/{posthog,stripe,clerk}/connections*` — a brand's
  *                              PostHog visits + Stripe payments (read-only)
  *
  * Every sub-path is forwarded verbatim — no path rename, no body transform, no
@@ -475,17 +475,17 @@ router.post("/orgs/people/sync", ...orgUserChain, async (req: AuthenticatedReque
   }
 });
 
-// ─── PostHog visits + Stripe payments (read-only sources of the person thread) ─
+// ─── PostHog visits + Stripe payments + Clerk signups (read-only sources of the person thread)
 //
 // Same shape as the GoHighLevel connection routes above: the brand stores its
 // credential through the EXISTING /v1/keys/brands/:brandId route (provider
-// `posthog` / `stripe`), crm-service resolves it server-side, and these routes
+// `posthog` / `stripe` / `clerk`), crm-service resolves it server-side, and these routes
 // only create / pause / resume / disconnect / read the connection. The create
 // route proves the credential against the vendor first; a refusal comes back 400
 // as `{ type, error, vendorStatus?, vendorError? }`, relayed field-for-field via
-// `respondUpstreamError`. crm-service's `/internal/posthog/*` + `/internal/stripe/*`
+// `respondUpstreamError`. crm-service's `/internal/{posthog,stripe,clerk}/*`
 // tier stays unproxied.
-for (const provider of ["posthog", "stripe"] as const) {
+for (const provider of ["posthog", "stripe", "clerk"] as const) {
   const base = `/orgs/${provider}/connections`;
 
   // POST /v1/orgs/{provider}/connections → crm-service POST /orgs/{provider}/connections
