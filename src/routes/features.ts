@@ -444,6 +444,23 @@ router.get("/public/channels", async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /v1/public/catalogue/sales-funnels
+ * The sales funnels we can run today (features-service forces `runnable` on: published, not
+ * mixed). Read by the signup's campaign step, signed out (owner 2026-10-10). Proxied to
+ * features-service GET /public/catalogue/sales-funnels, public there, so public here (rule #3):
+ * no identity of any kind. Status + body piped byte-for-byte (#10), query string verbatim (#11).
+ */
+router.get("/public/catalogue/sales-funnels", async (req: Request, res: Response) => {
+  try {
+    await pipeExternalService(externalServices.features, `/public/catalogue/sales-funnels${rawQueryString(req.originalUrl)}`, { expressRes: res });
+  } catch (error: any) {
+    console.error("[api-service] Public sales funnels error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to get the public sales funnels");
+  }
+});
+
+/**
  * GET /v1/public/catalogue/faces/:file
  * The face of a sales funnel name: an SVG drawn from the NAME alone (same name, same
  * face), `<URL-encoded name>.svg`. Proxied to features-service GET
