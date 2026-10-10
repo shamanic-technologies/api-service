@@ -415,17 +415,8 @@ const OFFER_ROUTES = [
   // The list hides archived offers unless `?includeArchived=true`, forwarded by offerQuery.
   { method: "post", path: "/brands/:id/offers/:offerId/archive", suffix: "/archive", what: "archive brand offer" },
   { method: "post", path: "/brands/:id/offers/:offerId/unarchive", suffix: "/unarchive", what: "unarchive brand offer" },
-  // HOW AN OFFER SELLS: the funnel steps and legs the customer selected for this offer
-  // (features-service step keys + leg keys, stored as given). `stated: false` = never stated.
-  { method: "get", path: "/brands/:id/offers/:offerId/sales-path", suffix: "/sales-path", what: "get offer sales path" },
-  { method: "put", path: "/brands/:id/offers/:offerId/sales-path", suffix: "/sales-path", what: "save offer sales path" },
-  // WHICH CHANNELS the offer accepts (features-service channel slugs). `stated: false` = never stated.
-  { method: "get", path: "/brands/:id/offers/:offerId/channels", suffix: "/channels", what: "get offer channels" },
-  { method: "put", path: "/brands/:id/offers/:offerId/channels", suffix: "/channels", what: "save offer channels" },
-  // WHICH SALES PATHS the customer selected on the offer (features-service combinationKeys,
-  // stored as given; several may share a campaign, no money). `stated: false` = never stated.
-  { method: "get", path: "/brands/:id/offers/:offerId/selected-sales-paths", suffix: "/selected-sales-paths", what: "get offer selected sales paths" },
-  { method: "put", path: "/brands/:id/offers/:offerId/selected-sales-paths", suffix: "/selected-sales-paths", what: "save offer selected sales paths" },
+  // The offer's sales path, accepted channels and selected sales paths are RETIRED (owner
+  // 2026-10-10: a campaign IS a sales funnel): no proxy, brand-service no longer serves them.
 ] as const;
 
 for (const route of OFFER_ROUTES) {

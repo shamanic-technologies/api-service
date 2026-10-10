@@ -248,42 +248,6 @@ router.post("/campaigns/start-funded-pair", authenticate, requireOrg, requireUse
   }
 });
 
-/**
- * POST /v1/offers/:offerId/reactive-defaults → campaign-service POST /offers/:offerId/reactive-defaults
- *
- * Called after a PERSON saved the offer's ticked sales paths: campaign-service switches ON every
- * reactive campaign a ticked path uses that has no campaign yet (a stopped one stays stopped).
- * Body `{ brandId }` forwarded untouched (campaign-service's body is strict and owns the 400 on a
- * missing brandId); the body's brandId ALSO rides `x-brand-id` (an identity value rides a header,
- * never only the body), unless the caller already named the brand in the header/query, in which
- * case a different body brandId is a 400. Status (200, 400, 409 payment hold, 502
- * sales_paths_unavailable) and body forwarded field for field.
- */
-router.post("/offers/:offerId/reactive-defaults", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const headers = buildInternalHeaders(req);
-    const bodyBrandId = req.body?.brandId;
-    if (typeof bodyBrandId === "string" && bodyBrandId.length > 0) {
-      if (headers["x-brand-id"] && headers["x-brand-id"] !== bodyBrandId) {
-        res.status(400).json({
-          error: `Conflict: x-brand-id (${headers["x-brand-id"]}) does not match body brandId (${bodyBrandId})`,
-        });
-        return;
-      }
-      headers["x-brand-id"] = bodyBrandId;
-    }
-    const { status, data } = await callExternalServiceWithStatus(
-      externalServices.campaign,
-      `/offers/${encodeURIComponent(req.params.offerId)}/reactive-defaults`,
-      { method: "POST", headers, body: req.body },
-    );
-    res.status(status).json(data);
-  } catch (error: any) {
-    console.error("[api-service] POST /v1/offers/:offerId/reactive-defaults — FAILED:", error.message);
-    respondUpstreamError(res, error, "Failed to switch on the offer's reactive campaigns");
-  }
-});
-
 /** Raw query string of the caller's URL, `?` included (empty when none): forwarded verbatim. */
 function rawQueryString(originalUrl: string): string {
   const index = originalUrl.indexOf("?");
