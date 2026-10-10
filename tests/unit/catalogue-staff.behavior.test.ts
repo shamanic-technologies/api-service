@@ -147,6 +147,25 @@ describe("staff catalogue — query and ids", () => {
   });
 });
 
+describe("public — GET /v1/public/catalogue/sales-funnels", () => {
+  it("pipes the page byte-for-byte with the query verbatim and sends no identity", async () => {
+    upstream(200, RAW);
+    const res = await request(buildApp()).get("/v1/public/catalogue/sales-funnels?containsChannels=sales-cold-email-outreach&limit=25");
+    expect(res.status).toBe(200);
+    expect(res.text).toBe(RAW);
+    expect(calls[0].url).toBe(`${FEATURES_BASE}/public/catalogue/sales-funnels?containsChannels=sales-cold-email-outreach&limit=25`);
+    expect(calls[0].options.headers["x-org-id"]).toBeUndefined();
+    expect(calls[0].options.headers["x-user-id"]).toBeUndefined();
+  });
+
+  it("forwards the producer's refusal field-for-field", async () => {
+    upstream(400, '{"error":"limit must be 1..25","reason":"limit_invalid"}');
+    const res = await request(buildApp()).get("/v1/public/catalogue/sales-funnels?limit=x");
+    expect(res.status).toBe(400);
+    expect(res.body.reason).toBe("limit_invalid");
+  });
+});
+
 describe("public — GET /v1/public/catalogue/faces/:file", () => {
   const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"></svg>';
 

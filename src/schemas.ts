@@ -8271,6 +8271,30 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/public/catalogue/sales-funnels",
+  tags: ["Features"],
+  summary: "The sales funnels we can run today",
+  description:
+    "Byte passthrough to features-service GET /public/catalogue/sales-funnels: one page of runnable sales funnels (id, name, face, line, type, costUsd, costPer, roi, ...), ROI first; `runnable` is forced on by the producer. Query string forwarded verbatim (containsChannels, paths, q, limit). No authentication required.",
+  request: {
+    query: z
+      .object({
+        containsChannels: z.string().optional().openapi({ description: "Comma list of channel slugs: funnels containing at least one" }),
+        paths: z.string().optional(),
+        q: z.string().optional(),
+        limit: z.string().optional().openapi({ description: "1..25, default 10" }),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicSalesFunnelsResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/public/catalogue/faces/{file}",
   tags: ["Features"],
   summary: "A sales funnel name's face (SVG)",
