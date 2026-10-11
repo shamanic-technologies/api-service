@@ -4,7 +4,7 @@ import { pipeExternalService, externalServices } from "../lib/service-client.js"
 import { respondUpstreamError } from "../lib/upstream-error.js";
 
 // Staff-only reads of features-service's agent catalogue (`/internal/catalogue/*`, features-service
-// PR #1482): steps, sales paths, channels, pipes, sales funnels and workflows, each a small LIST
+// PR #1482): steps, sales paths, channels, pipes, sales funnels, workflows and triggers, each a small LIST
 // (`q`, `limit` <= 25, the "contains at least one" filters) and ONE object by id. Behind the
 // dashboard v2 Staff sections (one per business object: an overview, the ongoing ones, a page
 // each). Fleet-wide, no org scoping: the producer takes no identity. Gate: authenticatePlatform +
@@ -12,8 +12,8 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
 // errors field-for-field (#7), query string verbatim (#11).
 const router = Router();
 
-/** The six catalogue objects features-service serves, in its own path spelling. */
-export const CATALOGUE_OBJECTS = ["steps", "sales-paths", "channels", "pipes", "sales-funnels", "workflows"] as const;
+/** The catalogue objects features-service serves, in its own path spelling (triggers: what starts a reactive pipe). */
+export const CATALOGUE_OBJECTS = ["steps", "sales-paths", "channels", "pipes", "sales-funnels", "workflows", "triggers"] as const;
 
 /** Raw query string (with its `?`) off the original URL, forwarded verbatim (#11). */
 function rawQueryString(originalUrl: string): string {

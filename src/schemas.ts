@@ -8111,6 +8111,46 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/catalogue/triggers",
+  tags: ["Features"],
+  summary: "List catalogue triggers (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to features-service GET /internal/catalogue/triggers: one page of triggers, what starts a reactive pipe (id, name, icon, eventIcon, line, fromStep, firedBy, coded, pipeCount, ...). Query string forwarded verbatim (documented today: q, limit; not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({ q: z.string().optional(), limit: z.string().optional() }).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueTriggersListResponse") } } },
+    400: { description: "Invalid filter (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+    503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/catalogue/triggers/{id}",
+  tags: ["Features"],
+  summary: "Read one catalogue trigger (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to features-service GET /internal/catalogue/triggers/{id}: the trigger and the reactive pipes it starts. Query string forwarded verbatim; status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { params: z.object({ id: z.string().openapi({ description: "a trigger id (e.g. positive_reply_received)" }) }), query: z.object({}).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueTriggersDetailResponse") } } },
+    404: { description: "Unknown id (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+    503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/public/catalogue/steps",
   tags: ["Features"],
   summary: "Every catalogue step with its icon",

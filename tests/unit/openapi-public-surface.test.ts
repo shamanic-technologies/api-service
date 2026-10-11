@@ -90,6 +90,8 @@ const PLATFORM_OPERATIONS = [
   "get /v1/catalogue/sales-funnels/{id}",
   "get /v1/catalogue/workflows",
   "get /v1/catalogue/workflows/{id}",
+  "get /v1/catalogue/triggers",
+  "get /v1/catalogue/triggers/{id}",
   "get /v1/social/brands/{brandId}/linkedin-posts",
   "get /v1/social/me/linkedin-posts",
   "get /v1/runs/stats/costs/margin/timeseries",
