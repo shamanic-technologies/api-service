@@ -1491,4 +1491,33 @@ router.get(
   },
 );
 
+/**
+ * GET /v1/features/brands/:brandId/sales-funnel-campaigns/:salesFunnelCampaignId/activity
+ *   → features-service GET /brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/activity
+ *
+ * The dashboard campaign page (owner 2026-10-11): one sales funnel campaign's whole funnel in people (step
+ * counts, step-to-step rates) and each pipe's work (daily series, AI Instant Call figures), all served by
+ * features-service. Same auth and identity forwarding as the rows route above; query verbatim (#11);
+ * status and body relayed (#7), 404 `sales_funnel_campaign_not_found` / `brand_not_found` included.
+ */
+router.get(
+  "/features/brands/:brandId/sales-funnel-campaigns/:salesFunnelCampaignId/activity",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.features,
+        `/brands/${encodeURIComponent(req.params.brandId)}/sales-funnel-campaigns/${encodeURIComponent(req.params.salesFunnelCampaignId)}/activity${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("Failed to get sales funnel campaign activity:", error.message);
+      respondUpstreamError(res, error, "Failed to get sales funnel campaign activity");
+    }
+  },
+);
+
 export default router;
