@@ -219,6 +219,7 @@ describe("published OpenAPI document", () => {
       "get /v1/brands",
       "post /v1/keys",
       "get /v1/billing/accounts/balance",
+      "get /v1/billing/accounts/runway",
       "get /v1/billing/credits/grants",
       "get /v1/platform/services",
     ]) {

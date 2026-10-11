@@ -61,10 +61,11 @@ describe("Billing proxy routes", () => {
     // incl. the 4 sales-budget and 6 subscription routes, and the 5 per-plan
     // routes (cancel/resume share one handler in a loop: 4 occurrences),
     // plus the 2 pause/unpause loops (org-level + per-plan), and the 3
-    // offer campaign-budgets routes, and the 4 sales funnel caps routes.
+    // offer campaign-budgets routes, and the 4 sales funnel caps routes,
+    // and the runway read.
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    expect(authMatches!.length).toBe(41);
+    expect(authMatches!.length).toBe(42);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints (no x-key-source)", () => {
@@ -75,8 +76,9 @@ describe("Billing proxy routes", () => {
     // 24 routes + the shared salesBudgetProxy helper (2 branches) behind the 4 sales-budget routes
     // + the 4 per-plan handlers (cancel/resume share one) + the 2 pause/unpause loops
     // + the shared offerCampaignBudgetsProxy helper (2 branches)
-    // + the shared salesFunnelCapsProxy helper (2 branches) + the brand sales-funnel-caps list.
-    expect(headerMatches!.length).toBe(37);
+    // + the shared salesFunnelCapsProxy helper (2 branches) + the brand sales-funnel-caps list
+    // + the runway read.
+    expect(headerMatches!.length).toBe(38);
   });
 
   it("should have GET /billing/payments endpoint sourced from stripe-service", () => {
@@ -114,6 +116,7 @@ describe("Billing proxy routes", () => {
   it("should forward correct downstream paths", () => {
     expect(content).toContain('"/v1/accounts"');
     expect(content).toContain('"/v1/accounts/balance"');
+    expect(content).toContain('"/v1/accounts/runway"');
     expect(content).toContain('"/v1/accounts/auto_topup"');
     expect(content).toContain('"/v1/checkout-sessions"');
     expect(content).toContain('"/v1/portal-sessions"');
@@ -139,6 +142,7 @@ describe("Billing OpenAPI schemas", () => {
   it("should register all billing paths", () => {
     expect(schemaContent).toContain('path: "/v1/billing/accounts"');
     expect(schemaContent).toContain('path: "/v1/billing/accounts/balance"');
+    expect(schemaContent).toContain('path: "/v1/billing/accounts/runway"');
     expect(schemaContent).toContain('path: "/v1/billing/accounts/auto_topup"');
     expect(schemaContent).toContain('path: "/v1/billing/checkout-sessions"');
     expect(schemaContent).toContain('path: "/v1/billing/portal-sessions"');

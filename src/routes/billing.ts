@@ -69,6 +69,24 @@ router.get("/billing/accounts/balance", authenticate, requireOrg, async (req: Au
   }
 });
 
+// GET /v1/billing/accounts/runway — how many days the prepaid balance lasts
+// Pure pass-through of billing-service's own read: body and status verbatim
+// (200 states days/depleted/no_budget/budget_unavailable/not_prepaid, 404 no
+// account, 502 billing's upstream down). No account upsert: billing's 404 is a
+// meaningful answer the caller branches on, and a read must not create rows.
+router.get("/billing/accounts/runway", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/runway",
+      { headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to get runway");
+  }
+});
+
 // PATCH /v1/billing/accounts/auto_topup — configure auto-topup
 router.patch("/billing/accounts/auto_topup", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
