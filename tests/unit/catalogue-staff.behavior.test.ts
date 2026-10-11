@@ -15,7 +15,7 @@ const { FEATURES_BASE } = vi.hoisted(() => {
  * Staff agent catalogue — byte passthrough to features-service (PR #1482):
  *   GET /v1/catalogue/<object>      → GET /internal/catalogue/<object>
  *   GET /v1/catalogue/<object>/:id  → GET /internal/catalogue/<object>/:id
- * for steps, sales-paths, channels, pipes, sales-funnels, workflows; and the public
+ * for steps, sales-paths, channels, pipes, sales-funnels, workflows, triggers; and the public
  *   GET /v1/public/catalogue/faces/:file → GET /public/catalogue/faces/:file (an SVG).
  *
  * No auth mock: the real authenticatePlatform + requireStaff run, and every refusal
@@ -49,8 +49,8 @@ beforeEach(() => {
   calls = [];
 });
 
-it("serves exactly the six objects features-service serves", () => {
-  expect([...CATALOGUE_OBJECTS]).toEqual(["steps", "sales-paths", "channels", "pipes", "sales-funnels", "workflows"]);
+it("serves exactly the seven objects features-service serves", () => {
+  expect([...CATALOGUE_OBJECTS]).toEqual(["steps", "sales-paths", "channels", "pipes", "sales-funnels", "workflows", "triggers"]);
 });
 
 const ROUTES = CATALOGUE_OBJECTS.flatMap((o) => [
@@ -139,7 +139,7 @@ describe("staff catalogue — query and ids", () => {
     expect(calls[0].url).toBe(`${FEATURES_BASE}/internal/catalogue/steps/a%2Fb`);
   });
 
-  it("serves no object outside the six", async () => {
+  it("serves no object outside the seven", async () => {
     upstream(200, RAW);
     const res = await request(buildApp()).get("/v1/catalogue/declarations").set(STAFF);
     expect(res.status).toBe(404);

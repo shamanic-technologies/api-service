@@ -5292,6 +5292,14 @@
         "type": "object",
         "properties": {}
       },
+      "CatalogueTriggersListResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CatalogueTriggersDetailResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "PublicCatalogueStepsResponse": {
         "type": "object",
         "properties": {}
