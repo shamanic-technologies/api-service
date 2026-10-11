@@ -625,6 +625,37 @@ router.post("/campaigns/:id/stop", authenticate, requireOrg, requireUser, async 
 
 
 /**
+ * GET /v1/campaigns/:id/sourcing-stats — pass-through to lead-service
+ * GET /orgs/campaigns/{campaignId}/sourcing-stats.
+ *
+ * What ONE sourcing pipe of a sales funnel (a source campaign: Apollo cold filters,
+ * Apollo buying signals, LinkedIn engagement) found and kept since inception.
+ * lead-service derives it; this gateway forwards the answer and merges nothing (rule #2).
+ *
+ * The org boundary is the authenticated one: `x-org-id` comes from
+ * `buildInternalHeaders(req)`, never from the caller. lead-service's refusals (404 not a
+ * campaign of this org, 409 not a source campaign, 502 a sibling it reads is down) reach
+ * the caller with their own status and body through `respondUpstreamError`; the success
+ * status is forwarded too, never hardcoded. The query string is forwarded verbatim
+ * (rule #11). One campaign's figures are small, so no pipe (rule #10); the response
+ * shape is lead-service's (rule #8).
+ */
+router.get("/campaigns/:id/sourcing-stats", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?")) : "";
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.lead,
+      `/orgs/campaigns/${encodeURIComponent(req.params.id)}/sourcing-stats${query}`,
+      { headers: buildInternalHeaders(req) }
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Get campaign sourcing stats error:", error);
+    respondUpstreamError(res, error, "Failed to get campaign sourcing stats");
+  }
+});
+
+/**
  * GET /v1/campaigns/:id/stats
  * Get campaign statistics
  */
