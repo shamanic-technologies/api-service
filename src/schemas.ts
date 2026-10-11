@@ -1602,6 +1602,31 @@ registry.registerPath({
   },
 });
 
+const SalesFunnelCampaignActivityResponseSchema = z.object({}).passthrough().openapi("SalesFunnelCampaignActivityResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/activity",
+  tags: ["Campaigns"],
+  summary: "One sales funnel campaign's funnel in people and each pipe's work",
+  description:
+    "Proxy to features-service GET /brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/activity. The whole " +
+    "funnel in people (step counts and step-to-step rates) and each pipe's work (daily series, AI Instant Call figures), " +
+    "all served by features-service. The org is the authenticated one. No query parameters documented today; any query " +
+    "is forwarded verbatim. Status and body relayed verbatim.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string(), salesFunnelCampaignId: z.string() }),
+    query: z.object({}).passthrough(),
+  },
+  responses: {
+    200: { description: "The campaign's funnel and pipes activity", content: { "application/json": { schema: SalesFunnelCampaignActivityResponseSchema } } },
+    400: { description: "Refused by features-service, forwarded verbatim", content: errorContent },
+    404: { description: "sales_funnel_campaign_not_found or brand_not_found, forwarded verbatim", content: errorContent },
+    502: { description: "A producer unreadable, forwarded verbatim", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/sales-funnel-campaigns",
