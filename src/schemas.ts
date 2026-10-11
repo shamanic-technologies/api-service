@@ -3029,6 +3029,48 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/leads/{id}/answered-outside",
+  tags: ["Leads"],
+  summary: "State that you answered this person outside the platform",
+  description:
+    "Pass-through to lead-service POST /orgs/leads/{id}/answered-outside. Records that the caller answered this " +
+    "person from outside the platform (their own inbox, which no system of ours sees), so the person stops waiting " +
+    "on the brand and leaves the list read at GET /v1/leads/awaiting-reply?brandId=. No request body. The caller's " +
+    "org AND user identity are forwarded, because lead-service records who answered. Status and body are " +
+    "lead-service's, forwarded unchanged. Refer to lead-service openapi.json for the exact response shape.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().openapi({
+        description: "The `id` of a lead as returned by GET /v1/leads.",
+      }),
+    }),
+    query: z
+      .object({
+        brandId: z.string().optional().openapi({
+          description: "Optional brand scope. Documented today, not a whitelist: the query string is forwarded verbatim.",
+        }),
+      })
+      .passthrough(),
+  },
+  responses: {
+    201: {
+      description: "The statement as recorded by lead-service, and whether the person is still awaiting a reply.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadAnsweredOutsideResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid lead id or no user (lead-service states the reason)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead in this caller's org or brand", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "get",
   path: "/v1/leads/{id}/followups",
   tags: ["Leads"],
