@@ -1874,6 +1874,37 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/campaigns/{id}/sourcing-stats",
+  tags: ["Campaigns"],
+  summary: "What one sourcing pipe of a sales funnel found and kept, since inception",
+  description:
+    "Pass-through to lead-service GET /orgs/campaigns/{campaignId}/sourcing-stats. For one source campaign of a " +
+    "sales funnel (Apollo cold filters, Apollo buying signals, LinkedIn engagement): the people and companies it " +
+    "found, how many of them were kept (served to an outreach campaign of the offer), and the daily series. " +
+    "lead-service derives the figures; api-service forwards status and body untransformed. The read is org-scoped " +
+    "downstream on the authenticated org. Refer to lead-service openapi.json (`SourcingStatsResponse`) for the " +
+    "exact response shape.",
+  security: authed,
+  request: { params: CampaignIdParam },
+  responses: {
+    200: {
+      description: "The source pipe's found / kept figures, as returned by lead-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("CampaignSourcingStatsResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Not a campaign of this caller's org", content: errorContent },
+    409: { description: "The campaign is not a lead source (not a sourcing pipe)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "A service lead-service reads to answer is down", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/campaigns/{id}/stats",
   tags: ["Campaigns"],
   summary: "Get campaign stats",
