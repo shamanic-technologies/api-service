@@ -6768,6 +6768,32 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/accounts/runway",
+  tags: ["Billing"],
+  summary: "Get account runway",
+  description:
+    "How many days the prepaid balance lasts at the org's daily budget — pass-through from billing-service " +
+    "(`state`: days, depleted, no_budget, budget_unavailable, not_prepaid; plus balance_cents, daily_budget_cents, " +
+    "configured_daily_budget_cents, days_left, days_left_exact, runs_out_at). Body and status forwarded verbatim.",
+  security: authed,
+  responses: {
+    200: {
+      description: "Runway info — pass-through from billing-service",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("RunwayResponse"),
+        },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No billing account for this org", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "Billing upstream unavailable", content: errorContent },
+  },
+});
+
 export const CardSetupRequestSchema = z
   .object({
     return_url: z
