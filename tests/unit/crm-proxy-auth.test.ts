@@ -33,6 +33,8 @@ const READ_PATHS = [
   "/v1/orgs/stripe/connections?brandId=b1",
   "/v1/orgs/clerk/connections?brandId=b1",
   "/v1/orgs/people/timeline?brandId=b1&personKey=email%3Aalice%40acme.com",
+  "/v1/orgs/people/outcomes?brandId=b1",
+  "/v1/orgs/people/outcomes/people?brandId=b1&step=signup",
 ];
 
 const WRITE_PATHS = [

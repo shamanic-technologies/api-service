@@ -13849,6 +13849,41 @@ registry.registerPath({
   },
 });
 
+const CrmPeopleOutcomePeopleQuery = CrmBrandIdQuery.extend({
+  step: z.string().openapi({ description: "Outcome step (e.g. signup), vocabulary owned by crm-service" }),
+  limit: z.string().optional().openapi({ description: "Page size, validated by crm-service" }),
+  offset: z.string().optional().openapi({ description: "Page offset, validated by crm-service" }),
+});
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/people/outcomes",
+  tags: ["CRM Contacts"],
+  summary: "People who reached each outcome step, every source merged",
+  description:
+    "Proxy to crm-service GET /orgs/people/outcomes — per outcome step (website visit, signup, form submitted, meeting booked / attended, paid client), the distinct people who reached it from any source the brand connected, with per-source counts and how many we contacted. The whole query string is forwarded byte-for-byte (`brandId`). Requires x-user-id. Response shape owned by crm-service (PeopleOutcomes).",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Outcome counts as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/people/outcomes/people",
+  tags: ["CRM Contacts"],
+  summary: "The people of one outcome step, paged",
+  description:
+    "Proxy to crm-service GET /orgs/people/outcomes/people. The whole query string is forwarded byte-for-byte (`brandId`, `step`, `limit`, `offset` — the ones documented today, not a whitelist). Requires x-user-id. crm-service's 400 on an unknown step crosses verbatim. Response shape owned by crm-service (PeopleOutcomePeople).",
+  security: authed,
+  request: { query: CrmPeopleOutcomePeopleQuery },
+  responses: {
+    200: { description: "People as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/v1/orgs/people/sync",

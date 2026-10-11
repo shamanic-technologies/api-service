@@ -458,6 +458,39 @@ router.get("/orgs/people/timeline", ...orgUserChain, async (req: AuthenticatedRe
   }
 });
 
+// GET /v1/orgs/people/outcomes → crm-service GET /orgs/people/outcomes
+// Per outcome step, the distinct people who reached it from ANY source the brand
+// connected (PostHog, Clerk, Stripe, GoHighLevel), not only the leads we contacted.
+router.get("/orgs/people/outcomes", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.crm,
+      `/orgs/people/outcomes${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] People outcomes error:", error);
+    respondUpstreamError(res, error, "People outcomes error");
+  }
+});
+
+// GET /v1/orgs/people/outcomes/people → crm-service GET /orgs/people/outcomes/people
+// The paged people of one outcome step (`step`, `limit`, `offset` validated downstream).
+router.get("/orgs/people/outcomes/people", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.crm,
+      `/orgs/people/outcomes/people${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] People outcome step error:", error);
+    respondUpstreamError(res, error, "People outcome step error");
+  }
+});
+
 // POST /v1/orgs/people/sync → crm-service POST /orgs/people/sync
 // crm-service answers 202 (accepted, runs in the background); the upstream status
 // crosses unchanged.
