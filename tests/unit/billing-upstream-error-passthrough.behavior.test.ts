@@ -133,6 +133,10 @@ describe("the sibling billing proxies forward the upstream failure the same way"
       call: (app) => request(app).get("/v1/billing/accounts/balance"),
     },
     {
+      name: "GET /v1/billing/accounts/runway",
+      call: (app) => request(app).get("/v1/billing/accounts/runway"),
+    },
+    {
       name: "PATCH /v1/billing/accounts/auto_topup",
       call: (app) =>
         request(app)
@@ -167,6 +171,51 @@ describe("the sibling billing proxies forward the upstream failure the same way"
       expect(res.body).toEqual(body);
     });
   }
+});
+
+describe("GET /v1/billing/accounts/runway — verbatim pass-through", () => {
+  const RUNWAY = {
+    org_id: "org_test456",
+    payment_mode: "prepaid",
+    state: "days",
+    balance_cents: 12000,
+    daily_budget_cents: 1000,
+    configured_daily_budget_cents: 1000,
+    days_left: 12,
+    days_left_exact: 12,
+    runs_out_at: "2026-10-23T00:00:00.000Z",
+  };
+
+  it("forwards billing's 200 body untouched, one call to billing's runway path with the org", async () => {
+    stubUpstream(200, RUNWAY);
+
+    const res = await request(buildApp()).get("/v1/billing/accounts/runway");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(RUNWAY);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${BILLING_BASE}/v1/accounts/runway`);
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+  });
+
+  it("forwards billing's 404 (no account) without creating one", async () => {
+    stubUpstream(404, { error: "Account not found" });
+
+    const res = await request(buildApp()).get("/v1/billing/accounts/runway");
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Account not found" });
+    expect(calls).toHaveLength(1);
+  });
+
+  it("forwards billing's 502", async () => {
+    stubUpstream(502, { error: "budget upstream down" });
+
+    const res = await request(buildApp()).get("/v1/billing/accounts/runway");
+
+    expect(res.status).toBe(502);
+    expect(res.body).toEqual({ error: "budget upstream down" });
+  });
 });
 
 describe("no route in billing.ts rebuilds its own error envelope", () => {
