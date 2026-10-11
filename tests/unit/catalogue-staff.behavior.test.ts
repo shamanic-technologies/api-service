@@ -166,6 +166,27 @@ describe("public — GET /v1/public/catalogue/sales-funnels", () => {
   });
 });
 
+describe("public — GET /v1/public/catalogue/steps", () => {
+  const STEPS = '{"rows":[{"key":"reply","name":"Reply","icon":"ChatCircle"}],"someNewField":true}';
+
+  it("pipes the rows byte-for-byte with the query verbatim and sends no identity", async () => {
+    upstream(200, STEPS);
+    const res = await request(buildApp()).get("/v1/public/catalogue/steps?x=1&x=2");
+    expect(res.status).toBe(200);
+    expect(res.text).toBe(STEPS);
+    expect(calls[0].url).toBe(`${FEATURES_BASE}/public/catalogue/steps?x=1&x=2`);
+    expect(calls[0].options.headers["x-org-id"]).toBeUndefined();
+    expect(calls[0].options.headers["x-user-id"]).toBeUndefined();
+  });
+
+  it("forwards the producer's 404 field-for-field", async () => {
+    upstream(404, '{"error":"Not found","code":"route_missing"}');
+    const res = await request(buildApp()).get("/v1/public/catalogue/steps");
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Not found", code: "route_missing" });
+  });
+});
+
 describe("public — GET /v1/public/catalogue/faces/:file", () => {
   const SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128"></svg>';
 
