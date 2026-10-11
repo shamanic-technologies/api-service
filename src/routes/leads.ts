@@ -518,6 +518,46 @@ router.delete(
 );
 
 /**
+ * POST /v1/leads/:id/answered-outside — pass-through to lead-service
+ * POST /orgs/leads/{id}/answered-outside.
+ *
+ * The customer states "I answered this person outside the platform" (from their own
+ * inbox, which no system of ours sees), so the person leaves the "Needs your call"
+ * list (lead-service `GET /orgs/leads/awaiting-reply`, reached through
+ * `GET /v1/leads/:id` above with `id = awaiting-reply`).
+ *
+ * No request body: lead-service takes none, so none is forwarded. `requireUser` is
+ * load-bearing — lead-service records WHO answered and 400s without a user;
+ * `buildInternalHeaders(req)` carries the authenticated org and user, never the
+ * caller's. The query string (`brandId`) is forwarded verbatim (rule #11), the
+ * upstream status and body likewise (rules #7/#8: 201 recorded, 400 not a uuid /
+ * no user, 404 not in this org or brand).
+ */
+router.post(
+  "/leads/:id/answered-outside",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/answered-outside${rawQueryString(req.originalUrl)}`,
+        {
+          method: "POST",
+          headers: buildInternalHeaders(req),
+        }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Answered outside statement error:", error);
+      respondUpstreamError(res, error, "Failed to record answered-outside statement");
+    }
+  }
+);
+
+/**
  * GET /v1/leads/:id/followups — pass-through to lead-service
  * GET /orgs/leads/{id}/followups.
  *

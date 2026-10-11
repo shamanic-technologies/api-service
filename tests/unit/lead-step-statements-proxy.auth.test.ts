@@ -44,6 +44,12 @@ describe("/v1/leads/:id/step-statements — auth gate", () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  it("refuses an answered-outside POST with no credentials", async () => {
+    const res = await request(buildApp()).post(`/v1/leads/${LEAD}/answered-outside`);
+    expect(res.status).toBe(401);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it("refuses a GET with no credentials", async () => {
     const res = await request(buildApp()).get(`/v1/leads/${LEAD}/step-statements`);
     expect(res.status).toBe(401);
