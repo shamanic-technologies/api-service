@@ -461,6 +461,24 @@ router.get("/public/catalogue/sales-funnels", async (req: Request, res: Response
 });
 
 /**
+ * GET /v1/public/catalogue/steps
+ * Every catalogue step's key, name and Phosphor icon, nothing economic: the customer
+ * dashboard's Outcomes entries wear the same icon as the staff Steps section (owner
+ * 2026-10-11). Proxied to features-service GET /public/catalogue/steps, public there, so
+ * public here (rule #3): no identity of any kind. Status + body piped byte-for-byte (#10),
+ * query string verbatim (#11).
+ */
+router.get("/public/catalogue/steps", async (req: Request, res: Response) => {
+  try {
+    await pipeExternalService(externalServices.features, `/public/catalogue/steps${rawQueryString(req.originalUrl)}`, { expressRes: res });
+  } catch (error: any) {
+    console.error("[api-service] Public catalogue steps error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to get the public catalogue steps");
+  }
+});
+
+/**
  * GET /v1/public/catalogue/faces/:file
  * The face of a sales funnel name: an SVG drawn from the NAME alone (same name, same
  * face), `<URL-encoded name>.svg`. Proxied to features-service GET

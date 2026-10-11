@@ -8055,6 +8055,20 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/public/catalogue/steps",
+  tags: ["Features"],
+  summary: "Every catalogue step with its icon",
+  description:
+    "Byte passthrough to features-service GET /public/catalogue/steps: every catalogue step `{ key, name, icon }` (Phosphor icon name), unpaged, nothing economic. Query string forwarded verbatim. No authentication required.",
+  request: { query: z.object({}).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicCatalogueStepsResponse") } } },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/public/catalogue/sales-funnels",
   tags: ["Features"],
   summary: "The sales funnels we can run today",
