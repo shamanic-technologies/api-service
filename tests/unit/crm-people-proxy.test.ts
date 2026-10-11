@@ -109,6 +109,39 @@ describe("/v1/orgs/people* → crm-service", () => {
     expect(res.body).toEqual({ error: "person not found", reason: "person_not_found" });
   });
 
+  it("GET /orgs/people/outcomes forwards the query string + identity headers, body verbatim", async () => {
+    reply = { status: 200, body: { steps: [{ step: "signup", people: 3 }] } };
+    const res = await request(buildApp()).get(`/v1/orgs/people/outcomes?brandId=${BRAND}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ steps: [{ step: "signup", people: 3 }] });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/people/outcomes?brandId=${BRAND}`);
+    expect(calls[0].options.method).toBe("GET");
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("GET /orgs/people/outcomes/people reaches its own downstream path, query byte-copied", async () => {
+    reply = { status: 200, body: { people: [], total: 0 } };
+    const res = await request(buildApp()).get(
+      `/v1/orgs/people/outcomes/people?brandId=${BRAND}&step=signup&limit=25&offset=50`,
+    );
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ people: [], total: 0 });
+    expect(calls[0].url).toBe(
+      `${CRM_BASE}/orgs/people/outcomes/people?brandId=${BRAND}&step=signup&limit=25&offset=50`,
+    );
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("GET /orgs/people/outcomes/people returns crm-service's 400 status and body verbatim", async () => {
+    reply = { status: 400, body: { type: "validation", error: "unknown step", code: "invalid_step" } };
+    const res = await request(buildApp()).get(`/v1/orgs/people/outcomes/people?brandId=${BRAND}&step=nope`);
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ type: "validation", error: "unknown step", code: "invalid_step" });
+  });
+
   it("POST /orgs/people/sync forwards the body verbatim and passes 202 through", async () => {
     reply = { status: 202, body: { status: "accepted", scopeId: "s1" } };
     const res = await request(buildApp()).post("/v1/orgs/people/sync").send({ brandId: BRAND });
@@ -135,7 +168,11 @@ describe("/v1/orgs/people* → crm-service", () => {
       .get(`/v1/orgs/people/timeline?brandId=${BRAND}&personKey=email%3Aa%40b.c`)
       .set("x-test-no-user", "1");
     const sync = await request(app).post("/v1/orgs/people/sync").set("x-test-no-user", "1").send({ brandId: BRAND });
-    for (const res of [list, timeline, sync]) {
+    const outcomes = await request(app).get(`/v1/orgs/people/outcomes?brandId=${BRAND}`).set("x-test-no-user", "1");
+    const stepPeople = await request(app)
+      .get(`/v1/orgs/people/outcomes/people?brandId=${BRAND}&step=signup`)
+      .set("x-test-no-user", "1");
+    for (const res of [list, timeline, sync, outcomes, stepPeople]) {
       expect(res.status).toBe(401);
       expect(res.body.error).toBe("User identity required");
     }
