@@ -13,6 +13,9 @@
  * recorded. A call refused before its key resolved to a user has no person to
  * file it under and is not recorded either.
  *
+ * Never recorded either: reads of the API's own description (the openapi
+ * catalogue, GET or HEAD, see HOUSEKEEPING_PATHS): machine housekeeping.
+ *
  * Never recorded: the Authorization / x-api-key / cookie headers (only an
  * allow-list of harmless headers is kept), the key itself (the record carries a
  * one-way fingerprint), and any secret-looking field or value in the query,
@@ -213,6 +216,30 @@ export function callChannel(headers: Record<string, string | string[] | undefine
   return value === "mcp" ? "mcp" : "api";
 }
 
+// ─── housekeeping (never recorded) ──────────────────────────────────────────
+
+/**
+ * The API's own description: the openapi catalogue documents. A client (our MCP
+ * server above all) reads or revalidates them before its real calls to learn
+ * what it may call. That is machine housekeeping, not something the person
+ * asked us, so it is never filed on their thread and never starts a
+ * conversation (owner 2026-10-12).
+ */
+export const HOUSEKEEPING_PATHS: ReadonlySet<string> = new Set([
+  "/openapi.json",
+  "/public/openapi.json",
+  "/internal/openapi.json",
+  "/v1/me/openapi.json",
+]);
+
+/** A GET/HEAD of a catalogue document (query string and a trailing slash ignored). */
+export function isHousekeepingCall(method: string, url: string): boolean {
+  if (method !== "GET" && method !== "HEAD") return false;
+  const [path] = url.split("?");
+  const bare = path.length > 1 ? path.replace(/\/+$/, "") : path;
+  return HOUSEKEEPING_PATHS.has(bare);
+}
+
 // ─── capture middleware ─────────────────────────────────────────────────────
 
 /**
@@ -224,6 +251,7 @@ export function callChannel(headers: Record<string, string | string[] | undefine
 export function recordCustomerCalls(req: Request, res: Response, next: NextFunction) {
   const authorization = req.headers.authorization;
   if (typeof authorization !== "string" || !authorization.startsWith("Bearer ")) return next();
+  if (isHousekeepingCall(req.method, req.originalUrl)) return next();
 
   const startedAt = Date.now();
   const chunks: Buffer[] = [];
