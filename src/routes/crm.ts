@@ -130,6 +130,23 @@ router.get("/orgs/contacts/serve-stats", ...orgChain, async (req: AuthenticatedR
   }
 });
 
+// GET /v1/orgs/contacts/segments → crm-service GET /orgs/contacts/segments
+// The brand's CRM segments (pipeline stages + deal status, tags, funnel steps),
+// each with its people count: what a CRM sourcing `segment` can name. Read-only.
+router.get("/orgs/contacts/segments", ...orgChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.crm,
+      `/orgs/contacts/segments${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] Contact segments error:", error);
+    respondUpstreamError(res, error, "Contact segments error");
+  }
+});
+
 // POST /v1/orgs/contacts/serve-next → crm-service POST /orgs/contacts/serve-next
 // Body forwarded verbatim — crm-service owns its shape.
 router.post("/orgs/contacts/serve-next", ...orgChain, async (req: AuthenticatedRequest, res) => {

@@ -13510,6 +13510,19 @@ const CrmBrandIdQuery = z.object({
   brandId: z.string().uuid().openapi({ description: "Brand ID (required by crm-service)" }),
 });
 
+const CrmServeStatsQuery = CrmBrandIdQuery.extend({
+  pool: z.enum(["csv", "people"]).optional().openapi({ description: "csv (default: imported CRM files) or people (the brand's merged CRM people)" }),
+  segment: z
+    .string()
+    .optional()
+    .openapi({
+      description:
+        'pool=people only. URL-encoded JSON CRM segment: {"dealStages":[{"pipeline":"Sales Pipeline","stage":"Form Filled - No Appointment"}],"dealStatuses":["open"],"tags":["vip"],"reached":["form_submission"],"notReached":["sale"]}. Names come from GET /v1/orgs/contacts/segments.',
+    }),
+  reachableBy: z.string().optional().openapi({ description: "phone, email, or both (comma-separated)" }),
+  uploadIds: z.string().optional().openapi({ description: "pool=csv only. Repeated or comma-separated upload ids" }),
+}).passthrough();
+
 const OrgUploadRequest = z
   .object({
     contentBase64: z
@@ -13747,11 +13760,26 @@ registry.registerPath({
   tags: ["CRM Contacts"],
   summary: "Served vs remaining sendable counts for a brand",
   description:
-    "Proxy to crm-service GET /orgs/contacts/serve-stats. The whole query string is forwarded untransformed, including a repeated or comma-separated `uploadIds` per-file scope. Response shape owned by crm-service.",
+    "Proxy to crm-service GET /orgs/contacts/serve-stats. The whole query string is forwarded untransformed, including a repeated or comma-separated `uploadIds` per-file scope. With `pool=people`, a `segment` (URL-encoded JSON, same shape as serve-next `people.segment`: dealStages, dealStatuses, tags, reached, notReached, includeClients, includeOptedOut) counts only that part of the brand's CRM and adds a per-stage breakdown; pick segment names from GET /v1/orgs/contacts/segments. The parameters below are the ones documented today, not a whitelist. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmServeStatsQuery },
+  responses: {
+    200: { description: "Serve stats as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/contacts/segments",
+  tags: ["CRM Contacts"],
+  summary: "List the CRM segments of a brand (pipeline stages, deal statuses, tags, funnel steps) with people counts",
+  description:
+    "Proxy to crm-service GET /orgs/contacts/segments. What a CRM sourcing campaign can be scoped to, read from the brand's own connected CRM and tools: every CRM pipeline stage with its deal status, every contact tag, every funnel step reached (website visit, signup, form submission, meeting booked, sale...), each with how many people it holds. Call it before scoping a CRM segment on serve-next (`people.segment`), serve-stats (`segment`) or a CRM audience. Read-only, no cost. The whole query string is forwarded untransformed. Response shape owned by crm-service (PeopleSegmentCatalogue).",
   security: authed,
   request: { query: CrmBrandIdQuery },
   responses: {
-    200: { description: "Serve stats as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    200: { description: "Segment catalogue as returned by crm-service ({ brandId, dealStages, tags, steps })", content: { "application/json": { schema: CrmPassthroughResponse } } },
     ...crmErrorResponses,
   },
 });
