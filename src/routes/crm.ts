@@ -130,6 +130,23 @@ router.get("/orgs/contacts/serve-stats", ...orgChain, async (req: AuthenticatedR
   }
 });
 
+// GET /v1/orgs/contacts/segments → crm-service GET /orgs/contacts/segments
+// The brand's CRM segments (pipeline stages + deal status, tags, funnel steps),
+// each with its people count: what a CRM sourcing `segment` can name. Read-only.
+router.get("/orgs/contacts/segments", ...orgChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.crm,
+      `/orgs/contacts/segments${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] Contact segments error:", error);
+    respondUpstreamError(res, error, "Contact segments error");
+  }
+});
+
 // POST /v1/orgs/contacts/serve-next → crm-service POST /orgs/contacts/serve-next
 // Body forwarded verbatim — crm-service owns its shape.
 router.post("/orgs/contacts/serve-next", ...orgChain, async (req: AuthenticatedRequest, res) => {
@@ -523,6 +540,56 @@ router.post("/orgs/people/sync", ...orgUserChain, async (req: AuthenticatedReque
   } catch (error) {
     console.error("[api-service] People sync error:", error);
     respondUpstreamError(res, error, "People sync error");
+  }
+});
+
+// ─── Stated merges: two people of a brand are one human ─────────────────────
+// crm-service owns the statement, its refusals (`{ type: "refused", reason, … }`
+// as 404 / 409 / 422) and the rebuild it kicks; the status (201 new, 200
+// duplicate) and the body cross unchanged — a refusal's reason is the point.
+
+// POST /v1/orgs/people/merges → crm-service POST /orgs/people/merges
+router.post("/orgs/people/merges", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.crm,
+      "/orgs/people/merges",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error) {
+    console.error("[api-service] Merge people error:", error);
+    respondUpstreamError(res, error, "Merge people error");
+  }
+});
+
+// GET /v1/orgs/people/merges → crm-service GET /orgs/people/merges
+router.get("/orgs/people/merges", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.crm,
+      `/orgs/people/merges${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] List people merges error:", error);
+    respondUpstreamError(res, error, "List people merges error");
+  }
+});
+
+// POST /v1/orgs/people/merges/:mergeId/undo → crm-service POST /orgs/people/merges/:mergeId/undo
+router.post("/orgs/people/merges/:mergeId/undo", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.crm,
+      `/orgs/people/merges/${encodeURIComponent(req.params.mergeId)}/undo`,
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error) {
+    console.error("[api-service] Undo people merge error:", error);
+    respondUpstreamError(res, error, "Undo people merge error");
   }
 });
 

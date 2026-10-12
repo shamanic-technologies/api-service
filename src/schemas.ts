@@ -13512,6 +13512,19 @@ const CrmBrandIdQuery = z.object({
   brandId: z.string().uuid().openapi({ description: "Brand ID (required by crm-service)" }),
 });
 
+const CrmServeStatsQuery = CrmBrandIdQuery.extend({
+  pool: z.enum(["csv", "people"]).optional().openapi({ description: "csv (default: imported CRM files) or people (the brand's merged CRM people)" }),
+  segment: z
+    .string()
+    .optional()
+    .openapi({
+      description:
+        'pool=people only. URL-encoded JSON CRM segment: {"dealStages":[{"pipeline":"Sales Pipeline","stage":"Form Filled - No Appointment"}],"dealStatuses":["open"],"tags":["vip"],"reached":["form_submission"],"notReached":["sale"]}. Names come from GET /v1/orgs/contacts/segments.',
+    }),
+  reachableBy: z.string().optional().openapi({ description: "phone, email, or both (comma-separated)" }),
+  uploadIds: z.string().optional().openapi({ description: "pool=csv only. Repeated or comma-separated upload ids" }),
+}).passthrough();
+
 const OrgUploadRequest = z
   .object({
     contentBase64: z
@@ -13749,11 +13762,26 @@ registry.registerPath({
   tags: ["CRM Contacts"],
   summary: "Served vs remaining sendable counts for a brand",
   description:
-    "Proxy to crm-service GET /orgs/contacts/serve-stats. The whole query string is forwarded untransformed, including a repeated or comma-separated `uploadIds` per-file scope. Response shape owned by crm-service.",
+    "Proxy to crm-service GET /orgs/contacts/serve-stats. The whole query string is forwarded untransformed, including a repeated or comma-separated `uploadIds` per-file scope. With `pool=people`, a `segment` (URL-encoded JSON, same shape as serve-next `people.segment`: dealStages, dealStatuses, tags, reached, notReached, includeClients, includeOptedOut) counts only that part of the brand's CRM and adds a per-stage breakdown; pick segment names from GET /v1/orgs/contacts/segments. The parameters below are the ones documented today, not a whitelist. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmServeStatsQuery },
+  responses: {
+    200: { description: "Serve stats as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/contacts/segments",
+  tags: ["CRM Contacts"],
+  summary: "List the CRM segments of a brand (pipeline stages, deal statuses, tags, funnel steps) with people counts",
+  description:
+    "Proxy to crm-service GET /orgs/contacts/segments. What a CRM sourcing campaign can be scoped to, read from the brand's own connected CRM and tools: every CRM pipeline stage with its deal status, every contact tag, every funnel step reached (website visit, signup, form submission, meeting booked, sale...), each with how many people it holds. Call it before scoping a CRM segment on serve-next (`people.segment`), serve-stats (`segment`) or a CRM audience. Read-only, no cost. The whole query string is forwarded untransformed. Response shape owned by crm-service (PeopleSegmentCatalogue).",
   security: authed,
   request: { query: CrmBrandIdQuery },
   responses: {
-    200: { description: "Serve stats as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    200: { description: "Segment catalogue as returned by crm-service ({ brandId, dealStages, tags, steps })", content: { "application/json": { schema: CrmPassthroughResponse } } },
     ...crmErrorResponses,
   },
 });
@@ -14187,6 +14215,61 @@ registry.registerPath({
   request: { body: { content: { "application/json": { schema: CrmPassthroughRequest } } } },
   responses: {
     202: { description: "Accepted, as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+// Stated merges: someone says two people of a brand are the same human.
+const peopleMergeRefusal = { description: "Refused, crm-service's `{ type: \"refused\", reason, personId?, error }` forwarded verbatim", content: errorContent };
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/people/merges",
+  tags: ["CRM Contacts"],
+  summary: "Merge two people into one person (they are the same human)",
+  description:
+    "Merge two people of a brand into ONE person when they are the same person on different channels and no source record says so (a WhatsApp chat with a number nobody saved, and the same human on Gmail or in the CRM). Proxy to crm-service POST /orgs/people/merges. Body `{ brandId, personIds: [personId, personId], reason? }` (the two personId values from GET /v1/orgs/people) forwarded verbatim. The two people become one merged thread with every channel and identity key of both; one person id is kept and the other still opens it. A rebuild starts at once: the merged person shows on GET /v1/orgs/people within about a minute. Idempotent: stating the same two people again answers 200 with `duplicate: true` (201 for a new merge). Refusals cross verbatim with their reason: 404 `person_not_found`, 422 `different_brand` / `same_person`, 409 `already_one_person`. Unmerge with POST /v1/orgs/people/merges/{mergeId}/undo. Requires x-user-id (recorded as who stated it). Response shape owned by crm-service.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: CrmPassthroughRequest } } } },
+  responses: {
+    201: { description: "Merge stated, rebuild started (crm-service body verbatim)", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    200: { description: "Already stated (`duplicate: true`), same body", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: peopleMergeRefusal,
+    409: peopleMergeRefusal,
+    422: peopleMergeRefusal,
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/people/merges",
+  tags: ["CRM Contacts"],
+  summary: "List the merges stated on a brand's people (same person, merged)",
+  description:
+    "Proxy to crm-service GET /orgs/people/merges: every merge stated on the brand (two people said to be the same person), newest first, undone ones included, each with `applied` (the latest build shows them as one person) and the merged `personId`. The whole query string is forwarded byte-for-byte (`brandId` required downstream). Requires x-user-id. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Merges as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/people/merges/{mergeId}/undo",
+  tags: ["CRM Contacts"],
+  summary: "Unmerge two people (undo a stated merge)",
+  description:
+    "Unmerge: take back a merge stated with POST /v1/orgs/people/merges. Proxy to crm-service POST /orgs/people/merges/{mergeId}/undo, body `{ brandId }` forwarded verbatim. The two people come back apart, each with its own person id, at the rebuild that starts now (unless a source record ties them on its own). The merge stays listed with who undid it and when. Idempotent: undoing twice answers `duplicate: true`. An unknown merge is 404 `merge_not_found`, crm-service's body verbatim. Requires x-user-id. Response shape owned by crm-service.",
+  security: authed,
+  request: {
+    params: z.object({ mergeId: z.string() }),
+    body: { content: { "application/json": { schema: CrmPassthroughRequest } } },
+  },
+  responses: {
+    200: { description: "Undone, as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: peopleMergeRefusal,
     ...crmErrorResponses,
   },
 });
