@@ -103,7 +103,8 @@ describe("GET /v1/me — a user key reaches every organization of its user", () 
     );
     expect(res.body.keyScope).toMatch(/belongs to its USER/);
     expect(res.body.keyScope).toMatch(/org_target_required/);
-    expect(res.body.keyScope).toMatch(/never carries staff, admin or beta powers/);
+    expect(res.body.keyScope).toMatch(/never carries admin or beta powers/);
+    expect(res.body.keyScope).toMatch(/Staff \(key\)/);
     expect(res.body.lookupErrors).toEqual([]);
     expect(res.body).toMatchObject({ userId: "user-1", orgId: "org-1", authType: "user_key" });
   });
