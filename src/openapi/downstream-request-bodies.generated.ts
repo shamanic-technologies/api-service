@@ -794,6 +794,49 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       }
     }
   },
+  "POST /v1/followup-cuts": {
+    "service": "instantly-service",
+    "method": "POST",
+    "path": "/orgs/followup-cuts",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "campaignId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The campaign (campaign-service id) that emailed these leads"
+        },
+        "leadEmails": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "email"
+          },
+          "minItems": 1,
+          "maxItems": 500,
+          "description": "The leads of that campaign whose queued follow-ups stop. Every other lead keeps its follow-ups."
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "description": "Why: stored on the audit row"
+        }
+      },
+      "required": [
+        "campaignId",
+        "leadEmails",
+        "reason"
+      ],
+      "example": {
+        "campaignId": "fb201499-4f90-40da-9cc3-f612392664f2",
+        "leadEmails": [
+          "alice@example.com"
+        ],
+        "reason": "Sourcing bug handed this campaign people it was not meant to write to"
+      }
+    }
+  },
   "POST /v1/invites/validate": {
     "service": "client-service",
     "method": "POST",
