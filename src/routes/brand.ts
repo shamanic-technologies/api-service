@@ -381,7 +381,9 @@ function offerQuery(req: AuthenticatedRequest): string {
 function offerPath(req: AuthenticatedRequest, suffix = ""): string {
   const base = `/orgs/brands/${req.params.id}/offers`;
   const offer = req.params.offerId ? `/${encodeURIComponent(req.params.offerId)}` : "";
-  return `${base}${offer}${suffix}${offerQuery(req)}`;
+  // A suffix may name its own path params (`/steps/:stepKey`): each is filled from the request.
+  const tail = suffix.replace(/:(\w+)/g, (_m, name: string) => encodeURIComponent(req.params[name] ?? ""));
+  return `${base}${offer}${tail}${offerQuery(req)}`;
 }
 
 /**
@@ -417,6 +419,13 @@ const OFFER_ROUTES = [
   { method: "post", path: "/brands/:id/offers/:offerId/unarchive", suffix: "/unarchive", what: "unarchive brand offer" },
   // The offer's sales path, accepted channels and selected sales paths are RETIRED (owner
   // 2026-10-10: a campaign IS a sales funnel): no proxy, brand-service no longer serves them.
+  // What came back (owner 2026-10-12) is ONLY the steps the offer's business has: the Copilot
+  // reads them before proposing a funnel and adds one when the client confirms it. No body on
+  // the writes; brand-service's 400 `unknown_step` / 502 `step_catalogue_unavailable` reach the
+  // caller field for field through respondUpstreamError.
+  { method: "get", path: "/brands/:id/offers/:offerId/steps", suffix: "/steps", what: "get offer steps" },
+  { method: "put", path: "/brands/:id/offers/:offerId/steps/:stepKey", suffix: "/steps/:stepKey", what: "add offer step" },
+  { method: "delete", path: "/brands/:id/offers/:offerId/steps/:stepKey", suffix: "/steps/:stepKey", what: "remove offer step" },
 ] as const;
 
 for (const route of OFFER_ROUTES) {
@@ -426,9 +435,9 @@ for (const route of OFFER_ROUTES) {
         externalServices.brand,
         offerPath(req, route.suffix),
         {
-          method: route.method.toUpperCase() as "GET" | "POST" | "PUT" | "PATCH",
+          method: route.method.toUpperCase() as "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
           headers: buildInternalHeaders(req),
-          ...(route.method === "get" ? {} : { body: req.body }),
+          ...(route.method === "get" || route.method === "delete" ? {} : { body: req.body }),
         },
       );
       res.status(status).json(data);
