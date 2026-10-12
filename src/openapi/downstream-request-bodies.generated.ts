@@ -1070,6 +1070,29 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "format": "uuid",
           "description": "Bind this audience to ONE imported CRM source (a crm-service upload id of the same brand). Every CRM serve made under this audience is then restricted to the people of that file, so several bound audiences can coexist for one brand and each is independently pausable + independently costed. Validated against the brand's uploads at creation (400 if it is not one of them). Omit to keep the whole-brand behaviour. Immutable afterwards."
         },
+        "crmPeople": {
+          "type": "object",
+          "properties": {
+            "signedUp": {
+              "type": "boolean",
+              "description": "true = only people who signed up to the brand's product (a signup on its auth provider); false = only people who did not."
+            },
+            "replied": {
+              "type": "boolean",
+              "description": "false = only people who NEVER wrote to the brand on any conversation channel (email, WhatsApp, LinkedIn, an answer to our outreach); true = only people who did."
+            },
+            "reachableBy": {
+              "type": "string",
+              "enum": [
+                "phone",
+                "email"
+              ],
+              "description": "Only people holding a phone / an email. A phone channel (WhatsApp, SMS) wants 'phone': a person served without one is burned for nothing."
+            }
+          },
+          "additionalProperties": false,
+          "description": "Bind this CRM audience to the brand's merged PEOPLE matching a filter (e.g. {signedUp: true, replied: false} = product signups who never answered) instead of to an imported file. Requires provider 'crm'; exclusive with crmUploadId. Every serve passes the filter to crm-service (same brand-wide no-re-serve forever); each served person carries its phone when crm-service holds one. Validated against crm-service's serve-stats at creation (its counts become the audience's Size / Remaining). Immutable afterwards."
+        },
         "offerId": {
           "type": "string",
           "format": "uuid",
@@ -1442,6 +1465,64 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "minItems": 1,
           "maxItems": 200,
           "description": "Restrict the serve to these imported CRM files (ids from GET /orgs/contacts/uploads). Omit for the whole brand. Suppression stays brand-wide: a contact already served through another file is never returned again, whichever file is used."
+        },
+        "people": {
+          "type": "object",
+          "properties": {
+            "signedUp": {
+              "type": "boolean",
+              "description": "true = only people who signed up to the brand's product (its auth provider, e.g. Clerk); false = only people who did not."
+            },
+            "replied": {
+              "type": "boolean",
+              "description": "false = only people who NEVER wrote to the brand on any conversation channel (Gmail / WhatsApp / LinkedIn inbound, any answer to our cold email): never written to, or written to without an answer. true = only people who answered. Copilot / API use is the product being used, not a conversation."
+            },
+            "reachableBy": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "phone",
+                    "email"
+                  ]
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "phone",
+                      "email"
+                    ]
+                  }
+                }
+              ],
+              "description": "Only people holding a phone / an email (a list = all)."
+            }
+          },
+          "description": "Serve from the brand's merged PEOPLE (one row per human, every source) instead of its CSV rows. Exclusive with uploadIds. Always excludes automated senders, people not about this brand, and anyone without an email. Same brand-wide no-re-serve: every address of a served person is suppressed, and a person any address of whom was served before is never served."
+        },
+        "reachableBy": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "phone",
+                "email"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "phone",
+                  "email"
+                ]
+              }
+            }
+          ],
+          "description": "The channel(s) the pipe serving writes on (all required): `phone` (WhatsApp, calls, SMS) or `email`. On BOTH pools, a contact or person the pipe cannot reach is SKIPPED and NOT marked served, so it stays available to a pipe that can. Omit = no requirement (unchanged behaviour)."
         }
       },
       "required": [
@@ -1619,6 +1700,54 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
     "method": "POST",
     "path": "/orgs/opportunities/next",
     "schema": null
+  },
+  "POST /v1/orgs/people/merges": {
+    "service": "crm-service",
+    "method": "POST",
+    "path": "/orgs/people/merges",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "brandId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "personIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "description": "The two personId values from GET /orgs/people."
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Why they are the same human (kept with the statement)."
+        }
+      },
+      "required": [
+        "brandId",
+        "personIds"
+      ]
+    }
+  },
+  "POST /v1/orgs/people/merges/{mergeId}/undo": {
+    "service": "crm-service",
+    "method": "POST",
+    "path": "/orgs/people/merges/{mergeId}/undo",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "brandId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "brandId"
+      ]
+    }
   },
   "POST /v1/orgs/people/sync": {
     "service": "crm-service",
