@@ -4184,6 +4184,78 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – Offer steps (proxy to brand-service /orgs/brands/:id/offers/:offerId/steps[/:stepKey]).
+// The funnel steps the client stated its business has for one offer (owner 2026-10-12). Passthrough:
+// brand-service owns { offerId, stated, steps, statedAt[, changed] } and every refusal.
+// ===================================================================
+const OfferStepsResponseSchema = z.object({}).passthrough().openapi("OfferStepsResponse");
+const OfferStepParams = BrandOfferParams.extend({
+  stepKey: z.string().describe("A features-service step key (GET /v1/public/catalogue/steps lists them), e.g. purchase"),
+});
+const OFFER_STEPS_MODEL =
+  "The funnel steps the client stated its business has for this offer (features-service step keys such as " +
+  "conversation, booking_call, meeting_booked, purchase). stated false (steps null) = the offer never stated its " +
+  "steps, a different answer from stated true with an empty list. Never legs, channels or sales paths.";
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}/steps",
+  tags: ["Brand"],
+  summary: "Read the steps an offer's business has",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/steps. " + OFFER_STEPS_MODEL +
+    " Answers { offerId, stated, steps, statedAt }. Read them before proposing a sales funnel: a funnel " +
+    "through a step the offer does not have is a question to ask the client, not a default.",
+  security: authed,
+  request: { params: BrandOfferParams },
+  responses: {
+    200: { description: "The offer's stated steps", content: { "application/json": { schema: OfferStepsResponseSchema } } },
+    400: { description: "Invalid brand or offer ID format (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "No such brand, or no such offer on it (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+const OFFER_STEP_WRITE_RESPONSES = {
+  200: { description: "The steps after the write, with changed (false = no-op)", content: { "application/json": { schema: OfferStepsResponseSchema } } },
+  400: { description: "Invalid ID, or reason unknown_step (a key outside the step catalogue; knownSteps lists the valid ones), forwarded verbatim", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+  404: { description: "No such brand, or no such offer on it (forwarded verbatim)", content: errorContent },
+  500: { description: "Upstream error", content: errorContent },
+  502: { description: "reason step_catalogue_unavailable: the step catalogue could not be read, nothing written (forwarded verbatim)", content: errorContent },
+};
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/offers/{offerId}/steps/{stepKey}",
+  tags: ["Brand"],
+  summary: "State one step of an offer (idempotent)",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{brandId}/offers/{offerId}/steps/{stepKey}. " + OFFER_STEPS_MODEL +
+    " Adds ONE step, only after the client confirmed their business has it. No body. Already stated = 200 " +
+    "with changed false. Answers { offerId, stated, steps, statedAt, changed }.",
+  security: authed,
+  request: { params: OfferStepParams },
+  responses: OFFER_STEP_WRITE_RESPONSES,
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/brands/{id}/offers/{offerId}/steps/{stepKey}",
+  tags: ["Brand"],
+  summary: "Remove one step of an offer (idempotent)",
+  description:
+    "Proxy to brand-service DELETE /orgs/brands/{brandId}/offers/{offerId}/steps/{stepKey}. " + OFFER_STEPS_MODEL +
+    " Removes ONE step. Not stated = 200 with changed false. Answers { offerId, stated, steps, statedAt, changed }.",
+  security: authed,
+  request: { params: OfferStepParams },
+  responses: OFFER_STEP_WRITE_RESPONSES,
+});
+
+// ===================================================================
 // Brand – Click Destination (proxy to brand-service /orgs/brands/:id/click-destination)
 // Downstream owns body + response shapes — passthrough only. No gateway
 // re-validation, so brand-service's 4xx errors propagate verbatim.
