@@ -80,7 +80,16 @@ async function main() {
       continue;
     }
     const schema = (((op.requestBody as Json | undefined)?.content as Json | undefined)?.["application/json"] as Json | undefined)?.schema;
-    out[key] = { ...src, schema: schema ? (inline(doc, schema) as Json) : null };
+    const inlined = schema ? (inline(doc, schema) as Json) : null;
+    for (const field of src.omit ?? []) {
+      if (!inlined?.properties || !(field in (inlined.properties as Json))) {
+        problems.push(`${key}: omit names "${field}", which ${src.service} does not document`);
+        continue;
+      }
+      delete (inlined.properties as Json)[field];
+      if (Array.isArray(inlined.required)) inlined.required = (inlined.required as string[]).filter((f) => f !== field);
+    }
+    out[key] = { ...src, schema: inlined };
   }
   if (problems.length) {
     console.error(`[api-service] sync-downstream-bodies: ${problems.length} problem(s)\n${problems.join("\n")}`);

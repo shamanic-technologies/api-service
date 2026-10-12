@@ -14902,3 +14902,98 @@ registry.registerPath({
     409: { description: "Refused, with a `code` (forwarded verbatim)", content: errorContent },
   },
 });
+
+// ---------------------------------------------------------------------------
+// Organizations and member invitations (client-service).
+// ---------------------------------------------------------------------------
+const passthroughBody = (name: string) => ({ content: { "application/json": { schema: z.object({}).passthrough().openapi(name) } } });
+const passthroughResponse = (description: string, name: string) => ({ description, content: { "application/json": { schema: z.object({}).passthrough().openapi(name) } } });
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs",
+  tags: ["Organizations"],
+  summary: "Create an organization for a new client (staff only)",
+  description:
+    "Open a new client's account: send the organization's `name` (and an `idempotencyKey` so a retry returns the same org). " +
+    "Returns `orgId`, ready at once for brands, offers, audiences and campaigns, with onboarding already marked complete. " +
+    "Then add the client's website as a brand and invite the client (`POST /v1/orgs/{orgId}/member-invitations`). " +
+    "No credit is granted: use `POST /v1/billing/credits/grant`. Staff only: a distribute.you staff member's own API key; " +
+    "any other key gets 403 `staff_only`. The acting user is taken from the key. Pass-through to client-service POST /internal/orgs " +
+    "(201 created, 200 idempotent replay).",
+  security: platformAuth,
+  request: { body: passthroughBody("CreateOrganizationRequest") },
+  responses: {
+    201: passthroughResponse("Organization created (client-service shape)", "CreatedOrganization"),
+    200: passthroughResponse("Idempotent replay: the org an earlier call with the same idempotencyKey created", "CreatedOrganizationReplay"),
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Identity provider failed (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/{orgId}/member-invitations",
+  tags: ["Organizations"],
+  summary: "Invite a person to the organization by email",
+  description:
+    "Invite someone to join this organization: send their `email`. Returns the `invitation` with its `inviteUrl`, the link to " +
+    "forward by hand (they also get it by email). Inviting the same email again returns the pending invitation (200) instead of " +
+    "a second one. Any member of the organization may invite. The inviter is taken from the key. Pass-through to client-service " +
+    "POST /internal/orgs/{orgId}/member-invitations.",
+  security: authed,
+  request: {
+    params: z.object({ orgId: z.string().uuid().openapi({ description: "The organization (from GET /v1/me)" }) }),
+    body: passthroughBody("InviteMemberRequest"),
+  },
+  responses: {
+    201: passthroughResponse("Invitation created, with its link", "MemberInvitationCreated"),
+    200: passthroughResponse("Already invited: the pending invitation", "MemberInvitationExisting"),
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not a member of this organization", content: errorContent },
+    422: { description: "`invitation_refused` (e.g. already a member), forwarded verbatim", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/{orgId}/member-invitations",
+  tags: ["Organizations"],
+  summary: "List the organization's pending invitations",
+  description:
+    "The invitations to this organization that can still be accepted: email, link, dates. Any member may list them. " +
+    "Pass-through to client-service GET /internal/orgs/{orgId}/member-invitations.",
+  security: authed,
+  request: { params: z.object({ orgId: z.string().uuid().openapi({ description: "The organization (from GET /v1/me)" }) }) },
+  responses: {
+    200: passthroughResponse("Pending invitations (client-service shape)", "MemberInvitationList"),
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not a member of this organization", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/orgs/{orgId}/member-invitations/{invitationId}",
+  tags: ["Organizations"],
+  summary: "Revoke an invitation to the organization",
+  description:
+    "Cancel a pending invitation so its link stops working. Any member may revoke. " +
+    "Pass-through to client-service DELETE /internal/orgs/{orgId}/member-invitations/{invitationId}.",
+  security: authed,
+  request: {
+    params: z.object({
+      orgId: z.string().uuid().openapi({ description: "The organization (from GET /v1/me)" }),
+      invitationId: z.string().openapi({ description: "The invitation id, from the list or the creation answer" }),
+    }),
+  },
+  responses: {
+    200: passthroughResponse("The revoked invitation", "MemberInvitationRevoked"),
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not a member of this organization", content: errorContent },
+    404: { description: "`invitation_not_found` (forwarded verbatim)", content: errorContent },
+  },
+});

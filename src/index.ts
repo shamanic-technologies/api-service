@@ -72,6 +72,7 @@ import adminBrandsRoutes from "./routes/admin-brands.js";
 import agentSignupsRoutes from "./routes/agent-signups.js";
 import prepaidRoutes from "./routes/prepaid.js";
 import repliesRoutes from "./routes/replies.js";
+import orgsRoutes from "./routes/orgs.js";
 import { rateLimit } from "./middleware/rate-limit.js";
 import { authenticatePlatform } from "./middleware/auth.js";
 import { buildDocument } from "./openapi/document.js";
@@ -294,6 +295,7 @@ app.use("/v1", chatRoutes);
 app.use("/v1", agentSignupsRoutes); // public: an AI agent opens an account and gets a key (no auth)
 app.use("/v1", prepaidRoutes);
 app.use("/v1", repliesRoutes);
+app.use("/v1", orgsRoutes);
 app.use("/v1", billingRoutes);
 app.use("/v1", creditsRoutes);
 app.use("/v1", usageDiscountRoutes);

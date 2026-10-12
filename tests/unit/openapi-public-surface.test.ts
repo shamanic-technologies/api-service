@@ -64,6 +64,7 @@ const PLATFORM_OPERATIONS = [
   "get /v1/promo-codes/{code}",
   "patch /v1/promo-codes/{code}",
   "post /v1/billing/credits/grant",
+  "post /v1/orgs",
   "get /v1/billing/credits/grants/all",
   "post /v1/billing/credits/debit",
   "get /v1/billing/credits/debits/all",
