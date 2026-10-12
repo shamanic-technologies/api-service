@@ -13914,6 +13914,26 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "patch",
+  path: "/v1/orgs/matrix/links/{linkId}",
+  tags: ["CRM Contacts"],
+  summary: "Mark a linked account as the brand's outreach default for its channel",
+  description:
+    "Proxy to crm-service PATCH /orgs/matrix/links/{linkId}. A first WhatsApp message to a person no linked account already talks with goes out from this account (an existing conversation keeps its account). One per brand and channel: the others lose it. Request body forwarded verbatim. Status and body of every refusal are forwarded verbatim. Response shape owned by crm-service.",
+  security: authed,
+  request: {
+    params: z.object({ linkId: z.string().openapi({ description: "Link id (the account's `linkId` from GET /v1/orgs/matrix/links)" }) }),
+    body: { content: { "application/json": { schema: CrmPassthroughRequest } } },
+  },
+  responses: {
+    200: { description: "The account's view as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: { description: "No such link for this brand (forwarded verbatim)", content: errorContent },
+    409: { description: "The account is not linked (forwarded verbatim)", content: errorContent },
+    ...crmErrorResponses,
+  },
+});
+
 // ── GoHighLevel mirror (crm-service proxy) ───────────────────────────────────
 // A brand's GoHighLevel sub-account, mirrored: its contacts and its sales
 // pipeline. The credential lives brand-scoped in key-service (see

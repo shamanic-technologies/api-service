@@ -84,6 +84,7 @@ export const DOWNSTREAM_BODY_SOURCES: Record<string, DownstreamBodySource> = {
   "POST /v1/orgs/matrix/connections": { service: "crm-service", method: "POST", path: "/orgs/matrix/connections" },
   "PATCH /v1/orgs/matrix/connections/{id}": { service: "crm-service", method: "PATCH", path: "/orgs/matrix/connections/{id}" },
   "POST /v1/orgs/matrix/links": { service: "crm-service", method: "POST", path: "/orgs/matrix/links" },
+  "PATCH /v1/orgs/matrix/links/{linkId}": { service: "crm-service", method: "PATCH", path: "/orgs/matrix/links/{linkId}" },
   "POST /v1/orgs/gohighlevel/connections": { service: "crm-service", method: "POST", path: "/orgs/gohighlevel/connections" },
   "PATCH /v1/orgs/gohighlevel/connections/{id}": { service: "crm-service", method: "PATCH", path: "/orgs/gohighlevel/connections/{id}" },
   "POST /v1/orgs/posthog/connections": { service: "crm-service", method: "POST", path: "/orgs/posthog/connections" },
