@@ -4,6 +4,7 @@ import {
   authenticatePlatform,
   requireOrg,
   requireStaff,
+  requireStaffActor,
   AuthenticatedRequest,
 } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
@@ -44,12 +45,14 @@ function staffHeaders(
 
 // POST /v1/billing/credits/grant — grant free credit to the org in context (staff only).
 // Body { amountCents, note?, idempotencyKey } forwarded as-is to billing-service
-// POST /v1/credits/grant (which owns value validation).
+// POST /v1/credits/grant (which owns value validation and idempotency).
+// `requireStaffActor`: the staff admin console (platform key + staff x-email) AND a
+// staff member's own API key (the MCP, owner rule 2026-10-12); a client key is 403.
 router.post(
   "/billing/credits/grant",
   authenticate,
   requireOrg,
-  requireStaff,
+  requireStaffActor,
   async (req: AuthenticatedRequest, res) => {
     try {
       const result = await callExternalService(

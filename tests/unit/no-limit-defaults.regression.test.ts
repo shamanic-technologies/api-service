@@ -55,10 +55,13 @@ describe("No silent limit defaults on list endpoints", () => {
         }
       }
 
-      // Also check requestBody schemas for POST endpoints
+      // Also check requestBody schemas for POST endpoints. A body copied from the
+      // PRODUCER's openapi (src/openapi/downstream-bodies.ts) documents the producer's
+      // own real limit, not a cap this gateway applies: it is not a gateway default.
       const bodySchema =
         operation.requestBody?.content?.["application/json"]?.schema;
-      if (bodySchema?.properties) {
+      const documentedFromProducer = String((operation as any).description ?? "").includes("Request body: documented from ");
+      if (bodySchema?.properties && !documentedFromProducer) {
         for (const [propName, propSchema] of Object.entries(
           bodySchema.properties as Record<string, any>,
         )) {

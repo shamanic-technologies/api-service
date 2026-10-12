@@ -63,8 +63,10 @@ describe("Credit-grant proxy routes (source)", () => {
     // word lack the trailing comma, so this counts code references only.
     const matches = content.match(/requireStaff,/g);
     // 1 import + 2 route usages (POST grant, GET grants/all). The per-org GET grants dropped it.
-    // + POST debit, GET debits/all.
-    expect(matches!.length).toBe(5);
+    // + POST debit, GET debits/all. POST grant moved to requireStaffActor (staff key
+    // allowed, owner 2026-10-12): pinned behaviourally in staff-key-operations.behavior.test.ts.
+    expect(matches!.length).toBe(4);
+    expect(content).toMatch(/"\/billing\/credits\/grant",\s*authenticate,\s*requireOrg,\s*requireStaffActor,/);
   });
 
   it("should forward correct LOCKED downstream billing paths", () => {

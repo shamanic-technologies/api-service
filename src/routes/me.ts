@@ -3,6 +3,7 @@ import { authenticateUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { fetchBrandMemberships, fetchOrganizationNames } from "../lib/org-scope.js";
+import { buildDocument } from "../openapi/document.js";
 
 const router = Router();
 
@@ -17,7 +18,8 @@ export const KEY_SCOPE =
   "Each request acts in ONE organization: name a brand (`?brandId=`, the `x-brand-id` header, or `brandId` in a JSON body), " +
   "which selects the organization holding it, or name the organization (`?orgId=` or the `x-org-id` header). " +
   "A user in exactly one organization needs to name nothing; a user in several gets `400 org_target_required` with the list. " +
-  "The key never carries staff, admin or beta powers, even when its user has them.";
+  "The key never carries admin or beta powers. A distribute.you staff member's key may call only the few staff operations " +
+  "listed under the `Staff (key)` tag of `GET /v1/me/openapi.json`; a non-staff key gets 403 on them.";
 
 /** client-service caps a batch; staff see every org that holds a brand. */
 const ORG_NAMES_BATCH = 200;
@@ -97,6 +99,9 @@ router.get("/me", authenticateUser, async (req: AuthenticatedRequest, res) => {
       : null;
   }
 
+  const q = typeof req.query.q === "string" ? req.query.q.trim() : "";
+  if (q && organizations) organizations = filterOrganizations(organizations, q);
+
   const userRes = await userPromise;
   const user = userRes
     ? { id: userRes.user.id, email: userRes.user.email, firstName: userRes.user.firstName, lastName: userRes.user.lastName }
@@ -108,7 +113,7 @@ router.get("/me", authenticateUser, async (req: AuthenticatedRequest, res) => {
     : null);
 
   res.json({
-    summary: buildSummary(user, organizations, targetOrg, !!scope?.isStaff, req.authType === "user_key"),
+    summary: buildSummary(user, organizations, targetOrg, !!scope?.isStaff, req.authType === "user_key", q),
     user,
     organizations,
     organization: targetOrg ? { id: targetOrg.id, name: targetOrg.name } : null,
@@ -121,6 +126,49 @@ router.get("/me", authenticateUser, async (req: AuthenticatedRequest, res) => {
   });
 });
 
+/**
+ * `?q=`: keep the organizations whose id or name contains the text (all their
+ * brands), or that hold a brand whose id, name or domain contains it (those
+ * brands only). Case-insensitive substring. A staff key reaches every
+ * organization, and the unfiltered list overflows an agent's tool result.
+ */
+export function filterOrganizations(orgs: MeOrgWithBrands[], q: string): MeOrgWithBrands[] {
+  const needle = q.toLowerCase();
+  const hit = (v: string | null) => !!v && v.toLowerCase().includes(needle);
+  const out: MeOrgWithBrands[] = [];
+  for (const o of orgs) {
+    if (hit(o.id) || hit(o.name)) {
+      out.push(o);
+      continue;
+    }
+    const brands = o.brands.filter((b) => hit(b.id) || hit(b.name) || hit(b.domain));
+    if (brands.length > 0) out.push({ ...o, brands });
+  }
+  return out;
+}
+
+/**
+ * GET /v1/me/openapi.json — the API document for THIS key.
+ *
+ * A customer key gets the public document (the one `GET /openapi.json` serves).
+ * A staff member's key gets the `"staff-key"` audience: the public document plus
+ * the staff operations a staff key may call (`STAFF_KEY_OPERATIONS`), each
+ * `x-staff-only: true`. The distribute.you MCP searches this document per
+ * session, so a staff session finds those operations and a client session never
+ * sees them. Gateway-built from the registry; cached per audience (the registry
+ * does not change while the process runs).
+ */
+const documentCache = new Map<"public" | "staff-key", Record<string, unknown>>();
+router.get("/me/openapi.json", authenticateUser, (req: AuthenticatedRequest, res) => {
+  const audience = req.authType === "user_key" && req.userKeyScope?.isStaff ? "staff-key" : "public";
+  let doc = documentCache.get(audience);
+  if (!doc) {
+    doc = buildDocument({ audience });
+    documentCache.set(audience, doc);
+  }
+  res.json(doc);
+});
+
 function orgLabel(o: MeOrg): string {
   return o.name ? `"${o.name}"` : `organization ${o.id} (name not recorded)`;
 }
@@ -131,6 +179,7 @@ function buildSummary(
   target: MeOrg | null,
   isStaff: boolean,
   isKey: boolean,
+  q = "",
 ): string {
   const who = user
     ? [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email || user.id
@@ -139,7 +188,8 @@ function buildSummary(
   const parts = [`Acting as ${who}${email}.`];
 
   if (!orgs) parts.push("Its organizations could not be listed (lookup failed).");
-  else if (isStaff) parts.push(`Staff: counts as a member of every organization; ${orgs.length} organizations hold a brand.`);
+  else if (isStaff && q) parts.push(`Staff: counts as a member of every organization; ${orgs.length} match "${q}".`);
+  else if (isStaff) parts.push(`Staff: counts as a member of every organization; ${orgs.length} organizations hold a brand. Pass ?q= to find one by name or domain.`);
   else if (orgs.length === 0) parts.push("Member of no organization.");
   else {
     const list = orgs
