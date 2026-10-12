@@ -6855,6 +6855,55 @@ registry.registerPath({
   },
 });
 
+// Monthly charge limit — "the card is never charged more than $X a month".
+// Pass-through to billing-service /v1/accounts/monthly_charge_limit (PR #740).
+const MONTHLY_CHARGE_LIMIT_ANSWER =
+  "`{org_id, monthly_charge_limit_cents (null = no limit), period: \"calendar_month_utc\", period_start, period_end, " +
+  "charged_this_period_cents, remaining_cents, limit_reached, limit_reached_at, refused_amount_cents, updated_at}`. " +
+  "No billing account needed (onboarding may state it before any payment). Body and status forwarded verbatim.";
+
+export const SetMonthlyChargeLimitRequestSchema = z
+  .object({
+    monthly_charge_limit_cents: z
+      .number()
+      .int()
+      .min(0)
+      .openapi({ description: "Most the org's card may be charged per calendar month (UTC), in cents", example: 50000 }),
+  })
+  .openapi("SetMonthlyChargeLimitRequest");
+
+const MonthlyChargeLimitResponseSchema = z.object({}).passthrough().openapi("MonthlyChargeLimitResponse");
+
+for (const [method, summary, lead] of [
+  ["get", "Get the monthly charge limit", "Read the org's monthly card charge limit and this month's charges."],
+  ["put", "Set the monthly charge limit", "Set the most the org's card may be charged per calendar month (UTC)."],
+  ["delete", "Remove the monthly charge limit", "Remove the org's monthly card charge limit."],
+] as const) {
+  registry.registerPath({
+    method,
+    path: "/v1/billing/accounts/monthly_charge_limit",
+    tags: ["Billing"],
+    summary,
+    description: `${lead} Pass-through from billing-service. Answer: ${MONTHLY_CHARGE_LIMIT_ANSWER}`,
+    security: authed,
+    ...(method === "put"
+      ? { request: { body: { content: { "application/json": { schema: SetMonthlyChargeLimitRequestSchema } } } } }
+      : {}),
+    responses: {
+      200: {
+        description: "Monthly charge limit state — pass-through from billing-service",
+        content: { "application/json": { schema: MonthlyChargeLimitResponseSchema } },
+      },
+      ...(method === "put"
+        ? { 400: { description: "Invalid monthly_charge_limit_cents (billing-service's refusal, verbatim)", content: errorContent } }
+        : {}),
+      401: { description: "Unauthorized", content: errorContent },
+      500: { description: "Internal error", content: errorContent },
+      502: { description: "Billing upstream unavailable", content: errorContent },
+    },
+  });
+}
+
 export const CardSetupRequestSchema = z
   .object({
     return_url: z

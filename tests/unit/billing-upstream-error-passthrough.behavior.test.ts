@@ -137,6 +137,19 @@ describe("the sibling billing proxies forward the upstream failure the same way"
       call: (app) => request(app).get("/v1/billing/accounts/runway"),
     },
     {
+      name: "GET /v1/billing/accounts/monthly_charge_limit",
+      call: (app) => request(app).get("/v1/billing/accounts/monthly_charge_limit"),
+    },
+    {
+      name: "PUT /v1/billing/accounts/monthly_charge_limit",
+      call: (app) =>
+        request(app).put("/v1/billing/accounts/monthly_charge_limit").send({ monthly_charge_limit_cents: 50000 }),
+    },
+    {
+      name: "DELETE /v1/billing/accounts/monthly_charge_limit",
+      call: (app) => request(app).delete("/v1/billing/accounts/monthly_charge_limit"),
+    },
+    {
       name: "PATCH /v1/billing/accounts/auto_topup",
       call: (app) =>
         request(app)
@@ -215,6 +228,80 @@ describe("GET /v1/billing/accounts/runway — verbatim pass-through", () => {
 
     expect(res.status).toBe(502);
     expect(res.body).toEqual({ error: "budget upstream down" });
+  });
+});
+
+describe("/v1/billing/accounts/monthly_charge_limit — verbatim pass-through", () => {
+  const STATE = {
+    org_id: "org_test456",
+    monthly_charge_limit_cents: 50000,
+    period: "calendar_month_utc",
+    period_start: "2026-10-01T00:00:00.000Z",
+    period_end: "2026-11-01T00:00:00.000Z",
+    charged_this_period_cents: 12000,
+    remaining_cents: 38000,
+    limit_reached: false,
+    limit_reached_at: null,
+    refused_amount_cents: 0,
+    updated_at: "2026-10-12T06:00:00.000Z",
+  };
+  const PATH = `${BILLING_BASE}/v1/accounts/monthly_charge_limit`;
+
+  it("GET forwards billing's 200 body untouched, one call, no account upsert", async () => {
+    stubUpstream(200, STATE);
+
+    const res = await request(buildApp()).get("/v1/billing/accounts/monthly_charge_limit");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(STATE);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(PATH);
+    expect(calls[0].options.method).toBe("GET");
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("PUT forwards the body as-is and returns billing's answer", async () => {
+    stubUpstream(200, STATE);
+
+    const res = await request(buildApp())
+      .put("/v1/billing/accounts/monthly_charge_limit")
+      .send({ monthly_charge_limit_cents: 50000 });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(STATE);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(PATH);
+    expect(calls[0].options.method).toBe("PUT");
+    expect(JSON.parse(calls[0].options.body)).toEqual({ monthly_charge_limit_cents: 50000 });
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+  });
+
+  it("PUT does not pre-validate: billing's 400 reaches the caller as a 400, body verbatim", async () => {
+    const refusal = { error: "monthly_charge_limit_cents: Number must be greater than or equal to 0" };
+    stubUpstream(400, refusal);
+
+    const res = await request(buildApp())
+      .put("/v1/billing/accounts/monthly_charge_limit")
+      .send({ monthly_charge_limit_cents: -5 });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual(refusal);
+    expect(calls).toHaveLength(1);
+  });
+
+  it("DELETE forwards to billing with no body and returns the cleared state", async () => {
+    const cleared = { ...STATE, monthly_charge_limit_cents: null, charged_this_period_cents: null, remaining_cents: null };
+    stubUpstream(200, cleared);
+
+    const res = await request(buildApp()).delete("/v1/billing/accounts/monthly_charge_limit");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(cleared);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(PATH);
+    expect(calls[0].options.method).toBe("DELETE");
+    expect(calls[0].options.body).toBeUndefined();
   });
 });
 
