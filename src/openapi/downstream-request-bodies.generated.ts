@@ -126,6 +126,30 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       ]
     }
   },
+  "PATCH /v1/orgs/matrix/links/{linkId}": {
+    "service": "crm-service",
+    "method": "PATCH",
+    "path": "/orgs/matrix/links/{linkId}",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "brandId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "outreachDefault": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        }
+      },
+      "required": [
+        "brandId",
+        "outreachDefault"
+      ]
+    }
+  },
   "PATCH /v1/orgs/posthog/connections/{id}": {
     "service": "crm-service",
     "method": "PATCH",
