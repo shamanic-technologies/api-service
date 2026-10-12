@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
+import { authenticate, authenticatePlatform, requireOrg, requireStaff, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { ContentComposeRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
@@ -113,9 +113,13 @@ router.post("/content/preview-email/prepare", authenticate, requireOrg, requireU
  * Proxy to content-generation-service GET /platform-prompts?type=<string>.
  * Returns the stored prompt template + its variable metadata so callers can
  * collect inputs before invoking POST /v1/content/generate-expert-quote-pitch.
+ *
+ * STAFF ONLY (security hotfix 2026-10-12): content-generation-service's prompts table and
+ * feature→prompt assignments are PLATFORM-wide (no org scope), so this read hands out our
+ * shared prompt templates and the write re-points a feature's prompt for every org.
  * Response shape is owned by the downstream service — passthrough only.
  */
-router.get("/content/platform-prompts", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.get("/content/platform-prompts", authenticatePlatform, requireStaff, authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
     if (req.query["type"]) params.set("type", req.query["type"] as string);
@@ -137,9 +141,13 @@ router.get("/content/platform-prompts", authenticate, requireOrg, requireUser, a
  * Proxy to content-generation-service GET /prompt-assignments?featureSlug=<slug>.
  * Returns the prompt currently assigned to a feature + its variable metadata so the
  * dashboard prompt editor can read the prompt the feature's GENERATE step uses.
+ *
+ * STAFF ONLY (security hotfix 2026-10-12): content-generation-service's prompts table and
+ * feature→prompt assignments are PLATFORM-wide (no org scope), so this read hands out our
+ * shared prompt templates and the write re-points a feature's prompt for every org.
  * Response shape is owned by the downstream service — passthrough only.
  */
-router.get("/content/prompt-assignments", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.get("/content/prompt-assignments", authenticatePlatform, requireStaff, authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const params = new URLSearchParams();
     if (req.query["featureSlug"]) params.set("featureSlug", req.query["featureSlug"] as string);
@@ -160,10 +168,14 @@ router.get("/content/prompt-assignments", authenticate, requireOrg, requireUser,
  * PUT /v1/content/prompt-assignments
  * Proxy to content-generation-service PUT /prompt-assignments.
  * Saves the feature's generation prompt (forks + reassigns downstream).
+ *
+ * STAFF ONLY (security hotfix 2026-10-12): content-generation-service's prompts table and
+ * feature→prompt assignments are PLATFORM-wide (no org scope), so this read hands out our
+ * shared prompt templates and the write re-points a feature's prompt for every org.
  * Body + response shapes are owned by the downstream service — passthrough only.
  * Downstream owns validation: its 400 variable-integrity errors propagate verbatim.
  */
-router.put("/content/prompt-assignments", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.put("/content/prompt-assignments", authenticatePlatform, requireStaff, authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const result = await callExternalService(
       externalServices.emailgen,
