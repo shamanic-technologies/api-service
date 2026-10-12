@@ -175,6 +175,13 @@ The "direct is fast / gateway is slow" asymmetry is usually a **measurement arti
 
 Incident 2026-07-11 (public cost-per-outcome-trend "gateway timeout"): brief pinned it on the gateway; profiling showed gateway warm-overhead ~0, and a 5.5-min-idle direct-first A/B gave direct-cold ~11.6s / gateway-warm 0.32s — the gateway was innocent. Root cause was features-service's shared goal-bucket dataset cold-building on the request path (its own issue #547's documented next-lever); fixed there via SWR warm-off-request-path (features-service v0.87.7 / #551), no api-service change.
 
+### Customer call log (`src/lib/call-log.ts`) — every user-key call is a conversation
+
+Every call made with a client's OWN key (`Authorization: Bearer distrib.usr_...`, MCP included) is pushed to crm-service `POST /internal/api-calls` and shows on that person's staff Unibox thread (source `api`, channel `api` or `mcp`). The dashboard's platform-key traffic is never recorded. `recordCustomerCalls` is mounted once before every route and copies response bytes (up to 256 KB) by wrapping `res.write`/`res.end` on Bearer requests only; the record is built on `finish` and pushed in batches (2 s, 50 calls, 6 MB) off the request path, a refused batch retried once then dropped, loud.
+- **Never store a secret:** request headers are an ALLOW-list (`KEPT_HEADERS`), the key is a sha256 fingerprint, and `redactJson`/`redactText` replace secret-named fields and key-looking values in query, request and response. A new header worth keeping goes in the allow-list, never a deny-list. `tests/unit/call-log.test.ts` pins it.
+- **MCP marker:** our MCP server sends `x-distribute-client: mcp` (+ optional `x-distribute-mcp-tool: <tool>`); without it a call reads as channel `api`.
+- Any middleware that rewrites the response stream (compression) must be mounted BEFORE `recordCustomerCalls` (the last wrapper of `res.write` sees the route's plain bytes), or the log stores compressed bytes.
+
 ### Future direction
 
 New proxy routes should follow the pattern `/v1/{service-name}/{original-downstream-path}` to make the mapping obvious and mechanical. Existing routes keep their current shape to avoid breaking clients.

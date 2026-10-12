@@ -36,6 +36,13 @@ export interface BrandMembership { id: string; name: string | null; domain: stri
 export interface UserKeyScope {
   isStaff: boolean;
   /**
+   * The key's user as client-service knows them, for the customer call log
+   * (`lib/call-log.ts`): the email matches the call to their person in the
+   * staff Unibox. Absent only on scopes built by hand (tests).
+   */
+  email?: string | null;
+  displayName?: string | null;
+  /**
    * The organizations the user is actually a member of. Staff can act in every
    * organization; their real memberships still rank first when a brand is held
    * by several organizations.
@@ -76,13 +83,14 @@ export function respondTargetFailure(res: Response, f: TargetFailure) {
 export async function loadUserKeyScope(userId: string): Promise<UserKeyScope | TargetFailure> {
   try {
     const [user, memberships] = await Promise.all([
-      callExternalService<{ user: { email: string | null } }>(
+      callExternalService<{ user: { email: string | null; firstName?: string | null; lastName?: string | null } }>(
         externalServices.client,
         `/internal/users/${encodeURIComponent(userId)}`,
       ),
       fetchUserOrganizations(userId),
     ]);
-    return { isStaff: isStaffEmail(user.user.email), memberships };
+    const displayName = [user.user.firstName, user.user.lastName].filter((p) => p && p.trim()).join(" ").trim() || null;
+    return { isStaff: isStaffEmail(user.user.email), memberships, email: user.user.email ?? null, displayName };
   } catch (err) {
     if ((err as { statusCode?: number }).statusCode === 404) {
       // The key outlived its user (client-service no longer knows them).

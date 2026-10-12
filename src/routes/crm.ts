@@ -458,6 +458,24 @@ router.get("/orgs/people/timeline", ...orgUserChain, async (req: AuthenticatedRe
   }
 });
 
+// GET /v1/orgs/people/api-calls/:callId → crm-service GET /orgs/people/api-calls/:callId
+// The whole call (request + our answer, secrets already removed) behind a thread
+// item of source `api` (`ref.callId`). Served on the staff Unibox scope only;
+// crm-service's 404 `{ reason: "call_not_found" }` reaches the caller verbatim.
+router.get("/orgs/people/api-calls/:callId", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.crm,
+      `/orgs/people/api-calls/${encodeURIComponent(req.params.callId)}${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] Person API call error:", error);
+    respondUpstreamError(res, error, "Person API call error");
+  }
+});
+
 // GET /v1/orgs/people/outcomes → crm-service GET /orgs/people/outcomes
 // Per outcome step, the distinct people who reached it from ANY source the brand
 // connected (PostHog, Clerk, Stripe, GoHighLevel), not only the leads we contacted.
