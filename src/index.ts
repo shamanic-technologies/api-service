@@ -69,11 +69,14 @@ import costsStaffRoutes from "./routes/costs-staff.js";
 import socialRoutes from "./routes/social.js";
 import adminRoutes from "./routes/admin.js";
 import adminBrandsRoutes from "./routes/admin-brands.js";
+import agentSignupsRoutes from "./routes/agent-signups.js";
+import prepaidRoutes from "./routes/prepaid.js";
 import { rateLimit } from "./middleware/rate-limit.js";
 import { authenticatePlatform } from "./middleware/auth.js";
 import { buildDocument } from "./openapi/document.js";
 import { requestId } from "./middleware/request-id.js";
 import { recordCustomerCalls } from "./lib/call-log.js";
+import { agentPaymentRequired } from "./middleware/payment-required.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
@@ -133,6 +136,13 @@ app.use(express.json({ limit: "10mb" }));
 // key is filed as a conversation on their Unibox thread (crm-service). Watches
 // Bearer calls only, never slows or fails them: see src/lib/call-log.ts.
 app.use(recordCustomerCalls);
+
+// ── Payment required, for orgs opened by an AI agent ────────────────────────
+// A key-authenticated call that a downstream refuses for lack of money (402)
+// on an `agent_api` org is answered as one legible 402 naming the prepay route
+// and its minimums. Mounted after the call log so the log stores what the
+// caller actually received. Every other org is untouched: see the module.
+app.use(agentPaymentRequired);
 
 // ── OpenAPI ─────────────────────────────────────────────────────────────────
 // `openapi.json` is generated for the PUBLIC audience (see
@@ -280,6 +290,8 @@ app.use("/v1", activityRoutes);
 app.use("/v1", workflowsRoutes);
 app.use("/v1", promptsRoutes);
 app.use("/v1", chatRoutes);
+app.use("/v1", agentSignupsRoutes); // public: an AI agent opens an account and gets a key (no auth)
+app.use("/v1", prepaidRoutes);
 app.use("/v1", billingRoutes);
 app.use("/v1", creditsRoutes);
 app.use("/v1", usageDiscountRoutes);
