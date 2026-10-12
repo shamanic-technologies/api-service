@@ -8606,6 +8606,42 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/email-sequences",
+  tags: ["Conversations"],
+  summary: "Every email we run for a brand, sent or queued, per prospect",
+  description:
+    "Pass-through to instantly-service GET /orgs/email-sequences. One row per sequence (a prospect " +
+    "emailed again after the re-contact window has two): `leadId`, `leadEmail`, `campaignId` and " +
+    "`steps[]`, each `{ step, kind: first_email|follow_up, status: sent|queued|stopped, sentAt }`. " +
+    "`sent` = it went out at `sentAt`; `queued` = not sent yet, it goes out in the prospect's business " +
+    "hours; `stopped` = it will not go out (reply, bounce, opt-out, meeting booked, or sequence stopped). " +
+    "Join with the email bodies of GET /v1/emails?brandId= on `leadId`. Paged: pass `nextCursor` back as " +
+    "`cursor` until it is null (default 500, max 2000 per page). A brand that is not one of the " +
+    "authenticated org's brands is a 404 `brand_not_in_org`. The whole query string is forwarded " +
+    "verbatim; the parameters listed here are the ones documented today, not a whitelist. Declares no " +
+    "cost.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().openapi({ description: "The brand (uuid) whose email sequences to list" }),
+      limit: z.string().optional().openapi({ description: "Sequences per page (downstream default 500, max 2000)" }),
+      cursor: z.string().optional().openapi({ description: "The previous page's `nextCursor`, verbatim" }),
+    }).passthrough(),
+  },
+  responses: {
+    200: {
+      description: "One page of email sequences as returned by instantly-service",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("EmailSequencesResponse") } },
+    },
+    400: { description: "Missing or invalid query parameters", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "The brand is not one of this organization's brands — `code: brand_not_in_org`", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/sending-schedule",
   tags: ["Conversations"],
   summary: "When we may email one lead (weekdays, local hours, timezone)",
