@@ -1498,9 +1498,119 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
                 }
               ],
               "description": "Only people holding a phone / an email (a list = all)."
+            },
+            "segment": {
+              "allOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "dealStages": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "stage": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          },
+                          "pipeline": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                          }
+                        },
+                        "required": [
+                          "stage"
+                        ]
+                      },
+                      "minItems": 1,
+                      "maxItems": 50,
+                      "description": "CRM pipeline stage: the person has a deal CURRENTLY at one of these stages (the customer's own stage name, optionally its pipeline name; trimmed, case-insensitive). Names come from GET /orgs/contacts/segments.",
+                      "example": [
+                        {
+                          "pipeline": "Sales Pipeline",
+                          "stage": "Form Filled - No Appointment"
+                        }
+                      ]
+                    },
+                    "dealStatuses": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "minItems": 1,
+                      "maxItems": 10,
+                      "description": "The deal's CRM status, verbatim (GoHighLevel: open, won, lost, abandoned). With dealStages, the SAME deal must match both.",
+                      "example": [
+                        "open"
+                      ]
+                    },
+                    "tags": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "minItems": 1,
+                      "maxItems": 50,
+                      "description": "The person's CRM contact carries one of these tags (case-insensitive)."
+                    },
+                    "reached": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "website_visit",
+                          "signup",
+                          "form_submission",
+                          "meeting_booked",
+                          "meeting_attended",
+                          "meeting_not_held",
+                          "sale"
+                        ]
+                      },
+                      "minItems": 1,
+                      "description": "The person reached one of these funnel steps, any source the brand connected (form submitted, appointment booked / showed / no-show, signup, website visit, sale)."
+                    },
+                    "notReached": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "website_visit",
+                          "signup",
+                          "form_submission",
+                          "meeting_booked",
+                          "meeting_attended",
+                          "meeting_not_held",
+                          "sale"
+                        ]
+                      },
+                      "minItems": 1,
+                      "description": "The person reached none of these steps."
+                    },
+                    "includeClients": {
+                      "type": "boolean",
+                      "description": "Default false: people who reached `sale` (a deal won, a payment that stands) are out."
+                    },
+                    "includeOptedOut": {
+                      "type": "boolean",
+                      "description": "Default false: people the CRM marks do-not-contact are out."
+                    }
+                  },
+                  "description": "A part of the brand's own CRM. Inside a list any one entry matches; across keys all must match. Clients and opted-out people are always out unless stated."
+                },
+                {
+                  "description": "Only people in this part of the brand's own CRM (pipeline stage, tag, funnel step...). Scopes a CRM sourcing to a segment."
+                }
+              ]
             }
           },
-          "description": "Serve from the brand's merged PEOPLE (one row per human, every source) instead of its CSV rows. Exclusive with uploadIds. Always excludes automated senders, people not about this brand, and anyone without an email. Same brand-wide no-re-serve: every address of a served person is suppressed, and a person any address of whom was served before is never served."
+          "description": "Serve from the brand's merged PEOPLE (one row per human, every source) instead of its CSV rows. Exclusive with uploadIds. Always excludes automated senders, people not about this brand, anyone without an email, and anyone the CRM marks do-not-contact (unless segment.includeOptedOut). Same brand-wide no-re-serve: every address of a served person is suppressed, and a person any address of whom was served before is never served."
         },
         "reachableBy": {
           "anyOf": [

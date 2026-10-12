@@ -26,6 +26,7 @@ const READ_PATHS = [
   "/v1/orgs/contacts?brandId=b1",
   "/v1/orgs/contacts/uploads?brandId=b1",
   "/v1/orgs/contacts/serve-stats?brandId=b1",
+  "/v1/orgs/contacts/segments?brandId=b1",
   "/v1/orgs/matrix/connections?brandId=b1",
   "/v1/orgs/matrix/leads?brandId=b1",
   "/v1/orgs/people?brandId=b1",
