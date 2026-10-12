@@ -1088,10 +1088,25 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
                 "email"
               ],
               "description": "Only people holding a phone / an email. A phone channel (WhatsApp, SMS) wants 'phone': a person served without one is burned for nothing."
+            },
+            "segment": {
+              "type": "object",
+              "additionalProperties": {
+                "nullable": true
+              },
+              "description": "A part of the brand's own CRM, as crm-service's PeopleSegment states it (passed through verbatim, validated by crm-service): dealStages [{stage, pipeline?}], dealStatuses, tags, reached / notReached (funnel steps), includeClients, includeOptedOut. Lists OR, keys AND; clients and opted-out people are out unless stated. Names come from crm-service GET /orgs/contacts/segments.",
+              "example": {
+                "dealStages": [
+                  {
+                    "pipeline": "Sales Pipeline",
+                    "stage": "Form Filled - No Appointment"
+                  }
+                ]
+              }
             }
           },
           "additionalProperties": false,
-          "description": "Bind this CRM audience to the brand's merged PEOPLE matching a filter (e.g. {signedUp: true, replied: false} = product signups who never answered) instead of to an imported file. Requires provider 'crm'; exclusive with crmUploadId. Every serve passes the filter to crm-service (same brand-wide no-re-serve forever); each served person carries its phone when crm-service holds one. Validated against crm-service's serve-stats at creation (its counts become the audience's Size / Remaining). Immutable afterwards."
+          "description": "Bind this CRM audience to the brand's merged PEOPLE matching a filter (e.g. {signedUp: true, replied: false} = product signups who never answered) instead of to an imported file, optionally scoped to a `segment` of the brand's own CRM (e.g. {segment: {dealStages: [{pipeline: 'Sales Pipeline', stage: 'Form Filled - No Appointment'}]}}). Requires provider 'crm'; exclusive with crmUploadId. A segment crm-service refuses is a 400 carrying its reason. Every serve passes the filter to crm-service (same brand-wide no-re-serve forever); each served person carries its phone when crm-service holds one. Validated against crm-service's serve-stats at creation (its counts become the audience's Size / Remaining). Immutable afterwards."
         },
         "offerId": {
           "type": "string",
