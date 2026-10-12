@@ -161,6 +161,81 @@ describe("/v1/orgs/people* → crm-service", () => {
     expect(res.body).toEqual({ type: "validation", error: "brandId (uuid) is required in the body" });
   });
 
+  const P1 = "0b9a6f1e-1111-4a2b-8c3d-000000000001";
+  const P2 = "0b9a6f1e-2222-4a2b-8c3d-000000000002";
+  const MERGE = "7c0d5e2a-3333-4b4c-9d5e-000000000003";
+
+  it("POST /orgs/people/merges forwards the body verbatim + identity, passes 201 and body through", async () => {
+    reply = { status: 201, body: { merge: { mergeId: MERGE }, duplicate: false, applied: false, personId: null, rebuild: "started" } };
+    const body = { brandId: BRAND, personIds: [P1, P2], reason: "same human on WhatsApp and Gmail" };
+    const res = await request(buildApp()).post("/v1/orgs/people/merges").send(body);
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual(reply.body);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/people/merges`);
+    expect(calls[0].options.method).toBe("POST");
+    expect(JSON.parse(calls[0].options.body)).toEqual(body);
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("POST /orgs/people/merges passes a 200 duplicate through unchanged", async () => {
+    reply = { status: 200, body: { merge: { mergeId: MERGE }, duplicate: true, rebuild: "not_needed" } };
+    const res = await request(buildApp()).post("/v1/orgs/people/merges").send({ brandId: BRAND, personIds: [P1, P2] });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(reply.body);
+  });
+
+  for (const [status, reason] of [[404, "person_not_found"], [409, "already_one_person"], [422, "different_brand"]] as const) {
+    it(`POST /orgs/people/merges returns crm-service's ${status} ${reason} refusal verbatim`, async () => {
+      reply = { status, body: { type: "refused", reason, personId: P2, error: `refused: ${reason}` } };
+      const res = await request(buildApp()).post("/v1/orgs/people/merges").send({ brandId: BRAND, personIds: [P1, P2] });
+      expect(res.status).toBe(status);
+      expect(res.body).toEqual({ type: "refused", reason, personId: P2, error: `refused: ${reason}` });
+    });
+  }
+
+  it("GET /orgs/people/merges forwards the query string byte-for-byte + identity", async () => {
+    reply = { status: 200, body: { brandId: BRAND, merges: [] } };
+    const res = await request(buildApp()).get(`/v1/orgs/people/merges?brandId=${BRAND}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ brandId: BRAND, merges: [] });
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/people/merges?brandId=${BRAND}`);
+    expect(calls[0].options.method).toBe("GET");
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("POST /orgs/people/merges/:mergeId/undo reaches its own downstream path, body verbatim", async () => {
+    reply = { status: 200, body: { merge: { mergeId: MERGE, active: false }, duplicate: false, rebuild: "started" } };
+    const res = await request(buildApp()).post(`/v1/orgs/people/merges/${MERGE}/undo`).send({ brandId: BRAND });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(reply.body);
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/people/merges/${MERGE}/undo`);
+    expect(calls[0].options.method).toBe("POST");
+    expect(JSON.parse(calls[0].options.body)).toEqual({ brandId: BRAND });
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("POST /orgs/people/merges/:mergeId/undo returns crm-service's 404 merge_not_found verbatim", async () => {
+    reply = { status: 404, body: { type: "refused", reason: "merge_not_found", error: "merge not found" } };
+    const res = await request(buildApp()).post(`/v1/orgs/people/merges/${MERGE}/undo`).send({ brandId: BRAND });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ type: "refused", reason: "merge_not_found", error: "merge not found" });
+  });
+
+  it("refuses the merge routes with no user identity, before reaching crm-service", async () => {
+    const app = buildApp();
+    const merge = await request(app).post("/v1/orgs/people/merges").set("x-test-no-user", "1").send({ brandId: BRAND, personIds: [P1, P2] });
+    const list = await request(app).get(`/v1/orgs/people/merges?brandId=${BRAND}`).set("x-test-no-user", "1");
+    const undo = await request(app).post(`/v1/orgs/people/merges/${MERGE}/undo`).set("x-test-no-user", "1").send({ brandId: BRAND });
+    for (const res of [merge, list, undo]) {
+      expect(res.status).toBe(401);
+      expect(res.body.error).toBe("User identity required");
+    }
+    expect(calls).toHaveLength(0);
+  });
+
   it("refuses every people route with no user identity, before reaching crm-service", async () => {
     const app = buildApp();
     const list = await request(app).get(`/v1/orgs/people?brandId=${BRAND}`).set("x-test-no-user", "1");
