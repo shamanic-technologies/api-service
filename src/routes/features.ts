@@ -1276,7 +1276,7 @@ const OFFER_ROUTES = [
 // ── Brand grain ──────────────────────────────────────────────────────────────
 
 /**
- * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value}
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths}
  *
  * The offer grain above, one level further up. A brand holds several offers and
  * each of those runs several channels, so a brand screen built on a per-feature
@@ -1318,6 +1318,10 @@ const GRAIN_SUFFIXES = [
   // Not placed state no value with a reason), per column and per card. A separate figure,
   // added to no pipeline. Column membership and pricing are features-service's.
   { suffix: "deals-value", what: "deals value" },
+  // The sales paths the brand's people ACTUALLY lived (lead-service timeline), with leads,
+  // paid clients, revenue, cost and ROI, ranked overall and per sales funnel campaign, beside
+  // the catalogue's expected figures. `?offerId=` / `?pricing=` ride the raw query.
+  { suffix: "lived-sales-paths", what: "lived sales paths" },
 ] as const;
 
 for (const { suffix, what } of OFFER_ROUTES) {
