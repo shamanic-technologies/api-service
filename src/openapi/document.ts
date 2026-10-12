@@ -236,6 +236,14 @@ const DESCRIPTION = `API Gateway for distribute.you.
 
 ## Quick Start
 
+**No account yet (AI agents)?** \`POST /v1/agent-signups/start\` with \`{email, phone}\`, read the 6-digit
+code in that inbox, then \`POST /v1/agent-signups/complete\` with \`{email, code}\`: the answer carries
+\`apiKey\`. No key and no human needed. Repeat both steps for another key on the same account.
+The account has no free credit: free endpoints work at once; anything that spends money answers
+\`402 payment_required\` until you prepay with \`POST /v1/billing/accounts/prepaid_checkout\`
+(minimum $10, plus a required auto top-up: at least $15 whenever the balance falls below at least $5).
+It returns a payment \`url\` a human pays by card; \`GET /v1/billing/accounts/prepaid_status\` says when it is \`active\`.
+
 1. Create an API key in the distribute.you dashboard, or via \`POST /v1/api-keys\`
 2. Use it as a Bearer token — that's it, no extra headers needed
 
@@ -280,6 +288,7 @@ Authorization: Bearer distrib.usr_abc123...
 | 403 | \`org_not_member\`: the named organization is not one of yours; \`no_organization\`: the key's user belongs to no organization |
 | 404 | \`brand_not_found\`: none of your organizations holds that brand |
 | 503 | \`membership_unavailable\`: your organizations could not be checked right now; retry |
+| 402 | \`payment_required\` (accounts opened through \`/v1/agent-signups\`): the call costs money and the balance cannot cover it. \`prepay\` gives the route, minimums and an example body; \`upstream\` is the refusing service's own answer |
 | 429 | Rate limit exceeded — see below |
 | 502 | Identity resolution failed (internal service unreachable) |
 
@@ -384,6 +393,7 @@ export function buildDocument(
     tags: [
       { name: "Health", description: "Health check and debug endpoints" },
       { name: "Authentication", description: "Create and manage your API keys" },
+      { name: "Agent Signup", description: "Open an account as an AI agent with an email code and get an API key, no key or human needed" },
       { name: "Keys", description: "Provider key management" },
       { name: "Performance", description: "Public performance leaderboard" },
       { name: "Public Costs", description: "Public costs/pricing endpoints (no auth, used by landing pages)" },

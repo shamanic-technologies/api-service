@@ -14678,3 +14678,170 @@ registry.registerPath({
   },
   responses: qualificationResponses(200, "Downstream body, untouched"),
 });
+
+// ---------------------------------------------------------------------------
+// AGENT SIGNUP + PREPAY — an AI agent opens an account, gets a key, prepays.
+// Owner 2026-10-12: no free credit, no trial, no subscription on this path;
+// prepaid with MANDATORY auto top-up; minimums $10 prepay / $15 reload / $5
+// threshold (front validation, src/lib/agent-prepay.ts).
+// ---------------------------------------------------------------------------
+
+const AGENT_FLOW =
+  "Agent flow, no human needed except to pay: (1) POST /v1/agent-signups/start with your email + phone, " +
+  "(2) read the 6-digit code in that inbox, (3) POST /v1/agent-signups/complete with email + code → `apiKey`, " +
+  "(4) call any free endpoint with `Authorization: Bearer <apiKey>`, (5) before anything that spends money, " +
+  "POST /v1/billing/accounts/prepaid_checkout and have the returned `url` paid. There is no free credit.";
+
+export const AgentSignupStartRequestSchema = z
+  .object({
+    email: z.string().describe("An inbox you can read: the code is sent there, and account updates go there").openapi({ example: "agent@example.com" }),
+    phone: z.string().describe("A phone number in international format, for urgent matters (WhatsApp). Format-checked, not verified").openapi({ example: "+33612345678" }),
+  })
+  .passthrough()
+  .openapi("AgentSignupStartRequest");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/agent-signups/start",
+  tags: ["Agent Signup"],
+  summary: "Request a signup code by email (no API key needed)",
+  description:
+    "Step 1 of opening a distribute.you account as an AI agent, with no API key and no human. Sends a 6-digit code " +
+    "to `email`; read it in that inbox, then call POST /v1/agent-signups/complete. Works for an email that already " +
+    "has an account too (that is how you get another API key for it). Requesting a new code cancels the earlier ones. " +
+    "Answer (from client-service, verbatim): `{email, expiresAt, codeTtlMinutes, maxAttempts}`. " +
+    AGENT_FLOW,
+  request: { body: { content: { "application/json": { schema: AgentSignupStartRequestSchema } } } },
+  responses: {
+    200: { description: "Code sent: `{email, expiresAt, codeTtlMinutes, maxAttempts}`", content: { "application/json": { schema: z.object({}).passthrough().openapi("AgentSignupStartResponse") } } },
+    400: { description: "`invalid_request`: email or phone missing or malformed (`message` says which)", content: errorContent },
+    502: { description: "`code_email_failed`: the code email could not be sent; retry", content: errorContent },
+  },
+});
+
+export const AgentSignupCompleteRequestSchema = z
+  .object({
+    email: z.string().describe("The email the code was sent to").openapi({ example: "agent@example.com" }),
+    code: z.string().describe("The 6-digit code from the email").openapi({ example: "123456" }),
+    keyName: z.string().optional().describe("Label for the new API key (default: `Agent key <timestamp>`)"),
+  })
+  .openapi("AgentSignupCompleteRequest");
+
+const PrepayInstructionsSchema = z
+  .object({
+    method: z.literal("POST"),
+    path: z.string().openapi({ example: "/v1/billing/accounts/prepaid_checkout" }),
+    minimums_cents: z.object({
+      topup_amount_cents: z.number().int().openapi({ example: 1000 }),
+      auto_topup_amount_cents: z.number().int().openapi({ example: 1500 }),
+      auto_topup_threshold_cents: z.number().int().openapi({ example: 500 }),
+    }),
+    example_body: z.object({}).passthrough(),
+    returns: z.string(),
+    then: z.string(),
+    status_path: z.string().openapi({ example: "/v1/billing/accounts/prepaid_status" }),
+  })
+  .openapi("PrepayInstructions");
+
+// Built by the gateway (src/routes/agent-signups.ts): account from client-service + key from key-service.
+export const AgentSignupCompleteResponseSchema = z
+  .object({
+    apiKey: z.string().describe("The new API key (`distrib.usr_*`). Shown ONCE: store it. Send it as `Authorization: Bearer <apiKey>`"),
+    apiKeyId: z.string().describe("Id of the key, to revoke it later with DELETE /v1/api-keys/{id}"),
+    apiKeyName: z.string(),
+    orgId: z.string().describe("Your organization"),
+    userId: z.string().describe("Your user"),
+    email: z.string(),
+    contactPhone: z.string().nullable(),
+    created: z.boolean().describe("true = a new account was opened; false = the email already had one, and this is one more key for it"),
+    usage: z.string(),
+    prepay: PrepayInstructionsSchema.describe("How to prepay before calling anything that costs money"),
+  })
+  .openapi("AgentSignupCompleteResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/agent-signups/complete",
+  tags: ["Agent Signup"],
+  summary: "Verify the code and get an API key (no API key needed)",
+  description:
+    "Step 2: send the email and the 6-digit code; get back a working API key plus your org and user ids. A new email " +
+    "opens an account (organization + user; the email is the account's contact, the person can later sign in to the " +
+    "dashboard with it). An email that already has an account gets a NEW additional key for that same account " +
+    "(`created: false`): call start + complete again whenever you need another key. The account has NO free credit: " +
+    "free endpoints work at once, and anything that spends money answers 402 `payment_required` until you prepay " +
+    "(see `prepay` in the answer). A 429 with `error: \"too_many_attempts\"` means this code is burned after too " +
+    "many wrong tries: request a new one with POST /v1/agent-signups/start (any other 429 is the rate limit). " +
+    AGENT_FLOW,
+  request: { body: { content: { "application/json": { schema: AgentSignupCompleteRequestSchema } } } },
+  responses: {
+    200: { description: "The account and a new API key", content: { "application/json": { schema: AgentSignupCompleteResponseSchema } } },
+    400: { description: "`code_invalid` (wrong code, `attemptsLeft` says how many tries remain) or `invalid_request` (email/code missing or malformed)", content: errorContent },
+    404: { description: "`no_pending_code`: no code was requested for this email; call POST /v1/agent-signups/start", content: errorContent },
+    410: { description: "`code_expired`: request a new code with POST /v1/agent-signups/start", content: errorContent },
+    502: { description: "`identity_provider_failed` / `billing_unavailable` (account not opened, retry), or `key_minting_failed` (account ready, no key: call complete again with the same code)", content: errorContent },
+  },
+});
+
+export const PrepaidCheckoutRequestSchema = z
+  .object({
+    topup_amount_cents: z.number().int().min(1000).describe("Charged now and credited exactly, in cents. Minimum 1000 ($10). You choose the amount").openapi({ example: 1000 }),
+    auto_topup_amount_cents: z.number().int().min(1500).describe("What each automatic reload charges the saved card, in cents. Minimum 1500 ($15)").openapi({ example: 1500 }),
+    auto_topup_threshold_cents: z.number().int().min(500).describe("Reload when the balance would fall below this, in cents. Minimum 500 ($5)").openapi({ example: 500 }),
+    success_url: z.string().url().optional().describe("Where the payer lands after paying (default: a distribute.you page)"),
+    cancel_url: z.string().url().optional().describe("Where the payer lands if they cancel (default: a distribute.you page)"),
+  })
+  .passthrough()
+  .openapi("PrepaidCheckoutRequest");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/billing/accounts/prepaid_checkout",
+  tags: ["Billing"],
+  summary: "Prepay: get a payment link (amount you choose, auto top-up required)",
+  description:
+    "Call this when a call answered 402 `payment_required`, or before anything that spends money. Returns `url`, a " +
+    "hosted card payment page charging `topup_amount_cents`. Paying it credits the balance with exactly that amount " +
+    "(no free credit is ever added), saves the card, and arms the MANDATORY automatic top-up: whenever the balance " +
+    "would fall below `auto_topup_threshold_cents`, the card is charged `auto_topup_amount_cents`. Minimums: $10 " +
+    "prepay, $15 reload, $5 threshold; below a minimum the answer is 400 `amount_below_minimum` naming the `field` and " +
+    "its `minimum_cents` (a missing or non-integer amount is 400 `invalid_amount`). No subscription on this path. " +
+    "You cannot pay the page yourself unless you hold a card: give `url` to your human. Then poll " +
+    "GET /v1/billing/accounts/prepaid_status until `state` is `active`. Example: prepay $10 → balance $10; it drops " +
+    "under $5 → the card is charged $15. Answer from billing-service, verbatim: `{url, session_id, org_id, " +
+    "payment_mode: \"prepaid\", free_credit_offer, topup_amount_cents, auto_topup: {amount_cents, threshold_cents}}`.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: PrepaidCheckoutRequestSchema } } } },
+  responses: {
+    200: { description: "Payment page ready", content: { "application/json": { schema: z.object({}).passthrough().openapi("PrepaidCheckoutResponse") } } },
+    400: { description: "`amount_below_minimum` / `invalid_amount` (`field`, `minimum_cents`, `message`), or billing's own refusal of the body", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: { description: "`subscription_mode` (this org pays by subscription), or money still owed (`code`, `owed_cents`)", content: errorContent },
+    502: { description: "Payment provider unavailable; retry", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/accounts/prepaid_status",
+  tags: ["Billing"],
+  summary: "Prepaid status: paid yet? balance, auto top-up, can the card be reloaded?",
+  description:
+    "Read after giving a payment `url` to your human, and whenever a paid call is refused. `state`: " +
+    "`awaiting_payment` (nothing paid yet: the page has not been paid, open a new checkout if the link expired) | " +
+    "`active` (paid, auto top-up armed, card reloadable: you can spend) | `card_not_reloadable` (paid, but the card " +
+    "cannot be charged automatically, `card.not_reloadable_reason` says why: `no_saved_card`, " +
+    "`card_issuing_country_unsupported`, `prepaid_card`, `recurring_charge_not_authorized`, `card_unusable`; the " +
+    "balance is spendable but will not refill: ask your human to pay a new prepaid checkout with another card) | " +
+    "`auto_topup_off` (prepaid without reload: open a prepaid checkout to arm it) | `not_prepaid` (the org pays " +
+    "another way). Also `balance_cents`, `paid_cents`, `auto_topup {enabled, amount_cents, threshold_cents}`, " +
+    "`card {saved, reloadable, not_reloadable_reason}`. Answer from billing-service, verbatim; 404 = no billing " +
+    "account yet (nothing paid).",
+  security: authed,
+  responses: {
+    200: { description: "Prepaid status", content: { "application/json": { schema: z.object({}).passthrough().openapi("PrepaidStatusResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No billing account yet", content: errorContent },
+    502: { description: "Payment provider unavailable; retry", content: errorContent },
+  },
+});
