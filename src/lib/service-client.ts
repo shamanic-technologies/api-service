@@ -5,6 +5,7 @@
 import { Agent, type Dispatcher } from "undici";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
+import { noteUpstreamStatus } from "./upstream-payment.js";
 
 // Shared undici dispatcher for journalists-quotes-service.
 // /orgs/opportunities/discover (batch scorer) and /next run heavy RAG scoring on
@@ -364,6 +365,7 @@ export async function callExternalServiceWithStatus<T>(
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[callExternalService] ${method} ${url} upstream error ${response.status}:`, errorText);
+      noteUpstreamStatus(response.status, errorText);
       // Passthrough upstream body verbatim — gateway is transparent (CLAUDE.md rule #6).
       // LLM/MCP callers need the real root cause; generic "Service call failed" is undebuggable.
       const message = errorText || `Service call failed: ${response.status}`;
@@ -450,6 +452,7 @@ export async function pipeExternalService(
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[pipeExternalService] ${method} ${url} upstream error ${response.status}:`, errorText);
+      noteUpstreamStatus(response.status, errorText);
       const err = new Error(errorText || `Service call failed: ${response.status}`) as Error & {
         statusCode: number;
       };
@@ -515,6 +518,7 @@ export async function streamExternalService(
   if (!response.ok) {
     const errorText = await response.text();
     console.warn(`[streamExternalService] ${method} ${path} upstream error: ${response.status}`, errorText);
+    noteUpstreamStatus(response.status, errorText);
     expressRes.status(response.status).json({ error: errorText || `Upstream error: ${response.status}` });
     return;
   }
@@ -616,6 +620,7 @@ export async function forwardMultipartUpload<T>(
   if (!response.ok) {
     const errorText = await response.text();
     console.error(`[forwardMultipartUpload] POST ${url} upstream error ${response.status}:`, errorText);
+    noteUpstreamStatus(response.status, errorText);
     const message = errorText || `Service call failed: ${response.status}`;
     const err = new Error(message) as Error & { statusCode: number };
     err.statusCode = response.status;
