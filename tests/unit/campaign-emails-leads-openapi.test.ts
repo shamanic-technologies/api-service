@@ -28,8 +28,8 @@ describe("Campaign emails OpenAPI response schemas", () => {
   it("CampaignEmailsResponse should document key email fields", () => {
     const emailsSchema = spec.components?.schemas?.CampaignEmailsResponse;
     expect(emailsSchema).toBeDefined();
-    const emailProps =
-      emailsSchema.properties.emails.items.properties;
+    const items = emailsSchema.properties.emails.items;
+    const emailProps = (items.$ref ? spec.components.schemas[items.$ref.split("/").pop()!] : items).properties;
     for (const field of [
       "id",
       "subject",
@@ -43,10 +43,13 @@ describe("Campaign emails OpenAPI response schemas", () => {
       "leadTitle",
       "leadIndustry",
       "clientCompanyName",
-      "generationRun",
       "createdAt",
     ]) {
       expect(emailProps).toHaveProperty(field);
+    }
+    // Security hotfix 2026-10-12: the customer document never advertises our internals.
+    for (const field of ["generationRun", "generationRunId", "promptRaw", "responseRaw", "variablesRaw", "model", "promptType"]) {
+      expect(emailProps).not.toHaveProperty(field);
     }
   });
 
