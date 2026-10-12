@@ -1,6 +1,7 @@
 import { OpenApiGeneratorV3 } from "@asteasolutions/zod-to-openapi";
 import { registry } from "../schemas.js";
 import { DEPRECATION_POLICY, MINIMUM_NOTICE_DAYS } from "../lib/deprecation.js";
+import { attachDownstreamBodies } from "./downstream-bodies.js";
 import {
   ANONYMOUS_POLICY,
   AUTHENTICATED_POLICY,
@@ -346,7 +347,26 @@ The same policy is machine-readable at the root of this document under
  * the complete document, served only to a caller holding the platform key at
  * `GET /internal/openapi.json`.
  */
-export type DocumentAudience = "public" | "staff";
+export type DocumentAudience = "public" | "staff" | "staff-key";
+
+/**
+ * Operations a STAFF user's own key may call (`requireStaffActor`), keyed
+ * `"<METHOD> <path template>"`. Owner rule 2026-10-12 (`mcp-first`): staff
+ * change client accounts through the distribute.you MCP with their own key,
+ * exactly like a client, so the few staff operations that job needs must be
+ * reachable by a staff key, and only by one.
+ *
+ * They are staff operations, so the public document never carries them. The
+ * `"staff-key"` audience is the public document PLUS these, each marked
+ * `x-staff-only: true`, tagged `STAFF_KEY_TAG`, with Bearer as its only scheme:
+ * that is what `GET /v1/me/openapi.json` serves to a staff user's key, and what
+ * the MCP searches for that session. A non-staff key gets the public document.
+ */
+export const STAFF_KEY_OPERATIONS = new Set<string>([
+  "POST /v1/billing/credits/grant",
+]);
+
+export const STAFF_KEY_TAG = "Staff (key)";
 
 /** Security scheme naming the shared platform key (`ADMIN_DISTRIBUTE_API_KEY`). */
 export const PLATFORM_SECURITY_SCHEME = "apiKeyAuth";
@@ -419,6 +439,8 @@ export function buildDocument(
       { name: "Waitlist", description: "Waitlist for users without an invite code" },
       { name: "Rewards", description: "Customer reward tasks and their due counts (client-service proxy)" },
       { name: "Mailing Lists", description: "Staff mailing lists and written updates (transactional-email-service proxy, staff-only)" },
+      { name: "Replies", description: "Answer a person in their existing email thread, from the mailbox that wrote to them" },
+      { name: STAFF_KEY_TAG, description: "Staff-only operations a distribute.you staff member's own API key may call; any other key gets 403" },
     ],
   }) as unknown as Record<string, unknown>;
 
@@ -426,9 +448,13 @@ export function buildDocument(
   document["x-deprecation-policy"] = DEPRECATION_POLICY;
 
   postProcessOperations(document);
+  attachDownstreamBodies(document);
 
-  if ((options.audience ?? "public") === "public") {
-    stripNonCustomerSurface(document);
+  const audience = options.audience ?? "public";
+  if (audience === "public") {
+    stripNonCustomerSurface(document, new Set());
+  } else if (audience === "staff-key") {
+    stripNonCustomerSurface(document, STAFF_KEY_OPERATIONS);
   }
 
   return document;
@@ -454,7 +480,10 @@ export function buildDocument(
  * request carrying a valid Bearer token AND anything in `X-API-Key` is answered
  * `401 Invalid admin key` without the Bearer ever being examined.
  */
-function stripNonCustomerSurface(document: Record<string, unknown>): void {
+function stripNonCustomerSurface(
+  document: Record<string, unknown>,
+  keepForStaffKey: Set<string>,
+): void {
   const paths = document.paths as Record<string, Record<string, unknown>> | undefined;
   const keptTags = new Set<string>();
 
@@ -467,7 +496,16 @@ function stripNonCustomerSurface(document: Record<string, unknown>): void {
         Object.keys((requirement ?? {}) as Record<string, unknown>),
       );
       const tags = (operation.tags as string[] | undefined) ?? [];
+      const key = `${method.toUpperCase()} ${path}`;
+      if (keepForStaffKey.has(key)) {
+        operation.tags = [STAFF_KEY_TAG];
+        operation.security = [{ bearerAuth: [] }];
+        (operation as Record<string, unknown>)["x-staff-only"] = true;
+        keptTags.add(STAFF_KEY_TAG);
+        continue;
+      }
       const platformOnly =
+        STAFF_KEY_OPERATIONS.has(key) ||
         schemes.includes(PLATFORM_SECURITY_SCHEME) ||
         tags.some((tag) => STAFF_ONLY_TAGS.has(tag));
 

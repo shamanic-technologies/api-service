@@ -1082,9 +1082,16 @@ registry.registerPath({
     "belongs to its USER and reaches every organization that user is a member of (checked on every request; staff count as " +
     "members of every organization). Each request acts in ONE organization: name a brand (`?brandId=`, `x-brand-id`, or " +
     "`brandId` in a JSON body) or the organization (`?orgId=` or `x-org-id`); a user in exactly one organization needs to name " +
-    "nothing. This endpoint answers even when no organization is named. A key never carries staff, admin or beta powers. " +
+    "nothing. This endpoint answers even when no organization is named. A key never carries admin or beta powers; a staff " +
+    "member's key may call the few operations listed under the `Staff (key)` tag of `GET /v1/me/openapi.json`. " +
+    "Pass `q` to find one organization or brand by name, domain or id (a staff key reaches every organization, so the full list is long). " +
     "Authenticate with `Authorization: Bearer <key>`. On 401 the body's `code` says why and `fix` says what to do.",
   security: authed,
+  request: {
+    query: z.object({
+      q: z.string().optional().openapi({ description: "Find an organization or brand: text matched (case-insensitive, substring) against each organization's id and name and each brand's id, name and domain. An organization that matches keeps all its brands; otherwise only its matching brands are listed. Example: `leadingislearning`." }),
+    }),
+  },
   responses: {
     200: {
       description: "Current user and org info",
@@ -2665,9 +2672,10 @@ registry.registerPath({
   method: "get",
   path: "/v1/leads",
   tags: ["Leads"],
-  summary: "List leads",
+  summary: "List or search a brand's leads (find a lead by email, name or company)",
   description:
     "Pass-through to lead-service GET /orgs/leads. Filter by brandId and/or campaignId (at least one required). " +
+    "To find one person, pass `q`: their email (or part of it), name, job title or company name; every word must match. " +
     "The whole query string is forwarded to lead-service verbatim: the parameters listed here are the ones documented " +
     "today, not a whitelist — any other filter lead-service accepts can be sent and reaches it unchanged. " +
     "Each lead is a LeadDetail with the canonical FullLead payload under `lead` (lead-service v0.13.4+). " +
@@ -2680,6 +2688,8 @@ registry.registerPath({
       limit: z.coerce.number().int().optional().openapi({ description: "Max results to return" }),
       offset: z.coerce.number().int().optional().openapi({ description: "Offset for pagination" }),
       view: z.string().optional().openapi({ description: "Projection view forwarded to lead-service (e.g. `basic` for a slim payload)" }),
+      q: z.string().optional().openapi({ description: "Search: a person's email (or part of it), name, job title or company name. Case-insensitive substring; with several words, each must match one of those fields. Example: `jane@acme.com`." }),
+      status: z.string().optional().openapi({ description: "Comma-separated lead statuses to include (lead-service decides the default set)" }),
     }).passthrough(),
   },
   responses: {
@@ -7153,12 +7163,13 @@ registry.registerPath({
   method: "post",
   path: "/v1/billing/credits/grant",
   tags: ["Billing"],
-  summary: "Grant free credit to an org (staff only)",
+  summary: "Grant free credit to an organization (staff only)",
   description:
-    "Grant an arbitrary free-credit amount to the org in context. Staff-only: requires the " +
-    "platform API key AND an x-email in the STAFF_EMAILS allowlist. Transparent proxy to " +
-    "billing-service POST /v1/credits/grant; body { amountCents, note?, idempotencyKey } " +
-    "forwarded as-is, response owned by the downstream service.",
+    "Give an organization free credit: an amount in cents and a note. Name the organization with `orgId` " +
+    "(or a brand with `brandId`). Staff only: a distribute.you staff member's own API key, or the platform key " +
+    "with a staff x-email; any other key gets 403 `staff_only`. Idempotent on `idempotencyKey`: a retry with the " +
+    "same key grants nothing more, a new key stacks a new grant. Transparent proxy to billing-service " +
+    "POST /v1/credits/grant, which validates the body and owns the response.",
   security: platformAuth,
   request: { body: { content: { "application/json": { schema: CreditGrantRequestSchema } } } },
   responses: {
@@ -14843,5 +14854,51 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "No billing account yet", content: errorContent },
     502: { description: "Payment provider unavailable; retry", content: errorContent },
+  },
+});
+
+// ---------------------------------------------------------------------------
+// GET /v1/me/openapi.json — the API document for the calling key.
+// ---------------------------------------------------------------------------
+registry.registerPath({
+  method: "get",
+  path: "/v1/me/openapi.json",
+  tags: ["User"],
+  summary: "The API document for this key",
+  description:
+    "The OpenAPI document of every operation THIS key may call. For a customer key it is the public document " +
+    "(`GET /openapi.json`). For a distribute.you staff member's key it also carries the staff operations a staff key " +
+    "may call, each under the `Staff (key)` tag. The distribute.you MCP reads it to know what a session can do.",
+  security: authed,
+  responses: {
+    200: { description: "OpenAPI 3 document", content: { "application/json": { schema: z.object({}).passthrough().openapi("KeyOpenApiDocument") } } },
+    401: { description: "Missing or refused key", content: errorContent },
+  },
+});
+
+// ---------------------------------------------------------------------------
+// POST /v1/replies — answer a person in their existing thread (instantly-service).
+// ---------------------------------------------------------------------------
+registry.registerPath({
+  method: "post",
+  path: "/v1/replies",
+  tags: ["Replies"],
+  summary: "Reply to a person in their existing email thread",
+  description:
+    "Send an answer into the email thread a person already has with the brand, from the mailbox and persona that wrote " +
+    "to them (the reply a sales rep would send). Name the person by `email` alone: the thread is found from it. When that " +
+    "person wrote back on several campaigns the answer is 409 `ambiguous_thread` with the `candidates`; call again with one " +
+    "`campaign_id`. Write `body_html` without a signature (the persona's is added). " +
+    "Send `sent_by: \"human\"` for a reply a person decided on. Name the organization with `brandId` or `orgId`. " +
+    "Pass-through to instantly-service POST /orgs/replies: refusals come back unchanged with a `code` " +
+    "(409 `ambiguous_thread`, `no_reply_to_thread`, `human_took_over`; 404 `campaign_not_found` when the org never emailed that person).",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("ReplyToPersonRequest") } } } },
+  responses: {
+    200: { description: "The reply was sent (instantly-service shape)", content: { "application/json": { schema: z.object({}).passthrough().openapi("ReplyToPersonResponse") } } },
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No thread for that person (forwarded verbatim)", content: errorContent },
+    409: { description: "Refused, with a `code` (forwarded verbatim)", content: errorContent },
   },
 });

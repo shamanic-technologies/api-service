@@ -3,7 +3,7 @@ import { timingSafeEqual } from "crypto";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { createRun, updateRun } from "@distribute/runs-client";
 import { looksLikeUserKey, respondAuthFailure } from "../lib/auth-failure.js";
-import { staffEmailAllowlist } from "../lib/staff.js";
+import { isStaffEmail, staffEmailAllowlist } from "../lib/staff.js";
 import { loadUserKeyScope, resolveTargetOrg, respondTargetFailure, UserKeyScope } from "../lib/org-scope.js";
 
 /**
@@ -369,6 +369,45 @@ export function requireStaff(
 
   req.staffEmail = email;
   return next();
+}
+
+/**
+ * Staff gate that ALSO admits a staff member's own API key. MUST run after
+ * `authenticate` / `authenticateUser`.
+ *
+ * Owner rule 2026-10-12 (`mcp-first`): staff change client accounts through the
+ * distribute.you MCP with their own key, exactly like a client would, so the few
+ * staff operations that job needs (listed in `STAFF_KEY_OPERATIONS`,
+ * `src/openapi/document.ts`) must accept a staff user's key.
+ *
+ * - `user_key`: admitted only when the key's USER is staff, as client-service
+ *   records them (`userKeyScope.isStaff`, from the user's stored email against
+ *   `STAFF_EMAILS`). Nothing the caller sends is read: a client key cannot claim
+ *   staff with a header. `req.staffEmail` = the user's stored email.
+ * - platform key: exactly `requireStaff` (forwarded `x-email` in the allowlist).
+ *
+ * Use it ONLY on operations listed in `STAFF_KEY_OPERATIONS`; every other staff
+ * route keeps `requireStaff`, which refuses every Bearer key.
+ */
+export function requireStaffActor(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction,
+) {
+  if (req.authType === "user_key") {
+    const scope = req.userKeyScope;
+    const email = scope?.email?.trim().toLowerCase();
+    if (!scope?.isStaff || !email || !isStaffEmail(email)) {
+      return res.status(403).json({
+        error: "Staff access required",
+        code: "staff_only",
+        message: "Only a distribute.you staff member's key may call this operation.",
+      });
+    }
+    req.staffEmail = email;
+    return next();
+  }
+  return requireStaff(req, res, next);
 }
 
 /**
