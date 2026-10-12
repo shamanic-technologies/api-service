@@ -10,6 +10,9 @@ vi.mock("../../src/middleware/auth.js", () => ({
     req.authType = "admin";
     next();
   },
+  // Staff gate exercised for real in generation-leak-guard.behavior.test.ts.
+  authenticatePlatform: (_req: any, _res: any, next: any) => next(),
+  requireStaff: (_req: any, _res: any, next: any) => next(),
   requireOrg: (_req: any, _res: any, next: any) => next(),
   requireUser: (_req: any, _res: any, next: any) => next(),
   AuthenticatedRequest: {},

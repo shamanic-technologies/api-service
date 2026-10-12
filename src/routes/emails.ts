@@ -5,6 +5,7 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
 import { SendEmailRequestSchema, DeployEmailTemplatesRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
+import { isStaffCaller, toCustomerEmail } from "../lib/customer-email-view.js";
 
 const router = Router();
 
@@ -21,8 +22,9 @@ function rawQueryString(originalUrl: string): string {
 
 /**
  * GET /v1/emails — list generated emails with filters (brand-level)
- * Proxies to content-generation-service GET /generations. Returns the same enriched shape
- * as GET /campaigns/:id/emails.
+ * Proxies to content-generation-service GET /generations. Returns the same shape as
+ * GET /campaigns/:id/emails: the customer allowlist for a non-staff caller, the full row
+ * enriched with `generationRun` costs for staff (src/lib/customer-email-view.ts).
  *
  * `brandId` is read here only because this gateway 400s without it; the query string itself
  * is forwarded verbatim (CLAUDE.md #11), so every filter content-generation-service accepts
@@ -49,7 +51,13 @@ router.get("/emails", authenticate, requireOrg, requireUser, async (req: Authent
       return res.json({ emails: [] });
     }
 
-    // Batch-fetch generation run costs from runs-service
+    // SECURITY: a non-staff caller gets the customer allowlist only — never the prompt,
+    // raw model output, raw variables, token counts or our run costs (customer-email-view.ts).
+    if (!isStaffCaller(req)) {
+      return res.json({ emails: allEmails.map(toCustomerEmail) });
+    }
+
+    // Staff only: batch-fetch generation run costs from runs-service
     const generationRunIds = allEmails
       .map((e) => e.generationRunId as string | undefined)
       .filter((id): id is string => !!id);
@@ -93,8 +101,9 @@ router.get("/emails", authenticate, requireOrg, requireUser, async (req: Authent
 /**
  * GET /v1/emails/by-lead/:leadId — the generated email for ONE lead.
  * Transparent proxy to content-generation-service GET /generations/by-lead/:leadId
- * (org-scoped via identity headers). Body forwarded verbatim (CLAUDE.md #8 — downstream
- * owns the generation shape; no field re-declaration / stripping).
+ * (org-scoped via identity headers). Staff get the row verbatim; every other caller gets the
+ * customer allowlist (src/lib/customer-email-view.ts): the row carries our prompt and raw
+ * model output, which never reach a customer.
  *
  * The query string is forwarded verbatim (CLAUDE.md #11). A person is contacted by several
  * brands of one org and by several campaigns of one brand, so the scope the caller asks for
@@ -118,8 +127,10 @@ router.get(
         externalServices.emailgen,
         `/generations/by-lead/${encodeURIComponent(req.params.leadId)}${rawQueryString(req.originalUrl)}`,
         { headers: buildInternalHeaders(req) },
-      ) as { generation: Record<string, unknown> };
-      res.json({ generation: result.generation });
+      ) as { generation: Record<string, unknown> | null };
+      // SECURITY: non-staff callers get the customer allowlist only (customer-email-view.ts).
+      const generation = result.generation && !isStaffCaller(req) ? toCustomerEmail(result.generation) : result.generation;
+      res.json({ generation });
     } catch (error: any) {
       // No generation yet for this lead → normal empty state, not an error.
       if (error.statusCode === 404) {

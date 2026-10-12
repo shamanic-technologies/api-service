@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
+import { authenticate, authenticatePlatform, requireOrg, requireStaff, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { VersionPromptRequestSchema } from "../schemas.js";
@@ -8,9 +8,15 @@ const router = Router();
 
 /**
  * GET /v1/prompts?type=cold-email
- * Get a prompt template by type from content-generation service
+ * Get a prompt template by type from content-generation service.
+ *
+ * STAFF ONLY (security hotfix 2026-10-12): content-generation-service's prompts table is
+ * PLATFORM-wide (no org scope), so a customer could read any of our prompt templates by
+ * type, and PUT below would version a shared template. chat-service's
+ * get/update_prompt_template tools call these with the platform key and no `x-email`, so
+ * they now answer 403 (the customer-facing copilot carries those tools).
  */
-router.get("/prompts", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.get("/prompts", authenticatePlatform, requireStaff, authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const type = req.query.type as string | undefined;
     if (!type) {
@@ -35,7 +41,7 @@ router.get("/prompts", authenticate, requireOrg, requireUser, async (req: Authen
  * PUT /v1/prompts
  * Create a new version of a prompt template (auto-increments type name)
  */
-router.put("/prompts", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.put("/prompts", authenticatePlatform, requireStaff, authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = VersionPromptRequestSchema.safeParse(req.body);
     if (!parsed.success) {

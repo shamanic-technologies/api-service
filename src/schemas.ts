@@ -1286,6 +1286,44 @@ const RunCostDataSchema = z
   })
   .openapi("RunCostData");
 
+// The CUSTOMER view of a generated email (security hotfix 2026-10-12). The gateway projects
+// every content-generation-service generation row onto this allowlist for any non-staff
+// caller (src/lib/customer-email-view.ts): the prompt, raw model output, raw variables,
+// token counts, model, prompt type, workflow slugs and run costs never reach a customer.
+// Documented field-by-field on purpose: this is a shape api-service constructs (rule #8's
+// exception), and the document must not advertise a field a customer cannot receive.
+const GeneratedEmailSequenceStepSchema = z
+  .object({
+    step: z.number().describe("1-based position in the cadence"),
+    subject: z.string().nullable().optional().describe("Step subject, when the step carries its own"),
+    bodyHtml: z.string().nullable().describe("Step body as HTML"),
+    bodyText: z.string().nullable().describe("Step body as plain text"),
+    daysSinceLastStep: z.number().nullable().describe("Delay in days after the previous step (0 for step 1)"),
+  })
+  .openapi("GeneratedEmailSequenceStep");
+
+export const GeneratedEmailSchema = z
+  .object({
+    id: z.string().describe("Generation ID"),
+    leadId: z.string().nullable().optional().describe("Lead the email was written for"),
+    campaignId: z.string(),
+    brandIds: z.array(z.string()).optional().describe("Brands the email was written for"),
+    subject: z.string().nullable().describe("Email subject line"),
+    bodyHtml: z.string().nullable().describe("First email body as HTML"),
+    bodyText: z.string().nullable().describe("First email body as plain text"),
+    bodySource: z.enum(["column", "sequence", "none"]).optional().describe("Where bodyText/bodyHtml were read from; `none` = no readable copy"),
+    sequence: z.array(GeneratedEmailSequenceStepSchema).nullable().describe("Every step of the planned cadence"),
+    leadFirstName: z.string().nullable(),
+    leadLastName: z.string().nullable(),
+    leadCompany: z.string().nullable(),
+    leadTitle: z.string().nullable(),
+    leadIndustry: z.string().nullable(),
+    leadOrganizationDomain: z.string().nullable().optional().describe("Company domain from lead enrichment"),
+    clientCompanyName: z.string().nullable(),
+    createdAt: z.string().describe("ISO timestamp"),
+  })
+  .openapi("GeneratedEmail");
+
 // Mirror of runs-service `RunWithOwnCost` (RunSchema + own-cost totals).
 // Used by GET /v1/runs (list). One item per run, own-cost totals only;
 // per-cost-name breakdown lives on GET /v1/runs/{id}.
@@ -2019,36 +2057,17 @@ registry.registerPath({
   tags: ["Campaigns"],
   summary: "Get campaign emails",
   description:
-    "Get all generated emails for a campaign across all runs, with generation cost data",
+    "Get all generated emails for a campaign across all runs: the lead each was written for and the subject and body of every step.",
   security: authed,
   request: { params: CampaignIdParam },
   responses: {
     200: {
-      description: "Campaign emails with generation run data",
+      description: "Campaign emails",
       content: {
         "application/json": {
           schema: z
             .object({
-              emails: z.array(
-                z.object({
-                  id: z.string().describe("Generation ID"),
-                  campaignId: z.string(),
-                  subject: z.string().nullable().describe("Email subject line"),
-                  bodyHtml: z.string().nullable().describe("Email body as HTML"),
-                  bodyText: z.string().nullable().describe("Email body as plain text"),
-                  sequence: z.number().nullable().describe("Sequence number in the campaign"),
-                  leadFirstName: z.string().nullable(),
-                  leadLastName: z.string().nullable(),
-                  leadCompany: z.string().nullable(),
-                  leadOrganizationDomain: z.string().nullable().describe("Company domain from lead enrichment"),
-                  leadTitle: z.string().nullable(),
-                  leadIndustry: z.string().nullable(),
-                  clientCompanyName: z.string().nullable(),
-                  generationRunId: z.string().nullable(),
-                  createdAt: z.string().describe("ISO timestamp"),
-                  generationRun: RunCostDataSchema.nullable().describe("Generation run cost data, null if no run"),
-                }),
-              ),
+              emails: z.array(GeneratedEmailSchema),
             })
             .openapi("CampaignEmailsResponse"),
         },
@@ -6113,7 +6132,7 @@ registry.registerPath({
   description:
     "Returns a prompt template by type from the content-generation service. " +
     "Includes the template text and its declared variables.",
-  security: authed,
+  security: platformAuth, // STAFF ONLY (requireStaff): prompts are platform-wide IP
   request: {
     query: z.object({
       type: z.string().describe("Prompt type to look up (e.g. 'cold-email')"),
@@ -6163,7 +6182,7 @@ registry.registerPath({
     "Creates a new version of a prompt template with an auto-incremented type name. " +
     "For example, sourceType 'cold-email' creates 'cold-email-v2'. " +
     "The source prompt is never modified.",
-  security: authed,
+  security: platformAuth, // STAFF ONLY (requireStaff): prompts are platform-wide IP
   request: {
     body: {
       content: {
@@ -9587,7 +9606,8 @@ registry.registerPath({
   tags: ["Emails"],
   summary: "List generated emails by brand",
   description:
-    "List all generated emails across campaigns for a brand. Returns the same enriched shape as GET /campaigns/{id}/emails. " +
+    "List all generated emails across campaigns for a brand: the lead each was written for and the subject and body of " +
+    "every step. Returns the same shape as GET /campaigns/{id}/emails. " +
     "Proxies to content-generation-service GET /generations. The query string is forwarded verbatim, so every filter " +
     "content-generation-service accepts can be asked for; the parameters below are the ones it documents today, not a " +
     "whitelist this gateway enforces. brandId is the one this gateway itself requires.",
@@ -9604,31 +9624,12 @@ registry.registerPath({
   },
   responses: {
     200: {
-      description: "Generated emails with run cost data",
+      description: "Generated emails",
       content: {
         "application/json": {
           schema: z
             .object({
-              emails: z.array(
-                z.object({
-                  id: z.string().describe("Generation ID"),
-                  campaignId: z.string(),
-                  subject: z.string().nullable(),
-                  bodyHtml: z.string().nullable(),
-                  bodyText: z.string().nullable(),
-                  sequence: z.number().nullable(),
-                  leadFirstName: z.string().nullable(),
-                  leadLastName: z.string().nullable(),
-                  leadCompany: z.string().nullable(),
-                  leadOrganizationDomain: z.string().nullable(),
-                  leadTitle: z.string().nullable(),
-                  leadIndustry: z.string().nullable(),
-                  clientCompanyName: z.string().nullable(),
-                  generationRunId: z.string().nullable(),
-                  createdAt: z.string(),
-                  generationRun: RunCostDataSchema.nullable(),
-                }),
-              ),
+              emails: z.array(GeneratedEmailSchema),
             })
             .openapi("BrandEmailsResponse"),
         },
@@ -9647,7 +9648,7 @@ registry.registerPath({
   summary: "Get the generated email for a lead",
   description:
     "The generated email (subject + body + follow-up sequence) for a single lead. " +
-    "Transparent proxy to content-generation-service GET /generations/by-lead/{leadId}; body forwarded verbatim. " +
+    "Proxies content-generation-service GET /generations/by-lead/{leadId} and returns the GeneratedEmail view of the row. " +
     "The query string is forwarded verbatim too, so the scope the caller asks for decides which of the person's " +
     "generations comes back; the parameters below are the ones content-generation-service documents today, not a " +
     "whitelist this gateway enforces. " +
@@ -9676,13 +9677,12 @@ registry.registerPath({
   },
   responses: {
     200: {
-      description: "The lead's generated email, or null if none exists yet (passthrough — owned by content-generation-service)",
+      description: "The lead's generated email, or null if none exists yet",
       content: {
         "application/json": {
-          // Passthrough per CLAUDE.md #8 — downstream owns the generation shape; do NOT re-declare fields.
+          // Constructed shape (security hotfix 2026-10-12): the customer allowlist, src/lib/customer-email-view.ts.
           schema: z
-            .object({ generation: z.object({}).passthrough().nullable() })
-            .passthrough()
+            .object({ generation: GeneratedEmailSchema.nullable() })
             .openapi("EmailByLeadResponse"),
         },
       },
@@ -10791,7 +10791,7 @@ registry.registerPath({
     "Returns the stored prompt template + its variable metadata so callers can collect inputs " +
     "before invoking POST /v1/content/generate-expert-quote-pitch. " +
     "Response shape is owned by the downstream service.",
-  security: authed,
+  security: platformAuth, // STAFF ONLY (requireStaff): prompts are platform-wide IP
   request: {
     query: z.object({ type: z.string().openapi({ description: "Prompt type to look up (e.g. expert-quote-pitch)" }) }),
   },
@@ -10818,7 +10818,7 @@ registry.registerPath({
     "Returns the prompt currently assigned to a feature + its variable metadata so the " +
     "dashboard prompt editor can read the prompt the feature's GENERATE step uses. " +
     "Response shape is owned by the downstream service.",
-  security: authed,
+  security: platformAuth, // STAFF ONLY (requireStaff): prompts are platform-wide IP
   request: {
     query: z.object({ featureSlug: z.string().openapi({ description: "Feature slug whose assigned prompt to fetch (e.g. pr-expert-quote-opportunities)" }) }),
   },
@@ -10840,7 +10840,7 @@ registry.registerPath({
     "Saves the feature's generation prompt (forks + reassigns downstream). " +
     "Body + response shapes are owned by the downstream service; its 400 variable-integrity " +
     "errors propagate verbatim.",
-  security: authed,
+  security: platformAuth, // STAFF ONLY (requireStaff): prompts are platform-wide IP
   request: {
     body: { content: { "application/json": { schema: PromptAssignmentRequestSchema } } },
   },
