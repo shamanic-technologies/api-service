@@ -8794,6 +8794,60 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/followup-cuts",
+  tags: ["Conversations"],
+  summary: "Stop the queued follow-ups of named leads a campaign emailed in error",
+  description:
+    "Pass-through to instantly-service POST /orgs/followup-cuts. For leads a campaign should never " +
+    "have written to (a sourcing mistake): the rest of their sequence will not go out. Every other lead " +
+    "of the campaign keeps its follow-ups. Body `{ campaignId, leadEmails[], reason }`. Not an opt-out: " +
+    "nothing is recorded as unsubscribe or suppression. All or nothing on names: an email the campaign " +
+    "never wrote to is a 404 `leads_not_in_campaign` and nothing is cut. Idempotent (`already_cut`). " +
+    "Audited: who, when, why (GET /v1/followup-cuts). A lead that could not be cut answers 502.",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("FollowupCutsRequest") } } },
+  },
+  responses: {
+    200: {
+      description: "Per-lead outcome as returned by instantly-service",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("FollowupCutsResponse") } },
+    },
+    400: { description: "Invalid body", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "A named email has no sequence in this campaign — `code: leads_not_in_campaign`", content: errorContent },
+    502: { description: "At least one lead could not be cut", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/followup-cuts",
+  tags: ["Conversations"],
+  summary: "The follow-up cuts of a campaign (who, when, why)",
+  description:
+    "Pass-through to instantly-service GET /orgs/followup-cuts. Every lead whose follow-ups were cut in " +
+    "this campaign, with who cut, when, why and the queued steps refunded. Query forwarded verbatim.",
+  security: authed,
+  request: {
+    query: z.object({
+      campaignId: z.string().openapi({ description: "The campaign whose cuts to list" }),
+    }).passthrough(),
+  },
+  responses: {
+    200: {
+      description: "Cuts as returned by instantly-service",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("FollowupCutsListResponse") } },
+    },
+    400: { description: "Missing or invalid query parameters", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "get",
   path: "/v1/sending-schedule",
   tags: ["Conversations"],

@@ -179,4 +179,61 @@ router.get(
   },
 );
 
+/**
+ * POST /v1/followup-cuts — pass-through to instantly-service POST /orgs/followup-cuts.
+ *
+ * Stop the queued follow-ups of NAMED leads a campaign emailed in error (a sourcing
+ * mistake): the rest of THEIR sequence does not go out, every other lead of that
+ * campaign keeps its follow-ups. Not an opt-out, unsubscribe or suppression: those
+ * people never asked to stop. instantly-service owns the queue, the audit
+ * (who / when / why) and the refusals (404 `leads_not_in_campaign` when a named email
+ * has no sequence in that campaign of the AUTHENTICATED org, 502 when a lead could
+ * not be cut); status and body reach the caller unchanged (rule #7). Body forwarded
+ * byte-identical (rule #4).
+ */
+router.post(
+  "/followup-cuts",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.instantly,
+        "/orgs/followup-cuts",
+        { method: "POST", headers: buildInternalHeaders(req), body: req.body },
+      );
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Follow-up cut error:", error.message);
+      respondUpstreamError(res, error, "Failed to cut follow-ups");
+    }
+  },
+);
+
+/**
+ * GET /v1/followup-cuts?campaignId= — pass-through to instantly-service GET
+ * /orgs/followup-cuts: the audit of every follow-up cut of a campaign. Query string
+ * forwarded verbatim (rule #11).
+ */
+router.get(
+  "/followup-cuts",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.instantly,
+        `/orgs/followup-cuts${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) },
+      );
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Follow-up cut list error:", error.message);
+      respondUpstreamError(res, error, "Failed to list follow-up cuts");
+    }
+  },
+);
+
 export default router;
