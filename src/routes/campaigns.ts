@@ -6,6 +6,7 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
 import { fetchDeliveryStats, EMPTY_DELIVERY_STATS } from "../lib/delivery-stats.js";
 import { buildHeadline, buildFailureDetails } from "../lib/stats-headline.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
+import { isStaffCaller, toCustomerEmail } from "../lib/customer-email-view.js";
 import {
   CreateCampaignRequestSchema,
   deriveCampaignType,
@@ -794,7 +795,13 @@ router.get("/campaigns/:id/emails", authenticate, requireOrg, requireUser, async
       return res.json({ emails: [] });
     }
 
-    // 2. Batch-fetch generation run costs from runs-service
+    // SECURITY: a non-staff caller gets the customer allowlist only — never the prompt,
+    // raw model output, raw variables, token counts or our run costs (customer-email-view.ts).
+    if (!isStaffCaller(req)) {
+      return res.json({ emails: allEmails.map(toCustomerEmail) });
+    }
+
+    // 2. Staff only: batch-fetch generation run costs from runs-service
     const generationRunIds = allEmails
       .map((e) => e.generationRunId as string | undefined)
       .filter((id): id is string => !!id);
