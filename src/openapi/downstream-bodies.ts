@@ -28,6 +28,8 @@ export interface DownstreamBodySource {
   service: string;
   method: "POST" | "PUT" | "PATCH";
   path: string;
+  /** Body fields the GATEWAY supplies from the authenticated identity: left out of the documented body. */
+  omit?: string[];
 }
 
 /** `"<METHOD> <gateway path template>"` → the producer route the body is forwarded to. */
@@ -96,6 +98,8 @@ export const DOWNSTREAM_BODY_SOURCES: Record<string, DownstreamBodySource> = {
   "PATCH /v1/brands/{id}/offers/{offerId}/qualification/criteria/{criterionId}": { service: "lead-service", method: "PATCH", path: "/orgs/brands/{brandId}/offers/{offerId}/qualification/criteria/{criterionId}" },
   "POST /v1/brands/{id}/offers/{offerId}/qualification/criteria/{criterionId}/sample": { service: "lead-service", method: "POST", path: "/orgs/brands/{brandId}/offers/{offerId}/qualification/criteria/{criterionId}/sample" },
   "POST /v1/replies": { service: "instantly-service", method: "POST", path: "/orgs/replies" },
+  "POST /v1/orgs": { service: "client-service", method: "POST", path: "/internal/orgs", omit: ["createdByUserId"] },
+  "POST /v1/orgs/{orgId}/member-invitations": { service: "client-service", method: "POST", path: "/internal/orgs/{orgId}/member-invitations", omit: ["invitedByUserId"] },
 };
 
 export interface DownstreamBodySnapshot extends DownstreamBodySource {

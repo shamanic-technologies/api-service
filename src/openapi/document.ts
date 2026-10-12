@@ -364,6 +364,7 @@ export type DocumentAudience = "public" | "staff" | "staff-key";
  */
 export const STAFF_KEY_OPERATIONS = new Set<string>([
   "POST /v1/billing/credits/grant",
+  "POST /v1/orgs",
 ]);
 
 export const STAFF_KEY_TAG = "Staff (key)";
@@ -439,6 +440,7 @@ export function buildDocument(
       { name: "Waitlist", description: "Waitlist for users without an invite code" },
       { name: "Rewards", description: "Customer reward tasks and their due counts (client-service proxy)" },
       { name: "Mailing Lists", description: "Staff mailing lists and written updates (transactional-email-service proxy, staff-only)" },
+      { name: "Organizations", description: "Create a client organization (staff) and invite people into an organization" },
       { name: "Replies", description: "Answer a person in their existing email thread, from the mailbox that wrote to them" },
       { name: STAFF_KEY_TAG, description: "Staff-only operations a distribute.you staff member's own API key may call; any other key gets 403" },
     ],

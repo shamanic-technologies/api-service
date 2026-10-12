@@ -953,6 +953,35 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       ]
     }
   },
+  "POST /v1/orgs": {
+    "service": "client-service",
+    "method": "POST",
+    "path": "/internal/orgs",
+    "omit": [
+      "createdByUserId"
+    ],
+    "schema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "The client organization's display name.",
+          "example": "Acme Inc"
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "Optional. A retry by the same user with the same key returns the org the first call created (200, `created: false`), even under concurrent calls. Without a key every call creates a new org."
+        }
+      },
+      "required": [
+        "name"
+      ]
+    }
+  },
   "POST /v1/orgs/{orgId}/invites/claim": {
     "service": "client-service",
     "method": "POST",
@@ -972,6 +1001,28 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       "required": [
         "code",
         "inviteeOrgId"
+      ]
+    }
+  },
+  "POST /v1/orgs/{orgId}/member-invitations": {
+    "service": "client-service",
+    "method": "POST",
+    "path": "/internal/orgs/{orgId}/member-invitations",
+    "omit": [
+      "invitedByUserId"
+    ],
+    "schema": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "maxLength": 320,
+          "format": "email",
+          "example": "jane@acme.com"
+        }
+      },
+      "required": [
+        "email"
       ]
     }
   },
