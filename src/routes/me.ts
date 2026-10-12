@@ -4,6 +4,7 @@ import { callExternalService, externalServices } from "../lib/service-client.js"
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { fetchBrandMemberships, fetchOrganizationNames } from "../lib/org-scope.js";
 import { buildDocument } from "../openapi/document.js";
+import { catalogueBody, sendCatalogue, type CatalogueBody } from "../lib/catalogue-response.js";
 
 const router = Router();
 
@@ -158,15 +159,16 @@ export function filterOrganizations(orgs: MeOrgWithBrands[], q: string): MeOrgWi
  * sees them. Gateway-built from the registry; cached per audience (the registry
  * does not change while the process runs).
  */
-const documentCache = new Map<"public" | "staff-key", Record<string, unknown>>();
+const documentCache = new Map<"public" | "staff-key", CatalogueBody>();
 router.get("/me/openapi.json", authenticateUser, (req: AuthenticatedRequest, res) => {
   const audience = req.authType === "user_key" && req.userKeyScope?.isStaff ? "staff-key" : "public";
   let doc = documentCache.get(audience);
   if (!doc) {
-    doc = buildDocument({ audience });
+    doc = catalogueBody(buildDocument({ audience }));
     documentCache.set(audience, doc);
   }
-  res.json(doc);
+  // ETag per audience; If-None-Match on it -> 304, no body (src/lib/catalogue-response.ts).
+  sendCatalogue(req, res, doc);
 });
 
 function orgLabel(o: MeOrg): string {

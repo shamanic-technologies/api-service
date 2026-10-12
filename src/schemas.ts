@@ -174,10 +174,12 @@ registry.registerPath({
   summary: "OpenAPI specification",
   description:
     "Returns the OpenAPI 3.0 JSON document for this API — the document you are reading. " +
-    "It describes every operation you can call with your API key.",
+    "It describes every operation you can call with your API key. The response carries an `ETag`; send it back as " +
+    "`If-None-Match` and an unchanged document answers 304 with no body.",
   responses: {
+    304: { description: "Not modified: the copy named by `If-None-Match` is current. No body." },
     200: {
-      description: "OpenAPI 3.0 specification",
+      description: "OpenAPI 3.0 specification (header `ETag` names this version)",
       content: {
         "application/json": {
           // The document this gateway itself serves — passthrough, because the
@@ -14868,10 +14870,13 @@ registry.registerPath({
   description:
     "The OpenAPI document of every operation THIS key may call. For a customer key it is the public document " +
     "(`GET /openapi.json`). For a distribute.you staff member's key it also carries the staff operations a staff key " +
-    "may call, each under the `Staff (key)` tag. The distribute.you MCP reads it to know what a session can do.",
+    "may call, each under the `Staff (key)` tag. The distribute.you MCP reads it to know what a session can do. " +
+    "Revalidate instead of re-downloading: the response carries an `ETag`; send it back as `If-None-Match` and an unchanged " +
+    "document answers 304 with no body. Reads of this document are not recorded on your conversation thread.",
   security: authed,
   responses: {
-    200: { description: "OpenAPI 3 document", content: { "application/json": { schema: z.object({}).passthrough().openapi("KeyOpenApiDocument") } } },
+    200: { description: "OpenAPI 3 document (header `ETag` names this version)", content: { "application/json": { schema: z.object({}).passthrough().openapi("KeyOpenApiDocument") } } },
+    304: { description: "Not modified: the copy named by `If-None-Match` is current. No body." },
     401: { description: "Missing or refused key", content: errorContent },
   },
 });

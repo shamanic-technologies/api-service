@@ -78,6 +78,7 @@ import { authenticatePlatform } from "./middleware/auth.js";
 import { buildDocument } from "./openapi/document.js";
 import { requestId } from "./middleware/request-id.js";
 import { recordCustomerCalls } from "./lib/call-log.js";
+import { catalogueBody, sendCatalogue, type CatalogueBody } from "./lib/catalogue-response.js";
 import { agentPaymentRequired } from "./middleware/payment-required.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { readFileSync, existsSync } from "fs";
@@ -157,10 +158,13 @@ app.use(agentPaymentRequired);
 // committed file to keep in sync. The OPERATIONS themselves are unchanged:
 // removing one from the published document does not remove its route.
 const openapiPath = join(__dirname, "..", "openapi.json");
-app.get("/openapi.json", (_req, res) => {
+// The catalogue documents answer conditional requests (ETag + If-None-Match ->
+// 304, no body) and are serialized once per process: see src/lib/catalogue-response.ts.
+let publishedDocument: CatalogueBody | null = null;
+app.get("/openapi.json", (req, res) => {
   if (existsSync(openapiPath)) {
-    const spec = JSON.parse(readFileSync(openapiPath, "utf-8"));
-    res.json(spec);
+    publishedDocument ??= catalogueBody(JSON.parse(readFileSync(openapiPath, "utf-8")));
+    sendCatalogue(req, res, publishedDocument);
   } else {
     res.status(404).json({ error: "OpenAPI spec not generated yet. Run: pnpm generate:openapi" });
   }
@@ -225,10 +229,14 @@ function buildPublicSpec(): Record<string, unknown> | null {
   return spec;
 }
 
-app.get("/public/openapi.json", (_req, res) => {
-  const spec = buildPublicSpec();
-  if (spec) {
-    res.json(spec);
+let publicDocument: CatalogueBody | null = null;
+app.get("/public/openapi.json", (req, res) => {
+  if (!publicDocument) {
+    const spec = buildPublicSpec();
+    if (spec) publicDocument = catalogueBody(spec);
+  }
+  if (publicDocument) {
+    sendCatalogue(req, res, publicDocument);
   } else {
     res.status(404).json({ error: "OpenAPI spec not generated yet. Run: pnpm generate:openapi" });
   }
@@ -247,8 +255,10 @@ app.use(
 // that does not carry `ADMIN_DISTRIBUTE_API_KEY`, which is the same key the
 // documented platform operations themselves require — so this exposes nothing
 // to a caller who could not already call them.
-app.get("/internal/openapi.json", authenticatePlatform, (_req, res) => {
-  res.json(buildDocument({ audience: "staff" }));
+let staffDocument: CatalogueBody | null = null;
+app.get("/internal/openapi.json", authenticatePlatform, (req, res) => {
+  staffDocument ??= catalogueBody(buildDocument({ audience: "staff" }));
+  sendCatalogue(req, res, staffDocument);
 });
 
 // Public routes
