@@ -146,4 +146,37 @@ describe("/v1/orgs/matrix/links* → crm-service", () => {
     expect(res.status).toBe(404);
     expect(res.body).toEqual(upstream);
   });
+  it("PATCH forwards the linkId in the path, the body verbatim and org identity, returns the account view", async () => {
+    const LINK = "bbbbbbbb-1111-4111-8111-000000000009";
+    const body = { brandId: BRAND, outreachDefault: true };
+    const upstream = { link: { linkId: LINK, channel: "whatsapp", status: "linked", outreachDefault: true } };
+    upstreamOnce(200, upstream);
+
+    const res = await request(buildApp()).patch(`/v1/orgs/matrix/links/${LINK}`).send(body);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(upstream);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/matrix/links/${LINK}`);
+    expect(calls[0].options.method).toBe("PATCH");
+    expect(JSON.parse(calls[0].options.body)).toEqual(body);
+    expect(calls[0].options.headers["X-API-Key"]).toBe("crm-test-key");
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("PATCH propagates crm-service's 404 and 409 with the same JSON body", async () => {
+    const LINK = "bbbbbbbb-1111-4111-8111-000000000009";
+    const notFound = { type: "not_found", error: "no such link for this brand" };
+    upstreamOnce(404, notFound);
+    const r404 = await request(buildApp()).patch(`/v1/orgs/matrix/links/${LINK}`).send({ brandId: BRAND, outreachDefault: true });
+    expect(r404.status).toBe(404);
+    expect(r404.body).toEqual(notFound);
+
+    const conflict = { type: "conflict", error: "the account is failed, not linked" };
+    upstreamOnce(409, conflict);
+    const r409 = await request(buildApp()).patch(`/v1/orgs/matrix/links/${LINK}`).send({ brandId: BRAND, outreachDefault: true });
+    expect(r409.status).toBe(409);
+    expect(r409.body).toEqual(conflict);
+  });
 });

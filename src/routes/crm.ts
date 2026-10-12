@@ -287,6 +287,24 @@ router.delete("/orgs/matrix/links/:channel", ...orgChain, async (req: Authentica
   }
 });
 
+// PATCH /v1/orgs/matrix/links/:linkId → crm-service PATCH /orgs/matrix/links/{linkId}
+// Marks ONE linked account as the brand's outreach default for its channel (the
+// account a first WhatsApp message goes out from). Body `{ brandId, outreachDefault: true }`
+// forwarded verbatim; crm-service's 400 / 404 / 409 cross with their own status and body.
+router.patch("/orgs/matrix/links/:linkId", ...orgChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.crm,
+      `/orgs/matrix/links/${encodeURIComponent(req.params.linkId)}`,
+      { method: "PATCH", body: req.body, headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error) {
+    console.error("[api-service] Set matrix link outreach default error:", error);
+    respondUpstreamError(res, error, "Set matrix link outreach default error");
+  }
+});
+
 // ─── GoHighLevel mirror (contacts + sales pipeline) ──────────────────────────
 //
 // crm-service mirrors a brand's GoHighLevel sub-account: its contacts, its
