@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Response } from "express";
 import {
   authenticate,
   authenticatePlatform,
@@ -86,6 +86,42 @@ router.get("/billing/accounts/runway", authenticate, requireOrg, async (req: Aut
     respondUpstreamError(res, error, "Failed to get runway");
   }
 });
+
+// GET | PUT | DELETE /v1/billing/accounts/monthly_charge_limit — "my card is never
+// charged more than $X a month". Pure pass-through of billing-service's
+// /v1/accounts/monthly_charge_limit: body forwarded as-is, billing's status and
+// body forwarded verbatim (its 400 on a bad monthly_charge_limit_cents reaches
+// the dashboard as a 400). No account upsert: billing needs no account for this
+// (onboarding states the limit before any payment) and a read must not create rows.
+async function monthlyChargeLimitProxy(
+  req: AuthenticatedRequest,
+  res: Response,
+  method: "GET" | "PUT" | "DELETE",
+  failure: string
+) {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/monthly_charge_limit",
+      method === "PUT"
+        ? { method, body: req.body, headers: buildInternalHeaders(req) }
+        : { method, headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, failure);
+  }
+}
+
+router.get("/billing/accounts/monthly_charge_limit", authenticate, requireOrg, (req: AuthenticatedRequest, res) =>
+  monthlyChargeLimitProxy(req, res, "GET", "Failed to read monthly charge limit")
+);
+router.put("/billing/accounts/monthly_charge_limit", authenticate, requireOrg, (req: AuthenticatedRequest, res) =>
+  monthlyChargeLimitProxy(req, res, "PUT", "Failed to set monthly charge limit")
+);
+router.delete("/billing/accounts/monthly_charge_limit", authenticate, requireOrg, (req: AuthenticatedRequest, res) =>
+  monthlyChargeLimitProxy(req, res, "DELETE", "Failed to remove monthly charge limit")
+);
 
 // PATCH /v1/billing/accounts/auto_topup — configure auto-topup
 router.patch("/billing/accounts/auto_topup", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
