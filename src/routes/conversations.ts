@@ -5,7 +5,8 @@ import {
   requireUser,
   AuthenticatedRequest,
 } from "../middleware/auth.js";
-import { callExternalService, externalServices } from "../lib/service-client.js";
+import { callExternalService, pipeExternalService, externalServices } from "../lib/service-client.js";
+import { ensureBrandInOrg } from "../lib/brand-ownership.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 
@@ -128,6 +129,52 @@ router.get(
     } catch (error: any) {
       console.error("[api-service] Get sending schedule error:", error);
       respondUpstreamError(res, error, "Failed to get sending schedule");
+    }
+  },
+);
+
+/**
+ * GET /v1/email-sequences — pass-through to instantly-service GET /orgs/email-sequences.
+ *
+ * Every email we run for one brand, per prospect: each step of the sequence (first
+ * email + follow-ups) and whether it went out (`sent` + `sentAt`), is waiting for
+ * the prospect's business hours (`queued`), or will not go out (`stopped`).
+ * instantly-service performs the sends, so it states the status; the generated
+ * bodies stay on `GET /v1/emails?brandId=`, joined by `leadId` on the caller's side
+ * (rule #2: no aggregation here). Read-only, declares no cost.
+ *
+ * Org scoping, three layers: the AUTHENTICATED org (a user key resolves it from
+ * `?brandId` among the user's own orgs); `ensureBrandInOrg` 404s `brand_not_in_org`
+ * before any data read when the brand is not one of the org's brands; instantly-service
+ * filters on `x-org-id`. The query string is forwarded verbatim (rule #11) and
+ * `brandId` also rides `x-brand-id` (buildInternalHeaders promotes it from the query).
+ * Byte pipe (rule #10): a large brand holds tens of thousands of sequences.
+ */
+router.get(
+  "/email-sequences",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { brandId } = req.query as { brandId?: string };
+      if (!brandId) {
+        return res.status(400).json({ error: "Missing required query parameter: brandId" });
+      }
+      if (!(await ensureBrandInOrg(req, res, brandId))) return;
+
+      await pipeExternalService(
+        externalServices.instantly,
+        `/orgs/email-sequences${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req), expressRes: res },
+      );
+    } catch (error: any) {
+      if (res.headersSent) {
+        res.end();
+        return;
+      }
+      console.error("[api-service] Get email sequences error:", error);
+      respondUpstreamError(res, error, "Failed to get email sequences");
     }
   },
 );
