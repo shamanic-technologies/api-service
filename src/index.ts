@@ -73,6 +73,7 @@ import { rateLimit } from "./middleware/rate-limit.js";
 import { authenticatePlatform } from "./middleware/auth.js";
 import { buildDocument } from "./openapi/document.js";
 import { requestId } from "./middleware/request-id.js";
+import { recordCustomerCalls } from "./lib/call-log.js";
 import { apiReference } from "@scalar/express-api-reference";
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
@@ -126,6 +127,12 @@ app.use(rateLimit);
 // free-form business-context body (~1MB / ~300k chars, "5 PDFs of 20 pages")
 // that brand-service stores + uses as the field-extraction source.
 app.use(express.json({ limit: "10mb" }));
+
+// ── Customer call log ───────────────────────────────────────────────────────
+// Every call a client (or their assistant, MCP included) makes with their OWN
+// key is filed as a conversation on their Unibox thread (crm-service). Watches
+// Bearer calls only, never slows or fails them: see src/lib/call-log.ts.
+app.use(recordCustomerCalls);
 
 // ── OpenAPI ─────────────────────────────────────────────────────────────────
 // `openapi.json` is generated for the PUBLIC audience (see

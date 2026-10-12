@@ -14112,6 +14112,22 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/people/api-calls/{callId}",
+  tags: ["CRM Contacts"],
+  summary: "One API / MCP call of a person, whole: request and answer",
+  description:
+    "Proxy to crm-service GET /orgs/people/api-calls/{callId}: the raw side of a thread item of source `api` (its `ref.callId`), secrets already removed, each body cut at 256 KB. The whole query string is forwarded byte-for-byte (`brandId` required downstream). Requires x-user-id. Served on the staff Unibox scope only; any other scope is 404 with crm-service's body verbatim. Response shape owned by crm-service.",
+  security: authed,
+  request: { params: z.object({ callId: z.string() }), query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "The call as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: { description: "Call not found in this scope (forwarded verbatim)", content: errorContent },
+    ...crmErrorResponses,
+  },
+});
+
 const CrmPeopleOutcomePeopleQuery = CrmBrandIdQuery.extend({
   step: z.string().openapi({ description: "Outcome step (e.g. signup), vocabulary owned by crm-service" }),
   limit: z.string().optional().openapi({ description: "Page size, validated by crm-service" }),
