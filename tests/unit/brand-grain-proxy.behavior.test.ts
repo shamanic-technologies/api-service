@@ -12,7 +12,7 @@ const { FEATURES_BASE } = vi.hoisted(() => {
 });
 
 /**
- * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value} — BEHAVIOURAL cover.
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths} — BEHAVIOURAL cover.
  *
  * The offer-grain sibling's reasoning applies verbatim (see
  * offer-grain-proxy.behavior.test.ts): a source-substring test cannot see a template
@@ -141,6 +141,13 @@ const DEALS_VALUE_BODY = {
   ],
 };
 
+// Lived sales paths: what people actually lived, ranked overall and per sales funnel campaign.
+const LIVED_SALES_PATHS_BODY = {
+  brandId: BRAND_ID,
+  paths: [{ pathKey: "contacted>positive_reply>paid_client", leads: 12, paidClients: 2, revenueUsd: 4000, costUsd: 300, roi: 13.3 }],
+  byCampaign: [],
+};
+
 const READS = [
   { suffix: "revenue", body: REVENUE_BODY, query: "pricing=net" },
   { suffix: "audience-stats", body: AUDIENCE_STATS_BODY, query: "pricing=net" },
@@ -148,6 +155,7 @@ const READS = [
   { suffix: "conversion-rates", body: CONVERSION_RATES_BODY, query: "funnel=self-serve" },
   { suffix: "contacted-value", body: CONTACTED_VALUE_BODY, query: "cursor=lead-0" },
   { suffix: "deals-value", body: DEALS_VALUE_BODY, query: "refresh=1" },
+  { suffix: "lived-sales-paths", body: LIVED_SALES_PATHS_BODY, query: "offerId=offer-1&pricing=net" },
 ] as const;
 
 describe("GET /v1/brands/:brandId/* — over the wire", () => {

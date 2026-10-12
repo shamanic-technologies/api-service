@@ -11699,6 +11699,36 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/brands/{brandId}/lived-sales-paths",
+  tags: ["Features"],
+  summary: "Brand lived sales paths: which way paid clients actually came, with cost, revenue and ROI",
+  description:
+    "The sales paths the brand's people ACTUALLY lived (e.g. video -> website visit -> signup -> paid; cold email -> positive reply -> paid), " +
+    "built from lead-service's timeline: per path the leads, paid clients, revenue, cost and ROI, ranked overall and per sales funnel campaign, " +
+    "beside the EXPECTED economics of the same catalogue path (planned vs lived). Since inception. Answers 'which way did paid clients come' " +
+    "and 'lived sales path ROI ranking'. Response shape: features-service component LivedSalesPaths. " +
+    "Proxied to features-service GET /brands/{brandId}/lived-sales-paths. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID") }),
+    query: z.object({
+      offerId: z.string().optional().describe("Only this offer's people, and the spend of the campaigns that sell it. Omitted: every offer"),
+      pricing: z.enum(["gross", "net"]).optional().describe("Pricing basis for every money figure (omitted = gross)"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Brand lived sales paths (features-service LivedSalesPaths)", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandLivedSalesPathsResponse") } } },
+    400: { description: "Invalid pricing value (pricing_unrecognised)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "The caller does not hold this brand (brand_not_found)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "A source could not be read (lived_sales_paths_unavailable)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/brands/{brandId}/conversion-rates",
   tags: ["Features"],
   summary: "Brand conversion rates",
