@@ -420,6 +420,7 @@ export function buildDocument(
       { name: "Public Costs", description: "Public costs/pricing endpoints (no auth, used by landing pages)" },
       { name: "User", description: "Current user information" },
       { name: "Campaigns", description: "Campaign management" },
+      { name: "Plays", description: "Tactics, strategies and plays: the shared catalogue of which workflows a pipe may run. Read them, create a tactic or a strategy, add a play to a pipe" },
       { name: "Leads", description: "Lead search" },
       { name: "Qualify", description: "Email reply qualification" },
       { name: "Brand", description: "Brand management" },
