@@ -473,6 +473,52 @@ router.post("/workflows/:id/prompt-edit", authenticate, requireOrg, requireUser,
 });
 
 /**
+ * POST /v1/workflows/:id/fork
+ * POST /v1/workflows/dynasty/:workflowDynastySlug/fork
+ *
+ * Copy a workflow with a STATED change (a JSON Patch on its DAG) into a new
+ * dynasty, deployed and on every pipe its source serves. Transparent proxy to
+ * workflow-service POST /workflows/{id}/fork and its dynasty twin. Same access as
+ * PUT /v1/workflows/{id}, which already forks from a whole DAG: any authenticated
+ * org + user (API key, Copilot, dashboard).
+ *
+ * Byte passthrough via `pipeExternalService`: the 201 and the refusals (400 /
+ * 404 / 409 with `existingWorkflowId` / 422 with `changeIndex` / 502) reach the
+ * caller with the producer's status and body. The body is not validated here —
+ * workflow-service owns `{ changes, description?, tags? }`.
+ */
+router.post("/workflows/dynasty/:workflowDynastySlug/fork", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.workflow,
+      `/workflows/dynasty/${encodeURIComponent(req.params.workflowDynastySlug)}/fork`,
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body, expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("Workflow dynasty fork error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to fork workflow");
+  }
+});
+
+router.post("/workflows/:id/fork", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
+
+    await pipeExternalService(
+      externalServices.workflow,
+      `/workflows/${id}/fork`,
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body, expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("Workflow fork error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to fork workflow");
+  }
+});
+
+/**
  * PUT /v1/workflows/dynasty/:workflowDynastySlug/status
  * Activate or deprecate a workflow dynasty. Transparent proxy to workflow-service
  * PUT /workflows/dynasty/{workflowDynastySlug}/status. Body + response forwarded verbatim.
