@@ -49,8 +49,10 @@ beforeEach(() => {
   calls = [];
 });
 
-it("serves exactly the seven objects features-service serves", () => {
-  expect([...CATALOGUE_OBJECTS]).toEqual(["steps", "sales-paths", "channels", "pipes", "sales-funnels", "workflows", "triggers"]);
+it("serves exactly the ten objects features-service serves", () => {
+  expect([...CATALOGUE_OBJECTS]).toEqual([
+    "steps", "sales-paths", "channels", "pipes", "sales-funnels", "workflows", "triggers", "tactics", "strategies", "plays",
+  ]);
 });
 
 const ROUTES = CATALOGUE_OBJECTS.flatMap((o) => [
@@ -133,13 +135,23 @@ describe("staff catalogue — query and ids", () => {
     expect(calls[0].url).toBe(`${FEATURES_BASE}/internal/catalogue/pipes/sales-cold-email-outreach%7Clead_found_to_conversation`);
   });
 
+  it("forwards the plays list's ?pipe= verbatim and keeps a play id's `|` and `~` intact", async () => {
+    upstream(200, "{}");
+    await request(buildApp()).get("/v1/catalogue/plays?pipe=sales-cold-email-outreach|lead_found_to_conversation").set(STAFF);
+    expect(calls[0].url).toBe(`${FEATURES_BASE}/internal/catalogue/plays?pipe=sales-cold-email-outreach|lead_found_to_conversation`);
+    calls = [];
+    upstream(200, "{}");
+    await request(buildApp()).get("/v1/catalogue/plays/sales-cold-email-outreach%7Clead_found_to_conversation~valid-only").set(STAFF);
+    expect(calls[0].url).toBe(`${FEATURES_BASE}/internal/catalogue/plays/sales-cold-email-outreach%7Clead_found_to_conversation~valid-only`);
+  });
+
   it("encodes a slash-carrying id into one segment", async () => {
     upstream(200, "{}");
     await request(buildApp()).get("/v1/catalogue/steps/a%2Fb").set(STAFF);
     expect(calls[0].url).toBe(`${FEATURES_BASE}/internal/catalogue/steps/a%2Fb`);
   });
 
-  it("serves no object outside the seven", async () => {
+  it("serves no object outside the ten", async () => {
     upstream(200, RAW);
     const res = await request(buildApp()).get("/v1/catalogue/declarations").set(STAFF);
     expect(res.status).toBe(404);
