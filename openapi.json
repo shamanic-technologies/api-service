@@ -5392,6 +5392,30 @@
         "type": "object",
         "properties": {}
       },
+      "CatalogueTacticsListResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CatalogueTacticsDetailResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CatalogueStrategiesListResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CatalogueStrategiesDetailResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CataloguePlaysListResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CataloguePlaysDetailResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "PublicCatalogueStepsResponse": {
         "type": "object",
         "properties": {}
