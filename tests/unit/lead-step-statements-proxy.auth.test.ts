@@ -50,6 +50,18 @@ describe("/v1/leads/:id/step-statements — auth gate", () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
+  it("refuses a disqualification PUT with no credentials", async () => {
+    const res = await request(buildApp()).put(`/v1/leads/${LEAD}/disqualification`).send({ note: "x" });
+    expect(res.status).toBe(401);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("refuses a disqualification DELETE with no credentials", async () => {
+    const res = await request(buildApp()).delete(`/v1/leads/${LEAD}/disqualification?brandId=b`);
+    expect(res.status).toBe(401);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it("refuses a GET with no credentials", async () => {
     const res = await request(buildApp()).get(`/v1/leads/${LEAD}/step-statements`);
     expect(res.status).toBe(401);

@@ -518,6 +518,76 @@ router.delete(
 );
 
 /**
+ * PUT /v1/leads/:id/disqualification — pass-through to lead-service
+ * PUT /orgs/leads/{id}/disqualification.
+ *
+ * Marks one lead "Disqualified" (its own tag beside the step tags), with an optional
+ * free note. `id` is the row id a row of GET /v1/leads carries, as on step-statements.
+ *
+ * Body forwarded VERBATIM (rule #8 corollary: lead-service owns `brandId`/`offerId`/
+ * `note` and its refusals), query string verbatim (rule #11), upstream status via
+ * `callExternalServiceWithStatus`, refusals via `respondUpstreamError` so `code`
+ * survives. `buildInternalHeaders(req)` carries org AND user: lead-service records who
+ * stated the mark.
+ *
+ * Its read, `GET /orgs/leads/disqualifications`, needs no route here: `GET /v1/leads/:id`
+ * forwards `id = disqualifications` plus the query verbatim, like `awaiting-reply`.
+ */
+router.put(
+  "/leads/:id/disqualification",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/disqualification${rawQueryString(req.originalUrl)}`,
+        {
+          method: "PUT",
+          headers: buildInternalHeaders(req),
+          body: req.body,
+        }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Disqualify lead error:", error);
+      respondUpstreamError(res, error, "Failed to disqualify lead");
+    }
+  }
+);
+
+/**
+ * DELETE /v1/leads/:id/disqualification — pass-through to lead-service
+ * DELETE /orgs/leads/{id}/disqualification. The undo of the PUT above; the scope
+ * (`brandId`, `offerId`) rides the query string, forwarded verbatim (rule #11).
+ */
+router.delete(
+  "/leads/:id/disqualification",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/disqualification${rawQueryString(req.originalUrl)}`,
+        {
+          method: "DELETE",
+          headers: buildInternalHeaders(req),
+        }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Withdraw lead disqualification error:", error);
+      respondUpstreamError(res, error, "Failed to withdraw lead disqualification");
+    }
+  }
+);
+
+/**
  * POST /v1/leads/:id/answered-outside — pass-through to lead-service
  * POST /orgs/leads/{id}/answered-outside.
  *
