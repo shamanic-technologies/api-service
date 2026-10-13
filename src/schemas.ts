@@ -7954,6 +7954,34 @@ registry.registerPath({
   },
 });
 
+export const BillingAbsorbedCostsResponseSchema = z.object({}).passthrough().openapi("BillingAbsorbedCostsResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/absorbed-costs",
+  tags: ["Billing"],
+  summary: "Cost the platform absorbs per customer, per month since inception (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email). Byte passthrough to billing-service " +
+    "GET /internal/absorbed-costs (spend with no campaign + card fees, per customer, per month); " +
+    "query string forwarded verbatim, status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z
+      .object({
+        fresh: z.string().optional().openapi({ description: "`true` bypasses billing-service's cache. Documented today, not a whitelist: the query string is forwarded verbatim." }),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "Absorbed costs — pass-through from billing-service", content: { "application/json": { schema: BillingAbsorbedCostsResponseSchema } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/runs/stats/costs/vendor",

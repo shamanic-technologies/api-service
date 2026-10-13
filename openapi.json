@@ -5304,6 +5304,10 @@
         "type": "object",
         "properties": {}
       },
+      "BillingAbsorbedCostsResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "FleetVendorCostStatsResponse": {
         "type": "object",
         "properties": {}

@@ -621,6 +621,29 @@ router.get("/billing/revenue/by-org/:orgId", authenticatePlatform, requireStaff,
 });
 
 /**
+ * GET /v1/billing/absorbed-costs            (STAFF ONLY)
+ * Proxy to billing-service GET /internal/absorbed-costs.
+ *
+ * The cost the platform ABSORBS per customer (spend with no campaign + card
+ * fees), per month since inception — read by the dashboard's staff Monitoring
+ * page. Cross-org fleet financials: same tier and pattern as
+ * /v1/billing/revenue/fleet (`authenticatePlatform + requireStaff`, no
+ * `requireOrg`). Byte passthrough; the query string (`fresh=true` today) is
+ * forwarded verbatim off originalUrl (rule #11).
+ */
+router.get("/billing/absorbed-costs", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.billing,
+      `/internal/absorbed-costs${rawQueryString(req.originalUrl)}`,
+      { expressRes: res }
+    );
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to read absorbed costs");
+  }
+});
+
+/**
  * POST /v1/billing/accounts/charge
  * Proxy to billing-service POST /internal/accounts/by-org/:orgId/charge.
  *
