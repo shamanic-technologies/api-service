@@ -8194,6 +8194,100 @@ registry.registerPath({
   },
 });
 
+// Tactics, strategies and plays — shared catalogue, any authenticated caller (src/routes/plays.ts)
+const PLAYS_MODEL =
+  "A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). " +
+  "A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". " +
+  "A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. " +
+  "Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. " +
+  "This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide.";
+const playsCommon = (s: string) => `${s} ${PLAYS_MODEL} Byte passthrough to features-service; status and body (including 400/404/409 with a named \`reason\`) owned by it.`;
+const playsListQuery = z.object({ q: z.string().optional().openapi({ description: "Text to find by name or id" }), limit: z.string().optional().openapi({ description: "Rows per page, 1..25 (default 10)" }) }).passthrough();
+const playsErrors = {
+  400: { description: "Invalid request, `reason` names it (forwarded verbatim)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  502: { description: "Upstream error", content: errorContent },
+  503: { description: "Catalogue figures not computed yet (forwarded verbatim)", content: errorContent },
+};
+const playsOk = (name: string) => ({ description: "Pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi(name) } } });
+
+registry.registerPath({
+  method: "get", path: "/v1/tactics", tags: ["Plays"], security: authed,
+  summary: "List tactics",
+  description: playsCommon("One page of tactics (id, name, description, how many workflows were judged on it and how many follow it). Query string forwarded verbatim (documented today: q, limit; not a whitelist)."),
+  request: { query: playsListQuery },
+  responses: { 200: playsOk("TacticsListResponse"), ...playsErrors },
+});
+registry.registerPath({
+  method: "get", path: "/v1/tactics/{id}", tags: ["Plays"], security: authed,
+  summary: "Read one tactic",
+  description: playsCommon("One tactic with every workflow version judged on it (follows yes/no, probability)."),
+  request: { params: z.object({ id: z.string().openapi({ description: "A tactic id (its name slugged, e.g. `catch-all`)" }) }) },
+  responses: { 200: playsOk("TacticDetailResponse"), 404: { description: "Unknown tactic (forwarded verbatim)", content: errorContent }, ...playsErrors },
+});
+registry.registerPath({
+  method: "post", path: "/v1/tactics", tags: ["Plays"], security: authed,
+  summary: "Create a tactic",
+  description: playsCommon("Declare a new tactic. Every workflow version is then judged on its description within minutes, so describe precisely what a workflow DOES, not what it is called. Name and description must be unique (409 `tactic_name_taken` / `tactic_description_taken`); the id is the name slugged. The author is recorded from your API key; any `createdBy` you send is replaced."),
+  request: { body: { content: { "application/json": { schema: z.object({
+    name: z.string().openapi({ description: "Short unique name, e.g. `Catch-all`" }),
+    description: z.string().openapi({ description: "Unique, precise: what a workflow following it does" }),
+  }).passthrough().openapi("CreateTacticRequest") } } } },
+  responses: { 201: playsOk("CreateTacticResponse"), 409: { description: "Name or description taken (forwarded verbatim)", content: errorContent }, ...playsErrors },
+});
+
+registry.registerPath({
+  method: "get", path: "/v1/strategies", tags: ["Plays"], security: authed,
+  summary: "List strategies",
+  description: playsCommon("One page of strategies (id, name, description, tactics required and excluded, pipes that already catalogue a play on it). Query string forwarded verbatim (documented today: q, limit; not a whitelist)."),
+  request: { query: playsListQuery },
+  responses: { 200: playsOk("StrategiesListResponse"), ...playsErrors },
+});
+registry.registerPath({
+  method: "get", path: "/v1/strategies/{id}", tags: ["Plays"], security: authed,
+  summary: "Read one strategy",
+  description: playsCommon("One strategy: its tactics required and excluded and the pipes that catalogue a play on it."),
+  request: { params: z.object({ id: z.string().openapi({ description: "A strategy id, e.g. `valid-catch-all`" }) }) },
+  responses: { 200: playsOk("StrategyDetailResponse"), 404: { description: "Unknown strategy (forwarded verbatim)", content: errorContent }, ...playsErrors },
+});
+registry.registerPath({
+  method: "post", path: "/v1/strategies", tags: ["Plays"], security: authed,
+  summary: "Create a strategy",
+  description: playsCommon("Declare a new strategy over existing tactics (at least one tactic in `requires` or `excludes`, never the same tactic in both). Name and description must be unique (409 `strategy_name_taken` / `strategy_description_taken`); a strategy with the same rule as an existing one is 409 `strategy_rule_taken` (use that one); an unknown tactic is 404 `tactic_not_found`. Then add it to a pipe with `POST /v1/plays`. The author is recorded from your API key; any `createdBy` you send is replaced."),
+  request: { body: { content: { "application/json": { schema: z.object({
+    name: z.string().openapi({ description: "Unique name, e.g. `Valid + Catch-all`" }),
+    description: z.string().openapi({ description: "Unique description of what the strategy allows" }),
+    requires: z.array(z.string()).optional().openapi({ description: "Tactic ids a workflow must follow" }),
+    excludes: z.array(z.string()).optional().openapi({ description: "Tactic ids a workflow must not follow" }),
+  }).passthrough().openapi("CreateStrategyRequest") } } } },
+  responses: { 201: playsOk("CreateStrategyResponse"), 404: { description: "Unknown tactic (forwarded verbatim)", content: errorContent }, 409: { description: "Name, description or rule taken (forwarded verbatim)", content: errorContent }, ...playsErrors },
+});
+
+registry.registerPath({
+  method: "get", path: "/v1/plays", tags: ["Plays"], security: authed,
+  summary: "List the plays of a pipe",
+  description: playsCommon("The plays a pipe catalogues (default play first) with their fleet cost, ROI and status. Pass `pipe` to list one pipe's plays; without it, every pipe cataloguing plays. Query string forwarded verbatim (documented today: pipe, limit; not a whitelist)."),
+  request: { query: z.object({ pipe: z.string().optional().openapi({ description: "A pipe id, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`" }), limit: z.string().optional().openapi({ description: "Rows per page, 1..25 (default 10)" }) }).passthrough() },
+  responses: { 200: playsOk("PlaysListResponse"), ...playsErrors },
+});
+registry.registerPath({
+  method: "get", path: "/v1/plays/{id}", tags: ["Plays"], security: authed,
+  summary: "Read one play",
+  description: playsCommon("One play: its pipe, strategy, fleet cost and ROI, why it is still learning, and the workflows its strategy rules out."),
+  request: { params: z.object({ id: z.string().openapi({ description: "A play id: `<pipe id>` (default play) or `<pipe id>~<strategy id>`, URL-encoded" }) }) },
+  responses: { 200: playsOk("PlayDetailResponse"), 404: { description: "Unknown play (forwarded verbatim)", content: errorContent }, ...playsErrors },
+});
+registry.registerPath({
+  method: "post", path: "/v1/plays", tags: ["Plays"], security: authed,
+  summary: "Add a play to a pipe",
+  description: playsCommon("Add an existing strategy to a pipe as a new play, so campaigns on that pipe can run it (for example strategy `valid-catch-all` on pipe `sales-cold-email-outreach|lead_found_to_website_visit`). Idempotent: a play that already exists answers 200 with `created: false`; a new one 201. Unknown pipe or strategy is a 404 `*_not_found`. The author is recorded from your API key; any `createdBy` you send is replaced."),
+  request: { body: { content: { "application/json": { schema: z.object({
+    pipeId: z.string().openapi({ description: "Pipe id, `<channel slug>|<leg key>`" }),
+    strategyId: z.string().openapi({ description: "Strategy id (GET /v1/strategies)" }),
+  }).passthrough().openapi("CreatePlayRequest") } } } },
+  responses: { 200: playsOk("PlayAlreadyExistsResponse"), 201: playsOk("CreatePlayResponse"), 404: { description: "Unknown pipe or strategy (forwarded verbatim)", content: errorContent }, ...playsErrors },
+});
+
 // Agent catalogue (staff) — features-service /internal/catalogue/* (PR #1482)
 registry.registerPath({
   method: "get",
