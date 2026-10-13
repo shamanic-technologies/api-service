@@ -8372,6 +8372,126 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/catalogue/tactics",
+  tags: ["Features"],
+  summary: "List catalogue tactics (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to features-service GET /internal/catalogue/tactics: one page of tactics, the yes/no tags Jev puts on every workflow version (e.g. Catch-all). Query string forwarded verbatim (documented today: q, limit; not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({ q: z.string().optional(), limit: z.string().optional() }).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueTacticsListResponse") } } },
+    400: { description: "Invalid filter (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+    503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/catalogue/tactics/{id}",
+  tags: ["Features"],
+  summary: "Read one catalogue tactic (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to features-service GET /internal/catalogue/tactics/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { params: z.object({ id: z.string().openapi({ description: "a tactic id" }) }), query: z.object({}).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueTacticsDetailResponse") } } },
+    404: { description: "Unknown id (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+    503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/catalogue/strategies",
+  tags: ["Features"],
+  summary: "List catalogue strategies (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to features-service GET /internal/catalogue/strategies: one page of strategies, the tactics a workflow must / must not follow (e.g. Valid only, Valid + Catch-all). Query string forwarded verbatim (documented today: q, limit; not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({ q: z.string().optional(), limit: z.string().optional() }).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueStrategiesListResponse") } } },
+    400: { description: "Invalid filter (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+    503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/catalogue/strategies/{id}",
+  tags: ["Features"],
+  summary: "Read one catalogue strategy (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to features-service GET /internal/catalogue/strategies/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { params: z.object({ id: z.string().openapi({ description: "a strategy id" }) }), query: z.object({}).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueStrategiesDetailResponse") } } },
+    404: { description: "Unknown id (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+    503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/catalogue/plays",
+  tags: ["Features"],
+  summary: "List catalogue plays (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to features-service GET /internal/catalogue/plays: the plays of one pipe, a pipe x a strategy with its ROI. Query string forwarded verbatim (documented today: pipe (a pipe id, e.g. sales-cold-email-outreach|lead_found_to_conversation), q, limit; not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({ q: z.string().optional(), limit: z.string().optional(), pipe: z.string().optional().openapi({ example: "sales-cold-email-outreach|lead_found_to_conversation" }) }).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CataloguePlaysListResponse") } } },
+    400: { description: "Invalid filter (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+    503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/catalogue/plays/{id}",
+  tags: ["Features"],
+  summary: "Read one catalogue play (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Byte passthrough to features-service GET /internal/catalogue/plays/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { params: z.object({ id: z.string().openapi({ description: "a play id (carries `|` and `~`; percent-encode `|` as %7C)" }) }), query: z.object({}).passthrough() },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CataloguePlaysDetailResponse") } } },
+    404: { description: "Unknown id (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+    503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/public/catalogue/steps",
   tags: ["Features"],
   summary: "Every catalogue step with its icon",
