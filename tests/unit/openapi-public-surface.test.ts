@@ -75,6 +75,7 @@ const PLATFORM_OPERATIONS = [
   "put /v1/billing/accounts/by-org/{orgId}/payment-mode",
   "get /v1/billing/accounts/by-org/{orgId}/subscription",
   "get /v1/billing/revenue/fleet",
+  "get /v1/billing/absorbed-costs",
   "get /v1/runs/stats/costs/vendor",
   "get /v1/runs/stats/costs/margin",
   "get /v1/costs/vendor-costs",
