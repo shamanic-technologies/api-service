@@ -4,6 +4,7 @@ import {
   authenticatePlatform,
   requireOrg,
   requireStaff,
+  requireStaffActor,
   requireUser,
   AuthenticatedRequest,
 } from "../middleware/auth.js";
@@ -121,6 +122,50 @@ router.put("/billing/accounts/monthly_charge_limit", authenticate, requireOrg, (
 );
 router.delete("/billing/accounts/monthly_charge_limit", authenticate, requireOrg, (req: AuthenticatedRequest, res) =>
   monthlyChargeLimitProxy(req, res, "DELETE", "Failed to remove monthly charge limit")
+);
+
+// Top-up minimums — the smallest top-up and the smallest auto-reload threshold
+// this org may set. billing-service owns the values, their offer defaults and the
+// refusals (400 `code` + `minimum_cents`, 404 `account_not_found`); both are
+// forwarded verbatim.
+// GET: any member of the org (a dashboard shows the minimum in force).
+// PUT: staff only (`requireStaffActor`: a staff member's own key, or the platform
+// key + a staff x-email; a client key is 403). The staff email is forwarded as
+// x-email, which billing records as `set_by`.
+router.get("/billing/accounts/topup_minimums", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/topup_minimums",
+      { method: "GET", headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to read top-up minimums");
+  }
+});
+
+router.put(
+  "/billing/accounts/topup_minimums",
+  authenticate,
+  requireOrg,
+  requireStaffActor,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.billing,
+        "/v1/accounts/topup_minimums",
+        {
+          method: "PUT",
+          body: req.body,
+          headers: { ...buildInternalHeaders(req), "x-email": req.staffEmail! },
+        }
+      );
+      res.json(result);
+    } catch (error: any) {
+      respondUpstreamError(res, error, "Failed to set top-up minimums");
+    }
+  }
 );
 
 // PATCH /v1/billing/accounts/auto_topup — configure auto-topup

@@ -365,6 +365,7 @@ export type DocumentAudience = "public" | "staff" | "staff-key";
 export const STAFF_KEY_OPERATIONS = new Set<string>([
   "POST /v1/billing/credits/grant",
   "POST /v1/orgs",
+  "PUT /v1/billing/accounts/topup_minimums",
 ]);
 
 export const STAFF_KEY_TAG = "Staff (key)";
