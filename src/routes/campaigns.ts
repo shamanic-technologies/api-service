@@ -3,6 +3,7 @@ import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../
 import { callExternalService, callExternalServiceWithStatus, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
+import { ensureBrandInOrg } from "../lib/brand-ownership.js";
 import { fetchDeliveryStats, EMPTY_DELIVERY_STATS } from "../lib/delivery-stats.js";
 import { buildHeadline, buildFailureDetails } from "../lib/stats-headline.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
@@ -280,6 +281,51 @@ for (const tail of ["/trigger-events/summary", "/trigger-events"]) {
     }
   });
 }
+
+/**
+ * POST /v1/trigger-events → campaign-service POST /internal/trigger-events
+ *
+ * A customer REPORTS one occurrence of a trigger on their own brand/offer with their own key (owner
+ * 2026-10-13): e.g. `email_pushed_via_api` with `person` (who it is about) and `item` (the email they
+ * wrote: `{subject, bodyHtml?, bodyText?}`), and every live campaign of theirs whose reactive pipe answers
+ * that trigger runs for that person. Any declared trigger, never a per-trigger branch here.
+ *
+ *  - The org is the AUTHENTICATED one (buildInternalHeaders); for a user key `authenticate` already picked
+ *    it from the body's `brandId` among the user's own orgs.
+ *  - `brandId` must be one of that org's brands at brand-service, else 404 `brand_not_in_org`, nothing
+ *    recorded (campaign-service takes the brand from the body and does not check ownership).
+ *  - `performed` is refused (400 `performed_not_reportable`): it states what a SERVICE already did in
+ *    process ("ran under campaign X"), an outcome the fleet measures pipes on; a customer reports an
+ *    occurrence and campaign-service decides what it did.
+ *  - Body forwarded byte-identical, status (201 recorded / 200 replayed) and refusals (`unknown_trigger`
+ *    400, ...) relayed verbatim, hence the pipe.
+ */
+router.post("/trigger-events", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  const body = req.body;
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    return res.status(400).json({ error: "The body must be a JSON object", code: "invalid_body" });
+  }
+  if (body.performed !== undefined) {
+    return res.status(400).json({
+      error: "`performed` cannot be reported through the API: report the occurrence and the platform decides what it runs.",
+      code: "performed_not_reportable",
+      fix: "Remove `performed` from the body.",
+    });
+  }
+  try {
+    if (typeof body.brandId === "string" && !(await ensureBrandInOrg(req, res, body.brandId))) return;
+    await pipeExternalService(externalServices.campaign, "/internal/trigger-events", {
+      method: "POST",
+      headers: buildInternalHeaders(req),
+      body,
+      expressRes: res,
+    });
+  } catch (error: any) {
+    console.error("[api-service] POST /v1/trigger-events — FAILED:", error.message);
+    if (res.headersSent) return;
+    respondUpstreamError(res, error, "Failed to record the trigger occurrence");
+  }
+});
 
 /**
  * SALES FUNNEL CAMPAIGNS (owner 2026-10-10): a campaign is brand x offer x sales funnel, run or paused as one.

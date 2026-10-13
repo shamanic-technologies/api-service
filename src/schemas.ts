@@ -1583,6 +1583,78 @@ registry.registerPath({
   },
 });
 
+// POST /v1/trigger-events -> campaign-service POST /internal/trigger-events. The body is forwarded
+// byte-identical: this schema DOCUMENTS the producer's fields and validates nothing (rule #8 corollary).
+const ReportTriggerEventRequestSchema = z
+  .object({
+    triggerId: z.string().openapi({
+      description:
+        "A declared trigger id (GET /v1/public/channels `triggers[].id`), e.g. `email_pushed_via_api` to have an email you wrote sent. Unknown = 400 `unknown_trigger`.",
+      example: "email_pushed_via_api",
+    }),
+    brandId: z.string().uuid().openapi({ description: "Your brand (GET /v1/brands). Not one of your organization's brands = 404 `brand_not_in_org`." }),
+    offerId: z.string().uuid().openapi({ description: "The brand's offer the occurrence is about." }),
+    person: z
+      .object({
+        email: z.string().email(),
+        name: z.string().optional(),
+        phone: z.string().optional(),
+      })
+      .passthrough()
+      .optional()
+      .openapi({ description: "Who the occurrence is about, by identity. Each campaign the trigger reaches files them as a lead of the brand and runs for them." }),
+    item: z
+      .record(z.unknown())
+      .optional()
+      .openapi({
+        description:
+          "What the occurrence carries, any JSON (at most 20,000 characters), handed verbatim to the workflow that runs. For `email_pushed_via_api`: the email you wrote, `{subject, bodyHtml?, bodyText?}` (at least one body), sent as written.",
+        example: { subject: "Hiring in Leeds?", bodyText: "Hi Sam,\nI saw you are hiring..." },
+      }),
+    idempotencyKey: z.string().optional().openapi({ description: "Unique per organization: a retry returns the first event (`replayed: true`), recorded once." }),
+    occurredAt: z.string().optional().openapi({ description: "When it happened (ISO date-time). Absent = now." }),
+    dueAt: z.string().optional().openapi({ description: "When it must fire (ISO date-time). Later than now = recorded `pending` and fired then." }),
+  })
+  .passthrough()
+  .openapi("ReportTriggerEventRequest");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/trigger-events",
+  tags: ["Campaigns"],
+  summary: "Push an email to send, or fire any trigger: report one occurrence for a person",
+  description:
+    "Report ONE occurrence of a trigger on your brand and offer, with your own API key. Every live campaign of yours whose " +
+    "reactive step answers that trigger runs for the person named (same funding and rules as any campaign run). " +
+    "Example: push an email you wrote (`triggerId: email_pushed_via_api`, `person.email`, `item: {subject, bodyText}`) and " +
+    "your Email Sending campaign sends it as written from our inboxes. Proxy to campaign-service POST /internal/trigger-events: " +
+    "body forwarded as is, status and refusals relayed verbatim. The answer's `event.outcome` says what ran (`ran`) or why not " +
+    "(`skipped` + reason, e.g. `no_campaign`, `unfunded`); a person still being filed leaves the event `pending` a few minutes. " +
+    "Read events back with GET /v1/offers/{offerId}/trigger-events. `performed` is not accepted here (400 `performed_not_reportable`).",
+  security: authed,
+  request: {
+    body: { content: { "application/json": { schema: ReportTriggerEventRequestSchema } } },
+  },
+  responses: {
+    201: {
+      description: "Recorded (and, when due now, fired: `event.outcome`). Shape owned by campaign-service.",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("ReportTriggerEventResponse") } },
+    },
+    200: {
+      description: "`idempotencyKey` named an event already recorded: that event, `replayed: true`.",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("ReportTriggerEventReplayedResponse") } },
+    },
+    400: {
+      description:
+        "Refused, nothing recorded: `unknown_trigger`, a malformed body (campaign-service, verbatim) or `performed_not_reportable`.",
+      content: errorContent,
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "The brand is not one of this organization's brands (`code: brand_not_in_org`).", content: errorContent },
+    502: { description: "The trigger list could not be read (`catalogue_unavailable`), nothing recorded.", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/offers/{offerId}/trigger-events",
