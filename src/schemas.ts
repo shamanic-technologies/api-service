@@ -7211,6 +7211,74 @@ for (const [method, summary, lead] of [
   });
 }
 
+// Top-up minimums — the smallest top-up and auto-reload threshold this org may set.
+// Pass-through to billing-service /v1/accounts/topup_minimums. GET: any org member.
+// PUT: staff only (requireStaffActor), listed in STAFF_KEY_OPERATIONS.
+const TOPUP_MINIMUMS_ANSWER =
+  "`{org_id, free_credit_offer, topup_minimum_cents, reload_threshold_minimum_cents, topup_minimum_source, " +
+  "reload_threshold_minimum_source (\"account\" | \"offer_default\"), offer_default_topup_minimum_cents, " +
+  "offer_default_reload_threshold_minimum_cents, set_by, set_at}`. null = no minimum. Body and status forwarded verbatim.";
+
+const TopupMinimumsResponseSchema = z.object({}).passthrough().openapi("TopupMinimumsResponse");
+
+export const SetTopupMinimumsRequestSchema = z
+  .object({
+    topup_minimum_cents: z
+      .number()
+      .int()
+      .nullable()
+      .optional()
+      .openapi({ description: "Smallest top-up this org may make (checkout, on-demand charge, auto-reload amount), in cents. null = back to the offer default", example: 1000 }),
+    reload_threshold_minimum_cents: z
+      .number()
+      .int()
+      .nullable()
+      .optional()
+      .openapi({ description: "Smallest auto-reload threshold this org may set, in cents. null = back to the offer default", example: 1000 }),
+  })
+  .passthrough()
+  .openapi("SetTopupMinimumsRequest");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/accounts/topup_minimums",
+  tags: ["Billing"],
+  summary: "Get the org's top-up minimums",
+  description:
+    "Read the smallest top-up and the smallest auto-reload threshold the org in context may set, and whether each " +
+    `comes from the org itself or its offer default. Pass-through from billing-service. Answer: ${TOPUP_MINIMUMS_ANSWER}`,
+  security: authed,
+  responses: {
+    200: { description: "Minimums in force — pass-through from billing-service", content: { "application/json": { schema: TopupMinimumsResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No billing account for this org (billing-service's answer, verbatim)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/billing/accounts/topup_minimums",
+  tags: ["Billing"],
+  summary: "Set the org's top-up minimums (staff only)",
+  description:
+    "Set the smallest top-up and/or the smallest auto-reload threshold for ONE org (name it with `orgId` or a brand). " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key " +
+    "gets 403 `staff_only`. The staff email is recorded as `set_by`. billing-service validates the body; a top-up or " +
+    "threshold below the minimum is refused there with `code` + `minimum_cents`. " +
+    `Pass-through from billing-service PUT /v1/accounts/topup_minimums. Answer: ${TOPUP_MINIMUMS_ANSWER}`,
+  security: platformAuth,
+  request: { body: { content: { "application/json": { schema: SetTopupMinimumsRequestSchema } } } },
+  responses: {
+    200: { description: "Minimums in force — pass-through from billing-service", content: { "application/json": { schema: TopupMinimumsResponseSchema } } },
+    400: { description: "Invalid body (billing-service's refusal, verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "No billing account for this org (billing-service's answer, verbatim)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
 export const CardSetupRequestSchema = z
   .object({
     return_url: z
