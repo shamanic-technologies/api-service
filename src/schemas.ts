@@ -15730,6 +15730,67 @@ registry.registerPath({
   },
 });
 
+export const AddOrgMemberRequestSchema = z
+  .object({
+    email: z.string().describe("The person's email. They receive NOTHING: no invitation, no code. They later sign in to the dashboard with this email and land in this organization").openapi({ example: "jane@acme.com" }),
+    keyName: z.string().optional().describe("Label for the person's new API key (default: `Key for <email> <timestamp>`)"),
+  })
+  .passthrough()
+  .openapi("AddOrgMemberRequest");
+
+// Built by the gateway (src/routes/orgs.ts): membership from client-service + key from key-service.
+export const AddOrgMemberResponseSchema = z
+  .object({
+    member: z
+      .object({
+        userId: z.string().describe("The person's user id"),
+        clerkUserId: z.string(),
+        email: z.string(),
+        orgId: z.string(),
+        role: z.string().openapi({ example: "org:admin" }),
+      })
+      .passthrough(),
+    userCreated: z.boolean().describe("true = this email had no account and one was opened (nothing was emailed)"),
+    membershipCreated: z.boolean().describe("false = the person was already a member (idempotent replay)"),
+    apiKey: z.string().describe("The PERSON's new API key (`distrib.usr_*`), shown ONCE. It reaches only the organizations this person is a member of, never staff operations"),
+    apiKeyId: z.string().describe("Id of the key (the person can revoke it with DELETE /v1/api-keys/{id})"),
+    apiKeyName: z.string(),
+    usage: z.string(),
+  })
+  .openapi("AddOrgMemberResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/{orgId}/members",
+  tags: ["Organizations"],
+  summary: "Add a person to an organization silently and get their API key (staff only)",
+  description:
+    "Make a person (by `email`) a member of this organization WITHOUT sending them anything, and get back an API key that " +
+    "belongs to that person, to hand over in your own message (test it first: GET /v1/me with it lists only their organizations). " +
+    "An email with no account gets one (verified, nothing mailed); the person later signs in to the dashboard with that email. " +
+    "Calling again for a member is safe (200, `membershipCreated: false`) and mints one more key. The key is a normal user key: " +
+    "it reaches only the organizations the person belongs to and never staff operations; a staff email is refused " +
+    "(422 `staff_email_refused`). Staff only: a distribute.you staff member's own API key, any other key gets 403 `staff_only`. " +
+    "The staff caller need not be a member of the organization. Membership: client-service POST /internal/orgs/{orgId}/members " +
+    "(refusals forwarded verbatim); key: key-service.",
+  security: platformAuth,
+  request: {
+    params: z.object({ orgId: z.string().uuid().openapi({ description: "The organization (e.g. from POST /v1/orgs)" }) }),
+    body: { content: { "application/json": { schema: AddOrgMemberRequestSchema } } },
+  },
+  responses: {
+    201: { description: "Member added, with their new API key", content: { "application/json": { schema: AddOrgMemberResponseSchema } } },
+    200: { description: "Already a member: one more API key for them", content: { "application/json": { schema: AddOrgMemberResponseSchema } } },
+    400: { description: "`invalid_request`: email missing or malformed", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff (`staff_only`)", content: errorContent },
+    404: { description: "`org_not_found` (forwarded verbatim)", content: errorContent },
+    409: { description: "`org_has_no_identity`: the organization has no identity-provider org yet (forwarded verbatim)", content: errorContent },
+    422: { description: "`staff_email_refused` (a staff member's email), or `member_refused` in the identity provider's words (forwarded verbatim)", content: errorContent },
+    502: { description: "`identity_provider_failed` (forwarded verbatim) or `key_minting_failed` (member added, no key: call again)", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/v1/orgs/{orgId}/member-invitations",
