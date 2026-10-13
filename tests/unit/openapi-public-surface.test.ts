@@ -65,6 +65,7 @@ const PLATFORM_OPERATIONS = [
   "patch /v1/promo-codes/{code}",
   "post /v1/billing/credits/grant",
   "post /v1/orgs",
+  "post /v1/orgs/{orgId}/members",
   "put /v1/billing/accounts/topup_minimums",
   "get /v1/billing/credits/grants/all",
   "post /v1/billing/credits/debit",
