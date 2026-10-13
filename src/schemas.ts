@@ -5954,6 +5954,74 @@ registry.registerPath({
   responses: workflowPromptEditResponses,
 });
 
+const workflowForkDescription =
+  "Copies a workflow with a stated change into a NEW dynasty. `changes` is a JSON Patch (RFC 6902: `add`, " +
+  "`replace`, `remove`, `test`) applied in order to a copy of the source DAG (`{nodes, edges}`, read it with " +
+  "GET /v1/workflows/{id}); everything it does not name stays byte-identical. Under `/nodes` a non-numeric " +
+  "path segment names a node by its `id`, e.g. `{ op: \"add\", path: \"/nodes/fetch-lead/config/body\", value: {...} }`. " +
+  "The copy is validated like any stored workflow, deployed, and serves every pipe its source serves (active at once); " +
+  "the source is never modified. Optional `description` (defaults to the source's: say what the copy does " +
+  "differently, workflows are judged on their DAG and description) and `tags`. Responses come back from " +
+  "workflow-service verbatim: 201 `{ workflow, sourceWorkflow, changesApplied }`; 400 change leaves the DAG " +
+  "identical or the result is invalid; 404; 409 the same copy already exists (`existingWorkflowId`, so a re-run " +
+  "is idempotent); 422 a change cannot apply (`changeIndex`).";
+
+const WorkflowForkRequestSchema = z
+  .object({
+    changes: z.array(z.object({
+      op: z.string().describe("\"add\" | \"replace\" | \"remove\" | \"test\""),
+      path: z.string().describe("JSON Pointer into the DAG; under /nodes a non-numeric segment is a node id"),
+      value: z.any().optional().describe("Required except for remove"),
+    }).passthrough()).describe("The stated change, applied in order. Validated by workflow-service."),
+    description: z.string().optional().describe("The copy's description. Defaults to the source's."),
+    tags: z.array(z.string()).optional().describe("The copy's tags. Defaults to the source's."),
+  })
+  .passthrough()
+  .openapi("WorkflowForkRequest");
+
+const workflowForkResponses = {
+  201: {
+    description: "Forked: `{ workflow, sourceWorkflow, changesApplied }` (pass-through from workflow-service)",
+    content: { "application/json": { schema: z.object({}).passthrough().openapi("WorkflowForkResponse") } },
+  },
+  400: { description: "Invalid body, no-op change or invalid resulting DAG (forwarded verbatim)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  404: { description: "Workflow / dynasty not found (forwarded verbatim)", content: errorContent },
+  409: { description: "The copy already exists: `existingWorkflowId` (forwarded verbatim)", content: errorContent },
+  422: { description: "A change cannot apply: `changeIndex` (forwarded verbatim)", content: errorContent },
+  502: { description: "Upstream failure (forwarded verbatim)", content: errorContent },
+};
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/workflows/{id}/fork",
+  tags: ["Workflows"],
+  summary: "Fork a workflow version with a stated change",
+  description: "Transparent proxy to workflow-service POST /workflows/{id}/fork. The copy branches from exactly this version. " + workflowForkDescription,
+  security: authed,
+  request: {
+    params: z.object({ id: z.string().uuid().describe("Workflow version id") }),
+    body: { content: { "application/json": { schema: WorkflowForkRequestSchema } } },
+  },
+  responses: workflowForkResponses,
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/workflows/dynasty/{workflowDynastySlug}/fork",
+  tags: ["Workflows"],
+  summary: "Fork a workflow dynasty with a stated change",
+  description:
+    "Transparent proxy to workflow-service POST /workflows/dynasty/{workflowDynastySlug}/fork. The dynasty slug " +
+    "resolves to its currently-active version, which the copy branches from. " + workflowForkDescription,
+  security: authed,
+  request: {
+    params: z.object({ workflowDynastySlug: z.string().describe("Stable dynasty slug") }),
+    body: { content: { "application/json": { schema: WorkflowForkRequestSchema } } },
+  },
+  responses: workflowForkResponses,
+});
+
 registry.registerPath({
   method: "put",
   path: "/v1/workflows/dynasty/{workflowDynastySlug}/status",
