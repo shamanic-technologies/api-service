@@ -2,11 +2,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
 
-const { CLIENT_BASE } = vi.hoisted(() => {
+const { CLIENT_BASE, KEY_BASE } = vi.hoisted(() => {
   const CLIENT_BASE = "http://client.test.local";
+  const KEY_BASE = "http://key.test.local";
   process.env.CLIENT_SERVICE_URL = CLIENT_BASE;
   process.env.CLIENT_SERVICE_API_KEY = "client-test-key";
-  return { CLIENT_BASE };
+  process.env.KEY_SERVICE_URL = KEY_BASE;
+  return { CLIENT_BASE, KEY_BASE };
 });
 
 /**
@@ -106,5 +108,113 @@ describe("/v1/orgs/:orgId/member-invitations → client-service", () => {
     const res = await request(app()).get("/v1/orgs/33333333-3333-3333-3333-333333333333/member-invitations");
     expect(res.status).toBe(403);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /v1/orgs/:orgId/members → client-service member add + key-service key for that person", () => {
+  const ORG = "44444444-4444-4444-4444-444444444444";
+  const PERSON = "55555555-5555-5555-5555-555555555555";
+  const added = (membershipCreated: boolean) => ({
+    member: { userId: PERSON, clerkUserId: "user_clerk_1", email: "jane@acme.com", orgId: ORG, role: "org:admin" },
+    userCreated: membershipCreated,
+    membershipCreated,
+  });
+  const minted = { id: "key-1", key: "distrib.usr_abc", name: "Jane key", orgId: ORG, userId: PERSON, createdBy: "user-staff" };
+
+  it("a staff key (not a member of the org) adds silently and gets a key OWNED by the person: 201", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    fetchMock
+      .mockResolvedValueOnce(upstream(201, added(true)))
+      .mockResolvedValueOnce(upstream(200, { user: { id: PERSON, email: "jane@acme.com" } }))
+      .mockResolvedValueOnce(upstream(200, minted));
+    const res = await request(app()).post(`/v1/orgs/${ORG}/members`).send({ email: "jane@acme.com", keyName: "Jane key" });
+    expect(res.status).toBe(201);
+    expect(res.body).toMatchObject({
+      member: added(true).member,
+      userCreated: true,
+      membershipCreated: true,
+      apiKey: "distrib.usr_abc",
+      apiKeyId: "key-1",
+      apiKeyName: "Jane key",
+    });
+
+    const [addUrl, addInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(addUrl).toBe(`${CLIENT_BASE}/internal/orgs/${ORG}/members`);
+    expect(JSON.parse(addInit.body as string)).toEqual({ email: "jane@acme.com" });
+    expect((fetchMock.mock.calls[1] as [string])[0]).toBe(`${CLIENT_BASE}/internal/users/${PERSON}`);
+
+    const [keyUrl, keyInit] = fetchMock.mock.calls[2] as [string, RequestInit];
+    expect(keyUrl).toBe(`${KEY_BASE}/api-keys`);
+    const keyHeaders = keyInit.headers as Record<string, string>;
+    expect(keyHeaders["x-org-id"]).toBe(ORG);
+    expect(keyHeaders["x-user-id"]).toBe(PERSON);
+    expect(JSON.parse(keyInit.body as string)).toEqual({ userId: PERSON, createdBy: "user-staff", name: "Jane key" });
+  });
+
+  it("an existing member is an idempotent replay: 200 with one more key", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    fetchMock
+      .mockResolvedValueOnce(upstream(200, added(false)))
+      .mockResolvedValueOnce(upstream(200, { user: { id: PERSON, email: "jane@acme.com" } }))
+      .mockResolvedValueOnce(upstream(200, minted));
+    const res = await request(app()).post(`/v1/orgs/${ORG}/members`).send({ email: "jane@acme.com" });
+    expect(res.status).toBe(200);
+    expect(res.body.membershipCreated).toBe(false);
+    expect(res.body.apiKey).toBe("distrib.usr_abc");
+  });
+
+  it("a client key is refused 403 staff_only and nothing is called", async () => {
+    identity.current = { ...CLIENT_KEY, userId: "user-client", orgId: ORG };
+    const res = await request(app()).post(`/v1/orgs/${ORG}/members`).send({ email: "jane@acme.com" });
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("staff_only");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("a staff email is refused 422 before any membership is made", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    const res = await request(app()).post(`/v1/orgs/${ORG}/members`).send({ email: " Kevin@Distribute.you " });
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe("staff_email_refused");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("a resulting user whose stored email is staff gets NO key", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    fetchMock
+      .mockResolvedValueOnce(upstream(200, added(false)))
+      .mockResolvedValueOnce(upstream(200, { user: { id: PERSON, email: "kevin.lourd@gmail.com" } }));
+    const res = await request(app()).post(`/v1/orgs/${ORG}/members`).send({ email: "alias@acme.com" });
+    expect(res.status).toBe(422);
+    expect(res.body.error).toBe("staff_email_refused");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("a missing email is a 400 and nothing is called", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    const res = await request(app()).post(`/v1/orgs/${ORG}/members`).send({});
+    expect(res.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("client-service refusals are forwarded verbatim and no key is minted", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    fetchMock.mockResolvedValueOnce(upstream(409, { error: "org_has_no_identity", message: "No Clerk org" }));
+    const res = await request(app()).post(`/v1/orgs/${ORG}/members`).send({ email: "jane@acme.com" });
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual({ error: "org_has_no_identity", message: "No Clerk org" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("key-service failing is a 502 key_minting_failed naming the member", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    fetchMock
+      .mockResolvedValueOnce(upstream(201, added(true)))
+      .mockResolvedValueOnce(upstream(200, { user: { id: PERSON, email: "jane@acme.com" } }))
+      .mockResolvedValueOnce(upstream(500, { error: "Internal server error" }));
+    const res = await request(app()).post(`/v1/orgs/${ORG}/members`).send({ email: "jane@acme.com" });
+    expect(res.status).toBe(502);
+    expect(res.body.error).toBe("key_minting_failed");
+    expect(res.body.member.userId).toBe(PERSON);
   });
 });

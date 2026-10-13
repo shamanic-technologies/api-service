@@ -8726,6 +8726,88 @@
         "type": "object",
         "properties": {}
       },
+      "AddOrgMemberResponse": {
+        "type": "object",
+        "properties": {
+          "member": {
+            "type": "object",
+            "properties": {
+              "userId": {
+                "type": "string",
+                "description": "The person's user id"
+              },
+              "clerkUserId": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string"
+              },
+              "orgId": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "example": "org:admin"
+              }
+            },
+            "required": [
+              "userId",
+              "clerkUserId",
+              "email",
+              "orgId",
+              "role"
+            ]
+          },
+          "userCreated": {
+            "type": "boolean",
+            "description": "true = this email had no account and one was opened (nothing was emailed)"
+          },
+          "membershipCreated": {
+            "type": "boolean",
+            "description": "false = the person was already a member (idempotent replay)"
+          },
+          "apiKey": {
+            "type": "string",
+            "description": "The PERSON's new API key (`distrib.usr_*`), shown ONCE. It reaches only the organizations this person is a member of, never staff operations"
+          },
+          "apiKeyId": {
+            "type": "string",
+            "description": "Id of the key (the person can revoke it with DELETE /v1/api-keys/{id})"
+          },
+          "apiKeyName": {
+            "type": "string"
+          },
+          "usage": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "member",
+          "userCreated",
+          "membershipCreated",
+          "apiKey",
+          "apiKeyId",
+          "apiKeyName",
+          "usage"
+        ]
+      },
+      "AddOrgMemberRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "The person's email. They receive NOTHING: no invitation, no code. They later sign in to the dashboard with this email and land in this organization",
+            "example": "jane@acme.com"
+          },
+          "keyName": {
+            "type": "string",
+            "description": "Label for the person's new API key (default: `Key for <email> <timestamp>`)"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
       "MemberInvitationExisting": {
         "type": "object",
         "properties": {}
