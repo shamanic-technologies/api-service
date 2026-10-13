@@ -2540,6 +2540,30 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       ]
     }
   },
+  "PUT /v1/leads/{id}/disqualification": {
+    "service": "lead-service",
+    "method": "PUT",
+    "path": "/orgs/leads/{id}/disqualification",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "brandId": {
+          "type": "string",
+          "description": "The brand. Absent = x-brand-id, else the row's own brand."
+        },
+        "offerId": {
+          "type": "string",
+          "description": "One offer of the brand. Absent = every offer."
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Why, in your words. Optional.",
+          "example": "Runs a construction company, we sell to supermarkets."
+        }
+      }
+    }
+  },
   "PUT /v1/orgs/google/contact-links": {
     "service": "google-service",
     "method": "PUT",

@@ -3060,6 +3060,89 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "put",
+  path: "/v1/leads/{id}/disqualification",
+  tags: ["Leads"],
+  summary: "Mark one lead Disqualified, with an optional note",
+  description:
+    "Pass-through to lead-service PUT /orgs/leads/{id}/disqualification. Puts the \"Disqualified\" tag on a lead " +
+    "(its own tag, beside the step tags), with an optional free note saying why. Every body field is optional: " +
+    "`brandId` and `offerId` narrow the scope, `note` is stored verbatim. The body is forwarded VERBATIM and " +
+    "lead-service owns its refusals, which reach the caller with their own status and body. The caller's org " +
+    "AND user are forwarded: lead-service records who marked the lead. " +
+    "List a brand's disqualified leads with GET /v1/leads/disqualifications?brandId=<id>[&offerId=<id>]. " +
+    "Refer to lead-service openapi.json for the exact request and response shapes.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().openapi({
+        description: "The `id` of a lead as returned by GET /v1/leads.",
+      }),
+    }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadDisqualificationRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "The lead as marked, as returned by lead-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadDisqualificationResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid request (lead-service states the reason)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead in this caller's org", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/leads/{id}/disqualification",
+  tags: ["Leads"],
+  summary: "Remove the Disqualified mark from one lead",
+  description:
+    "Pass-through to lead-service DELETE /orgs/leads/{id}/disqualification, the undo of the PUT on the same path. " +
+    "The scope rides the query string (`brandId`, `offerId`), forwarded verbatim. The caller's org AND user are " +
+    "forwarded. Refer to lead-service openapi.json for the exact response shape.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().openapi({
+        description: "The `id` of a lead as returned by GET /v1/leads.",
+      }),
+    }),
+    query: z
+      .object({
+        brandId: z.string().optional().openapi({ description: "Brand scope of the mark." }),
+        offerId: z.string().optional().openapi({ description: "Offer scope of the mark." }),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: {
+      description: "The lead after the mark was removed, as returned by lead-service.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("LeadDisqualificationWithdrawalResponse"),
+        },
+      },
+    },
+    400: { description: "Invalid request (lead-service states the reason)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead in this caller's org", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/leads/{id}/answered-outside",
   tags: ["Leads"],
