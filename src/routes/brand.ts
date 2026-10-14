@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, authenticatePlatform, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, callExternalServiceWithStatus, externalServices, forwardMultipartUpload } from "../lib/service-client.js";
+import { callExternalService, callExternalServiceWithStatus, externalServices, forwardMultipartUpload, pipeExternalService } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { BrandUpsertRequestSchema } from "../schemas.js";
@@ -488,6 +488,31 @@ router.post("/brands/:id/offers/:offerId/documents", authenticate, requireOrg, r
   } catch (error: any) {
     console.error("[api-service] Failed to upload offer document:", error.message);
     respondUpstreamError(res, error, "Failed to upload offer document");
+  }
+});
+
+/**
+ * GET /v1/brands/:id/offers/:offerId/documents/:documentId/content
+ *   → brand-service GET /orgs/brands/:id/offers/:offerId/documents/:documentId/content
+ *
+ * The file's raw bytes, so a client can open or download what they uploaded. Piped, never
+ * parsed (a file is binary, up to 5 MB): status, Content-Type and body bytes come straight
+ * through, plus the download headers brand-service sets (Content-Disposition carries the
+ * file name, X-Document-Sha256, Cache-Control private no-store). A 404 DOCUMENT_NOT_FOUND
+ * reaches the caller field for field through respondUpstreamError.
+ */
+const OFFER_DOCUMENT_CONTENT_HEADERS = ["Content-Disposition", "X-Document-Sha256", "Cache-Control"];
+
+router.get("/brands/:id/offers/:offerId/documents/:documentId/content", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(externalServices.brand, offerPath(req, "/documents/:documentId/content"), {
+      headers: buildInternalHeaders(req),
+      expressRes: res,
+      forwardResponseHeaders: OFFER_DOCUMENT_CONTENT_HEADERS,
+    });
+  } catch (error: any) {
+    console.error("[api-service] Failed to read offer document content:", error.message);
+    respondUpstreamError(res, error, "Failed to read offer document content");
   }
 });
 

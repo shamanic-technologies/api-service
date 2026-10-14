@@ -425,9 +425,13 @@ export async function callExternalServiceWithStatus<T>(
 export async function pipeExternalService(
   service: { url: string; apiKey: string; dispatcher?: Dispatcher },
   path: string,
-  options: ServiceCallOptions & { expressRes: import("express").Response },
+  options: ServiceCallOptions & {
+    expressRes: import("express").Response;
+    /** Extra upstream response headers to copy verbatim when present (a file download's Content-Disposition). */
+    forwardResponseHeaders?: string[];
+  },
 ): Promise<void> {
-  const { method = "GET", body, headers = {}, expressRes } = options;
+  const { method = "GET", body, headers = {}, expressRes, forwardResponseHeaders = [] } = options;
   const url = downstreamUrl(service.url, path);
 
   const controller = new AbortController();
@@ -463,6 +467,10 @@ export async function pipeExternalService(
     const contentType = response.headers.get("content-type");
     expressRes.status(response.status);
     expressRes.setHeader("Content-Type", contentType || "application/json");
+    for (const name of forwardResponseHeaders) {
+      const value = response.headers.get(name);
+      if (value !== null) expressRes.setHeader(name, value);
+    }
 
     if (!response.body) {
       expressRes.end();
