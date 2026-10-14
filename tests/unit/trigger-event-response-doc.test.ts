@@ -18,7 +18,7 @@ describe("POST /v1/trigger-events documents the event it answers", () => {
       const body = resolve(doc.paths["/v1/trigger-events"].post.responses[status].content["application/json"].schema);
       expect(Object.keys(body.properties)).toEqual(["event", "replayed"]);
       const event = resolve(body.properties.event);
-      for (const f of ["id", "triggerId", "leadId", "status", "outcome", "skipReason", "ranCampaignIds", "processedAt", "detail"]) {
+      for (const f of ["id", "triggerId", "leadId", "status", "outcome", "skipReason", "ranCampaignIds", "ranLeads", "processedAt", "detail"]) {
         expect(event.properties, f).toHaveProperty(f);
       }
     });

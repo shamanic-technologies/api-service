@@ -992,7 +992,7 @@
           "leadId": {
             "type": "string",
             "nullable": true,
-            "description": "The lead the reporting service named on the occurrence. Null on an event you push with `person`: that person is filed as a lead of each campaign the trigger reaches, not on the event."
+            "description": "The lead the reporting service named on the occurrence. Null on an event you push with `person`: that person is filed as a lead of each campaign that runs, read them in `ranLeads`."
           },
           "requestedByCampaignId": {
             "type": "string",
@@ -1032,6 +1032,25 @@
             },
             "description": "The campaigns that ran for it (empty unless `outcome` is `ran`)."
           },
+          "ranLeads": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "campaignId": {
+                  "type": "string"
+                },
+                "leadId": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "campaignId",
+                "leadId"
+              ]
+            },
+            "description": "Per campaign that ran: the lead the event's person was filed as on that campaign. Empty when no run carried a lead."
+          },
           "performedByCaller": {
             "type": "boolean"
           },
@@ -1061,6 +1080,7 @@
           "outcome",
           "skipReason",
           "ranCampaignIds",
+          "ranLeads",
           "performedByCaller",
           "processedAt"
         ]
