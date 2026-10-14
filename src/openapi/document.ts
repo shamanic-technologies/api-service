@@ -367,6 +367,7 @@ export const STAFF_KEY_OPERATIONS = new Set<string>([
   "POST /v1/orgs",
   "POST /v1/orgs/{orgId}/members",
   "PUT /v1/billing/accounts/topup_minimums",
+  "PUT /v1/catalogue/pipes/{pipeId}/default-play",
 ]);
 
 export const STAFF_KEY_TAG = "Staff (key)";
