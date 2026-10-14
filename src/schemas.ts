@@ -4420,6 +4420,147 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – Offer documents (proxy to brand-service /orgs/brands/:id/offers/:offerId/documents[/:documentId]).
+// Files the client owns about one offer, which the AI responder can attach when a prospect replies.
+// Responses are passthrough: brand-service owns { document[, created] } / { documents } and every refusal.
+// The request bodies below are documentation only; nothing is validated or stripped here.
+// ===================================================================
+const OfferDocumentResponseSchema = z.object({}).passthrough().openapi("OfferDocumentResponse");
+const OfferDocumentParams = BrandOfferParams.extend({
+  documentId: z.string().describe("Document ID (from the list or the upload answer)"),
+});
+const OFFER_DOCUMENTS_MODEL =
+  "Documents are files the client owns about ONE offer (a one-pager, a case study, a spec sheet, an FAQ). " +
+  "The AI answering a prospect reads the list (fileName + description) to pick the one that helps and attaches it. " +
+  "Accepted: pdf, docx, pptx, xlsx, doc, ppt, xls, csv, txt, md, png, jpg/jpeg, gif, webp; at most 5 MB per file " +
+  "and 25 files per offer. The file extension decides the type and must match the content.";
+const OfferDocumentJsonUpload = z
+  .object({
+    fileName: z.string().describe("File name WITH its extension; the extension decides the type, e.g. case-study.pdf"),
+    description: z.string().describe("What the file is and when it helps a prospect (1 to 1000 characters). Required."),
+    contentBase64: z.string().describe("The file bytes, base64 (at most 5 MB decoded)."),
+  })
+  .passthrough()
+  .openapi("OfferDocumentJsonUpload");
+const OfferDocumentMultipartUpload = z
+  .object({
+    file: z.string().openapi({ type: "string", format: "binary", description: "The file (at most 5 MB)." }),
+    description: z.string().describe("What the file is and when it helps a prospect. Required."),
+    fileName: z.string().optional().describe("Overrides the uploaded file name (must keep an accepted extension)."),
+  })
+  .openapi("OfferDocumentMultipartUpload");
+const OfferDocumentPatch = z
+  .object({
+    fileName: z.string().optional().describe("New name; must keep the same type of extension."),
+    description: z.string().optional().describe("New description (1 to 1000 characters)."),
+  })
+  .passthrough()
+  .openapi("OfferDocumentPatch");
+const OFFER_DOCUMENT_ERRORS = {
+  400: { description: "Invalid ID, body or file (reason names it), forwarded verbatim", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+  404: { description: "No such brand, offer or document (forwarded verbatim)", content: errorContent },
+  500: { description: "Upstream error", content: errorContent },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}/documents",
+  tags: ["Brand"],
+  summary: "List an offer's documents",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/documents. " + OFFER_DOCUMENTS_MODEL +
+    " Answers { documents }, oldest first, metadata only (no file bytes).",
+  security: authed,
+  request: { params: BrandOfferParams },
+  responses: {
+    200: { description: "The offer's documents", content: { "application/json": { schema: OfferDocumentResponseSchema } } },
+    ...OFFER_DOCUMENT_ERRORS,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/offers/{offerId}/documents",
+  tags: ["Brand"],
+  summary: "Upload a document to an offer",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{brandId}/offers/{offerId}/documents. " + OFFER_DOCUMENTS_MODEL +
+    " Send JSON { fileName, description, contentBase64 } or multipart/form-data (file, description, optional fileName). " +
+    "201 { document, created: true }; the same bytes already on this offer answer 200 { document, created: false } " +
+    "(a retry stores nothing twice).",
+  security: authed,
+  request: {
+    params: BrandOfferParams,
+    body: {
+      content: {
+        "application/json": { schema: OfferDocumentJsonUpload },
+        "multipart/form-data": { schema: OfferDocumentMultipartUpload },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Same bytes already on this offer: the stored document, created false", content: { "application/json": { schema: OfferDocumentResponseSchema } } },
+    201: { description: "Document stored, created true", content: { "application/json": { schema: OfferDocumentResponseSchema } } },
+    ...OFFER_DOCUMENT_ERRORS,
+    409: { description: "reason too_many_documents: the offer already holds 25 files (forwarded verbatim)", content: errorContent },
+    413: { description: "reason file_too_large: the file is over 5 MB (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}/documents/{documentId}",
+  tags: ["Brand"],
+  summary: "Read one offer document",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/documents/{documentId}. " + OFFER_DOCUMENTS_MODEL +
+    " Answers { document }, metadata only.",
+  security: authed,
+  request: { params: OfferDocumentParams },
+  responses: {
+    200: { description: "The document", content: { "application/json": { schema: OfferDocumentResponseSchema } } },
+    ...OFFER_DOCUMENT_ERRORS,
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/brands/{id}/offers/{offerId}/documents/{documentId}",
+  tags: ["Brand"],
+  summary: "Rename or re-describe an offer document",
+  description:
+    "Proxy to brand-service PATCH /orgs/brands/{brandId}/offers/{offerId}/documents/{documentId}. " + OFFER_DOCUMENTS_MODEL +
+    " Send fileName, description, or both. Answers { document }.",
+  security: authed,
+  request: {
+    params: OfferDocumentParams,
+    body: { content: { "application/json": { schema: OfferDocumentPatch } } },
+  },
+  responses: {
+    200: { description: "The updated document", content: { "application/json": { schema: OfferDocumentResponseSchema } } },
+    ...OFFER_DOCUMENT_ERRORS,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/brands/{id}/offers/{offerId}/documents/{documentId}",
+  tags: ["Brand"],
+  summary: "Delete an offer document",
+  description:
+    "Proxy to brand-service DELETE /orgs/brands/{brandId}/offers/{offerId}/documents/{documentId}. " + OFFER_DOCUMENTS_MODEL +
+    " Answers { deleted: true, documentId }.",
+  security: authed,
+  request: { params: OfferDocumentParams },
+  responses: {
+    200: { description: "Deleted", content: { "application/json": { schema: OfferDocumentResponseSchema } } },
+    ...OFFER_DOCUMENT_ERRORS,
+  },
+});
+
+// ===================================================================
 // Brand – Click Destination (proxy to brand-service /orgs/brands/:id/click-destination)
 // Downstream owns body + response shapes — passthrough only. No gateway
 // re-validation, so brand-service's 4xx errors propagate verbatim.

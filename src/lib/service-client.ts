@@ -586,16 +586,27 @@ export async function streamExternalService(
 export async function forwardMultipartUpload<T>(
   service: { url: string; apiKey: string; dispatcher?: Dispatcher },
   path: string,
-  options: { req: import("express").Request; headers?: Record<string, string> },
+  options: { req: import("express").Request; headers?: Record<string, string>; maxBytes?: number },
 ): Promise<{ status: number; data: T }> {
-  const { req, headers = {} } = options;
+  const { req, headers = {}, maxBytes } = options;
   const url = downstreamUrl(service.url, path);
 
   // Buffer the entire multipart body. `express.json()` skips non-JSON content
   // types, so the multipart stream reaches here untouched and fully readable.
+  // `maxBytes` refuses an oversized body (413) as soon as it is crossed, before
+  // it is held in memory whole.
   const chunks: Buffer[] = [];
+  let received = 0;
   for await (const chunk of req) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    received += buf.length;
+    if (maxBytes !== undefined && received > maxBytes) {
+      throw Object.assign(
+        new Error(JSON.stringify({ error: `Upload is over ${maxBytes} bytes.`, reason: "payload_too_large" })),
+        { statusCode: 413 },
+      );
+    }
+    chunks.push(buf);
   }
   const bodyBuffer = Buffer.concat(chunks);
 
