@@ -218,3 +218,46 @@ describe("POST /v1/orgs/:orgId/members → client-service member add + key-servi
     expect(res.body.member.userId).toBe(PERSON);
   });
 });
+
+describe("DELETE /v1/orgs/:orgId/members/:userId → client-service member removal", () => {
+  const ORG = "66666666-6666-6666-6666-666666666666";
+  const PERSON = "77777777-7777-7777-7777-777777777777";
+
+  it("a staff key (not a member of the org) removes: exact downstream path, 200 + body piped back", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    const removed = { userId: PERSON, orgId: ORG, membershipRemoved: true, lastActiveOrgCleared: true };
+    fetchMock.mockResolvedValue(upstream(200, removed));
+    const res = await request(app()).delete(`/v1/orgs/${ORG}/members/${PERSON}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(removed);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${CLIENT_BASE}/internal/orgs/${ORG}/members/${PERSON}`);
+    expect(init.method).toBe("DELETE");
+  });
+
+  it("a replay forwards the producer's membershipRemoved: false", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    const replay = { userId: PERSON, orgId: ORG, membershipRemoved: false, lastActiveOrgCleared: false };
+    fetchMock.mockResolvedValue(upstream(200, replay));
+    const res = await request(app()).delete(`/v1/orgs/${ORG}/members/${PERSON}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(replay);
+  });
+
+  it("a client key is refused 403 staff_only and client-service is never called", async () => {
+    identity.current = { ...CLIENT_KEY, userId: "user-client", orgId: ORG };
+    const res = await request(app()).delete(`/v1/orgs/${ORG}/members/${PERSON}`);
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("staff_only");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("refusals are forwarded verbatim with their status", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    const refusal = { error: "member_removal_refused", message: "Cannot remove the last admin" };
+    fetchMock.mockResolvedValue(upstream(422, refusal));
+    const res = await request(app()).delete(`/v1/orgs/${ORG}/members/${PERSON}`);
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual(refusal);
+  });
+});

@@ -42,6 +42,14 @@ import { isStaffEmail } from "../lib/staff.js";
  *   user email ∈ `STAFF_EMAILS`) before any key is minted. The answer is built
  *   here (membership + key), so its schema is typed (rule #8 exception, like
  *   `agent-signups.ts`).
+ * - `DELETE /v1/orgs/:orgId/members/:userId` → `DELETE
+ *   /internal/orgs/:orgId/members/:userId`: staff take a person out of a client's
+ *   org (their identity-provider membership ends; their last-active org is
+ *   cleared when it was this one). The counterpart of the add above, gated the
+ *   same way (`requireStaffActor`, `STAFF_KEY_OPERATIONS`, `authenticateUser`:
+ *   the path org is not a request target). Idempotent downstream (200 with
+ *   `membershipRemoved: false` for a non-member); piped byte-identical, refusals
+ *   included.
  *
  * The acting user is identity, so the gateway supplies it from `authenticate`
  * (`createdByUserId` / `invitedByUserId`, client-service's body names for the
@@ -230,5 +238,23 @@ router.post("/orgs/:orgId/members", authenticateUser, requireUser, requireStaffA
     usage: "The person sends it as `Authorization: Bearer <apiKey>` (Claude Code / the distribute MCP). It reaches only the organizations this person is a member of. First call: GET /v1/me.",
   });
 });
+
+router.delete(
+  "/orgs/:orgId/members/:userId",
+  authenticateUser,
+  requireUser,
+  requireStaffActor,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.client,
+        `/internal/orgs/${encodeURIComponent(req.params.orgId)}/members/${encodeURIComponent(req.params.userId)}`,
+        { expressRes: res, method: "DELETE", headers: buildInternalHeaders(req) },
+      );
+    } catch (error) {
+      respondUpstreamError(res, error, "Failed to take the person out of the organization");
+    }
+  },
+);
 
 export default router;

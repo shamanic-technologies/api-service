@@ -16071,6 +16071,38 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "delete",
+  path: "/v1/orgs/{orgId}/members/{userId}",
+  tags: ["Organizations"],
+  summary: "Take a person out of an organization (staff only)",
+  description:
+    "End a person's membership of this organization: they lose access to it at once (their API keys stop reaching it) " +
+    "and, if it was the organization they last used, that is cleared. Their account and their other organizations are untouched. " +
+    "`userId` is the person's user id (the `member.userId` returned by POST /v1/orgs/{orgId}/members, or `id` in GET /v1/users, which lists only the people whose last-used organization is the one named). " +
+    "Calling again is safe: 200 with `membershipRemoved: false` when they are not a member. " +
+    "Staff only: a distribute.you staff member's own API key, any other key gets 403 `staff_only`. The staff caller need not be a " +
+    "member of the organization. Pass-through to client-service DELETE /internal/orgs/{orgId}/members/{userId}: answers " +
+    "`{ userId, orgId, membershipRemoved, lastActiveOrgCleared }`, refusals forwarded verbatim with `error` + `message`.",
+  security: platformAuth,
+  request: {
+    params: z.object({
+      orgId: z.string().uuid().openapi({ description: "The organization" }),
+      userId: z.string().uuid().openapi({ description: "The person's user id" }),
+    }),
+  },
+  responses: {
+    200: passthroughResponse("Done (client-service shape): `membershipRemoved: false` = they were not a member", "RemovedOrgMember"),
+    400: { description: "`invalid_request` (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff (`staff_only`)", content: errorContent },
+    404: { description: "`org_not_found` or `user_not_found` (forwarded verbatim)", content: errorContent },
+    409: { description: "`org_has_no_identity`: the organization has no identity-provider org (forwarded verbatim)", content: errorContent },
+    422: { description: "`member_removal_refused`: the identity provider refused, e.g. the last admin (message safe to show, forwarded verbatim)", content: errorContent },
+    502: { description: "`identity_provider_failed` (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/orgs/{orgId}/member-invitations",
   tags: ["Organizations"],
