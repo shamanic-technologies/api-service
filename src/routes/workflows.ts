@@ -226,6 +226,30 @@ router.get("/workflows/dynasties", authenticate, requireOrg, requireUser, async 
 });
 
 /**
+ * GET /v1/workflows/summaries
+ * Transparent proxy to workflow-service GET /workflows/summaries: what each workflow of a feature
+ * does (slug, names, description, status, version, tags, content model/template), WITHOUT its DAG.
+ * GET /v1/workflows returns every DAG (hundreds of KB per feature); an agent picking a workflow
+ * needs this light listing and reads one DAG on demand with GET /v1/workflows/:id.
+ *
+ * Query forwarded verbatim (workflow-service owns the vocabulary: featureSlug, workflowDynastySlug,
+ * status today). Declared before `/workflows/:id` so `summaries` is never sent downstream as an id.
+ */
+router.get("/workflows/summaries", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.workflow,
+      `/workflows/summaries${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] GET /v1/workflows/summaries — FAILED:", error.message);
+    respondUpstreamError(res, error, "Failed to list workflow summaries");
+  }
+});
+
+/**
  * POST /v1/workflows
  * Create a new workflow
  */
