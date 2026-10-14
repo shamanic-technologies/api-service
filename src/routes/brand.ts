@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { authenticate, authenticatePlatform, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalService, callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
+import { callExternalService, callExternalServiceWithStatus, externalServices, forwardMultipartUpload } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { BrandUpsertRequestSchema } from "../schemas.js";
@@ -426,6 +426,14 @@ const OFFER_ROUTES = [
   { method: "get", path: "/brands/:id/offers/:offerId/steps", suffix: "/steps", what: "get offer steps" },
   { method: "put", path: "/brands/:id/offers/:offerId/steps/:stepKey", suffix: "/steps/:stepKey", what: "add offer step" },
   { method: "delete", path: "/brands/:id/offers/:offerId/steps/:stepKey", suffix: "/steps/:stepKey", what: "remove offer step" },
+  // OFFER DOCUMENTS: files the client owns about one offer (one-pager, case study), which the
+  // AI responder can attach when a prospect replies. brand-service owns the accepted types, the
+  // 5 MB / 25-file caps and every refusal (413 file_too_large, 409 too_many_documents, 404
+  // DOCUMENT_NOT_FOUND), forwarded field for field. The upload is its own handler below.
+  { method: "get", path: "/brands/:id/offers/:offerId/documents", suffix: "/documents", what: "list offer documents" },
+  { method: "get", path: "/brands/:id/offers/:offerId/documents/:documentId", suffix: "/documents/:documentId", what: "get offer document" },
+  { method: "patch", path: "/brands/:id/offers/:offerId/documents/:documentId", suffix: "/documents/:documentId", what: "update offer document" },
+  { method: "delete", path: "/brands/:id/offers/:offerId/documents/:documentId", suffix: "/documents/:documentId", what: "delete offer document" },
 ] as const;
 
 for (const route of OFFER_ROUTES) {
@@ -447,6 +455,41 @@ for (const route of OFFER_ROUTES) {
     }
   });
 }
+
+/**
+ * POST /v1/brands/:id/offers/:offerId/documents → brand-service POST /orgs/brands/:id/offers/:offerId/documents
+ *
+ * Upload one offer document, in either encoding brand-service accepts:
+ * - application/json `{ fileName, description, contentBase64 }`: a 5 MB file is ~6.7 MB of
+ *   base64, under the gateway's global 10 MB json limit (src/index.ts), forwarded as-is.
+ * - multipart/form-data (`file`, `description`, optional `fileName`): express.json skips it, so
+ *   the raw bytes reach forwardMultipartUpload untouched, boundary included. Capped at
+ *   MAX_OFFER_DOCUMENT_MULTIPART_BYTES while buffering so an oversized body cannot fill the
+ *   gateway's memory; brand-service words the real 5 MB refusal.
+ * The upstream status is kept: 201 created, 200 when the same bytes were already on the offer.
+ */
+export const MAX_OFFER_DOCUMENT_MULTIPART_BYTES = 8 * 1024 * 1024;
+
+router.post("/brands/:id/offers/:offerId/documents", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const path = offerPath(req, "/documents");
+    const { status, data } = req.is("multipart/form-data")
+      ? await forwardMultipartUpload(externalServices.brand, path, {
+          req,
+          headers: buildInternalHeaders(req),
+          maxBytes: MAX_OFFER_DOCUMENT_MULTIPART_BYTES,
+        })
+      : await callExternalServiceWithStatus(externalServices.brand, path, {
+          method: "POST",
+          headers: buildInternalHeaders(req),
+          body: req.body,
+        });
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Failed to upload offer document:", error.message);
+    respondUpstreamError(res, error, "Failed to upload offer document");
+  }
+});
 
 /**
  * PUT /v1/brands/:id/click-destination
