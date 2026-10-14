@@ -66,6 +66,7 @@ const PLATFORM_OPERATIONS = [
   "post /v1/billing/credits/grant",
   "post /v1/orgs",
   "post /v1/orgs/{orgId}/members",
+  "delete /v1/orgs/{orgId}/members/{userId}",
   "put /v1/billing/accounts/topup_minimums",
   "put /v1/catalogue/pipes/{pipeId}/default-play",
   "get /v1/billing/credits/grants/all",

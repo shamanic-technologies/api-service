@@ -8907,6 +8907,10 @@
           "email"
         ]
       },
+      "RemovedOrgMember": {
+        "type": "object",
+        "properties": {}
+      },
       "MemberInvitationExisting": {
         "type": "object",
         "properties": {}
