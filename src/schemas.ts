@@ -9681,6 +9681,96 @@ registry.registerPath({
   },
 });
 
+const EMAIL_SIGNATURE_RULES =
+  "Every email we send for a brand ends with a signature. By default it is ours: the sending " +
+  "mailbox's name, then `Distribute.you | Marketing Agency` (`signature: null`). Set your own and it " +
+  "replaces ours on every NEW email thread of the brand: the email itself (a cold email, or an email you " +
+  "pushed through the API with the `email_pushed_via_api` trigger), every follow-up, and every reply we " +
+  "send in that thread, AI replies included. A thread keeps the signature it started with: changing or " +
+  "resetting yours applies to new threads only, so a conversation never switches signature halfway. ";
+const EMAIL_SIGNATURE_TAIL =
+  "A brand that is not one of the authenticated org's brands is a 404 `brand_not_in_org`. Pass-through " +
+  "to instantly-service /orgs/email-signature; upstream errors are forwarded field-for-field. Declares no cost.";
+const EmailSignatureResponse = z.object({}).passthrough().openapi("EmailSignatureResponse", {
+  description: "`{ brandId, signature, updatedAt }`: `signature` is your text, or null when the brand uses our default signature.",
+});
+const emailSignatureBrandQuery = z.object({
+  brandId: z.string().openapi({ description: "The brand (uuid) the signature is for" }),
+}).passthrough();
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/email-signature",
+  tags: ["Conversations"],
+  summary: "Get my email signature: the signature at the bottom of a brand's emails",
+  description: "Read the email signature of a brand. " + EMAIL_SIGNATURE_RULES + EMAIL_SIGNATURE_TAIL,
+  security: authed,
+  request: { query: emailSignatureBrandQuery },
+  responses: {
+    200: { description: "The brand's signature (null = our default)", content: { "application/json": { schema: EmailSignatureResponse } } },
+    400: { description: "Missing brandId", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "The brand is not one of this organization's brands — `code: brand_not_in_org`", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/email-signature",
+  tags: ["Conversations"],
+  summary: "Change my email signature: replace our default signature with yours for a brand",
+  description:
+    "Set your own email signature for a brand, replacing ours. Idempotent: setting it again overwrites it. " +
+    EMAIL_SIGNATURE_RULES +
+    "Plain text, one line per line (`\\n` between lines), at most 1,000 characters and 12 lines; HTML is shown " +
+    "as written; leave out the `--` line, it is added above the signature automatically. A signature that breaks " +
+    "a rule is a 400 with a readable reason. An email sent for several brands at once uses the signature they " +
+    "share; two different signatures make that send refused. " + EMAIL_SIGNATURE_TAIL,
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            brandId: z.string().openapi({ description: "The brand (uuid) the signature is for" }),
+            signature: z.string().openapi({
+              description:
+                "Your signature as plain text, `\\n` between lines, at most 1,000 characters and 12 lines, no `--` line. Example: `Jane Doe\\nHead of Sales, Acme\\nacme.com`.",
+            }),
+          }).passthrough().openapi("SetEmailSignatureRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Saved: new threads of this brand end with it", content: { "application/json": { schema: EmailSignatureResponse } } },
+    400: { description: "Missing brandId, or a signature that is empty, too long, has too many lines, or contains a `--` line", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "The brand is not one of this organization's brands — `code: brand_not_in_org`", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/email-signature",
+  tags: ["Conversations"],
+  summary: "Reset my email signature to the default: remove yours, our signature is used again",
+  description:
+    "Remove your email signature for a brand: new threads end with our default signature again. Idempotent. " +
+    EMAIL_SIGNATURE_RULES + EMAIL_SIGNATURE_TAIL,
+  security: authed,
+  request: { query: emailSignatureBrandQuery },
+  responses: {
+    200: { description: "Removed: `signature: null`, our default is used on new threads", content: { "application/json": { schema: EmailSignatureResponse } } },
+    400: { description: "Missing brandId", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "The brand is not one of this organization's brands — `code: brand_not_in_org`", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/v1/followup-cuts",
