@@ -964,13 +964,122 @@
         "type": "object",
         "properties": {}
       },
-      "ReportTriggerEventReplayedResponse": {
+      "TriggerEvent": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The event id."
+          },
+          "triggerId": {
+            "type": "string",
+            "nullable": true,
+            "description": "The trigger type (GET /v1/public/channels `triggers[].id`)."
+          },
+          "step": {
+            "type": "string",
+            "nullable": true
+          },
+          "orgId": {
+            "type": "string"
+          },
+          "brandId": {
+            "type": "string"
+          },
+          "offerId": {
+            "type": "string"
+          },
+          "leadId": {
+            "type": "string",
+            "nullable": true,
+            "description": "The lead the reporting service named on the occurrence. Null on an event you push with `person`: that person is filed as a lead of each campaign the trigger reaches, not on the event."
+          },
+          "requestedByCampaignId": {
+            "type": "string",
+            "nullable": true
+          },
+          "recordedVia": {
+            "type": "string",
+            "description": "Who recorded it, e.g. `trigger_events` for a push through this route."
+          },
+          "occurredAt": {
+            "type": "string",
+            "description": "ISO date-time."
+          },
+          "dueAt": {
+            "type": "string",
+            "description": "ISO date-time it fires (or fired)."
+          },
+          "status": {
+            "type": "string",
+            "description": "`pending` (due later, or held a few minutes while the person is filed) | `firing` | `done`."
+          },
+          "outcome": {
+            "type": "string",
+            "nullable": true,
+            "description": "`ran` (at least one campaign ran) | `skipped` (see `skipReason`) | `failed` (every run failed); null until `status` is `done`."
+          },
+          "skipReason": {
+            "type": "string",
+            "nullable": true,
+            "description": "Why nothing ran, one reason: a campaign's own (e.g. `unfunded`, `run_in_flight`, `person_suppressed`), else `campaign_off`, `no_campaign`, `no_leg`; `run_failed` when `outcome` is `failed`. Null when it ran.",
+            "example": "no_campaign"
+          },
+          "ranCampaignIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The campaigns that ran for it (empty unless `outcome` is `ran`)."
+          },
+          "performedByCaller": {
+            "type": "boolean"
+          },
+          "processedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "ISO date-time the outcome was written; null until done."
+          },
+          "detail": {
+            "nullable": true,
+            "description": "Every per-campaign answer: `{legKeys, triggered[], skipped[], offCampaignIds}`, plus the `person` and `item` you sent."
+          }
+        },
+        "required": [
+          "id",
+          "triggerId",
+          "step",
+          "orgId",
+          "brandId",
+          "offerId",
+          "leadId",
+          "requestedByCampaignId",
+          "recordedVia",
+          "occurredAt",
+          "dueAt",
+          "status",
+          "outcome",
+          "skipReason",
+          "ranCampaignIds",
+          "performedByCaller",
+          "processedAt"
+        ]
       },
       "ReportTriggerEventResponse": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "event": {
+            "$ref": "#/components/schemas/TriggerEvent"
+          },
+          "replayed": {
+            "type": "boolean",
+            "description": "`true` when `idempotencyKey` named an event already recorded (answered 200)."
+          }
+        },
+        "required": [
+          "event",
+          "replayed"
+        ]
       },
       "ReportTriggerEventRequest": {
         "type": "object",
@@ -1048,7 +1157,17 @@
       },
       "OfferTriggerEventsListResponse": {
         "type": "object",
-        "properties": {}
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TriggerEvent"
+            }
+          }
+        },
+        "required": [
+          "events"
+        ]
       },
       "BrandSalesFunnelCampaignRowsResponse": {
         "type": "object",
@@ -22018,7 +22137,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReportTriggerEventReplayedResponse"
+                  "$ref": "#/components/schemas/ReportTriggerEventResponse"
                 }
               }
             },
@@ -22080,7 +22199,7 @@
             }
           },
           "201": {
-            "description": "Recorded (and, when due now, fired: `event.outcome`). Shape owned by campaign-service.",
+            "description": "Recorded (and, when due now, fired: `event.outcome`). Body relayed verbatim from campaign-service.",
             "content": {
               "application/json": {
                 "schema": {
