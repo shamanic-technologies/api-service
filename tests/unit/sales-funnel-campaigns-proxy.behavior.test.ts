@@ -108,6 +108,34 @@ describe("sales funnel campaigns + caps — pass-through", () => {
     expect(JSON.parse(init.body)).toEqual({ status: "activate" });
   });
 
+  it("DELETE: forwards to /sales-funnel-campaigns/{id} with the authenticated org and relays the 200", async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string, init: any) => {
+      calls.push({ url, init });
+      return respond(200, `{"deleted":true,"salesFunnelCampaignId":"${SFC}","unitIds":["u1","u2"]}`);
+    });
+    const res = await request(buildApp()).delete(`/v1/sales-funnel-campaigns/${SFC}`).set("x-org-id", "org_someone_else");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ deleted: true, salesFunnelCampaignId: SFC, unitIds: ["u1", "u2"] });
+    const { url, init } = upstream();
+    expect(new URL(url).pathname).toBe(`/sales-funnel-campaigns/${SFC}`);
+    expect(init.method).toBe("DELETE");
+    expect(init.body).toBeUndefined();
+    expect(init.headers["x-org-id"]).toBe("org_authenticated");
+  });
+
+  it("DELETE: relays a 409 has_history and a 502 runs_unavailable field-for-field", async () => {
+    const refusal = '{"error":"This campaign already ran. Stop it instead.","reason":"sales_funnel_campaign_has_history"}';
+    global.fetch = vi.fn().mockImplementation(async () => respond(409, refusal));
+    let res = await request(buildApp()).delete(`/v1/sales-funnel-campaigns/${SFC}`);
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual(JSON.parse(refusal));
+    const down = '{"error":"Could not read its history.","reason":"runs_unavailable","detail":"timeout"}';
+    global.fetch = vi.fn().mockImplementation(async () => respond(502, down));
+    res = await request(buildApp()).delete(`/v1/sales-funnel-campaigns/${SFC}`);
+    expect(res.status).toBe(502);
+    expect(res.body).toEqual(JSON.parse(down));
+  });
+
   it("caps GET: forwards to billing's same path with the funnel id re-encoded", async () => {
     const res = await request(buildApp()).get(`/v1/brands/${BRAND}/offers/${OFFER}/sales-funnels/${FUNNEL_ENCODED}/caps`);
     expect(res.status).toBe(200);

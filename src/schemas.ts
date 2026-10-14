@@ -1846,6 +1846,30 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "delete",
+  path: "/v1/sales-funnel-campaigns/{id}",
+  tags: ["Campaigns"],
+  summary: "Delete a sales funnel campaign created by mistake (stopped, never ran)",
+  description:
+    "Proxy to campaign-service DELETE /sales-funnel-campaigns/{id}. Deletes the funnel campaign AND its units in one " +
+    "transaction. Only a STOPPED campaign that NEVER RAN (no run ever filed under any of its units, no trigger delivery " +
+    "recorded). A campaign that ran keeps its results: stop it instead (PATCH { status: stop }), it stays in the past " +
+    "campaigns. The org is the authenticated one (another org's campaign is a 404). Refusals carry `reason` and a " +
+    "customer-facing `error` sentence, relayed verbatim: 409 sales_funnel_campaign_ongoing (stop it first), 409 " +
+    "sales_funnel_campaign_has_history (it ran), 502 runs_unavailable | billing_unavailable (nothing deleted). Billing " +
+    "caps stated for THIS funnel campaign are cleared; the funnel-wide cap shared by other campaigns is untouched.",
+  security: authed,
+  request: { params: z.object({ id: z.string() }) },
+  responses: {
+    200: { description: "{ deleted: true, salesFunnelCampaignId, unitIds }", content: { "application/json": { schema: z.object({}).passthrough().openapi("SalesFunnelCampaignDeleteResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Not found in this org, forwarded verbatim", content: errorContent },
+    409: { description: "Refused (reason sales_funnel_campaign_ongoing | sales_funnel_campaign_has_history), forwarded verbatim", content: errorContent },
+    502: { description: "Refused (reason runs_unavailable | billing_unavailable), nothing deleted, forwarded verbatim", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "get",
   path: "/v1/campaigns/{id}",
   tags: ["Campaigns"],
@@ -6348,6 +6372,42 @@ registry.registerPath({
     400: { description: "Invalid request", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Workflow dynasty not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/workflows/summaries",
+  tags: ["Workflows"],
+  summary: "List what each workflow of a feature does, without its DAG",
+  description:
+    "A light listing to choose a workflow: per version its id, workflowSlug, workflowName, workflowDynastySlug, " +
+    "workflowDynastyName, featureSlug, description (what it does, in plain words), status, workflowDynastyStatus, " +
+    "version, tags, contentModel, contentPromptType, createdAt, updatedAt. Never the DAG: GET /v1/workflows returns " +
+    "every DAG (hundreds of KB per feature); read one DAG on demand with GET /v1/workflows/{id}. Sorted by dynasty, " +
+    "newest version first. Transparent proxy to workflow-service GET /workflows/summaries: the query string is " +
+    "forwarded verbatim; the parameters below are the ones it documents today, not a whitelist. Response is producer-owned.",
+  security: authed,
+  request: {
+    query: z
+      .object({
+        featureSlug: z.string().optional().describe("Exact match on the feature slug (e.g. ai-meeting-booking)."),
+        workflowDynastySlug: z.string().optional().describe("One lineage, every version (the unversioned slug)."),
+        status: z
+          .string()
+          .optional()
+          .describe("active (default: executable, version active AND dynasty not retired) | deprecated | all."),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: {
+      description: "{ workflows: [...] } without DAGs, pass-through from workflow-service",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("WorkflowSummariesResponse") } },
+    },
+    400: { description: "Refused by workflow-service, forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
