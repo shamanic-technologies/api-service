@@ -11,7 +11,6 @@ import {
 import { callExternalService, callExternalServiceWithStatus, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
-import { retiredCampaignBudget } from "../lib/deprecation.js";
 
 const router = Router();
 
@@ -856,7 +855,7 @@ router.get("/brands/:brandId/daily-budget", authenticate, requireOrg, async (req
  * buildInternalHeaders. Downstream 4xx errors propagate verbatim — passthrough only.
  *
  * In particular billing can answer 409 here when the brand is funded per campaign
- * (see the campaign-budget routes below) and refuses a brand-level write. That status
+ * and refuses a brand-level write. That status
  * AND its body must reach the caller field-for-field — a consumer branches on it — hence respondUpstreamError rather
  * than a rebuilt { error: err.message } envelope, which would stringify billing's whole
  * JSON body into the `error` string and destroy every machine-readable field (CLAUDE.md #7).
@@ -878,71 +877,11 @@ router.patch("/brands/:brandId/daily-budget", authenticate, requireOrg, async (r
   }
 });
 
-/**
- * Per-campaign daily ceilings — campaign = (offer × leg × acquisition channel),
- * no funnel (billing-service #500). They replaced the per-funnel ceiling routes,
- * which this gateway stopped proxying when billing-service dropped them (wave C2/C3).
- *
- *   GET /v1/brands/:brandId/campaign-budgets  → every campaign's ceiling (sums to the brand total)
- *   GET /v1/brands/:brandId/campaign-budget?offerId=&legKey=&featureSlug=  → one campaign (null = unfunded)
- *   PUT /v1/brands/:brandId/campaign-budget   { offerId, legKey, featureSlug, dailyBudgetCents }
- *
- * Passthrough only: billing owns the three-part key, the minimums and the
- * consolidation rule; the query string is forwarded verbatim off originalUrl
- * (CLAUDE.md #11) and billing's 400 on a missing key part reaches the caller as-is.
- */
+/** Raw query string off originalUrl (CLAUDE.md #11). */
 function rawQueryString(originalUrl: string): string {
   const i = originalUrl.indexOf("?");
   return i === -1 ? "" : originalUrl.slice(i);
 }
-
-router.get("/brands/:brandId/campaign-budgets", retiredCampaignBudget, authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    if (!isUuid(req.params.brandId)) {
-      return res.status(400).json({ error: "Invalid brand ID — expected a UUID" });
-    }
-    const result = await callExternalService(
-      externalServices.billing,
-      `/v1/brands/${req.params.brandId}/campaign-budgets`,
-      { headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    respondUpstreamError(res, error, "Failed to get campaign budgets");
-  }
-});
-
-router.get("/brands/:brandId/campaign-budget", retiredCampaignBudget, authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    if (!isUuid(req.params.brandId)) {
-      return res.status(400).json({ error: "Invalid brand ID — expected a UUID" });
-    }
-    const result = await callExternalService(
-      externalServices.billing,
-      `/v1/brands/${req.params.brandId}/campaign-budget${rawQueryString(req.originalUrl)}`,
-      { headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    respondUpstreamError(res, error, "Failed to get campaign budget");
-  }
-});
-
-router.put("/brands/:brandId/campaign-budget", retiredCampaignBudget, authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
-  try {
-    if (!isUuid(req.params.brandId)) {
-      return res.status(400).json({ error: "Invalid brand ID — expected a UUID" });
-    }
-    const result = await callExternalService(
-      externalServices.billing,
-      `/v1/brands/${req.params.brandId}/campaign-budget`,
-      { method: "PUT", body: req.body, headers: buildInternalHeaders(req) }
-    );
-    res.json(result);
-  } catch (error: any) {
-    respondUpstreamError(res, error, "Failed to set campaign budget");
-  }
-});
 
 /**
  * A brand's ONE daily sales budget ("global" mode) — billing-service
@@ -978,39 +917,6 @@ router.get("/brands/:brandId/sales-budget", authenticate, requireOrg, salesBudge
 router.put("/brands/:brandId/sales-budget", authenticate, requireOrg, salesBudgetProxy("PUT", "", "Failed to set sales budget"));
 router.delete("/brands/:brandId/sales-budget", authenticate, requireOrg, salesBudgetProxy("DELETE", "", "Failed to clear sales budget"));
 router.get("/brands/:brandId/sales-budget/history", authenticate, requireOrg, salesBudgetProxy("GET", "/history", "Failed to get sales budget history"));
-
-/**
- * A budget per campaign (channel x leg) of an offer — billing-service
- * /v1/brands/:brandId/offers/:offerId/campaign-budgets. Passthrough only:
- * billing owns the items, the minimums, the reactive cap and every refusal
- * (400/409/502 with `code`), which reach the caller untouched.
- *
- *   GET    …/campaign-budgets[?campaigns=slug:leg,…]       → query forwarded verbatim
- *   PUT    …/campaign-budgets   { items: [{ featureSlug, legKey, budgetCents }] }
- *   DELETE …/campaign-budgets?featureSlug=&legKey=          → query forwarded verbatim
- */
-function offerCampaignBudgetsProxy(method: "GET" | "PUT" | "DELETE", failure: string) {
-  return async (req: AuthenticatedRequest, res: any) => {
-    try {
-      const path = `/v1/brands/${req.params.brandId}/offers/${req.params.offerId}/campaign-budgets`;
-      const result = await callExternalService(
-        externalServices.billing,
-        method === "PUT" ? path : `${path}${rawQueryString(req.originalUrl)}`,
-        method === "PUT"
-          ? { method, body: req.body, headers: buildInternalHeaders(req) }
-          : { method, headers: buildInternalHeaders(req) }
-      );
-      res.json(result);
-    } catch (error: any) {
-      respondUpstreamError(res, error, failure);
-    }
-  };
-}
-
-const OFFER_CAMPAIGN_BUDGETS = "/brands/:brandId/offers/:offerId/campaign-budgets";
-router.get(OFFER_CAMPAIGN_BUDGETS, retiredCampaignBudget, authenticate, requireOrg, requireUser, offerCampaignBudgetsProxy("GET", "Failed to get offer campaign budgets"));
-router.put(OFFER_CAMPAIGN_BUDGETS, retiredCampaignBudget, authenticate, requireOrg, requireUser, offerCampaignBudgetsProxy("PUT", "Failed to set offer campaign budgets"));
-router.delete(OFFER_CAMPAIGN_BUDGETS, retiredCampaignBudget, authenticate, requireOrg, requireUser, offerCampaignBudgetsProxy("DELETE", "Failed to remove offer campaign budget"));
 
 /**
  * MAX BUDGET + MAX VOLUME of a sales funnel campaign (owner 2026-10-10) — billing-service, same paths:
