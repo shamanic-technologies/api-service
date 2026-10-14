@@ -1598,7 +1598,16 @@ const ReportTriggerEventRequestSchema = z
       .object({
         email: z.string().email(),
         name: z.string().optional(),
-        phone: z.string().optional(),
+        phone: z.string().optional().openapi({
+          description:
+            "The person's phone number, international form preferred (e.g. `+447700900123`): it is also used to infer the person's timezone when you state none.",
+          example: "+447700900123",
+        }),
+        timezone: z.string().optional().openapi({
+          description:
+            "The person's IANA timezone name (e.g. `Europe/London`, `America/New_York`, `UTC`), so every message lands in their business hours. An offset such as `GMT+1` or `+01:00` is refused (400 naming `person.timezone`, nothing recorded). Absent = inferred from what we hold, notably the phone (a +44 number = Europe/London) or the email. A stated timezone always wins over an inferred one.",
+          example: "Europe/London",
+        }),
       })
       .passthrough()
       .optional()
