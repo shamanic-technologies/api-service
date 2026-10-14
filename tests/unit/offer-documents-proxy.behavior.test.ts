@@ -153,6 +153,46 @@ describe("offer documents proxies", () => {
     expect(calls).toHaveLength(0);
   });
 
+  it("GET .../content pipes the file bytes with the download headers", async () => {
+    const bytes = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x00, 0xff, 0x10]);
+    const upstreamHeaders = new Headers({
+      "content-type": "application/pdf",
+      "content-disposition": `attachment; filename="case.pdf"; filename*=UTF-8''case.pdf`,
+      "x-document-sha256": "abc123",
+      "cache-control": "private, no-store",
+      "x-internal-thing": "nope",
+    });
+    global.fetch = vi.fn().mockImplementation(async (url: string, options: any) => {
+      calls.push({ url, options });
+      return new Response(bytes, { status: 200, headers: upstreamHeaders });
+    });
+    const res = await request(buildApp())
+      .get(`${BASE}/${DOC_ID}/content`)
+      .buffer(true)
+      .parse((r, cb) => {
+        const chunks: Buffer[] = [];
+        r.on("data", (c: Buffer) => chunks.push(c));
+        r.on("end", () => cb(null, Buffer.concat(chunks)));
+      });
+    expect(res.status).toBe(200);
+    expect(Buffer.compare(res.body as Buffer, bytes)).toBe(0);
+    expect(res.headers["content-type"]).toBe("application/pdf");
+    expect(res.headers["content-disposition"]).toBe(`attachment; filename="case.pdf"; filename*=UTF-8''case.pdf`);
+    expect(res.headers["x-document-sha256"]).toBe("abc123");
+    expect(res.headers["cache-control"]).toBe("private, no-store");
+    expect(res.headers["x-internal-thing"]).toBeUndefined();
+    expect(calls[0].url).toBe(`${DOWNSTREAM}/${DOC_ID}/content`);
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+  });
+
+  it("GET .../content forwards the 404 DOCUMENT_NOT_FOUND AS a 404 with its body", async () => {
+    const refusal = { error: "Document not found", code: "DOCUMENT_NOT_FOUND" };
+    stub(404, refusal);
+    const res = await request(buildApp()).get(`${BASE}/${DOC_ID}/content`);
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual(refusal);
+  });
+
   it("forwards brand-service's 413 file_too_large AS a 413 with its body", async () => {
     const refusal = { error: "The file is over 5 MB.", reason: "file_too_large" };
     stub(413, refusal);
