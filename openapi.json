@@ -9081,6 +9081,25 @@
         "type": "object",
         "properties": {}
       },
+      "OrgMembershipLimit": {
+        "type": "object",
+        "properties": {}
+      },
+      "SetOrgMembershipLimitRequest": {
+        "type": "object",
+        "properties": {
+          "maxAllowedMemberships": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "description": "How many members the organization may hold, or null for no limit. A value the identity provider's plan does not allow is refused (422 `limit_refused`, its own sentence in `message`), never clamped.",
+            "example": 20
+          }
+        },
+        "required": [
+          "maxAllowedMemberships"
+        ]
+      },
       "MemberInvitationExisting": {
         "type": "object",
         "properties": {}

@@ -16222,6 +16222,64 @@ registry.registerPath({
   },
 });
 
+const MEMBERSHIP_LIMIT_ABOUT =
+  "How many people this organization may hold. Every organization allows the identity provider's plan maximum (20 today) " +
+  "unless staff set its own. Past the limit, a join through the join link, an invitation or an added member is refused. " +
+  "Staff only: a distribute.you staff member's own API key, any other key gets 403 `staff_only`. The staff caller need not be " +
+  "a member of the organization. Answer: `{ maxAllowedMemberships: int | null (null = no limit), membersCount }`.";
+
+const membershipLimitErrors = {
+  400: { description: "`invalid_request` (forwarded verbatim)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  403: { description: "Not staff (`staff_only`)", content: errorContent },
+  404: { description: "`org_not_found` (forwarded verbatim)", content: errorContent },
+  409: { description: "`org_has_no_identity`: the organization has no identity-provider org yet (forwarded verbatim)", content: errorContent },
+  502: { description: "`identity_provider_failed` (forwarded verbatim)", content: errorContent },
+};
+
+export const SetOrgMembershipLimitRequestSchema = z
+  .object({
+    maxAllowedMemberships: z.number().int().min(1).nullable().openapi({
+      description:
+        "How many members the organization may hold, or null for no limit. A value the identity provider's plan does not allow " +
+        "is refused (422 `limit_refused`, its own sentence in `message`), never clamped.",
+      example: 20,
+    }),
+  })
+  .passthrough()
+  .openapi("SetOrgMembershipLimitRequest");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/{orgId}/membership-limit",
+  tags: ["Organizations"],
+  summary: "Read how many people an organization may hold (staff only)",
+  description: MEMBERSHIP_LIMIT_ABOUT + " Pass-through to client-service GET /internal/orgs/{orgId}/membership-limit.",
+  security: platformAuth,
+  request: { params: joinLinkParams },
+  responses: {
+    200: passthroughResponse("`{ maxAllowedMemberships, membersCount }`", "OrgMembershipLimit"),
+    ...membershipLimitErrors,
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/orgs/{orgId}/membership-limit",
+  tags: ["Organizations"],
+  summary: "Set how many people an organization may hold (staff only)",
+  description:
+    "Members already in stay. Sends nothing to anyone. " + MEMBERSHIP_LIMIT_ABOUT +
+    " Pass-through to client-service PUT /internal/orgs/{orgId}/membership-limit: answers the limit as the identity provider now holds it.",
+  security: platformAuth,
+  request: { params: joinLinkParams, body: { content: { "application/json": { schema: SetOrgMembershipLimitRequestSchema } } } },
+  responses: {
+    200: passthroughResponse("Set: `{ maxAllowedMemberships, membersCount }`", "OrgMembershipLimit"),
+    422: { description: "`limit_refused`: the identity provider's plan does not allow this value; `message` is its sentence (forwarded verbatim)", content: errorContent },
+    ...membershipLimitErrors,
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/v1/orgs/{orgId}/member-invitations",

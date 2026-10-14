@@ -70,6 +70,8 @@ const PLATFORM_OPERATIONS = [
   "get /v1/orgs/{orgId}/join-link",
   "post /v1/orgs/{orgId}/join-link",
   "delete /v1/orgs/{orgId}/join-link",
+  "get /v1/orgs/{orgId}/membership-limit",
+  "put /v1/orgs/{orgId}/membership-limit",
   "put /v1/billing/accounts/topup_minimums",
   "put /v1/catalogue/pipes/{pipeId}/default-play",
   "patch /v1/strategies/{id}",

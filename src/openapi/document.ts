@@ -375,6 +375,8 @@ export const STAFF_KEY_OPERATIONS = new Set<string>([
   "GET /v1/orgs/{orgId}/join-link",
   "POST /v1/orgs/{orgId}/join-link",
   "DELETE /v1/orgs/{orgId}/join-link",
+  "GET /v1/orgs/{orgId}/membership-limit",
+  "PUT /v1/orgs/{orgId}/membership-limit",
   "PUT /v1/billing/accounts/topup_minimums",
   "PUT /v1/catalogue/pipes/{pipeId}/default-play",
   "PATCH /v1/strategies/{id}",
