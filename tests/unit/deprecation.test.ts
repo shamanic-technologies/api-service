@@ -59,7 +59,7 @@ describe("signalDeprecation", () => {
   });
 });
 
-describe("no operation is deprecated today", () => {
+describe("only the retired per-campaign budget operations are deprecated", () => {
   it("matches the claim the OpenAPI description makes", async () => {
     const spec = await import("../../openapi.json");
     const methods = ["get", "post", "put", "patch", "delete"] as const;
@@ -69,6 +69,42 @@ describe("no operation is deprecated today", () => {
         if (item[method]?.deprecated) deprecated.push(`${method.toUpperCase()} ${path}`);
       }
     }
-    expect(deprecated).toEqual([]);
+    expect(deprecated.sort()).toEqual(
+      [
+        "PATCH /v1/brands/{brandId}/campaigns/daily-budget",
+        "GET /v1/brands/{brandId}/campaign-budgets",
+        "GET /v1/brands/{brandId}/campaign-budget",
+        "PUT /v1/brands/{brandId}/campaign-budget",
+        "GET /v1/brands/{brandId}/offers/{offerId}/campaign-budgets",
+        "PUT /v1/brands/{brandId}/offers/{offerId}/campaign-budgets",
+        "DELETE /v1/brands/{brandId}/offers/{offerId}/campaign-budgets",
+      ].sort(),
+    );
+    for (const op of deprecated) {
+      const [method, path] = op.split(" ");
+      const item = (spec.default.paths as Record<string, any>)[path][method.toLowerCase()];
+      expect(item.summary).toMatch(/^Deprecated: /);
+      expect(item.description).toContain("/sales-funnels/{salesFunnelId}/caps");
+    }
+  });
+
+  it("keeps the caps, brand daily budget and brand pause operations current", async () => {
+    const spec = await import("../../openapi.json");
+    const paths = spec.default.paths as Record<string, any>;
+    for (const [path, method] of [
+      ["/v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps", "put"],
+      ["/v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps", "get"],
+      ["/v1/brands/{brandId}/sales-funnel-caps", "get"],
+      ["/v1/brands/{brandId}/daily-budget", "patch"],
+      ["/v1/brands/{brandId}/daily-budget", "get"],
+      ["/v1/brands/{brandId}/pause", "patch"],
+    ] as const) {
+      expect(paths[path][method].deprecated, `${method} ${path}`).toBeFalsy();
+    }
+  });
+
+  it("the retirement notice honours the minimum-notice floor", async () => {
+    const { RETIRED_CAMPAIGN_BUDGET_NOTICE } = await import("../../src/lib/deprecation.js");
+    expect(honoursMinimumNotice(RETIRED_CAMPAIGN_BUDGET_NOTICE)).toBe(true);
   });
 });

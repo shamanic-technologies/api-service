@@ -3,6 +3,7 @@ import {
   OpenAPIRegistry,
   extendZodWithOpenApi,
 } from "@asteasolutions/zod-to-openapi";
+import { RETIRED_CAMPAIGN_BUDGET_REPLACEMENT } from "./lib/deprecation.js";
 
 extendZodWithOpenApi(z);
 export const registry = new OpenAPIRegistry();
@@ -1916,8 +1917,10 @@ registry.registerPath({
   method: "patch",
   path: "/v1/brands/{brandId}/campaigns/daily-budget",
   tags: ["Campaigns"],
-  summary: "Set daily budget for all of a brand's campaigns",
+  summary: "Deprecated: Set daily budget for all of a brand's campaigns (use the sales funnel caps)",
+  deprecated: true,
   description:
+    RETIRED_CAMPAIGN_BUDGET_REPLACEMENT +
     "Proxy to campaign-service PATCH /brands/{brandId}/daily-budget. Sets dailyBudgetCents on " +
     "EVERY sales campaign of the brand at once — the brand-page propagation lever: when a customer " +
     "edits their daily budget on the brand page it flows down to the brand's campaign(s). Distinct " +
@@ -10497,8 +10500,10 @@ registry.registerPath({
   method: "get",
   path: "/v1/brands/{brandId}/campaign-budgets",
   tags: ["Billing"],
-  summary: "List a brand's per-campaign daily budgets",
+  summary: "Deprecated: List a brand's per-campaign daily budgets (use the sales funnel caps)",
+  deprecated: true,
   description:
+    RETIRED_CAMPAIGN_BUDGET_REPLACEMENT +
     "Proxy to billing-service GET /v1/brands/{brandId}/campaign-budgets. Every campaign (offer x leg x channel) " +
     "daily ceiling for the calling org + brand, summing to the brand total. Response shape owned downstream.",
   security: authed,
@@ -10518,8 +10523,10 @@ registry.registerPath({
   method: "get",
   path: "/v1/brands/{brandId}/campaign-budget",
   tags: ["Billing"],
-  summary: "Get one campaign's daily budget",
+  summary: "Deprecated: Get one campaign's daily budget (use the sales funnel caps)",
+  deprecated: true,
   description:
+    RETIRED_CAMPAIGN_BUDGET_REPLACEMENT +
     "Proxy to billing-service GET /v1/brands/{brandId}/campaign-budget. One campaign's daily ceiling, keyed by " +
     "?offerId=&legKey=&featureSlug= (null when unfunded). Query forwarded verbatim; these are the params documented today, not a whitelist.",
   security: authed,
@@ -10539,8 +10546,10 @@ registry.registerPath({
   method: "put",
   path: "/v1/brands/{brandId}/campaign-budget",
   tags: ["Billing"],
-  summary: "Set one campaign's daily budget",
+  summary: "Deprecated: Set one campaign's daily budget (use the sales funnel caps)",
+  deprecated: true,
   description:
+    RETIRED_CAMPAIGN_BUDGET_REPLACEMENT +
     "Proxy to billing-service PUT /v1/brands/{brandId}/campaign-budget. Body { offerId, legKey, featureSlug, " +
     "dailyBudgetCents }; key vocabulary, minimums and consolidation are owned downstream; its 4xx propagate verbatim.",
   security: authed,
@@ -10631,8 +10640,10 @@ registry.registerPath({
   method: "get",
   path: "/v1/brands/{brandId}/offers/{offerId}/campaign-budgets",
   tags: ["Billing"],
-  summary: "Read the budget of each campaign (channel x leg) of an offer",
+  summary: "Deprecated: Read the budget of each campaign (channel x leg) of an offer (use the sales funnel caps)",
+  deprecated: true,
   description:
+    RETIRED_CAMPAIGN_BUDGET_REPLACEMENT +
     "Proxy to billing-service GET /v1/brands/{brandId}/offers/{offerId}/campaign-budgets. The query string is forwarded verbatim; documented params are today's, not a whitelist. Response shape owned downstream.",
   security: authed,
   request: {
@@ -10646,8 +10657,10 @@ registry.registerPath({
   method: "put",
   path: "/v1/brands/{brandId}/offers/{offerId}/campaign-budgets",
   tags: ["Billing"],
-  summary: "Set the budgets of campaigns (channel x leg) of an offer",
+  summary: "Deprecated: Set the budgets of campaigns (channel x leg) of an offer (use the sales funnel caps)",
+  deprecated: true,
   description:
+    RETIRED_CAMPAIGN_BUDGET_REPLACEMENT +
     "Proxy to billing-service PUT /v1/brands/{brandId}/offers/{offerId}/campaign-budgets. Body { items: [{ featureSlug, legKey, budgetCents }] }, forwarded untouched. Status and body (with code) of every refusal propagate verbatim.",
   security: authed,
   request: { params: OfferCampaignBudgetsParams, body: { content: { "application/json": { schema: OfferCampaignBudgetsRequestSchema } } } },
@@ -10658,8 +10671,10 @@ registry.registerPath({
   method: "delete",
   path: "/v1/brands/{brandId}/offers/{offerId}/campaign-budgets",
   tags: ["Billing"],
-  summary: "Remove the budget of one campaign (channel x leg) of an offer",
+  summary: "Deprecated: Remove the budget of one campaign (channel x leg) of an offer (use the sales funnel caps)",
+  deprecated: true,
   description:
+    RETIRED_CAMPAIGN_BUDGET_REPLACEMENT +
     "Proxy to billing-service DELETE /v1/brands/{brandId}/offers/{offerId}/campaign-budgets?featureSlug=&legKey=. The query string is forwarded verbatim.",
   security: authed,
   request: {
