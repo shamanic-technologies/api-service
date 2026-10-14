@@ -5586,11 +5586,15 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Short unique name, e.g. `Catch-all`"
+            "minLength": 1,
+            "maxLength": 60,
+            "description": "Short unique name, e.g. `Catch-all` (1 to 60 characters, else 400 `name_required` / `name_too_long`)"
           },
           "description": {
             "type": "string",
-            "description": "Unique, precise: what a workflow following it does"
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Unique, precise: what a workflow following it does (1 to 500 characters, else 400 `description_required` / `description_too_long`)"
           }
         },
         "required": [
@@ -5607,6 +5611,8 @@
         "properties": {
           "description": {
             "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
             "description": "The new description, unique, at most 500 characters: what a workflow following the tactic does"
           }
         },
@@ -5631,11 +5637,15 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "Unique name, e.g. `Valid + Catch-all`"
+            "minLength": 1,
+            "maxLength": 60,
+            "description": "Unique name, e.g. `Valid + Catch-all` (1 to 60 characters, else 400 `name_required` / `name_too_long`)"
           },
           "description": {
             "type": "string",
-            "description": "Unique description of what the strategy allows"
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Unique description of what the strategy allows (1 to 500 characters, else 400 `description_required` / `description_too_long`)"
           },
           "requires": {
             "type": "array",
@@ -5678,11 +5688,15 @@
         "properties": {
           "pipeId": {
             "type": "string",
-            "description": "Pipe id, `<channel slug>|<leg key>`"
+            "minLength": 1,
+            "maxLength": 200,
+            "description": "Pipe id, `<channel slug>|<leg key>` (at most 200 characters)"
           },
           "strategyId": {
             "type": "string",
-            "description": "Strategy id (GET /v1/strategies)"
+            "minLength": 1,
+            "maxLength": 100,
+            "description": "Strategy id (GET /v1/strategies, at most 100 characters)"
           }
         },
         "required": [
@@ -151771,7 +151785,7 @@
           "Features"
         ],
         "summary": "The sales funnels we can run today, priced for one offer",
-        "description": "Proxied to features-service GET /internal/catalogue/sales-funnels?offerId={offerId}&runnable=true with the authenticated org: one page of runnable sales funnels (id, name, face, line, type, costUsd, costPer, roi, status, ...), ROI first, each priced on THIS offer's own client value and rates (an `offer` block names them). The rest of the query is forwarded verbatim (brandId required downstream, containsChannels, paths, q, limit); refusals come back as served (400 brand_required, 404 offer_not_found).",
+        "description": "Proxied to features-service GET /internal/catalogue/sales-funnels?offerId={offerId}&runnable=true with the authenticated org: one page of runnable sales funnels (id, name, face, line, type, costUsd, costPer, roi, status, ...), ROI first, each priced on THIS offer's own client value and rates (an `offer` block names them). The rest of the query is forwarded verbatim (documented today: brandId, required downstream; q; containsChannels; paths; limit; not a whitelist); refusals come back as served (400 brand_required, 404 offer_not_found).",
         "security": [
           {
             "bearerAuth": []
@@ -151803,6 +151817,16 @@
           {
             "schema": {
               "type": "string",
+              "description": "Text search: every word must appear in the funnel's name, line or id (e.g. `ai-meeting-booking~valid-catch-all` to find funnels running that play)"
+            },
+            "required": false,
+            "description": "Text search: every word must appear in the funnel's name, line or id (e.g. `ai-meeting-booking~valid-catch-all` to find funnels running that play)",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "description": "Comma list of channel slugs: funnels containing at least one"
             },
             "required": false,
@@ -151813,10 +151837,20 @@
           {
             "schema": {
               "type": "string",
-              "description": "1..25"
+              "description": "Comma list of sales path ids (default: every path)"
             },
             "required": false,
-            "description": "1..25",
+            "description": "Comma list of sales path ids (default: every path)",
+            "name": "paths",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "1..25, default 10"
+            },
+            "required": false,
+            "description": "1..25, default 10",
             "name": "limit",
             "in": "query"
           },
