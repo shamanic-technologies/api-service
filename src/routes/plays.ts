@@ -1,5 +1,5 @@
 import { Router, type Response } from "express";
-import { authenticateUser, AuthenticatedRequest } from "../middleware/auth.js";
+import { authenticateUser, requireStaffActor, AuthenticatedRequest } from "../middleware/auth.js";
 import { pipeExternalService, externalServices } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 
@@ -14,7 +14,7 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
 // (#10, a create answers 201 or 200 `created: false`), errors field-for-field (#7), query string
 // verbatim (#11), request body passthrough (#8 corollary).
 //
-// ONE body edit, on the writes: `createdBy` (creates) / `updatedBy` (tactic edit) is what the producer records as the author, so it is
+// ONE body edit, on the writes: `createdBy` (creates) / `updatedBy` (tactic edit; the staff email on a strategy edit) is what the producer records as the author, so it is
 // SET here from the authenticated identity and a caller-sent value is overwritten — a client must
 // not be able to write someone else's name into the catalogue.
 const router = Router();
@@ -94,6 +94,25 @@ router.patch("/v1/tactics/:id", authenticateUser, (req: AuthenticatedRequest, re
   pipe(req, res, `/internal/catalogue/tactics/${encodeURIComponent(req.params.id)}`, "Failed to edit tactic", {
     method: "PATCH",
     body: { ...jsonBody(req), updatedBy: createdByOf(req) },
+  }),
+);
+
+/**
+ * PATCH /v1/strategies/:id → features-service PATCH /internal/catalogue/strategies/:id
+ * (STRATEGY-EDIT-PUBLIC-1014): change a strategy's `requires` / `excludes` (each the FULL new
+ * list) and/or `description`. STAFF ONLY, unlike the create: an edit changes what every client's
+ * campaigns on that strategy's plays run (a new tactic reaches no older strategy by itself, so staff
+ * exclude it there). Gate = `authenticateUser + requireStaffActor`, like the pipe default play: a
+ * staff member's own key (the distribute MCP) or the platform key + a staff x-email; a client key
+ * gets 403 `staff_only`. Listed in `STAFF_KEY_OPERATIONS`.
+ *
+ * `updatedBy` is the AUTHENTICATED staff email (a sent value is overwritten); the rest of the body
+ * is forwarded verbatim, id re-encoded, status and body piped byte-for-byte.
+ */
+router.patch("/v1/strategies/:id", authenticateUser, requireStaffActor, (req: AuthenticatedRequest, res) =>
+  pipe(req, res, `/internal/catalogue/strategies/${encodeURIComponent(req.params.id)}`, "Failed to edit strategy", {
+    method: "PATCH",
+    body: { ...jsonBody(req), updatedBy: req.staffEmail },
   }),
 );
 

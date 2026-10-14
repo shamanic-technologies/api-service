@@ -8668,7 +8668,9 @@ const PLAYS_MODEL =
   "(4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play " +
   "and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, " +
   "create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. " +
-  "A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`).";
+  "A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). " +
+  "A new tactic reaches no older strategy by itself: a strategy that names nothing about it lets its workflows through either way, so exclude it (or require it) there. " +
+  "Editing a strategy's tactics or description is staff only (`PATCH /v1/strategies/{id}`), because it changes what every client's campaigns on its plays run.";
 const playsCommon = (s: string) => `${s} ${PLAYS_MODEL} Byte passthrough to features-service; status and body (including 400/404/409 with a named \`reason\`) owned by it.`;
 const playsListQuery = z.object({ q: z.string().optional().openapi({ description: "Text to find by name or id" }), limit: z.string().optional().openapi({ description: "Rows per page, 1..25 (default 10)" }) }).passthrough();
 const playsErrors = {
@@ -8742,6 +8744,27 @@ registry.registerPath({
     excludes: z.array(z.string()).optional().openapi({ description: "Tactic ids a workflow must not follow" }),
   }).passthrough().openapi("CreateStrategyRequest") } } } },
   responses: { 201: playsOk("CreateStrategyResponse"), 404: { description: "Unknown tactic (forwarded verbatim)", content: errorContent }, 409: { description: "Name, description or rule taken (forwarded verbatim)", content: errorContent }, ...playsErrors },
+});
+
+registry.registerPath({
+  method: "patch", path: "/v1/strategies/{id}", tags: ["Plays"], security: platformAuth,
+  summary: "Edit a strategy's tactics or description (staff only)",
+  description: playsCommon("Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Change a strategy's `requires`, `excludes` and/or `description`. Each list you send is the FULL new list (a field you leave out is unchanged; sending none of the three is 400 `edit_empty`). Use it when a new tactic leaks into an older strategy that names nothing about it: add the tactic to that strategy's `excludes`. The edit changes what every client's campaigns on this strategy's plays run. Refusals: 400 `requires_invalid` / `excludes_invalid` / `description_too_long` / `tactic_required_and_excluded` / `strategy_empty`; 404 `strategy_not_found` / `tactic_not_found`; 409 `strategy_description_taken` / `strategy_rule_taken` (another strategy already has this rule) / `default_play_runs_nothing` (a pipe's default play on it would run no workflow). The answer carries the strategy, `changed`, `previous {requires, excludes, description}`, `createdBy`, `createdAt`, `updatedBy`, `updatedAt`. The editor is recorded as the authenticated staff email; any `updatedBy` you send is replaced. Byte passthrough to features-service PATCH /internal/catalogue/strategies/{id}."),
+  request: {
+    params: z.object({ id: z.string().openapi({ description: "A strategy id, e.g. `valid-catch-all`" }) }),
+    body: { content: { "application/json": { schema: z.object({
+      requires: z.array(z.string()).optional().openapi({ description: "The FULL new list of tactic ids a workflow must follow (absent = unchanged)" }),
+      excludes: z.array(z.string()).optional().openapi({ description: "The FULL new list of tactic ids a workflow must not follow (absent = unchanged)" }),
+      description: z.string().optional().openapi({ description: "The new unique description (absent = unchanged)" }),
+    }).passthrough().openapi("EditStrategyRequest") } } },
+  },
+  responses: {
+    200: playsOk("EditStrategyResponse"),
+    403: { description: "Not staff (`staff_only`)", content: errorContent },
+    404: { description: "Unknown strategy or tactic (forwarded verbatim)", content: errorContent },
+    409: { description: "Description or rule taken, or a default play would run nothing (forwarded verbatim)", content: errorContent },
+    ...playsErrors,
+  },
 });
 
 registry.registerPath({
