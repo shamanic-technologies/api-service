@@ -325,3 +325,48 @@ describe("/v1/orgs/:orgId/join-link → client-service join link (staff key only
     expect(res.body).toEqual(refusal);
   });
 });
+
+describe("/v1/orgs/:orgId/membership-limit → client-service membership limit (staff key only)", () => {
+  const ORG = "99999999-9999-9999-9999-999999999999";
+  const DOWNSTREAM = `${CLIENT_BASE}/internal/orgs/${ORG}/membership-limit`;
+
+  it("GET reads it: exact downstream path, body piped back", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    fetchMock.mockResolvedValue(upstream(200, { maxAllowedMemberships: 20, membersCount: 3 }));
+    const res = await request(app()).get(`/v1/orgs/${ORG}/membership-limit`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ maxAllowedMemberships: 20, membersCount: 3 });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(DOWNSTREAM);
+    expect(init.method ?? "GET").toBe("GET");
+  });
+
+  it("PUT sets it: body forwarded untouched, null (no limit) included", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    fetchMock.mockResolvedValue(upstream(200, { maxAllowedMemberships: null, membersCount: 3 }));
+    const res = await request(app()).put(`/v1/orgs/${ORG}/membership-limit`).send({ maxAllowedMemberships: null });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ maxAllowedMemberships: null, membersCount: 3 });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(DOWNSTREAM);
+    expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body as string)).toEqual({ maxAllowedMemberships: null });
+  });
+
+  it("PUT refused by the identity provider's plan: 422 limit_refused forwarded verbatim", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    const refusal = { error: "limit_refused", message: "Clerk: max allowed memberships exceeds plan limit" };
+    fetchMock.mockResolvedValue(upstream(422, refusal));
+    const res = await request(app()).put(`/v1/orgs/${ORG}/membership-limit`).send({ maxAllowedMemberships: 25 });
+    expect(res.status).toBe(422);
+    expect(res.body).toEqual(refusal);
+  });
+
+  it.each(["get", "put"] as const)("%s: a client key is refused 403 staff_only and client-service is never called", async (m) => {
+    identity.current = { ...CLIENT_KEY, userId: "user-client", orgId: ORG };
+    const res = await request(app())[m](`/v1/orgs/${ORG}/membership-limit`).send({ maxAllowedMemberships: 50 });
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("staff_only");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

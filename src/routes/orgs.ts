@@ -58,6 +58,13 @@ import { isStaffEmail } from "../lib/staff.js";
  *   `authenticateUser`: the path org is not a request target). The mint's
  *   `createdByUserId` is the acting staff member, forced from auth. Piped
  *   byte-identical with status (201 minted, 200 existing).
+ * - `GET|PUT /v1/orgs/:orgId/membership-limit` → the same paths under
+ *   `/internal`: staff read and set how many people the org may hold (every org
+ *   allows the identity provider's plan maximum unless staff set its own; `null`
+ *   = no limit). Same gate as the join link. The PUT body passes through
+ *   untouched (client-service validates it, and a value the identity provider's
+ *   plan refuses comes back as its 422 `limit_refused`, verbatim). Nothing is
+ *   sent to anyone.
  *
  * The acting user is identity, so the gateway supplies it from `authenticate`
  * (`createdByUserId` / `invitedByUserId`, client-service's body names for the
@@ -299,6 +306,31 @@ router.delete("/orgs/:orgId/join-link", authenticateUser, requireUser, requireSt
     });
   } catch (error) {
     respondUpstreamError(res, error, "Failed to revoke the join link");
+  }
+});
+
+function membershipLimitPath(req: AuthenticatedRequest) {
+  return `/internal/orgs/${encodeURIComponent(req.params.orgId)}/membership-limit`;
+}
+
+router.get("/orgs/:orgId/membership-limit", authenticateUser, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(externalServices.client, membershipLimitPath(req), { expressRes: res, headers: buildInternalHeaders(req) });
+  } catch (error) {
+    respondUpstreamError(res, error, "Failed to read the membership limit");
+  }
+});
+
+router.put("/orgs/:orgId/membership-limit", authenticateUser, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(externalServices.client, membershipLimitPath(req), {
+      expressRes: res,
+      method: "PUT",
+      body: req.body,
+      headers: buildInternalHeaders(req),
+    });
+  } catch (error) {
+    respondUpstreamError(res, error, "Failed to set the membership limit");
   }
 });
 
