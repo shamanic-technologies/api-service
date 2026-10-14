@@ -123,10 +123,54 @@ for (const object of PLAY_OBJECTS) {
   });
 }
 
+describe("PATCH /v1/tactics/:id (edit a tactic's description)", () => {
+  it("PATCH to the exact downstream path, id re-encoded, body forwarded, updatedBy forced to the caller", async () => {
+    upstream(200, RAW);
+    const sent = { description: "Sends to catch-all domains", updatedBy: "someone-else", futureField: 1 };
+    const res = await request(buildApp()).patch(`/v1/tactics/${encodeURIComponent("catch all/x")}`).set(AUTH).send(sent);
+    expect(res.status).toBe(200);
+    expect(res.text).toBe(RAW);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${FEATURES_BASE}/internal/catalogue/tactics/catch%20all%2Fx`);
+    expect(calls[0].options.method).toBe("PATCH");
+    expect(calls[0].options.headers["X-API-Key"]).toBe("features-test-key");
+    expect(JSON.parse(calls[0].options.body)).toEqual({ ...sent, updatedBy: `org:${ORG}/user:${USER}` });
+  });
+
+  it("producer 400 / 404 / 409 reach the caller with status and named body", async () => {
+    for (const [status, body] of [
+      [400, { error: "too long", reason: "description_too_long" }],
+      [404, { error: "no tactic", reason: "tactic_not_found" }],
+      [409, { error: "taken", reason: "tactic_description_taken" }],
+    ] as const) {
+      upstream(status, JSON.stringify(body));
+      const res = await request(buildApp()).patch("/v1/tactics/catch-all").set(AUTH).send({ description: "Y" });
+      expect(res.status).toBe(status);
+      expect(res.body).toEqual(body);
+    }
+  });
+
+  it("no credentials: 401, nothing reaches features-service", async () => {
+    upstream(200, RAW);
+    const res = await request(buildApp()).patch("/v1/tactics/catch-all").send({ description: "Y", updatedBy: "forged" });
+    expect(res.status).toBe(401);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("only tactics are editable here: PATCH on strategies or plays is not routed", async () => {
+    upstream(200, RAW);
+    for (const object of ["strategies", "plays"]) {
+      const res = await request(buildApp()).patch(`/v1/${object}/x`).set(AUTH).send({ description: "Y" });
+      expect(res.status).toBe(404);
+    }
+    expect(calls).toHaveLength(0);
+  });
+});
+
 describe("published customer document", () => {
   const doc = buildDocument() as any;
   const ops: Array<[string, string]> = [
-    ["/v1/tactics", "get"], ["/v1/tactics/{id}", "get"], ["/v1/tactics", "post"],
+    ["/v1/tactics", "get"], ["/v1/tactics/{id}", "get"], ["/v1/tactics", "post"], ["/v1/tactics/{id}", "patch"],
     ["/v1/strategies", "get"], ["/v1/strategies/{id}", "get"], ["/v1/strategies", "post"],
     ["/v1/plays", "get"], ["/v1/plays/{id}", "get"], ["/v1/plays", "post"],
   ];
@@ -142,5 +186,8 @@ describe("published customer document", () => {
     for (const path of ["/v1/tactics", "/v1/strategies", "/v1/plays"]) {
       expect(JSON.stringify(doc.paths[path].post.requestBody)).not.toContain("createdBy");
     }
+  });
+  it("never documents updatedBy as a request field", () => {
+    expect(JSON.stringify(doc.paths["/v1/tactics/{id}"].patch.requestBody)).not.toContain("updatedBy");
   });
 });

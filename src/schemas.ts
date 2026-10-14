@@ -8705,6 +8705,19 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "patch", path: "/v1/tactics/{id}", tags: ["Plays"], security: authed,
+  summary: "Edit a tactic's description",
+  description: playsCommon("Replace a tactic's description. Editing re-judges every workflow version on the new words within minutes; the old verdicts keep serving until each is replaced. The description must stay unique (409 `tactic_description_taken`) and at most 500 characters (400 `description_too_long`); an unknown tactic is 404 `tactic_not_found`. The answer carries the tactic, `changed`, `previousDescription`, `updatedBy` and `updatedAt`. The editor is recorded from your API key; any `updatedBy` you send is replaced."),
+  request: {
+    params: z.object({ id: z.string().openapi({ description: "A tactic id (its name slugged, e.g. `catch-all`)" }) }),
+    body: { content: { "application/json": { schema: z.object({
+      description: z.string().openapi({ description: "The new description, unique, at most 500 characters: what a workflow following the tactic does" }),
+    }).passthrough().openapi("EditTacticRequest") } } },
+  },
+  responses: { 200: playsOk("EditTacticResponse"), 404: { description: "Unknown tactic (forwarded verbatim)", content: errorContent }, 409: { description: "Description taken (forwarded verbatim)", content: errorContent }, ...playsErrors },
+});
+
+registry.registerPath({
   method: "get", path: "/v1/strategies", tags: ["Plays"], security: authed,
   summary: "List strategies",
   description: playsCommon("One page of strategies (id, name, description, tactics required and excluded, pipes that already catalogue a play on it). Query string forwarded verbatim (documented today: q, limit; not a whitelist)."),
