@@ -313,6 +313,34 @@ router.get("/leads/:id", authenticate, requireOrg, requireUser, async (req: Auth
 });
 
 /**
+ * GET /v1/campaigns/:campaignId/leads/by-lead/:leadId
+ * Pass-through to lead-service GET /orgs/campaigns/{campaignId}/leads/by-lead/{leadId}: the lead
+ * row of ONE person (`leadId` = the person's lead id, e.g. `ranLeads[].leadId` from
+ * POST /v1/trigger-events) on ONE campaign, without paging the campaign's leads. Same `{ leadDetail }`
+ * body as GET /v1/leads/:id. Status and body relayed verbatim (404 `lead_not_on_campaign`, 400 on a
+ * non-uuid leadId or a `campaignId` query param are lead-service's to raise).
+ */
+router.get(
+  "/campaigns/:campaignId/leads/by-lead/:leadId",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.lead,
+        `/orgs/campaigns/${encodeURIComponent(req.params.campaignId)}/leads/by-lead/${encodeURIComponent(req.params.leadId)}${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) }
+      );
+      res.json(result);
+    } catch (error: any) {
+      console.error("[api-service] Get campaign lead by person error:", error);
+      respondUpstreamError(res, error, "Failed to get the person's lead on this campaign");
+    }
+  }
+);
+
+/**
  * POST /v1/leads/search
  * Search for leads via lead-service
  */
