@@ -41,7 +41,7 @@
     },
     {
       "name": "Plays",
-      "description": "Tactics, strategies and plays: the shared catalogue of which workflows a pipe may run. Read them, create a tactic or a strategy, add a play to a pipe"
+      "description": "Tactics, strategies and plays: the shared catalogue of which workflows a pipe may run, and the way to change HOW a campaign behaves (for example replies carrying an offer document as an attachment). The chain: a tactic naming the behaviour, a strategy requiring it, a play putting that strategy on a pipe, a sales funnel carrying the play (GET /v1/offers/{offerId}/sales-funnels), a sales funnel campaign on that funnel (POST /v1/sales-funnel-campaigns, created stopped)"
     },
     {
       "name": "Leads",
@@ -66,6 +66,10 @@
     {
       "name": "Chat",
       "description": "AI chat with SSE streaming"
+    },
+    {
+      "name": "Skills",
+      "description": "The agent skill tree, read-only: the method our Copilot follows to organize a client request, for your own agent to follow too"
     },
     {
       "name": "Billing",
@@ -2990,6 +2994,14 @@
         "type": "object",
         "properties": {}
       },
+      "BrandOffersListResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "BrandOfferResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "OfferDocumentResponse": {
         "type": "object",
         "properties": {}
@@ -5546,6 +5558,14 @@
         "properties": {}
       },
       "VendorCostVersionsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "AgentSkillsListResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "AgentSkillResponse": {
         "type": "object",
         "properties": {}
       },
@@ -23901,7 +23921,7 @@
           "Campaigns"
         ],
         "summary": "List the org's sales funnel campaigns, each with its units",
-        "description": "Proxy to campaign-service GET /sales-funnel-campaigns. A SALES FUNNEL CAMPAIGN (owner 2026-10-10) is brand x offer x sales funnel: it owns one unit (an ordinary campaign) per pipe of the funnel and is run or paused as a whole. Its money is the funnel's caps at billing (GET /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps); no max budget = held unfunded. The org is the authenticated one. Status and body (with `reason` on a refusal) relayed verbatim. Query forwarded verbatim (documented today: brandId, offerId, salesFunnelId, status; not a whitelist).",
+        "description": "Proxy to campaign-service GET /sales-funnel-campaigns. A SALES FUNNEL CAMPAIGN (owner 2026-10-10) is brand x offer x sales funnel: it owns one unit (an ordinary campaign) per pipe of the funnel and is run or paused as a whole. Its money is the funnel's caps at billing (GET /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps); no max budget = held unfunded. The org is the authenticated one. Status and body (with `reason` on a refusal) relayed verbatim. HOW each pipe behaves is fixed by the funnel's plays (`<leg>@<channel>~<strategy id>` in the funnel id; see the Plays tag: tactic, strategy, play on a pipe, a funnel carrying it, a campaign on that funnel). To change a behaviour (for example replies that carry an offer document as an attachment), launch a campaign on a funnel carrying the right play, created with `status: stopped` until the client agrees. Query forwarded verbatim (documented today: brandId, offerId, salesFunnelId, status; not a whitelist).",
         "security": [
           {
             "bearerAuth": []
@@ -24384,7 +24404,7 @@
           "Campaigns"
         ],
         "summary": "Launch a sales funnel as one campaign (brand x offer x sales funnel)",
-        "description": "Proxy to campaign-service POST /sales-funnel-campaigns. A SALES FUNNEL CAMPAIGN (owner 2026-10-10) is brand x offer x sales funnel: it owns one unit (an ordinary campaign) per pipe of the funnel and is run or paused as a whole. Its money is the funnel's caps at billing (GET /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps); no max budget = held unfunded. The org is the authenticated one. Status and body (with `reason` on a refusal) relayed verbatim. Body { brandId, offerId, salesFunnelId, status: ongoing | stopped } forwarded untouched. 201 when created, 200 for an existing identity.\n\nRequest body: documented from campaign-service POST /sales-funnel-campaigns, which owns and validates it; the gateway forwards it unchanged.",
+        "description": "Proxy to campaign-service POST /sales-funnel-campaigns. A SALES FUNNEL CAMPAIGN (owner 2026-10-10) is brand x offer x sales funnel: it owns one unit (an ordinary campaign) per pipe of the funnel and is run or paused as a whole. Its money is the funnel's caps at billing (GET /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps); no max budget = held unfunded. The org is the authenticated one. Status and body (with `reason` on a refusal) relayed verbatim. HOW each pipe behaves is fixed by the funnel's plays (`<leg>@<channel>~<strategy id>` in the funnel id; see the Plays tag: tactic, strategy, play on a pipe, a funnel carrying it, a campaign on that funnel). To change a behaviour (for example replies that carry an offer document as an attachment), launch a campaign on a funnel carrying the right play, created with `status: stopped` until the client agrees. Body { brandId, offerId, salesFunnelId, status: ongoing | stopped } forwarded untouched. 201 when created, 200 for an existing identity.\n\nRequest body: documented from campaign-service POST /sales-funnel-campaigns, which owns and validates it; the gateway forwards it unchanged.",
         "security": [
           {
             "bearerAuth": []
@@ -24982,7 +25002,7 @@
           "Campaigns"
         ],
         "summary": "One sales funnel campaign with its units",
-        "description": "Proxy to campaign-service GET /sales-funnel-campaigns/{id}. A SALES FUNNEL CAMPAIGN (owner 2026-10-10) is brand x offer x sales funnel: it owns one unit (an ordinary campaign) per pipe of the funnel and is run or paused as a whole. Its money is the funnel's caps at billing (GET /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps); no max budget = held unfunded. The org is the authenticated one. Status and body (with `reason` on a refusal) relayed verbatim.",
+        "description": "Proxy to campaign-service GET /sales-funnel-campaigns/{id}. A SALES FUNNEL CAMPAIGN (owner 2026-10-10) is brand x offer x sales funnel: it owns one unit (an ordinary campaign) per pipe of the funnel and is run or paused as a whole. Its money is the funnel's caps at billing (GET /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps); no max budget = held unfunded. The org is the authenticated one. Status and body (with `reason` on a refusal) relayed verbatim. HOW each pipe behaves is fixed by the funnel's plays (`<leg>@<channel>~<strategy id>` in the funnel id; see the Plays tag: tactic, strategy, play on a pipe, a funnel carrying it, a campaign on that funnel). To change a behaviour (for example replies that carry an offer document as an attachment), launch a campaign on a funnel carrying the right play, created with `status: stopped` until the client agrees.",
         "security": [
           {
             "bearerAuth": []
@@ -25374,7 +25394,7 @@
           "Campaigns"
         ],
         "summary": "Run or pause the whole sales funnel campaign",
-        "description": "Proxy to campaign-service PATCH /sales-funnel-campaigns/{id}. A SALES FUNNEL CAMPAIGN (owner 2026-10-10) is brand x offer x sales funnel: it owns one unit (an ordinary campaign) per pipe of the funnel and is run or paused as a whole. Its money is the funnel's caps at billing (GET /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps); no max budget = held unfunded. The org is the authenticated one. Status and body (with `reason` on a refusal) relayed verbatim. Body { status: activate | stop } forwarded untouched; every unit moves with it.\n\nRequest body: documented from campaign-service PATCH /sales-funnel-campaigns/{id}, which owns and validates it; the gateway forwards it unchanged.",
+        "description": "Proxy to campaign-service PATCH /sales-funnel-campaigns/{id}. A SALES FUNNEL CAMPAIGN (owner 2026-10-10) is brand x offer x sales funnel: it owns one unit (an ordinary campaign) per pipe of the funnel and is run or paused as a whole. Its money is the funnel's caps at billing (GET /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps); no max budget = held unfunded. The org is the authenticated one. Status and body (with `reason` on a refusal) relayed verbatim. HOW each pipe behaves is fixed by the funnel's plays (`<leg>@<channel>~<strategy id>` in the funnel id; see the Plays tag: tactic, strategy, play on a pipe, a funnel carrying it, a campaign on that funnel). To change a behaviour (for example replies that carry an offer document as an attachment), launch a campaign on a funnel carrying the right play, created with `status: stopped` until the client agrees. Body { status: activate | stop } forwarded untouched; every unit moves with it.\n\nRequest body: documented from campaign-service PATCH /sales-funnel-campaigns/{id}, which owns and validates it; the gateway forwards it unchanged.",
         "security": [
           {
             "bearerAuth": []
@@ -41154,6 +41174,14 @@
                     "maxLength": 2000,
                     "description": "Why, in your words. Optional.",
                     "example": "Runs a construction company, we sell to supermarkets."
+                  },
+                  "level": {
+                    "type": "string",
+                    "enum": [
+                      "lead",
+                      "company"
+                    ],
+                    "description": "`lead` (default) = this person at this company. `company` = the lead's whole company for the brand (\"not our target\"), covering every lead of it; 409 `lead_has_no_company` when the lead has no known company."
                   }
                 }
               }
@@ -60376,13 +60404,1221 @@
         "operationId": "deleteV1BrandsByIdOffersByOfferIdStepsByStepKey"
       }
     },
+    "/v1/brands/{id}/offers": {
+      "get": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "List a brand's offers",
+        "description": "Proxy to brand-service GET /orgs/brands/{brandId}/offers. An OFFER is one thing the brand sells; its id is what offer-scoped routes take (economics, steps, documents, sales funnels, campaigns). Archived offers are hidden unless `includeArchived=true`. Query string forwarded verbatim; status and body owned by brand-service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID"
+            },
+            "required": true,
+            "description": "Brand ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "`true` to list archived offers too"
+            },
+            "required": false,
+            "description": "`true` to list archived offers too",
+            "name": "includeArchived",
+            "in": "query"
+          },
+          {
+            "name": "x-request-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._:-]+$"
+            },
+            "description": "Correlation id for this request. Echoed back verbatim in the `x-request-id` response header. Omit it and the gateway generates a UUID, so the response header is always present. Useful for tying a response back to the call that produced it when issuing concurrent requests."
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "With a user key (`distrib.usr_*`): the organization this request acts in, one of the key user's organizations (GET /v1/me lists them). Same as the `orgId` query parameter. Needed only when the user belongs to several organizations and the request names no brand; otherwise optional."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Forwarded to downstream services. With a user key it also selects the organization the request acts in: the one of the user's organizations holding every named brand (same for `brandId` in the query or a JSON body)."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The brand's offers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandOffersListResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid brand ID format (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Brand does not belong to the caller's org (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such brand (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. Wait `Retry-After` seconds and retry; the budget that was exceeded is named in the body and described in `RateLimit-Policy`.",
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Rate limit exceeded"
+                    },
+                    "code": {
+                      "type": "string",
+                      "example": "RATE_LIMITED"
+                    },
+                    "policy": {
+                      "type": "string",
+                      "example": "authenticated"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "example": 600
+                    },
+                    "windowSeconds": {
+                      "type": "integer",
+                      "example": 60
+                    },
+                    "retryAfterSeconds": {
+                      "type": "integer",
+                      "example": 42
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "code",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getV1BrandsByIdOffers"
+      }
+    },
+    "/v1/brands/{id}/offers/{offerId}": {
+      "get": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "Read one offer",
+        "description": "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}. Query string forwarded verbatim; status and body owned by brand-service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID"
+            },
+            "required": true,
+            "description": "Brand ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Offer ID"
+            },
+            "required": true,
+            "description": "Offer ID",
+            "name": "offerId",
+            "in": "path"
+          },
+          {
+            "name": "x-request-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._:-]+$"
+            },
+            "description": "Correlation id for this request. Echoed back verbatim in the `x-request-id` response header. Omit it and the gateway generates a UUID, so the response header is always present. Useful for tying a response back to the call that produced it when issuing concurrent requests."
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "With a user key (`distrib.usr_*`): the organization this request acts in, one of the key user's organizations (GET /v1/me lists them). Same as the `orgId` query parameter. Needed only when the user belongs to several organizations and the request names no brand; otherwise optional."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Forwarded to downstream services. With a user key it also selects the organization the request acts in: the one of the user's organizations holding every named brand (same for `brandId` in the query or a JSON body)."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The offer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandOfferResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid brand or offer ID format (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Brand does not belong to the caller's org (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such brand, or no such offer on it (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. Wait `Retry-After` seconds and retry; the budget that was exceeded is named in the body and described in `RateLimit-Policy`.",
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Rate limit exceeded"
+                    },
+                    "code": {
+                      "type": "string",
+                      "example": "RATE_LIMITED"
+                    },
+                    "policy": {
+                      "type": "string",
+                      "example": "authenticated"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "example": 600
+                    },
+                    "windowSeconds": {
+                      "type": "integer",
+                      "example": 60
+                    },
+                    "retryAfterSeconds": {
+                      "type": "integer",
+                      "example": 42
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "code",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getV1BrandsByIdOffersByOfferId"
+      }
+    },
     "/v1/brands/{id}/offers/{offerId}/documents": {
       "get": {
         "tags": [
           "Brand"
         ],
         "summary": "List an offer's documents",
-        "description": "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/documents. Documents are files the client owns about ONE offer (a one-pager, a case study, a spec sheet, an FAQ). The AI answering a prospect reads the list (fileName + description) to pick the one that helps and attaches it. Accepted: pdf, docx, pptx, xlsx, doc, ppt, xls, csv, txt, md, png, jpg/jpeg, gif, webp; at most 5 MB per file and 25 files per offer. The file extension decides the type and must match the content. Answers { documents }, oldest first, metadata only (no file bytes).",
+        "description": "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/documents. Documents are files the client owns about ONE offer (a one-pager, a case study, a spec sheet, an FAQ), sent as an email attachment on a reply to a prospect. Uploading one changes no campaign by itself: a document is attached only (a) when you reply yourself with `POST /v1/replies` and list it in `attachments` [{ document_id }], or (b) by a WORKFLOW that attaches offer documents, reading this list (fileName + description) to pick the file that helps. Which workflow a campaign's pipe runs is chosen by its PLAY, not by you directly: to make a campaign's AI meeting booking replies carry an attachment, find (`GET /v1/tactics?q=attach`) or create (`POST /v1/tactics`) a tactic describing that attachment behaviour, a strategy requiring it (`POST /v1/strategies`), add it as a play on the pipe `ai-meeting-booking|conversation_to_meeting_booked` (`POST /v1/plays`), then pick a sales funnel running that play (`GET /v1/offers/{offerId}/sales-funnels`, its id carries `@ai-meeting-booking~<strategy id>`) and launch it with `POST /v1/sales-funnel-campaigns`. Write each description as when the file helps a prospect. Accepted: pdf, docx, pptx, xlsx, doc, ppt, xls, csv, txt, md, png, jpg/jpeg, gif, webp; at most 5 MB per file and 25 files per offer. The file extension decides the type and must match the content. Answers { documents }, oldest first, metadata only (no file bytes).",
         "security": [
           {
             "bearerAuth": []
@@ -60984,7 +62220,7 @@
           "Brand"
         ],
         "summary": "Upload a document to an offer",
-        "description": "Proxy to brand-service POST /orgs/brands/{brandId}/offers/{offerId}/documents. Documents are files the client owns about ONE offer (a one-pager, a case study, a spec sheet, an FAQ). The AI answering a prospect reads the list (fileName + description) to pick the one that helps and attaches it. Accepted: pdf, docx, pptx, xlsx, doc, ppt, xls, csv, txt, md, png, jpg/jpeg, gif, webp; at most 5 MB per file and 25 files per offer. The file extension decides the type and must match the content. Send JSON { fileName, description, contentBase64 } or multipart/form-data (file, description, optional fileName). 201 { document, created: true }; the same bytes already on this offer answer 200 { document, created: false } (a retry stores nothing twice).",
+        "description": "Proxy to brand-service POST /orgs/brands/{brandId}/offers/{offerId}/documents. Documents are files the client owns about ONE offer (a one-pager, a case study, a spec sheet, an FAQ), sent as an email attachment on a reply to a prospect. Uploading one changes no campaign by itself: a document is attached only (a) when you reply yourself with `POST /v1/replies` and list it in `attachments` [{ document_id }], or (b) by a WORKFLOW that attaches offer documents, reading this list (fileName + description) to pick the file that helps. Which workflow a campaign's pipe runs is chosen by its PLAY, not by you directly: to make a campaign's AI meeting booking replies carry an attachment, find (`GET /v1/tactics?q=attach`) or create (`POST /v1/tactics`) a tactic describing that attachment behaviour, a strategy requiring it (`POST /v1/strategies`), add it as a play on the pipe `ai-meeting-booking|conversation_to_meeting_booked` (`POST /v1/plays`), then pick a sales funnel running that play (`GET /v1/offers/{offerId}/sales-funnels`, its id carries `@ai-meeting-booking~<strategy id>`) and launch it with `POST /v1/sales-funnel-campaigns`. Write each description as when the file helps a prospect. Accepted: pdf, docx, pptx, xlsx, doc, ppt, xls, csv, txt, md, png, jpg/jpeg, gif, webp; at most 5 MB per file and 25 files per offer. The file extension decides the type and must match the content. Send JSON { fileName, description, contentBase64 } or multipart/form-data (file, description, optional fileName). 201 { document, created: true }; the same bytes already on this offer answer 200 { document, created: false } (a retry stores nothing twice).",
         "security": [
           {
             "bearerAuth": []
@@ -61800,7 +63036,7 @@
           "Brand"
         ],
         "summary": "Read one offer document",
-        "description": "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/documents/{documentId}. Documents are files the client owns about ONE offer (a one-pager, a case study, a spec sheet, an FAQ). The AI answering a prospect reads the list (fileName + description) to pick the one that helps and attaches it. Accepted: pdf, docx, pptx, xlsx, doc, ppt, xls, csv, txt, md, png, jpg/jpeg, gif, webp; at most 5 MB per file and 25 files per offer. The file extension decides the type and must match the content. Answers { document }, metadata only.",
+        "description": "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/documents/{documentId}. Documents are files the client owns about ONE offer (a one-pager, a case study, a spec sheet, an FAQ), sent as an email attachment on a reply to a prospect. Uploading one changes no campaign by itself: a document is attached only (a) when you reply yourself with `POST /v1/replies` and list it in `attachments` [{ document_id }], or (b) by a WORKFLOW that attaches offer documents, reading this list (fileName + description) to pick the file that helps. Which workflow a campaign's pipe runs is chosen by its PLAY, not by you directly: to make a campaign's AI meeting booking replies carry an attachment, find (`GET /v1/tactics?q=attach`) or create (`POST /v1/tactics`) a tactic describing that attachment behaviour, a strategy requiring it (`POST /v1/strategies`), add it as a play on the pipe `ai-meeting-booking|conversation_to_meeting_booked` (`POST /v1/plays`), then pick a sales funnel running that play (`GET /v1/offers/{offerId}/sales-funnels`, its id carries `@ai-meeting-booking~<strategy id>`) and launch it with `POST /v1/sales-funnel-campaigns`. Write each description as when the file helps a prospect. Accepted: pdf, docx, pptx, xlsx, doc, ppt, xls, csv, txt, md, png, jpg/jpeg, gif, webp; at most 5 MB per file and 25 files per offer. The file extension decides the type and must match the content. Answers { document }, metadata only.",
         "security": [
           {
             "bearerAuth": []
@@ -62412,7 +63648,7 @@
           "Brand"
         ],
         "summary": "Rename or re-describe an offer document",
-        "description": "Proxy to brand-service PATCH /orgs/brands/{brandId}/offers/{offerId}/documents/{documentId}. Documents are files the client owns about ONE offer (a one-pager, a case study, a spec sheet, an FAQ). The AI answering a prospect reads the list (fileName + description) to pick the one that helps and attaches it. Accepted: pdf, docx, pptx, xlsx, doc, ppt, xls, csv, txt, md, png, jpg/jpeg, gif, webp; at most 5 MB per file and 25 files per offer. The file extension decides the type and must match the content. Send fileName, description, or both. Answers { document }.",
+        "description": "Proxy to brand-service PATCH /orgs/brands/{brandId}/offers/{offerId}/documents/{documentId}. Documents are files the client owns about ONE offer (a one-pager, a case study, a spec sheet, an FAQ), sent as an email attachment on a reply to a prospect. Uploading one changes no campaign by itself: a document is attached only (a) when you reply yourself with `POST /v1/replies` and list it in `attachments` [{ document_id }], or (b) by a WORKFLOW that attaches offer documents, reading this list (fileName + description) to pick the file that helps. Which workflow a campaign's pipe runs is chosen by its PLAY, not by you directly: to make a campaign's AI meeting booking replies carry an attachment, find (`GET /v1/tactics?q=attach`) or create (`POST /v1/tactics`) a tactic describing that attachment behaviour, a strategy requiring it (`POST /v1/strategies`), add it as a play on the pipe `ai-meeting-booking|conversation_to_meeting_booked` (`POST /v1/plays`), then pick a sales funnel running that play (`GET /v1/offers/{offerId}/sales-funnels`, its id carries `@ai-meeting-booking~<strategy id>`) and launch it with `POST /v1/sales-funnel-campaigns`. Write each description as when the file helps a prospect. Accepted: pdf, docx, pptx, xlsx, doc, ppt, xls, csv, txt, md, png, jpg/jpeg, gif, webp; at most 5 MB per file and 25 files per offer. The file extension decides the type and must match the content. Send fileName, description, or both. Answers { document }.",
         "security": [
           {
             "bearerAuth": []
@@ -63033,7 +64269,7 @@
           "Brand"
         ],
         "summary": "Delete an offer document",
-        "description": "Proxy to brand-service DELETE /orgs/brands/{brandId}/offers/{offerId}/documents/{documentId}. Documents are files the client owns about ONE offer (a one-pager, a case study, a spec sheet, an FAQ). The AI answering a prospect reads the list (fileName + description) to pick the one that helps and attaches it. Accepted: pdf, docx, pptx, xlsx, doc, ppt, xls, csv, txt, md, png, jpg/jpeg, gif, webp; at most 5 MB per file and 25 files per offer. The file extension decides the type and must match the content. Answers { deleted: true, documentId }.",
+        "description": "Proxy to brand-service DELETE /orgs/brands/{brandId}/offers/{offerId}/documents/{documentId}. Documents are files the client owns about ONE offer (a one-pager, a case study, a spec sheet, an FAQ), sent as an email attachment on a reply to a prospect. Uploading one changes no campaign by itself: a document is attached only (a) when you reply yourself with `POST /v1/replies` and list it in `attachments` [{ document_id }], or (b) by a WORKFLOW that attaches offer documents, reading this list (fileName + description) to pick the file that helps. Which workflow a campaign's pipe runs is chosen by its PLAY, not by you directly: to make a campaign's AI meeting booking replies carry an attachment, find (`GET /v1/tactics?q=attach`) or create (`POST /v1/tactics`) a tactic describing that attachment behaviour, a strategy requiring it (`POST /v1/strategies`), add it as a play on the pipe `ai-meeting-booking|conversation_to_meeting_booked` (`POST /v1/plays`), then pick a sales funnel running that play (`GET /v1/offers/{offerId}/sales-funnels`, its id carries `@ai-meeting-booking~<strategy id>`) and launch it with `POST /v1/sales-funnel-campaigns`. Write each description as when the file helps a prospect. Accepted: pdf, docx, pptx, xlsx, doc, ppt, xls, csv, txt, md, png, jpg/jpeg, gif, webp; at most 5 MB per file and 25 files per offer. The file extension decides the type and must match the content. Answers { deleted: true, documentId }.",
         "security": [
           {
             "bearerAuth": []
@@ -63647,7 +64883,7 @@
           "Brand"
         ],
         "summary": "Download an offer document's file",
-        "description": "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/documents/{documentId}/content. Documents are files the client owns about ONE offer (a one-pager, a case study, a spec sheet, an FAQ). The AI answering a prospect reads the list (fileName + description) to pick the one that helps and attaches it. Accepted: pdf, docx, pptx, xlsx, doc, ppt, xls, csv, txt, md, png, jpg/jpeg, gif, webp; at most 5 MB per file and 25 files per offer. The file extension decides the type and must match the content. Answers the raw file bytes under the document's own Content-Type, with Content-Disposition (attachment, the file name) and X-Document-Sha256 (hex SHA-256 of the bytes).",
+        "description": "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/documents/{documentId}/content. Documents are files the client owns about ONE offer (a one-pager, a case study, a spec sheet, an FAQ), sent as an email attachment on a reply to a prospect. Uploading one changes no campaign by itself: a document is attached only (a) when you reply yourself with `POST /v1/replies` and list it in `attachments` [{ document_id }], or (b) by a WORKFLOW that attaches offer documents, reading this list (fileName + description) to pick the file that helps. Which workflow a campaign's pipe runs is chosen by its PLAY, not by you directly: to make a campaign's AI meeting booking replies carry an attachment, find (`GET /v1/tactics?q=attach`) or create (`POST /v1/tactics`) a tactic describing that attachment behaviour, a strategy requiring it (`POST /v1/strategies`), add it as a play on the pipe `ai-meeting-booking|conversation_to_meeting_booked` (`POST /v1/plays`), then pick a sales funnel running that play (`GET /v1/offers/{offerId}/sales-funnels`, its id carries `@ai-meeting-booking~<strategy id>`) and launch it with `POST /v1/sales-funnel-campaigns`. Write each description as when the file helps a prospect. Accepted: pdf, docx, pptx, xlsx, doc, ppt, xls, csv, txt, md, png, jpg/jpeg, gif, webp; at most 5 MB per file and 25 files per offer. The file extension decides the type and must match the content. Answers the raw file bytes under the document's own Content-Type, with Content-Disposition (attachment, the file name) and X-Document-Sha256 (hex SHA-256 of the bytes).",
         "security": [
           {
             "bearerAuth": []
@@ -109144,6 +110380,853 @@
         "operationId": "postV1BillingAccountsSubscriptionsBySubscriptionIdUnpause"
       }
     },
+    "/v1/skills": {
+      "get": {
+        "tags": [
+          "Skills"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "List the agent skill tree",
+        "description": "The skill tree is the method our Copilot follows to organize a client's request on distribute.you (offers, catalogue, sales funnels, campaigns, budget, workflows, tactics and plays): markdown skills in a tree, `index` first. Your own agent can follow the same method: read the tree, then load a skill when its description matches the ask. Read-only; the same for every client. Answers { skills: [{ slug, parentSlug, title, description, position, version, ... }] } without content. Byte passthrough to chat-service GET /internal/skills; status and body owned by it.",
+        "responses": {
+          "200": {
+            "description": "The skill tree",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentSkillsListResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. Wait `Retry-After` seconds and retry; the budget that was exceeded is named in the body and described in `RateLimit-Policy`.",
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Rate limit exceeded"
+                    },
+                    "code": {
+                      "type": "string",
+                      "example": "RATE_LIMITED"
+                    },
+                    "policy": {
+                      "type": "string",
+                      "example": "authenticated"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "example": 600
+                    },
+                    "windowSeconds": {
+                      "type": "integer",
+                      "example": 60
+                    },
+                    "retryAfterSeconds": {
+                      "type": "integer",
+                      "example": 42
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "code",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getV1Skills",
+        "parameters": [
+          {
+            "name": "x-request-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._:-]+$"
+            },
+            "description": "Correlation id for this request. Echoed back verbatim in the `x-request-id` response header. Omit it and the gateway generates a UUID, so the response header is always present. Useful for tying a response back to the call that produced it when issuing concurrent requests."
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "With a user key (`distrib.usr_*`): the organization this request acts in, one of the key user's organizations (GET /v1/me lists them). Same as the `orgId` query parameter. Needed only when the user belongs to several organizations and the request names no brand; otherwise optional."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Forwarded to downstream services. With a user key it also selects the organization the request acts in: the one of the user's organizations holding every named brand (same for `brandId` in the query or a JSON body)."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
+      }
+    },
+    "/v1/skills/{slug}": {
+      "get": {
+        "tags": [
+          "Skills"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Read one agent skill",
+        "description": "The skill tree is the method our Copilot follows to organize a client's request on distribute.you (offers, catalogue, sales funnels, campaigns, budget, workflows, tactics and plays): markdown skills in a tree, `index` first. Your own agent can follow the same method: read the tree, then load a skill when its description matches the ask. Read-only; the same for every client. Answers one skill with its markdown `content` (start with `index`). Byte passthrough to chat-service GET /internal/skills/{slug}; a 404 for an unknown slug comes back verbatim.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "A skill slug from GET /v1/skills, e.g. `index`, `offers`, `campaigns`"
+            },
+            "required": true,
+            "name": "slug",
+            "in": "path"
+          },
+          {
+            "name": "x-request-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._:-]+$"
+            },
+            "description": "Correlation id for this request. Echoed back verbatim in the `x-request-id` response header. Omit it and the gateway generates a UUID, so the response header is always present. Useful for tying a response back to the call that produced it when issuing concurrent requests."
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "With a user key (`distrib.usr_*`): the organization this request acts in, one of the key user's organizations (GET /v1/me lists them). Same as the `orgId` query parameter. Needed only when the user belongs to several organizations and the request names no brand; otherwise optional."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Forwarded to downstream services. With a user key it also selects the organization the request acts in: the one of the user's organizations holding every named brand (same for `brandId` in the query or a JSON body)."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The skill with its content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentSkillResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown skill (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. Wait `Retry-After` seconds and retry; the budget that was exceeded is named in the body and described in `RateLimit-Policy`.",
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Rate limit exceeded"
+                    },
+                    "code": {
+                      "type": "string",
+                      "example": "RATE_LIMITED"
+                    },
+                    "policy": {
+                      "type": "string",
+                      "example": "authenticated"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "example": 600
+                    },
+                    "windowSeconds": {
+                      "type": "integer",
+                      "example": 60
+                    },
+                    "retryAfterSeconds": {
+                      "type": "integer",
+                      "example": 42
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "code",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getV1SkillsBySlug"
+      }
+    },
     "/v1/tactics": {
       "get": {
         "tags": [
@@ -109155,7 +111238,7 @@
           }
         ],
         "summary": "List tactics",
-        "description": "One page of tactics (id, name, description, how many workflows were judged on it and how many follow it). Query string forwarded verbatim (documented today: q, limit; not a whitelist). A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
+        "description": "One page of tactics (id, name, description, how many workflows were judged on it and how many follow it). Query string forwarded verbatim (documented today: q, limit; not a whitelist). A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
         "parameters": [
           {
             "schema": {
@@ -109689,7 +111772,7 @@
           }
         ],
         "summary": "Create a tactic",
-        "description": "Declare a new tactic. Every workflow version is then judged on its description within minutes, so describe precisely what a workflow DOES, not what it is called. Name and description must be unique (409 `tactic_name_taken` / `tactic_description_taken`); the id is the name slugged. The author is recorded from your API key; any `createdBy` you send is replaced. A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
+        "description": "Declare a new tactic. Every workflow version is then judged on its description within minutes, so describe precisely what a workflow DOES, not what it is called. Name and description must be unique (409 `tactic_name_taken` / `tactic_description_taken`); the id is the name slugged. The author is recorded from your API key; any `createdBy` you send is replaced. A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -110282,7 +112365,7 @@
           }
         ],
         "summary": "Read one tactic",
-        "description": "One tactic with every workflow version judged on it (follows yes/no, probability). A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
+        "description": "One tactic with every workflow version judged on it (follows yes/no, probability). A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
         "parameters": [
           {
             "schema": {
@@ -110875,7 +112958,7 @@
           }
         ],
         "summary": "List strategies",
-        "description": "One page of strategies (id, name, description, tactics required and excluded, pipes that already catalogue a play on it). Query string forwarded verbatim (documented today: q, limit; not a whitelist). A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
+        "description": "One page of strategies (id, name, description, tactics required and excluded, pipes that already catalogue a play on it). Query string forwarded verbatim (documented today: q, limit; not a whitelist). A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
         "parameters": [
           {
             "schema": {
@@ -111409,7 +113492,7 @@
           }
         ],
         "summary": "Create a strategy",
-        "description": "Declare a new strategy over existing tactics (at least one tactic in `requires` or `excludes`, never the same tactic in both). Name and description must be unique (409 `strategy_name_taken` / `strategy_description_taken`); a strategy with the same rule as an existing one is 409 `strategy_rule_taken` (use that one); an unknown tactic is 404 `tactic_not_found`. Then add it to a pipe with `POST /v1/plays`. The author is recorded from your API key; any `createdBy` you send is replaced. A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
+        "description": "Declare a new strategy over existing tactics (at least one tactic in `requires` or `excludes`, never the same tactic in both). Name and description must be unique (409 `strategy_name_taken` / `strategy_description_taken`); a strategy with the same rule as an existing one is 409 `strategy_rule_taken` (use that one); an unknown tactic is 404 `tactic_not_found`. Then add it to a pipe with `POST /v1/plays`. The author is recorded from your API key; any `createdBy` you send is replaced. A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -112068,7 +114151,7 @@
           }
         ],
         "summary": "Read one strategy",
-        "description": "One strategy: its tactics required and excluded and the pipes that catalogue a play on it. A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
+        "description": "One strategy: its tactics required and excluded and the pipes that catalogue a play on it. A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
         "parameters": [
           {
             "schema": {
@@ -112661,7 +114744,7 @@
           }
         ],
         "summary": "List the plays of a pipe",
-        "description": "The plays a pipe catalogues (default play first) with their fleet cost, ROI and status. Pass `pipe` to list one pipe's plays; without it, every pipe cataloguing plays. Query string forwarded verbatim (documented today: pipe, limit; not a whitelist). A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
+        "description": "The plays a pipe catalogues (default play first) with their fleet cost, ROI and status. Pass `pipe` to list one pipe's plays; without it, every pipe cataloguing plays. Query string forwarded verbatim (documented today: pipe, limit; not a whitelist). A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
         "parameters": [
           {
             "schema": {
@@ -113195,7 +115278,7 @@
           }
         ],
         "summary": "Add a play to a pipe",
-        "description": "Add an existing strategy to a pipe as a new play, so campaigns on that pipe can run it (for example strategy `valid-catch-all` on pipe `sales-cold-email-outreach|lead_found_to_website_visit`). Idempotent: a play that already exists answers 200 with `created: false`; a new one 201. Unknown pipe or strategy is a 404 `*_not_found`. The author is recorded from your API key; any `createdBy` you send is replaced. A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
+        "description": "Add an existing strategy to a pipe as a new play, so campaigns on that pipe can run it (for example strategy `valid-catch-all` on pipe `sales-cold-email-outreach|lead_found_to_website_visit`). Idempotent: a play that already exists answers 200 with `created: false`; a new one 201. Unknown pipe or strategy is a 404 `*_not_found`. The author is recorded from your API key; any `createdBy` you send is replaced. A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -113854,7 +115937,7 @@
           }
         ],
         "summary": "Read one play",
-        "description": "One play: its pipe, strategy, fleet cost and ROI, why it is still learning, and the workflows its strategy rules out. A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
+        "description": "One play: its pipe, strategy, fleet cost and ROI, why it is still learning, and the workflows its strategy rules out. A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
         "parameters": [
           {
             "schema": {
@@ -192571,6 +194654,13 @@
                       }
                     ],
                     "description": "The channel(s) the pipe serving writes on (all required): `phone` (WhatsApp, calls, SMS) or `email`. On BOTH pools, a contact or person the pipe cannot reach is SKIPPED and NOT marked served, so it stays available to a pipe that can. Omit = no requirement (unchanged behaviour)."
+                  },
+                  "relationships": {
+                    "type": "string",
+                    "enum": [
+                      "business_only"
+                    ],
+                    "description": "The pipe's relationship policy (its lead strategy, forwarded by human-service). `business_only`: lead-service is asked who each candidate is to the brand (POST /internal/brands/{brandId}/relationships/query); nobody tagged personal, investor, supplier, team, partner or advisor (sure or unsure), nobody lead-service never judged, nobody without a human id is handed out, on BOTH pools. Such a person is NOT marked served (another pipe may still write to them). lead-service unreadable = 502 relationships_unavailable, nothing served. Omit = unchanged behaviour."
                   }
                 },
                 "required": [
@@ -220992,7 +223082,7 @@
           "Replies"
         ],
         "summary": "Reply to a person in their existing email thread",
-        "description": "Send an answer into the email thread a person already has with the brand, from the mailbox and persona that wrote to them (the reply a sales rep would send). Name the person by `email` alone: the thread is found from it. When that person wrote back on several campaigns the answer is 409 `ambiguous_thread` with the `candidates`; call again with one `campaign_id`. Write `body_html` without a signature (the persona's is added). Send `sent_by: \"human\"` for a reply a person decided on. Name the organization with `brandId` or `orgId`. Pass-through to instantly-service POST /orgs/replies: refusals come back unchanged with a `code` (409 `ambiguous_thread`, `no_reply_to_thread`, `human_took_over`; 404 `campaign_not_found` when the org never emailed that person).\n\nRequest body: documented from instantly-service POST /orgs/replies, which owns and validates it; the gateway forwards it unchanged.",
+        "description": "Send an answer into the email thread a person already has with the brand, from the mailbox and persona that wrote to them (the reply a sales rep would send). Name the person by `email` alone: the thread is found from it. When that person wrote back on several campaigns the answer is 409 `ambiguous_thread` with the `candidates`; call again with one `campaign_id`. Write `body_html` without a signature (the persona's is added). Send `sent_by: \"human\"` for a reply a person decided on. Name the organization with `brandId` or `orgId`. To send files, list offer documents in `attachments` [{ document_id }] (up to 5, 10 MB together; ids from `GET /v1/brands/{id}/offers/{offerId}/documents`): each goes as a real email attachment, and any problem refuses the whole reply, nothing sent (404 `attachment_not_found`, 422 `attachment_too_large` or `attachments_unsupported_on_transport`, 502 `attachment_unavailable`). Pass-through to instantly-service POST /orgs/replies: refusals come back unchanged with a `code` (409 `ambiguous_thread`, `no_reply_to_thread`, `human_took_over`; 404 `campaign_not_found` when the org never emailed that person). The full body is documented from instantly-service.\n\nRequest body: documented from instantly-service POST /orgs/replies, which owns and validates it; the gateway forwards it unchanged.",
         "security": [
           {
             "bearerAuth": []
@@ -221026,6 +223116,24 @@
                       "automation"
                     ],
                     "description": "Who asked for this answer to be sent. It decides ONE thing: whether the human-takeover gate applies. An `automation` reply is refused (409 `human_took_over`) once a person has answered the thread since the prospect last wrote; a `human` reply is never gated. Absent resolves to `automation` — the automated responder is the only caller today, so the gate is live without waiting on it, and a human surface declares `human` explicitly."
+                  },
+                  "attachments": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "document_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "An offer document id (UUID) from brand-service, of THIS org (x-org-id)."
+                        }
+                      },
+                      "required": [
+                        "document_id"
+                      ]
+                    },
+                    "maxItems": 5,
+                    "description": "Offer documents to attach to the reply as real files (a case study, a one-pager). This service reads each one from brand-service, bytes included, as this org, and attaches it under brand-service's filename and type. Up to 5, 10 MB together. FAIL LOUD, nothing sent: unknown or another org's document = 404 `attachment_not_found`; over the limits = 422 `attachment_too_large`; brand-service unreadable = 502 `attachment_unavailable`; a thread on the Instantly pipe (no attachment support) = 422 `attachments_unsupported_on_transport`. Absent or empty = the reply exactly as before. Replies only: cold sequence steps never carry a file."
                   }
                 },
                 "required": [
@@ -221373,6 +223481,72 @@
               }
             }
           },
+          "422": {
+            "description": "An attachment refused (`attachment_too_large`, `attachments_unsupported_on_transport`), nothing sent (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "429": {
             "description": "Rate limit exceeded. Wait `Retry-After` seconds and retry; the budget that was exceeded is named in the body and described in `RateLimit-Policy`.",
             "headers": {
@@ -221472,6 +223646,72 @@
                     "code",
                     "retryAfterSeconds"
                   ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "An attachment unreadable (`attachment_unavailable`), nothing sent (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
                 }
               }
             }

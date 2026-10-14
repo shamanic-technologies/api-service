@@ -1715,6 +1715,13 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
             }
           ],
           "description": "The channel(s) the pipe serving writes on (all required): `phone` (WhatsApp, calls, SMS) or `email`. On BOTH pools, a contact or person the pipe cannot reach is SKIPPED and NOT marked served, so it stays available to a pipe that can. Omit = no requirement (unchanged behaviour)."
+        },
+        "relationships": {
+          "type": "string",
+          "enum": [
+            "business_only"
+          ],
+          "description": "The pipe's relationship policy (its lead strategy, forwarded by human-service). `business_only`: lead-service is asked who each candidate is to the brand (POST /internal/brands/{brandId}/relationships/query); nobody tagged personal, investor, supplier, team, partner or advisor (sure or unsure), nobody lead-service never judged, nobody without a human id is handed out, on BOTH pools. Such a person is NOT marked served (another pipe may still write to them). lead-service unreadable = 502 relationships_unavailable, nothing served. Omit = unchanged behaviour."
         }
       },
       "required": [
@@ -2040,6 +2047,24 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
             "automation"
           ],
           "description": "Who asked for this answer to be sent. It decides ONE thing: whether the human-takeover gate applies. An `automation` reply is refused (409 `human_took_over`) once a person has answered the thread since the prospect last wrote; a `human` reply is never gated. Absent resolves to `automation` — the automated responder is the only caller today, so the gate is live without waiting on it, and a human surface declares `human` explicitly."
+        },
+        "attachments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "document_id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "An offer document id (UUID) from brand-service, of THIS org (x-org-id)."
+              }
+            },
+            "required": [
+              "document_id"
+            ]
+          },
+          "maxItems": 5,
+          "description": "Offer documents to attach to the reply as real files (a case study, a one-pager). This service reads each one from brand-service, bytes included, as this org, and attaches it under brand-service's filename and type. Up to 5, 10 MB together. FAIL LOUD, nothing sent: unknown or another org's document = 404 `attachment_not_found`; over the limits = 422 `attachment_too_large`; brand-service unreadable = 502 `attachment_unavailable`; a thread on the Instantly pipe (no attachment support) = 422 `attachments_unsupported_on_transport`. Absent or empty = the reply exactly as before. Replies only: cold sequence steps never carry a file."
         }
       },
       "required": [
@@ -2560,6 +2585,14 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "maxLength": 2000,
           "description": "Why, in your words. Optional.",
           "example": "Runs a construction company, we sell to supermarkets."
+        },
+        "level": {
+          "type": "string",
+          "enum": [
+            "lead",
+            "company"
+          ],
+          "description": "`lead` (default) = this person at this company. `company` = the lead's whole company for the brand (\"not our target\"), covering every lead of it; 409 `lead_has_no_company` when the lead has no known company."
         }
       }
     }
