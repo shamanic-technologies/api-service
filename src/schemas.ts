@@ -1555,7 +1555,7 @@ const TriggerEventSchema = z
     offerId: z.string(),
     leadId: z.string().nullable().openapi({
       description:
-        "The lead the reporting service named on the occurrence. Null on an event you push with `person`: that person is filed as a lead of each campaign the trigger reaches, not on the event.",
+        "The lead the reporting service named on the occurrence. Null on an event you push with `person`: that person is filed as a lead of each campaign that runs, read them in `ranLeads`.",
     }),
     requestedByCampaignId: z.string().nullable(),
     recordedVia: z.string().openapi({ description: "Who recorded it, e.g. `trigger_events` for a push through this route." }),
@@ -1571,6 +1571,12 @@ const TriggerEventSchema = z
       example: "no_campaign",
     }),
     ranCampaignIds: z.array(z.string()).openapi({ description: "The campaigns that ran for it (empty unless `outcome` is `ran`)." }),
+    ranLeads: z
+      .array(z.object({ campaignId: z.string(), leadId: z.string() }))
+      .openapi({
+        description:
+          "Per campaign that ran: the lead the event's person was filed as on that campaign. Empty when no run carried a lead.",
+      }),
     performedByCaller: z.boolean(),
     processedAt: z.string().nullable().openapi({ description: "ISO date-time the outcome was written; null until done." }),
     detail: z.unknown().nullable().openapi({
