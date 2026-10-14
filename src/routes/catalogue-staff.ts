@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticatePlatform, requireStaff, AuthenticatedRequest } from "../middleware/auth.js";
+import { authenticatePlatform, authenticateUser, requireStaff, requireStaffActor, AuthenticatedRequest } from "../middleware/auth.js";
 import { pipeExternalService, externalServices } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 
@@ -56,5 +56,41 @@ for (const object of CATALOGUE_OBJECTS) {
     ),
   );
 }
+
+/**
+ * PUT /v1/catalogue/pipes/:pipeId/default-play → features-service
+ * PUT /internal/catalogue/pipes/{pipeId}/default-play `{strategyId, decidedBy}`
+ * (RELATIONSHIP-TAGS-1014): which play a pipe runs when a campaign names none. A
+ * fleet-wide STAFF write, no org: `authenticateUser + requireStaffActor`, so a staff
+ * member's own key (the distribute MCP) or the platform key + a staff x-email may
+ * call it, a client key gets 403 `staff_only`. Listed in `STAFF_KEY_OPERATIONS`.
+ *
+ * `decidedBy` is the AUTHENTICATED staff email, never a body value (CLAUDE.md rule #4,
+ * third exception: an author the producer records is the authenticated identity).
+ * Everything else in the body is forwarded verbatim; status and body come back
+ * byte-for-byte (409 `default_play_runs_nothing` included).
+ */
+router.put(
+  "/v1/catalogue/pipes/:pipeId/default-play",
+  authenticateUser,
+  requireStaffActor,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.features,
+        `/internal/catalogue/pipes/${encodeURIComponent(req.params.pipeId)}/default-play`,
+        {
+          method: "PUT",
+          body: { ...(req.body ?? {}), decidedBy: req.staffEmail },
+          expressRes: res,
+        },
+      );
+    } catch (error: any) {
+      console.error("[api-service] Failed to set pipe default play:", error.message);
+      if (res.headersSent) { res.end(); return; }
+      respondUpstreamError(res, error, "Failed to set pipe default play");
+    }
+  },
+);
 
 export default router;
