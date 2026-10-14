@@ -11,6 +11,7 @@ import {
 import { callExternalService, callExternalServiceWithStatus, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
+import { retiredCampaignBudget } from "../lib/deprecation.js";
 
 const router = Router();
 
@@ -895,7 +896,7 @@ function rawQueryString(originalUrl: string): string {
   return i === -1 ? "" : originalUrl.slice(i);
 }
 
-router.get("/brands/:brandId/campaign-budgets", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+router.get("/brands/:brandId/campaign-budgets", retiredCampaignBudget, authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     if (!isUuid(req.params.brandId)) {
       return res.status(400).json({ error: "Invalid brand ID — expected a UUID" });
@@ -911,7 +912,7 @@ router.get("/brands/:brandId/campaign-budgets", authenticate, requireOrg, async 
   }
 });
 
-router.get("/brands/:brandId/campaign-budget", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+router.get("/brands/:brandId/campaign-budget", retiredCampaignBudget, authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     if (!isUuid(req.params.brandId)) {
       return res.status(400).json({ error: "Invalid brand ID — expected a UUID" });
@@ -927,7 +928,7 @@ router.get("/brands/:brandId/campaign-budget", authenticate, requireOrg, async (
   }
 });
 
-router.put("/brands/:brandId/campaign-budget", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+router.put("/brands/:brandId/campaign-budget", retiredCampaignBudget, authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     if (!isUuid(req.params.brandId)) {
       return res.status(400).json({ error: "Invalid brand ID — expected a UUID" });
@@ -1007,9 +1008,9 @@ function offerCampaignBudgetsProxy(method: "GET" | "PUT" | "DELETE", failure: st
 }
 
 const OFFER_CAMPAIGN_BUDGETS = "/brands/:brandId/offers/:offerId/campaign-budgets";
-router.get(OFFER_CAMPAIGN_BUDGETS, authenticate, requireOrg, requireUser, offerCampaignBudgetsProxy("GET", "Failed to get offer campaign budgets"));
-router.put(OFFER_CAMPAIGN_BUDGETS, authenticate, requireOrg, requireUser, offerCampaignBudgetsProxy("PUT", "Failed to set offer campaign budgets"));
-router.delete(OFFER_CAMPAIGN_BUDGETS, authenticate, requireOrg, requireUser, offerCampaignBudgetsProxy("DELETE", "Failed to remove offer campaign budget"));
+router.get(OFFER_CAMPAIGN_BUDGETS, retiredCampaignBudget, authenticate, requireOrg, requireUser, offerCampaignBudgetsProxy("GET", "Failed to get offer campaign budgets"));
+router.put(OFFER_CAMPAIGN_BUDGETS, retiredCampaignBudget, authenticate, requireOrg, requireUser, offerCampaignBudgetsProxy("PUT", "Failed to set offer campaign budgets"));
+router.delete(OFFER_CAMPAIGN_BUDGETS, retiredCampaignBudget, authenticate, requireOrg, requireUser, offerCampaignBudgetsProxy("DELETE", "Failed to remove offer campaign budget"));
 
 /**
  * MAX BUDGET + MAX VOLUME of a sales funnel campaign (owner 2026-10-10) — billing-service, same paths:
