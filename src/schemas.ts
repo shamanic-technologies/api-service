@@ -3,7 +3,6 @@ import {
   OpenAPIRegistry,
   extendZodWithOpenApi,
 } from "@asteasolutions/zod-to-openapi";
-import { RETIRED_CAMPAIGN_BUDGET_REPLACEMENT } from "./lib/deprecation.js";
 
 extendZodWithOpenApi(z);
 export const registry = new OpenAPIRegistry();
@@ -1960,50 +1959,6 @@ registry.registerPath({
         },
       },
     },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "patch",
-  path: "/v1/brands/{brandId}/campaigns/daily-budget",
-  tags: ["Campaigns"],
-  summary: "Deprecated: Set daily budget for all of a brand's campaigns (use the sales funnel caps)",
-  deprecated: true,
-  description:
-    RETIRED_CAMPAIGN_BUDGET_REPLACEMENT +
-    "Proxy to campaign-service PATCH /brands/{brandId}/daily-budget. Sets dailyBudgetCents on " +
-    "EVERY sales campaign of the brand at once — the brand-page propagation lever: when a customer " +
-    "edits their daily budget on the brand page it flows down to the brand's campaign(s). Distinct " +
-    "from PATCH /v1/brands/{brandId}/daily-budget (billing-service brand spend cap). Body " +
-    "{ dailyBudgetCents } (integer cents >= 0, or null to clear each campaign's own budget so they " +
-    "fall back to the brand daily budget). Identity headers (x-org-id, x-user-id, x-run-id) are " +
-    "forwarded. Body + response shapes are owned by campaign-service; its 4xx validation errors " +
-    "propagate verbatim.",
-  security: authed,
-  request: {
-    params: z.object({ brandId: z.string().uuid().describe("Brand ID") }),
-    body: {
-      content: {
-        "application/json": {
-          schema: z
-            .object({
-              dailyBudgetCents: z
-                .number()
-                .int()
-                .nonnegative()
-                .nullable()
-                .describe("Daily budget in cents for every sales campaign of the brand; null clears each campaign's own budget"),
-            })
-            .openapi("SetBrandCampaignsDailyBudgetRequest"),
-        },
-      },
-    },
-  },
-  responses: {
-    200: { description: "Per-campaign daily budgets updated", content: { "application/json": { schema: z.object({}).passthrough().openapi("SetBrandCampaignsDailyBudgetResponse") } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -10531,91 +10486,11 @@ registry.registerPath({
   },
 });
 
-// Brand – Per-campaign daily budgets (proxy to billing-service, #500)
-// Campaign = (offer × leg × acquisition channel), no funnel. billing owns the three-part key,
-// the minimums and the consolidation rule — the gateway declares none of it (CLAUDE.md #4/#8).
+// Brand budget params. The per-campaign daily-budget routes (GET /campaign-budgets, GET|PUT
+// /campaign-budget, the offer-level /campaign-budgets, PATCH /campaigns/daily-budget) were REMOVED
+// 2026-10-14: a campaign's money is its sales funnel caps (below). Do not re-add them.
 const BrandBudgetParam = z.object({
   brandId: z.string().uuid().describe("Brand ID"),
-});
-const CampaignBudgetsResponseSchema = z.object({}).passthrough().openapi("CampaignBudgetsResponse");
-const CampaignBudgetResponseSchema = z.object({}).passthrough().openapi("CampaignBudgetResponse");
-const CampaignBudgetRequestSchema = z.object({}).passthrough().openapi("CampaignBudgetRequest");
-const CampaignBudgetQuery = z
-  .object({
-    offerId: z.string().optional().describe("Offer ID (required by billing-service)"),
-    legKey: z.string().optional().describe("Leg key (required by billing-service)"),
-    featureSlug: z.string().optional().describe("Acquisition channel feature slug (required by billing-service)"),
-  })
-  .passthrough();
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/brands/{brandId}/campaign-budgets",
-  tags: ["Billing"],
-  summary: "Deprecated: List a brand's per-campaign daily budgets (use the sales funnel caps)",
-  deprecated: true,
-  description:
-    RETIRED_CAMPAIGN_BUDGET_REPLACEMENT +
-    "Proxy to billing-service GET /v1/brands/{brandId}/campaign-budgets. Every campaign (offer x leg x channel) " +
-    "daily ceiling for the calling org + brand, summing to the brand total. Response shape owned downstream.",
-  security: authed,
-  request: {
-    params: BrandBudgetParam,
-  },
-  responses: {
-    200: { description: "Downstream body, untouched", content: { "application/json": { schema: CampaignBudgetsResponseSchema } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/brands/{brandId}/campaign-budget",
-  tags: ["Billing"],
-  summary: "Deprecated: Get one campaign's daily budget (use the sales funnel caps)",
-  deprecated: true,
-  description:
-    RETIRED_CAMPAIGN_BUDGET_REPLACEMENT +
-    "Proxy to billing-service GET /v1/brands/{brandId}/campaign-budget. One campaign's daily ceiling, keyed by " +
-    "?offerId=&legKey=&featureSlug= (null when unfunded). Query forwarded verbatim; these are the params documented today, not a whitelist.",
-  security: authed,
-  request: {
-    params: BrandBudgetParam, query: CampaignBudgetQuery,
-  },
-  responses: {
-    200: { description: "Downstream body, untouched", content: { "application/json": { schema: CampaignBudgetResponseSchema } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "put",
-  path: "/v1/brands/{brandId}/campaign-budget",
-  tags: ["Billing"],
-  summary: "Deprecated: Set one campaign's daily budget (use the sales funnel caps)",
-  deprecated: true,
-  description:
-    RETIRED_CAMPAIGN_BUDGET_REPLACEMENT +
-    "Proxy to billing-service PUT /v1/brands/{brandId}/campaign-budget. Body { offerId, legKey, featureSlug, " +
-    "dailyBudgetCents }; key vocabulary, minimums and consolidation are owned downstream; its 4xx propagate verbatim.",
-  security: authed,
-  request: {
-    params: BrandBudgetParam,
-    body: { content: { "application/json": { schema: CampaignBudgetRequestSchema } } },
-  },
-  responses: {
-    200: { description: "Downstream body, untouched", content: { "application/json": { schema: CampaignBudgetResponseSchema } } },
-    400: { description: "Validation error (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    404: { description: "Not found (forwarded verbatim)", content: errorContent },
-    500: { description: "Upstream error", content: errorContent },
-  },
 });
 
 const SalesBudgetResponseSchema = z.object({}).passthrough().openapi("SalesBudgetResponse");
@@ -10671,74 +10546,6 @@ registry.registerPath({
   security: authed,
   request: { params: BrandBudgetParam },
   responses: salesBudgetResponses,
-});
-
-// Brand x offer – per-campaign budgets (proxy to billing-service). billing owns the
-// items, minimums, caps and refusal codes; the gateway declares none of it (#4/#8).
-const OfferCampaignBudgetsParams = z.object({
-  brandId: z.string().describe("Brand ID"),
-  offerId: z.string().describe("Offer ID"),
-});
-const OfferCampaignBudgetsRequestSchema = z.object({}).passthrough().openapi("OfferCampaignBudgetsRequest");
-const OfferCampaignBudgetsResponseSchema = z.object({}).passthrough().openapi("OfferCampaignBudgetsResponse");
-const offerCampaignBudgetsResponses = {
-  200: { description: "Billing's body, forwarded untouched", content: { "application/json": { schema: OfferCampaignBudgetsResponseSchema } } },
-  400: { description: "Refused by billing (e.g. code below_minimum, reactive_above_cap, entry_item_required), body forwarded verbatim", content: errorContent },
-  409: { description: "Conflict from billing (e.g. code no_plan_for_offer, reactive_charge_declined), body forwarded verbatim", content: errorContent },
-  502: { description: "Billing dependency unavailable (e.g. code minimums_unavailable, campaign_status_unavailable, charge_unavailable), body forwarded verbatim", content: errorContent },
-};
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/brands/{brandId}/offers/{offerId}/campaign-budgets",
-  tags: ["Billing"],
-  summary: "Deprecated: Read the budget of each campaign (channel x leg) of an offer (use the sales funnel caps)",
-  deprecated: true,
-  description:
-    RETIRED_CAMPAIGN_BUDGET_REPLACEMENT +
-    "Proxy to billing-service GET /v1/brands/{brandId}/offers/{offerId}/campaign-budgets. The query string is forwarded verbatim; documented params are today's, not a whitelist. Response shape owned downstream.",
-  security: authed,
-  request: {
-    params: OfferCampaignBudgetsParams,
-    query: z.object({ campaigns: z.string().optional().describe("Comma-separated featureSlug:legKey pairs to narrow the read") }).passthrough(),
-  },
-  responses: offerCampaignBudgetsResponses,
-});
-
-registry.registerPath({
-  method: "put",
-  path: "/v1/brands/{brandId}/offers/{offerId}/campaign-budgets",
-  tags: ["Billing"],
-  summary: "Deprecated: Set the budgets of campaigns (channel x leg) of an offer (use the sales funnel caps)",
-  deprecated: true,
-  description:
-    RETIRED_CAMPAIGN_BUDGET_REPLACEMENT +
-    "Proxy to billing-service PUT /v1/brands/{brandId}/offers/{offerId}/campaign-budgets. Body { items: [{ featureSlug, legKey, budgetCents }] }, forwarded untouched. Status and body (with code) of every refusal propagate verbatim.",
-  security: authed,
-  request: { params: OfferCampaignBudgetsParams, body: { content: { "application/json": { schema: OfferCampaignBudgetsRequestSchema } } } },
-  responses: offerCampaignBudgetsResponses,
-});
-
-registry.registerPath({
-  method: "delete",
-  path: "/v1/brands/{brandId}/offers/{offerId}/campaign-budgets",
-  tags: ["Billing"],
-  summary: "Deprecated: Remove the budget of one campaign (channel x leg) of an offer (use the sales funnel caps)",
-  deprecated: true,
-  description:
-    RETIRED_CAMPAIGN_BUDGET_REPLACEMENT +
-    "Proxy to billing-service DELETE /v1/brands/{brandId}/offers/{offerId}/campaign-budgets?featureSlug=&legKey=. The query string is forwarded verbatim.",
-  security: authed,
-  request: {
-    params: OfferCampaignBudgetsParams,
-    query: z
-      .object({
-        featureSlug: z.string().optional().describe("Channel feature slug (required by billing-service)"),
-        legKey: z.string().optional().describe("Leg key (required by billing-service)"),
-      })
-      .passthrough(),
-  },
-  responses: offerCampaignBudgetsResponses,
 });
 
 // Sales funnel caps (proxy to billing-service, same paths): MAX BUDGET + MAX VOLUME of a sales funnel

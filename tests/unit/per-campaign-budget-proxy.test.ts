@@ -54,7 +54,7 @@ function buildApp() {
   return app;
 }
 
-describe("per-campaign budget + audience-stats proxies", () => {
+describe("removed per-campaign budget route + audience-stats proxies", () => {
   let calls: Array<{ url: string; options: any }>;
 
   beforeEach(() => {
@@ -66,41 +66,12 @@ describe("per-campaign budget + audience-stats proxies", () => {
   });
 
   // ── #2 set all of a brand's campaigns' daily budget ──────────────────────────
-  it("PATCH /v1/brands/:brandId/campaigns/daily-budget → campaign-service /brands/:brandId/daily-budget, body verbatim", async () => {
-    const body = { dailyBudgetCents: 5000 };
-    const res = await request(buildApp())
-      .patch("/v1/brands/brand-uuid-1/campaigns/daily-budget")
-      .send(body);
-    expect(res.status).toBe(200);
-    const call = calls[0];
-    expect(call.url).toBe(`${CAMPAIGN_BASE}/brands/brand-uuid-1/daily-budget`);
-    expect(call.options.method).toBe("PATCH");
-    expect(JSON.parse(call.options.body)).toEqual(body);
-    expect(call.options.headers["X-API-Key"]).toBe("campaign-test-key");
-    expect(call.options.headers["x-org-id"]).toBe("org_test456");
-    expect(call.options.headers["x-user-id"]).toBe("user_test123");
-  });
-
-  it("PATCH /v1/brands/:brandId/campaigns/daily-budget forwards null (clear) verbatim", async () => {
-    const body = { dailyBudgetCents: null };
-    const res = await request(buildApp())
-      .patch("/v1/brands/brand-uuid-2/campaigns/daily-budget")
-      .send(body);
-    expect(res.status).toBe(200);
-    expect(calls[0].url).toBe(`${CAMPAIGN_BASE}/brands/brand-uuid-2/daily-budget`);
-    expect(JSON.parse(calls[0].options.body)).toEqual(body);
-  });
-
-  it("returns campaign-service body verbatim (no shape assertion / transform)", async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ brandId: "brand-uuid-1", orgId: "org_test456", dailyBudgetCents: 5000, updatedCount: 2 }),
-    });
+  it("PATCH /v1/brands/:brandId/campaigns/daily-budget is gone (removed 2026-10-14): 404, campaign-service not called", async () => {
     const res = await request(buildApp())
       .patch("/v1/brands/brand-uuid-1/campaigns/daily-budget")
       .send({ dailyBudgetCents: 5000 });
-    expect(res.body).toEqual({ brandId: "brand-uuid-1", orgId: "org_test456", dailyBudgetCents: 5000, updatedCount: 2 });
+    expect(res.status).toBe(404);
+    expect(calls.length).toBe(0);
   });
 
   it("does NOT collide with billing PATCH /v1/brands/:brandId/daily-budget (different path)", async () => {
