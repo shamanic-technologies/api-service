@@ -14,7 +14,7 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
 // (#10, a create answers 201 or 200 `created: false`), errors field-for-field (#7), query string
 // verbatim (#11), request body passthrough (#8 corollary).
 //
-// ONE body edit, on the creates: `createdBy` is what the producer records as the author, so it is
+// ONE body edit, on the writes: `createdBy` (creates) / `updatedBy` (tactic edit) is what the producer records as the author, so it is
 // SET here from the authenticated identity and a caller-sent value is overwritten — a client must
 // not be able to write someone else's name into the catalogue.
 const router = Router();
@@ -25,6 +25,11 @@ export const PLAY_OBJECTS = ["tactics", "strategies", "plays"] as const;
 function rawQueryString(originalUrl: string): string {
   const i = originalUrl.indexOf("?");
   return i === -1 ? "" : originalUrl.slice(i);
+}
+
+/** The caller's JSON object body, `{}` for anything else. */
+function jsonBody(req: AuthenticatedRequest): Record<string, unknown> {
+  return req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {};
 }
 
 /** The author features-service records: the authenticated user, and the org it acted in when one resolved. */
@@ -38,12 +43,12 @@ async function pipe(
   res: Response,
   path: string,
   fallback: string,
-  write?: { body: Record<string, unknown> },
+  write?: { method: "POST" | "PATCH"; body: Record<string, unknown> },
 ) {
   try {
     await pipeExternalService(externalServices.features, path, {
       expressRes: res,
-      ...(write ? { method: "POST", body: write.body } : {}),
+      ...(write ? { method: write.method, body: write.body } : {}),
     });
   } catch (error: any) {
     console.error(`[api-service] ${fallback}:`, error.message);
@@ -73,11 +78,23 @@ for (const object of PLAY_OBJECTS) {
 
   /** POST /v1/<object> → features-service POST /internal/catalogue/<object>, `createdBy` set from the caller's identity. */
   router.post(`/v1/${object}`, authenticateUser, (req: AuthenticatedRequest, res) => {
-    const body = req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {};
     return pipe(req, res, `/internal/catalogue/${object}`, `Failed to create ${object}`, {
-      body: { ...body, createdBy: createdByOf(req) },
+      method: "POST",
+      body: { ...jsonBody(req), createdBy: createdByOf(req) },
     });
   });
 }
+
+/**
+ * PATCH /v1/tactics/:id → features-service PATCH /internal/catalogue/tactics/:id (edit a tactic's
+ * description; the producer re-judges every workflow version on the new words). Same access as the
+ * create; `updatedBy` is SET from the caller's identity (a sent one is overwritten), id re-encoded.
+ */
+router.patch("/v1/tactics/:id", authenticateUser, (req: AuthenticatedRequest, res) =>
+  pipe(req, res, `/internal/catalogue/tactics/${encodeURIComponent(req.params.id)}`, "Failed to edit tactic", {
+    method: "PATCH",
+    body: { ...jsonBody(req), updatedBy: createdByOf(req) },
+  }),
+);
 
 export default router;
