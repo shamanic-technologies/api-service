@@ -1187,7 +1187,6 @@ export const CreateCampaignRequestSchema = z
     // Campaign v2 — per-campaign configuration (owned by campaign-service).
     // Faithful passthrough: types mirror campaign-service's create contract exactly.
     goal: z.string().min(1).nullable().optional().describe("Campaign's own optimization goal. Vocabulary owned by campaign-service — not enumerated here."),
-    audienceIds: z.array(z.string().min(1)).min(1).nullable().optional().describe("Subset of the brand's audiences this campaign targets"),
     servicesOffered: z.array(z.string().min(1)).nullable().optional().describe("Services offered by this campaign"),
     clickDestinationUrl: z.string().min(1).nullable().optional().describe("Campaign's click-destination URL"),
   })
@@ -1381,7 +1380,6 @@ const CampaignSchema = z
     maxLeads: z.number().nullable().describe("Maximum number of leads"),
     // Campaign v2 — per-campaign configuration (owned by campaign-service, forwarded byte-identical).
     goal: z.enum(["signup", "meetingBooked", "purchase"]).nullable().describe("Campaign's own optimization goal"),
-    audienceIds: z.array(z.string()).nullable().describe("Subset of the brand's audiences this campaign targets"),
     servicesOffered: z.array(z.string()).nullable().describe("Services offered by this campaign"),
     clickDestinationUrl: z.string().nullable().describe("Campaign's click-destination URL"),
     startDate: z.string().nullable().describe("Campaign start date"),
@@ -1446,7 +1444,9 @@ registry.registerPath({
     "The body is a PASSTHROUGH: the fields below are the ones the gateway itself needs, and every other field " +
     "campaign-service accepts is forwarded unchanged. A sales-outreach campaign states what it sells as `offerId` " +
     "plus the leg it is bought for as `legKey` — that is what the campaign is paced and priced on. The gateway " +
-    "neither infers nor defaults either: campaign-service's own 400 comes back verbatim.",
+    "neither infers nor defaults either: campaign-service's own 400 comes back verbatim.\n\n" +
+    "A campaign does not pick who its pipes find or contact: each pipe's lead strategy decides that. " +
+    "Browse and extend the strategies with the lead-strategy catalogue (`/v1/tactics`, `/v1/strategies`, `/v1/plays`).",
   security: authed,
   request: {
     body: {

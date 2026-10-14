@@ -655,14 +655,6 @@
             ],
             "description": "Campaign's own optimization goal"
           },
-          "audienceIds": {
-            "type": "array",
-            "nullable": true,
-            "items": {
-              "type": "string"
-            },
-            "description": "Subset of the brand's audiences this campaign targets"
-          },
           "servicesOffered": {
             "type": "array",
             "nullable": true,
@@ -737,7 +729,6 @@
           "maxBudgetTotalUsd",
           "maxLeads",
           "goal",
-          "audienceIds",
           "servicesOffered",
           "clickDestinationUrl",
           "startDate",
@@ -885,16 +876,6 @@
             "nullable": true,
             "minLength": 1,
             "description": "Campaign's own optimization goal. Vocabulary owned by campaign-service — not enumerated here."
-          },
-          "audienceIds": {
-            "type": "array",
-            "nullable": true,
-            "items": {
-              "type": "string",
-              "minLength": 1
-            },
-            "minItems": 1,
-            "description": "Subset of the brand's audiences this campaign targets"
           },
           "servicesOffered": {
             "type": "array",
@@ -20152,7 +20133,7 @@
           "Campaigns"
         ],
         "summary": "Create a campaign",
-        "description": "Create a new campaign. Requires feature inputs and at least one of featureSlug/featureDynastySlug plus one of workflowSlug/workflowDynastySlug.\n\nUse `workflowDynastySlug`/`featureDynastySlug` (preferred) to let campaign-service resolve to the latest version automatically. Use `workflowSlug`/`featureSlug` only to pin to a specific version. Feature inputs are validated by key-presence against features-service (api-service never inspects values).\n\nThe body is a PASSTHROUGH: the fields below are the ones the gateway itself needs, and every other field campaign-service accepts is forwarded unchanged. A sales-outreach campaign states what it sells as `offerId` plus the leg it is bought for as `legKey` — that is what the campaign is paced and priced on. The gateway neither infers nor defaults either: campaign-service's own 400 comes back verbatim.",
+        "description": "Create a new campaign. Requires feature inputs and at least one of featureSlug/featureDynastySlug plus one of workflowSlug/workflowDynastySlug.\n\nUse `workflowDynastySlug`/`featureDynastySlug` (preferred) to let campaign-service resolve to the latest version automatically. Use `workflowSlug`/`featureSlug` only to pin to a specific version. Feature inputs are validated by key-presence against features-service (api-service never inspects values).\n\nThe body is a PASSTHROUGH: the fields below are the ones the gateway itself needs, and every other field campaign-service accepts is forwarded unchanged. A sales-outreach campaign states what it sells as `offerId` plus the leg it is bought for as `legKey` — that is what the campaign is paced and priced on. The gateway neither infers nor defaults either: campaign-service's own 400 comes back verbatim.\n\nA campaign does not pick who its pipes find or contact: each pipe's lead strategy decides that. Browse and extend the strategies with the lead-strategy catalogue (`/v1/tactics`, `/v1/strategies`, `/v1/plays`).",
         "security": [
           {
             "bearerAuth": []
