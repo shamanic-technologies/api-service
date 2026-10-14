@@ -157,9 +157,9 @@ describe("PATCH /v1/tactics/:id (edit a tactic's description)", () => {
     expect(calls).toHaveLength(0);
   });
 
-  it("only tactics are editable here: PATCH on strategies or plays is not routed", async () => {
+  it("plays are not editable here: PATCH on a play is not routed (strategy edits are staff only, strategy-edit.behavior.test.ts)", async () => {
     upstream(200, RAW);
-    for (const object of ["strategies", "plays"]) {
+    for (const object of ["plays"]) {
       const res = await request(buildApp()).patch(`/v1/${object}/x`).set(AUTH).send({ description: "Y" });
       expect(res.status).toBe(404);
     }
