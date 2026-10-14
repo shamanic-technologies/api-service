@@ -319,8 +319,13 @@ made while throttled still count, so back off rather than polling the 429.
 
 ## Deprecation policy
 
-Nothing in this document is deprecated today. When something is, you learn it
-mechanically, from the API itself, and with at least
+Deprecated today: the per-campaign / per-step DAILY budget operations (their
+summaries start with "Deprecated:"). A campaign is a sales funnel campaign whose
+money is its caps: \`PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps\`.
+The brand-wide daily budget and the brand pause are not deprecated.
+
+When something is deprecated, you learn it mechanically, from the API itself,
+and with at least
 **${MINIMUM_NOTICE_DAYS} days** of notice:
 
 - The operation is marked \`deprecated: true\` in this document.

@@ -3,6 +3,7 @@ import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../
 import { callExternalService, callExternalServiceWithStatus, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
+import { retiredCampaignBudget } from "../lib/deprecation.js";
 import { ensureBrandInOrg } from "../lib/brand-ownership.js";
 import { fetchDeliveryStats, EMPTY_DELIVERY_STATS } from "../lib/delivery-stats.js";
 import { buildHeadline, buildFailureDetails } from "../lib/stats-headline.js";
@@ -640,7 +641,7 @@ router.patch("/campaigns/:id", authenticate, requireOrg, requireUser, async (req
  * Proxies to campaign-service PATCH /brands/:brandId/daily-budget. Body + response are
  * downstream-owned and forwarded byte-identical.
  */
-router.patch("/brands/:brandId/campaigns/daily-budget", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.patch("/brands/:brandId/campaigns/daily-budget", retiredCampaignBudget, authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   try {
     const { brandId } = req.params;
 

@@ -55,6 +55,17 @@ beforeEach(() => {
 });
 
 describe("offer campaign-budgets proxies", () => {
+  it("signals the retirement (Deprecation + Sunset) and the caps route stays undeprecated", async () => {
+    const res = await request(buildApp()).get(PATH);
+    expect(res.status).toBe(200);
+    expect(res.headers["deprecation"]).toBe(`@${Math.floor(Date.parse("2026-10-14T00:00:00Z") / 1000)}`);
+    expect(res.headers["sunset"]).toBe(new Date("2027-04-12T00:00:00Z").toUTCString());
+    const caps = await request(buildApp()).get(`/v1/brands/${BRAND_ID}/offers/${OFFER_ID}/sales-funnels/sf1/caps`);
+    expect(caps.headers["deprecation"]).toBeUndefined();
+    const brandBudget = await request(buildApp()).get(`/v1/brands/${BRAND_ID}/daily-budget`);
+    expect(brandBudget.headers["deprecation"]).toBeUndefined();
+  });
+
   it("GET forwards to billing's exact path with the authenticated org and user, body untouched", async () => {
     const res = await request(buildApp()).get(PATH).set("x-org-id", "org_spoofed");
     expect(res.status).toBe(200);
