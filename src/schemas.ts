@@ -1703,7 +1703,11 @@ const salesFunnelCampaignDescription =
   "A SALES FUNNEL CAMPAIGN (owner 2026-10-10) is brand x offer x sales funnel: it owns one unit (an ordinary " +
   "campaign) per pipe of the funnel and is run or paused as a whole. Its money is the funnel's caps at billing " +
   "(GET /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps); no max budget = held unfunded. " +
-  "The org is the authenticated one. Status and body (with `reason` on a refusal) relayed verbatim.";
+  "The org is the authenticated one. Status and body (with `reason` on a refusal) relayed verbatim. " +
+  "HOW each pipe behaves is fixed by the funnel's plays (`<leg>@<channel>~<strategy id>` in the funnel id; see the Plays tag: " +
+  "tactic, strategy, play on a pipe, a funnel carrying it, a campaign on that funnel). To change a behaviour (for example " +
+  "replies that carry an offer document as an attachment), launch a campaign on a funnel carrying the right play, created " +
+  "with `status: stopped` until the client agrees.";
 
 const BrandSalesFunnelCampaignRowsResponseSchema = z.object({}).passthrough().openapi("BrandSalesFunnelCampaignRowsResponse");
 
@@ -4419,6 +4423,49 @@ registry.registerPath({
   responses: OFFER_STEP_WRITE_RESPONSES,
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers",
+  tags: ["Brand"],
+  summary: "List a brand's offers",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{brandId}/offers. An OFFER is one thing the brand sells; its id is what " +
+    "offer-scoped routes take (economics, steps, documents, sales funnels, campaigns). Archived offers are hidden unless " +
+    "`includeArchived=true`. Query string forwarded verbatim; status and body owned by brand-service.",
+  security: authed,
+  request: {
+    params: z.object({ id: z.string().describe("Brand ID") }),
+    query: z.object({ includeArchived: z.string().optional().describe("`true` to list archived offers too") }).passthrough(),
+  },
+  responses: {
+    200: { description: "The brand's offers", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandOffersListResponse") } } },
+    400: { description: "Invalid brand ID format (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "No such brand (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}",
+  tags: ["Brand"],
+  summary: "Read one offer",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}. Query string forwarded verbatim; status and body owned by brand-service.",
+  security: authed,
+  request: { params: BrandOfferParams },
+  responses: {
+    200: { description: "The offer", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandOfferResponse") } } },
+    400: { description: "Invalid brand or offer ID format (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
+    404: { description: "No such brand, or no such offer on it (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // ===================================================================
 // Brand – Offer documents (proxy to brand-service /orgs/brands/:id/offers/:offerId/documents[/:documentId]).
 // Files the client owns about one offer, which the AI responder can attach when a prospect replies.
@@ -4430,8 +4477,16 @@ const OfferDocumentParams = BrandOfferParams.extend({
   documentId: z.string().describe("Document ID (from the list or the upload answer)"),
 });
 const OFFER_DOCUMENTS_MODEL =
-  "Documents are files the client owns about ONE offer (a one-pager, a case study, a spec sheet, an FAQ). " +
-  "The AI answering a prospect reads the list (fileName + description) to pick the one that helps and attaches it. " +
+  "Documents are files the client owns about ONE offer (a one-pager, a case study, a spec sheet, an FAQ), sent as an " +
+  "email attachment on a reply to a prospect. Uploading one changes no campaign by itself: a document is attached only " +
+  "(a) when you reply yourself with `POST /v1/replies` and list it in `attachments` [{ document_id }], or (b) by a " +
+  "WORKFLOW that attaches offer documents, reading this list (fileName + description) to pick the file that helps. " +
+  "Which workflow a campaign's pipe runs is chosen by its PLAY, not by you directly: to make a campaign's AI meeting " +
+  "booking replies carry an attachment, find (`GET /v1/tactics?q=attach`) or create (`POST /v1/tactics`) a tactic " +
+  "describing that attachment behaviour, a strategy requiring it (`POST /v1/strategies`), add it as a play on the " +
+  "pipe `ai-meeting-booking|conversation_to_meeting_booked` (`POST /v1/plays`), then pick a sales funnel running that " +
+  "play (`GET /v1/offers/{offerId}/sales-funnels`, its id carries `@ai-meeting-booking~<strategy id>`) and launch it " +
+  "with `POST /v1/sales-funnel-campaigns`. Write each description as when the file helps a prospect. " +
   "Accepted: pdf, docx, pptx, xlsx, doc, ppt, xls, csv, txt, md, png, jpg/jpeg, gif, webp; at most 5 MB per file " +
   "and 25 files per offer. The file extension decides the type and must match the content.";
 const OfferDocumentJsonUpload = z
@@ -8572,13 +8627,48 @@ registry.registerPath({
   },
 });
 
+// Agent skill tree, read-only, any authenticated caller (src/routes/agent-skills.ts)
+const AGENT_SKILLS_MODEL =
+  "The skill tree is the method our Copilot follows to organize a client's request on distribute.you (offers, catalogue, sales funnels, " +
+  "campaigns, budget, workflows, tactics and plays): markdown skills in a tree, `index` first. Your own agent can follow the same method: " +
+  "read the tree, then load a skill when its description matches the ask. Read-only; the same for every client.";
+registry.registerPath({
+  method: "get", path: "/v1/skills", tags: ["Skills"], security: authed,
+  summary: "List the agent skill tree",
+  description: `${AGENT_SKILLS_MODEL} Answers { skills: [{ slug, parentSlug, title, description, position, version, ... }] } without content. Byte passthrough to chat-service GET /internal/skills; status and body owned by it.`,
+  responses: {
+    200: { description: "The skill tree", content: { "application/json": { schema: z.object({}).passthrough().openapi("AgentSkillsListResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+registry.registerPath({
+  method: "get", path: "/v1/skills/{slug}", tags: ["Skills"], security: authed,
+  summary: "Read one agent skill",
+  description: `${AGENT_SKILLS_MODEL} Answers one skill with its markdown \`content\` (start with \`index\`). Byte passthrough to chat-service GET /internal/skills/{slug}; a 404 for an unknown slug comes back verbatim.`,
+  request: { params: z.object({ slug: z.string().openapi({ description: "A skill slug from GET /v1/skills, e.g. `index`, `offers`, `campaigns`" }) }) },
+  responses: {
+    200: { description: "The skill with its content", content: { "application/json": { schema: z.object({}).passthrough().openapi("AgentSkillResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Unknown skill (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // Tactics, strategies and plays — shared catalogue, any authenticated caller (src/routes/plays.ts)
 const PLAYS_MODEL =
   "A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). " +
   "A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". " +
   "A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. " +
   "Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. " +
-  "This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide.";
+  "This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. " +
+  "It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): " +
+  "(1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); " +
+  "(3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); " +
+  "(4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play " +
+  "and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, " +
+  "create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. " +
+  "A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`).";
 const playsCommon = (s: string) => `${s} ${PLAYS_MODEL} Byte passthrough to features-service; status and body (including 400/404/409 with a named \`reason\`) owned by it.`;
 const playsListQuery = z.object({ q: z.string().optional().openapi({ description: "Text to find by name or id" }), limit: z.string().optional().openapi({ description: "Rows per page, 1..25 (default 10)" }) }).passthrough();
 const playsErrors = {
@@ -15870,8 +15960,12 @@ registry.registerPath({
     "person wrote back on several campaigns the answer is 409 `ambiguous_thread` with the `candidates`; call again with one " +
     "`campaign_id`. Write `body_html` without a signature (the persona's is added). " +
     "Send `sent_by: \"human\"` for a reply a person decided on. Name the organization with `brandId` or `orgId`. " +
+    "To send files, list offer documents in `attachments` [{ document_id }] (up to 5, 10 MB together; ids from " +
+    "`GET /v1/brands/{id}/offers/{offerId}/documents`): each goes as a real email attachment, and any problem refuses the " +
+    "whole reply, nothing sent (404 `attachment_not_found`, 422 `attachment_too_large` or `attachments_unsupported_on_transport`, " +
+    "502 `attachment_unavailable`). " +
     "Pass-through to instantly-service POST /orgs/replies: refusals come back unchanged with a `code` " +
-    "(409 `ambiguous_thread`, `no_reply_to_thread`, `human_took_over`; 404 `campaign_not_found` when the org never emailed that person).",
+    "(409 `ambiguous_thread`, `no_reply_to_thread`, `human_took_over`; 404 `campaign_not_found` when the org never emailed that person). The full body is documented from instantly-service.",
   security: authed,
   request: { body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("ReplyToPersonRequest") } } } },
   responses: {
@@ -15880,6 +15974,8 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "No thread for that person (forwarded verbatim)", content: errorContent },
     409: { description: "Refused, with a `code` (forwarded verbatim)", content: errorContent },
+    422: { description: "An attachment refused (`attachment_too_large`, `attachments_unsupported_on_transport`), nothing sent (forwarded verbatim)", content: errorContent },
+    502: { description: "An attachment unreadable (`attachment_unavailable`), nothing sent (forwarded verbatim)", content: errorContent },
   },
 });
 
