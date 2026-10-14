@@ -236,4 +236,55 @@ router.get(
   },
 );
 
+/**
+ * /v1/email-signature — pass-through to instantly-service /orgs/email-signature
+ * (GET ?brandId=, PUT { brandId, signature }, DELETE ?brandId=).
+ *
+ * The signature at the bottom of every email we send for a brand. Ours by default
+ * (`signature: null`); a client's own replaces it on every NEW thread of the brand
+ * (the email itself, pushed emails, follow-ups, AI replies); a thread keeps the
+ * signature it started with. instantly-service (the send door) owns the setting,
+ * its validation (400 with a readable reason) and the per-thread pinning.
+ *
+ * instantly-service scopes on `x-org-id` but does not check the brand belongs to
+ * the org, so `ensureBrandInOrg` 404s `brand_not_in_org` before any read or write
+ * (same gate as GET /v1/email-sequences). Query string forwarded verbatim (rule
+ * #11), PUT body forwarded as-is (rule #4), errors field-for-field (rule #7).
+ */
+function brandIdOf(req: AuthenticatedRequest): string | undefined {
+  const source = req.method === "PUT" ? req.body : req.query;
+  const brandId = source?.brandId;
+  return typeof brandId === "string" && brandId ? brandId : undefined;
+}
+
+for (const method of ["GET", "PUT", "DELETE"] as const) {
+  router[method.toLowerCase() as "get" | "put" | "delete"](
+    "/email-signature",
+    authenticate,
+    requireOrg,
+    requireUser,
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const brandId = brandIdOf(req);
+        if (!brandId) {
+          return res.status(400).json({
+            error: method === "PUT" ? "Missing required body field: brandId" : "Missing required query parameter: brandId",
+          });
+        }
+        if (!(await ensureBrandInOrg(req, res, brandId))) return;
+
+        const result = await callExternalService(
+          externalServices.instantly,
+          method === "PUT" ? "/orgs/email-signature" : `/orgs/email-signature${rawQueryString(req.originalUrl)}`,
+          { method, headers: buildInternalHeaders(req), ...(method === "PUT" ? { body: req.body } : {}) },
+        );
+        res.json(result);
+      } catch (error: any) {
+        console.error(`[api-service] ${method} email signature error:`, error.message);
+        respondUpstreamError(res, error, `Failed to ${method === "GET" ? "read" : "change"} the email signature`);
+      }
+    },
+  );
+}
+
 export default router;
