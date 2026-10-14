@@ -108,6 +108,32 @@ describe("sales funnel campaigns + caps — pass-through", () => {
     expect(JSON.parse(init.body)).toEqual({ status: "activate" });
   });
 
+  it("DELETE: forwards the method with no body and the authenticated org, relays the 200", async () => {
+    const ok = `{"deleted":true,"salesFunnelCampaignId":"${SFC}","unitIds":["u1","u2"]}`;
+    global.fetch = vi.fn().mockImplementation(async (url: string, init: any) => {
+      calls.push({ url, init });
+      return respond(200, ok);
+    });
+    const res = await request(buildApp()).delete(`/v1/sales-funnel-campaigns/${SFC}`).set("x-org-id", "org_someone_else");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(JSON.parse(ok));
+    const { url, init } = upstream();
+    expect(new URL(url).pathname).toBe(`/sales-funnel-campaigns/${SFC}`);
+    expect(init.method).toBe("DELETE");
+    expect(init.body).toBeUndefined();
+    expect(init.headers["x-org-id"]).toBe("org_authenticated");
+  });
+
+  it("DELETE: relays a 409 refusal field-for-field", async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string, init: any) => {
+      calls.push({ url, init });
+      return respond(409, '{"error":"Stop this campaign before deleting it.","reason":"sales_funnel_campaign_ongoing"}');
+    });
+    const res = await request(buildApp()).delete(`/v1/sales-funnel-campaigns/${SFC}`);
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual({ error: "Stop this campaign before deleting it.", reason: "sales_funnel_campaign_ongoing" });
+  });
+
   it("caps GET: forwards to billing's same path with the funnel id re-encoded", async () => {
     const res = await request(buildApp()).get(`/v1/brands/${BRAND}/offers/${OFFER}/sales-funnels/${FUNNEL_ENCODED}/caps`);
     expect(res.status).toBe(200);

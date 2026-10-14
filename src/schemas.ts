@@ -1845,6 +1845,29 @@ registry.registerPath({
   },
 });
 
+const SalesFunnelCampaignDeleteResponseSchema = z.object({}).passthrough().openapi("SalesFunnelCampaignDeleteResponse");
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/sales-funnel-campaigns/{id}",
+  tags: ["Campaigns"],
+  summary: "Delete a sales funnel campaign created by mistake (stopped, never ran)",
+  description:
+    "Proxy to campaign-service DELETE /sales-funnel-campaigns/{id}. " +
+    salesFunnelCampaignDescription +
+    " Removes a campaign created by mistake together with its units: only a STOPPED campaign that never ran and never " +
+    "spent can go. A campaign that is running (stop it first) or has any history is refused. No body.",
+  security: authed,
+  request: { params: z.object({ id: z.string() }) },
+  responses: {
+    200: { description: "{ deleted: true, salesFunnelCampaignId, unitIds }", content: { "application/json": { schema: SalesFunnelCampaignDeleteResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Not found in this org, forwarded verbatim", content: errorContent },
+    409: { description: "Refused (reason sales_funnel_campaign_ongoing | sales_funnel_campaign_has_history), forwarded verbatim", content: errorContent },
+    502: { description: "Dependency unavailable (reason runs_unavailable | billing_unavailable), forwarded verbatim", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/campaigns/{id}",
