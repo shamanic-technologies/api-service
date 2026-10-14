@@ -50,6 +50,14 @@ import { isStaffEmail } from "../lib/staff.js";
  *   the path org is not a request target). Idempotent downstream (200 with
  *   `membershipRemoved: false` for a non-member); piped byte-identical, refusals
  *   included.
+ * - `GET|POST|DELETE /v1/orgs/:orgId/join-link` → the same paths under
+ *   `/internal`: staff read, mint (or get the existing one: one per org) and
+ *   revoke the org's shareable join link, so the MCP can put it in a prospect's
+ *   email. Whoever opens it joins as admin with any email; nothing is emailed.
+ *   Same gate as the members routes (`requireStaffActor`, `STAFF_KEY_OPERATIONS`,
+ *   `authenticateUser`: the path org is not a request target). The mint's
+ *   `createdByUserId` is the acting staff member, forced from auth. Piped
+ *   byte-identical with status (201 minted, 200 existing).
  *
  * The acting user is identity, so the gateway supplies it from `authenticate`
  * (`createdByUserId` / `invitedByUserId`, client-service's body names for the
@@ -256,5 +264,42 @@ router.delete(
     }
   },
 );
+
+function joinLinkPath(req: AuthenticatedRequest) {
+  return `/internal/orgs/${encodeURIComponent(req.params.orgId)}/join-link`;
+}
+
+router.get("/orgs/:orgId/join-link", authenticateUser, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(externalServices.client, joinLinkPath(req), { expressRes: res, headers: buildInternalHeaders(req) });
+  } catch (error) {
+    respondUpstreamError(res, error, "Failed to read the join link");
+  }
+});
+
+router.post("/orgs/:orgId/join-link", authenticateUser, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(externalServices.client, joinLinkPath(req), {
+      expressRes: res,
+      method: "POST",
+      body: { createdByUserId: req.userId },
+      headers: buildInternalHeaders(req),
+    });
+  } catch (error) {
+    respondUpstreamError(res, error, "Failed to create the join link");
+  }
+});
+
+router.delete("/orgs/:orgId/join-link", authenticateUser, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(externalServices.client, joinLinkPath(req), {
+      expressRes: res,
+      method: "DELETE",
+      headers: buildInternalHeaders(req),
+    });
+  } catch (error) {
+    respondUpstreamError(res, error, "Failed to revoke the join link");
+  }
+});
 
 export default router;

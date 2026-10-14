@@ -261,3 +261,67 @@ describe("DELETE /v1/orgs/:orgId/members/:userId → client-service member remov
     expect(res.body).toEqual(refusal);
   });
 });
+
+describe("/v1/orgs/:orgId/join-link → client-service join link (staff key only)", () => {
+  const ORG = "88888888-8888-8888-8888-888888888888";
+  const LINK = { url: "https://dashboard.distribute.you/join/tok_1", createdAt: "2026-10-14T12:00:00.000Z" };
+
+  it("POST mints: exact downstream path, creator forced from auth (a forged one is dropped), 201 + body piped back", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    fetchMock.mockResolvedValue(upstream(201, { link: LINK, created: true }));
+    const res = await request(app()).post(`/v1/orgs/${ORG}/join-link`).send({ createdByUserId: "forged", other: 1 });
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual({ link: LINK, created: true });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${CLIENT_BASE}/internal/orgs/${ORG}/join-link`);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ createdByUserId: "user-staff" });
+  });
+
+  it("POST on an org that has one forwards 200 created: false", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    fetchMock.mockResolvedValue(upstream(200, { link: LINK, created: false }));
+    const res = await request(app()).post(`/v1/orgs/${ORG}/join-link`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ link: LINK, created: false });
+  });
+
+  it("GET reads it, null included", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    fetchMock.mockResolvedValue(upstream(200, { link: null }));
+    const res = await request(app()).get(`/v1/orgs/${ORG}/join-link`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ link: null });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${CLIENT_BASE}/internal/orgs/${ORG}/join-link`);
+    expect(init.method ?? "GET").toBe("GET");
+  });
+
+  it("DELETE revokes", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    fetchMock.mockResolvedValue(upstream(200, { revoked: true }));
+    const res = await request(app()).delete(`/v1/orgs/${ORG}/join-link`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ revoked: true });
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${CLIENT_BASE}/internal/orgs/${ORG}/join-link`);
+    expect(init.method).toBe("DELETE");
+  });
+
+  it.each(["get", "post", "delete"] as const)("%s: a client key is refused 403 staff_only and client-service is never called", async (m) => {
+    identity.current = { ...CLIENT_KEY, userId: "user-client", orgId: ORG };
+    const res = await request(app())[m](`/v1/orgs/${ORG}/join-link`);
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("staff_only");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("refusals are forwarded verbatim with their status", async () => {
+    identity.current = { ...STAFF_KEY, orgId: undefined };
+    const refusal = { error: "org_has_no_identity", message: "No identity org" };
+    fetchMock.mockResolvedValue(upstream(409, refusal));
+    const res = await request(app()).post(`/v1/orgs/${ORG}/join-link`);
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual(refusal);
+  });
+});
