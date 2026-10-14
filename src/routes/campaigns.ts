@@ -3,7 +3,6 @@ import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../
 import { callExternalService, callExternalServiceWithStatus, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
-import { retiredCampaignBudget } from "../lib/deprecation.js";
 import { ensureBrandInOrg } from "../lib/brand-ownership.js";
 import { fetchDeliveryStats, EMPTY_DELIVERY_STATS } from "../lib/delivery-stats.js";
 import { buildHeadline, buildFailureDetails } from "../lib/stats-headline.js";
@@ -626,38 +625,6 @@ router.patch("/campaigns/:id", authenticate, requireOrg, requireUser, async (req
     // A refusal (409 payment_declined, 502 billing_unavailable, ...) carries campaign-service's
     // own customer-facing `error` plus `reason` / `blockedReason` — forward it field-for-field.
     respondUpstreamError(res, error, "Failed to update campaign");
-  }
-});
-
-/**
- * PATCH /v1/brands/:brandId/campaigns/daily-budget
- * Set the daily budget for ALL of a brand's sales campaigns at once.
- *
- * Brand-page propagation lever: when a customer edits their daily budget on the brand page,
- * that number must flow down to the brand's campaign(s) so per-campaign pacing enforces it.
- * Distinct from PATCH /v1/brands/:brandId/daily-budget (billing-service brand spend cap) — this
- * targets campaign-service's per-campaign budget. dailyBudgetCents:null clears each campaign's
- * own budget so they fall back to the brand daily budget.
- * Proxies to campaign-service PATCH /brands/:brandId/daily-budget. Body + response are
- * downstream-owned and forwarded byte-identical.
- */
-router.patch("/brands/:brandId/campaigns/daily-budget", retiredCampaignBudget, authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
-  try {
-    const { brandId } = req.params;
-
-    const result = await callExternalService(
-      externalServices.campaign,
-      `/brands/${brandId}/daily-budget`,
-      {
-        method: "PATCH",
-        headers: buildInternalHeaders(req),
-        body: req.body,
-      }
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("Set brand campaigns daily budget error:", error);
-    respondUpstreamError(res, error, "Failed to set brand campaigns daily budget");
   }
 });
 

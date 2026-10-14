@@ -15,13 +15,12 @@
  * - Removal is a `major`-version event; the URL version prefix (`/v1`) never
  *   changes meaning under a caller.
  *
- * First deprecation (2026-10-14): the per-campaign / per-step DAILY budget
- * routes (`RETIRED_CAMPAIGN_BUDGET_NOTICE`). Owner model: a campaign IS a sales
- * funnel campaign whose money is its caps (max budget and/or max volume per
- * period, billing's sales-funnel caps routes), pay as you go at /catalog prices.
- * The brand-level daily budget and the brand pause are NOT retired.
+ * Nothing is deprecated today. The per-campaign daily-budget routes were
+ * deprecated then REMOVED on 2026-10-14 (zero callers left; a campaign's money
+ * is its sales funnel caps), so this module is again the mechanism the policy
+ * promises for the next deprecation.
  */
-import type { NextFunction, Request, Response } from "express";
+import { Response } from "express";
 
 /** Minimum days between announcing a deprecation and sunsetting the operation. */
 export const MINIMUM_NOTICE_DAYS = 180;
@@ -85,27 +84,4 @@ export function signalDeprecation(res: Response, notice: DeprecationNotice): voi
 export function honoursMinimumNotice(notice: DeprecationNotice): boolean {
   const days = (notice.sunsetAt.getTime() - notice.deprecatedAt.getTime()) / 86_400_000;
   return days >= MINIMUM_NOTICE_DAYS;
-}
-
-/**
- * The retired per-campaign daily-budget operations (owner 2026-10-14). They keep
- * working until the sunset date; the served document marks them `deprecated`
- * and names the caps route so search tools and agents land on today's model.
- */
-export const RETIRED_CAMPAIGN_BUDGET_NOTICE: DeprecationNotice = {
-  deprecatedAt: new Date("2026-10-14T00:00:00Z"),
-  sunsetAt: new Date("2027-04-12T00:00:00Z"),
-};
-
-/** Lead sentence of every retired per-campaign budget operation's description. */
-export const RETIRED_CAMPAIGN_BUDGET_REPLACEMENT =
-  "DEPRECATED (retired 2026-10-14): a campaign is a sales funnel campaign whose money is its caps. " +
-  "To set what a campaign may spend, use PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps " +
-  "(max budget and/or max volume per period; read with GET on the same path, list with GET /v1/brands/{brandId}/sales-funnel-caps). " +
-  "The brand-wide ceiling stays PATCH /v1/brands/{brandId}/daily-budget. Do not use this operation for new work. ";
-
-/** Express middleware: signal the per-campaign budget retirement on every response. */
-export function retiredCampaignBudget(_req: Request, res: Response, next: NextFunction): void {
-  signalDeprecation(res, RETIRED_CAMPAIGN_BUDGET_NOTICE);
-  next();
 }

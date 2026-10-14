@@ -319,10 +319,10 @@ made while throttled still count, so back off rather than polling the 429.
 
 ## Deprecation policy
 
-Deprecated today: the per-campaign / per-step DAILY budget operations (their
-summaries start with "Deprecated:"). A campaign is a sales funnel campaign whose
-money is its caps: \`PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps\`.
-The brand-wide daily budget and the brand pause are not deprecated.
+Nothing in this document is deprecated today. To set what a campaign may
+spend, use its sales funnel caps:
+\`PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps\`
+(the old per-campaign daily-budget operations are gone).
 
 When something is deprecated, you learn it mechanically, from the API itself,
 and with at least
