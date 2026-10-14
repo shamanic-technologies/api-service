@@ -9087,6 +9087,18 @@
         "type": "object",
         "properties": {}
       },
+      "OrgJoinLinkMinted": {
+        "type": "object",
+        "properties": {}
+      },
+      "OrgJoinLink": {
+        "type": "object",
+        "properties": {}
+      },
+      "OrgJoinLinkRevoked": {
+        "type": "object",
+        "properties": {}
+      },
       "MemberInvitationExisting": {
         "type": "object",
         "properties": {}
