@@ -16025,3 +16025,221 @@ registry.registerPath({
     404: { description: "`invitation_not_found` (forwarded verbatim)", content: errorContent },
   },
 });
+
+// ── Relationships (RELATIONSHIP-TAGS-1014) ─────────────────────────────────────
+// Who each person is to a brand: relationship tags, suggested merges, company.
+// Pass-through to lead-service /orgs/brands/{brandId}/relationships/* (same suffix)
+// and GET /orgs/leads/{id}/relationship. lead-service owns the vocabulary, the
+// shapes and every refusal; bodies and query strings are forwarded verbatim.
+const RELATIONSHIP_TAGS_DOC =
+  "Tags: `personal` (about the PERSON, shown on every brand) and `customer`, `prospect`, `team`, `investor`, " +
+  "`advisor`, `supplier`, `partner`, `other_professional` (about this person at this brand).";
+
+const RelationshipBrandParam = z.string().uuid().openapi({ description: "The brand (from GET /v1/me or GET /v1/brands)" });
+const RelationshipHumanParam = z.string().uuid().openapi({ description: "The person (`humanId` from the review read)" });
+
+const relationshipErrors = {
+  400: { description: "Invalid request (lead-service states the reason, verbatim)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  404: { description: "Not found in this organization (lead-service's answer, verbatim)", content: errorContent },
+  500: { description: "Internal error", content: errorContent },
+  502: { description: "lead-service could not reach a service it needs (verbatim)", content: errorContent },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/relationships/review",
+  tags: ["Leads"],
+  summary: "Review who each person is to a brand: unsure merges, unsure tags, unknown companies, and everything settled",
+  description:
+    "What the brand's relationship review needs: `mergeQuestions` (two people the AI thinks may be the same person, " +
+    "each with a `confidence` and a `reason`), `tagQuestions` (a tag the AI is unsure about), `companyQuestions` " +
+    "(people whose company is unknown, with candidates), `settled` (merges done and every person with their company " +
+    "and tags) and `counts`. Fix each with the POST/PUT/DELETE routes under the same path. " + RELATIONSHIP_TAGS_DOC +
+    " Pass-through to lead-service GET /orgs/brands/{brandId}/relationships/review.",
+  security: authed,
+  request: { params: z.object({ brandId: RelationshipBrandParam }) },
+  responses: {
+    200: { description: "The review, as returned by lead-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("RelationshipReviewResponse") } } },
+    ...relationshipErrors,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{brandId}/relationships/merge-questions/{questionId}/answer",
+  tags: ["Leads"],
+  summary: "Answer a merge question: are these two the same person?",
+  description:
+    "`{same: true}` links the two people as one person (for this organization only); `{same: false}` records them as " +
+    "different people and the question is never asked again. Undo a merge with POST .../relationships/merges/{linkId}/undo. " +
+    "Pass-through to lead-service POST /orgs/brands/{brandId}/relationships/merge-questions/{questionId}/answer.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: RelationshipBrandParam, questionId: z.string().uuid().openapi({ description: "`mergeQuestions[].id` from the review read" }) }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({ same: z.boolean().openapi({ description: "true = the same person, false = two different people" }) })
+            .passthrough()
+            .openapi("RelationshipMergeAnswerRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "The answer as recorded, as returned by lead-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("RelationshipMergeAnswerResponse") } } },
+    ...relationshipErrors,
+    409: { description: "`human_service_refused` (verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{brandId}/relationships/merges/{linkId}/undo",
+  tags: ["Leads"],
+  summary: "Undo a merge: the two people are separate again",
+  description:
+    "Undo one merge listed in `settled.merges` of the review read. " +
+    "Pass-through to lead-service POST /orgs/brands/{brandId}/relationships/merges/{linkId}/undo.",
+  security: authed,
+  request: { params: z.object({ brandId: RelationshipBrandParam, linkId: z.string().openapi({ description: "`settled.merges[].linkId` from the review read" }) }) },
+  responses: {
+    200: { description: "The merge undone, as returned by lead-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("RelationshipMergeUndoResponse") } } },
+    ...relationshipErrors,
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{brandId}/relationships/{humanId}/tags/{tag}",
+  tags: ["Leads"],
+  summary: "Say yes or no to one relationship tag on a person",
+  description:
+    "Your word on a tag outranks the evidence and the AI's judgment. `{state: \"yes\"}` or `{state: \"no\"}`. " +
+    RELATIONSHIP_TAGS_DOC + " Remove your word with DELETE on the same path. " +
+    "Pass-through to lead-service PUT /orgs/brands/{brandId}/relationships/{humanId}/tags/{tag}.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: RelationshipBrandParam, humanId: RelationshipHumanParam, tag: z.string().openapi({ description: "One relationship tag, e.g. `personal`, `customer`" }) }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({ state: z.string().openapi({ description: "`yes` or `no`" }) })
+            .passthrough()
+            .openapi("RelationshipTagStateRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "`{relationship}` after the change, as returned by lead-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("RelationshipTagStateResponse") } } },
+    ...relationshipErrors,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/brands/{brandId}/relationships/{humanId}/tags/{tag}",
+  tags: ["Leads"],
+  summary: "Remove your word on one relationship tag (back to evidence and the AI's judgment)",
+  description:
+    "Withdraw a yes/no stated with PUT on the same path. " +
+    "Pass-through to lead-service DELETE /orgs/brands/{brandId}/relationships/{humanId}/tags/{tag}.",
+  security: authed,
+  request: { params: z.object({ brandId: RelationshipBrandParam, humanId: RelationshipHumanParam, tag: z.string().openapi({ description: "One relationship tag" }) }) },
+  responses: {
+    200: { description: "`{withdrawn, relationship}`, as returned by lead-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("RelationshipTagWithdrawResponse") } } },
+    ...relationshipErrors,
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{brandId}/relationships/{humanId}/company",
+  tags: ["Leads"],
+  summary: "Set the company a person works at (or say they have none)",
+  description:
+    "Send exactly one of `{domain}`, `{name}` or `{none: true}`. " +
+    "Pass-through to lead-service PUT /orgs/brands/{brandId}/relationships/{humanId}/company.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: RelationshipBrandParam, humanId: RelationshipHumanParam }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              domain: z.string().optional().openapi({ description: "The company's website domain, e.g. `acme.com`" }),
+              name: z.string().optional().openapi({ description: "The company's name, when no domain is known" }),
+              none: z.boolean().optional().openapi({ description: "true = this person works at no company" }),
+            })
+            .passthrough()
+            .openapi("RelationshipCompanyRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "`{company}` as set, as returned by lead-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("RelationshipCompanyResponse") } } },
+    ...relationshipErrors,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/leads/{id}/relationship",
+  tags: ["Leads"],
+  summary: "Who the person of one lead is to its brand",
+  description:
+    "Answer `{leadId, brandId, relationship}`: the person's company, relationship tags (yes and unsure), when the " +
+    "whole thread was last judged, the detail per tag, and `policies.business_only`. " + RELATIONSHIP_TAGS_DOC +
+    " `brandId` (query) picks the brand when the lead row belongs to several. " +
+    "Pass-through to lead-service GET /orgs/leads/{id}/relationship.",
+  security: authed,
+  request: {
+    params: z.object({ id: z.string().openapi({ description: "The `id` of a lead as returned by GET /v1/leads." }) }),
+    query: z.object({ brandId: z.string().optional().openapi({ description: "Brand scope." }) }).passthrough(),
+  },
+  responses: {
+    200: { description: "The relationship block, as returned by lead-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("LeadRelationshipResponse") } } },
+    ...relationshipErrors,
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/catalogue/pipes/{pipeId}/default-play",
+  tags: ["Features"],
+  summary: "Set the play a pipe runs by default (staff only)",
+  description:
+    "Fleet-wide: the strategy a pipe runs when a campaign names no play. Staff only: a distribute.you staff member's own " +
+    "API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. `decidedBy` is recorded as " +
+    "the authenticated staff email (a body value is ignored). A strategy whose play runs nothing is refused 409 " +
+    "`default_play_runs_nothing`. Byte passthrough to features-service PUT /internal/catalogue/pipes/{pipeId}/default-play.",
+  security: platformAuth,
+  request: {
+    params: z.object({ pipeId: z.string().openapi({ description: "a pipe id `<channel slug>|<leg key>` (GET /v1/catalogue/pipes)" }) }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({ strategyId: z.string().openapi({ description: "The strategy (GET /v1/strategies) the pipe runs by default" }) })
+            .passthrough()
+            .openapi("PipeDefaultPlayRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PipeDefaultPlayResponse") } } },
+    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff (`staff_only`)", content: errorContent },
+    404: { description: "Unknown pipe or strategy (forwarded verbatim)", content: errorContent },
+    409: { description: "`default_play_runs_nothing` (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});

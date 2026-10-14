@@ -533,6 +533,35 @@ router.delete(
  * Its read, `GET /orgs/leads/disqualifications`, needs no route here: `GET /v1/leads/:id`
  * forwards `id = disqualifications` plus the query verbatim, like `awaiting-reply`.
  */
+/**
+ * GET /v1/leads/:id/relationship — pass-through to lead-service
+ * GET /orgs/leads/{id}/relationship (RELATIONSHIP-TAGS-1014): who the person of one
+ * lead row is to its brand (tags, unsure tags, company, the `business_only` policy).
+ * `GET /v1/leads/:id` matches one segment only, so it never reached this path.
+ * `brandId` rides the query string verbatim (rule #11); the org is the authenticated
+ * one; status and body are lead-service's (404 not in this org / brand).
+ */
+router.get(
+  "/leads/:id/relationship",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/relationship${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Get lead relationship error:", error);
+      respondUpstreamError(res, error, "Failed to get lead relationship");
+    }
+  }
+);
+
 router.put(
   "/leads/:id/disqualification",
   authenticate,

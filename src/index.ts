@@ -30,6 +30,7 @@ import crmRoutes from "./routes/crm.js";
 import googleRoutes from "./routes/google.js";
 import scrapingRoutes from "./routes/scraping.js";
 import leadsRoutes from "./routes/leads.js";
+import relationshipsRoutes from "./routes/relationships.js";
 import qualificationRoutes from "./routes/qualification.js";
 import conversationsRoutes from "./routes/conversations.js";
 import activityRoutes from "./routes/activity.js";
@@ -293,6 +294,7 @@ app.use("/v1", brandPauseRoutes);
 app.use("/v1", brandSpendableBudgetRoutes);
 app.use("/v1", rewardTasksRoutes);
 app.use("/v1", brandAudienceRoutes);
+app.use("/v1", relationshipsRoutes); // lead-service /orgs/brands/:brandId/relationships/* (RELATIONSHIP-TAGS-1014)
 app.use("/v1", brandRoutes);
 app.use("/v1", crmRoutes);
 app.use("/v1", googleRoutes);
