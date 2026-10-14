@@ -16322,6 +16322,78 @@ registry.registerPath({
   },
 });
 
+const JOIN_LINK_ABOUT =
+  "The org's join link is ONE shareable dashboard URL for the whole team of a prospect or client: put it in your email so " +
+  "anyone of their team reaches this organization's dashboard. Whoever opens it signs in or signs up with ANY email and " +
+  "joins the organization as an admin. Nothing is emailed by us. One link per organization, no expiry: it works until revoked; " +
+  "revoking kills it at once (members who already joined stay) and the next mint gives a new URL. " +
+  "Staff only: a distribute.you staff member's own API key, any other key gets 403 `staff_only`. The staff caller need not be " +
+  "a member of the organization.";
+
+const joinLinkParams = z.object({ orgId: z.string().uuid().openapi({ description: "The organization (e.g. from POST /v1/orgs)" }) });
+
+const joinLinkErrors = {
+  400: { description: "`invalid_request` (forwarded verbatim)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  403: { description: "Not staff (`staff_only`)", content: errorContent },
+  404: { description: "`org_not_found`, or `user_not_found` for the acting staff member on mint (forwarded verbatim)", content: errorContent },
+  409: { description: "`org_has_no_identity`: the organization has no identity-provider org yet (forwarded verbatim)", content: errorContent },
+  502: { description: "`identity_provider_failed` (forwarded verbatim)", content: errorContent },
+};
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/{orgId}/join-link",
+  tags: ["Organizations"],
+  summary: "Get a link the prospect's team can use to join the account (staff only)",
+  description:
+    "Mint this organization's join link, or get the existing one (calling again returns the SAME URL, 200 `created: false`). " +
+    "Send no body: you are recorded as the link's creator. " + JOIN_LINK_ABOUT +
+    " Pass-through to client-service POST /internal/orgs/{orgId}/join-link: answers `{ link: { url, createdAt }, created }`, " +
+    "`link.url` is the URL to share.",
+  security: platformAuth,
+  request: { params: joinLinkParams },
+  responses: {
+    201: passthroughResponse("Minted: `{ link: { url, createdAt }, created: true }`", "OrgJoinLinkMinted"),
+    200: passthroughResponse("The organization already had one, returned: `{ link, created: false }`", "OrgJoinLinkMinted"),
+    ...joinLinkErrors,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/{orgId}/join-link",
+  tags: ["Organizations"],
+  summary: "Read an organization's join link (staff only)",
+  description:
+    "Read this organization's join link without creating one: `{ link: { url, createdAt } }`, or `{ link: null }` when it has " +
+    "none (never minted, or revoked). " + JOIN_LINK_ABOUT +
+    " Pass-through to client-service GET /internal/orgs/{orgId}/join-link.",
+  security: platformAuth,
+  request: { params: joinLinkParams },
+  responses: {
+    200: passthroughResponse("`{ link: { url, createdAt } | null }`", "OrgJoinLink"),
+    ...joinLinkErrors,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/orgs/{orgId}/join-link",
+  tags: ["Organizations"],
+  summary: "Revoke an organization's join link (staff only)",
+  description:
+    "The link stops working at once (opening it says it is no longer valid); members who already joined stay. Minting again " +
+    "gives a NEW URL. Safe to call again: `{ revoked: false }` when there was none. " + JOIN_LINK_ABOUT +
+    " Pass-through to client-service DELETE /internal/orgs/{orgId}/join-link: answers `{ revoked }`.",
+  security: platformAuth,
+  request: { params: joinLinkParams },
+  responses: {
+    200: passthroughResponse("`{ revoked: true }`, or `false` when there was no link", "OrgJoinLinkRevoked"),
+    ...joinLinkErrors,
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/v1/orgs/{orgId}/member-invitations",
