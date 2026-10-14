@@ -1539,8 +1539,54 @@ const OfferTriggerEventsSummaryResponseSchema = z
   .object({})
   .passthrough()
   .openapi("OfferTriggerEventsSummaryResponse");
+// One trigger event, as campaign-service serves it (its `TriggerEvent` schema, served openapi 2026-10-14).
+// These response schemas DOCUMENT the producer's fields and validate nothing: every trigger-event route
+// pipes the upstream bytes (`pipeExternalService`), so a field campaign-service adds still reaches the
+// caller today; the document learns it here. Owner gap 2026-10-14: the 201 of POST /v1/trigger-events was
+// published as `{}`, so an agent could not read `event.outcome` / `skipReason` / `ranCampaignIds`.
+const TriggerEventSchema = z
+  .object({
+    id: z.string().openapi({ description: "The event id." }),
+    triggerId: z.string().nullable().openapi({ description: "The trigger type (GET /v1/public/channels `triggers[].id`)." }),
+    step: z.string().nullable(),
+    orgId: z.string(),
+    brandId: z.string(),
+    offerId: z.string(),
+    leadId: z.string().nullable().openapi({
+      description:
+        "The lead the reporting service named on the occurrence. Null on an event you push with `person`: that person is filed as a lead of each campaign the trigger reaches, not on the event.",
+    }),
+    requestedByCampaignId: z.string().nullable(),
+    recordedVia: z.string().openapi({ description: "Who recorded it, e.g. `trigger_events` for a push through this route." }),
+    occurredAt: z.string().openapi({ description: "ISO date-time." }),
+    dueAt: z.string().openapi({ description: "ISO date-time it fires (or fired)." }),
+    status: z.string().openapi({ description: "`pending` (due later, or held a few minutes while the person is filed) | `firing` | `done`." }),
+    outcome: z.string().nullable().openapi({
+      description: "`ran` (at least one campaign ran) | `skipped` (see `skipReason`) | `failed` (every run failed); null until `status` is `done`.",
+    }),
+    skipReason: z.string().nullable().openapi({
+      description:
+        "Why nothing ran, one reason: a campaign's own (e.g. `unfunded`, `run_in_flight`, `person_suppressed`), else `campaign_off`, `no_campaign`, `no_leg`; `run_failed` when `outcome` is `failed`. Null when it ran.",
+      example: "no_campaign",
+    }),
+    ranCampaignIds: z.array(z.string()).openapi({ description: "The campaigns that ran for it (empty unless `outcome` is `ran`)." }),
+    performedByCaller: z.boolean(),
+    processedAt: z.string().nullable().openapi({ description: "ISO date-time the outcome was written; null until done." }),
+    detail: z.unknown().nullable().openapi({
+      description: "Every per-campaign answer: `{legKeys, triggered[], skipped[], offCampaignIds}`, plus the `person` and `item` you sent.",
+    }),
+  })
+  .passthrough()
+  .openapi("TriggerEvent");
+const ReportTriggerEventResponseSchema = z
+  .object({
+    event: TriggerEventSchema,
+    replayed: z.boolean().openapi({ description: "`true` when `idempotencyKey` named an event already recorded (answered 200)." }),
+  })
+  .passthrough()
+  .openapi("ReportTriggerEventResponse");
 const OfferTriggerEventsListResponseSchema = z
-  .object({})
+  .object({ events: z.array(TriggerEventSchema) })
   .passthrough()
   .openapi("OfferTriggerEventsListResponse");
 
@@ -1646,12 +1692,12 @@ registry.registerPath({
   },
   responses: {
     201: {
-      description: "Recorded (and, when due now, fired: `event.outcome`). Shape owned by campaign-service.",
-      content: { "application/json": { schema: z.object({}).passthrough().openapi("ReportTriggerEventResponse") } },
+      description: "Recorded (and, when due now, fired: `event.outcome`). Body relayed verbatim from campaign-service.",
+      content: { "application/json": { schema: ReportTriggerEventResponseSchema } },
     },
     200: {
       description: "`idempotencyKey` named an event already recorded: that event, `replayed: true`.",
-      content: { "application/json": { schema: z.object({}).passthrough().openapi("ReportTriggerEventReplayedResponse") } },
+      content: { "application/json": { schema: ReportTriggerEventResponseSchema } },
     },
     400: {
       description:
