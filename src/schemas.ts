@@ -8698,8 +8698,8 @@ registry.registerPath({
   summary: "Create a tactic",
   description: playsCommon("Declare a new tactic. Every workflow version is then judged on its description within minutes, so describe precisely what a workflow DOES, not what it is called. Name and description must be unique (409 `tactic_name_taken` / `tactic_description_taken`); the id is the name slugged. The author is recorded from your API key; any `createdBy` you send is replaced."),
   request: { body: { content: { "application/json": { schema: z.object({
-    name: z.string().openapi({ description: "Short unique name, e.g. `Catch-all`" }),
-    description: z.string().openapi({ description: "Unique, precise: what a workflow following it does" }),
+    name: z.string().min(1).max(60).openapi({ description: "Short unique name, e.g. `Catch-all` (1 to 60 characters, else 400 `name_required` / `name_too_long`)" }),
+    description: z.string().min(1).max(500).openapi({ description: "Unique, precise: what a workflow following it does (1 to 500 characters, else 400 `description_required` / `description_too_long`)" }),
   }).passthrough().openapi("CreateTacticRequest") } } } },
   responses: { 201: playsOk("CreateTacticResponse"), 409: { description: "Name or description taken (forwarded verbatim)", content: errorContent }, ...playsErrors },
 });
@@ -8711,7 +8711,7 @@ registry.registerPath({
   request: {
     params: z.object({ id: z.string().openapi({ description: "A tactic id (its name slugged, e.g. `catch-all`)" }) }),
     body: { content: { "application/json": { schema: z.object({
-      description: z.string().openapi({ description: "The new description, unique, at most 500 characters: what a workflow following the tactic does" }),
+      description: z.string().min(1).max(500).openapi({ description: "The new description, unique, at most 500 characters: what a workflow following the tactic does" }),
     }).passthrough().openapi("EditTacticRequest") } } },
   },
   responses: { 200: playsOk("EditTacticResponse"), 404: { description: "Unknown tactic (forwarded verbatim)", content: errorContent }, 409: { description: "Description taken (forwarded verbatim)", content: errorContent }, ...playsErrors },
@@ -8736,8 +8736,8 @@ registry.registerPath({
   summary: "Create a strategy",
   description: playsCommon("Declare a new strategy over existing tactics (at least one tactic in `requires` or `excludes`, never the same tactic in both). Name and description must be unique (409 `strategy_name_taken` / `strategy_description_taken`); a strategy with the same rule as an existing one is 409 `strategy_rule_taken` (use that one); an unknown tactic is 404 `tactic_not_found`. Then add it to a pipe with `POST /v1/plays`. The author is recorded from your API key; any `createdBy` you send is replaced."),
   request: { body: { content: { "application/json": { schema: z.object({
-    name: z.string().openapi({ description: "Unique name, e.g. `Valid + Catch-all`" }),
-    description: z.string().openapi({ description: "Unique description of what the strategy allows" }),
+    name: z.string().min(1).max(60).openapi({ description: "Unique name, e.g. `Valid + Catch-all` (1 to 60 characters, else 400 `name_required` / `name_too_long`)" }),
+    description: z.string().min(1).max(500).openapi({ description: "Unique description of what the strategy allows (1 to 500 characters, else 400 `description_required` / `description_too_long`)" }),
     requires: z.array(z.string()).optional().openapi({ description: "Tactic ids a workflow must follow" }),
     excludes: z.array(z.string()).optional().openapi({ description: "Tactic ids a workflow must not follow" }),
   }).passthrough().openapi("CreateStrategyRequest") } } } },
@@ -8763,8 +8763,8 @@ registry.registerPath({
   summary: "Add a play to a pipe",
   description: playsCommon("Add an existing strategy to a pipe as a new play, so campaigns on that pipe can run it (for example strategy `valid-catch-all` on pipe `sales-cold-email-outreach|lead_found_to_website_visit`). Idempotent: a play that already exists answers 200 with `created: false`; a new one 201. Unknown pipe or strategy is a 404 `*_not_found`. The author is recorded from your API key; any `createdBy` you send is replaced."),
   request: { body: { content: { "application/json": { schema: z.object({
-    pipeId: z.string().openapi({ description: "Pipe id, `<channel slug>|<leg key>`" }),
-    strategyId: z.string().openapi({ description: "Strategy id (GET /v1/strategies)" }),
+    pipeId: z.string().min(1).max(200).openapi({ description: "Pipe id, `<channel slug>|<leg key>` (at most 200 characters)" }),
+    strategyId: z.string().min(1).max(100).openapi({ description: "Strategy id (GET /v1/strategies, at most 100 characters)" }),
   }).passthrough().openapi("CreatePlayRequest") } } } },
   responses: { 200: playsOk("PlayAlreadyExistsResponse"), 201: playsOk("CreatePlayResponse"), 404: { description: "Unknown pipe or strategy (forwarded verbatim)", content: errorContent }, ...playsErrors },
 });
@@ -12335,14 +12335,16 @@ registry.registerPath({
   summary: "The sales funnels we can run today, priced for one offer",
   description:
     "Proxied to features-service GET /internal/catalogue/sales-funnels?offerId={offerId}&runnable=true with the authenticated org: one page of runnable sales funnels (id, name, face, line, type, costUsd, costPer, roi, status, ...), ROI first, each priced on THIS offer's own client value and rates (an `offer` block names them). " +
-    "The rest of the query is forwarded verbatim (brandId required downstream, containsChannels, paths, q, limit); refusals come back as served (400 brand_required, 404 offer_not_found).",
+    "The rest of the query is forwarded verbatim (documented today: brandId, required downstream; q; containsChannels; paths; limit; not a whitelist); refusals come back as served (400 brand_required, 404 offer_not_found).",
   security: authed,
   request: {
     params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
     query: z.object({
       brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+      q: z.string().optional().describe("Text search: every word must appear in the funnel's name, line or id (e.g. `ai-meeting-booking~valid-catch-all` to find funnels running that play)"),
       containsChannels: z.string().optional().describe("Comma list of channel slugs: funnels containing at least one"),
-      limit: z.string().optional().describe("1..25"),
+      paths: z.string().optional().describe("Comma list of sales path ids (default: every path)"),
+      limit: z.string().optional().describe("1..25, default 10"),
     }).passthrough(),
   },
   responses: {
@@ -16067,6 +16069,38 @@ registry.registerPath({
     409: { description: "`org_has_no_identity`: the organization has no identity-provider org yet (forwarded verbatim)", content: errorContent },
     422: { description: "`staff_email_refused` (a staff member's email), or `member_refused` in the identity provider's words (forwarded verbatim)", content: errorContent },
     502: { description: "`identity_provider_failed` (forwarded verbatim) or `key_minting_failed` (member added, no key: call again)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/orgs/{orgId}/members/{userId}",
+  tags: ["Organizations"],
+  summary: "Take a person out of an organization (staff only)",
+  description:
+    "End a person's membership of this organization: they lose access to it at once (their API keys stop reaching it) " +
+    "and, if it was the organization they last used, that is cleared. Their account and their other organizations are untouched. " +
+    "`userId` is the person's user id (the `member.userId` returned by POST /v1/orgs/{orgId}/members, or `id` in GET /v1/users, which lists only the people whose last-used organization is the one named). " +
+    "Calling again is safe: 200 with `membershipRemoved: false` when they are not a member. " +
+    "Staff only: a distribute.you staff member's own API key, any other key gets 403 `staff_only`. The staff caller need not be a " +
+    "member of the organization. Pass-through to client-service DELETE /internal/orgs/{orgId}/members/{userId}: answers " +
+    "`{ userId, orgId, membershipRemoved, lastActiveOrgCleared }`, refusals forwarded verbatim with `error` + `message`.",
+  security: platformAuth,
+  request: {
+    params: z.object({
+      orgId: z.string().uuid().openapi({ description: "The organization" }),
+      userId: z.string().uuid().openapi({ description: "The person's user id" }),
+    }),
+  },
+  responses: {
+    200: passthroughResponse("Done (client-service shape): `membershipRemoved: false` = they were not a member", "RemovedOrgMember"),
+    400: { description: "`invalid_request` (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff (`staff_only`)", content: errorContent },
+    404: { description: "`org_not_found` or `user_not_found` (forwarded verbatim)", content: errorContent },
+    409: { description: "`org_has_no_identity`: the organization has no identity-provider org (forwarded verbatim)", content: errorContent },
+    422: { description: "`member_removal_refused`: the identity provider refused, e.g. the last admin (message safe to show, forwarded verbatim)", content: errorContent },
+    502: { description: "`identity_provider_failed` (forwarded verbatim)", content: errorContent },
   },
 });
 

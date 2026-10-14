@@ -127,6 +127,26 @@ describe("published document: an agent can find the whole attachment setup", () 
     expect(plays.description).toContain("attachment");
   });
 
+  it("tactics, strategies and plays creates publish the producer's length limits", () => {
+    const body = (m: string, p: string) => op(m, p).requestBody.content["application/json"].schema;
+    const props = (m: string, p: string) => {
+      const sc = body(m, p);
+      return (sc.$ref ? doc.components.schemas[sc.$ref.split("/").pop()] : sc).properties;
+    };
+    expect(props("post", "/v1/tactics").name.maxLength).toBe(60);
+    expect(props("post", "/v1/tactics").description.maxLength).toBe(500);
+    expect(props("patch", "/v1/tactics/{id}").description.maxLength).toBe(500);
+    expect(props("post", "/v1/strategies").name.maxLength).toBe(60);
+    expect(props("post", "/v1/strategies").description.maxLength).toBe(500);
+    expect(props("post", "/v1/plays").pipeId.maxLength).toBe(200);
+    expect(props("post", "/v1/plays").strategyId.maxLength).toBe(100);
+  });
+
+  it("GET /v1/offers/{offerId}/sales-funnels lists the q and paths parameters it mentions", () => {
+    const names = op("get", "/v1/offers/{offerId}/sales-funnels").parameters.map((x: any) => x.name);
+    for (const n of ["brandId", "q", "containsChannels", "paths", "limit"]) expect(names).toContain(n);
+  });
+
   it("POST /v1/replies documents attachments", () => {
     const reply = op("post", "/v1/replies");
     expect(reply.description).toContain("attachments");
