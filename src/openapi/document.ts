@@ -369,6 +369,7 @@ export const STAFF_KEY_OPERATIONS = new Set<string>([
   "DELETE /v1/orgs/{orgId}/members/{userId}",
   "PUT /v1/billing/accounts/topup_minimums",
   "PUT /v1/catalogue/pipes/{pipeId}/default-play",
+  "PATCH /v1/strategies/{id}",
 ]);
 
 export const STAFF_KEY_TAG = "Staff (key)";
