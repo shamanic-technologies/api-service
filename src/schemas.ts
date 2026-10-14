@@ -2930,6 +2930,63 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/v1/campaigns/{campaignId}/leads/by-lead/{leadId}",
+  tags: ["Leads"],
+  summary: "Read one person's lead on one campaign",
+  description:
+    "Pass-through to lead-service GET /orgs/campaigns/{campaignId}/leads/by-lead/{leadId}. Use it when you hold a " +
+    "PERSON's lead id and a campaign and want that person's lead record there: for example after POST /v1/trigger-events, " +
+    "take `campaignId` and `ranLeads[].leadId` from its answer and read each pushed person's lead directly, instead of " +
+    "listing the campaign's leads and searching for them (a list misses people past its page). " +
+    "Answers the same `{ leadDetail }` body as GET /v1/leads/{id}; `leadDetail.id` is the row id the per-row reads take " +
+    "(GET /v1/leads/{id}, its history and step statements). The campaign in the path is the delivery scope (status, " +
+    "replies). A person holds at most one lead row per campaign. " +
+    "404 with `code: lead_not_on_campaign` means this person is not a lead of this campaign in your org (another org's row " +
+    "answers the same 404): if you just pushed them, the campaign has not picked them up yet. " +
+    "400 when `leadId` is not a uuid, or when `campaignId` is also sent as a query parameter (it belongs in the path only). " +
+    "The query string is forwarded verbatim; the parameters listed here are the ones documented today, not a whitelist. " +
+    "Refer to lead-service openapi.json for the exact response shape: api-service forwards it untransformed.",
+  security: authed,
+  request: {
+    params: z.object({
+      campaignId: z.string().openapi({
+        description: "The campaign id (e.g. `campaignId` from the POST /v1/trigger-events answer).",
+      }),
+      leadId: z.string().openapi({
+        description:
+          "The PERSON's lead id (e.g. `ranLeads[].leadId` from POST /v1/trigger-events), not a lead row id. A non-uuid value is a 400.",
+      }),
+    }),
+    query: z.object({
+      brandId: z.string().uuid().optional().openapi({
+        description: "Brand scope, same as on GET /v1/leads/{id}.",
+      }),
+      include: z.string().optional().openapi({
+        description: "`campaigns` nests this person's campaigns of the brand under the record, same as on the list.",
+      }),
+    }).passthrough(),
+  },
+  responses: {
+    200: {
+      description: "The person's lead record on this campaign as returned by lead-service (`{ leadDetail }`).",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("CampaignLeadByPersonResponse"),
+        },
+      },
+    },
+    400: { description: "leadId is not a uuid, or campaignId was sent as a query parameter", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: {
+      description: "`code: lead_not_on_campaign`: this person is not a lead of this campaign in the caller's org",
+      content: errorContent,
+    },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/leads/crm-pairings/rulings",
   tags: ["Leads"],
