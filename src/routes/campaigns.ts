@@ -334,6 +334,7 @@ router.post("/trigger-events", authenticate, requireOrg, requireUser, async (req
  *   POST  /v1/sales-funnel-campaigns        → campaign-service POST  /sales-funnel-campaigns (201 / 200 relayed)
  *   GET   /v1/sales-funnel-campaigns/:id    → campaign-service GET   /sales-funnel-campaigns/{id}
  *   PATCH /v1/sales-funnel-campaigns/:id    → campaign-service PATCH /sales-funnel-campaigns/{id} ({status: activate|stop})
+ *   DELETE /v1/sales-funnel-campaigns/:id   → campaign-service DELETE /sales-funnel-campaigns/{id} (one created by mistake, never ran)
  *
  * Org-scoped by `x-org-id`, ALWAYS the authenticated org (buildInternalHeaders). Bodies, query vocabulary,
  * status codes and refusals (`reason`) are campaign-service's, relayed verbatim (#4, #7, #8, #11).
@@ -393,6 +394,20 @@ router.patch(`${SALES_FUNNEL_CAMPAIGNS}/:id`, authenticate, requireOrg, requireU
   } catch (error: any) {
     console.error("[api-service] PATCH /v1/sales-funnel-campaigns/:id — FAILED:", error.message);
     respondUpstreamError(res, error, "Failed to run or pause the sales funnel campaign");
+  }
+});
+
+router.delete(`${SALES_FUNNEL_CAMPAIGNS}/:id`, authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.campaign,
+      `/sales-funnel-campaigns/${encodeURIComponent(req.params.id)}`,
+      { method: "DELETE", headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] DELETE /v1/sales-funnel-campaigns/:id — FAILED:", error.message);
+    respondUpstreamError(res, error, "Failed to delete the sales funnel campaign");
   }
 });
 
