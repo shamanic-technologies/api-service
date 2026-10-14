@@ -4560,6 +4560,26 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}/documents/{documentId}/content",
+  tags: ["Brand"],
+  summary: "Download an offer document's file",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{brandId}/offers/{offerId}/documents/{documentId}/content. " + OFFER_DOCUMENTS_MODEL +
+    " Answers the raw file bytes under the document's own Content-Type, with Content-Disposition (attachment, the file name) " +
+    "and X-Document-Sha256 (hex SHA-256 of the bytes).",
+  security: authed,
+  request: { params: OfferDocumentParams },
+  responses: {
+    200: {
+      description: "The file bytes",
+      content: { "application/octet-stream": { schema: z.string().openapi({ type: "string", format: "binary" }) } },
+    },
+    ...OFFER_DOCUMENT_ERRORS,
+  },
+});
+
 // ===================================================================
 // Brand – Click Destination (proxy to brand-service /orgs/brands/:id/click-destination)
 // Downstream owns body + response shapes — passthrough only. No gateway
