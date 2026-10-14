@@ -5,12 +5,13 @@ import express from "express";
 /**
  * Campaign v2 — per-campaign configuration fields proxy.
  *
- * campaign-service owns four per-campaign fields (goal, audienceIds,
- * servicesOffered, clickDestinationUrl). This suite asserts the gateway is a
+ * campaign-service owns three per-campaign fields (goal, servicesOffered,
+ * clickDestinationUrl). The per-campaign audience subset (`audienceIds`) is
+ * retired (LEAK-1012): who a pipe finds is its lead strategy. This suite asserts the gateway is a
  * faithful passthrough for them in BOTH directions:
- *   - POST create + PATCH update forward the four fields to campaign-service.
+ *   - POST create + PATCH update forward the three fields to campaign-service.
  *   - GET single + GET list return them byte-identical from campaign-service.
- * Additive: a campaign that sets none of the four behaves exactly as before.
+ * Additive: a campaign that sets none of the three behaves exactly as before.
  */
 
 vi.mock("../../src/middleware/auth.js", () => ({
@@ -44,10 +45,9 @@ function createApp() {
   return app;
 }
 
-// The four campaign v2 fields, populated.
+// The three campaign v2 fields, populated.
 const V2_FIELDS = {
   goal: "signup" as const,
-  audienceIds: ["aud-1", "aud-2"],
   servicesOffered: ["seo", "ppc"],
   clickDestinationUrl: "https://acme.com/pricing",
 };
@@ -69,7 +69,7 @@ describe("Campaign v2 per-campaign config fields proxy", () => {
       if (url.includes("/brands") && init?.method === "POST") {
         return { ok: true, json: () => Promise.resolve({ brandId: "brand-acme-com" }) };
       }
-      // campaign-service echoes the four fields back on the created/returned campaign
+      // campaign-service echoes the three fields back on the created/returned campaign
       if (url.includes("/campaigns")) {
         return {
           ok: true,
@@ -81,7 +81,6 @@ describe("Campaign v2 per-campaign config fields proxy", () => {
               brandIds: body?.brandIds ?? ["brand-acme-com"],
               status: "ongoing",
               goal: body?.goal ?? V2_FIELDS.goal,
-              audienceIds: body?.audienceIds ?? V2_FIELDS.audienceIds,
               servicesOffered: body?.servicesOffered ?? V2_FIELDS.servicesOffered,
               clickDestinationUrl: body?.clickDestinationUrl ?? V2_FIELDS.clickDestinationUrl,
             },
@@ -92,7 +91,7 @@ describe("Campaign v2 per-campaign config fields proxy", () => {
     });
   });
 
-  it("POST create forwards the four fields to campaign-service", async () => {
+  it("POST create forwards the three fields to campaign-service", async () => {
     const res = await request(createApp())
       .post("/v1/campaigns")
       .send({
@@ -107,12 +106,11 @@ describe("Campaign v2 per-campaign config fields proxy", () => {
     expect(res.status).toBe(200);
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.method === "POST");
     expect(campaignCall!.body!.goal).toBe(V2_FIELDS.goal);
-    expect(campaignCall!.body!.audienceIds).toEqual(V2_FIELDS.audienceIds);
     expect(campaignCall!.body!.servicesOffered).toEqual(V2_FIELDS.servicesOffered);
     expect(campaignCall!.body!.clickDestinationUrl).toBe(V2_FIELDS.clickDestinationUrl);
   });
 
-  it("POST create returns the four fields from campaign-service", async () => {
+  it("POST create returns the three fields from campaign-service", async () => {
     const res = await request(createApp())
       .post("/v1/campaigns")
       .send({
@@ -127,7 +125,7 @@ describe("Campaign v2 per-campaign config fields proxy", () => {
     expect(res.body.campaign).toMatchObject(V2_FIELDS);
   });
 
-  it("POST create still works when the four fields are absent (additive)", async () => {
+  it("POST create still works when the three fields are absent (additive)", async () => {
     const res = await request(createApp())
       .post("/v1/campaigns")
       .send({
@@ -141,12 +139,11 @@ describe("Campaign v2 per-campaign config fields proxy", () => {
     expect(res.status).toBe(200);
     const campaignCall = fetchCalls.find((c) => c.url.includes("/campaigns") && c.method === "POST");
     expect(campaignCall!.body!.goal).toBeUndefined();
-    expect(campaignCall!.body!.audienceIds).toBeUndefined();
     expect(campaignCall!.body!.servicesOffered).toBeUndefined();
     expect(campaignCall!.body!.clickDestinationUrl).toBeUndefined();
   });
 
-  it("PATCH update forwards the four fields to campaign-service", async () => {
+  it("PATCH update forwards the three fields to campaign-service", async () => {
     const res = await request(createApp())
       .patch("/v1/campaigns/campaign-1")
       .send({ ...V2_FIELDS });
@@ -154,12 +151,11 @@ describe("Campaign v2 per-campaign config fields proxy", () => {
     expect(res.status).toBe(200);
     const patchCall = fetchCalls.find((c) => c.url.includes("/campaigns/campaign-1") && c.method === "PATCH");
     expect(patchCall!.body!.goal).toBe(V2_FIELDS.goal);
-    expect(patchCall!.body!.audienceIds).toEqual(V2_FIELDS.audienceIds);
     expect(patchCall!.body!.servicesOffered).toEqual(V2_FIELDS.servicesOffered);
     expect(patchCall!.body!.clickDestinationUrl).toBe(V2_FIELDS.clickDestinationUrl);
   });
 
-  it("PATCH update returns the four fields from campaign-service", async () => {
+  it("PATCH update returns the three fields from campaign-service", async () => {
     const res = await request(createApp())
       .patch("/v1/campaigns/campaign-1")
       .send({ ...V2_FIELDS });
@@ -167,21 +163,21 @@ describe("Campaign v2 per-campaign config fields proxy", () => {
     expect(res.body.campaign).toMatchObject(V2_FIELDS);
   });
 
-  it("GET single campaign returns the four fields byte-identical", async () => {
+  it("GET single campaign returns the three fields byte-identical", async () => {
     const res = await request(createApp()).get("/v1/campaigns/campaign-1");
 
     expect(res.status).toBe(200);
     expect(res.body.campaign).toMatchObject(V2_FIELDS);
   });
 
-  it("GET list campaigns forwards the four fields through byte-identical", async () => {
+  it("GET list campaigns forwards the three fields through byte-identical", async () => {
     // list endpoint pure-passes the campaign-service body; assert nothing strips the fields.
     global.fetch = vi.fn().mockImplementation(async (url: string) => {
       if (url.includes("/campaigns")) {
         return {
           ok: true,
           json: () => Promise.resolve({
-            campaigns: [{ id: "campaign-1", ...V2_FIELDS }, { id: "campaign-2", goal: null, audienceIds: null, servicesOffered: null, clickDestinationUrl: null }],
+            campaigns: [{ id: "campaign-1", ...V2_FIELDS }, { id: "campaign-2", goal: null, servicesOffered: null, clickDestinationUrl: null }],
           }),
         };
       }
@@ -192,7 +188,19 @@ describe("Campaign v2 per-campaign config fields proxy", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.campaigns[0]).toMatchObject(V2_FIELDS);
-    // A campaign with none of the four set round-trips as nulls (additive, unchanged behavior).
-    expect(res.body.campaigns[1]).toMatchObject({ goal: null, audienceIds: null, servicesOffered: null, clickDestinationUrl: null });
+    // A campaign with none of the three set round-trips as nulls (additive, unchanged behavior).
+    expect(res.body.campaigns[1]).toMatchObject({ goal: null, servicesOffered: null, clickDestinationUrl: null });
+  });
+});
+
+describe("Retired per-campaign audience subset (LEAK-1012)", () => {
+  it("the published document offers no audienceIds on the campaign create or response schemas", async () => {
+    const { buildDocument } = await import("../../src/openapi/document.js");
+    const doc = buildDocument() as any;
+    const schemas = doc.components.schemas;
+    expect(schemas.CreateCampaignRequest.properties).not.toHaveProperty("audienceIds");
+    expect(schemas.Campaign.properties).not.toHaveProperty("audienceIds");
+    expect(JSON.stringify(doc)).not.toContain("audienceIds");
+    expect(doc.paths["/v1/campaigns"].post.description).toContain("/v1/strategies");
   });
 });
