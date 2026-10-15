@@ -4,7 +4,7 @@ import express from "express";
 
 /**
  * POST /v1/trigger-events — a customer reports one trigger occurrence, forwarded to campaign-service
- * POST /internal/trigger-events. Driven through the real router with a stubbed `fetch`: asserts the
+ * POST /internal/trigger-events/public (the public door). Driven through the real router with a stubbed `fetch`: asserts the
  * brand ownership gate, the full downstream path, the authenticated identity, the byte-identical body
  * and the relayed status + body.
  */
@@ -71,12 +71,12 @@ describe("POST /v1/trigger-events", () => {
     return c[0];
   }
 
-  it("forwards to campaign-service /internal/trigger-events, body byte-identical, 201 relayed", async () => {
+  it("forwards to campaign-service /internal/trigger-events/public, body byte-identical, 201 relayed", async () => {
     const res = await request(buildApp()).post("/v1/trigger-events").send(BODY);
     expect(res.status).toBe(201);
     expect(res.body).toEqual(JSON.parse(CREATED));
     const { url, init } = campaignCall();
-    expect(new URL(url).pathname).toBe("/internal/trigger-events");
+    expect(new URL(url).pathname).toBe("/internal/trigger-events/public");
     expect(init.method).toBe("POST");
     expect(JSON.parse(init.body)).toEqual(BODY);
   });
@@ -109,6 +109,13 @@ describe("POST /v1/trigger-events", () => {
     expect(res.status).toBe(400);
     expect(res.body.code).toBe("performed_not_reportable");
     expect(calls).toHaveLength(0);
+  });
+
+  it("relays campaign-service's trigger_not_callable 400 field-for-field", async () => {
+    campaignAnswer = () => respond(400, '{"error":"This trigger is computed by the platform","reason":"trigger_not_callable"}');
+    const res = await request(buildApp()).post("/v1/trigger-events").send({ ...BODY, triggerId: "delay" });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: "This trigger is computed by the platform", reason: "trigger_not_callable" });
   });
 
   it("relays campaign-service's unknown_trigger 400 field-for-field", async () => {
