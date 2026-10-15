@@ -9095,10 +9095,15 @@ registry.registerPath({
     "working one leg, from one step to the next (GET /v1/catalogue/steps). `mode: \"proactive\"` runs on its own budget and names no trigger; " +
     "`mode: \"reactive\"` names the trigger that asks for it (`triggerId`, GET /v1/catalogue/triggers), e.g. an AI instant call on Form submitted " +
     "toward Booking call. A leg out of a real step with no known conversion rate needs `conversionRatePct`. `published: false` = a draft. " +
+    "Where a pipe on a trigger starts: at Start (`fromStep: null`, leg `start_to_<toStep>`), and the trigger starts it, like every running " +
+    "reactive campaign; or out of a real step a trigger stands for (Positive reply, Form submitted). NEVER at Lead found: refused 400 " +
+    "`reactive_pipe_from_lead_found`. A trigger's fromStep is where a lead stands when it fires, not where a reactive pipe starts. To reuse a " +
+    "proactive pipe leaving that step, head a sales funnel with the trigger instead (POST /v1/catalogue/sales-funnels with `triggerId`). " +
+    "A pipe created by mistake is retired with POST /v1/catalogue/pipes/{pipeId}/retire. " +
     "The workflow a pipe runs is never picked here: features-service runs the best ROI workflow written for the channel. " +
     "`createdBy` is recorded as the authenticated staff email (a body value is replaced). Answers 201 with the pipe (id `<channel slug>|<leg key>`, " +
     "readable at GET /v1/catalogue/pipes/{id}). Refusals forwarded verbatim: 400 `channel_slug_required` / `from_step_required` / `step_unrecognised` / " +
-    "`leg_goes_nowhere` / `mode_unrecognised` / `trigger_required` / `proactive_leg_has_trigger` / `conversion_rate_required`; 404 `channel_not_found` / " +
+    "`leg_goes_nowhere` / `mode_unrecognised` / `trigger_required` / `proactive_leg_has_trigger` / `conversion_rate_required` / `reactive_pipe_from_lead_found`; 404 `channel_not_found` / " +
     "`trigger_not_found`; 409 `leg_exists` / `trigger_not_fired` (nothing fires that trigger yet). Byte passthrough to features-service POST /internal/catalogue/pipes.",
   security: platformAuth,
   request: {
@@ -9108,7 +9113,7 @@ registry.registerPath({
           schema: z
             .object({
               channelSlug: z.string().openapi({ description: "The channel working the leg (GET /v1/catalogue/channels)" }),
-              fromStep: z.string().nullable().openapi({ description: "The step the leg starts from (GET /v1/catalogue/steps); null = from nothing (an entry leg). Required, never defaulted" }),
+              fromStep: z.string().nullable().openapi({ description: "The step the leg starts from (GET /v1/catalogue/steps); null = from Start (an entry leg, where a pipe on a trigger starts). Never `lead_found` for a reactive pipe (400 `reactive_pipe_from_lead_found`). Required, never defaulted" }),
               toStep: z.string().openapi({ description: "The step the leg leads to (GET /v1/catalogue/steps)" }),
               mode: z.string().openapi({ description: "`proactive` (own budget, no trigger) or `reactive` (runs when its trigger fires)" }),
               triggerId: z.string().optional().openapi({ description: "Reactive only: the trigger that asks for this pipe (GET /v1/catalogue/triggers)" }),
@@ -9124,12 +9129,51 @@ registry.registerPath({
   },
   responses: {
     201: { description: "The pipe as created, pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CreatePipeResponse") } } },
-    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+    400: { description: "Invalid request, `reactive_pipe_from_lead_found` included (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Not staff (`staff_only`)", content: errorContent },
     404: { description: "Unknown channel or trigger (forwarded verbatim)", content: errorContent },
     409: { description: "`leg_exists` / `trigger_not_fired` (forwarded verbatim)", content: errorContent },
     502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/catalogue/pipes/{pipeId}/retire",
+  tags: ["Features"],
+  summary: "Retire a pipe created by mistake (staff only)",
+  description:
+    "Takes a pipe out of the catalogue: it leaves every catalogue read (lists, sales paths, funnels to build). Use it for a pipe created " +
+    "by mistake. Declaring the same leg again (POST /v1/catalogue/pipes) brings it back. Staff only: a distribute.you staff member's own " +
+    "API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. `retiredBy` is recorded as the authenticated " +
+    "staff email (a body value is replaced). Answers 200 `{object: \"pipe\", id, name, retired: true, retiredAt, retiredBy, note}`. " +
+    "Refusals forwarded verbatim: 400 `note_invalid` (note over 500 characters); 404 `pipe_not_found`; 409 `pipe_coded` (the pipe is " +
+    "stated in code, not in the catalogue store), `pipe_in_use` (a campaign of any org runs or ran it), `pipe_in_sales_funnel` (a declared " +
+    "sales funnel names it); 502 `campaigns_unreadable` (could not check the campaigns, nothing retired). " +
+    "Byte passthrough to features-service POST /internal/catalogue/pipes/{id}/retire.",
+  security: platformAuth,
+  request: {
+    params: z.object({ pipeId: z.string().openapi({ description: "a pipe id `<channel slug>|<leg key>` (GET /v1/catalogue/pipes), URL-encoded (it carries `|`)" }) }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({ note: z.string().max(500).nullable().optional().openapi({ description: "Why it is retired (500 characters at most)" }) })
+            .passthrough()
+            .openapi("RetirePipeRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "The retired pipe, pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("RetirePipeResponse") } } },
+    400: { description: "`note_invalid` (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff (`staff_only`)", content: errorContent },
+    404: { description: "`pipe_not_found` (forwarded verbatim)", content: errorContent },
+    409: { description: "`pipe_coded` / `pipe_in_use` / `pipe_in_sales_funnel` (forwarded verbatim)", content: errorContent },
+    502: { description: "`campaigns_unreadable` or upstream error", content: errorContent },
   },
 });
 
@@ -9155,6 +9199,7 @@ registry.registerPath({
           schema: z
             .object({
               pipeIds: z.array(z.string()).openapi({ description: "One pipe or play id per leg of a sales path, in order" }),
+              triggerId: z.string().optional().openapi({ description: "Optional: a trigger (GET /v1/catalogue/triggers) that heads the funnel. The first pipe must leave from the step that trigger starts from; this is how a proactive pipe is reused on a trigger" }),
               requestedByOrgId: z.string().nullable().optional().openapi({ description: "The org whose request led to this funnel, if any (provenance only: the funnel stays usable by every org)" }),
             })
             .passthrough()
