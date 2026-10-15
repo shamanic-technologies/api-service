@@ -81,6 +81,7 @@ import { authenticatePlatform } from "./middleware/auth.js";
 import { buildDocument } from "./openapi/document.js";
 import { requestId } from "./middleware/request-id.js";
 import { recordCustomerCalls } from "./lib/call-log.js";
+import { upstreamUnreachable } from "./middleware/upstream-unreachable.js";
 import { catalogueBody, sendCatalogue, type CatalogueBody } from "./lib/catalogue-response.js";
 import { agentPaymentRequired } from "./middleware/payment-required.js";
 import { apiReference } from "@scalar/express-api-reference";
@@ -149,6 +150,13 @@ app.use(recordCustomerCalls);
 // and its minimums. Mounted after the call log so the log stores what the
 // caller actually received. Every other org is untouched: see the module.
 app.use(agentPaymentRequired);
+
+// ── Named answer when a downstream never answered ───────────────────────────
+// A downstream that refuses connections (container swap during a deploy), has
+// no DNS entry or times out is answered 503 `upstream_unreachable` / 504
+// `upstream_timeout` with `Retry-After`, even from a route whose catch rebuilds
+// its own `{ error }` envelope. A downstream's own error body is never touched.
+app.use(upstreamUnreachable);
 
 // ── OpenAPI ─────────────────────────────────────────────────────────────────
 // `openapi.json` is generated for the PUBLIC audience (see

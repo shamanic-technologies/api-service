@@ -6,6 +6,7 @@ import { Agent, type Dispatcher } from "undici";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { noteUpstreamStatus } from "./upstream-payment.js";
+import { noteUpstreamUnreachable } from "../middleware/upstream-unreachable.js";
 
 // Shared undici dispatcher for journalists-quotes-service.
 // /orgs/opportunities/discover (batch scorer) and /next run heavy RAG scoring on
@@ -40,7 +41,86 @@ const TRANSIENT_FETCH_ERROR_CODES = new Set([
 ]);
 
 const TRANSIENT_FETCH_ERROR_MESSAGE = /\b(EAI_AGAIN|ECONNREFUSED|ECONNRESET|ENOTFOUND|ETIMEDOUT|UND_ERR_SOCKET)\b|timeout (expired|exceeded)|other side closed/i;
+// Non-idempotent writes keep the short window (~1.75 s): a reset mid-request may
+// already have been acted on downstream, so we do not stretch the replay of a write.
 const TRANSIENT_FETCH_RETRY_DELAYS_MS = [250, 500, 1_000] as const;
+// Idempotent reads ride out a container swap. Measured on the box 2026-10-15: a
+// recreated service binds its port 1.2-6.5 s after its container starts (apollo
+// 6.5 s, content-generation 4.8 s, features 3.4 s), on top of the old container's
+// stop. 250+500+1000+2000+3000+4000 = 10.75 s covers that before giving up.
+const IDEMPOTENT_FETCH_RETRY_DELAYS_MS = [250, 500, 1_000, 2_000, 3_000, 4_000] as const;
+const IDEMPOTENT_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+export const UPSTREAM_RETRY_AFTER_SECONDS = 5;
+
+/**
+ * A downstream that never ANSWERED (connection refused/reset, DNS miss, socket
+ * closed, headers timeout) — as opposed to a downstream that answered with its
+ * own 4xx/5xx, which keeps flowing through verbatim (rule #7).
+ *
+ * Before this, the raw undici `TypeError: fetch failed` reached the caller as
+ * `500 {"error":"fetch failed"}`: no status a client can branch on, nothing
+ * saying the route itself is fine. A deploy swaps containers several times a
+ * day, so agents hit it routinely and read it as a broken route.
+ * `respondUpstreamError` emits `body` field-for-field under `statusCode`.
+ */
+export class UpstreamUnreachableError extends Error {
+  readonly statusCode: number;
+  readonly body: Record<string, unknown>;
+
+  constructor(url: string, cause: string, timedOut: boolean, options?: { cause?: unknown }) {
+    const service = downstreamHost(url);
+    const message = timedOut
+      ? `The service behind this route (${service}) did not answer in time (${cause}). The request may still be running there: for a write, check its result before retrying; for a read, retry shortly.`
+      : `The service behind this route (${service}) is temporarily unreachable (${cause}), usually because it is restarting after a deploy. Your request is fine: retry in a few seconds.`;
+    super(message, options);
+    this.name = "UpstreamUnreachableError";
+    this.statusCode = timedOut ? 504 : 503;
+    this.body = {
+      error: message,
+      code: timedOut ? "upstream_timeout" : "upstream_unreachable",
+      service,
+      cause,
+      retryable: true,
+      retryAfterSeconds: UPSTREAM_RETRY_AFTER_SECONDS,
+    };
+  }
+}
+
+function downstreamHost(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
+}
+
+const TIMEOUT_FETCH_ERROR_CODES = new Set(["UND_ERR_HEADERS_TIMEOUT"]);
+
+function findTimeoutFetchCause(error: unknown, seen = new Set<unknown>()): string | null {
+  if (!error || typeof error !== "object" || seen.has(error)) return null;
+  seen.add(error);
+  const err = error as { code?: unknown; cause?: unknown; statusCode?: unknown };
+  if (typeof err.statusCode === "number") return null;
+  if (typeof err.code === "string" && TIMEOUT_FETCH_ERROR_CODES.has(err.code)) return err.code;
+  return findTimeoutFetchCause(err.cause, seen);
+}
+
+/**
+ * Name a thrown `fetch` failure: a network-level miss becomes an
+ * `UpstreamUnreachableError`; anything else (an abort because the CLIENT left,
+ * a programming error) is returned unchanged.
+ */
+export function nameFetchFailure(error: unknown, url: string): unknown {
+  if (error instanceof UpstreamUnreachableError) return error;
+  if ((error as { name?: unknown } | null)?.name === "AbortError") return error;
+  const timeout = findTimeoutFetchCause(error);
+  const cause = timeout ?? findTransientFetchCause(error);
+  if (!cause) return error;
+  const named = new UpstreamUnreachableError(url, cause, timeout !== null, { cause: error });
+  noteUpstreamUnreachable(named);
+  return named;
+}
 
 function findTransientFetchCause(error: unknown, seen = new Set<unknown>()): string | null {
   if (!error || typeof error !== "object" || seen.has(error)) return null;
@@ -92,11 +172,14 @@ async function fetchWithTransientNetworkRetry(
       return await fetch(url, init);
     } catch (error) {
       const cause = findTransientFetchCause(error);
-      const delayMs = TRANSIENT_FETCH_RETRY_DELAYS_MS[attempt];
-      if (!cause || delayMs === undefined) throw error;
+      const delays = IDEMPOTENT_METHODS.has(method.toUpperCase())
+        ? IDEMPOTENT_FETCH_RETRY_DELAYS_MS
+        : TRANSIENT_FETCH_RETRY_DELAYS_MS;
+      const delayMs = delays[attempt];
+      if (!cause || delayMs === undefined) throw nameFetchFailure(error, url);
 
       console.log(
-        `[api-service] [callExternalService] ${method} ${url} transient network failure (cause: ${cause}); retrying ${attempt + 1}/${TRANSIENT_FETCH_RETRY_DELAYS_MS.length} after ${delayMs}ms`,
+        `[api-service] [callExternalService] ${method} ${url} transient network failure (cause: ${cause}); retrying ${attempt + 1}/${delays.length} after ${delayMs}ms`,
       );
       await sleep(delayMs);
     }
@@ -377,7 +460,12 @@ export async function callExternalServiceWithStatus<T>(
     const data: T = await response.json();
     return { status: response.status, data };
   } catch (error: any) {
-    const cause = error.cause ? ` (cause: ${error.cause?.code || error.cause?.message || error.cause})` : "";
+    const cause =
+      error instanceof UpstreamUnreachableError
+        ? ` (cause: ${error.body.cause})`
+        : error.cause
+          ? ` (cause: ${error.cause?.code || error.cause?.message || error.cause})`
+          : "";
     console.error(`[callExternalService] ${method} ${url} failed: ${error.message}${cause}`);
     throw error;
   }
@@ -521,7 +609,9 @@ export async function streamExternalService(
     signal: controller.signal,
   };
   if (service.dispatcher) init.dispatcher = service.dispatcher;
-  const response = await fetch(url, init);
+  const response = await fetch(url, init).catch((error: unknown) => {
+    throw nameFetchFailure(error, url);
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -634,7 +724,9 @@ export async function forwardMultipartUpload<T>(
   };
   if (service.dispatcher) init.dispatcher = service.dispatcher;
 
-  const response = await fetch(url, init);
+  const response = await fetch(url, init).catch((error: unknown) => {
+    throw nameFetchFailure(error, url);
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
