@@ -8925,7 +8925,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List catalogue steps (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/steps: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: q, limit (1..25, default 10); not a whitelist); status and body owned by the downstream service.",
   security: platformAuth,
   request: { query: z.object({ q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -8945,7 +8945,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue step (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/steps/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: platformAuth,
   request: { params: z.object({ id: z.string().openapi({ description: "a step key or label" }) }), query: z.object({  }).passthrough() },
@@ -8966,7 +8966,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List catalogue sales paths (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/sales-paths: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: containsSteps, q, limit; not a whitelist); status and body owned by the downstream service.",
   security: platformAuth,
   request: { query: z.object({ containsSteps: z.string().optional().openapi({ description: "Comma list of step keys or labels: the paths containing at least one" }), q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -8986,7 +8986,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue sales path (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/sales-paths/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: platformAuth,
   request: { params: z.object({ id: z.string().openapi({ description: "a sales path id (leg keys joined by `+`, sent as `%2B`)" }) }), query: z.object({  }).passthrough() },
@@ -9007,7 +9007,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List catalogue channels (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/channels: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: forPaths, legKeys, q, limit; not a whitelist); status and body owned by the downstream service.",
   security: platformAuth,
   request: { query: z.object({ forPaths: z.string().optional().openapi({ description: "Comma list of sales path ids" }), legKeys: z.string().optional(), q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -9027,7 +9027,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue channel (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/channels/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: platformAuth,
   request: { params: z.object({ id: z.string().openapi({ description: "a channel slug" }) }), query: z.object({  }).passthrough() },
@@ -9048,7 +9048,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List catalogue pipes (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/pipes: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: paths, channels, legKeys, q, limit; not a whitelist); status and body owned by the downstream service.",
   security: platformAuth,
   request: { query: z.object({ paths: z.string().optional().openapi({ description: "Comma list of sales path ids" }), channels: z.string().optional().openapi({ description: "Comma list of channel slugs" }), legKeys: z.string().optional(), q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -9068,7 +9068,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue pipe (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/pipes/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: platformAuth,
   request: { params: z.object({ id: z.string().openapi({ description: "a pipe id `<channel slug>|<leg key>`" }) }), query: z.object({  }).passthrough() },
@@ -9084,12 +9084,61 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/catalogue/pipes",
+  tags: ["Features"],
+  summary: "Create a pipe: a channel on a new leg, proactive or reactive on a trigger (staff only)",
+  description:
+    "Fleet-wide catalogue write, usable by every org (like tactics, strategies and plays). Staff only: a distribute.you staff member's own " +
+    "API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. A pipe = a channel (GET /v1/catalogue/channels) " +
+    "working one leg, from one step to the next (GET /v1/catalogue/steps). `mode: \"proactive\"` runs on its own budget and names no trigger; " +
+    "`mode: \"reactive\"` names the trigger that asks for it (`triggerId`, GET /v1/catalogue/triggers), e.g. an AI instant call on Form submitted " +
+    "toward Booking call. A leg out of a real step with no known conversion rate needs `conversionRatePct`. `published: false` = a draft. " +
+    "The workflow a pipe runs is never picked here: features-service runs the best ROI workflow written for the channel. " +
+    "`createdBy` is recorded as the authenticated staff email (a body value is replaced). Answers 201 with the pipe (id `<channel slug>|<leg key>`, " +
+    "readable at GET /v1/catalogue/pipes/{id}). Refusals forwarded verbatim: 400 `channel_slug_required` / `from_step_required` / `step_unrecognised` / " +
+    "`leg_goes_nowhere` / `mode_unrecognised` / `trigger_required` / `proactive_leg_has_trigger` / `conversion_rate_required`; 404 `channel_not_found` / " +
+    "`trigger_not_found`; 409 `leg_exists` / `trigger_not_fired` (nothing fires that trigger yet). Byte passthrough to features-service POST /internal/catalogue/pipes.",
+  security: platformAuth,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              channelSlug: z.string().openapi({ description: "The channel working the leg (GET /v1/catalogue/channels)" }),
+              fromStep: z.string().nullable().openapi({ description: "The step the leg starts from (GET /v1/catalogue/steps); null = from nothing (an entry leg). Required, never defaulted" }),
+              toStep: z.string().openapi({ description: "The step the leg leads to (GET /v1/catalogue/steps)" }),
+              mode: z.string().openapi({ description: "`proactive` (own budget, no trigger) or `reactive` (runs when its trigger fires)" }),
+              triggerId: z.string().optional().openapi({ description: "Reactive only: the trigger that asks for this pipe (GET /v1/catalogue/triggers)" }),
+              conversionRatePct: z.number().optional().openapi({ description: "Share (0, 100] of people at fromStep who reach toStep, when no rate is known for that leg" }),
+              published: z.boolean().optional().openapi({ description: "false = a draft (default true)" }),
+              requestedByOrgId: z.string().nullable().optional().openapi({ description: "The org whose request led to this pipe, if any (provenance only: the pipe stays usable by every org)" }),
+            })
+            .passthrough()
+            .openapi("CreatePipeRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    201: { description: "The pipe as created, pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CreatePipeResponse") } } },
+    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff (`staff_only`)", content: errorContent },
+    404: { description: "Unknown channel or trigger (forwarded verbatim)", content: errorContent },
+    409: { description: "`leg_exists` / `trigger_not_fired` (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "get",
   path: "/v1/catalogue/sales-funnels",
   tags: ["Features"],
   summary: "List catalogue sales funnels (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/sales-funnels: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: paths, containsChannels, q, limit; not a whitelist); status and body owned by the downstream service.",
   security: platformAuth,
   request: { query: z.object({ paths: z.string().optional().openapi({ description: "Comma list of sales path ids" }), containsChannels: z.string().optional().openapi({ description: "Comma list of channel slugs: funnels containing at least one" }), q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -9109,7 +9158,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue sales funnel (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/sales-funnels/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: platformAuth,
   request: { params: z.object({ id: z.string().openapi({ description: "a sales funnel id" }) }), query: z.object({  }).passthrough() },
@@ -9130,7 +9179,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List catalogue workflows (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/workflows: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: pipe (required), q, limit; not a whitelist); status and body owned by the downstream service.",
   security: platformAuth,
   request: { query: z.object({ pipe: z.string().optional().openapi({ description: "A pipe id (required by the downstream)" }), q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -9150,7 +9199,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue workflow (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/workflows/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: platformAuth,
   request: { params: z.object({ id: z.string().openapi({ description: "a workflow dynasty slug (needs `pipe`)" }) }), query: z.object({ pipe: z.string().optional().openapi({ description: "A pipe id (required by the downstream)" }), q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -9171,7 +9220,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List catalogue triggers (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/triggers: one page of triggers, what starts a reactive pipe (id, name, icon, eventIcon, line, fromStep, firedBy, coded, pipeCount, ...). Query string forwarded verbatim (documented today: q, limit; not a whitelist); status and body owned by the downstream service.",
   security: platformAuth,
   request: { query: z.object({ q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -9191,7 +9240,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue trigger (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/triggers/{id}: the trigger and the reactive pipes it starts. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: platformAuth,
   request: { params: z.object({ id: z.string().openapi({ description: "a trigger id (e.g. positive_reply_received)" }) }), query: z.object({}).passthrough() },
@@ -9211,7 +9260,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List catalogue tactics (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/tactics: one page of tactics, the yes/no tags Jev puts on every workflow version (e.g. Catch-all). Query string forwarded verbatim (documented today: q, limit; not a whitelist); status and body owned by the downstream service.",
   security: platformAuth,
   request: { query: z.object({ q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -9231,7 +9280,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue tactic (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/tactics/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: platformAuth,
   request: { params: z.object({ id: z.string().openapi({ description: "a tactic id" }) }), query: z.object({}).passthrough() },
@@ -9251,7 +9300,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List catalogue strategies (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/strategies: one page of strategies, the tactics a workflow must / must not follow (e.g. Valid only, Valid + Catch-all). Query string forwarded verbatim (documented today: q, limit; not a whitelist); status and body owned by the downstream service.",
   security: platformAuth,
   request: { query: z.object({ q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -9271,7 +9320,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue strategy (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/strategies/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: platformAuth,
   request: { params: z.object({ id: z.string().openapi({ description: "a strategy id" }) }), query: z.object({}).passthrough() },
@@ -9291,7 +9340,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List catalogue plays (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/plays: the plays of one pipe, a pipe x a strategy with its ROI. Query string forwarded verbatim (documented today: pipe (a pipe id, e.g. sales-cold-email-outreach|lead_found_to_conversation), q, limit; not a whitelist); status and body owned by the downstream service.",
   security: platformAuth,
   request: { query: z.object({ q: z.string().optional(), limit: z.string().optional(), pipe: z.string().optional().openapi({ example: "sales-cold-email-outreach|lead_found_to_conversation" }) }).passthrough() },
@@ -9311,7 +9360,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue play (staff only)",
   description:
-    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/plays/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: platformAuth,
   request: { params: z.object({ id: z.string().openapi({ description: "a play id (carries `|` and `~`; percent-encode `|` as %7C)" }) }), query: z.object({}).passthrough() },

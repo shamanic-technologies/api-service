@@ -5896,6 +5896,55 @@
         "type": "object",
         "properties": {}
       },
+      "CreatePipeResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreatePipeRequest": {
+        "type": "object",
+        "properties": {
+          "channelSlug": {
+            "type": "string",
+            "description": "The channel working the leg (GET /v1/catalogue/channels)"
+          },
+          "fromStep": {
+            "type": "string",
+            "nullable": true,
+            "description": "The step the leg starts from (GET /v1/catalogue/steps); null = from nothing (an entry leg). Required, never defaulted"
+          },
+          "toStep": {
+            "type": "string",
+            "description": "The step the leg leads to (GET /v1/catalogue/steps)"
+          },
+          "mode": {
+            "type": "string",
+            "description": "`proactive` (own budget, no trigger) or `reactive` (runs when its trigger fires)"
+          },
+          "triggerId": {
+            "type": "string",
+            "description": "Reactive only: the trigger that asks for this pipe (GET /v1/catalogue/triggers)"
+          },
+          "conversionRatePct": {
+            "type": "number",
+            "description": "Share (0, 100] of people at fromStep who reach toStep, when no rate is known for that leg"
+          },
+          "published": {
+            "type": "boolean",
+            "description": "false = a draft (default true)"
+          },
+          "requestedByOrgId": {
+            "type": "string",
+            "nullable": true,
+            "description": "The org whose request led to this pipe, if any (provenance only: the pipe stays usable by every org)"
+          }
+        },
+        "required": [
+          "channelSlug",
+          "fromStep",
+          "toStep",
+          "mode"
+        ]
+      },
       "CatalogueSalesFunnelsListResponse": {
         "type": "object",
         "properties": {}

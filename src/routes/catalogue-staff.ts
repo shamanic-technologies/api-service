@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type NextFunction, type Response } from "express";
 import { authenticatePlatform, authenticateUser, requireStaff, requireStaffActor, AuthenticatedRequest } from "../middleware/auth.js";
 import { pipeExternalService, externalServices } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
@@ -7,10 +7,23 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
 // PR #1482): steps, sales paths, channels, pipes, sales funnels, workflows, triggers, tactics, strategies and plays, each a small LIST
 // (`q`, `limit` <= 25, the "contains at least one" filters) and ONE object by id. Behind the
 // dashboard v2 Staff sections (one per business object: an overview, the ongoing ones, a page
-// each). Fleet-wide, no org scoping: the producer takes no identity. Gate: authenticatePlatform +
-// requireStaff, like every other staff Monitoring route. Status + body piped byte-for-byte (#10),
-// errors field-for-field (#7), query string verbatim (#11).
+// each) and behind the distribute MCP (a staff member's own key: the reads it needs to compose a pipe,
+// a funnel, a play). Fleet-wide, no org scoping: the producer takes no identity. Gate: a staff member's
+// own key (`requireStaffActor`, listed in `STAFF_KEY_OPERATIONS`), or the platform key + a staff
+// x-email (`authenticatePlatform + requireStaff`, the dashboard's path, unchanged). Status + body piped
+// byte-for-byte (#10), errors field-for-field (#7), query string verbatim (#11).
 const router = Router();
+
+/**
+ * A Bearer key with no X-API-Key = a person's own key: staff only (`requireStaffActor`). Anything else
+ * takes the platform path the dashboard has always used, which needs no identity headers.
+ */
+function staffKeyOrPlatform(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (req.headers.authorization && !req.headers["x-api-key"]) {
+    return void authenticateUser(req, res, () => requireStaffActor(req, res, next));
+  }
+  return void authenticatePlatform(req, res, () => requireStaff(req, res, next));
+}
 
 /**
  * The catalogue objects features-service serves, in its own path spelling (triggers: what starts a
@@ -38,7 +51,7 @@ async function pipe(res: import("express").Response, path: string, fallback: str
 // One explicit route per downstream path (no catch-all): the list, then the object by id.
 for (const object of CATALOGUE_OBJECTS) {
   /** GET /v1/catalogue/<object> → features-service GET /internal/catalogue/<object> (one page of rows). */
-  router.get(`/v1/catalogue/${object}`, authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) =>
+  router.get(`/v1/catalogue/${object}`, staffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
     pipe(res, `/internal/catalogue/${object}${rawQueryString(req.originalUrl)}`, `Failed to list catalogue ${object}`),
   );
 
@@ -48,7 +61,7 @@ for (const object of CATALOGUE_OBJECTS) {
    * (sent as `%2B`, never a space) a pipe id carries `|`, and a play id carries `|` and `~` (`~` is unreserved, sent as is). A workflow needs `?pipe=`, which
    * rides the verbatim query string.
    */
-  router.get(`/v1/catalogue/${object}/:id`, authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) =>
+  router.get(`/v1/catalogue/${object}/:id`, staffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
     pipe(
       res,
       `/internal/catalogue/${object}/${encodeURIComponent(req.params.id)}${rawQueryString(req.originalUrl)}`,
@@ -92,5 +105,32 @@ router.put(
     }
   },
 );
+
+/**
+ * POST /v1/catalogue/pipes → features-service POST /internal/catalogue/pipes: a NEW pipe, a channel
+ * on a leg it does not perform yet (`{channelSlug, fromStep, toStep, mode, triggerId?, published?,
+ * conversionRatePct?, requestedByOrgId?}`; a reactive pipe names the trigger that asks for it). A
+ * fleet-wide catalogue write, like tactics, strategies and plays: staff only, the same gate as the
+ * default-play PUT (a staff key or the platform key + staff x-email; a client key gets 403
+ * `staff_only`). Listed in `STAFF_KEY_OPERATIONS`, so the distribute MCP finds it.
+ *
+ * `createdBy` is the AUTHENTICATED staff email, never a body value (CLAUDE.md rule #4, third
+ * exception). Everything else is forwarded verbatim; the 201 and every refusal (400 `trigger_required`,
+ * `conversion_rate_required`, ..., 404 `channel_not_found` / `trigger_not_found`, 409 `leg_exists` /
+ * `trigger_not_fired`) come back byte-for-byte.
+ */
+router.post("/v1/catalogue/pipes", authenticateUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(externalServices.features, "/internal/catalogue/pipes", {
+      method: "POST",
+      body: { ...(req.body ?? {}), createdBy: req.staffEmail },
+      expressRes: res,
+    });
+  } catch (error: any) {
+    console.error("[api-service] Failed to create pipe:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to create pipe");
+  }
+});
 
 export default router;
