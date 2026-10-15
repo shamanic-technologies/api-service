@@ -107,6 +107,38 @@ router.put(
 );
 
 /**
+ * POST /v1/catalogue/pipes/:pipeId/retire → features-service
+ * POST /internal/catalogue/pipes/{id}/retire `{retiredBy, note?}` (MCP-PIPE-GAPS-1015): take a pipe
+ * created by mistake out of every catalogue read. Same staff gate as the default-play PUT (a staff
+ * key or the platform key + staff x-email; a client key gets 403 `staff_only`), listed in
+ * `STAFF_KEY_OPERATIONS`. `retiredBy` is the AUTHENTICATED staff email, never a body value (CLAUDE.md
+ * rule #4, third exception). The gateway checks nothing else (usage, funnels, coded pipes are the
+ * producer's refusals); status and body come back byte-for-byte.
+ */
+router.post(
+  "/v1/catalogue/pipes/:pipeId/retire",
+  authenticateUser,
+  requireStaffActor,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.features,
+        `/internal/catalogue/pipes/${encodeURIComponent(req.params.pipeId)}/retire`,
+        {
+          method: "POST",
+          body: { ...(req.body ?? {}), retiredBy: req.staffEmail },
+          expressRes: res,
+        },
+      );
+    } catch (error: any) {
+      console.error("[api-service] Failed to retire pipe:", error.message);
+      if (res.headersSent) { res.end(); return; }
+      respondUpstreamError(res, error, "Failed to retire pipe");
+    }
+  },
+);
+
+/**
  * POST /v1/catalogue/pipes → features-service POST /internal/catalogue/pipes: a NEW pipe, a channel
  * on a leg it does not perform yet (`{channelSlug, fromStep, toStep, mode, triggerId?, published?,
  * conversionRatePct?, requestedByOrgId?}`; a reactive pipe names the trigger that asks for it). A

@@ -381,6 +381,7 @@ export const STAFF_KEY_OPERATIONS = new Set<string>([
   "PUT /v1/catalogue/pipes/{pipeId}/default-play",
   "PATCH /v1/strategies/{id}",
   "POST /v1/catalogue/pipes",
+  "POST /v1/catalogue/pipes/{pipeId}/retire",
   "POST /v1/catalogue/sales-funnels",
   "GET /v1/catalogue/steps",
   "GET /v1/catalogue/steps/{id}",
