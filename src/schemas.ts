@@ -9133,6 +9133,47 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/catalogue/sales-funnels",
+  tags: ["Features"],
+  summary: "Declare a sales funnel from its pipes (staff only)",
+  description:
+    "Fleet-wide catalogue write, usable by every org. Staff only: a distribute.you staff member's own API key, or the platform key " +
+    "with a staff x-email; any other key gets 403 `staff_only`. `pipeIds` = one pipe id (GET /v1/catalogue/pipes) or play id " +
+    "(`<pipe id>~<strategy id>`, GET /v1/catalogue/plays?pipe=) per leg of a sales path, in order, ONE channel per leg; a bare pipe id " +
+    "runs its default play. Works for a reactive funnel too (e.g. Form submitted -> AI Instant Call -> Booking call -> your team). " +
+    "Idempotent: 201 `created: true` when new, 200 `created: false` when already declared; either way the funnel detail (its id is what " +
+    "POST /v1/sales-funnel-campaigns takes). `createdBy` is recorded as the authenticated staff email (a body value is replaced). " +
+    "Refusals forwarded verbatim: 400 `pipe_ids_required` / `bare_leg_refused` / `one_channel_per_leg` / `leg_without_channel` / " +
+    "`funnel_invalid`; 404 `pipe_not_found`. Byte passthrough to features-service POST /internal/catalogue/sales-funnels.",
+  security: platformAuth,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              pipeIds: z.array(z.string()).openapi({ description: "One pipe or play id per leg of a sales path, in order" }),
+              requestedByOrgId: z.string().nullable().optional().openapi({ description: "The org whose request led to this funnel, if any (provenance only: the funnel stays usable by every org)" }),
+            })
+            .passthrough()
+            .openapi("CreateSalesFunnelRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Already declared: the funnel, pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("SalesFunnelAlreadyDeclaredResponse") } } },
+    201: { description: "Declared: the funnel, pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CreateSalesFunnelResponse") } } },
+    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff (`staff_only`)", content: errorContent },
+    404: { description: "Unknown pipe or play (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "get",
   path: "/v1/catalogue/sales-funnels",
   tags: ["Features"],

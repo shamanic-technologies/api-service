@@ -93,6 +93,27 @@ describe("POST /v1/catalogue/pipes", () => {
   });
 });
 
+describe("POST /v1/catalogue/sales-funnels", () => {
+  const FUNNEL = { pipeIds: ["ai-instant-call|form_submitted_to_booking_call", "your-team-closing-calls|booking_call_to_paid_client"] };
+
+  it("a STAFF key declares it: exact path, createdBy = the staff email, the producer's 200 (already declared) back", async () => {
+    identity.current = STAFF_KEY;
+    upstream(200, '{"created":false,"id":"f1"}');
+    const res = await request(app()).post("/v1/catalogue/sales-funnels").send({ ...FUNNEL, createdBy: "x@evil.com" });
+    expect(res.status).toBe(200);
+    expect(res.text).toBe('{"created":false,"id":"f1"}');
+    expect(calls[0].url).toBe(`${FEATURES_BASE}/internal/catalogue/sales-funnels`);
+    expect(JSON.parse(calls[0].init.body)).toEqual({ ...FUNNEL, createdBy: "kevin@distribute.you" });
+  });
+
+  it("a CLIENT key is refused 403 staff_only; features-service never called", async () => {
+    identity.current = CLIENT_KEY;
+    const res = await request(app()).post("/v1/catalogue/sales-funnels").send(FUNNEL);
+    expect(res.status).toBe(403);
+    expect(calls).toHaveLength(0);
+  });
+});
+
 describe("GET /v1/catalogue/pipes/:id with a person's own key", () => {
   const PIPE = "ai-instant-call|form_submitted_to_booking_call";
 

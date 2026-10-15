@@ -119,18 +119,26 @@ router.put(
  * `conversion_rate_required`, ..., 404 `channel_not_found` / `trigger_not_found`, 409 `leg_exists` /
  * `trigger_not_fired`) come back byte-for-byte.
  */
-router.post("/v1/catalogue/pipes", authenticateUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
-  try {
-    await pipeExternalService(externalServices.features, "/internal/catalogue/pipes", {
-      method: "POST",
-      body: { ...(req.body ?? {}), createdBy: req.staffEmail },
-      expressRes: res,
-    });
-  } catch (error: any) {
-    console.error("[api-service] Failed to create pipe:", error.message);
-    if (res.headersSent) { res.end(); return; }
-    respondUpstreamError(res, error, "Failed to create pipe");
-  }
-});
+/**
+ * POST /v1/catalogue/sales-funnels → features-service POST /internal/catalogue/sales-funnels: declare a
+ * sales funnel from its pipes (`{pipeIds, requestedByOrgId?}`: one pipe or play id per leg of a sales
+ * path, in order). Idempotent: 201 new, 200 already declared. Same gate and `createdBy` rule as the
+ * pipe create above; status and body byte-for-byte.
+ */
+for (const object of ["pipes", "sales-funnels"] as const) {
+  router.post(`/v1/catalogue/${object}`, authenticateUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(externalServices.features, `/internal/catalogue/${object}`, {
+        method: "POST",
+        body: { ...(req.body ?? {}), createdBy: req.staffEmail },
+        expressRes: res,
+      });
+    } catch (error: any) {
+      console.error(`[api-service] Failed to create catalogue ${object}:`, error.message);
+      if (res.headersSent) { res.end(); return; }
+      respondUpstreamError(res, error, `Failed to create catalogue ${object}`);
+    }
+  });
+}
 
 export default router;
