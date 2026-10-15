@@ -5945,6 +5945,34 @@
           "mode"
         ]
       },
+      "SalesFunnelAlreadyDeclaredResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateSalesFunnelResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CreateSalesFunnelRequest": {
+        "type": "object",
+        "properties": {
+          "pipeIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "One pipe or play id per leg of a sales path, in order"
+          },
+          "requestedByOrgId": {
+            "type": "string",
+            "nullable": true,
+            "description": "The org whose request led to this funnel, if any (provenance only: the funnel stays usable by every org)"
+          }
+        },
+        "required": [
+          "pipeIds"
+        ]
+      },
       "CatalogueSalesFunnelsListResponse": {
         "type": "object",
         "properties": {}
