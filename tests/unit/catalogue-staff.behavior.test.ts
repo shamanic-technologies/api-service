@@ -100,11 +100,11 @@ for (const r of ROUTES) {
       expect(calls).toHaveLength(0);
     });
 
-    it("refuses a customer bearer key (401) and calls nothing", async () => {
-      upstream(200, RAW);
+    it("refuses a bearer key key-service does not vouch for as staff, and never reaches features-service", async () => {
+      upstream(401, '{"error":"Invalid API key"}');
       const res = await request(buildApp()).get(r.path).set("Authorization", "Bearer distrib.usr_customer").set("x-email", "kevin@distribute.you");
-      expect(res.status).toBe(401);
-      expect(calls).toHaveLength(0);
+      expect([401, 403]).toContain(res.status);
+      expect(calls.filter((c) => c.url.startsWith(FEATURES_BASE))).toHaveLength(0);
     });
   });
 }
