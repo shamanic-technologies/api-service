@@ -16402,6 +16402,73 @@ registry.registerPath({
   },
 });
 
+// ── Owner Telegram notices (OWNER-TELEGRAM-GATEWAY-1014) ──────────────────────
+// Any member of the org, for their OWN org only (the path org must be the
+// authenticated one). Pass-through to client-service /internal/orgs/{orgId}/owner-telegram*.
+const ownerTelegramParams = z.object({
+  orgId: z.string().uuid().openapi({ description: "Your organization (from GET /v1/me). Must be the organization this request acts in." }),
+});
+const ownerTelegramErrors = {
+  401: { description: "Unauthorized", content: errorContent },
+  403: { description: "`org_mismatch`: the path organization is not the one this request acts in, or you are not a member", content: errorContent },
+  404: { description: "`org_not_found` (forwarded verbatim)", content: errorContent },
+};
+const OWNER_TELEGRAM_ABOUT =
+  "Telegram notices: one short line to the organization's owner when one of our workflows acts for the organization " +
+  "(for example, a post was published).";
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/{orgId}/owner-telegram/link-codes",
+  tags: ["Organizations"],
+  summary: "Get a link to connect Telegram for the organization's notices",
+  description:
+    OWNER_TELEGRAM_ABOUT +
+    " Open `linkUrl` (`https://t.me/<bot>?start=<code>`) and press Start in Telegram: that chat then gets the notices. " +
+    "Good once, for 30 minutes (`expiresAt`). Connecting again replaces the chat linked before. No body: the member " +
+    "connecting is taken from the key. Pass-through to client-service POST /internal/orgs/{orgId}/owner-telegram/link-codes.",
+  security: authed,
+  request: { params: ownerTelegramParams },
+  responses: {
+    201: passthroughResponse("`{ code, linkUrl, expiresAt }`", "OwnerTelegramLinkCode"),
+    ...ownerTelegramErrors,
+    502: { description: "`bot_unavailable`: Telegram could not be reached (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/{orgId}/owner-telegram",
+  tags: ["Organizations"],
+  summary: "Is the organization's owner connected to Telegram notices?",
+  description:
+    OWNER_TELEGRAM_ABOUT +
+    " Answers `{ reachable: false }`, or `{ reachable: true, target: \"linked_chat\" | \"platform_owner_chat\", linkedAt }`. " +
+    "Pass-through to client-service GET /internal/orgs/{orgId}/owner-telegram.",
+  security: authed,
+  request: { params: ownerTelegramParams },
+  responses: {
+    200: passthroughResponse("`{ reachable, target?, linkedAt? }`", "OwnerTelegramStatus"),
+    ...ownerTelegramErrors,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/orgs/{orgId}/owner-telegram",
+  tags: ["Organizations"],
+  summary: "Stop the organization's Telegram notices",
+  description:
+    "Disconnects the linked Telegram chat. Idempotent: `{ unlinked: false }` when nothing was linked. " +
+    "Pass-through to client-service DELETE /internal/orgs/{orgId}/owner-telegram.",
+  security: authed,
+  request: { params: ownerTelegramParams },
+  responses: {
+    200: passthroughResponse("`{ unlinked }`", "OwnerTelegramUnlinked"),
+    ...ownerTelegramErrors,
+  },
+});
+
 // ── Relationships (RELATIONSHIP-TAGS-1014) ─────────────────────────────────────
 // Who each person is to a brand: relationship tags, suggested merges, company.
 // Pass-through to lead-service /orgs/brands/{brandId}/relationships/* (same suffix)

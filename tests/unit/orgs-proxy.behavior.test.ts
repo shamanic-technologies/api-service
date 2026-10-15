@@ -370,3 +370,67 @@ describe("/v1/orgs/:orgId/membership-limit → client-service membership limit (
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+describe("/v1/orgs/:orgId/owner-telegram → client-service (any member, own org only)", () => {
+  const ORG = "66666666-6666-6666-6666-666666666666";
+  const OTHER = "77777777-7777-7777-7777-777777777777";
+
+  it("POST link-codes: a client key gets its org's link, the acting user forced from auth, body nothing else", async () => {
+    identity.current = { ...CLIENT_KEY, userId: "user-client", orgId: ORG };
+    const link = { code: "abc", linkUrl: "https://t.me/distribute_you_bot?start=abc", expiresAt: "2026-10-14T12:30:00.000Z" };
+    fetchMock.mockResolvedValue(upstream(201, link));
+    const res = await request(app()).post(`/v1/orgs/${ORG}/owner-telegram/link-codes`).send({ userId: "forged", chatId: 1 });
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual(link);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${CLIENT_BASE}/internal/orgs/${ORG}/owner-telegram/link-codes`);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({ userId: "user-client" });
+  });
+
+  it("GET reads and DELETE disconnects on the exact downstream paths, bodies and refusals forwarded", async () => {
+    identity.current = { ...CLIENT_KEY, userId: "user-client", orgId: ORG };
+    const status = { reachable: true, target: "linked_chat", linkedAt: "2026-10-14T10:00:00.000Z" };
+    fetchMock.mockResolvedValueOnce(upstream(200, status));
+    const get = await request(app()).get(`/v1/orgs/${ORG}/owner-telegram`);
+    expect(get.status).toBe(200);
+    expect(get.body).toEqual(status);
+    expect((fetchMock.mock.calls[0] as [string])[0]).toBe(`${CLIENT_BASE}/internal/orgs/${ORG}/owner-telegram`);
+
+    fetchMock.mockResolvedValueOnce(upstream(200, { unlinked: true }));
+    const del = await request(app()).delete(`/v1/orgs/${ORG}/owner-telegram`);
+    expect(del.status).toBe(200);
+    expect(del.body).toEqual({ unlinked: true });
+    const [url, init] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(url).toBe(`${CLIENT_BASE}/internal/orgs/${ORG}/owner-telegram`);
+    expect(init.method).toBe("DELETE");
+
+    fetchMock.mockResolvedValueOnce(upstream(502, { error: "bot_unavailable", message: "Telegram did not answer" }));
+    const bad = await request(app()).post(`/v1/orgs/${ORG}/owner-telegram/link-codes`);
+    expect(bad.status).toBe(502);
+    expect(bad.body).toEqual({ error: "bot_unavailable", message: "Telegram did not answer" });
+  });
+
+  it("another org is unreachable: every route refuses 403 org_mismatch before any call", async () => {
+    identity.current = { ...CLIENT_KEY, userId: "user-client", orgId: ORG };
+    const calls = [
+      request(app()).post(`/v1/orgs/${OTHER}/owner-telegram/link-codes`),
+      request(app()).get(`/v1/orgs/${OTHER}/owner-telegram`),
+      request(app()).delete(`/v1/orgs/${OTHER}/owner-telegram`),
+    ];
+    for (const res of await Promise.all(calls)) {
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBe("org_mismatch");
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("sending messages and consuming a link code are not exposed", async () => {
+    identity.current = { ...CLIENT_KEY, userId: "user-client", orgId: ORG };
+    const send = await request(app()).post(`/v1/orgs/${ORG}/owner-telegram/messages`).send({ text: "hi" });
+    const consume = await request(app()).post(`/v1/owner-telegram/links`).send({ code: "abc", chatId: 1 });
+    expect(send.status).toBe(404);
+    expect(consume.status).toBe(404);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});

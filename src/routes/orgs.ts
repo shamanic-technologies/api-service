@@ -66,6 +66,18 @@ import { isStaffEmail } from "../lib/staff.js";
  *   plan refuses comes back as its 422 `limit_refused`, verbatim). Nothing is
  *   sent to anyone.
  *
+ * - `POST /v1/orgs/:orgId/owner-telegram/link-codes`, `GET|DELETE
+ *   /v1/orgs/:orgId/owner-telegram` → the same paths under `/internal`: any
+ *   member of THEIR OWN org (clients too, no staff gate) gets a one-time
+ *   Telegram link to receive one-line notices when our workflows act for the
+ *   org, reads whether the org's owner is reachable there, and disconnects.
+ *   `:orgId` is the request's target, resolved and membership-checked by
+ *   `authenticate`, and must equal the authenticated org (`org_mismatch`
+ *   otherwise): another org is never reachable. The link-code body is ONLY
+ *   `{ userId: req.userId }` (the acting member, forced from auth; anything the
+ *   caller sends is dropped). Sending messages and consuming a link code stay
+ *   service-to-service (never proxied). Piped byte-identical with status.
+ *
  * The acting user is identity, so the gateway supplies it from `authenticate`
  * (`createdByUserId` / `invitedByUserId`, client-service's body names for the
  * gateway's `x-user-id`), spread-then-override like `/orgs/:orgId/invites/claim`:
@@ -331,6 +343,52 @@ router.put("/orgs/:orgId/membership-limit", authenticateUser, requireUser, requi
     });
   } catch (error) {
     respondUpstreamError(res, error, "Failed to set the membership limit");
+  }
+});
+
+function ownerTelegramPath(req: AuthenticatedRequest, suffix = "") {
+  return `/internal/orgs/${encodeURIComponent(req.orgId!)}/owner-telegram${suffix}`;
+}
+
+router.post(
+  "/orgs/:orgId/owner-telegram/link-codes",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    if (pathOrgMismatch(req, res)) return;
+    try {
+      await pipeExternalService(externalServices.client, ownerTelegramPath(req, "/link-codes"), {
+        expressRes: res,
+        method: "POST",
+        body: { userId: req.userId },
+        headers: buildInternalHeaders(req),
+      });
+    } catch (error) {
+      respondUpstreamError(res, error, "Failed to create the Telegram link");
+    }
+  },
+);
+
+router.get("/orgs/:orgId/owner-telegram", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  if (pathOrgMismatch(req, res)) return;
+  try {
+    await pipeExternalService(externalServices.client, ownerTelegramPath(req), { expressRes: res, headers: buildInternalHeaders(req) });
+  } catch (error) {
+    respondUpstreamError(res, error, "Failed to read the Telegram connection");
+  }
+});
+
+router.delete("/orgs/:orgId/owner-telegram", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  if (pathOrgMismatch(req, res)) return;
+  try {
+    await pipeExternalService(externalServices.client, ownerTelegramPath(req), {
+      expressRes: res,
+      method: "DELETE",
+      headers: buildInternalHeaders(req),
+    });
+  } catch (error) {
+    respondUpstreamError(res, error, "Failed to disconnect Telegram");
   }
 });
 
