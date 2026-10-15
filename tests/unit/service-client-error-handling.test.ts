@@ -99,7 +99,11 @@ describe("callExternalService error handling", () => {
 
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(networkError));
 
-    await expect(callExternalService(service, "/resolve", { method: "POST" })).rejects.toThrow("fetch failed");
+    await expect(callExternalService(service, "/resolve", { method: "POST" })).rejects.toMatchObject({
+      name: "UpstreamUnreachableError",
+      statusCode: 503,
+      body: expect.objectContaining({ code: "upstream_unreachable", cause: "ENOTFOUND" }),
+    });
 
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining("(cause: ENOTFOUND)"),

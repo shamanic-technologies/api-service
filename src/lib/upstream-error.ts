@@ -1,4 +1,5 @@
 import type { Response } from "express";
+import { UpstreamUnreachableError } from "./service-client.js";
 
 /**
  * Forward a downstream-service failure to the client with its status AND its body
@@ -27,6 +28,15 @@ import type { Response } from "express";
  * env-var error), which is the sole case where the gateway has nothing to forward.
  */
 export function respondUpstreamError(res: Response, error: unknown, fallbackMessage: string): void {
+  // The downstream never answered: there is no upstream body to forward, so the
+  // gateway names what happened (503 upstream_unreachable / 504 upstream_timeout)
+  // instead of echoing the transport message as a bare 500.
+  if (error instanceof UpstreamUnreachableError) {
+    res.setHeader("Retry-After", String(error.body.retryAfterSeconds));
+    res.status(error.statusCode).json(error.body);
+    return;
+  }
+
   const err = error as { statusCode?: unknown; message?: unknown } | null;
   const status = typeof err?.statusCode === "number" ? err.statusCode : 500;
   const rawBody = typeof err?.message === "string" ? err.message : "";
