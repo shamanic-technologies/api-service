@@ -1635,7 +1635,7 @@ registry.registerPath({
   },
 });
 
-// POST /v1/trigger-events -> campaign-service POST /internal/trigger-events. The body is forwarded
+// POST /v1/trigger-events -> campaign-service POST /internal/trigger-events/public (the public door). The body is forwarded
 // byte-identical: this schema DOCUMENTS the producer's fields and validates nothing (rule #8 corollary).
 const ReportTriggerEventRequestSchema = z
   .object({
@@ -1688,10 +1688,11 @@ registry.registerPath({
     "Report ONE occurrence of a trigger on your brand and offer, with your own API key. Every live campaign of yours whose " +
     "reactive step answers that trigger runs for the person named (same funding and rules as any campaign run). " +
     "Example: push an email you wrote (`triggerId: email_pushed_via_api`, `person.email`, `item: {subject, bodyText}`) and " +
-    "your Email Sending campaign sends it as written from our inboxes. Proxy to campaign-service POST /internal/trigger-events: " +
+    "your Email Sending campaign sends it as written from our inboxes. Proxy to campaign-service POST /internal/trigger-events/public: " +
     "body forwarded as is, status and refusals relayed verbatim. The answer's `event.outcome` says what ran (`ran`) or why not " +
     "(`skipped` + reason, e.g. `no_campaign`, `unfunded`); a person still being filed leaves the event `pending` a few minutes. " +
-    "Read events back with GET /v1/offers/{offerId}/trigger-events. `performed` is not accepted here (400 `performed_not_reportable`).",
+    "Read events back with GET /v1/offers/{offerId}/trigger-events. `performed` is not accepted here (400 `performed_not_reportable`). " +
+    "A trigger the platform computes itself (served `callable: false` by GET /v1/public/channels, e.g. a delay or a poll) cannot be reported: 400 `trigger_not_callable`, nothing recorded.",
   security: authed,
   request: {
     body: { content: { "application/json": { schema: ReportTriggerEventRequestSchema } } },
@@ -1707,7 +1708,7 @@ registry.registerPath({
     },
     400: {
       description:
-        "Refused, nothing recorded: `unknown_trigger`, a malformed body (campaign-service, verbatim) or `performed_not_reportable`.",
+        "Refused, nothing recorded: `unknown_trigger`, `trigger_not_callable` (a trigger the platform computes itself, not reportable by you), a malformed body (campaign-service, verbatim) or `performed_not_reportable`.",
       content: errorContent,
     },
     401: { description: "Unauthorized", content: errorContent },

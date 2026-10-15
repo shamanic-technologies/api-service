@@ -283,7 +283,7 @@ for (const tail of ["/trigger-events/summary", "/trigger-events"]) {
 }
 
 /**
- * POST /v1/trigger-events → campaign-service POST /internal/trigger-events
+ * POST /v1/trigger-events → campaign-service POST /internal/trigger-events/public
  *
  * A customer REPORTS one occurrence of a trigger on their own brand/offer with their own key (owner
  * 2026-10-13): e.g. `email_pushed_via_api` with `person` (who it is about) and `item` (the email they
@@ -299,6 +299,10 @@ for (const tail of ["/trigger-events/summary", "/trigger-events"]) {
  *    occurrence and campaign-service decides what it did.
  *  - Body forwarded byte-identical, status (201 recorded / 200 replayed) and refusals (`unknown_trigger`
  *    400, ...) relayed verbatim, hence the pipe.
+ *  - The PUBLIC door (owner 2026-10-15, FUNNEL-HEAD-TRIGGER-1015): a trigger distribute computes itself
+ *    (features-service serves it `callable: false`: delay, poll, GitHub issue, on_demand, lead_requested)
+ *    cannot be reported by a client; campaign-service refuses it 400 `trigger_not_callable`, nothing
+ *    recorded. `/internal/trigger-events` stays the INTERNAL door our own services fire through.
  */
 router.post("/trigger-events", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
   const body = req.body;
@@ -314,7 +318,7 @@ router.post("/trigger-events", authenticate, requireOrg, requireUser, async (req
   }
   try {
     if (typeof body.brandId === "string" && !(await ensureBrandInOrg(req, res, body.brandId))) return;
-    await pipeExternalService(externalServices.campaign, "/internal/trigger-events", {
+    await pipeExternalService(externalServices.campaign, "/internal/trigger-events/public", {
       method: "POST",
       headers: buildInternalHeaders(req),
       body,
