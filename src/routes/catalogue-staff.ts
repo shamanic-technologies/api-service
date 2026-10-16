@@ -1,16 +1,18 @@
 import { Router, type NextFunction, type Response } from "express";
-import { authenticatePlatform, authenticateUser, requireStaff, requireStaffActor, AuthenticatedRequest } from "../middleware/auth.js";
+import { authenticatePlatform, authenticateUser, requireStaff, requireStaffActor, staffKeyEmail, AuthenticatedRequest } from "../middleware/auth.js";
 import { pipeExternalService, externalServices } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 
-// Staff-only reads of features-service's agent catalogue (`/internal/catalogue/*`, features-service
+// Reads of features-service's agent catalogue (`/internal/catalogue/*`, features-service
 // PR #1482): steps, sales paths, channels, pipes, sales funnels, workflows, triggers, tactics, strategies and plays, each a small LIST
 // (`q`, `limit` <= 25, the "contains at least one" filters) and ONE object by id. Behind the
 // dashboard v2 Staff sections (one per business object: an overview, the ongoing ones, a page
 // each) and behind the distribute MCP (a staff member's own key: the reads it needs to compose a pipe,
-// a funnel, a play). Fleet-wide, no org scoping: the producer takes no identity. Gate: a staff member's
-// own key (`requireStaffActor`, listed in `STAFF_KEY_OPERATIONS`), or the platform key + a staff
-// x-email (`authenticatePlatform + requireStaff`, the dashboard's path, unchanged). Status + body piped
+// a funnel, a play; and, owner 2026-10-16, a CUSTOMER's own key: steps, sales paths, channels, pipes, funnels
+// and triggers, lists forced to `runnable=true`). Fleet-wide, no org scoping: the producer takes no identity.
+// Gate: a staff member's own key (`requireStaffActor`, `STAFF_KEY_OPERATIONS`), a customer key on the customer
+// objects, or the platform key + a staff x-email (`authenticatePlatform + requireStaff`, the dashboard's path,
+// unchanged). Status + body piped
 // byte-for-byte (#10), errors field-for-field (#7), query string verbatim (#11).
 const router = Router();
 
@@ -26,11 +28,52 @@ function staffKeyOrPlatform(req: AuthenticatedRequest, res: Response, next: Next
 }
 
 /**
+ * After `authenticateUser`: a CUSTOMER's own key (a `user_key` whose user is not staff) passes as a customer
+ * (`req.catalogueCustomer = true`); anything else must be staff (`requireStaffActor`: a staff key, or the platform
+ * key + a staff x-email). Owner 2026-10-16 (standard vocabulary): an outside agent on a customer key does on the
+ * catalogue what the same customer does in the Copilot; WHAT a customer may create stays features-service's call.
+ */
+function customerKeyOrStaff(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (req.authType === "user_key" && !staffKeyEmail(req)) {
+    req.catalogueCustomer = true;
+    return next();
+  }
+  return requireStaffActor(req, res, next);
+}
+
+/** Reads a customer key may make: the Bearer path admits it, the platform path stays staff (the dashboard's). */
+function customerKeyOrStaffRead(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (req.headers.authorization && !req.headers["x-api-key"]) {
+    return void authenticateUser(req, res, () => customerKeyOrStaff(req, res, next));
+  }
+  return void authenticatePlatform(req, res, () => requireStaff(req, res, next));
+}
+
+/**
  * The catalogue objects features-service serves, in its own path spelling (triggers: what starts a
  * reactive pipe; tactics: a yes/no tag on a workflow version; strategies: tactics a workflow must /
  * must not follow; plays: a pipe x a strategy, listed per `?pipe=`).
  */
 export const CATALOGUE_OBJECTS = ["steps", "sales-paths", "channels", "pipes", "sales-funnels", "workflows", "triggers", "tactics", "strategies", "plays"] as const;
+
+/**
+ * What a CUSTOMER key reads (the Copilot's customer reads: steps, sales paths, channels, pipes, funnels, triggers).
+ * Workflows, tactics, strategies and plays stay staff here (a customer reads plays and strategies at /v1/plays,
+ * /v1/strategies).
+ */
+export const CUSTOMER_CATALOGUE_OBJECTS = new Set<string>(["steps", "sales-paths", "channels", "pipes", "sales-funnels", "triggers"]);
+
+/**
+ * Lists features-service filters with `runnable`. A customer's list carries `runnable=true` (the Copilot's customer
+ * default, owner 2026-10-10: never present what we do not run): the producer's own filter, picked by who calls.
+ */
+const RUNNABLE_FILTERED_LISTS = new Set<string>(["sales-paths", "channels", "pipes", "sales-funnels"]);
+
+/** The raw query string with `runnable` forced to `true`; every other parameter stays byte-for-byte. */
+export function withRunnableForced(rawQuery: string): string {
+  const kept = rawQuery.replace(/^\?/, "").split("&").filter((part) => part !== "" && part.split("=")[0] !== "runnable");
+  return `?${[...kept, "runnable=true"].join("&")}`;
+}
 
 /** Raw query string (with its `?`) off the original URL, forwarded verbatim (#11). */
 function rawQueryString(originalUrl: string): string {
@@ -50,10 +93,13 @@ async function pipe(res: import("express").Response, path: string, fallback: str
 
 // One explicit route per downstream path (no catch-all): the list, then the object by id.
 for (const object of CATALOGUE_OBJECTS) {
+  const gate = CUSTOMER_CATALOGUE_OBJECTS.has(object) ? customerKeyOrStaffRead : staffKeyOrPlatform;
   /** GET /v1/catalogue/<object> → features-service GET /internal/catalogue/<object> (one page of rows). */
-  router.get(`/v1/catalogue/${object}`, staffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
-    pipe(res, `/internal/catalogue/${object}${rawQueryString(req.originalUrl)}`, `Failed to list catalogue ${object}`),
-  );
+  router.get(`/v1/catalogue/${object}`, gate, (req: AuthenticatedRequest, res) => {
+    const raw = rawQueryString(req.originalUrl);
+    const query = req.catalogueCustomer && RUNNABLE_FILTERED_LISTS.has(object) ? withRunnableForced(raw) : raw;
+    return pipe(res, `/internal/catalogue/${object}${query}`, `Failed to list catalogue ${object}`);
+  });
 
   /**
    * GET /v1/catalogue/<object>/:id → features-service GET /internal/catalogue/<object>/:id (one object).
@@ -61,7 +107,7 @@ for (const object of CATALOGUE_OBJECTS) {
    * (sent as `%2B`, never a space) a pipe id carries `|`, and a play id carries `|` and `~` (`~` is unreserved, sent as is). A workflow needs `?pipe=`, which
    * rides the verbatim query string.
    */
-  router.get(`/v1/catalogue/${object}/:id`, staffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  router.get(`/v1/catalogue/${object}/:id`, gate, (req: AuthenticatedRequest, res) =>
     pipe(
       res,
       `/internal/catalogue/${object}/${encodeURIComponent(req.params.id)}${rawQueryString(req.originalUrl)}`,
@@ -141,36 +187,60 @@ router.post(
 /**
  * POST /v1/catalogue/pipes → features-service POST /internal/catalogue/pipes: a NEW pipe, a channel
  * on a leg it does not perform yet (`{channelSlug, fromStep, toStep, mode, triggerId?, published?,
- * conversionRatePct?, requestedByOrgId?}`; a reactive pipe names the trigger that asks for it). A
- * fleet-wide catalogue write, like tactics, strategies and plays: staff only, the same gate as the
- * default-play PUT (a staff key or the platform key + staff x-email; a client key gets 403
- * `staff_only`). Listed in `STAFF_KEY_OPERATIONS`, so the distribute MCP finds it.
+ * conversionRatePct?, requestedByOrgId?}`; a reactive pipe names the trigger that asks for it). A pipe is a
+ * channel we would have to run: STAFF only (a staff key or the platform key + staff x-email); a customer key
+ * gets 403 `staff_only` saying what it can do instead. Listed in `STAFF_KEY_OPERATIONS`.
  *
  * `createdBy` is the AUTHENTICATED staff email, never a body value (CLAUDE.md rule #4, third
- * exception). Everything else is forwarded verbatim; the 201 and every refusal (400 `trigger_required`,
- * `conversion_rate_required`, ..., 404 `channel_not_found` / `trigger_not_found`, 409 `leg_exists` /
- * `trigger_not_fired`) come back byte-for-byte.
+ * exception). Everything else is forwarded verbatim; the 201 and every refusal come back byte-for-byte.
  */
+router.post("/v1/catalogue/pipes", authenticateUser, (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  if (req.authType === "user_key" && !staffKeyEmail(req)) {
+    return res.status(403).json({
+      error: "Staff access required",
+      code: "staff_only",
+      message:
+        "A new pipe is a channel on a leg we would have to run: only distribute.you staff create one. Build a sales funnel from the pipes we run (GET /v1/catalogue/pipes, then POST /v1/catalogue/sales-funnels), or ask us for this channel with a feature request.",
+    });
+  }
+  return requireStaffActor(req, res, next);
+}, (req: AuthenticatedRequest, res) => create(req, res, "pipes"));
+
 /**
- * POST /v1/catalogue/sales-funnels → features-service POST /internal/catalogue/sales-funnels: declare a
- * sales funnel from its pipes (`{pipeIds, requestedByOrgId?}`: one pipe or play id per leg of a sales
- * path, in order). Idempotent: 201 new, 200 already declared. Same gate and `createdBy` rule as the
- * pipe create above; status and body byte-for-byte.
+ * POST /v1/catalogue/sales-funnels → features-service POST /internal/catalogue/sales-funnels: declare a sales
+ * funnel from its pipes (`{pipeIds, triggerId?}`: one pipe or play id per leg of a sales path, in order).
+ * POST /v1/catalogue/sales-paths → features-service POST /internal/catalogue/sales-paths: declare a sales path
+ * (`{legKeys, triggerId?}`: the legs in order, optionally headed by a trigger).
+ * Idempotent (201 new, 200 already declared). A customer's own key may call both (owner 2026-10-16: everything but
+ * outcomes and triggers is creatable through the MCP); a customer funnel is sent `runnableOnly: true` and
+ * features-service refuses a pipe we do not run (400 `pipe_not_runnable`), the gateway checks nothing itself.
+ * `createdBy` = the authenticated identity (staff email, else the key user's email, else their id), `requestedByOrgId`
+ * = the org the key acts in for a customer (provenance only). Status and body byte-for-byte.
  */
-for (const object of ["pipes", "sales-funnels"] as const) {
-  router.post(`/v1/catalogue/${object}`, authenticateUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
-    try {
-      await pipeExternalService(externalServices.features, `/internal/catalogue/${object}`, {
-        method: "POST",
-        body: { ...(req.body ?? {}), createdBy: req.staffEmail },
-        expressRes: res,
-      });
-    } catch (error: any) {
-      console.error(`[api-service] Failed to create catalogue ${object}:`, error.message);
-      if (res.headersSent) { res.end(); return; }
-      respondUpstreamError(res, error, `Failed to create catalogue ${object}`);
-    }
-  });
+for (const object of ["sales-funnels", "sales-paths"] as const) {
+  router.post(`/v1/catalogue/${object}`, authenticateUser, customerKeyOrStaff, (req: AuthenticatedRequest, res) => create(req, res, object));
+}
+
+async function create(req: AuthenticatedRequest, res: Response, object: "pipes" | "sales-funnels" | "sales-paths") {
+  const body: Record<string, unknown> = { ...(req.body ?? {}) };
+  if (req.catalogueCustomer) {
+    body.createdBy = req.userKeyScope?.email?.trim().toLowerCase() || req.userId;
+    body.requestedByOrgId = req.orgId ?? null;
+    if (object === "sales-funnels") body.runnableOnly = true;
+  } else {
+    body.createdBy = req.staffEmail;
+  }
+  try {
+    await pipeExternalService(externalServices.features, `/internal/catalogue/${object}`, {
+      method: "POST",
+      body,
+      expressRes: res,
+    });
+  } catch (error: any) {
+    console.error(`[api-service] Failed to create catalogue ${object}:`, error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, `Failed to create catalogue ${object}`);
+  }
 }
 
 export default router;

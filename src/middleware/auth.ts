@@ -34,6 +34,8 @@ export interface AuthenticatedRequest extends Request {
   featureSlug?: string;
   /** Normalized staff email, set by requireStaff after allowlist match */
   staffEmail?: string;
+  /** Set by the catalogue gate (`routes/catalogue-staff.ts`) when a customer's own key (not staff) calls. */
+  catalogueCustomer?: boolean;
   /**
    * User-key requests only: which organizations the key's user can act in
    * (see `lib/org-scope.ts`). Set before the target org is resolved.
@@ -372,6 +374,18 @@ export function requireStaff(
 }
 
 /**
+ * The stored email of a `user_key` caller whose USER is staff (client-service's
+ * `isStaff` + the allowlist), else null. Nothing the caller sends is read. The
+ * one predicate `requireStaffActor` and the customer-or-staff catalogue gate share.
+ */
+export function staffKeyEmail(req: AuthenticatedRequest): string | null {
+  if (req.authType !== "user_key") return null;
+  const scope = req.userKeyScope;
+  const email = scope?.email?.trim().toLowerCase();
+  return scope?.isStaff && email && isStaffEmail(email) ? email : null;
+}
+
+/**
  * Staff gate that ALSO admits a staff member's own API key. MUST run after
  * `authenticate` / `authenticateUser`.
  *
@@ -395,9 +409,8 @@ export function requireStaffActor(
   next: NextFunction,
 ) {
   if (req.authType === "user_key") {
-    const scope = req.userKeyScope;
-    const email = scope?.email?.trim().toLowerCase();
-    if (!scope?.isStaff || !email || !isStaffEmail(email)) {
+    const email = staffKeyEmail(req);
+    if (!email) {
       return res.status(403).json({
         error: "Staff access required",
         code: "staff_only",
