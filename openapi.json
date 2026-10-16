@@ -129399,7 +129399,7 @@
         "tags": [
           "Conversations"
         ],
-        "summary": "Every email we run for a brand, sent or queued, per prospect",
+        "summary": "Every email we run for a brand, sent, bounced or queued, per prospect",
         "description": "Pass-through to instantly-service GET /orgs/email-sequences. One row per sequence (a prospect emailed again after the re-contact window has two): `leadId`, `leadEmail`, `campaignId` and `steps[]`, each `{ step, kind: first_email|follow_up, status: sent|bounced|queued|stopped, sentAt, bouncedAt }`. `sent` = it went out at `sentAt`; `bounced` = it went out at `sentAt` and the receiving server refused it at `bouncedAt` (it was NOT delivered); `queued` = not sent yet, it goes out in the prospect's business hours; `stopped` = it will not go out (reply, bounce, opt-out, meeting booked, or sequence stopped). Join with the email bodies of GET /v1/emails?brandId= on `leadId`. Paged: pass `nextCursor` back as `cursor` until it is null (default 500, max 2000 per page). A brand that is not one of the authenticated org's brands is a 404 `brand_not_in_org`. The whole query string is forwarded verbatim; the parameters listed here are the ones documented today, not a whitelist. Declares no cost.",
         "security": [
           {

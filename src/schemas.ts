@@ -9977,7 +9977,7 @@ registry.registerPath({
   method: "get",
   path: "/v1/email-sequences",
   tags: ["Conversations"],
-  summary: "Every email we run for a brand, sent or queued, per prospect",
+  summary: "Every email we run for a brand, sent, bounced or queued, per prospect",
   description:
     "Pass-through to instantly-service GET /orgs/email-sequences. One row per sequence (a prospect " +
     "emailed again after the re-contact window has two): `leadId`, `leadEmail`, `campaignId` and " +
