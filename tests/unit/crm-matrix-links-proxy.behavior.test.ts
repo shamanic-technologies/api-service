@@ -179,4 +179,24 @@ describe("/v1/orgs/matrix/links* → crm-service", () => {
     expect(r409.status).toBe(409);
     expect(r409.body).toEqual(conflict);
   });
+
+  it("PATCH without outreachDefault (automationAllowed / persona only) is forwarded, not rejected here", async () => {
+    const LINK = "bbbbbbbb-1111-4111-8111-000000000009";
+    for (const body of [
+      { brandId: BRAND, automationAllowed: false },
+      { brandId: BRAND, persona: { name: "Sophie", role: "Founder", instructions: "Warm, short" } },
+      { brandId: BRAND, persona: null },
+    ]) {
+      calls.length = 0;
+      const upstream = { link: { linkId: LINK, automationAllowed: false, persona: body.persona ?? null } };
+      upstreamOnce(200, upstream);
+
+      const res = await request(buildApp()).patch(`/v1/orgs/matrix/links/${LINK}`).send(body);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(upstream);
+      expect(calls).toHaveLength(1);
+      expect(JSON.parse(calls[0].options.body)).toEqual(body);
+    }
+  });
 });

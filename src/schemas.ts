@@ -15353,7 +15353,7 @@ registry.registerPath({
   tags: ["CRM Contacts"],
   summary: "Current link state per channel for a brand",
   description:
-    "Proxy to crm-service GET /orgs/matrix/links — one link per channel, carrying the current QR / pairing code while the user scans. Polled every few seconds by the dashboard. The whole query string is forwarded untransformed. Response shape owned by crm-service.",
+    "Proxy to crm-service GET /orgs/matrix/links — one link per channel, carrying the current QR / pairing code while the user scans. Polled every few seconds by the dashboard. Each account carries `automationAllowed` and its sender `persona` (set them with PATCH /v1/orgs/matrix/links/{linkId}). The whole query string is forwarded untransformed. Response shape owned by crm-service.",
   security: authed,
   request: { query: CrmBrandIdQuery },
   responses: {
@@ -15385,9 +15385,9 @@ registry.registerPath({
   method: "patch",
   path: "/v1/orgs/matrix/links/{linkId}",
   tags: ["CRM Contacts"],
-  summary: "Mark a linked account as the brand's outreach default for its channel",
+  summary: "Update a linked account: outreach default, automation allowed, sender persona",
   description:
-    "Proxy to crm-service PATCH /orgs/matrix/links/{linkId}. A first WhatsApp message to a person no linked account already talks with goes out from this account (an existing conversation keeps its account). One per brand and channel: the others lose it. Request body forwarded verbatim. Status and body of every refusal are forwarded verbatim. Response shape owned by crm-service.",
+    "Proxy to crm-service PATCH /orgs/matrix/links/{linkId}. Send `brandId` plus at least one of: `outreachDefault: true` (a first WhatsApp message to a person no linked account already talks with goes out from this account; an existing conversation keeps its account; one per brand and channel, the others lose it), `automationAllowed` (whether automated messages may go out from this account), `persona` (the sender persona `{name?, role?, instructions?}`, or null to clear it). Request body forwarded verbatim. Status and body of every refusal are forwarded verbatim. Response shape owned by crm-service.",
   security: authed,
   request: {
     params: z.object({ linkId: z.string().openapi({ description: "Link id (the account's `linkId` from GET /v1/orgs/matrix/links)" }) }),
