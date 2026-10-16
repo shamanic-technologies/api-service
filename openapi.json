@@ -6470,6 +6470,14 @@
           "list"
         ]
       },
+      "InstantlyOpsLeadSourceYieldResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsLeadSourceYieldSyncResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "InstantlyOpsMessageBodyResponse": {
         "type": "object",
         "properties": {}
