@@ -9917,8 +9917,9 @@ registry.registerPath({
   description:
     "Pass-through to instantly-service GET /orgs/email-sequences. One row per sequence (a prospect " +
     "emailed again after the re-contact window has two): `leadId`, `leadEmail`, `campaignId` and " +
-    "`steps[]`, each `{ step, kind: first_email|follow_up, status: sent|queued|stopped, sentAt }`. " +
-    "`sent` = it went out at `sentAt`; `queued` = not sent yet, it goes out in the prospect's business " +
+    "`steps[]`, each `{ step, kind: first_email|follow_up, status: sent|bounced|queued|stopped, sentAt, bouncedAt }`. " +
+    "`sent` = it went out at `sentAt`; `bounced` = it went out at `sentAt` and the receiving server refused " +
+    "it at `bouncedAt` (it was NOT delivered); `queued` = not sent yet, it goes out in the prospect's business " +
     "hours; `stopped` = it will not go out (reply, bounce, opt-out, meeting booked, or sequence stopped). " +
     "Join with the email bodies of GET /v1/emails?brandId= on `leadId`. Paged: pass `nextCursor` back as " +
     "`cursor` until it is null (default 500, max 2000 per page). A brand that is not one of the " +
@@ -10448,6 +10449,92 @@ registry.registerPath({
   responses: {
     200: { description: "Periods — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsSentPerPeriodResponse") } } },
     400: { description: "Downstream rejected the query (e.g. `grain` missing)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+const DOMAIN_BLOCKLIST_INTRO =
+  "Platform-scoped staff surface over instantly-service's sending-domain blocklist monitor "
+  + "(SURBL multi, Spamhaus DBL, URIBL; cross-org ops data, NOT customer data) — powers the staff "
+  + "blocklist page on admin.distribute.you. Staff-only (platform API key + STAFF_EMAILS x-email); no org context. ";
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/domain-blocklist",
+  tags: ["Instantly"],
+  summary: "Get the sending-domain blocklist state, event history and daily series (staff only)",
+  description:
+    DOMAIN_BLOCKLIST_INTRO
+    + "Transparent byte passthrough to instantly-service GET /internal/domain-blocklist: the current state per "
+    + "domain and list, which mailboxes are out of new sequences, the append-only event history and one point per "
+    + "day of the window. The query string is forwarded verbatim; `days` is the parameter instantly-service "
+    + "documents today, not a whitelist. A bad `days` answers instantly-service's own 400. Response owned by the "
+    + "downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Window in days, 1..365; instantly-service defaults to 60"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Blocklist read — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsDomainBlocklistResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/instantly/ops/domain-blocklist/check",
+  tags: ["Instantly"],
+  summary: "Run the sending-domain blocklist check now (staff only)",
+  description:
+    DOMAIN_BLOCKLIST_INTRO
+    + "Transparent byte passthrough to instantly-service POST /internal/domain-blocklist/check: checks every "
+    + "sending domain on every list, records state and events, then delivers pending staff alerts (the daily "
+    + "worker runs the same check). Idempotent. Response owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "What the check found — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsDomainBlocklistCheckResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/instantly/ops/domain-blocklist/removal-requests",
+  tags: ["Instantly"],
+  summary: "Record a blocklist removal request a person filed on the list's form (staff only)",
+  description:
+    DOMAIN_BLOCKLIST_INTRO
+    + "Transparent byte passthrough to instantly-service POST /internal/domain-blocklist/removal-requests: "
+    + "appends a `removal_requested` event (we never file the forms ourselves). The body is forwarded unchanged; "
+    + "the fields below are the ones instantly-service documents today. A missing domain or unknown list answers "
+    + "instantly-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            domain: z.string().describe("The sending domain the request was filed for"),
+            list: z.string().describe("surbl | spamhaus_dbl | uribl"),
+            note: z.string().optional(),
+            requestedBy: z.string().optional().describe("Who filed it"),
+          }).passthrough().openapi("InstantlyOpsDomainBlocklistRemovalRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    201: { description: "Recorded — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsDomainBlocklistRemovalResponse") } } },
+    400: { description: "Downstream rejected the body (missing domain or unknown list)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Not staff", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
