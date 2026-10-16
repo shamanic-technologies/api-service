@@ -37,8 +37,32 @@ const platformAuth: Record<string, string[]>[] = [{ apiKeyAuth: [] }];
 // ---------------------------------------------------------------------------
 // Common schemas
 // ---------------------------------------------------------------------------
+export const SalesFunnelCapSchema = z
+  .object({
+    salesFunnelId: z.string().optional(),
+    salesFunnelCampaignId: z.string().nullable().optional(),
+    amountCents: z.string().optional().describe("The campaign's max budget for the period, in cents (decimal string, as billing-service sends it)"),
+    period: z.string().optional(),
+    consumedCents: z.string().nullable().optional().describe("Spent so far in the period, in cents; null when it could not be measured"),
+    reservedCents: z.string().optional(),
+  })
+  .passthrough()
+  .openapi("SalesFunnelCap");
+
 export const ErrorResponseSchema = z
-  .object({ error: z.string().describe("Error message") })
+  .object({
+    error: z.string().describe("Error message"),
+    reason: z
+      .string()
+      .optional()
+      .describe(
+        "On a 402 only: present when the spend was refused because the campaign (sales funnel) reached its MAX BUDGET " +
+          "(`sales_funnel_max_budget_reached`) or its max budget could not be read (`sales_funnel_max_budget_unreadable`). " +
+          "Adding credit does not help: raise the campaign's max budget. Absent on a plain insufficient-balance refusal.",
+      ),
+    sales_funnel_cap: SalesFunnelCapSchema.optional().describe("On a 402 with `reason`: the cap billing-service applied, verbatim"),
+    message: z.string().optional().describe("Plain-words explanation, when the error carries one"),
+  })
   .openapi("ErrorResponse");
 
 const errorContent = {
@@ -7217,7 +7241,9 @@ registry.registerPath({
     402: {
       description:
         "Insufficient credits. The organization's credit balance is too low to process this request. " +
-        "Response includes `balance_cents` (current balance) and `required_cents` (minimum needed).",
+        "Response includes `balance_cents` (current balance) and `required_cents` (minimum needed). " +
+        "When `reason` is `sales_funnel_max_budget_reached` / `sales_funnel_max_budget_unreadable`, the campaign's MAX BUDGET " +
+        "refused the spend instead (`sales_funnel_cap` carries it): raise the max budget, adding credit does not help.",
       content: errorContent,
     },
     404: {
