@@ -288,9 +288,9 @@ router.delete("/orgs/matrix/links/:channel", ...orgChain, async (req: Authentica
 });
 
 // PATCH /v1/orgs/matrix/links/:linkId → crm-service PATCH /orgs/matrix/links/{linkId}
-// Marks ONE linked account as the brand's outreach default for its channel (the
-// account a first WhatsApp message goes out from). Body `{ brandId, outreachDefault: true }`
-// forwarded verbatim; crm-service's 400 / 404 / 409 cross with their own status and body.
+// Updates ONE linked account: outreach default for its channel (the account a first
+// WhatsApp message goes out from), automation allowed, sender persona. Body
+// `{ brandId, outreachDefault?, automationAllowed?, persona? }` forwarded verbatim; crm-service's 400 / 404 / 409 cross with their own status and body.
 router.patch("/orgs/matrix/links/:linkId", ...orgChain, async (req: AuthenticatedRequest, res) => {
   try {
     const { status, data } = await callExternalServiceWithStatus(
@@ -300,8 +300,8 @@ router.patch("/orgs/matrix/links/:linkId", ...orgChain, async (req: Authenticate
     );
     res.status(status).json(data);
   } catch (error) {
-    console.error("[api-service] Set matrix link outreach default error:", error);
-    respondUpstreamError(res, error, "Set matrix link outreach default error");
+    console.error("[api-service] Update matrix link error:", error);
+    respondUpstreamError(res, error, "Update matrix link error");
   }
 });
 

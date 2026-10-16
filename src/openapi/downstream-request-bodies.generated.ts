@@ -141,12 +141,38 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "type": "boolean",
           "enum": [
             true
-          ]
+          ],
+          "description": "Make this account the brand's outreach default for its channel."
+        },
+        "automationAllowed": {
+          "type": "boolean",
+          "description": "false = automated sends never write from this account and a message received on it fires no automated reply (it stays mirrored in the Unibox)."
+        },
+        "persona": {
+          "type": "object",
+          "nullable": true,
+          "properties": {
+            "name": {
+              "type": "string",
+              "nullable": true,
+              "maxLength": 80
+            },
+            "role": {
+              "type": "string",
+              "nullable": true,
+              "maxLength": 120
+            },
+            "instructions": {
+              "type": "string",
+              "nullable": true,
+              "maxLength": 4000
+            }
+          },
+          "description": "Who writes from this account. Omitted fields keep their value; null or \"\" clears one; persona: null clears all."
         }
       },
       "required": [
-        "brandId",
-        "outreachDefault"
+        "brandId"
       ]
     }
   },
@@ -1652,7 +1678,8 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
                           "meeting_booked",
                           "meeting_attended",
                           "meeting_not_held",
-                          "sale"
+                          "sale",
+                          "disqualified"
                         ]
                       },
                       "minItems": 1,
@@ -1669,7 +1696,8 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
                           "meeting_booked",
                           "meeting_attended",
                           "meeting_not_held",
-                          "sale"
+                          "sale",
+                          "disqualified"
                         ]
                       },
                       "minItems": 1,
@@ -1722,6 +1750,65 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
             "business_only"
           ],
           "description": "The pipe's relationship policy (its lead strategy, forwarded by human-service). `business_only`: lead-service is asked who each candidate is to the brand (POST /internal/brands/{brandId}/relationships/query); nobody tagged personal, investor, supplier, team, partner or advisor (sure or unsure), nobody lead-service never judged, nobody without a human id is handed out, on BOTH pools. Such a person is NOT marked served (another pipe may still write to them). lead-service unreadable = 502 relationships_unavailable, nothing served. Omit = unchanged behaviour."
+        },
+        "stepFilter": {
+          "allOf": [
+            {
+              "type": "object",
+              "properties": {
+                "reached": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "website_visit",
+                      "signup",
+                      "form_submission",
+                      "meeting_booked",
+                      "meeting_attended",
+                      "meeting_not_held",
+                      "sale",
+                      "disqualified"
+                    ]
+                  },
+                  "minItems": 1,
+                  "description": "The person reached one of these steps (any source the brand connected).",
+                  "example": [
+                    "form_submission",
+                    "meeting_booked",
+                    "meeting_attended",
+                    "meeting_not_held"
+                  ]
+                },
+                "notReached": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "website_visit",
+                      "signup",
+                      "form_submission",
+                      "meeting_booked",
+                      "meeting_attended",
+                      "meeting_not_held",
+                      "sale",
+                      "disqualified"
+                    ]
+                  },
+                  "minItems": 1,
+                  "description": "The person reached none of these steps.",
+                  "example": [
+                    "sale",
+                    "disqualified"
+                  ]
+                }
+              },
+              "description": "The SERVING PIPE's funnel-step filter (stated by the play's workflow, forwarded by lead-service and human-service), cross-org words only: never a client's stage or tag name. ANDed with the pool and the audience's own filter, on BOTH pools (a CSV row is judged on the person holding its address). Clients are ALWAYS out when it is present. `sale` = a deal won, a payment that stands, or a CRM stage / tag Jev judged `client`; `disqualified` = a CRM stage / tag Jev judged `disqualified` (unqualified, bad fit, blocked: GET /orgs/gohighlevel/label-verdicts)."
+            },
+            {
+              "description": "The serving pipe's funnel-step filter (see StepFilter). A person outside it is skipped and NOT marked served. Omit = unchanged behaviour."
+            }
+          ]
         }
       },
       "required": [
@@ -2046,7 +2133,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
             "human",
             "automation"
           ],
-          "description": "Who asked for this answer to be sent. It decides ONE thing: whether the human-takeover gate applies. An `automation` reply is refused (409 `human_took_over`) once a person has answered the thread since the prospect last wrote; a `human` reply is never gated. Absent resolves to `automation` — the automated responder is the only caller today, so the gate is live without waiting on it, and a human surface declares `human` explicitly."
+          "description": "Who asked for this answer to be sent. It decides ONE thing: whether the human-takeover gate applies. An `automation` reply is refused (409 `human_took_over`) once a person has answered the thread since the prospect last wrote and that answer is not yet counted as our touch; a `human` reply is never gated. Absent resolves to `automation` — the automated responder is the only caller today, so the gate is live without waiting on it, and a human surface declares `human` explicitly."
         },
         "attachments": {
           "type": "array",
