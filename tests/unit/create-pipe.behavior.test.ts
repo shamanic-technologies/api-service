@@ -132,14 +132,14 @@ describe("POST /v1/catalogue/sales-funnels", () => {
 describe("POST /v1/catalogue/sales-paths", () => {
   const PATH = { legKeys: ["start_to_lead_found", "lead_found_to_conversation", "conversation_to_paid_client"], triggerId: "lead_found" };
 
-  it("a CLIENT key declares it: exact path, body verbatim, createdBy = the key user's email, no runnableOnly", async () => {
+  it("a CLIENT key declares it: exact path, body verbatim, createdBy = the key user's email, runnableOnly true (a body value replaced)", async () => {
     identity.current = CLIENT_KEY;
     upstream(201, '{"created":true,"id":"p1","name":"Loire"}');
-    const res = await request(app()).post("/v1/catalogue/sales-paths").set("authorization", "Bearer distrib.usr_x").send(PATH);
+    const res = await request(app()).post("/v1/catalogue/sales-paths").set("authorization", "Bearer distrib.usr_x").send({ ...PATH, runnableOnly: false });
     expect(res.status).toBe(201);
     expect(res.text).toBe('{"created":true,"id":"p1","name":"Loire"}');
     expect(calls[0].url).toBe(`${FEATURES_BASE}/internal/catalogue/sales-paths`);
-    expect(JSON.parse(calls[0].init.body)).toEqual({ ...PATH, createdBy: "client@acme.com", requestedByOrgId: null });
+    expect(JSON.parse(calls[0].init.body)).toEqual({ ...PATH, createdBy: "client@acme.com", requestedByOrgId: null, runnableOnly: true });
   });
 
   it("a STAFF key declares it with the staff email; the producer's 200 (exists) back", async () => {
@@ -148,6 +148,15 @@ describe("POST /v1/catalogue/sales-paths", () => {
     const res = await request(app()).post("/v1/catalogue/sales-paths").send({ ...PATH, createdBy: "x" });
     expect(res.status).toBe(200);
     expect(JSON.parse(calls[0].init.body)).toEqual({ ...PATH, createdBy: "kevin@distribute.you" });
+  });
+
+  it("features-service's refusal of a leg no pipe we run works reaches the customer verbatim", async () => {
+    identity.current = CLIENT_KEY;
+    const refusal = '{"error":"legKeys[1]: lead_found_to_conversation is worked by no pipe we run today","reason":"leg_not_runnable"}';
+    upstream(400, refusal);
+    const res = await request(app()).post("/v1/catalogue/sales-paths").send(PATH);
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual(JSON.parse(refusal));
   });
 
   it("the platform key still needs a staff x-email", async () => {

@@ -212,8 +212,9 @@ router.post("/v1/catalogue/pipes", authenticateUser, (req: AuthenticatedRequest,
  * POST /v1/catalogue/sales-paths → features-service POST /internal/catalogue/sales-paths: declare a sales path
  * (`{legKeys, triggerId?}`: the legs in order, optionally headed by a trigger).
  * Idempotent (201 new, 200 already declared). A customer's own key may call both (owner 2026-10-16: everything but
- * outcomes and triggers is creatable through the MCP); a customer funnel is sent `runnableOnly: true` and
- * features-service refuses a pipe we do not run (400 `pipe_not_runnable`), the gateway checks nothing itself.
+ * outcomes and triggers is creatable through the MCP); a customer write of either is sent `runnableOnly: true` and
+ * features-service refuses what we do not run (funnel: 400 `pipe_not_runnable`; path: 400 `leg_not_runnable`, a leg
+ * no pipe we run works), the gateway checks nothing itself. A staff write never carries it.
  * `createdBy` = the authenticated identity (staff email, else the key user's email, else their id), `requestedByOrgId`
  * = the org the key acts in for a customer (provenance only). Status and body byte-for-byte.
  */
@@ -226,7 +227,7 @@ async function create(req: AuthenticatedRequest, res: Response, object: "pipes" 
   if (req.catalogueCustomer) {
     body.createdBy = req.userKeyScope?.email?.trim().toLowerCase() || req.userId;
     body.requestedByOrgId = req.orgId ?? null;
-    if (object === "sales-funnels") body.runnableOnly = true;
+    if (object === "sales-funnels" || object === "sales-paths") body.runnableOnly = true;
   } else {
     body.createdBy = req.staffEmail;
   }
