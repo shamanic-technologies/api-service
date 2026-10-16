@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authenticate, requireOrg, requireUser, requireStaff, AuthenticatedRequest } from "../middleware/auth.js";
+import { authenticate, requireOrg, requireUser, requireStaffActor, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, callExternalServiceWithStatus, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
@@ -455,8 +455,10 @@ router.post("/workflows/:id/validate", authenticate, requireOrg, requireUser, as
  * Upgrade or fork a workflow with an edited prompt template. Transparent proxy to
  * workflow-service POST /workflows/{id}/prompt-edit and its dynasty twin.
  *
- * STAFF ONLY (`requireStaff`, on top of org + user): an `upgrade` changes what every
- * campaign on the dynasty sends, for every client.
+ * STAFF ONLY (`requireStaffActor`, on top of org + user): an `upgrade` changes what
+ * every campaign on the dynasty sends, for every client. The staff console (platform
+ * key + staff x-email) and a staff member's own key (the MCP) may call it; a client
+ * key gets 403 `staff_only`. Listed in `STAFF_KEY_OPERATIONS`.
  *
  * Byte passthrough via `pipeExternalService`: the 201 stays a 201, and the
  * deliberate refusals (400 / 404 / 409 / 422 with `droppedVariables` /
@@ -465,7 +467,7 @@ router.post("/workflows/:id/validate", authenticate, requireOrg, requireUser, as
  * validated here — workflow-service owns `{ action, prompt }` and refuses what it
  * does not accept.
  */
-router.post("/workflows/dynasty/:workflowDynastySlug/prompt-edit", authenticate, requireOrg, requireUser, requireStaff, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/dynasty/:workflowDynastySlug/prompt-edit", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     await pipeExternalService(
       externalServices.workflow,
@@ -479,7 +481,7 @@ router.post("/workflows/dynasty/:workflowDynastySlug/prompt-edit", authenticate,
   }
 });
 
-router.post("/workflows/:id/prompt-edit", authenticate, requireOrg, requireUser, requireStaff, async (req: AuthenticatedRequest, res) => {
+router.post("/workflows/:id/prompt-edit", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
