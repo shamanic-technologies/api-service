@@ -6299,6 +6299,42 @@
         "type": "object",
         "properties": {}
       },
+      "InstantlyOpsDomainBlocklistResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsDomainBlocklistCheckResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsDomainBlocklistRemovalResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsDomainBlocklistRemovalRequest": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string",
+            "description": "The sending domain the request was filed for"
+          },
+          "list": {
+            "type": "string",
+            "description": "surbl | spamhaus_dbl | uribl"
+          },
+          "note": {
+            "type": "string"
+          },
+          "requestedBy": {
+            "type": "string",
+            "description": "Who filed it"
+          }
+        },
+        "required": [
+          "domain",
+          "list"
+        ]
+      },
       "InstantlyOpsMessageBodyResponse": {
         "type": "object",
         "properties": {}
@@ -128251,7 +128287,7 @@
           "Conversations"
         ],
         "summary": "Every email we run for a brand, sent or queued, per prospect",
-        "description": "Pass-through to instantly-service GET /orgs/email-sequences. One row per sequence (a prospect emailed again after the re-contact window has two): `leadId`, `leadEmail`, `campaignId` and `steps[]`, each `{ step, kind: first_email|follow_up, status: sent|queued|stopped, sentAt }`. `sent` = it went out at `sentAt`; `queued` = not sent yet, it goes out in the prospect's business hours; `stopped` = it will not go out (reply, bounce, opt-out, meeting booked, or sequence stopped). Join with the email bodies of GET /v1/emails?brandId= on `leadId`. Paged: pass `nextCursor` back as `cursor` until it is null (default 500, max 2000 per page). A brand that is not one of the authenticated org's brands is a 404 `brand_not_in_org`. The whole query string is forwarded verbatim; the parameters listed here are the ones documented today, not a whitelist. Declares no cost.",
+        "description": "Pass-through to instantly-service GET /orgs/email-sequences. One row per sequence (a prospect emailed again after the re-contact window has two): `leadId`, `leadEmail`, `campaignId` and `steps[]`, each `{ step, kind: first_email|follow_up, status: sent|bounced|queued|stopped, sentAt, bouncedAt }`. `sent` = it went out at `sentAt`; `bounced` = it went out at `sentAt` and the receiving server refused it at `bouncedAt` (it was NOT delivered); `queued` = not sent yet, it goes out in the prospect's business hours; `stopped` = it will not go out (reply, bounce, opt-out, meeting booked, or sequence stopped). Join with the email bodies of GET /v1/emails?brandId= on `leadId`. Paged: pass `nextCursor` back as `cursor` until it is null (default 500, max 2000 per page). A brand that is not one of the authenticated org's brands is a 404 `brand_not_in_org`. The whole query string is forwarded verbatim; the parameters listed here are the ones documented today, not a whitelist. Declares no cost.",
         "security": [
           {
             "bearerAuth": []
