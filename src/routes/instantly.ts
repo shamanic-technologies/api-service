@@ -359,7 +359,8 @@ router.get(
 // downstream status (200 on the check, 201 on a recorded removal request).
 // ---------------------------------------------------------------------------
 
-function registerBlocklistCall(
+function registerStaffInternalCall(
+  family: string,
   method: "GET" | "POST",
   gatewaySuffix: string,
   label: string,
@@ -368,7 +369,7 @@ function registerBlocklistCall(
     try {
       await pipeExternalService(
         externalServices.instantly,
-        `/internal/domain-blocklist${gatewaySuffix}${rawQueryString(req.originalUrl)}`,
+        `/internal/${family}${gatewaySuffix}${rawQueryString(req.originalUrl)}`,
         {
           method,
           body: method === "POST" ? req.body : undefined,
@@ -377,7 +378,7 @@ function registerBlocklistCall(
         },
       );
     } catch (error: any) {
-      console.error(`[api-service] Staff instantly domain-blocklist ${label} error:`, error.message);
+      console.error(`[api-service] Staff instantly ${family} ${label} error:`, error.message);
       if (res.headersSent) {
         res.end();
         return;
@@ -385,17 +386,25 @@ function registerBlocklistCall(
       respondUpstreamError(res, error, `Failed to ${label}`);
     }
   };
-  const path = `/instantly/ops/domain-blocklist${gatewaySuffix}`;
+  const path = `/instantly/ops/${family}${gatewaySuffix}`;
   if (method === "GET") router.get(path, authenticatePlatform, requireStaff, handler);
   else router.post(path, authenticatePlatform, requireStaff, handler);
 }
 
 // GET /v1/instantly/ops/domain-blocklist — state, events and daily series (staff only).
-registerBlocklistCall("GET", "", "read the domain blocklist");
+registerStaffInternalCall("domain-blocklist", "GET", "", "read the domain blocklist");
 // POST /v1/instantly/ops/domain-blocklist/check — run the blocklist check now (staff only).
-registerBlocklistCall("POST", "/check", "run the domain blocklist check");
+registerStaffInternalCall("domain-blocklist", "POST", "/check", "run the domain blocklist check");
 // POST /v1/instantly/ops/domain-blocklist/removal-requests — record a filed removal request (staff only).
-registerBlocklistCall("POST", "/removal-requests", "record the removal request");
+registerStaffInternalCall("domain-blocklist", "POST", "/removal-requests", "record the removal request");
+
+// Lead-source yield (instantly-service SOURCE-YIELD-1016, #1186): lead sources ranked by
+// the bounces, refusals and blocklist hits their people produce. Same staff tier and
+// byte passthrough; `days` forwarded verbatim (a bad value is instantly-service's 400).
+// GET /v1/instantly/ops/lead-source-yield — the ranking + daily series (staff only).
+registerStaffInternalCall("lead-source-yield", "GET", "", "read the lead-source yield");
+// POST /v1/instantly/ops/lead-source-yield/sync — copy lead-service's provenance now (staff only).
+registerStaffInternalCall("lead-source-yield", "POST", "/sync", "sync the lead provenance");
 
 // GET /v1/instantly/stats — fleet-wide email counters (sent, opened, replied…) with
 // no org scoping (staff only). Proxy to instantly-service GET /public/stats, which
