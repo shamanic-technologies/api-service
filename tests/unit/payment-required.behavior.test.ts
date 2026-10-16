@@ -14,6 +14,23 @@ import { callExternalService } from "../../src/lib/service-client.js";
 import { respondUpstreamError } from "../../src/lib/upstream-error.js";
 
 const DOWNSTREAM_402 = { error: "Insufficient credits", balance_cents: 0, required_cents: 12 };
+const SALES_FUNNEL_CAP = {
+  salesFunnelId: "funnel-1",
+  salesFunnelCampaignId: "campaign-1",
+  amountCents: 5000,
+  period: "month",
+  consumedCents: 4990,
+  reservedCents: 20,
+};
+const CAP_402 = {
+  error: "Sales funnel max budget reached",
+  type: "insufficient_credits",
+  balance_cents: 12000,
+  required_cents: 30,
+  reason: "sales_funnel_max_budget_reached",
+  sales_funnel_cap: SALES_FUNNEL_CAP,
+};
+let downstreamBody: Record<string, unknown> = DOWNSTREAM_402;
 
 /**
  * Two route shapes found in this gateway: one that forwards the upstream status
@@ -53,6 +70,14 @@ function buildApp(identity: { authType: "user_key" | "admin"; orgId?: string }) 
       respondUpstreamError(res, error, "failed");
     }
   });
+  app.post("/stringifying-402", async (_req, res) => {
+    try {
+      res.json(await callExternalService(down, "/paid", { method: "POST" }));
+    } catch (error: any) {
+      // streamExternalService's shape: the upstream status, the body as a string.
+      res.status(402).json({ error: error.message });
+    }
+  });
   app.get("/free", (_req, res) => res.json({ ok: true }));
   return app;
 }
@@ -63,7 +88,7 @@ function stubFetch(offer: string | "billing_down") {
   global.fetch = vi.fn(async (input: any) => {
     const url = String(input);
     if (url === `${DOWN_BASE}/paid`) {
-      return new Response(JSON.stringify(DOWNSTREAM_402), { status: 402, headers: { "content-type": "application/json" } });
+      return new Response(JSON.stringify(downstreamBody), { status: 402, headers: { "content-type": "application/json" } });
     }
     if (url === `${DOWN_BASE}/missing`) {
       return new Response(JSON.stringify({ error: "nope" }), { status: 404 });
@@ -82,6 +107,7 @@ function stubFetch(offer: string | "billing_down") {
 
 beforeEach(() => {
   billingCalls = 0;
+  downstreamBody = DOWNSTREAM_402;
 });
 
 describe("agentPaymentRequired", () => {
@@ -156,5 +182,80 @@ describe("agentPaymentRequired", () => {
     expect(res.status).toBe(402);
     expect(res.body).toEqual(DOWNSTREAM_402);
     expect(billingCalls).toBe(1);
+  });
+
+  describe("a refusal for the campaign's MAX BUDGET (sales funnel cap)", () => {
+    beforeEach(() => {
+      downstreamBody = CAP_402;
+    });
+
+    it("relays it verbatim with a message naming the max budget, never the prepay answer, for an agent org", async () => {
+      stubFetch("agent_api");
+      const res = await request(buildApp({ authType: "user_key", orgId: "org-1" })).post("/forwarding");
+
+      expect(res.status).toBe(402);
+      expect(res.headers.link).toBeUndefined();
+      expect(res.body).toMatchObject(CAP_402);
+      expect(res.body.code).toBeUndefined();
+      expect(res.body.prepay).toBeUndefined();
+      expect(res.body.message).toContain("max budget");
+      expect(res.body.message).not.toMatch(/prepay/i);
+      expect(billingCalls).toBe(0);
+    });
+
+    it("recovers reason + sales_funnel_cap from a route that masked the refusal as a 500, for any caller", async () => {
+      stubFetch("match_100");
+      for (const identity of [
+        { authType: "user_key" as const, orgId: "org-1" },
+        { authType: "admin" as const, orgId: "org-1" },
+      ]) {
+        const res = await request(buildApp(identity)).post("/masking");
+        expect(res.status).toBe(402);
+        expect(res.body).toMatchObject(CAP_402);
+        expect(res.body.reason).toBe("sales_funnel_max_budget_reached");
+        expect(res.body.sales_funnel_cap).toEqual(SALES_FUNNEL_CAP);
+      }
+      expect(billingCalls).toBe(0);
+    });
+
+    it("un-flattens a 402 whose body is the upstream JSON as a string (stream relay shape)", async () => {
+      stubFetch("match_100");
+      const res = await request(buildApp({ authType: "admin", orgId: "org-1" })).post("/stringifying-402");
+
+      expect(res.status).toBe(402);
+      expect(res.body.reason).toBe("sales_funnel_max_budget_reached");
+      expect(res.body.sales_funnel_cap).toEqual(SALES_FUNNEL_CAP);
+      expect(res.body.error).toBe("Sales funnel max budget reached");
+    });
+
+    it("keeps the sender's own message, and names the unreadable case", async () => {
+      stubFetch("match_100");
+      downstreamBody = { ...CAP_402, message: "own words" };
+      const own = await request(buildApp({ authType: "admin" })).post("/forwarding");
+      expect(own.body.message).toBe("own words");
+
+      downstreamBody = { ...CAP_402, reason: "sales_funnel_max_budget_unreadable" };
+      const unreadable = await request(buildApp({ authType: "admin" })).post("/forwarding");
+      expect(unreadable.status).toBe(402);
+      expect(unreadable.body.reason).toBe("sales_funnel_max_budget_unreadable");
+      expect(unreadable.body.message).toContain("could not be read");
+    });
+
+    it("leaves a plain insufficient-balance 402 (no reason) byte-identical for a non-agent caller", async () => {
+      downstreamBody = DOWNSTREAM_402;
+      stubFetch("match_100");
+      const app = buildApp({ authType: "user_key", orgId: "org-1" });
+      expect((await request(app).post("/forwarding")).body).toEqual(DOWNSTREAM_402);
+      const masked = await request(app).post("/masking");
+      expect(masked.status).toBe(500);
+      expect(masked.body).toEqual({ error: JSON.stringify(DOWNSTREAM_402) });
+    });
+
+    it("ignores an unknown reason (not a cap refusal): the agent still gets the prepay answer", async () => {
+      downstreamBody = { ...DOWNSTREAM_402, reason: "something_else" };
+      stubFetch("agent_api");
+      const res = await request(buildApp({ authType: "user_key", orgId: "org-1" })).post("/forwarding");
+      expect(res.body.code).toBe("payment_required");
+    });
   });
 });
