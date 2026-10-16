@@ -5740,6 +5740,141 @@
         "type": "object",
         "properties": {}
       },
+      "AgentStaffRequestResult": {
+        "type": "object",
+        "properties": {}
+      },
+      "AgentStaffRequestBody": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "bug",
+              "feature",
+              "skill_upgrade",
+              "contact_human"
+            ],
+            "description": "bug: something exists but fails. feature: a piece needs code (a new outcome or trigger included). skill_upgrade: a skill or a service doc misled you. contact_human: your user wants a person."
+          },
+          "repo": {
+            "type": "string",
+            "description": "bug / feature: the fleet repo that owns the piece (e.g. features-service, campaign-service, crm-service). skill_upgrade: the repo whose docs are wrong (or send skillSlug)."
+          },
+          "skillSlug": {
+            "type": "string",
+            "description": "skill_upgrade: the skill to upgrade (a slug from GET /v1/skills)."
+          },
+          "title": {
+            "type": "string",
+            "description": "bug / feature / skill_upgrade: short title."
+          },
+          "userRequest": {
+            "type": "string",
+            "description": "bug / feature: your user's words."
+          },
+          "missingPiece": {
+            "type": "string",
+            "description": "bug / feature: what is broken or missing, and what you checked first."
+          },
+          "pieceKey": {
+            "type": "string",
+            "description": "Kebab-case dedupe key (default: from the title). Reuse the one GET /v1/staff-requests shows for the same need."
+          },
+          "decomposition": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "piece": {
+                  "type": "string"
+                },
+                "outcome": {
+                  "type": "string",
+                  "enum": [
+                    "exists",
+                    "create",
+                    "needs_code"
+                  ]
+                },
+                "detail": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "piece",
+                "outcome"
+              ]
+            }
+          },
+          "newStepOrTrigger": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "step",
+                  "trigger"
+                ]
+              },
+              "name": {
+                "type": "string",
+                "description": "The new outcome (step) or trigger, in your user's words."
+              },
+              "tool": {
+                "type": "string",
+                "description": "Your user's tool where the real event happens (CRM, form, payments, site...)."
+              },
+              "event": {
+                "type": "string",
+                "description": "The real event in that tool that would fill it."
+              },
+              "example": {
+                "type": "string",
+                "description": "One person or case it would have fired for."
+              }
+            },
+            "required": [
+              "kind",
+              "name",
+              "tool",
+              "event",
+              "example"
+            ],
+            "description": "kind feature only: a NEW outcome or trigger is a feature request, never a catalogue row (nothing would fill it)."
+          },
+          "problem": {
+            "type": "string",
+            "description": "skill_upgrade: what is wrong."
+          },
+          "proposedChange": {
+            "type": "string",
+            "description": "skill_upgrade: the text you propose, ready to paste."
+          },
+          "reason": {
+            "type": "string",
+            "description": "contact_human: why a person is needed."
+          },
+          "message": {
+            "type": "string",
+            "description": "contact_human: your user's message."
+          },
+          "urgency": {
+            "type": "string",
+            "enum": [
+              "normal",
+              "urgent"
+            ]
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "AgentStaffRequestList": {
+        "type": "object",
+        "properties": {}
+      },
       "TacticsListResponse": {
         "type": "object",
         "properties": {}
@@ -112714,6 +112849,984 @@
           }
         },
         "operationId": "getV1SkillsBySlug"
+      }
+    },
+    "/v1/staff-requests": {
+      "post": {
+        "tags": [
+          "Skills"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "File a request to the team: bug, feature (a new outcome or trigger included), skill upgrade, or a person",
+        "description": "The same requests our Copilot files (request_staff, request_skill_upgrade, contact_human), for your agent: same record, same GitHub issue in the repo that owns the piece, same Telegram ping to the team. A new outcome or trigger is only ever a feature request (kind feature + newStepOrTrigger): there is no route that creates one. Check GET /v1/staff-requests and the API first: an existing route or running campaign is the answer, not a request. bug / feature / skill_upgrade open an issue and ping the team; contact_human pings the owner now (no issue, one ping per org every 10 minutes). Deduplicated per org on (repo, kind, pieceKey): a repeat answers 200 duplicate:true and counts it. Byte passthrough to chat-service POST /orgs/staff-requests.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentStaffRequestBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Already filed by this org (requestCount bumped)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {}
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Filed: { requestId, kind, destination, issueUrl, staffPinged, ... }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentStaffRequestResult"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Refused with its reason (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown skillSlug (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. Wait `Retry-After` seconds and retry; the budget that was exceeded is named in the body and described in `RateLimit-Policy`.",
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Rate limit exceeded"
+                    },
+                    "code": {
+                      "type": "string",
+                      "example": "RATE_LIMITED"
+                    },
+                    "policy": {
+                      "type": "string",
+                      "example": "authenticated"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "example": 600
+                    },
+                    "windowSeconds": {
+                      "type": "integer",
+                      "example": 60
+                    },
+                    "retryAfterSeconds": {
+                      "type": "integer",
+                      "example": 42
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "code",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "postV1StaffRequests",
+        "parameters": [
+          {
+            "name": "x-request-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._:-]+$"
+            },
+            "description": "Correlation id for this request. Echoed back verbatim in the `x-request-id` response header. Omit it and the gateway generates a UUID, so the response header is always present. Useful for tying a response back to the call that produced it when issuing concurrent requests."
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "With a user key (`distrib.usr_*`): the organization this request acts in, one of the key user's organizations (GET /v1/me lists them). Same as the `orgId` query parameter. Needed only when the user belongs to several organizations and the request names no brand; otherwise optional."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Forwarded to downstream services. With a user key it also selects the organization the request acts in: the one of the user's organizations holding every named brand (same for `brandId` in the query or a JSON body)."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
+      },
+      "get": {
+        "tags": [
+          "Skills"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "List your org's requests to the team",
+        "description": "The same requests our Copilot files (request_staff, request_skill_upgrade, contact_human), for your agent: same record, same GitHub issue in the repo that owns the piece, same Telegram ping to the team. A new outcome or trigger is only ever a feature request (kind feature + newStepOrTrigger): there is no route that creates one. Check GET /v1/staff-requests and the API first: an existing route or running campaign is the answer, not a request. Answers { requests: [{ requestId, kind, repo, pieceKey, title, issueUrl, requestCount, createdAt }] }, newest first, 50 max. Byte passthrough to chat-service GET /orgs/staff-requests.",
+        "responses": {
+          "200": {
+            "description": "The org's requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentStaffRequestList"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limit exceeded. Wait `Retry-After` seconds and retry; the budget that was exceeded is named in the body and described in `RateLimit-Policy`.",
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Retry-After": {
+                "description": "Seconds to wait before retrying.",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "example": "Rate limit exceeded"
+                    },
+                    "code": {
+                      "type": "string",
+                      "example": "RATE_LIMITED"
+                    },
+                    "policy": {
+                      "type": "string",
+                      "example": "authenticated"
+                    },
+                    "limit": {
+                      "type": "integer",
+                      "example": 600
+                    },
+                    "windowSeconds": {
+                      "type": "integer",
+                      "example": 60
+                    },
+                    "retryAfterSeconds": {
+                      "type": "integer",
+                      "example": 42
+                    }
+                  },
+                  "required": [
+                    "error",
+                    "code",
+                    "retryAfterSeconds"
+                  ]
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Upstream error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "headers": {
+              "RateLimit": {
+                "description": "Current rate-limit state for this caller, e.g. `limit=600, remaining=597, reset=42`. `reset` is seconds until the window rolls over.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Policy": {
+                "description": "Every budget this API applies, e.g. `\"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60` — `q` is requests per window, `w` is the window in seconds.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "RateLimit-Limit": {
+                "description": "Requests allowed in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Remaining": {
+                "description": "Requests still available in the current window.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "RateLimit-Reset": {
+                "description": "Seconds until the current window resets.",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "x-request-id": {
+                "description": "Correlation id — the `x-request-id` you sent, or one generated by the gateway.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Deprecation": {
+                "description": "Present ONLY on a deprecated operation. `@<unix-seconds>` (RFC 9745) — when the operation was announced as deprecated. Absent means the operation is not deprecated.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Sunset": {
+                "description": "Present ONLY on a deprecated operation. HTTP-date (RFC 8594) — the earliest date the operation may stop working, never less than 180 days after `Deprecation`.",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Link": {
+                "description": "Present ONLY on a deprecated operation. `<url>; rel=\"deprecation\"` — the replacement operation or the changelog entry.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "operationId": "getV1StaffRequests",
+        "parameters": [
+          {
+            "name": "x-request-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^[A-Za-z0-9._:-]+$"
+            },
+            "description": "Correlation id for this request. Echoed back verbatim in the `x-request-id` response header. Omit it and the gateway generates a UUID, so the response header is always present. Useful for tying a response back to the call that produced it when issuing concurrent requests."
+          },
+          {
+            "name": "x-org-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "With a user key (`distrib.usr_*`): the organization this request acts in, one of the key user's organizations (GET /v1/me lists them). Same as the `orgId` query parameter. Needed only when the user belongs to several organizations and the request names no brand; otherwise optional."
+          },
+          {
+            "name": "x-user-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "External user ID (e.g. Clerk user ID `user_2abc...`). Required when using an app key (`distrib.app_*`) on endpoints that need user context. Ignored when using a user key (`distrib.usr_*`)."
+          },
+          {
+            "name": "x-campaign-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Campaign ID. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-brand-id",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "uuid1,uuid2,uuid3"
+            },
+            "description": "Brand ID(s), comma-separated UUIDs. Supports multi-brand campaigns. Forwarded to downstream services. With a user key it also selects the organization the request acts in: the one of the user's organizations holding every named brand (same for `brandId` in the query or a JSON body)."
+          },
+          {
+            "name": "x-workflow-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Workflow slug. Automatically injected by workflow-service on workflow HTTP calls. Optional — forwarded to downstream services for tracking."
+          },
+          {
+            "name": "x-feature-slug",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Feature slug. Optional — forwarded to downstream services and runs for tracking."
+          }
+        ]
       }
     },
     "/v1/tactics": {

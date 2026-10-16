@@ -107,6 +107,10 @@ Owner decision 2026-10-01: a `distrib.usr_*` key is NOT bound to the org active 
 - **`GET`/`DELETE /v1/api-keys` are the caller's OWN keys across every org** (`authenticateUser`, no org needed): they call key-service `/internal/user-api-keys/by-user/{req.userId}`, never the org-scoped `GET /api-keys` (it returns every member's keys in the org). The user id comes from auth only; someone else's key is key-service's 404, forwarded. `POST` still stamps the active org (harmless). Tests: `tests/unit/keys-identity.test.ts`.
 - Tests: `tests/unit/user-key-cross-org.behavior.test.ts` drives the real middleware.
 
+### Requests to the team from any agent (`src/routes/agent-requests.ts`, owner 2026-10-16)
+
+`POST|GET /v1/staff-requests` (`authenticate + requireOrg + requireUser`) are byte pipes to chat-service `/orgs/staff-requests`: the Copilot's request_staff / request_skill_upgrade / contact_human for an outside agent, same record, same GitHub issue, same Telegram ping. A new outcome or trigger is only ever this (kind feature + `newStepOrTrigger`); never add a create route for one.
+
 ### Identity-enrichment headers forwarded on `/internal/resolve`
 
 On the admin path, `authenticate` resolves `x-external-org-id` / `x-external-user-id` to internal UUIDs via client-service `POST /internal/resolve`, and forwards five OPTIONAL enrichment headers into that body when present: `x-email` → `email`, `x-first-name` → `firstName`, `x-last-name` → `lastName`, `x-org-slug` → `orgSlug`, `x-org-name` → `orgName`. The dashboard/admin proxy reads them off the caller's session (Next.js `auth()` — `sessionClaims` for the profile fields, `orgSlug` for the slug) and sends them on every `/v1/*` request. `orgName` is what lets `GET /v1/me` name the organization a user key acts in: on 2026-10-01, 189 of 192 orgs had a NULL `orgs.name` because no caller had ever sent it.

@@ -39,6 +39,7 @@ import promptsRoutes from "./routes/prompts.js";
 import chatRoutes from "./routes/chat.js";
 import chatSkillsStaffRoutes from "./routes/chat-skills-staff.js";
 import agentSkillsRoutes from "./routes/agent-skills.js";
+import agentRequestsRoutes from "./routes/agent-requests.js";
 import catalogueStaffRoutes from "./routes/catalogue-staff.js";
 import playsRoutes from "./routes/plays.js";
 import billingRoutes from "./routes/billing.js";
@@ -281,6 +282,7 @@ app.use(costsRoutes); // public costs endpoints (no auth) — declares full /v1/
 app.use(costsStaffRoutes); // staff-only costs reads (authenticatePlatform + requireStaff) — declares full /v1...
 app.use(socialRoutes); // staff-only social-service reads (authenticatePlatform + requireStaff), full /v1 paths
 app.use(agentSkillsRoutes); // read-only agent skill tree for any authenticated caller (authenticateUser), full /v1 paths
+app.use(agentRequestsRoutes); // requests to the team (bug, feature incl. a new outcome/trigger, skill upgrade, human) for any agent, full /v1 paths
 app.use(chatSkillsStaffRoutes); // staff-only Copilot skills + staff requests (authenticatePlatform + requireStaff), full /v1 paths
 app.use(catalogueStaffRoutes); // staff-only agent catalogue reads (authenticatePlatform + requireStaff), full /v1 paths
 app.use(playsRoutes); // tactics, strategies, plays: reads + creates for any authenticated caller (authenticateUser), full /v1 paths
