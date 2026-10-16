@@ -137,8 +137,10 @@ router.get(
  * GET /v1/email-sequences — pass-through to instantly-service GET /orgs/email-sequences.
  *
  * Every email we run for one brand, per prospect: each step of the sequence (first
- * email + follow-ups) and whether it went out (`sent` + `sentAt`), is waiting for
- * the prospect's business hours (`queued`), or will not go out (`stopped`).
+ * email + follow-ups) and whether it went out (`sent` + `sentAt`), went out and was
+ * refused by the receiving server (`bounced` + `sentAt` + `bouncedAt`: never
+ * delivered), is waiting for the prospect's business hours (`queued`), or will not
+ * go out (`stopped`).
  * instantly-service performs the sends, so it states the status; the generated
  * bodies stay on `GET /v1/emails?brandId=`, joined by `leadId` on the caller's side
  * (rule #2: no aggregation here). Read-only, declares no cost.
