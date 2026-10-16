@@ -349,6 +349,54 @@ router.get(
   },
 );
 
+// ---------------------------------------------------------------------------
+// Sending-domain blocklists (instantly-service DOMAIN-BLOCKLIST-1016, v0.83.95).
+//
+// Same staff tier and byte-passthrough shape as the ops reads above; downstream
+// lives at /internal/domain-blocklist (not under /internal/ops). The read's query
+// string (`days`) is forwarded verbatim, and an invalid value is instantly-service's
+// own 400. The two writes forward the request body unchanged and relay the
+// downstream status (200 on the check, 201 on a recorded removal request).
+// ---------------------------------------------------------------------------
+
+function registerBlocklistCall(
+  method: "GET" | "POST",
+  gatewaySuffix: string,
+  label: string,
+): void {
+  const handler = async (req: AuthenticatedRequest, res: import("express").Response) => {
+    try {
+      await pipeExternalService(
+        externalServices.instantly,
+        `/internal/domain-blocklist${gatewaySuffix}${rawQueryString(req.originalUrl)}`,
+        {
+          method,
+          body: method === "POST" ? req.body : undefined,
+          headers: staffHeaders(req),
+          expressRes: res,
+        },
+      );
+    } catch (error: any) {
+      console.error(`[api-service] Staff instantly domain-blocklist ${label} error:`, error.message);
+      if (res.headersSent) {
+        res.end();
+        return;
+      }
+      respondUpstreamError(res, error, `Failed to ${label}`);
+    }
+  };
+  const path = `/instantly/ops/domain-blocklist${gatewaySuffix}`;
+  if (method === "GET") router.get(path, authenticatePlatform, requireStaff, handler);
+  else router.post(path, authenticatePlatform, requireStaff, handler);
+}
+
+// GET /v1/instantly/ops/domain-blocklist — state, events and daily series (staff only).
+registerBlocklistCall("GET", "", "read the domain blocklist");
+// POST /v1/instantly/ops/domain-blocklist/check — run the blocklist check now (staff only).
+registerBlocklistCall("POST", "/check", "run the domain blocklist check");
+// POST /v1/instantly/ops/domain-blocklist/removal-requests — record a filed removal request (staff only).
+registerBlocklistCall("POST", "/removal-requests", "record the removal request");
+
 // GET /v1/instantly/stats — fleet-wide email counters (sent, opened, replied…) with
 // no org scoping (staff only). Proxy to instantly-service GET /public/stats, which
 // sits behind its serviceAuth; query string forwarded verbatim, body piped.
