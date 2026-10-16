@@ -16,6 +16,7 @@ describe("GET /v1/email-sequences — published step-status doc", () => {
   it("lists bounced among the statuses and documents bouncedAt", () => {
     expect(op.description).toContain("status: sent|bounced|queued|stopped");
     expect(op.description).toContain("`bouncedAt`");
-    expect(op.description).toContain("receiving server refused it");
+    expect(op.description).toContain("receiving server refused");
+    expect(op.summary).toContain("bounced");
   });
 });
