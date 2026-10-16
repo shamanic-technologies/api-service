@@ -390,6 +390,8 @@ export const STAFF_KEY_OPERATIONS = new Set<string>([
   "GET /v1/catalogue/strategies/{id}",
   "GET /v1/catalogue/plays",
   "GET /v1/catalogue/plays/{id}",
+  "POST /v1/workflows/{id}/prompt-edit",
+  "POST /v1/workflows/dynasty/{workflowDynastySlug}/prompt-edit",
 ]);
 
 export const STAFF_KEY_TAG = "Staff (key)";

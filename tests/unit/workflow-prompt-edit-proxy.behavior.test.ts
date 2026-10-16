@@ -13,11 +13,12 @@ const { WORKFLOW_BASE } = vi.hoisted(() => {
 /**
  * POST /v1/workflows/:id/prompt-edit + /v1/workflows/dynasty/:slug/prompt-edit.
  *
- * Drives the real router (real requireStaff, requireOrg, requireUser) with only
+ * Drives the real router (real requireStaffActor, requireOrg, requireUser) with only
  * `authenticate` stubbed to an admin-keyed identity, and a stubbed fetch. Asserts:
  * the full downstream path, the identity forwarded, the body forwarded verbatim,
  * the producer's status + body returned byte-identical (201, 409, 422), and that a
- * non-staff caller is refused before workflow-service is called.
+ * non-staff caller is refused before workflow-service is called, while a staff
+ * member's own key (the MCP) gets through.
  *
  * The payloads below are fixtures, not a contract this repo owns (CLAUDE.md #6/#8).
  */
@@ -33,6 +34,13 @@ vi.mock("../../src/middleware/auth.js", async () => {
       req.orgId = "org_test456";
       req.runId = "run_test789";
       req.authType = req.headers["x-test-auth-type"] ?? "admin";
+      if (req.authType === "user_key") {
+        req.userKeyScope = {
+          isStaff: req.headers["x-test-key-staff"] === "true",
+          email: req.headers["x-test-key-email"],
+          memberships: [],
+        };
+      }
       next();
     },
   };
@@ -168,15 +176,37 @@ describe("prompt-edit — staff gate", () => {
     expect(calls).toHaveLength(0);
   });
 
-  it("refuses a user-key caller even with a staff email", async () => {
+  it("refuses a client's own key, even sending a staff x-email", async () => {
     stubUpstream(201, {});
     const res = await request(buildApp())
       .post(`/v1/workflows/${VERSION_ID}/prompt-edit`)
       .set("x-test-auth-type", "user_key")
+      .set("x-test-key-staff", "false")
+      .set("x-test-key-email", "client@acme.com")
       .set("x-email", STAFF)
       .send({ action: "fork", prompt: "x" });
     expect(res.status).toBe(403);
+    expect(res.body.code).toBe("staff_only");
     expect(calls).toHaveLength(0);
+  });
+
+  it.each([
+    [`/v1/workflows/3fa85f64-5717-4562-b3fc-2c963f66afa6/prompt-edit`, `/workflows/3fa85f64-5717-4562-b3fc-2c963f66afa6/prompt-edit`],
+    [`/v1/workflows/dynasty/some-dynasty/prompt-edit`, `/workflows/dynasty/some-dynasty/prompt-edit`],
+  ])("admits a staff member's own key on %s and relays the producer's refusal verbatim", async (path, downstream) => {
+    const upstream = { error: "prompt is required", code: "invalid_body" };
+    stubUpstream(400, upstream);
+    const res = await request(buildApp())
+      .post(path)
+      .set("x-test-auth-type", "user_key")
+      .set("x-test-key-staff", "true")
+      .set("x-test-key-email", STAFF)
+      .send({ action: "upgrade" });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${WORKFLOW_BASE}${downstream}`);
+    expect(JSON.parse(calls[0].options.body)).toEqual({ action: "upgrade" });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual(upstream);
   });
 
   it("refuses a caller with no email", async () => {
