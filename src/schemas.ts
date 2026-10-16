@@ -8954,18 +8954,17 @@ registry.registerPath({
   method: "get",
   path: "/v1/catalogue/steps",
   tags: ["Features"],
-  summary: "List catalogue steps (staff only)",
+  summary: "List catalogue steps",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. Steps are the outcomes a lead moves through (Lead found, Positive reply, Meeting booked, Paid client...): the words every leg, pipe and funnel is built from. " +
     "Byte passthrough to features-service GET /internal/catalogue/steps: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: q, limit (1..25, default 10); not a whitelist); status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { query: z.object({ q: z.string().optional(), limit: z.string().optional() }).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueStepsListResponse") } } },
     400: { description: "Invalid filter (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
+        502: { description: "Upstream error", content: errorContent },
     503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
   },
 });
@@ -8974,19 +8973,18 @@ registry.registerPath({
   method: "get",
   path: "/v1/catalogue/steps/{id}",
   tags: ["Features"],
-  summary: "Read one catalogue step (staff only)",
+  summary: "Read one catalogue step",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. Steps are the outcomes a lead moves through (Lead found, Positive reply, Meeting booked, Paid client...): the words every leg, pipe and funnel is built from. " +
     "Byte passthrough to features-service GET /internal/catalogue/steps/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { params: z.object({ id: z.string().openapi({ description: "a step key or label" }) }), query: z.object({  }).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueStepsDetailResponse") } } },
     400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
     404: { description: "Unknown id (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
+        502: { description: "Upstream error", content: errorContent },
     503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
   },
 });
@@ -8995,18 +8993,17 @@ registry.registerPath({
   method: "get",
   path: "/v1/catalogue/sales-paths",
   tags: ["Features"],
-  summary: "List catalogue sales paths (staff only)",
+  summary: "List catalogue sales paths",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A sales path is a chain of legs from Start (or a trigger) to Paid client, with no channel yet: pick one, then the pipes that work each leg (GET /v1/catalogue/pipes?paths=<id>). With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). " +
     "Byte passthrough to features-service GET /internal/catalogue/sales-paths: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: containsSteps, q, limit; not a whitelist); status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { query: z.object({ containsSteps: z.string().optional().openapi({ description: "Comma list of step keys or labels: the paths containing at least one" }), q: z.string().optional(), limit: z.string().optional() }).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueSalesPathsListResponse") } } },
     400: { description: "Invalid filter (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
+        502: { description: "Upstream error", content: errorContent },
     503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
   },
 });
@@ -9015,19 +9012,18 @@ registry.registerPath({
   method: "get",
   path: "/v1/catalogue/sales-paths/{id}",
   tags: ["Features"],
-  summary: "Read one catalogue sales path (staff only)",
+  summary: "Read one catalogue sales path",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A sales path is a chain of legs from Start (or a trigger) to Paid client, with no channel yet: pick one, then the pipes that work each leg (GET /v1/catalogue/pipes?paths=<id>). " +
     "Byte passthrough to features-service GET /internal/catalogue/sales-paths/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { params: z.object({ id: z.string().openapi({ description: "a sales path id (leg keys joined by `+`, sent as `%2B`)" }) }), query: z.object({  }).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueSalesPathsDetailResponse") } } },
     400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
     404: { description: "Unknown id (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
+        502: { description: "Upstream error", content: errorContent },
     503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
   },
 });
@@ -9036,18 +9032,17 @@ registry.registerPath({
   method: "get",
   path: "/v1/catalogue/channels",
   tags: ["Features"],
-  summary: "List catalogue channels (staff only)",
+  summary: "List catalogue channels",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A channel is what works a leg (cold email, AI meeting booking, your own team...). With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). " +
     "Byte passthrough to features-service GET /internal/catalogue/channels: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: forPaths, legKeys, q, limit; not a whitelist); status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { query: z.object({ forPaths: z.string().optional().openapi({ description: "Comma list of sales path ids" }), legKeys: z.string().optional(), q: z.string().optional(), limit: z.string().optional() }).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueChannelsListResponse") } } },
     400: { description: "Invalid filter (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
+        502: { description: "Upstream error", content: errorContent },
     503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
   },
 });
@@ -9056,19 +9051,18 @@ registry.registerPath({
   method: "get",
   path: "/v1/catalogue/channels/{id}",
   tags: ["Features"],
-  summary: "Read one catalogue channel (staff only)",
+  summary: "Read one catalogue channel",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A channel is what works a leg (cold email, AI meeting booking, your own team...). " +
     "Byte passthrough to features-service GET /internal/catalogue/channels/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { params: z.object({ id: z.string().openapi({ description: "a channel slug" }) }), query: z.object({  }).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueChannelsDetailResponse") } } },
     400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
     404: { description: "Unknown id (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
+        502: { description: "Upstream error", content: errorContent },
     503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
   },
 });
@@ -9077,18 +9071,17 @@ registry.registerPath({
   method: "get",
   path: "/v1/catalogue/pipes",
   tags: ["Features"],
-  summary: "List catalogue pipes (staff only)",
+  summary: "List catalogue pipes",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A pipe is one channel working one leg (id `<channel slug>|<leg key>`): a sales funnel names one pipe per leg (POST /v1/catalogue/sales-funnels). With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). " +
     "Byte passthrough to features-service GET /internal/catalogue/pipes: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: paths, channels, legKeys, q, limit; not a whitelist); status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { query: z.object({ paths: z.string().optional().openapi({ description: "Comma list of sales path ids" }), channels: z.string().optional().openapi({ description: "Comma list of channel slugs" }), legKeys: z.string().optional(), q: z.string().optional(), limit: z.string().optional() }).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CataloguePipesListResponse") } } },
     400: { description: "Invalid filter (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
+        502: { description: "Upstream error", content: errorContent },
     503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
   },
 });
@@ -9097,19 +9090,18 @@ registry.registerPath({
   method: "get",
   path: "/v1/catalogue/pipes/{id}",
   tags: ["Features"],
-  summary: "Read one catalogue pipe (staff only)",
+  summary: "Read one catalogue pipe",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A pipe is one channel working one leg (id `<channel slug>|<leg key>`): a sales funnel names one pipe per leg (POST /v1/catalogue/sales-funnels). " +
     "Byte passthrough to features-service GET /internal/catalogue/pipes/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { params: z.object({ id: z.string().openapi({ description: "a pipe id `<channel slug>|<leg key>`" }) }), query: z.object({  }).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CataloguePipesDetailResponse") } } },
     400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
     404: { description: "Unknown id (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
+        502: { description: "Upstream error", content: errorContent },
     503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
   },
 });
@@ -9121,7 +9113,7 @@ registry.registerPath({
   summary: "Create a pipe: a channel on a new leg, proactive or reactive on a trigger (staff only)",
   description:
     "Fleet-wide catalogue write, usable by every org (like tactics, strategies and plays). Staff only: a distribute.you staff member's own " +
-    "API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. A pipe = a channel (GET /v1/catalogue/channels) " +
+    "API key, or the platform key with a staff x-email; a customer key gets 403 `staff_only` (a customer builds sales funnels from the pipes we run, and asks for a new channel with a feature request). A pipe = a channel (GET /v1/catalogue/channels) " +
     "working one leg, from one step to the next (GET /v1/catalogue/steps). `mode: \"proactive\"` runs on its own budget and names no trigger; " +
     "`mode: \"reactive\"` names the trigger that asks for it (`triggerId`, GET /v1/catalogue/triggers), e.g. an AI instant call on Form submitted " +
     "toward Booking call. A leg out of a real step with no known conversion rate needs `conversionRatePct`. `published: false` = a draft. " +
@@ -9211,17 +9203,18 @@ registry.registerPath({
   method: "post",
   path: "/v1/catalogue/sales-funnels",
   tags: ["Features"],
-  summary: "Declare a sales funnel from its pipes (staff only)",
+  summary: "Declare a sales funnel from its pipes",
   description:
-    "Fleet-wide catalogue write, usable by every org. Staff only: a distribute.you staff member's own API key, or the platform key " +
-    "with a staff x-email; any other key gets 403 `staff_only`. `pipeIds` = one pipe id (GET /v1/catalogue/pipes) or play id " +
+    "Fleet-wide catalogue write, usable by every org. Any API key: a customer's own key may declare one from the pipes we run today " +
+    "(lists from GET /v1/catalogue/pipes with that key show only those; a pipe we do not run is refused 400 `pipe_not_runnable`, naming it and why); a staff key, " +
+    "or the platform key with a staff x-email, may use any pipe. `pipeIds` = one pipe id (GET /v1/catalogue/pipes) or play id " +
     "(`<pipe id>~<strategy id>`, GET /v1/catalogue/plays?pipe=) per leg of a sales path, in order, ONE channel per leg; a bare pipe id " +
     "runs its default play. Works for a reactive funnel too (e.g. Form submitted -> AI Instant Call -> Booking call -> your team). " +
     "Idempotent: 201 `created: true` when new, 200 `created: false` when already declared; either way the funnel detail (its id is what " +
-    "POST /v1/sales-funnel-campaigns takes). `createdBy` is recorded as the authenticated staff email (a body value is replaced). " +
-    "Refusals forwarded verbatim: 400 `pipe_ids_required` / `bare_leg_refused` / `one_channel_per_leg` / `leg_without_channel` / " +
-    "`funnel_invalid`; 404 `pipe_not_found`. Byte passthrough to features-service POST /internal/catalogue/sales-funnels.",
-  security: platformAuth,
+    "POST /v1/sales-funnel-campaigns takes). `createdBy` is recorded as the authenticated caller (staff email, else your key's email; a body value is replaced), and for a customer key `requestedByOrgId` is the org the key acts in. " +
+    "Refusals forwarded verbatim: 400 `pipe_ids_required` / `pipe_not_runnable` / `trigger_step_mismatch` / `trigger_without_step` / `bare_leg_refused` / `one_channel_per_leg` / `leg_without_channel` / " +
+    "`funnel_invalid`; 404 `pipe_not_found` / `trigger_not_found`. Byte passthrough to features-service POST /internal/catalogue/sales-funnels.",
+  security: authed,
   request: {
     body: {
       content: {
@@ -9230,7 +9223,7 @@ registry.registerPath({
             .object({
               pipeIds: z.array(z.string()).openapi({ description: "One pipe or play id per leg of a sales path, in order" }),
               triggerId: z.string().optional().openapi({ description: "Optional: a trigger (GET /v1/catalogue/triggers) that heads the funnel. The first pipe must leave from the step that trigger starts from; this is how a proactive pipe is reused on a trigger" }),
-              requestedByOrgId: z.string().nullable().optional().openapi({ description: "The org whose request led to this funnel, if any (provenance only: the funnel stays usable by every org)" }),
+              requestedByOrgId: z.string().nullable().optional().openapi({ description: "Staff only: the org whose request led to this funnel (provenance only: the funnel stays usable by every org). Set from your key for a customer" }),
             })
             .passthrough()
             .openapi("CreateSalesFunnelRequest"),
@@ -9243,28 +9236,69 @@ registry.registerPath({
     201: { description: "Declared: the funnel, pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CreateSalesFunnelResponse") } } },
     400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff (`staff_only`)", content: errorContent },
-    404: { description: "Unknown pipe or play (forwarded verbatim)", content: errorContent },
+        404: { description: "Unknown pipe or play (forwarded verbatim)", content: errorContent },
     502: { description: "Upstream error", content: errorContent },
   },
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/catalogue/sales-paths",
+  tags: ["Features"],
+  summary: "Declare a sales path: the legs in order, optionally headed by a trigger",
+  description:
+    "Fleet-wide catalogue write, usable by every org. Any API key (a customer's own key included). A sales path is the chain of legs " +
+    "a lead walks, from Start (or from a trigger's step) to Paid client, with no channel yet (GET /v1/catalogue/sales-paths lists the " +
+    "existing ones; GET /v1/catalogue/steps the words). `legKeys` = the legs in order, each `<from step>_to_<to step>` and each worked by " +
+    "some pipe (GET /v1/catalogue/pipes?legKeys=). `triggerId` (GET /v1/catalogue/triggers) puts a trigger at the head: the first leg " +
+    "must leave from that trigger's step, so a reactive funnel reuses the proactive pipes. Next step: a sales funnel naming one pipe per " +
+    "leg (POST /v1/catalogue/sales-funnels). Idempotent: 201 `created: true` when new, 200 `created: false` when it exists; either way " +
+    "the path row (id, name, legs). `createdBy` is recorded as the authenticated caller (a body value is replaced). Refusals forwarded " +
+    "verbatim: 400 `leg_keys_required` / `path_invalid` / `trigger_step_mismatch` / `trigger_without_step`; 404 `trigger_not_found`. " +
+    "Byte passthrough to features-service POST /internal/catalogue/sales-paths.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              legKeys: z.array(z.string()).openapi({ description: "The legs in order, e.g. [\"start_to_lead_found\", \"lead_found_to_conversation\", \"conversation_to_paid_client\"]" }),
+              triggerId: z.string().optional().openapi({ description: "Optional: a trigger (GET /v1/catalogue/triggers) at the head; the first leg must leave from its step" }),
+            })
+            .passthrough()
+            .openapi("CreateSalesPathRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Already declared: the path, pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("SalesPathAlreadyDeclaredResponse") } } },
+    201: { description: "Declared: the path, pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CreateSalesPathResponse") } } },
+    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff (platform key without a staff x-email)", content: errorContent },
+    404: { description: "Unknown trigger (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+
+registry.registerPath({
   method: "get",
   path: "/v1/catalogue/sales-funnels",
   tags: ["Features"],
-  summary: "List catalogue sales funnels (staff only)",
+  summary: "List catalogue sales funnels",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A sales funnel is a sales path with one pipe per leg; its id is what POST /v1/sales-funnel-campaigns takes. With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). " +
     "Byte passthrough to features-service GET /internal/catalogue/sales-funnels: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: paths, containsChannels, q, limit; not a whitelist); status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { query: z.object({ paths: z.string().optional().openapi({ description: "Comma list of sales path ids" }), containsChannels: z.string().optional().openapi({ description: "Comma list of channel slugs: funnels containing at least one" }), q: z.string().optional(), limit: z.string().optional() }).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueSalesFunnelsListResponse") } } },
     400: { description: "Invalid filter (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
+        502: { description: "Upstream error", content: errorContent },
     503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
   },
 });
@@ -9273,19 +9307,18 @@ registry.registerPath({
   method: "get",
   path: "/v1/catalogue/sales-funnels/{id}",
   tags: ["Features"],
-  summary: "Read one catalogue sales funnel (staff only)",
+  summary: "Read one catalogue sales funnel",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A sales funnel is a sales path with one pipe per leg; its id is what POST /v1/sales-funnel-campaigns takes. " +
     "Byte passthrough to features-service GET /internal/catalogue/sales-funnels/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { params: z.object({ id: z.string().openapi({ description: "a sales funnel id" }) }), query: z.object({  }).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueSalesFunnelsDetailResponse") } } },
     400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
     404: { description: "Unknown id (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
+        502: { description: "Upstream error", content: errorContent },
     503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
   },
 });
@@ -9335,18 +9368,17 @@ registry.registerPath({
   method: "get",
   path: "/v1/catalogue/triggers",
   tags: ["Features"],
-  summary: "List catalogue triggers (staff only)",
+  summary: "List catalogue triggers",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A trigger is an entry door that starts a reactive funnel: an OUTCOME trigger (an outcome was just reached, the only kind callable from outside, through POST /v1/trigger-events) or a CONDITION trigger (computed by us: an outcome + a delay + still not another, or an integration state). New triggers are never created here: ask for one with a feature request. " +
     "Byte passthrough to features-service GET /internal/catalogue/triggers: one page of triggers, what starts a reactive pipe (id, name, icon, eventIcon, line, fromStep, firedBy, coded, pipeCount, ...). Query string forwarded verbatim (documented today: q, limit; not a whitelist); status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { query: z.object({ q: z.string().optional(), limit: z.string().optional() }).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueTriggersListResponse") } } },
     400: { description: "Invalid filter (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
+        502: { description: "Upstream error", content: errorContent },
     503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
   },
 });
@@ -9355,18 +9387,17 @@ registry.registerPath({
   method: "get",
   path: "/v1/catalogue/triggers/{id}",
   tags: ["Features"],
-  summary: "Read one catalogue trigger (staff only)",
+  summary: "Read one catalogue trigger",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A trigger is an entry door that starts a reactive funnel: an OUTCOME trigger (an outcome was just reached, the only kind callable from outside, through POST /v1/trigger-events) or a CONDITION trigger (computed by us: an outcome + a delay + still not another, or an integration state). New triggers are never created here: ask for one with a feature request. " +
     "Byte passthrough to features-service GET /internal/catalogue/triggers/{id}: the trigger and the reactive pipes it starts. Query string forwarded verbatim; status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { params: z.object({ id: z.string().openapi({ description: "a trigger id (e.g. positive_reply_received)" }) }), query: z.object({}).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueTriggersDetailResponse") } } },
     404: { description: "Unknown id (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
+        502: { description: "Upstream error", content: errorContent },
     503: { description: "Economics not computed yet (forwarded verbatim)", content: errorContent },
   },
 });
