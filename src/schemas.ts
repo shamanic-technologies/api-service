@@ -10606,6 +10606,55 @@ registry.registerPath({
   },
 });
 
+const LEAD_SOURCE_YIELD_INTRO =
+  "Platform-scoped staff surface over instantly-service's lead-source yield (cross-org ops data, NOT customer "
+  + "data): which lead source feeds our sending domains bounces, refusals and blocklist hits. Powers the staff "
+  + "Blocklists page on admin.distribute.you. Staff-only (platform API key + STAFF_EMAILS x-email); no org context. ";
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/lead-source-yield",
+  tags: ["Instantly"],
+  summary: "Get lead sources ranked by the bounces, refusals and blocklist hits their people produce (staff only)",
+  description:
+    LEAD_SOURCE_YIELD_INTRO
+    + "Transparent byte passthrough to instantly-service GET /internal/lead-source-yield (its schema "
+    + "LeadSourceYieldRead): the ranking since inception plus one point per day of the window. The query string "
+    + "is forwarded verbatim; `days` is the parameter instantly-service documents today, not a whitelist. A bad "
+    + "`days` answers instantly-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Series window in days, 1..365; instantly-service defaults to 60"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Lead-source yield — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsLeadSourceYieldResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/instantly/ops/lead-source-yield/sync",
+  tags: ["Instantly"],
+  summary: "Copy lead-service's provenance for the people we emailed, now (staff only)",
+  description:
+    LEAD_SOURCE_YIELD_INTRO
+    + "Transparent byte passthrough to instantly-service POST /internal/lead-source-yield/sync: one provenance "
+    + "pass (the worker runs it every 30 min), then the yield cache is cleared. Response owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Pass summary — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsLeadSourceYieldSyncResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/instantly/ops/messages/{id}/body",
