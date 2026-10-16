@@ -171,12 +171,51 @@
         "type": "object",
         "properties": {}
       },
+      "SalesFunnelCap": {
+        "type": "object",
+        "properties": {
+          "salesFunnelId": {
+            "type": "string"
+          },
+          "salesFunnelCampaignId": {
+            "type": "string",
+            "nullable": true
+          },
+          "amountCents": {
+            "type": "string",
+            "description": "The campaign's max budget for the period, in cents (decimal string, as billing-service sends it)"
+          },
+          "period": {
+            "type": "string"
+          },
+          "consumedCents": {
+            "type": "string",
+            "nullable": true,
+            "description": "Spent so far in the period, in cents; null when it could not be measured"
+          },
+          "reservedCents": {
+            "type": "string"
+          }
+        },
+        "description": "On a 402 with `reason`: the cap billing-service applied, verbatim"
+      },
       "ErrorResponse": {
         "type": "object",
         "properties": {
           "error": {
             "type": "string",
             "description": "Error message"
+          },
+          "reason": {
+            "type": "string",
+            "description": "On a 402 only: present when the spend was refused because the campaign (sales funnel) reached its MAX BUDGET (`sales_funnel_max_budget_reached`) or its max budget could not be read (`sales_funnel_max_budget_unreadable`). Adding credit does not help: raise the campaign's max budget. Absent on a plain insufficient-balance refusal."
+          },
+          "sales_funnel_cap": {
+            "$ref": "#/components/schemas/SalesFunnelCap"
+          },
+          "message": {
+            "type": "string",
+            "description": "Plain-words explanation, when the error carries one"
           }
         },
         "required": [
@@ -96046,7 +96085,7 @@
             }
           },
           "402": {
-            "description": "Insufficient credits. The organization's credit balance is too low to process this request. Response includes `balance_cents` (current balance) and `required_cents` (minimum needed).",
+            "description": "Insufficient credits. The organization's credit balance is too low to process this request. Response includes `balance_cents` (current balance) and `required_cents` (minimum needed). When `reason` is `sales_funnel_max_budget_reached` / `sales_funnel_max_budget_unreadable`, the campaign's MAX BUDGET refused the spend instead (`sales_funnel_cap` carries it): raise the max budget, adding credit does not help.",
             "content": {
               "application/json": {
                 "schema": {

@@ -3,6 +3,7 @@ import type { AuthenticatedRequest } from "./auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { runWithUpstreamPaymentState, upstreamPaymentRequiredBody } from "../lib/upstream-payment.js";
 import { PREPAID_CHECKOUT_PATH, prepayInstructions } from "../lib/agent-prepay.js";
+import { asSalesFunnelCapRefusal, namedSalesFunnelCapBody } from "../lib/sales-funnel-cap.js";
 
 /** billing-service's mark on an org opened through the API: no free credit, prepaid only. */
 export const AGENT_API_OFFER = "agent_api";
@@ -28,6 +29,14 @@ interface PrepaidStatus {
  * Fires only when the response is an error AND (it is a 402, or a downstream
  * answered 402 while serving it and the route answered 5xx). Every other org, and
  * every platform-key (dashboard) call, gets the response it got before.
+ *
+ * One exception comes first, for EVERY caller: a refusal because a campaign (sales
+ * funnel) reached its MAX BUDGET (`reason: sales_funnel_max_budget_*`, see
+ * `lib/sales-funnel-cap.ts`). Prepaying changes nothing there, so it never gets the
+ * prepay answer, and a route that masked it as a 5xx (or flattened it into an
+ * `{ error: "<json>" }` string) does not get to hide `reason` + `sales_funnel_cap`:
+ * the caller receives the refusal's own body as a 402, plus a `message` naming the
+ * max budget when the sender wrote none. No billing read on that path.
  */
 export function agentPaymentRequired(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   runWithUpstreamPaymentState(() => {
@@ -36,6 +45,13 @@ export function agentPaymentRequired(req: AuthenticatedRequest, res: Response, n
       const upstream = upstreamPaymentRequiredBody();
       const paymentFailure =
         res.statusCode === 402 || (upstream !== undefined && res.statusCode >= 500);
+      if (paymentFailure && !res.headersSent) {
+        const capRefusal = asSalesFunnelCapRefusal(body) ?? (upstream !== undefined ? asSalesFunnelCapRefusal(upstream) : null);
+        if (capRefusal) {
+          res.status(402);
+          return originalJson(namedSalesFunnelCapBody(capRefusal));
+        }
+      }
       if (!paymentFailure || req.authType !== "user_key" || !req.orgId || res.headersSent) {
         return originalJson(body);
       }
