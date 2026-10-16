@@ -8812,6 +8812,70 @@ registry.registerPath({
   },
 });
 
+// Requests to the team from any agent (src/routes/agent-requests.ts → chat-service /orgs/staff-requests)
+const StaffRequestPieceSchema = z.object({
+  piece: z.string(),
+  outcome: z.enum(["exists", "create", "needs_code"]),
+  detail: z.string().optional(),
+});
+export const AgentStaffRequestBodySchema = z
+  .object({
+    kind: z.enum(["bug", "feature", "skill_upgrade", "contact_human"]).openapi({
+      description: "bug: something exists but fails. feature: a piece needs code (a new outcome or trigger included). skill_upgrade: a skill or a service doc misled you. contact_human: your user wants a person.",
+    }),
+    repo: z.string().optional().openapi({ description: "bug / feature: the fleet repo that owns the piece (e.g. features-service, campaign-service, crm-service). skill_upgrade: the repo whose docs are wrong (or send skillSlug)." }),
+    skillSlug: z.string().optional().openapi({ description: "skill_upgrade: the skill to upgrade (a slug from GET /v1/skills)." }),
+    title: z.string().optional().openapi({ description: "bug / feature / skill_upgrade: short title." }),
+    userRequest: z.string().optional().openapi({ description: "bug / feature: your user's words." }),
+    missingPiece: z.string().optional().openapi({ description: "bug / feature: what is broken or missing, and what you checked first." }),
+    pieceKey: z.string().optional().openapi({ description: "Kebab-case dedupe key (default: from the title). Reuse the one GET /v1/staff-requests shows for the same need." }),
+    decomposition: z.array(StaffRequestPieceSchema).optional(),
+    newStepOrTrigger: z
+      .object({
+        kind: z.enum(["step", "trigger"]),
+        name: z.string().openapi({ description: "The new outcome (step) or trigger, in your user's words." }),
+        tool: z.string().openapi({ description: "Your user's tool where the real event happens (CRM, form, payments, site...)." }),
+        event: z.string().openapi({ description: "The real event in that tool that would fill it." }),
+        example: z.string().openapi({ description: "One person or case it would have fired for." }),
+      })
+      .optional()
+      .openapi({ description: "kind feature only: a NEW outcome or trigger is a feature request, never a catalogue row (nothing would fill it)." }),
+    problem: z.string().optional().openapi({ description: "skill_upgrade: what is wrong." }),
+    proposedChange: z.string().optional().openapi({ description: "skill_upgrade: the text you propose, ready to paste." }),
+    reason: z.string().optional().openapi({ description: "contact_human: why a person is needed." }),
+    message: z.string().optional().openapi({ description: "contact_human: your user's message." }),
+    urgency: z.enum(["normal", "urgent"]).optional(),
+  })
+  .openapi("AgentStaffRequestBody");
+const AGENT_REQUESTS_MODEL =
+  "The same requests our Copilot files (request_staff, request_skill_upgrade, contact_human), for your agent: same record, same GitHub issue " +
+  "in the repo that owns the piece, same Telegram ping to the team. A new outcome or trigger is only ever a feature request (kind feature + newStepOrTrigger): " +
+  "there is no route that creates one. Check GET /v1/staff-requests and the API first: an existing route or running campaign is the answer, not a request.";
+registry.registerPath({
+  method: "post", path: "/v1/staff-requests", tags: ["Skills"], security: authed,
+  summary: "File a request to the team: bug, feature (a new outcome or trigger included), skill upgrade, or a person",
+  description: `${AGENT_REQUESTS_MODEL} bug / feature / skill_upgrade open an issue and ping the team; contact_human pings the owner now (no issue, one ping per org every 10 minutes). Deduplicated per org on (repo, kind, pieceKey): a repeat answers 200 duplicate:true and counts it. Byte passthrough to chat-service POST /orgs/staff-requests.`,
+  request: { body: { content: { "application/json": { schema: AgentStaffRequestBodySchema } } } },
+  responses: {
+    201: { description: "Filed: { requestId, kind, destination, issueUrl, staffPinged, ... }", content: { "application/json": { schema: z.object({}).passthrough().openapi("AgentStaffRequestResult") } } },
+    200: { description: "Already filed by this org (requestCount bumped)", content: { "application/json": { schema: z.object({}).passthrough() } } },
+    400: { description: "Refused with its reason (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Unknown skillSlug (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+registry.registerPath({
+  method: "get", path: "/v1/staff-requests", tags: ["Skills"], security: authed,
+  summary: "List your org's requests to the team",
+  description: `${AGENT_REQUESTS_MODEL} Answers { requests: [{ requestId, kind, repo, pieceKey, title, issueUrl, requestCount, createdAt }] }, newest first, 50 max. Byte passthrough to chat-service GET /orgs/staff-requests.`,
+  responses: {
+    200: { description: "The org's requests", content: { "application/json": { schema: z.object({}).passthrough().openapi("AgentStaffRequestList") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // Tactics, strategies and plays — shared catalogue, any authenticated caller (src/routes/plays.ts)
 const PLAYS_MODEL =
   "A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). " +
@@ -9917,8 +9981,9 @@ registry.registerPath({
   description:
     "Pass-through to instantly-service GET /orgs/email-sequences. One row per sequence (a prospect " +
     "emailed again after the re-contact window has two): `leadId`, `leadEmail`, `campaignId` and " +
-    "`steps[]`, each `{ step, kind: first_email|follow_up, status: sent|queued|stopped, sentAt }`. " +
-    "`sent` = it went out at `sentAt`; `queued` = not sent yet, it goes out in the prospect's business " +
+    "`steps[]`, each `{ step, kind: first_email|follow_up, status: sent|bounced|queued|stopped, sentAt, bouncedAt }`. " +
+    "`sent` = it went out at `sentAt`; `bounced` = it went out at `sentAt` and the receiving server refused " +
+    "it at `bouncedAt` (it was NOT delivered); `queued` = not sent yet, it goes out in the prospect's business " +
     "hours; `stopped` = it will not go out (reply, bounce, opt-out, meeting booked, or sequence stopped). " +
     "Join with the email bodies of GET /v1/emails?brandId= on `leadId`. Paged: pass `nextCursor` back as " +
     "`cursor` until it is null (default 500, max 2000 per page). A brand that is not one of the " +
@@ -10448,6 +10513,92 @@ registry.registerPath({
   responses: {
     200: { description: "Periods — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsSentPerPeriodResponse") } } },
     400: { description: "Downstream rejected the query (e.g. `grain` missing)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+const DOMAIN_BLOCKLIST_INTRO =
+  "Platform-scoped staff surface over instantly-service's sending-domain blocklist monitor "
+  + "(SURBL multi, Spamhaus DBL, URIBL; cross-org ops data, NOT customer data) — powers the staff "
+  + "blocklist page on admin.distribute.you. Staff-only (platform API key + STAFF_EMAILS x-email); no org context. ";
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/domain-blocklist",
+  tags: ["Instantly"],
+  summary: "Get the sending-domain blocklist state, event history and daily series (staff only)",
+  description:
+    DOMAIN_BLOCKLIST_INTRO
+    + "Transparent byte passthrough to instantly-service GET /internal/domain-blocklist: the current state per "
+    + "domain and list, which mailboxes are out of new sequences, the append-only event history and one point per "
+    + "day of the window. The query string is forwarded verbatim; `days` is the parameter instantly-service "
+    + "documents today, not a whitelist. A bad `days` answers instantly-service's own 400. Response owned by the "
+    + "downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Window in days, 1..365; instantly-service defaults to 60"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Blocklist read — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsDomainBlocklistResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/instantly/ops/domain-blocklist/check",
+  tags: ["Instantly"],
+  summary: "Run the sending-domain blocklist check now (staff only)",
+  description:
+    DOMAIN_BLOCKLIST_INTRO
+    + "Transparent byte passthrough to instantly-service POST /internal/domain-blocklist/check: checks every "
+    + "sending domain on every list, records state and events, then delivers pending staff alerts (the daily "
+    + "worker runs the same check). Idempotent. Response owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "What the check found — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsDomainBlocklistCheckResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/instantly/ops/domain-blocklist/removal-requests",
+  tags: ["Instantly"],
+  summary: "Record a blocklist removal request a person filed on the list's form (staff only)",
+  description:
+    DOMAIN_BLOCKLIST_INTRO
+    + "Transparent byte passthrough to instantly-service POST /internal/domain-blocklist/removal-requests: "
+    + "appends a `removal_requested` event (we never file the forms ourselves). The body is forwarded unchanged; "
+    + "the fields below are the ones instantly-service documents today. A missing domain or unknown list answers "
+    + "instantly-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            domain: z.string().describe("The sending domain the request was filed for"),
+            list: z.string().describe("surbl | spamhaus_dbl | uribl"),
+            note: z.string().optional(),
+            requestedBy: z.string().optional().describe("Who filed it"),
+          }).passthrough().openapi("InstantlyOpsDomainBlocklistRemovalRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    201: { description: "Recorded — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsDomainBlocklistRemovalResponse") } } },
+    400: { description: "Downstream rejected the body (missing domain or unknown list)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Not staff", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
