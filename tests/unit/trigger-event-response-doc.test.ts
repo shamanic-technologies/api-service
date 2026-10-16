@@ -28,4 +28,12 @@ describe("POST /v1/trigger-events documents the event it answers", () => {
     const body = resolve(doc.paths["/v1/offers/{offerId}/trigger-events"].get.responses["200"].content["application/json"].schema);
     expect(resolve(body.properties.events.items).properties).toHaveProperty("outcome");
   });
+
+  it("the request's person is identified by email OR an E.164 phone (phone-only allowed)", () => {
+    const body = resolve(doc.paths["/v1/trigger-events"].post.requestBody.content["application/json"].schema);
+    const person = resolve(body.properties.person);
+    expect(person.required ?? []).not.toContain("email");
+    expect(person.properties.phone.description).toMatch(/E\.164/);
+    expect(person.properties.phone.description).toMatch(/no `email`/);
+  });
 });

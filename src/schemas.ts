@@ -1672,12 +1672,16 @@ const ReportTriggerEventRequestSchema = z
     offerId: z.string().uuid().openapi({ description: "The brand's offer the occurrence is about." }),
     person: z
       .object({
-        email: z.string().email(),
+        email: z.string().email().optional().openapi({
+          description:
+            "The person's email. Optional when `phone` is given in E.164 form: one of the two is required (neither = 400 naming `person.email`, nothing recorded).",
+          example: "sam@employer.co.uk",
+        }),
         name: z.string().optional(),
         phone: z.string().optional().openapi({
           description:
-            "The person's phone number, international form preferred (e.g. `+447700900123`): it is also used to infer the person's timezone when you state none.",
-          example: "+447700900123",
+            "The person's phone number in E.164 form (`+` and country code, e.g. `+33612345678`; spaces and dashes are dropped). With no `email`, the phone alone identifies the person (e.g. someone who only gave their WhatsApp number): send `person: {phone, name?}`. It is also used to infer the person's timezone when you state none.",
+          example: "+33612345678",
         }),
         timezone: z.string().optional().openapi({
           description:
@@ -1687,7 +1691,7 @@ const ReportTriggerEventRequestSchema = z
       })
       .passthrough()
       .optional()
-      .openapi({ description: "Who the occurrence is about, by identity. Each campaign the trigger reaches files them as a lead of the brand and runs for them." }),
+      .openapi({ description: "Who the occurrence is about, by identity: `email`, or an E.164 `phone` when you have no email (one of the two is required). Each campaign the trigger reaches files them as a lead of the brand and runs for them." }),
     item: z
       .record(z.unknown())
       .optional()

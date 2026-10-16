@@ -125,6 +125,20 @@ describe("POST /v1/trigger-events", () => {
     expect(res.body).toEqual({ error: "no such trigger", reason: "unknown_trigger" });
   });
 
+  it("forwards a phone-only person (no email) byte-identical, no gateway 400 (WA-REACTIVE-LOOP-1016)", async () => {
+    const phoneOnly = {
+      triggerId: "whatsapp_number_given",
+      brandId: BRAND,
+      offerId: OFFER,
+      person: { phone: "+33612345678", name: "Camille" },
+    };
+    const res = await request(buildApp()).post("/v1/trigger-events").send(phoneOnly);
+    expect(res.status).toBe(201);
+    const { url, init } = campaignCall();
+    expect(new URL(url).pathname).toBe("/internal/trigger-events/public");
+    expect(init.body).toBe(JSON.stringify(phoneOnly));
+  });
+
   it("relays the 200 replay status", async () => {
     campaignAnswer = () => respond(200, '{"event":{"id":"e1"},"replayed":true}');
     const res = await request(buildApp()).post("/v1/trigger-events").send(BODY);
