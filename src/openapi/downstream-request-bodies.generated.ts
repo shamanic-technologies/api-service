@@ -1987,6 +1987,93 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
     "path": "/orgs/opportunities/next",
     "schema": null
   },
+  "POST /v1/orgs/people/corrections": {
+    "service": "crm-service",
+    "method": "POST",
+    "path": "/orgs/people/corrections",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "brandId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "tag_add",
+            "tag_remove",
+            "organization_add",
+            "organization_remove",
+            "domain_kind"
+          ]
+        },
+        "personId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "tag": {
+          "type": "string",
+          "enum": [
+            "personal_to_user",
+            "personal_not_to_user",
+            "professional_to_brand",
+            "professional_not_to_brand"
+          ]
+        },
+        "domain": {
+          "type": "string"
+        },
+        "companyId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "domainKind": {
+          "type": "string",
+          "enum": [
+            "mailbox_provider",
+            "organization"
+          ]
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "personal_to_user",
+              "personal_not_to_user",
+              "professional_to_brand",
+              "professional_not_to_brand"
+            ]
+          }
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "brandId",
+        "kind"
+      ]
+    }
+  },
+  "POST /v1/orgs/people/corrections/{correctionId}/undo": {
+    "service": "crm-service",
+    "method": "POST",
+    "path": "/orgs/people/corrections/{correctionId}/undo",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "brandId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "brandId"
+      ]
+    }
+  },
   "POST /v1/orgs/people/merges": {
     "service": "crm-service",
     "method": "POST",
