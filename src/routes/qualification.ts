@@ -14,6 +14,8 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
  *   PATCH  /v1/brands/:id/offers/:offerId/qualification/criteria/:criterionId → PATCH  …/criteria/:criterionId
  *   DELETE /v1/brands/:id/offers/:offerId/qualification/criteria/:criterionId → DELETE …/criteria/:criterionId
  *   POST   /v1/brands/:id/offers/:offerId/qualification/criteria/:criterionId/sample → POST …/criteria/:criterionId/sample
+ *   POST   /v1/brands/:id/offers/:offerId/qualification/previews             → POST   …/qualification/previews
+ *   GET    /v1/brands/:id/offers/:offerId/qualification/previews/:previewId  → GET    …/qualification/previews/:previewId
  *   GET    /v1/leads/:id/qualification                                       → GET    /orgs/leads/:id/qualification
  *
  * Criteria belong to an OFFER, so their routes sit beside the other offer routes
@@ -88,6 +90,11 @@ const OFFER_QUALIFICATION_ROUTES = [
   { method: "patch", path: "/qualification/criteria/:criterionId", suffix: (r: AuthenticatedRequest) => criterionSuffix(r), what: "update qualification criterion" },
   { method: "delete", path: "/qualification/criteria/:criterionId", suffix: (r: AuthenticatedRequest) => criterionSuffix(r), what: "archive qualification criterion" },
   { method: "post", path: "/qualification/criteria/:criterionId/sample", suffix: (r: AuthenticatedRequest) => criterionSuffix(r, "/sample"), what: "run qualification criterion on a sample" },
+  // The offer's enabled checks on sample companies that are not leads yet (signed-out onboarding). The POST
+  // spends and can take ~30s (lead-service waits ~25s on the run, then answers 202 "still running"): the
+  // service client's 300s default timeout covers it, no per-route override needed.
+  { method: "post", path: "/qualification/previews", suffix: () => "/previews", what: "run qualification checks on sample companies" },
+  { method: "get", path: "/qualification/previews/:previewId", suffix: (r: AuthenticatedRequest) => `/previews/${encodeURIComponent(r.params.previewId)}`, what: "get qualification preview" },
 ] as const;
 
 for (const route of OFFER_QUALIFICATION_ROUTES) {
