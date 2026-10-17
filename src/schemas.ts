@@ -16313,6 +16313,37 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/offers/{offerId}/qualification/previews",
+  tags: ["Leads"],
+  summary: "Run an offer's enabled qualification checks on sample companies that are not leads yet (spends)",
+  description:
+    "Pass-through to lead-service POST /orgs/brands/{brandId}/offers/{offerId}/qualification/previews. Body " +
+    "`{companies: [{domain, name}]}` (1..10) is forwarded verbatim. Spends on the org's behalf under a child run of " +
+    "the caller's run. Answers 200 when finished or 202 while still running (poll the GET on the returned preview id); " +
+    "both carry `{preview}`.",
+  security: authed,
+  request: { params: QualificationOfferParams, body: { content: { "application/json": { schema: QualificationPassthroughBody } } } },
+  responses: {
+    ...qualificationResponses(200, "Finished (downstream body, untouched)"),
+    202: { description: "Still running (downstream body, untouched)", content: { "application/json": { schema: QualificationResponseSchema } } },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}/qualification/previews/{previewId}",
+  tags: ["Leads"],
+  summary: "Read a qualification preview (never spends)",
+  description:
+    "Pass-through to lead-service GET /orgs/brands/{brandId}/offers/{offerId}/qualification/previews/{previewId}. " +
+    "404 `preview_not_found` forwarded verbatim.",
+  security: authed,
+  request: { params: QualificationOfferParams.extend({ previewId: z.string().describe("Preview ID") }) },
+  responses: qualificationResponses(200, "Downstream body, untouched"),
+});
+
+registry.registerPath({
   method: "get",
   path: "/v1/leads/{id}/qualification",
   tags: ["Leads"],

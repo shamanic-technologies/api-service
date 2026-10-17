@@ -51,6 +51,7 @@ const BRAND_ID = "75d7e3e8-6926-4f85-a557-976895400666";
 const OFFER_ID = "0d3d1f2c-8f4a-4a2e-9d1b-2f0f6a7c5b31";
 const CRITERION_ID = "5b1c2d3e-4f50-4a6b-8c7d-9e0f1a2b3c4d";
 const LEAD_ID = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d";
+const PREVIEW_ID = "3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f";
 const OFFER = `/brands/${BRAND_ID}/offers/${OFFER_ID}/qualification`;
 
 describe("qualification proxies", () => {
@@ -80,6 +81,8 @@ describe("qualification proxies", () => {
     { method: "patch", path: `${OFFER}/criteria/${CRITERION_ID}`, body: { enabled: false }, brand: true },
     { method: "delete", path: `${OFFER}/criteria/${CRITERION_ID}`, brand: true },
     { method: "post", path: `${OFFER}/criteria/${CRITERION_ID}/sample`, body: { limit: 5 }, brand: true },
+    { method: "post", path: `${OFFER}/previews`, body: { companies: [{ domain: "acme.com", name: "Acme" }], extra: 1 }, brand: true },
+    { method: "get", path: `${OFFER}/previews/${PREVIEW_ID}`, brand: true },
     { method: "get", path: `/leads/${LEAD_ID}/qualification?brandId=${BRAND_ID}&offerId=${OFFER_ID}`, brand: true },
   ];
 
@@ -119,6 +122,27 @@ describe("qualification proxies", () => {
     const res = await request(buildApp()).delete(`/v1${OFFER}/criteria/${CRITERION_ID}`);
     expect(res.status).toBe(404);
     expect(res.body).toEqual(refusal);
+  });
+
+  it("forwards a preview still running AS a 202 with its body", async () => {
+    const running = { preview: { id: PREVIEW_ID, status: "running", companies: [] } };
+    stub(202, running);
+    const res = await request(buildApp()).post(`/v1${OFFER}/previews`).send({ companies: [{ domain: "acme.com", name: "Acme" }] });
+    expect(res.status).toBe(202);
+    expect(res.body).toEqual(running);
+  });
+
+  it("forwards a 402 on the preview POST and a 404 preview_not_found on its GET verbatim", async () => {
+    const refusal = { error: "Insufficient credit", code: "insufficient_credit" };
+    stub(402, refusal);
+    let res = await request(buildApp()).post(`/v1${OFFER}/previews`).send({ companies: [{ domain: "acme.com", name: "Acme" }] });
+    expect(res.status).toBe(402);
+    expect(res.body).toEqual(refusal);
+    const missing = { error: "No preview with that id", code: "preview_not_found" };
+    stub(404, missing);
+    res = await request(buildApp()).get(`/v1${OFFER}/previews/${PREVIEW_ID}`);
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual(missing);
   });
 
   it("refuses an x-brand-id that disagrees with the path brand, without calling lead-service", async () => {
