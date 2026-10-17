@@ -15759,6 +15759,75 @@ registry.registerPath({
   },
 });
 
+// Corrections: a user corrects how the people were matched (a tag, a person's company, a domain verdict).
+const peopleCorrectionRefusal = { description: "Refused, crm-service's `{ type: \"refused\", reason, error }` forwarded verbatim", content: errorContent };
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/people/corrections",
+  tags: ["CRM Contacts"],
+  summary: "Correct a person's tag, company, or an email domain verdict",
+  description:
+    "Correct how distribute.you matched a brand's people. Proxy to crm-service POST /orgs/people/corrections, body forwarded verbatim. Kinds: `tag_add` / `tag_remove` `{ brandId, kind, personId, tag }` (one of the four connection tags: personal_to_user, personal_not_to_user, professional_to_brand, professional_not_to_brand); `organization_add` `{ brandId, kind, personId, domain (or website), tags? }` (the person speaks for that company) / `organization_remove` `{ brandId, kind, personId, companyId }`; `domain_kind` `{ brandId, kind, domain, domainKind: mailbox_provider | organization }` (a domain is a public mailbox, or a company). Optional `reason`. Your statement wins over the automatic answer until undone; a newer statement on the same thing replaces the older. A rebuild starts at once (about a minute). Same statement twice answers 200 with `duplicate: true` (201 for a new one). Refusals cross verbatim with their reason: 404 `person_not_found`, 422 `company_unresolved` / `tags_required`. Take it back with POST /v1/orgs/people/corrections/{correctionId}/undo. Requires x-user-id (recorded as who stated it). Response shape owned by crm-service.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: CrmPassthroughRequest } } } },
+  responses: {
+    201: { description: "Correction recorded, rebuild started (crm-service body verbatim)", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    200: { description: "Already stated (`duplicate: true`), same body", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: peopleCorrectionRefusal,
+    422: peopleCorrectionRefusal,
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/people/corrections",
+  tags: ["CRM Contacts"],
+  summary: "List the corrections stated on a brand's people",
+  description:
+    "Proxy to crm-service GET /orgs/people/corrections: every correction stated on the brand (tags, companies, domain verdicts), newest first, undone ones included, each with who stated it, when, and who undid it. The whole query string is forwarded byte-for-byte (`brandId` required downstream). Requires x-user-id. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery },
+  responses: {
+    200: { description: "Corrections as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/people/corrections/{correctionId}/undo",
+  tags: ["CRM Contacts"],
+  summary: "Undo a correction (the automatic answer applies again)",
+  description:
+    "Take back a correction stated with POST /v1/orgs/people/corrections. Proxy to crm-service POST /orgs/people/corrections/{correctionId}/undo, body `{ brandId }` forwarded verbatim. The automatic answer applies again from the rebuild that starts now. The correction stays listed with who undid it and when. Idempotent: undoing twice answers `duplicate: true`. An unknown correction is 404 `correction_not_found`, crm-service's body verbatim. Requires x-user-id. Response shape owned by crm-service.",
+  security: authed,
+  request: {
+    params: z.object({ correctionId: z.string() }),
+    body: { content: { "application/json": { schema: CrmPassthroughRequest } } },
+  },
+  responses: {
+    200: { description: "Undone, as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: peopleCorrectionRefusal,
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/people/organizations",
+  tags: ["CRM Contacts"],
+  summary: "List the companies a brand's people speak for, with their people and tags",
+  description:
+    "Proxy to crm-service GET /orgs/people/organizations (read-only): one row per company at least one person of the brand speaks for in a work role, most people first, with its people and the professional connection tags they carry (and how many carry each). Read off the last people build. The whole query string is forwarded byte-for-byte (`brandId` required downstream; `limit`, `offset` optional). Requires x-user-id. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmBrandIdQuery.passthrough() },
+  responses: {
+    200: { description: "Organizations as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
 // ===================================================================
 // Mailing Lists (proxy to transactional-email-service /mailing-lists/:slug/*)
 //

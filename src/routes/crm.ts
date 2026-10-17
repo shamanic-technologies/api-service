@@ -611,6 +611,71 @@ router.post("/orgs/people/merges/:mergeId/undo", ...orgUserChain, async (req: Au
   }
 });
 
+// ─── Corrections: a user corrects a tag, a person's company, a domain verdict ─
+// Same shape as the stated merges above: crm-service owns the statement, its
+// refusals (`{ type: "refused", … }` as 404 / 422) and the rebuild it kicks; the
+// status (201 new, 200 duplicate) and the body cross unchanged.
+
+// POST /v1/orgs/people/corrections → crm-service POST /orgs/people/corrections
+router.post("/orgs/people/corrections", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.crm,
+      "/orgs/people/corrections",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error) {
+    console.error("[api-service] Correct people error:", error);
+    respondUpstreamError(res, error, "Correct people error");
+  }
+});
+
+// GET /v1/orgs/people/corrections → crm-service GET /orgs/people/corrections
+router.get("/orgs/people/corrections", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.crm,
+      `/orgs/people/corrections${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] List people corrections error:", error);
+    respondUpstreamError(res, error, "List people corrections error");
+  }
+});
+
+// POST /v1/orgs/people/corrections/:correctionId/undo → crm-service POST /orgs/people/corrections/:correctionId/undo
+router.post("/orgs/people/corrections/:correctionId/undo", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.crm,
+      `/orgs/people/corrections/${encodeURIComponent(req.params.correctionId)}/undo`,
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error) {
+    console.error("[api-service] Undo people correction error:", error);
+    respondUpstreamError(res, error, "Undo people correction error");
+  }
+});
+
+// GET /v1/orgs/people/organizations → crm-service GET /orgs/people/organizations
+router.get("/orgs/people/organizations", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.crm,
+      `/orgs/people/organizations${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] List people organizations error:", error);
+    respondUpstreamError(res, error, "List people organizations error");
+  }
+});
+
 // ─── PostHog visits + Stripe payments + Clerk signups (read-only sources of the person thread)
 //
 // Same shape as the GoHighLevel connection routes above: the brand stores its

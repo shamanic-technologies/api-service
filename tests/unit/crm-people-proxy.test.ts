@@ -236,6 +236,91 @@ describe("/v1/orgs/people* → crm-service", () => {
     expect(calls).toHaveLength(0);
   });
 
+  const CORRECTION = "9e1f2a3b-4444-4c5d-8e6f-000000000004";
+
+  it("POST /orgs/people/corrections forwards the body verbatim + identity, passes 201 and body through", async () => {
+    reply = { status: 201, body: { correction: { correctionId: CORRECTION, kind: "tag_add" }, duplicate: false, rebuild: "started" } };
+    const body = { brandId: BRAND, kind: "tag_add", personId: P1, tag: "professional_to_brand", reason: "a client" };
+    const res = await request(buildApp()).post("/v1/orgs/people/corrections").send(body);
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual(reply.body);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/people/corrections`);
+    expect(calls[0].options.method).toBe("POST");
+    expect(JSON.parse(calls[0].options.body)).toEqual(body);
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("POST /orgs/people/corrections passes a 200 duplicate through unchanged", async () => {
+    reply = { status: 200, body: { correction: { correctionId: CORRECTION }, duplicate: true, rebuild: "not_needed" } };
+    const res = await request(buildApp()).post("/v1/orgs/people/corrections").send({ brandId: BRAND, kind: "tag_add", personId: P1, tag: "personal_to_user" });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(reply.body);
+  });
+
+  for (const [status, reason] of [[404, "person_not_found"], [422, "tags_required"], [422, "company_unresolved"], [400, "validation"]] as const) {
+    it(`POST /orgs/people/corrections returns crm-service's ${status} ${reason} refusal verbatim`, async () => {
+      reply = { status, body: { type: "refused", reason, error: `refused: ${reason}` } };
+      const res = await request(buildApp()).post("/v1/orgs/people/corrections").send({ brandId: BRAND, kind: "organization_add", personId: P1, domain: "acme.com" });
+      expect(res.status).toBe(status);
+      expect(res.body).toEqual({ type: "refused", reason, error: `refused: ${reason}` });
+    });
+  }
+
+  it("GET /orgs/people/corrections forwards the query string byte-for-byte + identity", async () => {
+    reply = { status: 200, body: { brandId: BRAND, corrections: [] } };
+    const res = await request(buildApp()).get(`/v1/orgs/people/corrections?brandId=${BRAND}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ brandId: BRAND, corrections: [] });
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/people/corrections?brandId=${BRAND}`);
+    expect(calls[0].options.method).toBe("GET");
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("POST /orgs/people/corrections/:correctionId/undo reaches its own downstream path, body verbatim", async () => {
+    reply = { status: 200, body: { correction: { correctionId: CORRECTION, undoneAt: "2026-10-17T12:00:00.000Z" }, duplicate: false, rebuild: "started" } };
+    const res = await request(buildApp()).post(`/v1/orgs/people/corrections/${CORRECTION}/undo`).send({ brandId: BRAND });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(reply.body);
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/people/corrections/${CORRECTION}/undo`);
+    expect(calls[0].options.method).toBe("POST");
+    expect(JSON.parse(calls[0].options.body)).toEqual({ brandId: BRAND });
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("POST /orgs/people/corrections/:correctionId/undo returns crm-service's 404 correction_not_found verbatim", async () => {
+    reply = { status: 404, body: { type: "refused", reason: "correction_not_found", error: "correction not found" } };
+    const res = await request(buildApp()).post(`/v1/orgs/people/corrections/${CORRECTION}/undo`).send({ brandId: BRAND });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ type: "refused", reason: "correction_not_found", error: "correction not found" });
+  });
+
+  it("GET /orgs/people/organizations forwards the query string byte-for-byte + identity", async () => {
+    reply = { status: 200, body: { brandId: BRAND, organizations: [{ companyId: CORRECTION, people: 2 }] } };
+    const res = await request(buildApp()).get(`/v1/orgs/people/organizations?brandId=${BRAND}&limit=5&offset=10`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(reply.body);
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/people/organizations?brandId=${BRAND}&limit=5&offset=10`);
+    expect(calls[0].options.method).toBe("GET");
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("refuses the correction + organization routes with no user identity, before reaching crm-service", async () => {
+    const app = buildApp();
+    const state = await request(app).post("/v1/orgs/people/corrections").set("x-test-no-user", "1").send({ brandId: BRAND, kind: "tag_add" });
+    const list = await request(app).get(`/v1/orgs/people/corrections?brandId=${BRAND}`).set("x-test-no-user", "1");
+    const undo = await request(app).post(`/v1/orgs/people/corrections/${CORRECTION}/undo`).set("x-test-no-user", "1").send({ brandId: BRAND });
+    const orgs = await request(app).get(`/v1/orgs/people/organizations?brandId=${BRAND}`).set("x-test-no-user", "1");
+    for (const res of [state, list, undo, orgs]) {
+      expect(res.status).toBe(401);
+      expect(res.body.error).toBe("User identity required");
+    }
+    expect(calls).toHaveLength(0);
+  });
+
   it("refuses every people route with no user identity, before reaching crm-service", async () => {
     const app = buildApp();
     const list = await request(app).get(`/v1/orgs/people?brandId=${BRAND}`).set("x-test-no-user", "1");
