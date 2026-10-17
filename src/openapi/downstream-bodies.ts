@@ -93,6 +93,8 @@ export const DOWNSTREAM_BODY_SOURCES: Record<string, DownstreamBodySource> = {
   "POST /v1/orgs/clerk/connections": { service: "crm-service", method: "POST", path: "/orgs/clerk/connections" },
   "PATCH /v1/orgs/clerk/connections/{id}": { service: "crm-service", method: "PATCH", path: "/orgs/clerk/connections/{id}" },
   "POST /v1/orgs/people/sync": { service: "crm-service", method: "POST", path: "/orgs/people/sync" },
+  "POST /v1/orgs/people/corrections": { service: "crm-service", method: "POST", path: "/orgs/people/corrections" },
+  "POST /v1/orgs/people/corrections/{correctionId}/undo": { service: "crm-service", method: "POST", path: "/orgs/people/corrections/{correctionId}/undo" },
   "POST /v1/orgs/people/merges": { service: "crm-service", method: "POST", path: "/orgs/people/merges" },
   "POST /v1/orgs/people/merges/{mergeId}/undo": { service: "crm-service", method: "POST", path: "/orgs/people/merges/{mergeId}/undo" },
   "POST /v1/brands/{id}/offers/{offerId}/qualification/suggestions": { service: "lead-service", method: "POST", path: "/orgs/brands/{brandId}/offers/{offerId}/qualification/suggestions" },
