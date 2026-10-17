@@ -420,6 +420,41 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       ]
     }
   },
+  "POST /v1/brands/{id}/offers/{offerId}/qualification/previews": {
+    "service": "lead-service",
+    "method": "POST",
+    "path": "/orgs/brands/{brandId}/offers/{offerId}/qualification/previews",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "companies": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "properties": {
+              "domain": {
+                "type": "string",
+                "minLength": 1
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "domain",
+              "name"
+            ]
+          }
+        }
+      },
+      "required": [
+        "companies"
+      ]
+    }
+  },
   "POST /v1/brands/{id}/offers/{offerId}/qualification/suggestions": {
     "service": "lead-service",
     "method": "POST",
