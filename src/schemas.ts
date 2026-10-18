@@ -1903,6 +1903,33 @@ registry.registerPath({
   },
 });
 
+const CampaignNextStepsResponseSchema = z.object({}).passthrough().openapi("CampaignNextStepsResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/next-steps",
+  tags: ["Campaigns"],
+  summary: "What comes next in one campaign: leads queued, when they go out, and the typical time to a positive reply",
+  description:
+    "Proxy to features-service GET /brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/next-steps. For one campaign " +
+    "(a sales funnel campaign id, or one of its pipes' campaign ids): `emailSendQueue` = leads whose first email waits in our " +
+    "email sender, follow-ups queued, and `firstEmailsFrom` = when the sending window next opens in each lead's own business " +
+    "hours (`sendWindow`); `timeToFirstPositiveReply` = the measured median days from a lead's first email to its first " +
+    "positive reply, on this campaign once it holds enough replies (`basis: campaign`), else the same pipes across every " +
+    "client (`basis: pipe_fleet`), else `learning: true` (say it is too early to tell). Since inception. Each part fails soft " +
+    "to a named null. The org is the authenticated one. Any query is forwarded verbatim. Status and body relayed verbatim.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string(), salesFunnelCampaignId: z.string() }),
+    query: z.object({}).passthrough(),
+  },
+  responses: {
+    200: { description: "The campaign's next steps", content: { "application/json": { schema: CampaignNextStepsResponseSchema } } },
+    404: { description: "sales_funnel_campaign_not_found or brand_not_found, forwarded verbatim", content: errorContent },
+    502: { description: "campaign-service unreadable, forwarded verbatim", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/sales-funnel-campaigns",
