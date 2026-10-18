@@ -498,6 +498,43 @@ router.get("/public/catalogue/faces/:file", async (req: Request, res: Response) 
 });
 
 /**
+ * GET /v1/public/indexes
+ * GET /v1/public/indexes/:slug
+ * Our public fleet indexes (e.g. the SCEO Cost Per Click Index: what our best proven
+ * cold email workflow pays for one website visit, recorded every day): the list with
+ * each index's latest value, and one index with its daily points. Proxied to
+ * features-service GET /public/indexes and GET /public/indexes/{slug}.
+ *
+ * Public at the producer, so public here (rule #3): no identity of any kind, the
+ * landing that reads them is anonymous. Status + body piped byte-for-byte (#10), so an
+ * unknown slug stays the producer's 404 `index_not_found`; query string verbatim (#11).
+ * No caching here: every read is the producer's current answer.
+ */
+router.get("/public/indexes", async (req: Request, res: Response) => {
+  try {
+    await pipeExternalService(externalServices.features, `/public/indexes${rawQueryString(req.originalUrl)}`, { expressRes: res });
+  } catch (error: any) {
+    console.error("[api-service] Public fleet indexes error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to get the public fleet indexes");
+  }
+});
+
+router.get("/public/indexes/:slug", async (req: Request, res: Response) => {
+  try {
+    await pipeExternalService(
+      externalServices.features,
+      `/public/indexes/${encodeURIComponent(req.params.slug)}${rawQueryString(req.originalUrl)}`,
+      { expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Public fleet index error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to get the public fleet index");
+  }
+});
+
+/**
  * GET /v1/public/sourcing-origins
  * The sourcing-origin catalogue: every place leads can come from (Apollo cold
  * filters, LinkedIn engagement signals, ...), the read that names the origins the
