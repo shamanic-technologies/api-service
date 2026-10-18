@@ -1599,4 +1599,33 @@ router.get(
   },
 );
 
+/**
+ * GET /v1/features/brands/:brandId/sales-funnel-campaigns/:salesFunnelCampaignId/next-steps
+ *   → features-service GET /brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/next-steps
+ *
+ * What comes next in one campaign (owner 2026-10-18, CAMPAIGN-NEXT-STEPS-1018), read by the Copilot and the MCP
+ * (`distribute_call_api`): leads queued in our email sender, when the sending window next opens in their business
+ * hours, and the measured time from a first email to a first positive reply, all served by features-service.
+ * Same auth and identity forwarding as the activity route above; query verbatim (#11); status and body relayed (#7).
+ */
+router.get(
+  "/features/brands/:brandId/sales-funnel-campaigns/:salesFunnelCampaignId/next-steps",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.features,
+        `/brands/${encodeURIComponent(req.params.brandId)}/sales-funnel-campaigns/${encodeURIComponent(req.params.salesFunnelCampaignId)}/next-steps${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("Failed to get campaign next steps:", error.message);
+      respondUpstreamError(res, error, "Failed to get campaign next steps");
+    }
+  },
+);
+
 export default router;
