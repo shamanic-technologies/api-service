@@ -639,6 +639,37 @@ registry.registerPath({
   },
 });
 
+const researchDocs: Array<{ path: string; downstream: string; summary: string; schema: string; query?: boolean }> = [
+  { path: "/v1/features/research", downstream: "/internal/research", summary: "Live Research file (staff only)", schema: "ResearchFileResponse", query: true },
+  { path: "/v1/features/research/conclusions", downstream: "/internal/research/conclusions", summary: "Live Research conclusion studies (staff only)", schema: "ResearchConclusionsResponse" },
+  { path: "/v1/features/research/studies", downstream: "/internal/research/studies", summary: "Live Research measured studies (staff only)", schema: "ResearchStudiesResponse" },
+];
+
+for (const doc of researchDocs) {
+  registry.registerPath({
+    method: "get",
+    path: doc.path,
+    tags: ["Features"],
+    summary: doc.summary,
+    description:
+      "features-service's live, fleet-wide Research studies for the staff Research page. The actual basis reveals margin, so staff-only: " +
+      "platform API key + a STAFF_EMAILS x-email, refused with 403 before any downstream call. No org context. " +
+      `Transparent proxy to features-service GET ${doc.downstream}; query forwarded verbatim; status and body owned by features-service ` +
+      "(503 research_not_computed_yet before its first build).",
+    security: platformAuth,
+    ...(doc.query
+      ? { request: { query: z.object({ basis: z.string().optional().openapi({ description: "user (billed) or actual (vendor cost). Documented today, not a whitelist." }) }).passthrough() } }
+      : {}),
+    responses: {
+      200: { description: "Research — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi(doc.schema) } } },
+      400: { description: "Invalid parameters", content: errorContent },
+      401: { description: "Unauthorized", content: errorContent },
+      403: { description: "Not staff", content: errorContent },
+      503: { description: "Research not computed yet", content: errorContent },
+    },
+  });
+}
+
 registry.registerPath({
   method: "get",
   path: "/v1/public/features/cost-per-outcome-lifetime",
