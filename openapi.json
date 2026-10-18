@@ -270,6 +270,18 @@
         "type": "object",
         "properties": {}
       },
+      "ResearchFileResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "ResearchConclusionsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "ResearchStudiesResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "PublicCostPerOutcomeLifetimeResponse": {
         "type": "object",
         "properties": {}
