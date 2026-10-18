@@ -779,6 +779,36 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/public/indexes",
+  tags: ["Features"],
+  summary: "Public fleet indexes",
+  description:
+    "Our public fleet indexes, for example the SCEO Cost Per Click Index (what our best proven cold email workflow pays for one website visit, recorded every day): each index with its latest value, status and day, plus the rule that sets a status. " +
+    "Proxied to features-service GET /public/indexes. The caller's query string is forwarded verbatim. Status and body are piped as is (producer-owned). No authentication required.",
+  responses: {
+    200: { description: "Fleet indexes — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicFleetIndexesResponse") } } },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/indexes/{slug}",
+  tags: ["Features"],
+  summary: "One public fleet index with its daily history",
+  description:
+    "One fleet index (slug from GET /v1/public/indexes) with its daily points (day, value, status). " +
+    "Proxied to features-service GET /public/indexes/{slug}. Status and body are piped as is: an unknown slug is the producer's 404 `index_not_found`. No authentication required.",
+  request: { params: z.object({ slug: z.string().openapi({ description: "Index slug, as listed by GET /v1/public/indexes" }) }) },
+  responses: {
+    200: { description: "One fleet index and its daily points — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicFleetIndexResponse") } } },
+    404: { description: "Unknown index slug (`index_not_found`)", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/public/sourcing-origins",
   tags: ["Features"],
   summary: "Public sourcing-origin catalogue",
