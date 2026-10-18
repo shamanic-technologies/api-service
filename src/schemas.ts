@@ -643,6 +643,8 @@ const researchDocs: Array<{ path: string; downstream: string; summary: string; s
   { path: "/v1/features/research", downstream: "/internal/research", summary: "Live Research file (staff only)", schema: "ResearchFileResponse", query: true },
   { path: "/v1/features/research/conclusions", downstream: "/internal/research/conclusions", summary: "Live Research conclusion studies (staff only)", schema: "ResearchConclusionsResponse" },
   { path: "/v1/features/research/studies", downstream: "/internal/research/studies", summary: "Live Research measured studies (staff only)", schema: "ResearchStudiesResponse" },
+  { path: "/v1/features/research/catalog", downstream: "/internal/research/catalog", summary: "Live Research catalogue: workflow, template and model pages per pipe (staff only)", schema: "ResearchCatalogResponse", query: true },
+  { path: "/v1/features/research/templates", downstream: "/internal/research/templates", summary: "Live Research template texts by template id (staff only)", schema: "ResearchTemplatesResponse" },
 ];
 
 for (const doc of researchDocs) {
