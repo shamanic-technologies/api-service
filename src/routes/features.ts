@@ -1024,6 +1024,41 @@ router.get(
 );
 
 /**
+ * GET /v1/features/research[/conclusions|/studies] — STAFF ONLY.
+ * features-service's live Research file (the staff Research page of dashboard v2): the whole
+ * file (`?basis=user|actual`; `actual` reveals our margin), the conclusion studies and the
+ * measured studies. Fleet-wide, so no org identity and requireOrg is deliberately absent;
+ * authenticatePlatform + requireStaff are network-free, so a non-staff caller is refused
+ * before any downstream call. Only the verified staff email is forwarded, for attribution.
+ *
+ * Byte passthroughs to features-service GET /internal/research[/conclusions|/studies]: query
+ * verbatim (#11), status + body piped (#10) — including the 503 `research_not_computed_yet`
+ * before the first build — errors field-for-field (#7). Declared BEFORE `/features/:slug/*`
+ * so `research` is never bound as a slug.
+ */
+const RESEARCH_ROUTES: Array<[string, string, string]> = [
+  ["/features/research", "/internal/research", "Failed to get the research file"],
+  ["/features/research/conclusions", "/internal/research/conclusions", "Failed to get the research conclusions"],
+  ["/features/research/studies", "/internal/research/studies", "Failed to get the research studies"],
+];
+
+for (const [path, downstream, fallback] of RESEARCH_ROUTES) {
+  router.get(path, authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.features,
+        `${downstream}${rawQueryString(req.originalUrl)}`,
+        { headers: staffHeaders(req), expressRes: res },
+      );
+    } catch (error: any) {
+      console.error(`[api-service] Staff research ${path} error:`, error.message);
+      if (res.headersSent) { res.end(); return; }
+      respondUpstreamError(res, error, fallback);
+    }
+  });
+}
+
+/**
  * GET /v1/features/:slug/pipeline-activity
  * 7-day pipeline activity for a brand. Forwards ALL query params (brandId, days, timezone,
  * pricing, …) transparently to features-service GET /features/:slug/pipeline-activity —
