@@ -282,6 +282,14 @@
         "type": "object",
         "properties": {}
       },
+      "ResearchCatalogResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "ResearchTemplatesResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "PublicCostPerOutcomeLifetimeResponse": {
         "type": "object",
         "properties": {}
