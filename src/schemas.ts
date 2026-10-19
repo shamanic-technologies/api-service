@@ -13172,6 +13172,31 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/orgs/leads/{leadId}/written-by",
+  tags: ["Features"],
+  summary: "Who wrote the messages sent to one lead",
+  description:
+    "For one person of the caller's org: on every message we sent on the org's behalf, which LLM wrote it (public name + vendor) " +
+    "and the plain lines of the tactics of the workflow version that wrote it, marked as being tested. " +
+    "Proxied to features-service GET /orgs/leads/{leadId}/written-by; the org is the authenticated one and the query is forwarded verbatim.",
+  security: authed,
+  request: {
+    params: z.object({ leadId: z.string().openapi({ example: "lead-uuid-123" }).describe("Lead id") }),
+    query: z.object({
+      campaignId: z.string().optional().describe("Narrow to one campaign"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Written-by entries", content: { "application/json": { schema: z.object({}).passthrough().openapi("WrittenByResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Lead not found", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/brands/{brandId}/contacted-value",
   tags: ["Features"],
   summary: "Brand contacted value",
