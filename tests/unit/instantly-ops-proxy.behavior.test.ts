@@ -49,6 +49,11 @@ const READS: Array<[string, string]> = [
   ["threads", "threads"],
   ["messages", "messages"],
   ["sent-per-period", "sent-per-period"],
+  ["placement-tests", "placement-tests"],
+  ["capacity-daily", "capacity-daily"],
+  ["schedule", "schedule"],
+  ["queued-steps", "queued-steps"],
+  ["placement-alerts", "placement-alerts"],
 ];
 
 describe("/v1/instantly/ops/* — over the wire", () => {
@@ -114,6 +119,44 @@ describe("/v1/instantly/ops/* — over the wire", () => {
     expect(calls[0].url).toBe(
       `${INSTANTLY_BASE}/internal/ops/sent-per-period?grain=day&since=2026-09-01T00%3A00%3A00Z`,
     );
+  });
+
+  it("forwards the monitoring filters verbatim (account / mailbox / domain / groupBy / horizonDays)", async () => {
+    await request(buildApp())
+      .get("/v1/instantly/ops/sent-per-period?grain=day&domain=x.com&groupBy=mailbox")
+      .set(STAFF);
+    await request(buildApp())
+      .get("/v1/instantly/ops/schedule?mailbox=a%40b.com&horizonDays=21&groupBy=domain")
+      .set(STAFF);
+    await request(buildApp())
+      .get("/v1/instantly/ops/queued-steps?account=a%40b.com&limit=50&cursor=c1")
+      .set(STAFF);
+
+    expect(calls.map((c) => c.url)).toEqual([
+      `${INSTANTLY_BASE}/internal/ops/sent-per-period?grain=day&domain=x.com&groupBy=mailbox`,
+      `${INSTANTLY_BASE}/internal/ops/schedule?mailbox=a%40b.com&horizonDays=21&groupBy=domain`,
+      `${INSTANTLY_BASE}/internal/ops/queued-steps?account=a%40b.com&limit=50&cursor=c1`,
+    ]);
+  });
+
+  it("GET placement-tests/:testId re-encodes the colon in a seed:<uuid> id and relays the body", async () => {
+    const payload = '{"testId":"seed:9b2c","seeds":[]}';
+    stub(200, payload);
+    const res = await request(buildApp())
+      .get("/v1/instantly/ops/placement-tests/seed%3A9b2c")
+      .set(STAFF);
+
+    expect(res.status).toBe(200);
+    expect(res.text).toBe(payload);
+    expect(calls[0].url).toBe(`${INSTANTLY_BASE}/internal/ops/placement-tests/seed%3A9b2c`);
+    expect(calls[0].options.headers["x-org-id"]).toBeUndefined();
+  });
+
+  it("GET placement-tests/:testId relays instantly-service's 404 for an unknown id", async () => {
+    stub(404, JSON.stringify({ error: "Placement test not found" }));
+    const res = await request(buildApp()).get("/v1/instantly/ops/placement-tests/seed%3Anope").set(STAFF);
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Placement test not found" });
   });
 
   it("hands back instantly-service's 400 when `limit` is missing on threads, body intact", async () => {

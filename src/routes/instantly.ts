@@ -322,6 +322,43 @@ registerOpsRead("messages", "messages");
 // GET /v1/instantly/ops/sent-per-period — emails sent per day/week/month by purpose
 // (to leads / manual replies / warmup / warmup replies / seeds); `grain` required downstream (staff only).
 registerOpsRead("sent-per-period", "sent per period");
+// Monitoring → Emails reads (instantly-service MAILBOX-MONITORING-1019): health of the
+// sending infra per account / mailbox / domain. Filters forwarded verbatim (staff only).
+// GET /v1/instantly/ops/placement-tests — placement tests, newest first.
+registerOpsRead("placement-tests", "placement tests");
+// GET /v1/instantly/ops/capacity-daily — capacity per day, past and future, plus the ramp plan.
+registerOpsRead("capacity-daily", "capacity per day");
+// GET /v1/instantly/ops/schedule — per day from today: planned warmups, placement tests, queued steps.
+registerOpsRead("schedule", "schedule");
+// GET /v1/instantly/ops/queued-steps — queued sequence steps at their theoretical date.
+registerOpsRead("queued-steps", "queued steps");
+// GET /v1/instantly/ops/placement-alerts — inbox-placement alert evaluations per provider + fired alerts.
+registerOpsRead("placement-alerts", "placement alerts");
+
+// GET /v1/instantly/ops/placement-tests/:testId — ONE placement test, each seed and where it
+// landed per inbox provider (staff only). The id carries a colon (`seed:<uuid>`), so it is
+// re-encoded like messages/:id/body. Declared after the literal `placement-tests` list.
+router.get(
+  "/instantly/ops/placement-tests/:testId",
+  authenticatePlatform,
+  requireStaff,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.instantly,
+        `/internal/ops/placement-tests/${encodeURIComponent(req.params.testId)}${rawQueryString(req.originalUrl)}`,
+        { headers: staffHeaders(req), expressRes: res },
+      );
+    } catch (error: any) {
+      console.error("[api-service] Staff instantly ops placement test error:", error.message);
+      if (res.headersSent) {
+        res.end();
+        return;
+      }
+      respondUpstreamError(res, error, "Failed to get instantly ops placement test");
+    }
+  },
+);
 
 // GET /v1/instantly/ops/messages/:id/body — the body of ONE message, read from its
 // bronze source (staff only). Declared after the literal `messages` sibling above;
