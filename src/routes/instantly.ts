@@ -406,6 +406,14 @@ registerStaffInternalCall("lead-source-yield", "GET", "", "read the lead-source 
 // POST /v1/instantly/ops/lead-source-yield/sync — copy lead-service's provenance now (staff only).
 registerStaffInternalCall("lead-source-yield", "POST", "/sync", "sync the lead provenance");
 
+// Deliverability monitors (instantly-service SENDER-HEALTH-1019, #1222): the stored daily
+// series behind the staff charts on admin.distribute.you. Same staff tier and byte
+// passthrough; the query string (`days`, `from`, `to`) is forwarded verbatim.
+// GET /v1/instantly/ops/seed-placement/daily — seed inbox % per day at Google, Microsoft 365, Outlook.com (staff only).
+registerStaffInternalCall("seed-placement", "GET", "/daily", "read the seed placement series");
+// GET /v1/instantly/ops/sender-health — mailboxes kept out of prospect mail per day, and why (staff only).
+registerStaffInternalCall("sender-health", "GET", "", "read the sender health series");
+
 // GET /v1/instantly/stats — fleet-wide email counters (sent, opened, replied…) with
 // no org scoping (staff only). Proxy to instantly-service GET /public/stats, which
 // sits behind its serviceAuth; query string forwarded verbatim, body piped.
