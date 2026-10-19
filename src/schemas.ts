@@ -10774,6 +10774,58 @@ registry.registerPath({
   },
 });
 
+const DELIVERABILITY_INTRO =
+  "Platform-scoped staff surface over instantly-service's deliverability monitors (cross-org ops data, NOT "
+  + "customer data). Powers the staff deliverability charts on admin.distribute.you. Staff-only (platform API "
+  + "key + STAFF_EMAILS x-email); no org context. ";
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/seed-placement/daily",
+  tags: ["Instantly"],
+  summary: "Get seed inbox placement per day at Google, Microsoft 365 and Outlook.com (staff only)",
+  description:
+    DELIVERABILITY_INTRO
+    + "Transparent byte passthrough to instantly-service GET /internal/seed-placement/daily (the stored "
+    + "seed_placement_daily series). The query string is forwarded verbatim. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({}).passthrough(),
+  },
+  responses: {
+    200: { description: "Seed placement series — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsSeedPlacementDailyResponse") } } },
+    400: { description: "Downstream rejected the query", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/sender-health",
+  tags: ["Instantly"],
+  summary: "Get the mailboxes kept out of prospect mail per day, and why (staff only)",
+  description:
+    DELIVERABILITY_INTRO
+    + "Transparent byte passthrough to instantly-service GET /internal/sender-health (the stored "
+    + "sender_health_daily series plus the latest tick's lists). The query string is forwarded verbatim; a bad "
+    + "`days` answers instantly-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Series window in days; instantly-service owns the default and bounds"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Sender health — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsSenderHealthResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/instantly/ops/messages/{id}/body",

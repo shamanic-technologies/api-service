@@ -141,6 +141,8 @@ const PLATFORM_OPERATIONS = [
   "post /v1/instantly/ops/domain-blocklist/removal-requests",
   "get /v1/instantly/ops/lead-source-yield",
   "post /v1/instantly/ops/lead-source-yield/sync",
+  "get /v1/instantly/ops/seed-placement/daily",
+  "get /v1/instantly/ops/sender-health",
   "put /internal/emails/templates",
   "get /v1/admin/brands",
   "get /v1/admin/brands/{brandId}/audience-snapshot",
