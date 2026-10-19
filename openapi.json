@@ -6514,6 +6514,14 @@
         "type": "object",
         "properties": {}
       },
+      "InstantlyOpsSeedPlacementDailyResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsSenderHealthResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "InstantlyOpsMessageBodyResponse": {
         "type": "object",
         "properties": {}
