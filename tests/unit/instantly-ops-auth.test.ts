@@ -30,6 +30,12 @@ const ROUTES = [
   "/v1/instantly/ops/messages?limit=10",
   "/v1/instantly/ops/messages/abc/body",
   "/v1/instantly/ops/sent-per-period?grain=month",
+  "/v1/instantly/ops/placement-tests?limit=10",
+  "/v1/instantly/ops/placement-tests/seed%3Aabc",
+  "/v1/instantly/ops/capacity-daily",
+  "/v1/instantly/ops/schedule",
+  "/v1/instantly/ops/queued-steps?limit=10",
+  "/v1/instantly/ops/placement-alerts",
 ];
 
 describe("/v1/instantly/ops/* — staff gate", () => {
