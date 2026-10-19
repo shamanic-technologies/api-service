@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate, authenticatePlatform, requireOrg, requireStaff, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
+import { requireStaffKeyOrPlatform } from "../middleware/staff-gate.js";
 import { callExternalService, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { ContentComposeRequestSchema } from "../schemas.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
@@ -191,5 +192,59 @@ router.put("/content/prompt-assignments", authenticatePlatform, requireStaff, au
     res.status(error.statusCode || 500).json({ error: error.message || "Failed to save prompt assignment" });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Staff catalogue status of templates and writer models + a template's last outputs
+// (TEMPLATE-MODEL-STATUS-1019) → content-generation-service `/internal/{models,templates}*`.
+// Fleet-wide, no org: the producer takes the API key only and leaves "who is staff" to this
+// gateway. Gate: a staff member's own key or the platform key + a staff x-email
+// (`requireStaffKeyOrPlatform`, `STAFF_KEY_OPERATIONS`). A deprecation here changes the status
+// only; stopping the workflows that use it is POST /v1/workflows/retire-by-content.
+// Status + body piped byte-for-byte (#10), errors field-for-field (#7), query verbatim (#11).
+// ---------------------------------------------------------------------------
+
+function rawQueryString(originalUrl: string): string {
+  const i = originalUrl.indexOf("?");
+  return i === -1 ? "" : originalUrl.slice(i);
+}
+
+async function pipeContentStaff(req: AuthenticatedRequest, res: import("express").Response, path: string, fallback: string) {
+  try {
+    await pipeExternalService(externalServices.emailgen, path, {
+      method: req.method === "PUT" ? "PUT" : "GET",
+      body: req.method === "PUT" ? req.body : undefined,
+      expressRes: res,
+    });
+  } catch (error: any) {
+    console.error(`[api-service] ${fallback}:`, error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, fallback);
+  }
+}
+
+/** GET /v1/content/models → GET /internal/models (every writer model alias + its status). */
+router.get("/content/models", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(req, res, "/internal/models", "Failed to list models"));
+
+/** PUT /v1/content/models/:model/status → PUT /internal/models/{model}/status `{status}`. */
+router.put("/content/models/:model/status", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(req, res, `/internal/models/${encodeURIComponent(req.params.model)}/status`, "Failed to set model status"));
+
+/** GET /v1/content/templates → GET /internal/templates (every template type + its status). */
+router.get("/content/templates", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(req, res, "/internal/templates", "Failed to list templates"));
+
+/** PUT /v1/content/templates/:type/status → PUT /internal/templates/{type}/status `{status}`. */
+router.put("/content/templates/:type/status", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(req, res, `/internal/templates/${encodeURIComponent(req.params.type)}/status`, "Failed to set template status"));
+
+/** GET /v1/content/templates/:type/outputs?limit= → GET /internal/templates/{type}/outputs (newest first, every org). */
+router.get("/content/templates/:type/outputs", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(
+    req,
+    res,
+    `/internal/templates/${encodeURIComponent(req.params.type)}/outputs${rawQueryString(req.originalUrl)}`,
+    "Failed to read template outputs",
+  ));
 
 export default router;
