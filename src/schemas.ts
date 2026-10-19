@@ -6564,8 +6564,9 @@ registry.registerPath({
   summary: "Set workflow dynasty status",
   description:
     "Activate or deprecate a workflow dynasty by its stable dynasty slug. Proxied verbatim to workflow-service. " +
-    "Deprecating hides the dynasty from selection; reactivating restores it.",
-  security: authed,
+    "Deprecating hides the dynasty from selection; reactivating restores it. Staff only: a dynasty is cross-org, " +
+    "so a distribute.you staff member's own key or the platform key with a staff x-email; any other key gets 403 `staff_only`.",
+  security: platformAuth,
   request: {
     params: z.object({
       workflowDynastySlug: z.string().openapi({ example: "sales-email-cold-outreach-sienna" }).describe("Stable dynasty slug"),
@@ -6585,6 +6586,7 @@ registry.registerPath({
     },
     400: { description: "Invalid request", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
     404: { description: "Workflow dynasty not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
@@ -6692,8 +6694,9 @@ registry.registerPath({
     "Deprecating stops that version running and stops it being offered to the pickers; the dynasty's " +
     "other versions are untouched. Re-activating is refused with 409 when another version of the same " +
     "dynasty is already active — the upstream body carries `existingWorkflowId` / `existingWorkflowSlug` " +
-    "and reaches the caller field-for-field.",
-  security: authed,
+    "and reaches the caller field-for-field. Staff only (a workflow is cross-org): a staff member's own key or " +
+    "the platform key with a staff x-email; any other key gets 403 `staff_only`.",
+  security: platformAuth,
   request: {
     params: z.object({
       id: z.string().uuid().openapi({ example: "3fa85f64-5717-4562-b3fc-2c963f66afa6" }).describe("Workflow version id"),
@@ -17580,5 +17583,150 @@ registry.registerPath({
     404: { description: "Unknown pipe or strategy (forwarded verbatim)", content: errorContent },
     409: { description: "`default_play_runs_nothing` (forwarded verbatim)", content: errorContent },
     502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Staff status of templates and writer models, a template's last outputs, and the
+// retire-by-content action that stops every workflow using one (TEMPLATE-MODEL-STATUS-1019).
+// ---------------------------------------------------------------------------
+
+const catalogueStatusNote =
+  "Staff only: a distribute.you staff member's own key, or the platform key with a staff x-email; any other key " +
+  "gets 403 `staff_only`. Cross-org: one status for every client. Byte passthrough, refusals forwarded verbatim.";
+
+const CatalogueStatusRequestSchema = z
+  .object({ status: z.string().describe("\"active\" or \"deprecated\". Validated by content-generation-service.") })
+  .passthrough()
+  .openapi("CatalogueStatusRequest");
+
+const catalogueStatusResponses = (what: string) => ({
+  200: { description: `${what} (pass-through from content-generation-service)`, content: { "application/json": { schema: z.object({}).passthrough() } } },
+  400: { description: "Missing or unknown status (forwarded verbatim)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  403: { description: "Not staff", content: errorContent },
+  404: { description: "Unknown model or template (forwarded verbatim)", content: errorContent },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/content/models",
+  tags: ["Content"],
+  summary: "Every writer model alias with its staff status (staff only)",
+  description: `${catalogueStatusNote} Proxies content-generation-service GET /internal/models. Answers \`{ models: [...] }\`.`,
+  security: platformAuth,
+  responses: {
+    200: { description: "All model aliases", content: { "application/json": { schema: z.object({}).passthrough().openapi("ContentModelStatusList") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/content/models/{model}/status",
+  tags: ["Content"],
+  summary: "Set a writer model's status, active or deprecated (staff only)",
+  description:
+    `${catalogueStatusNote} Proxies content-generation-service PUT /internal/models/{model}/status. Changes the status ` +
+    "only: a stored workflow using the model keeps writing with it. Stop those workflows with POST /v1/workflows/retire-by-content " +
+    "(`dryRun: true` first to list them). Re-activating brings no workflow back.",
+  security: platformAuth,
+  request: {
+    params: z.object({ model: z.string().describe("Model alias, e.g. `glm-pro`") }),
+    body: { content: { "application/json": { schema: CatalogueStatusRequestSchema } } },
+  },
+  responses: catalogueStatusResponses("Status set"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/content/templates",
+  tags: ["Content"],
+  summary: "Every stored template type with its staff status (staff only)",
+  description: `${catalogueStatusNote} Proxies content-generation-service GET /internal/templates. Answers \`{ templates: [...] }\`.`,
+  security: platformAuth,
+  responses: {
+    200: { description: "All templates", content: { "application/json": { schema: z.object({}).passthrough().openapi("ContentTemplateStatusList") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/content/templates/{type}/status",
+  tags: ["Content"],
+  summary: "Set a template's status, active or deprecated (staff only)",
+  description:
+    `${catalogueStatusNote} Proxies content-generation-service PUT /internal/templates/{type}/status. Changes the status ` +
+    "only: the template text is untouched and a stored workflow using it keeps rendering it. Stop those workflows with " +
+    "POST /v1/workflows/retire-by-content (`dryRun: true` first to list them). Re-activating brings no workflow back.",
+  security: platformAuth,
+  request: {
+    params: z.object({ type: z.string().describe("Template type, e.g. `cold-email-v59`") }),
+    body: { content: { "application/json": { schema: CatalogueStatusRequestSchema } } },
+  },
+  responses: catalogueStatusResponses("Status set"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/content/templates/{type}/outputs",
+  tags: ["Content"],
+  summary: "The last outputs written with a template, newest first (staff only)",
+  description:
+    `${catalogueStatusNote} Proxies content-generation-service GET /internal/templates/{type}/outputs, query string verbatim. ` +
+    "Every org; per output the subject, each email's text, when, workflow and model (never org/lead ids or the raw prompt). " +
+    "`limit` defaults to 5 at the producer.",
+  security: platformAuth,
+  request: {
+    params: z.object({ type: z.string().describe("Template type, e.g. `cold-email-v59`") }),
+    query: z.object({ limit: z.string().optional().describe("How many outputs (producer default 5, producer bounds)") }).passthrough(),
+  },
+  responses: {
+    200: { description: "Outputs", content: { "application/json": { schema: z.object({}).passthrough().openapi("ContentTemplateOutputs") } } },
+    400: { description: "Bad limit (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "No template of that type (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/workflows/retire-by-content",
+  tags: ["Workflows"],
+  summary: "Retire every workflow running a template or a model (staff only)",
+  description:
+    "Finds every RUNNABLE workflow (version active, dynasty active) whose content call renders `promptType` or writes with " +
+    "`model` (optionally narrowed by `featureSlug`) and retires each whole dynasty, exactly like " +
+    "PUT /v1/workflows/dynasty/{workflowDynastySlug}/status with `deprecated`. `dryRun: true` lists them and retires nothing: " +
+    "show that list before deprecating a template or model. No reverse: each workflow is re-activated by hand. Idempotent. " +
+    "Staff only: retiring stops the workflow for every client; a staff member's own key or the platform key with a staff " +
+    "x-email, any other key gets 403 `staff_only`. Byte passthrough to workflow-service POST /workflows/retire-by-content.",
+  security: platformAuth,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              promptType: z.string().optional().describe("Template type, e.g. `cold-email-v59` (give this or `model`)"),
+              model: z.string().optional().describe("Writer model alias, e.g. `glm-pro` (give this or `promptType`)"),
+              featureSlug: z.string().optional().describe("Only workflows of this feature"),
+              dryRun: z.boolean().optional().describe("true = list only, retire nothing"),
+            })
+            .passthrough()
+            .openapi("RetireWorkflowsByContentRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Workflows listed (dryRun) or retired (pass-through from workflow-service)", content: { "application/json": { schema: z.object({}).passthrough().openapi("RetireWorkflowsByContentResponse") } } },
+    400: { description: "Invalid body (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
   },
 });

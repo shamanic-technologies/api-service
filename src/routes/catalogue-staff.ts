@@ -1,5 +1,6 @@
 import { Router, type NextFunction, type Response } from "express";
 import { authenticatePlatform, authenticateUser, requireStaff, requireStaffActor, staffKeyEmail, AuthenticatedRequest } from "../middleware/auth.js";
+import { requireStaffKeyOrPlatform } from "../middleware/staff-gate.js";
 import { pipeExternalService, externalServices } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 
@@ -16,16 +17,7 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
 // byte-for-byte (#10), errors field-for-field (#7), query string verbatim (#11).
 const router = Router();
 
-/**
- * A Bearer key with no X-API-Key = a person's own key: staff only (`requireStaffActor`). Anything else
- * takes the platform path the dashboard has always used, which needs no identity headers.
- */
-function staffKeyOrPlatform(req: AuthenticatedRequest, res: Response, next: NextFunction) {
-  if (req.headers.authorization && !req.headers["x-api-key"]) {
-    return void authenticateUser(req, res, () => requireStaffActor(req, res, next));
-  }
-  return void authenticatePlatform(req, res, () => requireStaff(req, res, next));
-}
+const staffKeyOrPlatform = requireStaffKeyOrPlatform;
 
 /**
  * After `authenticateUser`: a CUSTOMER's own key (a `user_key` whose user is not staff) passes as a customer
