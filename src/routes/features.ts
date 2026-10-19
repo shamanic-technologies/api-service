@@ -1493,6 +1493,27 @@ router.get("/features/orgs/usage", authenticate, requireOrg, requireUser, async 
 });
 
 /**
+ * GET /v1/features/orgs/leads/:leadId/written-by — for one person of the caller's
+ * org, which LLM wrote each message we sent (public name + vendor) and the plain
+ * lines of the tactics being tested by the workflow version that wrote it.
+ * Transparent proxy to features-service GET /orgs/leads/{leadId}/written-by
+ * (query, e.g. campaignId, forwarded verbatim); the org is the AUTHENTICATED one.
+ */
+router.get("/features/orgs/leads/:leadId/written-by", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.features,
+      `/orgs/leads/${encodeURIComponent(String(req.params.leadId))}/written-by${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error: any) {
+    console.error("Failed to get lead written-by:", error.message);
+    respondUpstreamError(res, error, "Failed to get lead written-by");
+  }
+});
+
+/**
  * GET /v1/features/brands/:brandId/offers
  *
  * The brand grain's fourth read, and the one a brand Overview's offer table is
