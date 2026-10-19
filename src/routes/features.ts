@@ -1346,6 +1346,11 @@ const OFFER_ROUTES = [
   // and ROI, per campaign and in total. `pricing=gross|net` rides the raw query;
   // features-service owns the origins, the money and every refusal.
   { suffix: "sourcing", what: "offer sourcing" },
+  // Why a day costs what it costs (owner 2026-10-19, SPEND-CHARTS-1019): one point per day since
+  // inception, cost per outcome, conversion by entry cohort, Learning/maturity flags, what each
+  // day's spend bought per action and the expected values. `brandId`/`pricing` ride the raw query;
+  // features-service owns the chart and every refusal (400 brand_id_required, 404, 502).
+  { suffix: "spend-charts", what: "offer spend charts" },
 ] as const;
 
 // ── Brand grain ──────────────────────────────────────────────────────────────
@@ -1645,6 +1650,35 @@ router.get(
     } catch (error: any) {
       console.error("Failed to get campaign next steps:", error.message);
       respondUpstreamError(res, error, "Failed to get campaign next steps");
+    }
+  },
+);
+
+/**
+ * GET /v1/features/brands/:brandId/sales-funnel-campaigns/:salesFunnelCampaignId/spend-charts
+ *   → features-service GET /brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/spend-charts
+ *
+ * Why a day costs what it costs, for one campaign and each of its pipes (owner 2026-10-19, SPEND-CHARTS-1019), read by
+ * dashboard v2: one point per day since inception (cost per outcome, conversion by entry cohort, Learning/maturity
+ * flags, spend per action, expected values), all served by features-service. Same auth and identity forwarding as
+ * next-steps above; query verbatim (#11, `pricing`); status and body relayed (#7).
+ */
+router.get(
+  "/features/brands/:brandId/sales-funnel-campaigns/:salesFunnelCampaignId/spend-charts",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.features,
+        `/brands/${encodeURIComponent(req.params.brandId)}/sales-funnel-campaigns/${encodeURIComponent(req.params.salesFunnelCampaignId)}/spend-charts${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("Failed to get campaign spend charts:", error.message);
+      respondUpstreamError(res, error, "Failed to get campaign spend charts");
     }
   },
 );

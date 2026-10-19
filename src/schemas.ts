@@ -1930,6 +1930,35 @@ registry.registerPath({
   },
 });
 
+const CampaignSpendChartsResponseSchema = z.object({}).passthrough().openapi("CampaignSpendChartsResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/spend-charts",
+  tags: ["Campaigns"],
+  summary: "Daily spend and convergence charts of one campaign and each of its pipes",
+  description:
+    "Proxy to features-service GET /brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/spend-charts. Why a day " +
+    "costs what it costs and whether it is converging: one point per UTC day since the campaign's first activity, for the " +
+    "campaign and each of its pipes: the measured cost per outcome (served while Learning, flagged), the conversion by entry " +
+    "cohort (recent cohorts flagged not mature), the Learning flag, what the day's spend bought per action (new prospects, " +
+    "first contacts, follow-ups...) and the expected values the lines converge to. `pricing=net` = what the org pays " +
+    "(default gross). The org is the authenticated one. Any query is forwarded verbatim. Status and body relayed verbatim.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string(), salesFunnelCampaignId: z.string() }),
+    query: z.object({
+      pricing: z.string().optional().openapi({ example: "net" }).describe("gross | net — validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "The campaign's and its pipes' charts", content: { "application/json": { schema: CampaignSpendChartsResponseSchema } } },
+    400: { description: "pricing_unrecognised, forwarded verbatim", content: errorContent },
+    404: { description: "brand_not_found or sales_funnel_campaign_not_found, forwarded verbatim", content: errorContent },
+    502: { description: "A spend or people read failed, forwarded verbatim", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/sales-funnel-campaigns",
@@ -12891,6 +12920,34 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "Offer not found", content: errorContent },
     500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/offers/{offerId}/spend-charts",
+  tags: ["Features"],
+  summary: "Daily spend and convergence chart of one offer",
+  description:
+    "Why a day costs what it costs and whether it is converging, for one offer: one point per UTC day since its first activity, " +
+    "with the measured cost per outcome (served while Learning, flagged), the conversion by entry cohort (recent cohorts flagged " +
+    "not mature), the Learning flag, what the day's spend bought per action and the expected values. " +
+    "Proxied to features-service GET /offers/{offerId}/spend-charts. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("gross | net — validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer spend charts", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferSpendChartsResponse") } } },
+    400: { description: "brand_id_required or pricing_unrecognised, forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "brand_not_found or offer_has_no_campaigns, forwarded verbatim", content: errorContent },
+    502: { description: "A spend or people read failed, forwarded verbatim", content: errorContent },
   },
 });
 
