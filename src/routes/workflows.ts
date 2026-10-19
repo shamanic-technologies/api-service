@@ -207,6 +207,9 @@ router.get("/workflows/best", authenticate, requireOrg, requireUser, async (req:
  * of known parameters — workflow-service owns the filter vocabulary (a feature scope
  * among them), and a parameter it accepts must not need a gateway release to be reachable.
  *
+ * STAFF ONLY (`requireStaffActor`): a workflow version is cross-org, retiring it stops it for
+ * every client. Listed in `STAFF_KEY_OPERATIONS`.
+ *
  * Declared before `/workflows/:id`: Express matches a path parameter against any single
  * segment, so a later declaration would swallow this and send `dynasties` downstream as
  * a workflow id.
@@ -545,11 +548,39 @@ router.post("/workflows/:id/fork", authenticate, requireOrg, requireUser, async 
 });
 
 /**
+ * POST /v1/workflows/retire-by-content
+ * Retire every runnable workflow that renders a content-generation template (`promptType`)
+ * or writes with a model (`model`), optionally narrowed by `featureSlug`. `dryRun: true`
+ * lists them and retires nothing (the staff confirmation before a template/model deprecation,
+ * TEMPLATE-MODEL-STATUS-1019). Transparent byte proxy to workflow-service
+ * POST /workflows/retire-by-content; the body is the producer's to validate.
+ *
+ * STAFF ONLY (`requireStaffActor`): retiring a dynasty stops it for every client.
+ * Listed in `STAFF_KEY_OPERATIONS`.
+ */
+router.post("/workflows/retire-by-content", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.workflow,
+      "/workflows/retire-by-content",
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body, expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("Workflow retire-by-content error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to retire workflows by content");
+  }
+});
+
+/**
  * PUT /v1/workflows/dynasty/:workflowDynastySlug/status
  * Activate or deprecate a workflow dynasty. Transparent proxy to workflow-service
  * PUT /workflows/dynasty/{workflowDynastySlug}/status. Body + response forwarded verbatim.
+ *
+ * STAFF ONLY (`requireStaffActor`, TEMPLATE-MODEL-STATUS-1019): a dynasty is a cross-org
+ * catalogue object, deprecating it stops it for every client. Listed in `STAFF_KEY_OPERATIONS`.
  */
-router.put("/workflows/dynasty/:workflowDynastySlug/status", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.put("/workflows/dynasty/:workflowDynastySlug/status", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const { workflowDynastySlug } = req.params;
 
@@ -592,7 +623,7 @@ router.put("/workflows/dynasty/:workflowDynastySlug/status", authenticate, requi
  * these are distinct segment counts, but keeping the status routes together keeps
  * the dynasty/version pair readable.
  */
-router.put("/workflows/:id/status", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+router.put("/workflows/:id/status", authenticate, requireOrg, requireUser, requireStaffActor, async (req: AuthenticatedRequest, res) => {
   try {
     const { id } = req.params;
     if (!isUUID(id)) return res.status(400).json({ error: "Invalid workflow ID — expected a UUID" });
