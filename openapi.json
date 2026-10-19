@@ -6470,6 +6470,30 @@
         "type": "object",
         "properties": {}
       },
+      "InstantlyOpsPlacementTestsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsCapacityDailyResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsScheduleResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsQueuedStepsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsPlacementAlertsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "InstantlyOpsPlacementTestResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "InstantlyOpsDomainBlocklistResponse": {
         "type": "object",
         "properties": {}

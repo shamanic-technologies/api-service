@@ -10620,7 +10620,8 @@ registry.registerPath({
     + "Transparent byte passthrough to instantly-service GET /internal/ops/sent-per-period: every UTC period "
     + "from the first send (or `since`) to the current one, zeros included, with the count of emails sent per "
     + "purpose (toLeads, manualReplies, warmup, warmupReplies, seeds), distinct leads emailed, and `inProgress` "
-    + "on the current period. The query string is forwarded verbatim; the parameters below are the ones "
+    + "on the current period, optionally narrowed to one account / mailbox / domain or split per one (`groupBy`). "
+    + "The query string is forwarded verbatim; the parameters below are the ones "
     + "instantly-service documents today, not a whitelist. `grain` is REQUIRED downstream — omitting it "
     + "answers instantly-service's own 400. Response owned by the downstream service.",
   security: platformAuth,
@@ -10628,6 +10629,10 @@ registry.registerPath({
     query: z.object({
       grain: z.string().describe("REQUIRED downstream. day | week | month (UTC; a week starts Monday)"),
       since: z.string().optional().describe("ISO timestamp; the series starts at the period containing it"),
+      account: z.string().optional().describe("Sending address: only its sends"),
+      mailbox: z.string().optional().describe("Real mailbox login: only its sends"),
+      domain: z.string().optional().describe("Sending domain: only its sends"),
+      groupBy: z.string().optional().describe("Split each period per account | mailbox | domain"),
     }).passthrough(),
   },
   responses: {
@@ -10635,6 +10640,175 @@ registry.registerPath({
     400: { description: "Downstream rejected the query (e.g. `grain` missing)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+const MAILBOX_MONITORING_INTRO =
+  "Platform-scoped staff read over instantly-service's sending infra (cross-org ops data, NOT customer data). "
+  + "Powers dashboard v2 Monitoring > Emails: health per account, mailbox and domain. Staff-only (platform API "
+  + "key + STAFF_EMAILS x-email); no org context. ";
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/placement-tests",
+  tags: ["Instantly"],
+  summary: "List inbox placement tests, newest first (staff only)",
+  description:
+    MAILBOX_MONITORING_INTRO
+    + "Transparent byte passthrough to instantly-service GET /internal/ops/placement-tests: one row per placement test, optionally narrowed to one account / mailbox / domain. "
+    + "The query string is forwarded verbatim; the parameters below are the ones instantly-service documents "
+    + "today, not a whitelist. A bad value answers instantly-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      account: z.string().optional().describe("Sending address"),
+      mailbox: z.string().optional().describe("Real mailbox login"),
+      domain: z.string().optional().describe("Sending domain"),
+      limit: z.string().optional().describe("Page size; instantly-service owns the default and bounds"),
+      cursor: z.string().optional().describe("Opaque, from the previous page's nextCursor"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsPlacementTestsResponse") } } },
+    400: { description: "Downstream rejected the query", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/capacity-daily",
+  tags: ["Instantly"],
+  summary: "Get sending capacity per day, past and future, with the ramp plan (staff only)",
+  description:
+    MAILBOX_MONITORING_INTRO
+    + "Transparent byte passthrough to instantly-service GET /internal/ops/capacity-daily: capacity per day (measured past, projected future) and the ramp plan, fleet-wide or per account / mailbox / domain. "
+    + "The query string is forwarded verbatim; the parameters below are the ones instantly-service documents "
+    + "today, not a whitelist. A bad value answers instantly-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      account: z.string().optional().describe("Sending address"),
+      mailbox: z.string().optional().describe("Real mailbox login"),
+      domain: z.string().optional().describe("Sending domain"),
+      horizonDays: z.string().optional().describe("Days ahead; instantly-service owns the default and bounds"),
+      groupBy: z.string().optional().describe("Split each day per account | mailbox | domain"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsCapacityDailyResponse") } } },
+    400: { description: "Downstream rejected the query", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/schedule",
+  tags: ["Instantly"],
+  summary: "Get what is planned per day from today: warmups, placement tests, queued steps (staff only)",
+  description:
+    MAILBOX_MONITORING_INTRO
+    + "Transparent byte passthrough to instantly-service GET /internal/ops/schedule: per day from today, the planned warmups, planned placement tests and queued sequence steps at their theoretical date. "
+    + "The query string is forwarded verbatim; the parameters below are the ones instantly-service documents "
+    + "today, not a whitelist. A bad value answers instantly-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      account: z.string().optional().describe("Sending address"),
+      mailbox: z.string().optional().describe("Real mailbox login"),
+      domain: z.string().optional().describe("Sending domain"),
+      horizonDays: z.string().optional().describe("Days ahead; instantly-service owns the default and bounds"),
+      groupBy: z.string().optional().describe("Split each day per account | mailbox | domain"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsScheduleResponse") } } },
+    400: { description: "Downstream rejected the query", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/queued-steps",
+  tags: ["Instantly"],
+  summary: "List queued sequence steps with their theoretical send date (staff only)",
+  description:
+    MAILBOX_MONITORING_INTRO
+    + "Transparent byte passthrough to instantly-service GET /internal/ops/queued-steps: one row per queued sequence step with its theoretical send date. "
+    + "The query string is forwarded verbatim; the parameters below are the ones instantly-service documents "
+    + "today, not a whitelist. A bad value answers instantly-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      account: z.string().optional().describe("Sending address"),
+      mailbox: z.string().optional().describe("Real mailbox login"),
+      domain: z.string().optional().describe("Sending domain"),
+      limit: z.string().optional().describe("Page size; instantly-service owns the default and bounds"),
+      cursor: z.string().optional().describe("Opaque, from the previous page's nextCursor"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsQueuedStepsResponse") } } },
+    400: { description: "Downstream rejected the query", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/placement-alerts",
+  tags: ["Instantly"],
+  summary: "Get inbox-placement alert evaluations per provider and the alerts fired (staff only)",
+  description:
+    MAILBOX_MONITORING_INTRO
+    + "Transparent byte passthrough to instantly-service GET /internal/ops/placement-alerts: the inbox-placement alert evaluations per inbox provider and the alerts that fired. "
+    + "The query string is forwarded verbatim; the parameters below are the ones instantly-service documents "
+    + "today, not a whitelist. A bad value answers instantly-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({}).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsPlacementAlertsResponse") } } },
+    400: { description: "Downstream rejected the query", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/placement-tests/{testId}",
+  tags: ["Instantly"],
+  summary: "Get one inbox placement test: each seed and where it landed per provider (staff only)",
+  description:
+    MAILBOX_MONITORING_INTRO
+    + "Transparent byte passthrough to instantly-service GET /internal/ops/placement-tests/{testId}: one test, "
+    + "each seed and where it landed per inbox provider. The id carries a colon (`seed:<uuid>`) and is "
+    + "URL-encoded on the way down. An unknown id answers the downstream's own 404. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    params: z.object({
+      testId: z.string().describe("The test id from GET /v1/instantly/ops/placement-tests (e.g. seed:<uuid>)"),
+    }),
+  },
+  responses: {
+    200: { description: "Placement test — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsPlacementTestResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "No placement test with that id", content: errorContent },
     500: { description: "Upstream error", content: errorContent },
   },
 });
