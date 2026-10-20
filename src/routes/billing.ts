@@ -124,6 +124,28 @@ router.delete("/billing/accounts/monthly_charge_limit", authenticate, requireOrg
   monthlyChargeLimitProxy(req, res, "DELETE", "Failed to remove monthly charge limit")
 );
 
+// POST /v1/billing/accounts/pay_balance — "Pay $X now" on a postpaid account:
+// charges the saved card for exactly what the org owes. Pure pass-through of
+// billing-service POST /v1/accounts/pay_balance (no body, billing computes the
+// amount). Status AND body forwarded verbatim on every answer: 200
+// {charged_cents, account}; 402 charge_declined; 409 not_postpaid |
+// balance_below_minimum_charge | no_chargeable_payment_method |
+// card_not_chargeable_off_session (each with owed_cents); 429 charge_backoff;
+// 502 upstream_error; 404 no account. No account upsert and no retry here: a
+// charge is a write, the caller decides.
+router.post("/billing/accounts/pay_balance", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/pay_balance",
+      { method: "POST", headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to pay balance");
+  }
+});
+
 // Top-up minimums — the smallest top-up and the smallest auto-reload threshold
 // this org may set. billing-service owns the values, their offer defaults and the
 // refusals (400 `code` + `minimum_cents`, 404 `account_not_found`); both are
