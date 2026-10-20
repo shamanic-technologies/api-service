@@ -334,7 +334,9 @@ describe("Workflow dynasty status proxy", () => {
     // Forwards body + status code verbatim (passthrough)
     expect(block).toContain("callExternalServiceWithStatus");
     expect(block).toContain("res.status(status).json(data)");
-    expect(block).toContain("buildInternalHeaders(req)");
+    // Identity headers + the staff actor's x-email (DEPRECATION-REASON-1020);
+    // the wire behaviour is pinned in deprecation-reason.behavior.test.ts.
+    expect(block).toContain("deprecationActorHeaders(req)");
   });
 
   it("should use the same auth as other /workflows routes", () => {
