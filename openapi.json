@@ -9694,6 +9694,10 @@
           "status": {
             "type": "string",
             "description": "\"active\" or \"deprecated\". Validated by content-generation-service."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why. REQUIRED to deprecate (content-generation-service answers 400 `DEPRECATION_REASON_REQUIRED` without it). Who deprecated is recorded from the verified staff identity, never from the body."
           }
         },
         "required": [

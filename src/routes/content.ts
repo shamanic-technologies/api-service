@@ -201,6 +201,9 @@ router.put("/content/prompt-assignments", authenticatePlatform, requireStaff, au
 // (`requireStaffKeyOrPlatform`, `STAFF_KEY_OPERATIONS`). A deprecation here changes the status
 // only; stopping the workflows that use it is POST /v1/workflows/retire-by-content.
 // Status + body piped byte-for-byte (#10), errors field-for-field (#7), query verbatim (#11).
+// A status WRITE carries `x-staff-email` = the email the staff gate verified (`req.staffEmail`),
+// never a caller header or body value: the producer records who deprecated and refuses a
+// deprecation without it (DEPRECATION-REASON-1020); the body's `reason` is piped untouched.
 // ---------------------------------------------------------------------------
 
 function rawQueryString(originalUrl: string): string {
@@ -213,6 +216,7 @@ async function pipeContentStaff(req: AuthenticatedRequest, res: import("express"
     await pipeExternalService(externalServices.emailgen, path, {
       method: req.method === "PUT" ? "PUT" : "GET",
       body: req.method === "PUT" ? req.body : undefined,
+      headers: req.method === "PUT" && req.staffEmail ? { "x-staff-email": req.staffEmail } : undefined,
       expressRes: res,
     });
   } catch (error: any) {

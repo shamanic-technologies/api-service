@@ -112,6 +112,42 @@ describe("content-generation template / model status (staff)", () => {
     expect(calls[0].url).toBe(`${EMAILGEN_BASE}/internal/models/glm-pro/status`);
   });
 
+  it.each([
+    ["/v1/content/templates/cold-email-v59/status", "/internal/templates/cold-email-v59/status"],
+    ["/v1/content/models/glm-pro/status", "/internal/models/glm-pro/status"],
+  ] as const)("PUT %s carries the verified staff email as x-staff-email, body (reason) untouched", async (path, downstream) => {
+    stubUpstream(200, { status: "deprecated" });
+    const body = { status: "deprecated", reason: "Replies dropped after v59" };
+    const res = await staffPlatform(request(buildApp()).put(path))
+      .set("x-staff-email", "forged@evil.com")
+      .send({ ...body });
+    expect(res.status).toBe(200);
+    expect(calls[0].url).toBe(`${EMAILGEN_BASE}${downstream}`);
+    expect(calls[0].options.headers["x-staff-email"]).toBe(STAFF);
+    expect(JSON.parse(calls[0].options.body)).toEqual(body);
+  });
+
+  it("a staff key's deprecation carries the key user's stored email, not a caller header", async () => {
+    stubUpstream(200, { status: "deprecated" });
+    const res = await request(buildApp())
+      .put("/v1/content/templates/cold-email-v59/status")
+      .set("authorization", "Bearer distrib.usr_x")
+      .set("x-test-auth-type", "user_key")
+      .set("x-test-key-staff", "true")
+      .set("x-test-key-email", STAFF)
+      .set("x-staff-email", "forged@evil.com")
+      .set("x-email", "forged@evil.com")
+      .send({ status: "deprecated", reason: "r" });
+    expect(res.status).toBe(200);
+    expect(calls[0].options.headers["x-staff-email"]).toBe(STAFF);
+  });
+
+  it("GET reads carry no x-staff-email", async () => {
+    stubUpstream(200, { templates: [] });
+    await staffPlatform(request(buildApp()).get("/v1/content/templates"));
+    expect(calls[0].options.headers["x-staff-email"]).toBeUndefined();
+  });
+
   it("GET /v1/content/templates/:type/outputs forwards the query string verbatim", async () => {
     stubUpstream(200, { type: "cold-email-v59", outputs: [] });
     const res = await staffPlatform(request(buildApp()).get("/v1/content/templates/cold-email-v59/outputs?limit=5"));
