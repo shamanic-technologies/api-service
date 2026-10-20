@@ -7749,6 +7749,58 @@ for (const [method, summary, lead] of [
   });
 }
 
+// Pay balance — postpaid "Pay $X now". Pass-through to billing-service
+// POST /v1/accounts/pay_balance: no body, every refusal forwarded verbatim.
+const PayBalanceRefusalSchema = z.object({}).passthrough().openapi("PayBalanceRefusal");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/billing/accounts/pay_balance",
+  tags: ["Billing"],
+  summary: "Pay what a postpaid account owes now",
+  description:
+    "Charges the org's saved card, off-session, for exactly the amount the postpaid account owes " +
+    "(billing-service computes it; no body). Transparent proxy to billing-service " +
+    "POST /v1/accounts/pay_balance: status and body forwarded verbatim. Refusals carry a stable " +
+    "`code` and, where relevant, `owed_cents`: 402 `charge_declined`; 409 `not_postpaid`, " +
+    "`balance_below_minimum_charge`, `no_chargeable_payment_method`, `card_not_chargeable_off_session`; " +
+    "429 `charge_backoff`; 502 `upstream_error`; 404 no billing account. The gateway adds no retry.",
+  security: authed,
+  responses: {
+    200: {
+      description: "Charged — pass-through from billing-service (`{ charged_cents, account }`)",
+      content: {
+        "application/json": { schema: z.object({}).passthrough().openapi("PayBalanceResponse") },
+      },
+    },
+    401: { description: "Unauthorized", content: errorContent },
+    402: {
+      description: "Card declined, no money taken: `{ error, code: \"charge_declined\", owed_cents }`",
+      content: { "application/json": { schema: PayBalanceRefusalSchema } },
+    },
+    404: { description: "No billing account for this org (billing-service, verbatim)", content: errorContent },
+    409: {
+      description:
+        "Nothing charged: `code` is `not_postpaid`, `balance_below_minimum_charge`, " +
+        "`no_chargeable_payment_method` or `card_not_chargeable_off_session`; body carries `owed_cents`",
+      content: { "application/json": { schema: PayBalanceRefusalSchema } },
+    },
+    429: {
+      description:
+        "`code: \"charge_backoff\"` (billing holds off after a recent failed charge) or the gateway's own rate limiter",
+      headers: {
+        "Retry-After": { description: "Seconds to wait before retrying.", schema: { type: "integer" as const } },
+      },
+      content: { "application/json": { schema: PayBalanceRefusalSchema } },
+    },
+    500: { description: "Internal error", content: errorContent },
+    502: {
+      description: "`code: \"upstream_error\"` — no answer from the card processor; not a decline",
+      content: { "application/json": { schema: PayBalanceRefusalSchema } },
+    },
+  },
+});
+
 // Top-up minimums — the smallest top-up and auto-reload threshold this org may set.
 // Pass-through to billing-service /v1/accounts/topup_minimums. GET: any org member.
 // PUT: staff only (requireStaffActor), listed in STAFF_KEY_OPERATIONS.
