@@ -17596,13 +17596,22 @@ const catalogueStatusNote =
   "gets 403 `staff_only`. Cross-org: one status for every client. Byte passthrough, refusals forwarded verbatim.";
 
 const CatalogueStatusRequestSchema = z
-  .object({ status: z.string().describe("\"active\" or \"deprecated\". Validated by content-generation-service.") })
+  .object({
+    status: z.string().describe("\"active\" or \"deprecated\". Validated by content-generation-service."),
+    reason: z
+      .string()
+      .optional()
+      .describe(
+        "Why. REQUIRED to deprecate (content-generation-service answers 400 `DEPRECATION_REASON_REQUIRED` without it). " +
+          "Who deprecated is recorded from the verified staff identity, never from the body.",
+      ),
+  })
   .passthrough()
   .openapi("CatalogueStatusRequest");
 
 const catalogueStatusResponses = (what: string) => ({
   200: { description: `${what} (pass-through from content-generation-service)`, content: { "application/json": { schema: z.object({}).passthrough() } } },
-  400: { description: "Missing or unknown status (forwarded verbatim)", content: errorContent },
+  400: { description: "Missing or unknown status, or a deprecation without `reason` (forwarded verbatim)", content: errorContent },
   401: { description: "Unauthorized", content: errorContent },
   403: { description: "Not staff", content: errorContent },
   404: { description: "Unknown model or template (forwarded verbatim)", content: errorContent },
