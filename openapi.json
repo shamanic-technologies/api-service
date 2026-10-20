@@ -3959,6 +3959,32 @@
         "type": "object",
         "properties": {}
       },
+      "WorkflowDeprecation": {
+        "type": "object",
+        "nullable": true,
+        "properties": {
+          "reason": {
+            "type": "string",
+            "description": "Plain-language reason the workflow was deprecated ('Not specified' for deprecations recorded before reasons existed)"
+          },
+          "decidedBy": {
+            "type": "string",
+            "nullable": true,
+            "description": "Who decided: the staff member's email, else `user:<id>`; null for deprecations recorded before 2026-10-20"
+          },
+          "decidedAt": {
+            "type": "string",
+            "nullable": true,
+            "description": "When it was deprecated (ISO 8601); null for deprecations recorded before 2026-10-20"
+          }
+        },
+        "required": [
+          "reason",
+          "decidedBy",
+          "decidedAt"
+        ],
+        "description": "Why, by whom and when this workflow was deprecated; null when it is not deprecated. Owned by workflow-service."
+      },
       "WorkflowMetadata": {
         "type": "object",
         "properties": {
@@ -4027,6 +4053,9 @@
               "deprecated"
             ],
             "description": "Dynasty lifecycle status. 'deprecated' workflows are hidden from selection. Owned by workflow-service."
+          },
+          "deprecation": {
+            "$ref": "#/components/schemas/WorkflowDeprecation"
           }
         },
         "required": [
@@ -4733,13 +4762,22 @@
               "deprecated"
             ],
             "description": "New lifecycle status for the workflow dynasty."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Plain-language reason for deprecating, shown to staff on the workflow later (e.g. 'Spam complaints above 0.3% on Gmail'). Forwarded verbatim to workflow-service, which owns whether it is required."
+          },
+          "decidedBy": {
+            "type": "string",
+            "description": "Who decided the deprecation, when it is not the caller. Absent = workflow-service records the authenticated staff member's email, which this gateway forwards as `x-email`."
           }
         },
         "required": [
           "status"
         ],
         "example": {
-          "status": "deprecated"
+          "status": "deprecated",
+          "reason": "Spam complaints above 0.3% on Gmail"
         }
       },
       "WorkflowSummariesResponse": {
@@ -4761,13 +4799,22 @@
             "type": "string",
             "minLength": 1,
             "description": "New per-version lifecycle status, e.g. 'active' or 'deprecated'. The vocabulary is workflow-service's; the gateway forwards the body verbatim and does not validate it."
+          },
+          "reason": {
+            "type": "string",
+            "description": "Plain-language reason for deprecating, shown to staff on the workflow later (e.g. 'Spam complaints above 0.3% on Gmail'). Forwarded verbatim to workflow-service, which owns whether it is required."
+          },
+          "decidedBy": {
+            "type": "string",
+            "description": "Who decided the deprecation, when it is not the caller. Absent = workflow-service records the authenticated staff member's email, which this gateway forwards as `x-email`."
           }
         },
         "required": [
           "status"
         ],
         "example": {
-          "status": "deprecated"
+          "status": "deprecated",
+          "reason": "Replaced by v4, which books more meetings"
         }
       },
       "UpdateWorkflowResponse": {
@@ -9687,6 +9734,14 @@
           "dryRun": {
             "type": "boolean",
             "description": "true = list only, retire nothing"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Plain-language reason for deprecating, shown to staff on the workflow later (e.g. 'Spam complaints above 0.3% on Gmail'). Forwarded verbatim to workflow-service, which owns whether it is required."
+          },
+          "decidedBy": {
+            "type": "string",
+            "description": "Who decided the deprecation, when it is not the caller. Absent = workflow-service records the authenticated staff member's email, which this gateway forwards as `x-email`."
           }
         }
       }
