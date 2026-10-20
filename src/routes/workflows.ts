@@ -548,6 +548,20 @@ router.post("/workflows/:id/fork", authenticate, requireOrg, requireUser, async 
 });
 
 /**
+ * Identity headers for the three deprecation doors, plus the staff actor's email as `x-email`
+ * (DEPRECATION-REASON-1020): workflow-service records it as `decidedBy` when the body names
+ * nobody, so "decided by" on a deprecated workflow reads as a person, not a bare user id.
+ * `req.staffEmail` is set by `requireStaffActor` from an authenticated source (the key user's
+ * stored email, or the platform caller's allowlisted x-email), never a body value. The body
+ * (`reason`, `decidedBy`) is forwarded verbatim; workflow-service owns whether a reason is required.
+ */
+function deprecationActorHeaders(req: AuthenticatedRequest): Record<string, string> {
+  const headers = buildInternalHeaders(req);
+  if (req.staffEmail) headers["x-email"] = req.staffEmail;
+  return headers;
+}
+
+/**
  * POST /v1/workflows/retire-by-content
  * Retire every runnable workflow that renders a content-generation template (`promptType`)
  * or writes with a model (`model`), optionally narrowed by `featureSlug`. `dryRun: true`
@@ -563,7 +577,7 @@ router.post("/workflows/retire-by-content", authenticate, requireOrg, requireUse
     await pipeExternalService(
       externalServices.workflow,
       "/workflows/retire-by-content",
-      { method: "POST", headers: buildInternalHeaders(req), body: req.body, expressRes: res },
+      { method: "POST", headers: deprecationActorHeaders(req), body: req.body, expressRes: res },
     );
   } catch (error: any) {
     console.error("Workflow retire-by-content error:", error.message);
@@ -597,7 +611,7 @@ router.put("/workflows/dynasty/:workflowDynastySlug/status", authenticate, requi
       `/workflows/dynasty/${encodeURIComponent(workflowDynastySlug)}/status`,
       {
         method: "PUT",
-        headers: buildInternalHeaders(req),
+        headers: deprecationActorHeaders(req),
         body: parsed.data,
       },
     );
@@ -633,7 +647,7 @@ router.put("/workflows/:id/status", authenticate, requireOrg, requireUser, requi
       `/workflows/${id}/status`,
       {
         method: "PUT",
-        headers: buildInternalHeaders(req),
+        headers: deprecationActorHeaders(req),
         body: req.body,
       },
     );

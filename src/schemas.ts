@@ -395,6 +395,34 @@ const auditRevenueQueryParams = z.object({
   months: z.coerce.number().int().optional().openapi({ example: 12 }).describe("Trailing months in the monthly revenue series. Optional; downstream default applies."),
 });
 
+// Why a workflow was deprecated, who decided and when (DEPRECATION-REASON-1020). Owned by
+// workflow-service; documented here so staff reading a deprecated workflow know the block exists.
+const WorkflowDeprecationSchema = z
+  .object({
+    reason: z.string().describe("Plain-language reason the workflow was deprecated ('Not specified' for deprecations recorded before reasons existed)"),
+    decidedBy: z.string().nullable().describe("Who decided: the staff member's email, else `user:<id>`; null for deprecations recorded before 2026-10-20"),
+    decidedAt: z.string().nullable().describe("When it was deprecated (ISO 8601); null for deprecations recorded before 2026-10-20"),
+  })
+  .passthrough()
+  .nullable()
+  .describe("Why, by whom and when this workflow was deprecated; null when it is not deprecated. Owned by workflow-service.")
+  .openapi("WorkflowDeprecation");
+
+const deprecationReasonField = z
+  .string()
+  .optional()
+  .describe(
+    "Plain-language reason for deprecating, shown to staff on the workflow later (e.g. 'Spam complaints above 0.3% on Gmail'). " +
+    "Forwarded verbatim to workflow-service, which owns whether it is required.",
+  );
+const deprecationDecidedByField = z
+  .string()
+  .optional()
+  .describe(
+    "Who decided the deprecation, when it is not the caller. Absent = workflow-service records the authenticated staff " +
+    "member's email, which this gateway forwards as `x-email`.",
+  );
+
 const WorkflowMetadataSchema = z
   .object({
     id: z.string().describe("Workflow ID"),
@@ -412,6 +440,7 @@ const WorkflowMetadataSchema = z
     signature: z.string().describe("SHA-256 hash of the canonical DAG"),
     workflowDynastySignatureName: z.string().describe("Human-readable name for this DAG variant within the dynasty"),
     status: z.enum(["active", "deprecated"]).optional().describe("Dynasty lifecycle status. 'deprecated' workflows are hidden from selection. Owned by workflow-service."),
+    deprecation: WorkflowDeprecationSchema.optional(),
   })
   .passthrough()
   .openapi("WorkflowMetadata");
@@ -6421,8 +6450,11 @@ export const UpdateWorkflowRequestSchema = z
 export const WorkflowDynastyStatusRequestSchema = z
   .object({
     status: z.enum(["active", "deprecated"]).describe("New lifecycle status for the workflow dynasty."),
+    reason: deprecationReasonField,
+    decidedBy: deprecationDecidedByField,
   })
-  .openapi("WorkflowDynastyStatusRequest", { example: { status: "deprecated" } });
+  .passthrough()
+  .openapi("WorkflowDynastyStatusRequest", { example: { status: "deprecated", reason: "Spam complaints above 0.3% on Gmail" } });
 
 const workflowPromptEditDescription =
   "STAFF ONLY: requires the platform API key AND an x-email in the STAFF_EMAILS allowlist, on top of " +
@@ -6679,9 +6711,11 @@ export const WorkflowStatusRequestSchema = z
       "New per-version lifecycle status, e.g. 'active' or 'deprecated'. The vocabulary is " +
       "workflow-service's; the gateway forwards the body verbatim and does not validate it.",
     ),
+    reason: deprecationReasonField,
+    decidedBy: deprecationDecidedByField,
   })
   .passthrough()
-  .openapi("WorkflowStatusRequest", { example: { status: "deprecated" } });
+  .openapi("WorkflowStatusRequest", { example: { status: "deprecated", reason: "Replaced by v4, which books more meetings" } });
 
 registry.registerPath({
   method: "put",
@@ -17716,6 +17750,8 @@ registry.registerPath({
               model: z.string().optional().describe("Writer model alias, e.g. `glm-pro` (give this or `promptType`)"),
               featureSlug: z.string().optional().describe("Only workflows of this feature"),
               dryRun: z.boolean().optional().describe("true = list only, retire nothing"),
+              reason: deprecationReasonField,
+              decidedBy: deprecationDecidedByField,
             })
             .passthrough()
             .openapi("RetireWorkflowsByContentRequest"),
