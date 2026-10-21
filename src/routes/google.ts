@@ -8,7 +8,8 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
  * Transparent proxy of google-service's org-scoped Google CRM surface
  * (`/orgs/google/*`): connecting a Gmail mailbox (OAuth start/callback), listing
  * and disconnecting connected mailboxes, the async sync job, and the mirror reads
- * (messages, contacts, conversation, correspondents, contact links).
+ * (messages, contacts, conversation, correspondents, contact links), plus
+ * listing and disconnecting a connected Google Calendar (`/orgs/google/calendar/accounts`).
  *
  * Removed in #808 while google-service ran nowhere; restored once it was deployed
  * to the box (2026-08-26). Connecting a mailbox is a self-serve feature for every
@@ -28,7 +29,8 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
  * through `buildInternalHeaders` (the authenticated org, never a caller-named one).
  * Nothing here talks to Google itself.
  *
- * google-service's `/internal/*` routes (the staff exchange read) are deliberately
+ * google-service's `/internal/*` routes (the staff exchange read, the
+ * `/internal/calendar/events` feed for crm-service) are deliberately
  * NOT proxied (rule #3).
  */
 const router = Router();
@@ -91,6 +93,29 @@ router.delete("/orgs/google/accounts/:email", ...orgUserChain, (req: Authenticat
     `/orgs/google/accounts/${encodeURIComponent(req.params.email)}`,
     "DELETE",
     "Disconnect Google account",
+  ),
+);
+
+// GET /v1/orgs/google/calendar/accounts → google-service GET /orgs/google/calendar/accounts
+router.get("/orgs/google/calendar/accounts", ...orgUserChain, (req: AuthenticatedRequest, res) =>
+  forward(
+    req,
+    res,
+    `/orgs/google/calendar/accounts${rawQueryString(req.originalUrl)}`,
+    "GET",
+    "List Google calendars",
+  ),
+);
+
+// DELETE /v1/orgs/google/calendar/accounts/:email → google-service DELETE /orgs/google/calendar/accounts/:email
+// 404 `calendar_not_found` and 502 `google_revoke_failed` reach the caller with their body.
+router.delete("/orgs/google/calendar/accounts/:email", ...orgUserChain, (req: AuthenticatedRequest, res) =>
+  forward(
+    req,
+    res,
+    `/orgs/google/calendar/accounts/${encodeURIComponent(req.params.email)}`,
+    "DELETE",
+    "Disconnect Google calendar",
   ),
 );
 

@@ -116,6 +116,49 @@ describe("/v1/orgs/google/* → google-service", () => {
     expect(calls[0].url).toBe(`${GOOGLE_BASE}/orgs/google/accounts/..%2F..%2Finternal%2Fx`);
   });
 
+  it("GET calendar/accounts forwards path, method, identity; returns the upstream body", async () => {
+    next.body = { calendars: [{ email: "a@b.com", extra: 1 }] };
+    const res = await request(buildApp()).get("/v1/orgs/google/calendar/accounts");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(next.body);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${GOOGLE_BASE}/orgs/google/calendar/accounts`);
+    expect(calls[0].options.method).toBe("GET");
+    expect(calls[0].options.body).toBeUndefined();
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+    expect(calls[0].options.headers["x-run-id"]).toBe("run_test789");
+  });
+
+  it("GET calendar/accounts 502 body reaches the caller verbatim", async () => {
+    next = { status: 502, body: { error: "Google down", reason: "google_unavailable" } };
+    const res = await request(buildApp()).get("/v1/orgs/google/calendar/accounts");
+    expect(res.status).toBe(502);
+    expect(res.body).toEqual({ error: "Google down", reason: "google_unavailable" });
+  });
+
+  it("DELETE calendar/accounts/:email forwards path, method, identity; email one encoded segment", async () => {
+    next.body = { disconnected: true, email: "kevin+x@distribute.you", grant: "revoked" };
+    const res = await request(buildApp()).delete("/v1/orgs/google/calendar/accounts/kevin%2Bx%40distribute.you");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(next.body);
+    expect(calls[0].url).toBe(`${GOOGLE_BASE}/orgs/google/calendar/accounts/kevin%2Bx%40distribute.you`);
+    expect(calls[0].options.method).toBe("DELETE");
+    expect(calls[0].options.body).toBeUndefined();
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it.each([
+    [404, { error: "Calendar not found", reason: "calendar_not_found" }],
+    [502, { error: "Google revoke failed", reason: "google_revoke_failed" }],
+  ])("DELETE calendar/accounts/:email relays %i with its body", async (status, body) => {
+    next = { status, body };
+    const res = await request(buildApp()).delete("/v1/orgs/google/calendar/accounts/nobody%40x.com");
+    expect(res.status).toBe(status);
+    expect(res.body).toEqual(body);
+  });
+
   it("POST sync relays the 202 status, not a normalised 200", async () => {
     next = { status: 202, body: { jobId: "j1", status: "running" } };
     const res = await request(buildApp()).post("/v1/orgs/google/sync").send({});
