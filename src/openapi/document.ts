@@ -400,6 +400,12 @@ export const STAFF_KEY_OPERATIONS = new Set<string>([
   "GET /v1/content/templates",
   "PUT /v1/content/templates/{type}/status",
   "GET /v1/content/templates/{type}/outputs",
+  "POST /v1/content/platform-prompts",
+  "GET /v1/content/template-dynasties",
+  "POST /v1/content/template-dynasties",
+  "GET /v1/content/template-dynasties/{slug}",
+  "GET /v1/content/template-dynasties/{slug}/head",
+  "POST /v1/content/template-dynasties/{slug}/versions",
 ]);
 
 export const STAFF_KEY_TAG = "Staff (key)";

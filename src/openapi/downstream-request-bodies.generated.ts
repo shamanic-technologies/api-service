@@ -429,25 +429,23 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       "properties": {
         "companies": {
           "type": "array",
-          "minItems": 1,
-          "maxItems": 10,
           "items": {
             "type": "object",
             "properties": {
               "domain": {
-                "type": "string",
-                "minLength": 1
+                "type": "string"
               },
               "name": {
-                "type": "string",
-                "minLength": 1
+                "type": "string"
               }
             },
             "required": [
               "domain",
               "name"
             ]
-          }
+          },
+          "minItems": 1,
+          "maxItems": 10
         }
       },
       "required": [
@@ -639,7 +637,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
             "gpt-sol",
             "gpt-terra"
           ],
-          "description": "LLM model to generate with (version-free alias). Provider is derived automatically: anthropic → haiku | sonnet | opus; google → flash-lite | flash | flash-pro | pro; deepseek → deepseek-flash (DeepSeek V4 Flash) | deepseek-pro (DeepSeek V4 Pro); zai → glm-flash (glm-4.7-flashx) | glm-pro (glm-5.2); moonshot → kimi-flash (kimi-k2.6) | kimi-pro (kimi-k3). The six deepseek/zai/moonshot aliases are called directly on each vendor's OpenAI-compatible API. That path is text-only, which this service never exceeds; note that JSON-mode enforcement there is best-effort (fails loud rather than degrading), and a vendor whose account is out of credit answers 429 — surfaced as an error naming the provider, never silently rerouted to another vendor. Omit to use the default 'pro' (google) — unchanged from before this field existed."
+          "description": "LLM model to generate with (version-free alias). Provider is derived automatically: anthropic → haiku | sonnet | opus; google → flash-lite | flash | flash-pro | pro; deepseek → deepseek-flash (DeepSeek V4 Flash) | deepseek-pro (DeepSeek V4 Pro); zai → glm-flash (glm-4.7-flashx) | glm-pro (glm-5.2); moonshot → kimi-flash (kimi-k2.6) | kimi-pro (kimi-k3). The six deepseek/zai/moonshot aliases are called directly on each vendor's OpenAI-compatible API. That path is text-only, which this service never exceeds; note that JSON-mode enforcement there is best-effort (fails loud rather than degrading), and a vendor whose account is out of credit answers 429 — surfaced as an error naming the provider, never silently rerouted to another vendor. Omit to use the default 'pro' (google) — unchanged from before this field existed. Every alias stays accepted here whatever its staff status: a NEW workflow must not name one whose status is `deprecated` on GET /internal/models, but a stored workflow that does keeps generating."
         },
         "brandIds": {
           "type": "array",
@@ -663,6 +661,50 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         }
       },
       "required": [
+        "variables"
+      ]
+    }
+  },
+  "POST /v1/content/platform-prompts": {
+    "service": "content-generation-service",
+    "method": "POST",
+    "path": "/platform-prompts",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Unique prompt identifier, e.g. 'cold-email' or 'welcome-email'"
+        },
+        "prompt": {
+          "type": "string",
+          "description": "Prompt template text with {{variable}} placeholders. Must NOT contain company-specific data — only {{variables}}."
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Variable name as referenced in the prompt body via {{name}}."
+              },
+              "description": {
+                "type": "string",
+                "description": "Free-form description of what the caller should put for this variable. Caller decides the JSON shape — string, array, object, whatever fits the template. Multibrand is the default, so brand-related variables typically receive arrays or objects, not scalars."
+              }
+            },
+            "required": [
+              "name",
+              "description"
+            ]
+          },
+          "description": "Inputs the template expects. Each entry is { name, description }; the caller decides the JSON shape per name."
+        }
+      },
+      "required": [
+        "type",
+        "prompt",
         "variables"
       ]
     }
@@ -734,6 +776,67 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "type": "string",
           "format": "uuid",
           "description": "Which offer of the brand to pitch. Required by brand-service only when the brand sells several offers."
+        },
+        "qualification": {
+          "type": "object",
+          "properties": {
+            "domain": {
+              "type": "string",
+              "nullable": true,
+              "description": "The company the checks ran on."
+            },
+            "checks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "question": {
+                    "type": "string",
+                    "description": "The check's question, as the offer states it."
+                  },
+                  "mode": {
+                    "type": "string",
+                    "description": "must_pass (Hard filter) or mention (Bonus)."
+                  },
+                  "verdict": {
+                    "type": "string",
+                    "description": "yes | no | unavailable | not_checked"
+                  },
+                  "evidence": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "reason": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "screenshotUrl": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                },
+                "required": [
+                  "question"
+                ],
+                "additionalProperties": {
+                  "nullable": true
+                }
+              }
+            }
+          },
+          "required": [
+            "checks"
+          ],
+          "additionalProperties": {
+            "nullable": true
+          },
+          "description": "The offer's checks run on the recipient's company, exactly as lead-service serves them for that company (the same shape as a lead's `qualification`): { domain, checks: [{ question, mode ('must_pass' | 'mention'), verdict ('yes' | 'no' | 'unavailable' | 'not_checked'), evidence, reason, screenshotUrl, ... }] }. Forward it verbatim. Rendered to the model in the same \"Checks we ran on their company\" block as a campaign email (context only). Part of the stored preview's identity: changed results write a new email, the same results are answered from storage. Absent or `checks: []` = the preview is written exactly as without it."
+        },
+        "strategyId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "Write the example the way a campaign running this play of the cold-email pipe would: a features-service strategy id on `sales-cold-email-outreach|lead_found_to_conversation` (`offer-emails-only` = leads with something given for free, `named-emails-only` = names the brand and pitches it, `blind-emails-only` = never names the brand, asks about the problem first; any other play of the pipe works too). The email is written with the template + model of the workflow that play's campaign would run (its measured best, else the first workflow it allows in the leg ranking). Absent = the best mature cold-email workflow, as before. A strategy with no play on the pipe = 400 `code: UNKNOWN_STRATEGY`."
         }
       },
       "required": [
@@ -763,6 +866,129 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       "required": [
         "brandId"
       ]
+    }
+  },
+  "POST /v1/content/template-dynasties": {
+    "service": "content-generation-service",
+    "method": "POST",
+    "path": "/internal/template-dynasties",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "identity": {
+          "type": "string",
+          "enum": [
+            "blind",
+            "named"
+          ]
+        },
+        "featureSlug": {
+          "type": "string",
+          "minLength": 1
+        },
+        "legKey": {
+          "type": "string",
+          "minLength": 1
+        },
+        "versions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "description": "Existing template types, oldest first; the last is the head."
+        }
+      },
+      "required": [
+        "slug",
+        "name",
+        "description",
+        "signature",
+        "identity",
+        "featureSlug",
+        "legKey",
+        "versions"
+      ]
+    }
+  },
+  "POST /v1/content/template-dynasties/{slug}/versions": {
+    "service": "content-generation-service",
+    "method": "POST",
+    "path": "/internal/template-dynasties/{slug}/versions",
+    "schema": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "prompt": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The new version's full text. Must differ from every stored template."
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Variable name as referenced in the prompt body via {{name}}."
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Free-form description of what the caller should put for this variable. Caller decides the JSON shape — string, array, object, whatever fits the template. Multibrand is the default, so brand-related variables typically receive arrays or objects, not scalars."
+                  }
+                },
+                "required": [
+                  "name",
+                  "description"
+                ]
+              },
+              "description": "Exactly the {{tokens}} the text uses, each one declared by the current head (the workflows on the dynasty send those)."
+            }
+          },
+          "required": [
+            "prompt",
+            "variables"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "minLength": 1,
+              "description": "An ALREADY-STORED template to append as the head (same checks; refused if already a version of this dynasty)."
+            }
+          },
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false
+        }
+      ],
+      "description": "Either a new text (`prompt` + `variables`) or an existing template (`type`)."
     }
   },
   "POST /v1/emails/manual-qualifications/withdrawals": {
@@ -1580,6 +1806,70 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       ]
     }
   },
+  "POST /v1/orgs/contacts": {
+    "service": "crm-service",
+    "method": "POST",
+    "path": "/orgs/contacts",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "brandId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "email": {
+          "type": "string",
+          "nullable": true,
+          "format": "email"
+        },
+        "phone": {
+          "type": "string",
+          "nullable": true,
+          "description": "International form preferred (+33...)."
+        },
+        "firstName": {
+          "type": "string",
+          "nullable": true
+        },
+        "lastName": {
+          "type": "string",
+          "nullable": true
+        },
+        "fullName": {
+          "type": "string",
+          "nullable": true
+        },
+        "companyName": {
+          "type": "string",
+          "nullable": true
+        },
+        "companyDomain": {
+          "type": "string",
+          "nullable": true,
+          "description": "A domain or a URL (ntt.com, https://www.ntt.com/...)."
+        },
+        "jobTitle": {
+          "type": "string",
+          "nullable": true
+        },
+        "linkedinUrl": {
+          "type": "string",
+          "nullable": true,
+          "description": "The person's LinkedIn profile URL."
+        },
+        "note": {
+          "type": "string",
+          "nullable": true,
+          "maxLength": 5000,
+          "description": "What the client knows about the person (\"I met him at X\"), stored with the contact for the email writer."
+        }
+      },
+      "required": [
+        "brandId"
+      ],
+      "description": "Needs an email, a LinkedIn URL, or a name with a company (companyName or companyDomain)."
+    }
+  },
   "POST /v1/orgs/contacts/serve-next": {
     "service": "crm-service",
     "method": "POST",
@@ -1844,6 +2134,10 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
               "description": "The serving pipe's funnel-step filter (see StepFilter). A person outside it is skipped and NOT marked served. Omit = unchanged behaviour."
             }
           ]
+        },
+        "includeEmailUnknown": {
+          "type": "boolean",
+          "description": "CSV pool only (refused with people). After the sendable contacts, fill the rest of `limit` with contacts whose email is NOT known yet but that carry a name AND a company domain, company name or LinkedIn: returned in `contacts` with primaryEmail null, emailStatus unknown. Each is recorded handed out (never handed out twice; again after 24 h if nobody wrote back). The caller looks the email up and writes it back: POST /orgs/contacts/{contactId}/email-lookup. Same opt-out, consent, file, reach and step rules. Under relationships=business_only none is handed out (no known person to judge yet). Omit = unchanged behaviour."
         }
       },
       "required": [
@@ -1882,6 +2176,13 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "redirectUri": {
           "type": "string",
           "format": "uri"
+        },
+        "connection": {
+          "type": "string",
+          "enum": [
+            "mailbox",
+            "calendar"
+          ]
         }
       },
       "additionalProperties": false
@@ -2081,6 +2382,10 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
               "professional_not_to_brand"
             ]
           }
+        },
+        "contactPoint": {
+          "type": "string",
+          "description": "PERSON-RELATIONS-1017: one contact point of the person (as served in a relation's contactPoints, `<source>:<id>`): the tag / company correction applies to that point only, so its relation moves (e.g. this Gmail thread is personal; this Stripe account is Acme's). Absent = the whole person."
         },
         "reason": {
           "type": "string"

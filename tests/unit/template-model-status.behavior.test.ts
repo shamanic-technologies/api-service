@@ -234,3 +234,92 @@ describe("workflow retire-by-content + status routes (staff)", () => {
     expect(calls[0].url).toBe(`${WORKFLOW_BASE}/workflows/dynasty/sales-email-cold-outreach-sienna/status`);
   });
 });
+
+describe("template dynasties + new template text (staff, TPL-DYNASTY-1021-CG)", () => {
+  const dynasty = {
+    slug: "staff-test-short-cold-email",
+    name: "Staff test short cold email",
+    description: "A short email for a staff test.",
+    signature: "Staff test guideline.",
+    identity: "named",
+    featureSlug: "sales-email",
+    legKey: "website-visit",
+    versions: ["staff-test-short-v1"],
+  };
+
+  it("POST /v1/content/template-dynasties pipes the body and the producer's 201 byte-identical, with x-staff-email", async () => {
+    const upstream = { ...dynasty, head: "staff-test-short-v1", fieldNobodyDeclared: 1 };
+    stubUpstream(201, upstream);
+    const res = await staffPlatform(request(buildApp()).post("/v1/content/template-dynasties")).send(dynasty);
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual(upstream);
+    expect(calls[0].url).toBe(`${EMAILGEN_BASE}/internal/template-dynasties`);
+    expect(calls[0].options.method).toBe("POST");
+    expect(JSON.parse(calls[0].options.body)).toEqual(dynasty);
+    expect(calls[0].options.headers["x-staff-email"]).toBe(STAFF);
+  });
+
+  it("a producer refusal (409) reaches the caller with status and body", async () => {
+    const upstream = { error: "A dynasty already has that name", code: "DYNASTY_CONFLICT" };
+    stubUpstream(409, upstream);
+    const res = await staffPlatform(request(buildApp()).post("/v1/content/template-dynasties")).send(dynasty);
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual(upstream);
+  });
+
+  it("POST /v1/content/platform-prompts stores a new template text at POST /platform-prompts", async () => {
+    const body = { type: "staff-test-short-v1", prompt: "Write to {{lead}}", variables: [{ name: "lead", description: "x" }] };
+    stubUpstream(201, { type: body.type });
+    const res = await staffPlatform(request(buildApp()).post("/v1/content/platform-prompts")).send(body);
+    expect(res.status).toBe(201);
+    expect(calls[0].url).toBe(`${EMAILGEN_BASE}/platform-prompts`);
+    expect(JSON.parse(calls[0].options.body)).toEqual(body);
+  });
+
+  it.each([
+    ["get", "/v1/content/template-dynasties?featureSlug=sales-email&legKey=website-visit", "/internal/template-dynasties?featureSlug=sales-email&legKey=website-visit"],
+    ["get", "/v1/content/template-dynasties/a-b", "/internal/template-dynasties/a-b"],
+    ["get", "/v1/content/template-dynasties/a-b/head", "/internal/template-dynasties/a-b/head"],
+    ["post", "/v1/content/template-dynasties/a-b/versions", "/internal/template-dynasties/a-b/versions"],
+  ] as const)("%s %s hits %s", async (method, path, downstream) => {
+    stubUpstream(200, { ok: true });
+    const res = await staffPlatform((request(buildApp()) as any)[method](path)).send(method === "post" ? { type: "x" } : undefined);
+    expect(res.status).toBe(200);
+    expect(calls[0].url).toBe(`${EMAILGEN_BASE}${downstream}`);
+    expect(calls[0].options.method).toBe(method.toUpperCase());
+  });
+
+  it("a staff key's version add carries the key user's email as x-staff-email", async () => {
+    stubUpstream(201, {});
+    await request(buildApp())
+      .post("/v1/content/template-dynasties/a-b/versions")
+      .set("authorization", "Bearer distrib.usr_x")
+      .set("x-test-auth-type", "user_key")
+      .set("x-test-key-staff", "true")
+      .set("x-test-key-email", STAFF)
+      .set("x-staff-email", "forged@evil.com")
+      .send({ type: "x" });
+    expect(calls[0].options.headers["x-staff-email"]).toBe(STAFF);
+  });
+
+  it.each([
+    ["get", "/v1/content/template-dynasties"],
+    ["post", "/v1/content/template-dynasties"],
+    ["get", "/v1/content/template-dynasties/a-b"],
+    ["get", "/v1/content/template-dynasties/a-b/head"],
+    ["post", "/v1/content/template-dynasties/a-b/versions"],
+    ["post", "/v1/content/platform-prompts"],
+  ] as const)("%s %s refuses a client key and a non-staff platform caller before content-generation", async (method, path) => {
+    stubUpstream(200, {});
+    const clientKey = await (request(buildApp()) as any)[method](path)
+      .set("authorization", "Bearer distrib.usr_x")
+      .set("x-test-auth-type", "user_key")
+      .set("x-test-key-staff", "false")
+      .set("x-test-key-email", "client@acme.com")
+      .send({});
+    expect(clientKey.status).toBe(403);
+    const nonStaff = await (request(buildApp()) as any)[method](path).set("x-api-key", PLATFORM_KEY).set("x-email", "client@acme.com").send({});
+    expect(nonStaff.status).toBe(403);
+    expect(calls).toHaveLength(0);
+  });
+});

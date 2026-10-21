@@ -213,10 +213,11 @@ function rawQueryString(originalUrl: string): string {
 
 async function pipeContentStaff(req: AuthenticatedRequest, res: import("express").Response, path: string, fallback: string) {
   try {
+    const write = req.method === "PUT" || req.method === "POST";
     await pipeExternalService(externalServices.emailgen, path, {
-      method: req.method === "PUT" ? "PUT" : "GET",
-      body: req.method === "PUT" ? req.body : undefined,
-      headers: req.method === "PUT" && req.staffEmail ? { "x-staff-email": req.staffEmail } : undefined,
+      method: write ? (req.method as "PUT" | "POST") : "GET",
+      body: write ? req.body : undefined,
+      headers: write && req.staffEmail ? { "x-staff-email": req.staffEmail } : undefined,
       expressRes: res,
     });
   } catch (error: any) {
@@ -250,5 +251,38 @@ router.get("/content/templates/:type/outputs", requireStaffKeyOrPlatform, (req: 
     `/internal/templates/${encodeURIComponent(req.params.type)}/outputs${rawQueryString(req.originalUrl)}`,
     "Failed to read template outputs",
   ));
+
+// ---------------------------------------------------------------------------
+// Template dynasties (TPL-DYNASTY-1021-CG) → content-generation-service
+// `/internal/template-dynasties*`: a dynasty is one kind of email on one pipe; workflows
+// write with its head (latest version). Same staff gate, pipe and x-staff-email rule as the
+// status routes above (the producer records who upgraded the previous head). Plus the
+// staff write that stores a brand-new template text (`/platform-prompts`, idempotent per
+// type), which a new dynasty's first version must point to.
+// ---------------------------------------------------------------------------
+
+/** POST /v1/content/platform-prompts → POST /platform-prompts `{type, prompt, variables}` (201 new, 200 already stored). */
+router.post("/content/platform-prompts", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(req, res, "/platform-prompts", "Failed to store template"));
+
+/** GET /v1/content/template-dynasties?featureSlug=&legKey= → GET /internal/template-dynasties. */
+router.get("/content/template-dynasties", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(req, res, `/internal/template-dynasties${rawQueryString(req.originalUrl)}`, "Failed to list template dynasties"));
+
+/** POST /v1/content/template-dynasties → POST /internal/template-dynasties (201, over already-stored templates). */
+router.post("/content/template-dynasties", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(req, res, "/internal/template-dynasties", "Failed to create template dynasty"));
+
+/** GET /v1/content/template-dynasties/:slug → GET /internal/template-dynasties/{slug}. */
+router.get("/content/template-dynasties/:slug", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(req, res, `/internal/template-dynasties/${encodeURIComponent(req.params.slug)}`, "Failed to read template dynasty"));
+
+/** GET /v1/content/template-dynasties/:slug/head → GET /internal/template-dynasties/{slug}/head. */
+router.get("/content/template-dynasties/:slug/head", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(req, res, `/internal/template-dynasties/${encodeURIComponent(req.params.slug)}/head`, "Failed to resolve template dynasty head"));
+
+/** POST /v1/content/template-dynasties/:slug/versions → POST /internal/template-dynasties/{slug}/versions (201, the new head). */
+router.post("/content/template-dynasties/:slug/versions", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(req, res, `/internal/template-dynasties/${encodeURIComponent(req.params.slug)}/versions`, "Failed to add template dynasty version"));
 
 export default router;
