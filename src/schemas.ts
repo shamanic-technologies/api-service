@@ -15573,6 +15573,21 @@ const googleRoutes: Array<{
     params: z.object({ email: z.string().openapi({ description: "Connected Google account email (URL-encoded)" }) }),
   },
   {
+    method: "get",
+    path: "/v1/orgs/google/calendar/accounts",
+    summary: "List the org's connected Google Calendars",
+    description:
+      "Proxy to google-service GET /orgs/google/calendar/accounts. Response `{ calendars: [...] }` owned by google-service. Connect one with POST /v1/orgs/google/auth/start and body `{ connection: \"calendar\" }`.",
+  },
+  {
+    method: "delete",
+    path: "/v1/orgs/google/calendar/accounts/{email}",
+    summary: "Disconnect a Google Calendar",
+    description:
+      "Proxy to google-service DELETE /orgs/google/calendar/accounts/{email}. Revokes the calendar grant; returns `{ disconnected, email, grant }`. The email is URL-encoded in the path. 404 `{ reason: \"calendar_not_found\" }` and 502 `{ reason: \"google_revoke_failed\" }` forwarded verbatim.",
+    params: z.object({ email: z.string().openapi({ description: "Connected Google Calendar account email (URL-encoded)" }) }),
+  },
+  {
     method: "post",
     path: "/v1/orgs/google/sync",
     summary: "Start an async Gmail + contacts sync",
