@@ -281,6 +281,15 @@ router.get("/content/template-dynasties/:slug", requireStaffKeyOrPlatform, (req:
 router.get("/content/template-dynasties/:slug/head", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
   pipeContentStaff(req, res, `/internal/template-dynasties/${encodeURIComponent(req.params.slug)}/head`, "Failed to resolve template dynasty head"));
 
+/** GET /v1/content/template-dynasties/:slug/outputs?limit= → GET /internal/template-dynasties/{slug}/outputs (any version, newest first). */
+router.get("/content/template-dynasties/:slug/outputs", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(
+    req,
+    res,
+    `/internal/template-dynasties/${encodeURIComponent(req.params.slug)}/outputs${rawQueryString(req.originalUrl)}`,
+    "Failed to read template dynasty outputs",
+  ));
+
 /** POST /v1/content/template-dynasties/:slug/versions → POST /internal/template-dynasties/{slug}/versions (201, the new head). */
 router.post("/content/template-dynasties/:slug/versions", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
   pipeContentStaff(req, res, `/internal/template-dynasties/${encodeURIComponent(req.params.slug)}/versions`, "Failed to add template dynasty version"));

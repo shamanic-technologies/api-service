@@ -9740,6 +9740,10 @@
         "type": "object",
         "properties": {}
       },
+      "TemplateDynastyOutputs": {
+        "type": "object",
+        "properties": {}
+      },
       "AddTemplateDynastyVersionRequest": {
         "type": "object",
         "properties": {}
