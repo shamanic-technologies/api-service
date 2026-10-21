@@ -53,6 +53,7 @@ const PLATFORM_OPERATIONS = [
   "post /v1/content/template-dynasties",
   "get /v1/content/template-dynasties/{slug}",
   "get /v1/content/template-dynasties/{slug}/head",
+  "get /v1/content/template-dynasties/{slug}/outputs",
   "post /v1/content/template-dynasties/{slug}/versions",
   "get /v1/prompts",
   "put /v1/prompts",

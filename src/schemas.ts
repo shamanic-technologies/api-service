@@ -17942,6 +17942,28 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/v1/content/template-dynasties/{slug}/outputs",
+  tags: ["Content"],
+  summary: "The last email sequences written with a template dynasty, any version, newest first (staff only)",
+  description:
+    "Every org; per output the generation id, when, the exact template version (`promptType`), workflow, model, subject and each email's text + delay " +
+    "(never org/lead ids or the raw prompt). `limit` 1..20, default 5 at the producer. " +
+    "Proxies content-generation-service GET /internal/template-dynasties/{slug}/outputs, query string verbatim. " + templateDynastyNote,
+  security: platformAuth,
+  request: {
+    params: z.object({ slug: z.string().describe("Dynasty slug") }),
+    query: z.object({ limit: z.string().optional().describe("How many outputs (producer default 5, producer bounds)") }).passthrough(),
+  },
+  responses: {
+    200: { description: "`{ slug, outputs }`", content: { "application/json": { schema: z.object({}).passthrough().openapi("TemplateDynastyOutputs") } } },
+    ...templateDynastyErrors,
+    400: { description: "Bad limit (forwarded verbatim)", content: errorContent },
+    404: { description: "DYNASTY_NOT_FOUND (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/content/template-dynasties/{slug}/versions",
   tags: ["Content"],
