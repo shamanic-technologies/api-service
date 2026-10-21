@@ -15694,12 +15694,37 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/contacts",
+  tags: ["CRM Contacts"],
+  summary: "Add one person to my CRM (one contact, email optional)",
+  description:
+    "Add ONE person you know to a brand's CRM contacts, by JSON: the way to put a specific prospect (a name you were given, " +
+    "someone met at an event, a LinkedIn profile) in front of your campaigns without a CSV. Give `brandId` and at least one of: " +
+    "an `email`, a `linkedinUrl` (linkedin.com profile), or a name (`fullName`, or `firstName` + `lastName`) WITH a company " +
+    "(`companyName` or `companyDomain`). Optional: `phone`, `jobTitle`, `note` (what you know about the person, up to 5000 characters). " +
+    "The email is OPTIONAL: a contact with an email can be written to at once; a contact without one is looked up only when a " +
+    "campaign serves it (no lookup, no cost at add time), and its `emailStatus` reads `unknown` until then (`not_found` if the lookup found none). " +
+    "Adding the same person twice (same email or same LinkedIn) returns the SAME contact with the new details merged in (200, `created: false`, `matchedOn`); " +
+    "a new person answers 201. The person joins the brand's list \"Contacts added one by one\" (GET /v1/orgs/contacts/uploads, `kind: manual`). " +
+    "Proxy to crm-service POST /orgs/contacts; status and body piped byte-identical, refusals forwarded verbatim " +
+    "(400 `type: validation` for a bad field, 400 `type: not_enough_to_find` when the person cannot be identified). Requires a user (x-user-id).",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: CrmPassthroughRequest } } } },
+  responses: {
+    200: { description: "Person already in the CRM: same contact, new details merged (crm-service { contactId, created: false, matchedOn, emailStatus, contact })", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    201: { description: "Contact created (crm-service { contactId, created: true, matchedOn: null, emailStatus, contact })", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
   method: "get",
   path: "/v1/orgs/contacts",
   tags: ["CRM Contacts"],
   summary: "List silver contacts for a brand",
   description:
-    "Proxy to crm-service GET /orgs/contacts. The whole query string is forwarded untransformed. Response shape owned by crm-service.",
+    "Proxy to crm-service GET /orgs/contacts. Each contact carries its company (`companyName`, `companyDomain`), `jobTitle`, `linkedinUrl`, `note` and `emailStatus` (`known` | `unknown` | `not_found`) when crm-service holds them. The whole query string is forwarded untransformed. Response shape owned by crm-service.",
   security: authed,
   request: { query: CrmBrandIdQuery },
   responses: {
@@ -17800,6 +17825,144 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Not staff", content: errorContent },
     404: { description: "No template of that type (forwarded verbatim)", content: errorContent },
+  },
+});
+
+const templateDynastyNote =
+  "Staff only: a distribute.you staff member's own key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. " +
+  "A template dynasty is one kind of email on one pipe (feature + leg), cross-org: its versions are template types, the head (latest) is what " +
+  "workflows on that dynasty write with, and stats pool across versions. Byte passthrough to content-generation-service, refusals forwarded verbatim.";
+
+const templateDynastyErrors = {
+  400: { description: "Invalid body or query (forwarded verbatim)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  403: { description: "Not staff", content: errorContent },
+};
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/content/platform-prompts",
+  tags: ["Content"],
+  summary: "Store a brand-new template text (staff only)",
+  description:
+    "Store a NEW email template text under a new `type`, so a new template dynasty can point to it (POST /v1/content/template-dynasties) " +
+    "or an existing dynasty can append it as its head (POST /v1/content/template-dynasties/{slug}/versions with `type`). " +
+    "Body `{ type, prompt, variables: [{ name, description }] }`; the text uses only `{{variables}}`, never company-specific data " +
+    "(422 when content-generation-service judges it is not brand-neutral). Idempotent per type: 201 stored, 200 when that type already exists (unchanged). " +
+    "Proxies content-generation-service POST /platform-prompts. " + templateDynastyNote,
+  security: platformAuth,
+  request: { body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("StoreTemplateRequest") } } } },
+  responses: {
+    200: { description: "Type already stored (unchanged)", content: { "application/json": { schema: z.object({}).passthrough() } } },
+    201: { description: "Template stored", content: { "application/json": { schema: z.object({}).passthrough().openapi("StoredTemplate") } } },
+    ...templateDynastyErrors,
+    422: { description: "Template refused (not brand-neutral), forwarded verbatim", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/content/template-dynasties",
+  tags: ["Content"],
+  summary: "List template dynasties (staff only)",
+  description:
+    "Every template dynasty with its versions and head, optionally narrowed by `featureSlug` and `legKey` (query forwarded verbatim). " +
+    "Answers `{ dynasties: [...] }`. Proxies content-generation-service GET /internal/template-dynasties. " + templateDynastyNote,
+  security: platformAuth,
+  request: {
+    query: z
+      .object({
+        featureSlug: z.string().optional().describe("Only dynasties of this feature"),
+        legKey: z.string().optional().describe("Only dynasties on this leg"),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "Template dynasties", content: { "application/json": { schema: z.object({}).passthrough().openapi("TemplateDynastyList") } } },
+    ...templateDynastyErrors,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/content/template-dynasties",
+  tags: ["Content"],
+  summary: "Create a new template dynasty (staff only)",
+  description:
+    "Create a NEW template dynasty: a new kind of email on one pipe (`featureSlug` + `legKey`), e.g. a new short cold email on the website-visit leg. " +
+    "Body `{ slug, name, description, signature, identity: blind | named, featureSlug, legKey }` plus EXACTLY ONE of: " +
+    "`template: { prompt, variables: [{ name, description }], type? }` = a BRAND-NEW text stored as the first version and head in the same call " +
+    "(`type` defaults to `<slug>-v1`; `variables` exactly the text's {{tokens}}), or `versions: [type, ...]` = ALREADY-STORED template types, oldest first, the last is the head. " +
+    "`description` is one client-facing sentence, `signature` the internal guideline; name, description and signature are unique. Answers 201 with the dynasty. " +
+    "Refusals forwarded verbatim, nothing stored: 400 invalid body / both or neither form / `VARIABLES_MISMATCH`; 409 `DYNASTY_CONFLICT` / `TEMPLATE_TYPE_TAKEN` / `TEMPLATE_TWIN`; " +
+    "422 `TEMPLATE_NOT_NEUTRAL` / `BLIND_TEMPLATE_REVEALS_CLIENT`. Proxies POST /internal/template-dynasties. " + templateDynastyNote,
+  security: platformAuth,
+  request: { body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("CreateTemplateDynastyRequest") } } } },
+  responses: {
+    201: { description: "Dynasty created", content: { "application/json": { schema: z.object({}).passthrough().openapi("TemplateDynasty") } } },
+    ...templateDynastyErrors,
+    404: { description: "A listed template type does not exist (forwarded verbatim)", content: errorContent },
+    409: { description: "DYNASTY_CONFLICT / TEMPLATE_TYPE_TAKEN / TEMPLATE_TWIN (forwarded verbatim)", content: errorContent },
+    422: { description: "TEMPLATE_NOT_NEUTRAL / BLIND_TEMPLATE_REVEALS_CLIENT (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/content/template-dynasties/{slug}",
+  tags: ["Content"],
+  summary: "Read one template dynasty with its versions (staff only)",
+  description:
+    "One template dynasty: name, description, signature, identity, pipe, head and every version with its status. " +
+    "Proxies content-generation-service GET /internal/template-dynasties/{slug}. " + templateDynastyNote,
+  security: platformAuth,
+  request: { params: z.object({ slug: z.string().describe("Dynasty slug") }) },
+  responses: {
+    200: { description: "The dynasty", content: { "application/json": { schema: z.object({}).passthrough() } } },
+    ...templateDynastyErrors,
+    404: { description: "DYNASTY_NOT_FOUND (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/content/template-dynasties/{slug}/head",
+  tags: ["Content"],
+  summary: "Resolve a template dynasty's head template (staff only)",
+  description:
+    "The template the dynasty's workflows write with now: `{ dynasty, template }`, `template` = the head's full text and variables. " +
+    "Proxies content-generation-service GET /internal/template-dynasties/{slug}/head. " + templateDynastyNote,
+  security: platformAuth,
+  request: { params: z.object({ slug: z.string().describe("Dynasty slug") }) },
+  responses: {
+    200: { description: "Dynasty + head template", content: { "application/json": { schema: z.object({}).passthrough() } } },
+    ...templateDynastyErrors,
+    404: { description: "DYNASTY_NOT_FOUND (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/content/template-dynasties/{slug}/versions",
+  tags: ["Content"],
+  summary: "Add a new version (new head) to a template dynasty (staff only)",
+  description:
+    "Upgrade a template dynasty: either a new text `{ prompt, variables }` or an already-stored template `{ type }` becomes the head, " +
+    "and every workflow on the dynasty writes with it. The previous head is marked deprecated \"Upgraded\" by the verified staff member. " +
+    "Refusals forwarded verbatim: 409 `TEMPLATE_TWIN` (text identical to a stored template), 400 `VARIABLE_NOT_IN_HEAD` / `VARIABLES_MISMATCH`, " +
+    "422 brand/offer neutrality or the blind rule. Answers 201 `{ dynasty, template }`. " +
+    "Proxies content-generation-service POST /internal/template-dynasties/{slug}/versions. " + templateDynastyNote,
+  security: platformAuth,
+  request: {
+    params: z.object({ slug: z.string().describe("Dynasty slug") }),
+    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("AddTemplateDynastyVersionRequest") } } },
+  },
+  responses: {
+    201: { description: "New head", content: { "application/json": { schema: z.object({}).passthrough() } } },
+    ...templateDynastyErrors,
+    404: { description: "DYNASTY_NOT_FOUND (forwarded verbatim)", content: errorContent },
+    409: { description: "TEMPLATE_TWIN (forwarded verbatim)", content: errorContent },
+    422: { description: "Neutrality / blind rule refusal (forwarded verbatim)", content: errorContent },
   },
 });
 

@@ -4,6 +4,7 @@ import {
   callExternalService,
   callExternalServiceWithStatus,
   forwardMultipartUpload,
+  pipeExternalService,
   externalServices,
 } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
@@ -82,6 +83,25 @@ router.post("/orgs/contacts/upload", ...orgUserChain, async (req: AuthenticatedR
   } catch (error) {
     console.error("[api-service] Upload contacts error:", error);
     respondUpstreamError(res, error, "Upload contacts error");
+  }
+});
+
+// POST /v1/orgs/contacts → crm-service POST /orgs/contacts (add ONE contact by JSON)
+// A client adds one person they know (email optional). Requires x-user-id like the
+// CSV upload. Piped: crm-service answers 201 created / 200 already held, and its
+// refusals (400 validation / not_enough_to_find) reach the caller with status + body.
+router.post("/orgs/contacts", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(externalServices.crm, "/orgs/contacts", {
+      method: "POST",
+      body: req.body,
+      headers: buildInternalHeaders(req),
+      expressRes: res,
+    });
+  } catch (error) {
+    console.error("[api-service] Add contact error:", error);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Add contact error");
   }
 });
 
