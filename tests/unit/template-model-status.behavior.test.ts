@@ -281,6 +281,7 @@ describe("template dynasties + new template text (staff, TPL-DYNASTY-1021-CG)", 
     ["get", "/v1/content/template-dynasties/a-b", "/internal/template-dynasties/a-b"],
     ["get", "/v1/content/template-dynasties/a-b/head", "/internal/template-dynasties/a-b/head"],
     ["get", "/v1/content/template-dynasties/a-b/outputs?limit=4", "/internal/template-dynasties/a-b/outputs?limit=4"],
+    ["get", "/v1/content/workflow-dynasties/a-b/outputs?limit=30", "/internal/workflow-dynasties/a-b/outputs?limit=30"],
     ["post", "/v1/content/template-dynasties/a-b/versions", "/internal/template-dynasties/a-b/versions"],
   ] as const)("%s %s hits %s", async (method, path, downstream) => {
     stubUpstream(200, { ok: true });
@@ -309,6 +310,7 @@ describe("template dynasties + new template text (staff, TPL-DYNASTY-1021-CG)", 
     ["get", "/v1/content/template-dynasties/a-b"],
     ["get", "/v1/content/template-dynasties/a-b/head"],
     ["get", "/v1/content/template-dynasties/a-b/outputs"],
+    ["get", "/v1/content/workflow-dynasties/a-b/outputs"],
     ["post", "/v1/content/template-dynasties/a-b/versions"],
     ["post", "/v1/content/platform-prompts"],
   ] as const)("%s %s refuses a client key and a non-staff platform caller before content-generation", async (method, path) => {

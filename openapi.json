@@ -9759,6 +9759,10 @@
         "type": "object",
         "properties": {}
       },
+      "WorkflowDynastyOutputs": {
+        "type": "object",
+        "properties": {}
+      },
       "AddTemplateDynastyVersionRequest": {
         "type": "object",
         "properties": {}

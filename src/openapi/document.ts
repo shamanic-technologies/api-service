@@ -407,6 +407,7 @@ export const STAFF_KEY_OPERATIONS = new Set<string>([
   "GET /v1/content/template-dynasties/{slug}",
   "GET /v1/content/template-dynasties/{slug}/head",
   "GET /v1/content/template-dynasties/{slug}/outputs",
+  "GET /v1/content/workflow-dynasties/{slug}/outputs",
   "POST /v1/content/template-dynasties/{slug}/versions",
 ]);
 
