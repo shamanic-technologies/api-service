@@ -96,6 +96,7 @@ const PLATFORM_OPERATIONS = [
   "put /v1/catalogue/pipes/{pipeId}/default-play",
   "post /v1/catalogue/pipes",
   "post /v1/catalogue/pipes/{pipeId}/retire",
+  "post /v1/catalogue/plays/{playId}/retire",
   "patch /v1/strategies/{id}",
   "get /v1/billing/credits/grants/all",
   "post /v1/billing/credits/debit",
