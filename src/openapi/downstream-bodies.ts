@@ -40,6 +40,8 @@ export const DOWNSTREAM_BODY_SOURCES: Record<string, DownstreamBodySource> = {
   "POST /v1/leads/crm-pairings/rulings": { service: "lead-service", method: "POST", path: "/orgs/leads/crm-pairings/rulings" },
   "POST /v1/leads/{id}/step-statements": { service: "lead-service", method: "POST", path: "/orgs/leads/{id}/step-statements" },
   "PUT /v1/leads/{id}/disqualification": { service: "lead-service", method: "PUT", path: "/orgs/leads/{id}/disqualification" },
+  "PUT /v1/leads/{id}/not-a-person": { service: "lead-service", method: "PUT", path: "/orgs/leads/{id}/not-a-person" },
+  "POST /v1/brands/{brandId}/conversions/{conversionId}/withdraw": { service: "lead-service", method: "POST", path: "/orgs/brands/{brandId}/conversions/{conversionId}/withdraw" },
   "POST /v1/leads/{id}/followups": { service: "lead-service", method: "POST", path: "/orgs/leads/{id}/followups" },
   "PUT /v1/leads/{id}/crm-attribution/{step}": { service: "lead-service", method: "PUT", path: "/orgs/leads/{id}/crm-attribution/{step}" },
   "PUT /v1/brands/{id}/leg-rates": { service: "brand-service", method: "PUT", path: "/orgs/brands/{id}/leg-rates" },
