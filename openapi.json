@@ -6224,6 +6224,21 @@
           }
         }
       },
+      "RetirePlayResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "RetirePlayRequest": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 500,
+            "description": "Why it is retired (500 characters at most)"
+          }
+        }
+      },
       "SalesFunnelAlreadyDeclaredResponse": {
         "type": "object",
         "properties": {}

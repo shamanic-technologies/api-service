@@ -9473,6 +9473,43 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
+  path: "/v1/catalogue/plays/{playId}/retire",
+  tags: ["Features"],
+  summary: "Retire a play from its pipe (staff only)",
+  description:
+    "Takes a non-default play off its pipe: the campaigns that ran it keep running on the pipe's default play, with no client action. " +
+    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. " +
+    "`retiredBy` is recorded as the authenticated staff email (a body value is replaced). Answers 200 `{changed, retiredPlayId, retiredAt, runsNow}` " +
+    "(`runsNow` = the play those campaigns run from now on). Refusals forwarded verbatim: 400 `retiredBy_required` / `note_invalid`; " +
+    "404 `pipe_not_found` / `play_not_found`; 409 `default_play_not_retirable` (set another default first with PUT /v1/catalogue/pipes/{pipeId}/default-play). " +
+    "Byte passthrough to features-service POST /internal/catalogue/plays/{id}/retire.",
+  security: platformAuth,
+  request: {
+    params: z.object({ playId: z.string().openapi({ description: "a play id `<pipe id>~<strategy id>` (GET /v1/catalogue/plays), URL-encoded (it carries `|` and `~`)" }) }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({ note: z.string().max(500).nullable().optional().openapi({ description: "Why it is retired (500 characters at most)" }) })
+            .passthrough()
+            .openapi("RetirePlayRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Retire outcome, pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("RetirePlayResponse") } } },
+    400: { description: "`retiredBy_required` / `note_invalid` (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff (`staff_only`)", content: errorContent },
+    404: { description: "`pipe_not_found` / `play_not_found` (forwarded verbatim)", content: errorContent },
+    409: { description: "`default_play_not_retirable` (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
   path: "/v1/catalogue/sales-funnels",
   tags: ["Features"],
   summary: "Declare a sales funnel from its pipes",

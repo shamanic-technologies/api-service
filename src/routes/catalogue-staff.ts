@@ -177,6 +177,38 @@ router.post(
 );
 
 /**
+ * POST /v1/catalogue/plays/:playId/retire → features-service
+ * POST /internal/catalogue/plays/{id}/retire `{retiredBy, note?}` (PLAY-RETIRE-1022): take a
+ * non-default play off its pipe; the campaigns that ran it keep running on the pipe's default play.
+ * `playId` = `<pipe id>~<strategy id>` (carries `|` and `~`, URL-encoded). Same staff gate as the
+ * pipe retire (a staff key or the platform key + staff x-email; a client key gets 403 `staff_only`),
+ * listed in `STAFF_KEY_OPERATIONS`. `retiredBy` is the AUTHENTICATED staff email, never a body value
+ * (CLAUDE.md rule #4, third exception). Refusals are the producer's; status and body byte-for-byte.
+ */
+router.post(
+  "/v1/catalogue/plays/:playId/retire",
+  authenticateUser,
+  requireStaffActor,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.features,
+        `/internal/catalogue/plays/${encodeURIComponent(req.params.playId)}/retire`,
+        {
+          method: "POST",
+          body: { ...(req.body ?? {}), retiredBy: req.staffEmail },
+          expressRes: res,
+        },
+      );
+    } catch (error: any) {
+      console.error("[api-service] Failed to retire play:", error.message);
+      if (res.headersSent) { res.end(); return; }
+      respondUpstreamError(res, error, "Failed to retire play");
+    }
+  },
+);
+
+/**
  * POST /v1/catalogue/pipes → features-service POST /internal/catalogue/pipes: a NEW pipe, a channel
  * on a leg it does not perform yet (`{channelSlug, fromStep, toStep, mode, triggerId?, published?,
  * conversionRatePct?, requestedByOrgId?}`; a reactive pipe names the trigger that asks for it). A pipe is a
