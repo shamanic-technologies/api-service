@@ -18001,6 +18001,29 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/v1/content/workflow-dynasties/{slug}/outputs",
+  tags: ["Content"],
+  summary: "The last email sequences written by a workflow dynasty, every version, newest first (staff only)",
+  description:
+    "Every org; per output the generation id, when, the workflow run id, the exact workflow version (`workflowSlug`), the template version (`promptType`, nullable) " +
+    "and its template dynasty (`{ slug, name, position }` or null), the model, subject and each email's text + delay (never org/lead ids or the raw prompt). " +
+    "Empty `outputs` for a dynasty never run. `limit` 1..50, default 20 at the producer. " +
+    "Proxies content-generation-service GET /internal/workflow-dynasties/{slug}/outputs, query string verbatim.",
+  security: platformAuth,
+  request: {
+    params: z.object({ slug: z.string().describe("Workflow dynasty slug") }),
+    query: z.object({ limit: z.string().optional().describe("How many outputs (producer default 20, producer bounds)") }).passthrough(),
+  },
+  responses: {
+    200: { description: "`{ slug, outputs }`", content: { "application/json": { schema: z.object({}).passthrough().openapi("WorkflowDynastyOutputs") } } },
+    ...templateDynastyErrors,
+    400: { description: "Bad limit (forwarded verbatim)", content: errorContent },
+    502: { description: "workflow-service could not resolve the dynasty versions (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/content/template-dynasties/{slug}/versions",
   tags: ["Content"],

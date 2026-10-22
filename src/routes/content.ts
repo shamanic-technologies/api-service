@@ -290,6 +290,15 @@ router.get("/content/template-dynasties/:slug/outputs", requireStaffKeyOrPlatfor
     "Failed to read template dynasty outputs",
   ));
 
+/** GET /v1/content/workflow-dynasties/:slug/outputs?limit= → GET /internal/workflow-dynasties/{slug}/outputs (every version's runs, newest first, with template + LLM). */
+router.get("/content/workflow-dynasties/:slug/outputs", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(
+    req,
+    res,
+    `/internal/workflow-dynasties/${encodeURIComponent(req.params.slug)}/outputs${rawQueryString(req.originalUrl)}`,
+    "Failed to read workflow dynasty outputs",
+  ));
+
 /** POST /v1/content/template-dynasties/:slug/versions → POST /internal/template-dynasties/{slug}/versions (201, the new head). */
 router.post("/content/template-dynasties/:slug/versions", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
   pipeContentStaff(req, res, `/internal/template-dynasties/${encodeURIComponent(req.params.slug)}/versions`, "Failed to add template dynasty version"));
