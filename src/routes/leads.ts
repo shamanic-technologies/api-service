@@ -645,6 +645,169 @@ router.delete(
 );
 
 /**
+ * PUT /v1/leads/:id/not-a-person — pass-through to lead-service
+ * PUT /orgs/leads/{id}/not-a-person (FAKE-OUTCOMES-1022).
+ *
+ * The brand's own user (staff included) states that a lead is NOT a real person (our own
+ * test, a staff mailbox): lead-service takes it out of every figure of the org and sets
+ * its conversions aside. `id` = the row id a row of GET /v1/leads carries, or the lead id.
+ * The marks are listed by GET /v1/leads/not-a-person, which reaches lead-service through
+ * `GET /v1/leads/:id` above (`id = not-a-person`, query verbatim).
+ *
+ * Body forwarded VERBATIM (rule #8: lead-service owns `note` and its refusals), query
+ * verbatim (rule #11), upstream status via `callExternalServiceWithStatus`, refusals via
+ * `respondUpstreamError`. `buildInternalHeaders(req)` carries org AND user: lead-service
+ * records who marked the lead.
+ */
+router.put(
+  "/leads/:id/not-a-person",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/not-a-person${rawQueryString(req.originalUrl)}`,
+        {
+          method: "PUT",
+          headers: buildInternalHeaders(req),
+          body: req.body,
+        }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Mark lead not a person error:", error);
+      respondUpstreamError(res, error, "Failed to mark lead as not a real person");
+    }
+  }
+);
+
+/**
+ * DELETE /v1/leads/:id/not-a-person — pass-through to lead-service
+ * DELETE /orgs/leads/{id}/not-a-person. The undo of the PUT above.
+ */
+router.delete(
+  "/leads/:id/not-a-person",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/leads/${encodeURIComponent(req.params.id)}/not-a-person${rawQueryString(req.originalUrl)}`,
+        {
+          method: "DELETE",
+          headers: buildInternalHeaders(req),
+        }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Lift lead not-a-person mark error:", error);
+      respondUpstreamError(res, error, "Failed to lift the not-a-real-person mark");
+    }
+  }
+);
+
+/**
+ * GET /v1/brands/:brandId/conversions — pass-through to lead-service
+ * GET /orgs/brands/{brandId}/conversions (FAKE-OUTCOMES-1022).
+ *
+ * The brand's conversion events (signups, sales, meetings...), newest first, each saying
+ * whether it counts and, when set aside, why: how a caller finds the id of a wrongly
+ * attributed conversion. Filters (`event`, `leadId`, `email`, `limit`) ride the query
+ * string verbatim (rule #11).
+ */
+router.get(
+  "/brands/:brandId/conversions",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/brands/${encodeURIComponent(req.params.brandId)}/conversions${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] List brand conversions error:", error);
+      respondUpstreamError(res, error, "Failed to list brand conversions");
+    }
+  }
+);
+
+/**
+ * POST /v1/brands/:brandId/conversions/:conversionId/withdraw — pass-through to lead-service
+ * POST /orgs/brands/{brandId}/conversions/{conversionId}/withdraw.
+ *
+ * Withdraws one wrongly attributed conversion (`{note}` required, lead-service owns the
+ * refusals: 409 `crm_evidence`, 409 `use_step_statements`, forwarded with `code` intact).
+ * The caller's user is forwarded: lead-service records who withdrew it.
+ */
+router.post(
+  "/brands/:brandId/conversions/:conversionId/withdraw",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/brands/${encodeURIComponent(req.params.brandId)}/conversions/${encodeURIComponent(
+          req.params.conversionId
+        )}/withdraw${rawQueryString(req.originalUrl)}`,
+        {
+          method: "POST",
+          headers: buildInternalHeaders(req),
+          body: req.body,
+        }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Withdraw conversion error:", error);
+      respondUpstreamError(res, error, "Failed to withdraw conversion");
+    }
+  }
+);
+
+/**
+ * DELETE /v1/brands/:brandId/conversions/:conversionId/withdrawal — pass-through to lead-service
+ * DELETE /orgs/brands/{brandId}/conversions/{conversionId}/withdrawal. The undo of the POST above.
+ */
+router.delete(
+  "/brands/:brandId/conversions/:conversionId/withdrawal",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.lead,
+        `/orgs/brands/${encodeURIComponent(req.params.brandId)}/conversions/${encodeURIComponent(
+          req.params.conversionId
+        )}/withdrawal${rawQueryString(req.originalUrl)}`,
+        {
+          method: "DELETE",
+          headers: buildInternalHeaders(req),
+        }
+      );
+
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("[api-service] Restore conversion error:", error);
+      respondUpstreamError(res, error, "Failed to undo the conversion withdrawal");
+    }
+  }
+);
+
+/**
  * POST /v1/leads/:id/answered-outside — pass-through to lead-service
  * POST /orgs/leads/{id}/answered-outside.
  *

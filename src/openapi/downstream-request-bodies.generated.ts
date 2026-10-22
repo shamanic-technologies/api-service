@@ -296,6 +296,25 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       "description": "A conversion event reported by a client's website pixel."
     }
   },
+  "POST /v1/brands/{brandId}/conversions/{conversionId}/withdraw": {
+    "service": "lead-service",
+    "method": "POST",
+    "path": "/orgs/brands/{brandId}/conversions/{conversionId}/withdraw",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "note": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000,
+          "example": "Our own test signup, matched by surname only."
+        }
+      },
+      "required": [
+        "note"
+      ]
+    }
+  },
   "POST /v1/brands/{id}/icp/suggest": {
     "service": "brand-service",
     "method": "POST",
@@ -916,7 +935,49 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
             "minLength": 1
           },
           "minItems": 1,
-          "description": "Existing template types, oldest first; the last is the head."
+          "description": "Existing template types, oldest first; the last is the head. Exactly one of `versions` / `template`."
+        },
+        "template": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "description": "Type to store the new template under; default `<slug>-v1`. Later versions are `<family>-vN`."
+            },
+            "prompt": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The full text of a brand-new template. Must differ from every stored template."
+            },
+            "variables": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Variable name as referenced in the prompt body via {{name}}."
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "Free-form description of what the caller should put for this variable. Caller decides the JSON shape — string, array, object, whatever fits the template. Multibrand is the default, so brand-related variables typically receive arrays or objects, not scalars."
+                  }
+                },
+                "required": [
+                  "name",
+                  "description"
+                ]
+              },
+              "description": "Exactly the {{tokens}} the text uses."
+            }
+          },
+          "required": [
+            "prompt",
+            "variables"
+          ],
+          "additionalProperties": false,
+          "description": "A brand-new template, stored as the dynasty's first version and head. Exactly one of `versions` / `template`."
         }
       },
       "required": [
@@ -926,8 +987,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "signature",
         "identity",
         "featureSlug",
-        "legKey",
-        "versions"
+        "legKey"
       ]
     }
   },
@@ -1195,6 +1255,11 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "type": "string",
           "description": "REQUIRED on kind=stopped and kind=handed: why nothing is owed right now, stated by the caller and stored verbatim (\"answered_again\", \"meeting_booked\", \"not_interested\"). Absent is a 400, never an empty string.",
           "example": "answered_again"
+        },
+        "llmAlias": {
+          "type": "string",
+          "description": "kind=acted ONLY (any other kind with it = 400 llm_alias_only_on_acted). BEST-TPL-LLM-1022-LS: the LLM alias the acting run wrote this message with, as resolved for the run (e.g. features-service writer-pick). Stored on the act and served on GET /internal/leads/{leadId}/sent-messages as writtenBy.llmAlias. Optional: absent = the run states none (served as unknown with a reason, never guessed). Trimmed, 1..200 chars.",
+          "example": "gemini-3-flash"
         }
       },
       "required": [
@@ -3002,6 +3067,22 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
             "company"
           ],
           "description": "`lead` (default) = this person at this company. `company` = the lead's whole company for the brand (\"not our target\"), covering every lead of it; 409 `lead_has_no_company` when the lead has no known company."
+        }
+      }
+    }
+  },
+  "PUT /v1/leads/{id}/not-a-person": {
+    "service": "lead-service",
+    "method": "PUT",
+    "path": "/orgs/leads/{id}/not-a-person",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "note": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Why, in your words. Optional.",
+          "example": "Our own AI reply test."
         }
       }
     }
