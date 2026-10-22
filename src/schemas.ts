@@ -3495,6 +3495,129 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "put",
+  path: "/v1/leads/{id}/not-a-person",
+  tags: ["Leads"],
+  summary: "Mark a lead as NOT a real person (a test, a staff mailbox)",
+  description:
+    "Pass-through to lead-service PUT /orgs/leads/{id}/not-a-person. States that this lead is not a real person " +
+    "(our own test, a staff mailbox, a fake signup): it leaves every figure of the org (lead lists, counts, positive " +
+    "replies, signups, ROI) and its conversions are set aside. Nothing is deleted: DELETE on the same path lifts it. " +
+    "Body `{note?}` forwarded VERBATIM. A lead whose every email is a staff address is marked automatically. " +
+    "List the marked leads with GET /v1/leads/not-a-person[?leadId=<id>]. Refer to lead-service openapi.json for shapes.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().openapi({ description: "The `id` of a lead as returned by GET /v1/leads, or the lead's own id." }),
+    }),
+    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("LeadNotAPersonRequest") } } },
+  },
+  responses: {
+    200: { description: "The lead's marks, as returned by lead-service.", content: { "application/json": { schema: z.object({}).passthrough().openapi("LeadNotAPersonResponse") } } },
+    400: { description: "Invalid request (lead-service states the reason)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead in this caller's org", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/leads/{id}/not-a-person",
+  tags: ["Leads"],
+  summary: "Lift the not-a-real-person mark from a lead",
+  description:
+    "Pass-through to lead-service DELETE /orgs/leads/{id}/not-a-person, the undo of the PUT: the lead counts again and the " +
+    "conversions the mark set aside stand back up. An automatic staff-address mark stays (answered in `stillMarkedBy`).",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().openapi({ description: "The `id` of a lead as returned by GET /v1/leads, or the lead's own id." }),
+    }),
+  },
+  responses: {
+    200: { description: "As returned by lead-service.", content: { "application/json": { schema: z.object({}).passthrough().openapi("LeadNotAPersonLiftResponse") } } },
+    400: { description: "Invalid request (lead-service states the reason)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such lead in this caller's org", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/conversions",
+  tags: ["Leads"],
+  summary: "List a brand's conversion events (signups, sales, meetings) and whether each counts",
+  description:
+    "Pass-through to lead-service GET /orgs/brands/{brandId}/conversions. Newest first; each event says whether it COUNTS " +
+    "(`counted`) and, when set aside, why. Use it to find the id of a wrongly attributed conversion before withdrawing it. " +
+    "Query (`event`, `leadId`, `email`, `limit` 1..200) forwarded verbatim.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string() }),
+    query: z
+      .object({
+        event: z.string().optional(),
+        leadId: z.string().optional(),
+        email: z.string().optional(),
+        limit: z.string().optional(),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "As returned by lead-service.", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandConversionsListResponse") } } },
+    400: { description: "Invalid filter (lead-service states the reason)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{brandId}/conversions/{conversionId}/withdraw",
+  tags: ["Leads"],
+  summary: "Withdraw a wrongly attributed conversion",
+  description:
+    "Pass-through to lead-service POST /orgs/brands/{brandId}/conversions/{conversionId}/withdraw. Sets aside one conversion " +
+    "(a signup or sale your website tag reported, attributed to the wrong person or a test of ours): it stops counting " +
+    "everywhere. Body `{note}` (required, your words) forwarded VERBATIM; the caller's user is recorded. A CRM conversion " +
+    "answers 409 `crm_evidence`, a person's own step statement 409 `use_step_statements`. Undo: DELETE .../withdrawal.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string(), conversionId: z.string() }),
+    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("WithdrawConversionRequest") } } },
+  },
+  responses: {
+    200: { description: "As returned by lead-service.", content: { "application/json": { schema: z.object({}).passthrough().openapi("WithdrawConversionResponse") } } },
+    400: { description: "Invalid request (lead-service states the reason)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such conversion for this brand of the org", content: errorContent },
+    409: { description: "Corrected elsewhere (`code` says where)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/brands/{brandId}/conversions/{conversionId}/withdrawal",
+  tags: ["Leads"],
+  summary: "Undo a conversion withdrawal",
+  description:
+    "Pass-through to lead-service DELETE /orgs/brands/{brandId}/conversions/{conversionId}/withdrawal. Stands back up a " +
+    "conversion a person withdrew; anything set aside for another reason answers 409 `not_withdrawn_by_a_person`.",
+  security: authed,
+  request: { params: z.object({ brandId: z.string(), conversionId: z.string() }) },
+  responses: {
+    200: { description: "As returned by lead-service.", content: { "application/json": { schema: z.object({}).passthrough().openapi("RestoreConversionResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such conversion for this brand of the org", content: errorContent },
+    409: { description: "not_withdrawn_by_a_person", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/leads/{id}/answered-outside",
   tags: ["Leads"],
