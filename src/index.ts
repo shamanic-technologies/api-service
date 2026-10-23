@@ -27,6 +27,7 @@ import brandSpendableBudgetRoutes from "./routes/brand-spendable-budget.js";
 import rewardTasksRoutes from "./routes/reward-tasks.js";
 import brandAudienceRoutes from "./routes/brand-audience.js";
 import crmRoutes from "./routes/crm.js";
+import crmOpsRoutes from "./routes/crm-ops.js";
 import googleRoutes from "./routes/google.js";
 import scrapingRoutes from "./routes/scraping.js";
 import leadsRoutes from "./routes/leads.js";
@@ -314,6 +315,7 @@ app.use("/v1", brandAudienceRoutes);
 app.use("/v1", relationshipsRoutes); // lead-service /orgs/brands/:brandId/relationships/* (RELATIONSHIP-TAGS-1014)
 app.use("/v1", brandRoutes);
 app.use("/v1", crmRoutes);
+app.use("/v1", crmOpsRoutes);
 app.use("/v1", googleRoutes);
 app.use("/v1", scrapingRoutes);
 app.use("/v1", leadsRoutes);
