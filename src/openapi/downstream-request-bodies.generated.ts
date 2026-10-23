@@ -2936,6 +2936,26 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       }
     }
   },
+  "PUT /v1/brands/{id}/offers/{offerId}/user-fields": {
+    "service": "brand-service",
+    "method": "PUT",
+    "path": "/orgs/brands/{brandId}/offers/{offerId}/user-fields",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "fields": {
+          "type": "object",
+          "additionalProperties": {
+            "nullable": true
+          },
+          "description": "Confirmed values keyed by user-facing field key. Unknown keys are rejected (400)."
+        }
+      },
+      "required": [
+        "fields"
+      ]
+    }
+  },
   "PUT /v1/brands/{id}/sales-rep": {
     "service": "brand-service",
     "method": "PUT",
