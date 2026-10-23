@@ -59,6 +59,8 @@ const ROUTES: Array<[string, string]> = [
   ["/v1/features/research/catalog?basis=actual", "/internal/research/catalog?basis=actual"],
   ["/v1/features/research/catalog", "/internal/research/catalog"],
   ["/v1/features/research/templates", "/internal/research/templates"],
+  ["/v1/features/research/performance?basis=actual", "/internal/research/performance?basis=actual"],
+  ["/v1/features/research/performance", "/internal/research/performance"],
 ];
 
 describe.each(ROUTES)("GET %s — staff", (path, downstream) => {
