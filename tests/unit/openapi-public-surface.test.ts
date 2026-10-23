@@ -74,6 +74,7 @@ const PLATFORM_OPERATIONS = [
   "get /v1/features/research/studies",
   "get /v1/features/research/catalog",
   "get /v1/features/research/templates",
+  "get /v1/features/research/performance",
   "get /v1/features/{featureSlug}/workflow-projection/actual-cost",
   "get /v1/runs/vendor",
   "get /v1/features/stated-monthly-amounts",

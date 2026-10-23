@@ -290,6 +290,10 @@
         "type": "object",
         "properties": {}
       },
+      "ResearchPerformanceResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "PublicCostPerOutcomeLifetimeResponse": {
         "type": "object",
         "properties": {}
