@@ -11277,6 +11277,53 @@ registry.registerPath({
   },
 });
 
+const WHATSAPP_LINES_INTRO =
+  "Platform-scoped staff surface over crm-service's WhatsApp line watch (cross-org ops data, NOT customer data). "
+  + "Powers the WhatsApp section of dashboard v2 Monitoring: one row per linked line per day, red when the line "
+  + "is down. Staff-only (platform API key + STAFF_EMAILS x-email); no org context. ";
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/crm/ops/whatsapp-lines",
+  tags: ["CRM Ops"],
+  summary: "Get every linked WhatsApp line's connection state, now and per day (staff only)",
+  description:
+    WHATSAPP_LINES_INTRO
+    + "Transparent byte passthrough to crm-service GET /internal/ops/whatsapp-lines. The query string is forwarded "
+    + "verbatim; a bad `days` answers crm-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Series window in days; crm-service owns the default (30) and bounds (1..90)"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "WhatsApp line health — pass-through from crm-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CrmOpsWhatsappLinesResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/crm/ops/whatsapp-lines/check",
+  tags: ["CRM Ops"],
+  summary: "Run one WhatsApp line watch pass now (staff only)",
+  description:
+    WHATSAPP_LINES_INTRO
+    + "Transparent byte passthrough to crm-service POST /internal/ops/whatsapp-lines/check (the in-process loop "
+    + "runs it every 2 min). Response owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Pass summary — pass-through from crm-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CrmOpsWhatsappLinesCheckResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/instantly/ops/sender-health",

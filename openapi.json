@@ -6656,6 +6656,14 @@
         "type": "object",
         "properties": {}
       },
+      "CrmOpsWhatsappLinesResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "CrmOpsWhatsappLinesCheckResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "InstantlyOpsSenderHealthResponse": {
         "type": "object",
         "properties": {}
