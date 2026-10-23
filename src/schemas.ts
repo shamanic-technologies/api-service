@@ -18281,6 +18281,31 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
+  path: "/v1/content/template-dynasties/{slug}/merge",
+  tags: ["Content"],
+  summary: "Merge a template dynasty into another of the same pipe and identity (staff only)",
+  description:
+    "Fold dynasty {slug} INTO `into`: every version of {slug} becomes an OLDER version of `into`, deprecated (a still-active one with reason " +
+    "`Merged into <into>: <reason>`), so `into`'s head and what its workflows write with never change. {slug} then leaves the dynasty list, its slug " +
+    "resolves to `into`, and its stats/outputs read as `into`'s. The verified staff member is recorded as who merged. Refusals forwarded verbatim: " +
+    "409 `DIFFERENT_PIPE` / `DIFFERENT_IDENTITY` (blind and named are never merged) / `DYNASTY_MERGED`, 400 `SAME_DYNASTY` / blank reason, 404 `DYNASTY_NOT_FOUND`. " +
+    "Answers 200 `{ merged, movedVersions, deprecated, dynasty }`. " +
+    "Proxies content-generation-service POST /internal/template-dynasties/{slug}/merge. " + templateDynastyNote,
+  security: platformAuth,
+  request: {
+    params: z.object({ slug: z.string().describe("Slug of the dynasty to merge (the source)") }),
+    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("MergeTemplateDynastyRequest") } } },
+  },
+  responses: {
+    200: { description: "Merged", content: { "application/json": { schema: z.object({}).passthrough() } } },
+    ...templateDynastyErrors,
+    404: { description: "DYNASTY_NOT_FOUND (forwarded verbatim)", content: errorContent },
+    409: { description: "DIFFERENT_PIPE / DIFFERENT_IDENTITY / DYNASTY_MERGED (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
   path: "/v1/workflows/retire-by-content",
   tags: ["Workflows"],
   summary: "Retire every workflow running a template or a model (staff only)",
