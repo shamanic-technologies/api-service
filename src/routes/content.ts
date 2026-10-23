@@ -303,4 +303,8 @@ router.get("/content/workflow-dynasties/:slug/outputs", requireStaffKeyOrPlatfor
 router.post("/content/template-dynasties/:slug/versions", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
   pipeContentStaff(req, res, `/internal/template-dynasties/${encodeURIComponent(req.params.slug)}/versions`, "Failed to add template dynasty version"));
 
+/** POST /v1/content/template-dynasties/:slug/merge → POST /internal/template-dynasties/{slug}/merge `{ into, reason }` (merge into a sibling of the same pipe + identity). */
+router.post("/content/template-dynasties/:slug/merge", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(req, res, `/internal/template-dynasties/${encodeURIComponent(req.params.slug)}/merge`, "Failed to merge template dynasty"));
+
 export default router;

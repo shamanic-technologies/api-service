@@ -980,6 +980,31 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       ]
     }
   },
+  "POST /v1/content/template-dynasties/{slug}/merge": {
+    "service": "content-generation-service",
+    "method": "POST",
+    "path": "/internal/template-dynasties/{slug}/merge",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "into": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Slug of the dynasty to merge INTO: same pipe (featureSlug x legKey), same identity. Its head does not change."
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 1000,
+          "description": "Why (shown with the merge; also the deprecation reason of a merged version that was still active)."
+        }
+      },
+      "required": [
+        "into",
+        "reason"
+      ],
+      "additionalProperties": false
+    }
+  },
   "POST /v1/content/template-dynasties/{slug}/versions": {
     "service": "content-generation-service",
     "method": "POST",

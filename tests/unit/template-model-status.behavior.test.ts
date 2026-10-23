@@ -283,12 +283,29 @@ describe("template dynasties + new template text (staff, TPL-DYNASTY-1021-CG)", 
     ["get", "/v1/content/template-dynasties/a-b/outputs?limit=4", "/internal/template-dynasties/a-b/outputs?limit=4"],
     ["get", "/v1/content/workflow-dynasties/a-b/outputs?limit=30", "/internal/workflow-dynasties/a-b/outputs?limit=30"],
     ["post", "/v1/content/template-dynasties/a-b/versions", "/internal/template-dynasties/a-b/versions"],
+    ["post", "/v1/content/template-dynasties/a-b/merge", "/internal/template-dynasties/a-b/merge"],
   ] as const)("%s %s hits %s", async (method, path, downstream) => {
     stubUpstream(200, { ok: true });
     const res = await staffPlatform((request(buildApp()) as any)[method](path)).send(method === "post" ? { type: "x" } : undefined);
     expect(res.status).toBe(200);
     expect(calls[0].url).toBe(`${EMAILGEN_BASE}${downstream}`);
     expect(calls[0].options.method).toBe(method.toUpperCase());
+  });
+
+  it("a staff key's merge pipes the body verbatim with the key user's email as x-staff-email, and the producer's refusal back", async () => {
+    stubUpstream(409, { error: "blind and named", code: "DIFFERENT_IDENTITY" });
+    const res = await request(buildApp())
+      .post("/v1/content/template-dynasties/a-b/merge")
+      .set("authorization", "Bearer distrib.usr_x")
+      .set("x-test-auth-type", "user_key")
+      .set("x-test-key-staff", "true")
+      .set("x-test-key-email", STAFF)
+      .send({ into: "c-d", reason: "same approach" });
+    expect(res.status).toBe(409);
+    expect(res.body.code).toBe("DIFFERENT_IDENTITY");
+    expect(calls[0].url).toBe(`${EMAILGEN_BASE}/internal/template-dynasties/a-b/merge`);
+    expect(JSON.parse(calls[0].options.body)).toEqual({ into: "c-d", reason: "same approach" });
+    expect(calls[0].options.headers["x-staff-email"]).toBe(STAFF);
   });
 
   it("a staff key's version add carries the key user's email as x-staff-email", async () => {
@@ -312,6 +329,7 @@ describe("template dynasties + new template text (staff, TPL-DYNASTY-1021-CG)", 
     ["get", "/v1/content/template-dynasties/a-b/outputs"],
     ["get", "/v1/content/workflow-dynasties/a-b/outputs"],
     ["post", "/v1/content/template-dynasties/a-b/versions"],
+    ["post", "/v1/content/template-dynasties/a-b/merge"],
     ["post", "/v1/content/platform-prompts"],
   ] as const)("%s %s refuses a client key and a non-staff platform caller before content-generation", async (method, path) => {
     stubUpstream(200, {});

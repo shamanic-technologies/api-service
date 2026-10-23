@@ -87,6 +87,7 @@ export const DOWNSTREAM_BODY_SOURCES: Record<string, DownstreamBodySource> = {
   "POST /v1/content/platform-prompts": { service: "content-generation-service", method: "POST", path: "/platform-prompts" },
   "POST /v1/content/template-dynasties": { service: "content-generation-service", method: "POST", path: "/internal/template-dynasties" },
   "POST /v1/content/template-dynasties/{slug}/versions": { service: "content-generation-service", method: "POST", path: "/internal/template-dynasties/{slug}/versions" },
+  "POST /v1/content/template-dynasties/{slug}/merge": { service: "content-generation-service", method: "POST", path: "/internal/template-dynasties/{slug}/merge" },
   "POST /v1/orgs/matrix/connections": { service: "crm-service", method: "POST", path: "/orgs/matrix/connections" },
   "PATCH /v1/orgs/matrix/connections/{id}": { service: "crm-service", method: "PATCH", path: "/orgs/matrix/connections/{id}" },
   "POST /v1/orgs/matrix/links": { service: "crm-service", method: "POST", path: "/orgs/matrix/links" },
