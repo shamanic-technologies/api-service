@@ -2,6 +2,7 @@ import { OpenApiGeneratorV3 } from "@asteasolutions/zod-to-openapi";
 import { registry } from "../schemas.js";
 import { DEPRECATION_POLICY, MINIMUM_NOTICE_DAYS } from "../lib/deprecation.js";
 import { attachDownstreamBodies } from "./downstream-bodies.js";
+import { attachDownstreamResponses } from "./downstream-responses.js";
 import {
   ANONYMOUS_POLICY,
   AUTHENTICATED_POLICY,
@@ -141,6 +142,9 @@ const identityParams = [
   },
 ];
 
+/** The identity headers a customer key may send (see `src/lib/org-scope.ts`). */
+const CUSTOMER_IDENTITY_PARAMS = ["x-org-id", "x-brand-id"];
+
 /** Rate-limit state headers, present on every response the gateway sends. */
 const rateLimitResponseHeaders = {
   RateLimit: {
@@ -237,25 +241,35 @@ const DESCRIPTION = `API Gateway for distribute.you.
 
 ## Quick Start
 
-**No account yet (AI agents)?** \`POST /v1/agent-signups/start\` with \`{email, phone}\`, read the 6-digit
-code in that inbox, then \`POST /v1/agent-signups/complete\` with \`{email, code}\`: the answer carries
-\`apiKey\`. No key and no human needed. Repeat both steps for another key on the same account.
-The account has no free credit: free endpoints work at once; anything that spends money answers
-\`402 payment_required\` until you prepay with \`POST /v1/billing/accounts/prepaid_checkout\`
-(minimum $10, plus a required auto top-up: at least $15 whenever the balance falls below at least $5).
-It returns a payment \`url\` a human pays by card; \`GET /v1/billing/accounts/prepaid_status\` says when it is \`active\`.
+This is the full document (every operation your key may call). For the first client, read the short one:
+\`GET /v1/me/openapi.json?view=onboarding\` (also \`GET /openapi.json?view=onboarding\`, no key needed) lists only
+the operations below, in order, with what each one answers.
 
-1. Create an API key in the distribute.you dashboard, or via \`POST /v1/api-keys\`
-2. Use it as a Bearer token — that's it, no extra headers needed
+**1. Get a key.** Already have one (from the distribute.you dashboard, or \`POST /v1/api-keys\`)? Skip to 2. An AI agent with no account:
+\`POST /v1/agent-signups/start\` with \`{email, phone}\`, read the 6-digit code in that inbox, then
+\`POST /v1/agent-signups/complete\` with \`{email, code}\`: the answer carries \`apiKey\`. No human needed.
+Send the key as \`Authorization: Bearer distrib.usr_...\` on every call, nothing else.
 
-\`\`\`
-Authorization: Bearer distrib.usr_abc123...
-\`\`\`
+**2. Open the client's account, in this order.** Each step answers the id the next one takes.
 
-Your key carries your user identity and reaches every organization you are a member of.
-\`Authorization\` is the only header a key goes in.
+| Step | Operation | Keep from the answer |
+|------|-----------|----------------------|
+| Who am I | \`GET /v1/me\` | your organizations and brands |
+| Brand | \`POST /v1/brands\` \`{url, name?}\` | \`brandId\` |
+| Offer | \`POST /v1/brands/{brandId}/offers/proposals\` \`{description}\`, then \`POST /v1/brands/{brandId}/offers/confirm\` \`{offers}\` with the offer(s) you keep | \`offerId\` (\`GET /v1/brands/{brandId}/offers\` lists them) |
+| Audience | \`POST /v1/orgs/audiences/suggest\` \`{brandId, offerId, nlPrompt}\`, then \`POST /v1/orgs/audiences\` with the one you keep | the audience \`id\` |
+| Preview an email | \`POST /v1/content/preview-email/prepare\` \`{brandId, offerId}\`, then \`POST /v1/content/preview-email\` \`{brandId, offerId, recipient}\` | the email to show your user |
+| Prepay | \`POST /v1/billing/accounts/prepaid_checkout\`: a human pays the \`url\`; \`GET /v1/billing/accounts/prepaid_status\` says when it is \`active\` | |
+| Campaign | \`GET /v1/offers/{offerId}/sales-funnels\` (pick one), \`PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps\` \`{maxBudget, maxVolume}\`, \`POST /v1/sales-funnel-campaigns\` \`{brandId, offerId, salesFunnelId, status: "stopped"}\`, then \`PATCH /v1/sales-funnel-campaigns/{id}\` \`{status: "activate"}\` once your user agrees | the campaign \`id\` |
 
-**First call: \`GET /v1/me\`.** It says which user the key acts as and lists every organization
+**How to decide each step** (what to ask your user, what a good offer or audience looks like): read the skills our own
+Copilot follows, \`GET /v1/skills\` then \`GET /v1/skills/{slug}\`.
+
+Accounts opened through \`/v1/agent-signups\` have no free credit: free calls work at once; a call that spends money
+answers \`402 payment_required\` until the prepay is paid (minimum $10, plus a required auto top-up: at least $15
+whenever the balance falls below at least $5).
+
+**\`GET /v1/me\`** says which user the key acts as and lists every organization
 the key can act in (by name), each with its brands. A key belongs to its USER, not to one
 organization: membership is checked on every request, so leaving an organization removes it
 from the key. A key never carries staff, admin or beta powers. The dashboard is at
@@ -413,6 +427,59 @@ export const STAFF_KEY_OPERATIONS = new Set<string>([
 
 export const STAFF_KEY_TAG = "Staff (key)";
 
+/**
+ * The first-client path, in the order an agent runs it (the Quick Start table):
+ * key, who am I, brand, offer, audience, email preview, prepay, campaign, and
+ * the skills that say how to decide each step. `?view=onboarding` on
+ * `GET /openapi.json` and `GET /v1/me/openapi.json` serves ONLY these, with
+ * every schema they reference, so an agent reads one small document instead of
+ * the full one (1 MB). Each must document what it answers:
+ * `tests/unit/openapi-onboarding.test.ts`.
+ */
+export const ONBOARDING_OPERATIONS: readonly string[] = [
+  "POST /v1/agent-signups/start",
+  "POST /v1/agent-signups/complete",
+  "GET /v1/me",
+  "POST /v1/brands",
+  "GET /v1/brands",
+  "POST /v1/brands/{id}/offers/proposals",
+  "POST /v1/brands/{id}/offers/confirm",
+  "GET /v1/brands/{id}/offers",
+  "GET /v1/brands/{id}/offers/{offerId}",
+  "POST /v1/orgs/audiences/suggest",
+  "POST /v1/orgs/audiences",
+  "GET /v1/orgs/audiences",
+  "POST /v1/content/preview-email/prepare",
+  "POST /v1/content/preview-email",
+  "POST /v1/billing/accounts/prepaid_checkout",
+  "GET /v1/billing/accounts/prepaid_status",
+  "GET /v1/offers/{offerId}/sales-funnels",
+  "PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps",
+  "POST /v1/sales-funnel-campaigns",
+  "PATCH /v1/sales-funnel-campaigns/{id}",
+  "GET /v1/sales-funnel-campaigns/{id}",
+  "GET /v1/skills",
+  "GET /v1/skills/{slug}",
+];
+
+export type DocumentView = "full" | "onboarding";
+
+/**
+ * Read `?view=` off a catalogue request: absent = `"full"`; an unknown value is
+ * `null`, which the route answers 400 (never a silent fallback to another view).
+ */
+export function parseDocumentView(raw: unknown): DocumentView | null {
+  if (raw === undefined) return "full";
+  return raw === "full" || raw === "onboarding" ? raw : null;
+}
+
+export const INVALID_VIEW_ANSWER = {
+  error: "Unknown view",
+  code: "invalid_view",
+  fix: "Use ?view=onboarding for the first-client operations only, or omit view for the full document.",
+  views: ["full", "onboarding"],
+};
+
 /** Security scheme naming the shared platform key (`ADMIN_DISTRIBUTE_API_KEY`). */
 export const PLATFORM_SECURITY_SCHEME = "apiKeyAuth";
 
@@ -439,7 +506,7 @@ export const STAFF_ONLY_TAGS = new Set(["Mailing Lists"]);
  * customer's own key.
  */
 export function buildDocument(
-  options: { audience?: DocumentAudience } = {},
+  options: { audience?: DocumentAudience; view?: DocumentView } = {},
 ): Record<string, unknown> {
   const generator = new OpenApiGeneratorV3(registry.definitions);
 
@@ -495,17 +562,75 @@ export function buildDocument(
   // Machine-readable deprecation/versioning policy at the document root.
   document["x-deprecation-policy"] = DEPRECATION_POLICY;
 
-  postProcessOperations(document);
-  attachDownstreamBodies(document);
-
   const audience = options.audience ?? "public";
+  // A customer key names its organization or brand and nothing else: the user,
+  // campaign, workflow and feature headers are set by our own apps and
+  // workflow-service, never by a key holder.
+  postProcessOperations(document, {
+    identityParams: audience === "staff" ? undefined : CUSTOMER_IDENTITY_PARAMS,
+  });
+  attachDownstreamBodies(document);
+  attachDownstreamResponses(document);
+
   if (audience === "public") {
     stripNonCustomerSurface(document, new Set());
   } else if (audience === "staff-key") {
     stripNonCustomerSurface(document, STAFF_KEY_OPERATIONS);
   }
 
+  if (options.view === "onboarding") keepOnlyOnboarding(document);
+
   return document;
+}
+
+/**
+ * Reduce a built document to `ONBOARDING_OPERATIONS`, in that order, plus the
+ * components they reference (transitively) and their tags. Everything else in
+ * `info` stays, so the Quick Start reads the same in both views.
+ */
+function keepOnlyOnboarding(document: Record<string, unknown>): void {
+  const paths = document.paths as Record<string, Record<string, unknown>>;
+  const kept: Record<string, Record<string, unknown>> = {};
+  for (const key of ONBOARDING_OPERATIONS) {
+    const [method, path] = key.split(" ");
+    const operation = paths[path]?.[method.toLowerCase()];
+    if (!operation) continue;
+    (kept[path] ??= {})[method.toLowerCase()] = operation;
+  }
+  document.paths = kept;
+  document.info = {
+    ...(document.info as Record<string, unknown>),
+    title: "distribute.you API: first client",
+  };
+
+  // Keep every component reachable from the kept operations, nothing else.
+  const components = (document.components ?? {}) as Record<string, Record<string, unknown>>;
+  const reachable = new Set<string>();
+  const visit = (node: unknown): void => {
+    if (Array.isArray(node)) return node.forEach(visit);
+    if (!node || typeof node !== "object") return;
+    const ref = (node as Record<string, unknown>).$ref;
+    if (typeof ref === "string" && ref.startsWith("#/components/") && !reachable.has(ref)) {
+      reachable.add(ref);
+      const [, , section, name] = ref.split("/");
+      visit(components[section]?.[name]);
+    }
+    Object.values(node).forEach(visit);
+  };
+  visit(kept);
+  visit(document["x-response-headers"]);
+  for (const [section, entries] of Object.entries(components)) {
+    if (section === "securitySchemes") continue;
+    for (const name of Object.keys(entries)) {
+      if (!reachable.has(`#/components/${section}/${name}`)) delete entries[name];
+    }
+  }
+
+  const usedTags = new Set(
+    Object.values(kept).flatMap((item) => Object.values(item).flatMap((op) => ((op as { tags?: string[] }).tags ?? []))),
+  );
+  const tags = document.tags as { name: string }[] | undefined;
+  if (tags) document.tags = tags.filter((tag) => usedTags.has(tag.name));
 }
 
 /**
@@ -585,14 +710,55 @@ function stripNonCustomerSurface(
  * Post-process every operation in the document.
  *
  * This runs over whatever `registry.definitions` holds, so an operation added
- * later gets an `operationId`, the correlation-id parameter, the rate-limit
- * response headers and the 429 response without anyone remembering to add them
- * by hand. `tests/unit/openapi-agent-readiness.test.ts` fails the build if any
- * of that stops holding.
+ * later gets an `operationId`, the correlation-id parameter, the identity
+ * parameters and the 429 response without anyone remembering to add them by
+ * hand. `tests/unit/openapi-agent-readiness.test.ts` fails the build if any of
+ * that stops holding.
+ *
+ * Everything shared is declared ONCE under `components` and referenced: the
+ * rate-limit and deprecation headers every response carries live in
+ * `components.headers` and are listed at the root under `x-response-headers`
+ * (and in the description), not copied onto each of ~1,500 responses. Copying
+ * them was 4 MB of the 6.3 MB document an agent is pointed to (measured
+ * 2026-10-23), which no model could read.
  */
-export function postProcessOperations(document: Record<string, unknown>): void {
+export function postProcessOperations(
+  document: Record<string, unknown>,
+  options: { identityParams?: string[] } = {},
+): void {
   const paths = document.paths as Record<string, Record<string, unknown>> | undefined;
   if (!paths) return;
+
+  const wantedIdentity = options.identityParams ?? identityParams.map((p) => p.name);
+  const components = (document.components ??= {}) as Record<string, Record<string, unknown>>;
+  const parameters = (components.parameters ??= {});
+  const headers = (components.headers ??= {});
+  const responsesComponent = (components.responses ??= {});
+  parameters[paramComponentName(requestIdParam.name)] = requestIdParam;
+  for (const param of identityParams) {
+    if (wantedIdentity.includes(param.name)) parameters[paramComponentName(param.name)] = param;
+  }
+  for (const [name, header] of Object.entries({ ...rateLimitResponseHeaders, ...deprecationResponseHeaders })) {
+    headers[name] = header;
+  }
+  const rateLimited = rateLimitedResponse();
+  responsesComponent.RateLimited = {
+    ...rateLimited,
+    headers: Object.fromEntries(
+      Object.keys(rateLimited.headers).map((name) =>
+        name === "Retry-After"
+          ? [name, rateLimited.headers[name as "Retry-After"]]
+          : [name, { $ref: `#/components/headers/${name}` }],
+      ),
+    ),
+  };
+  document["x-response-headers"] = {
+    description:
+      "Headers EVERY response of this API carries (rate-limit state and correlation id), plus the deprecation " +
+      "headers a deprecated operation adds. Declared once in components.headers instead of on each response.",
+    always: Object.keys(rateLimitResponseHeaders).map((name) => `#/components/headers/${name}`),
+    onDeprecatedOperations: Object.keys(deprecationResponseHeaders).map((name) => `#/components/headers/${name}`),
+  };
 
   const seenOperationIds = new Map<string, string>();
 
@@ -618,25 +784,51 @@ export function postProcessOperations(document: Record<string, unknown>): void {
       // ── parameters ─────────────────────────────────────────────────────────
       // The correlation id is accepted on every operation, authenticated or not.
       // Identity headers only make sense where the operation authenticates.
-      const extraParams: unknown[] = [requestIdParam];
+      const extraParams: unknown[] = [{ $ref: `#/components/parameters/${paramComponentName(requestIdParam.name)}` }];
       if (operation.security && operation.security.length > 0) {
-        extraParams.push(...identityParams);
+        for (const name of wantedIdentity) extraParams.push({ $ref: `#/components/parameters/${paramComponentName(name)}` });
       }
       operation.parameters = [...(operation.parameters ?? []), ...extraParams];
 
       // ── responses ──────────────────────────────────────────────────────────
-      const responses = (operation.responses ??= {});
       // Every operation goes through the limiter, so every operation can 429.
-      // Added BEFORE the header pass so the 429 carries the same header set.
-      responses["429"] ??= rateLimitedResponse();
-      for (const response of Object.values(responses)) {
-        if (!response || typeof response !== "object") continue;
-        response.headers = {
-          ...rateLimitResponseHeaders,
-          ...deprecationResponseHeaders,
-          ...(response.headers ?? {}),
-        };
+      const responses = (operation.responses ??= {});
+      responses["429"] ??= { $ref: "#/components/responses/RateLimited" } as never;
+      // An error answer that is only a description over a shared schema is
+      // declared once (`Error401Unauthorized`) and referenced. Success answers
+      // stay inline: they are what a reader came for.
+      for (const [code, response] of Object.entries(responses)) {
+        const name = sharedErrorResponseName(code, response);
+        if (!name) continue;
+        responsesComponent[name] ??= response;
+        if (JSON.stringify(responsesComponent[name]) !== JSON.stringify(response)) continue;
+        responses[code] = { $ref: `#/components/responses/${name}` } as never;
       }
     }
   }
+}
+
+/**
+ * The components.responses key of an error answer that can be shared, or null.
+ * Shareable = a non-2xx made of a description and one JSON body that is a bare
+ * `$ref`, nothing else (no headers, no inline schema, no examples).
+ */
+function sharedErrorResponseName(code: string, response: unknown): string | null {
+  if (!/^[3-5]\d\d$/.test(code) || !response || typeof response !== "object") return null;
+  const r = response as Record<string, unknown>;
+  if (typeof r.$ref === "string") return null;
+  const keys = Object.keys(r).sort().join(",");
+  if (keys !== "content,description" || typeof r.description !== "string") return null;
+  const content = r.content as Record<string, { schema?: Record<string, unknown> }>;
+  const types = Object.keys(content);
+  if (types.length !== 1 || types[0] !== "application/json") return null;
+  const media = content["application/json"];
+  if (Object.keys(media).join(",") !== "schema" || Object.keys(media.schema ?? {}).join(",") !== "$ref") return null;
+  const schemaName = String(media.schema!.$ref).split("/").pop()!;
+  return `${pascal(schemaName)}${code}${pascal(r.description).slice(0, 60)}`;
+}
+
+/** `x-org-id` → `XOrgId`: the components.parameters key of a shared header parameter. */
+function paramComponentName(header: string): string {
+  return pascal(header);
 }

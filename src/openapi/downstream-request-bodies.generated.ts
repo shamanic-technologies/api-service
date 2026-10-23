@@ -589,13 +589,20 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "chosenIndex": {
           "type": "integer",
           "minimum": 0,
-          "description": "Index into `offers` of the one the customer starts with."
+          "description": "Index into `offers` of the one the customer starts with. Optional when ONE offer is sent (it is that offer); required when several are sent."
         }
       },
       "required": [
-        "offers",
-        "chosenIndex"
-      ]
+        "offers"
+      ],
+      "example": {
+        "offers": [
+          {
+            "name": "Brand Audit",
+            "description": "A one-week audit of your brand."
+          }
+        ]
+      }
     }
   },
   "POST /v1/brands/{id}/offers/proposals": {
@@ -637,26 +644,8 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         },
         "model": {
           "type": "string",
-          "enum": [
-            "haiku",
-            "sonnet",
-            "opus",
-            "flash-lite",
-            "flash",
-            "flash-pro",
-            "pro",
-            "deepseek-flash",
-            "deepseek-pro",
-            "glm-flash",
-            "glm-pro",
-            "kimi-flash",
-            "kimi-pro",
-            "fable",
-            "gpt-pro",
-            "gpt-sol",
-            "gpt-terra"
-          ],
-          "description": "LLM model to generate with (version-free alias). Provider is derived automatically: anthropic → haiku | sonnet | opus; google → flash-lite | flash | flash-pro | pro; deepseek → deepseek-flash (DeepSeek V4 Flash) | deepseek-pro (DeepSeek V4 Pro); zai → glm-flash (glm-4.7-flashx) | glm-pro (glm-5.2); moonshot → kimi-flash (kimi-k2.6) | kimi-pro (kimi-k3). The six deepseek/zai/moonshot aliases are called directly on each vendor's OpenAI-compatible API. That path is text-only, which this service never exceeds; note that JSON-mode enforcement there is best-effort (fails loud rather than degrading), and a vendor whose account is out of credit answers 429 — surfaced as an error naming the provider, never silently rerouted to another vendor. Omit to use the default 'pro' (google) — unchanged from before this field existed. Every alias stays accepted here whatever its staff status: a NEW workflow must not name one whose status is `deprecated` on GET /internal/models, but a stored workflow that does keeps generating."
+          "minLength": 1,
+          "description": "LLM to write with. Preferred: an LLM dynasty slug (e.g. `claude-opus`, `gemini-flash`; the list is chat-service GET /internal/model-dynasties), which always runs the dynasty's newest version. Any name chat-service POST /complete accepts is accepted: a dynasty slug, a head's exact model id, or a legacy alias (`opus`, `flash-pro`, `pro`…, each a redirect to its dynasty's head). The list is chat-service's (GET /internal/models there, mirrored with statuses on GET /internal/models here), read live: a name it does not accept → 400 `UNKNOWN_MODEL`. Provider is read from that catalogue, never sent by the caller. The model that actually wrote is recorded per generation (`model`). Omit to use the default `gemini-pro` (the model the old `pro` default ran). Every name stays accepted here whatever its staff status: a NEW workflow must not name one whose status is `deprecated` on GET /internal/models, but a stored workflow that does keeps generating."
         },
         "brandIds": {
           "type": "array",

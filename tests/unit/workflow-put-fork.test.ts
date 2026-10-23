@@ -72,7 +72,13 @@ describe("Generated openapi.json reflects fork/conflict changes", () => {
   const openapiPath = path.join(__dirname, "../../openapi.json");
   const spec = JSON.parse(fs.readFileSync(openapiPath, "utf-8"));
   const putEndpoint = spec.paths["/v1/workflows/{id}"]?.put;
-  const putResponses = putEndpoint?.responses;
+  // Plain error answers are shared `$ref`s to components.responses (declared once).
+  const putResponses = Object.fromEntries(
+    Object.entries((putEndpoint?.responses ?? {}) as Record<string, any>).map(([code, r]) => [
+      code,
+      r.$ref ? spec.components.responses[r.$ref.split("/").pop()] : r,
+    ]),
+  ) as Record<string, any>;
   const schemas = spec.components?.schemas;
 
   it("should have 200 response", () => {
