@@ -5680,6 +5680,50 @@ registry.registerPath({
   },
 });
 
+// Offer-level user fields (the dashboard's "Your offer, in six points" and "What you give away"
+// steps). Routed by OFFER_ROUTES in src/routes/brand.ts since they shipped; documented here so an
+// agent following the first-client path can find them. Shapes are brand-service's (snapshots).
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/offers/{offerId}/user-fields",
+  tags: ["Brand"],
+  summary: "Get one offer's confirmed user-facing fields",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{id}/offers/{offerId}/user-fields: each offer field with its value and " +
+    "provenance (`confirmed`, else an auto-extracted `suggested` prefill). Response shape is owned by brand-service.",
+  security: authed,
+  request: { params: BrandOfferParam },
+  responses: {
+    200: { description: "The offer's user-facing fields with provenance", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferUserFieldsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand or offer not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/brands/{id}/offers/{offerId}/user-fields",
+  tags: ["Brand"],
+  summary: "Confirm (upsert) one offer's user-facing fields",
+  description:
+    "Proxy to brand-service PUT /orgs/brands/{id}/offers/{offerId}/user-fields. Upserts the confirmed values the " +
+    "client states about this offer (its key points, what it gives for free, what it never gives) and returns the " +
+    "updated view. Body + response shapes are owned by brand-service; its 4xx propagate verbatim.",
+  security: authed,
+  request: {
+    params: BrandOfferParam,
+    body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferUserFieldsRequest") } } },
+  },
+  responses: {
+    200: { description: "The updated offer fields with provenance", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferUserFieldsUpdateResponse") } } },
+    400: { description: "Validation error / unknown key (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand or offer not found (forwarded verbatim)", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/v1/brands/{id}/transfer",

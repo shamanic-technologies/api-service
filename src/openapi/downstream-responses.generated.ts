@@ -258,6 +258,599 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "GET /v1/brands/{id}/offers/{offerId}/qualification/criteria": {
+    "service": "lead-service",
+    "method": "GET",
+    "path": "/orgs/brands/{brandId}/offers/{offerId}/qualification/criteria",
+    "responses": {
+      "200": {
+        "description": "Criteria",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "criteria": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "offerId": {
+                    "type": "string",
+                    "description": "The offer the criterion belongs to. It applies to every audience of that offer, never to another offer of the brand."
+                  },
+                  "title": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "A few plain words naming the check on a card (suggested criteria); null on a hand-made one and on suggestions written before 2026-10-16."
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "why": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Why it shows a company needs the offer (suggested criteria); null on a hand-made one."
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "mention",
+                      "must_pass"
+                    ],
+                    "description": "mention = the evidence is offered to the email writer, nobody is dropped; must_pass = a company failing it is declined before its reveal is paid, on every audience of the offer. A suggestion is written with mode = its recommendation (still OFF); PATCH changes it."
+                  },
+                  "recommendation": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "mode": {
+                        "type": "string",
+                        "enum": [
+                          "mention",
+                          "must_pass"
+                        ]
+                      },
+                      "reason": {
+                        "type": "string",
+                        "description": "One sentence a client reads on why this role."
+                      }
+                    },
+                    "required": [
+                      "mode",
+                      "reason"
+                    ],
+                    "description": "The AI's recommended role, frozen when suggested (a person's later PATCH of mode never changes it). Must have is recommended sparingly: at most ONE per suggestion run, and only on a check answered from data already held (availability in_our_data). null on hand-made criteria and older suggestions."
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "The client's on/off switch. Suggestions are written off. Only enabled criteria apply at serve and show on a lead."
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "suggested",
+                      "custom"
+                    ]
+                  },
+                  "availability": {
+                    "type": "string",
+                    "enum": [
+                      "in_our_data",
+                      "custom_check"
+                    ],
+                    "description": "in_our_data = answered from firmographics we already hold (no paid call); custom_check = a paid probe on the company."
+                  },
+                  "source": {
+                    "type": "string",
+                    "description": "The probe in plain words."
+                  },
+                  "probe": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "nullable": true
+                    },
+                    "description": "`{kind:\"company_data\"}` or `{kind:\"treg\", label, reading:\"text\"|\"screenshot\", calls:[{endpointId, method, params, maxMicro}]}`."
+                  },
+                  "estimate": {
+                    "type": "object",
+                    "properties": {
+                      "perRowUsd": {
+                        "type": "number",
+                        "description": "Estimated client cost to check ONE lead (probe + AI + storage), from catalogue prices. A company already checked in the last 30 days costs nothing."
+                      },
+                      "probeUsd": {
+                        "type": "number"
+                      },
+                      "aiUsd": {
+                        "type": "number"
+                      },
+                      "storageUsd": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "perRowUsd",
+                      "probeUsd",
+                      "aiUsd",
+                      "storageUsd"
+                    ]
+                  },
+                  "passRate": {
+                    "type": "object",
+                    "properties": {
+                      "checked": {
+                        "type": "integer",
+                        "description": "People this criterion was applied to (sample runs on leads, must-pass checks on serve candidates)."
+                      },
+                      "yes": {
+                        "type": "integer"
+                      },
+                      "no": {
+                        "type": "integer"
+                      },
+                      "unavailable": {
+                        "type": "integer",
+                        "description": "Nothing could be judged (probe failed, observation cannot answer, no company domain). Never counted as a pass."
+                      },
+                      "passRate": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "yes / checked, 4 decimals (unavailable stays in the denominator). null when nobody was checked yet."
+                      }
+                    },
+                    "required": [
+                      "checked",
+                      "yes",
+                      "no",
+                      "unavailable",
+                      "passRate"
+                    ]
+                  },
+                  "createdAt": {
+                    "type": "string"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                },
+                "required": [
+                  "id",
+                  "offerId",
+                  "title",
+                  "question",
+                  "why",
+                  "mode",
+                  "recommendation",
+                  "enabled",
+                  "origin",
+                  "availability",
+                  "source",
+                  "probe",
+                  "estimate",
+                  "passRate",
+                  "createdAt",
+                  "updatedAt"
+                ]
+              }
+            }
+          },
+          "required": [
+            "criteria"
+          ]
+        }
+      }
+    }
+  },
+  "GET /v1/brands/{id}/offers/{offerId}/qualification/previews/{previewId}": {
+    "service": "lead-service",
+    "method": "GET",
+    "path": "/orgs/brands/{brandId}/offers/{offerId}/qualification/previews/{previewId}",
+    "responses": {
+      "200": {
+        "description": "The preview, read from the stored verdicts",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "preview": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "brandId": {
+                  "type": "string"
+                },
+                "offerId": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "running",
+                    "completed",
+                    "failed"
+                  ],
+                  "description": "running = still checking (poll GET .../previews/{previewId}); completed = every check ran; failed = stopped (see error; what was checked before stays readable, asking again reuses it)."
+                },
+                "error": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "insufficient_credit | interrupted | failed"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "finishedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "run": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "The spend run (child of the caller's x-run-id), billed to the calling org."
+                    },
+                    "totalCostUsd": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "Everything the run spent (probes, AI, storage), read from runs-service once the preview stopped; null while running."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "totalCostUsd"
+                  ],
+                  "description": "null when the offer had no enabled check (nothing ran, nothing spent)."
+                },
+                "checks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "criterionId": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "question": {
+                        "type": "string"
+                      },
+                      "mode": {
+                        "type": "string",
+                        "enum": [
+                          "mention",
+                          "must_pass"
+                        ]
+                      },
+                      "source": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "criterionId",
+                      "title",
+                      "question",
+                      "mode",
+                      "source"
+                    ]
+                  },
+                  "description": "The ENABLED checks of the offer when the preview started (frozen), in creation order."
+                },
+                "companies": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "domain": {
+                        "type": "string",
+                        "description": "Normalized (lowercase, no scheme, no www)."
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "mustPass": {
+                        "type": "object",
+                        "properties": {
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "passes",
+                              "fails",
+                              "pending",
+                              "unknown"
+                            ],
+                            "description": "passes = no Must have (must_pass) answered no; an unavailable check never fails a company, as on a live serve. fails = at least one answered no (see failed): its Nice to have (mention) checks are not run (not_checked, reason failed_must_pass), as a live campaign would never email it. pending = running and a Must have is not answered yet. unknown = the preview failed before answering one."
+                          },
+                          "failed": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "criterionId": {
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "question": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "criterionId",
+                                "title",
+                                "question"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "state",
+                          "failed"
+                        ]
+                      },
+                      "qualification": {
+                        "type": "object",
+                        "properties": {
+                          "domain": {
+                            "type": "string"
+                          },
+                          "checks": {
+                            "type": "array",
+                            "items": {
+                              "allOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "criterionId": {
+                                      "type": "string"
+                                    },
+                                    "offerId": {
+                                      "type": "string"
+                                    },
+                                    "question": {
+                                      "type": "string",
+                                      "description": "The yes/no question about the company; yes means it needs the offer."
+                                    },
+                                    "mode": {
+                                      "type": "string",
+                                      "enum": [
+                                        "mention",
+                                        "must_pass"
+                                      ],
+                                      "description": "must_pass = Hard filter (a company failing it is declined before its reveal is paid); mention = Bonus (run once the lead is served, never drops anyone)."
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "description": "The probe in plain words."
+                                    },
+                                    "verdict": {
+                                      "type": "string",
+                                      "enum": [
+                                        "yes",
+                                        "no",
+                                        "unavailable",
+                                        "not_checked"
+                                      ],
+                                      "description": "yes = pass, no = fail, unavailable = could not check (see reason), not_checked = never run on this company (a Hard filter on a serve that did not go through candidates)."
+                                    },
+                                    "yesProbability": {
+                                      "type": "number",
+                                      "nullable": true
+                                    },
+                                    "evidence": {
+                                      "type": "string",
+                                      "nullable": true,
+                                      "description": "One plain sentence with the measured fact supporting the verdict."
+                                    },
+                                    "screenshotUrl": {
+                                      "type": "string",
+                                      "nullable": true,
+                                      "description": "Stored screenshot of what was observed, when the probe reads one."
+                                    },
+                                    "reason": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "checkedAt": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "criterionId",
+                                    "offerId",
+                                    "question",
+                                    "mode",
+                                    "source",
+                                    "verdict",
+                                    "yesProbability",
+                                    "evidence",
+                                    "screenshotUrl",
+                                    "reason",
+                                    "checkedAt"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "title": {
+                                      "type": "string",
+                                      "nullable": true,
+                                      "description": "The criterion's card title (null on a hand-made one)."
+                                    }
+                                  },
+                                  "required": [
+                                    "title"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "domain",
+                          "checks"
+                        ],
+                        "description": "Same shape as a served lead's `qualification` (POST /orgs/buffer/next), each check also titled: what the email writer gets."
+                      }
+                    },
+                    "required": [
+                      "domain",
+                      "name",
+                      "mustPass",
+                      "qualification"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "brandId",
+                "offerId",
+                "status",
+                "error",
+                "createdAt",
+                "finishedAt",
+                "run",
+                "checks",
+                "companies"
+              ]
+            }
+          },
+          "required": [
+            "preview"
+          ]
+        }
+      }
+    }
+  },
+  "GET /v1/brands/{id}/offers/{offerId}/user-fields": {
+    "service": "brand-service",
+    "method": "GET",
+    "path": "/orgs/brands/{brandId}/offers/{offerId}/user-fields",
+    "responses": {
+      "200": {
+        "description": "User-facing fields with provenance",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "fields": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "nullable": true
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": {
+                          "nullable": true
+                        }
+                      },
+                      {
+                        "nullable": true
+                      }
+                    ],
+                    "description": "Confirmed value, or the auto-extract prefill (may be null)"
+                  },
+                  "provenance": {
+                    "type": "string",
+                    "enum": [
+                      "confirmed",
+                      "suggested"
+                    ]
+                  }
+                },
+                "required": [
+                  "value",
+                  "provenance"
+                ]
+              },
+              "description": "Map keyed by user-facing field key (services, dreamOutcome, perceivedLikelihood, socialProof, riskReversal, urgency, scarcity, targetAudience, giveForFree, neverGive). Each value carries the resolved value and its provenance (`confirmed` = user-validated; `suggested` = auto-extract prefill)."
+            }
+          },
+          "required": [
+            "fields"
+          ]
+        }
+      }
+    }
+  },
+  "GET /v1/brands/{id}/sales-rep": {
+    "service": "brand-service",
+    "method": "GET",
+    "path": "/orgs/brands/{brandId}/sales-rep",
+    "responses": {
+      "200": {
+        "description": "The saved rep, with either fact null when we hold no such fact",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "salesRepEmail": {
+              "type": "string",
+              "nullable": true,
+              "description": "The address to copy the rep on when a prospect replies, or `null` when we hold no address for them. `null` is a first-class answer — reps stated before this field existed carry a phone and no email, and nothing is ever inferred from the org owner's account.",
+              "example": "kevin@acme.com"
+            },
+            "salesRepPhone": {
+              "type": "string",
+              "nullable": true,
+              "description": "The number to ring, in strict E.164, or `null` when the rep should be copied but never rung (what the AI meeting-booking channel needs).",
+              "example": "+33770657585"
+            },
+            "salesRepFirstName": {
+              "type": "string",
+              "nullable": true,
+              "description": "The rep's first name, as a hand-over names them (\"I've copied Marie, Head of Partnerships at Doc Dinners\"), or `null` when the brand never stated it. Never inferred from the email address or anywhere else.",
+              "example": "Marie"
+            },
+            "salesRepRole": {
+              "type": "string",
+              "nullable": true,
+              "description": "The rep's role / job title (\"Head of Partnerships\"), or `null` when the brand never stated it. Never inferred.",
+              "example": "Head of Partnerships"
+            }
+          },
+          "required": [
+            "salesRepEmail",
+            "salesRepPhone",
+            "salesRepFirstName",
+            "salesRepRole"
+          ]
+        }
+      }
+    }
+  },
   "GET /v1/offers/{offerId}/sales-funnels": {
     "service": "features-service",
     "method": "GET",
@@ -1038,6 +1631,187 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "GET /v1/orgs/audiences/{id}/preview/companies": {
+    "service": "human-service",
+    "method": "GET",
+    "path": "/orgs/audiences/{id}/preview/companies",
+    "responses": {
+      "200": {
+        "description": "A page of rows (or an honest empty/unavailable answer)",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "audienceId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "ready",
+                "empty",
+                "unavailable"
+              ],
+              "description": "ready = rows below (possibly more to page). empty = the audience matched nobody (reason no_match). unavailable = reason not_built_yet (ask again shortly) or provider_not_previewable (CRM-upload / retired apify audience)."
+            },
+            "reason": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "no_match",
+                "not_built_yet",
+                "provider_not_previewable",
+                null
+              ]
+            },
+            "rows": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "type": "integer",
+                    "description": "Stable 0-based rank of the company in this audience's list. Never changes once built."
+                  },
+                  "company": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "domain": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "website": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "logoUrl": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "description": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "One line, as the provider describes the company."
+                      },
+                      "location": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Display string, e.g. \"Zurich, Switzerland\"."
+                      },
+                      "city": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "country": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "employeeCount": {
+                        "type": "integer",
+                        "nullable": true
+                      },
+                      "industry": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "linkedinUrl": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "foundedYear": {
+                        "type": "integer",
+                        "nullable": true
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "domain",
+                      "website",
+                      "logoUrl",
+                      "description",
+                      "location",
+                      "city",
+                      "country",
+                      "employeeCount",
+                      "industry",
+                      "linkedinUrl",
+                      "foundedYear"
+                    ]
+                  },
+                  "person": {
+                    "type": "object",
+                    "properties": {
+                      "firstName": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "lastNameObfuscated": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Masked by the provider, e.g. \"Ni***s\". The full name is revealed only after signup."
+                      },
+                      "title": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "linkedinUrl": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Only when the provider gives it without a reveal; usually null."
+                      }
+                    },
+                    "required": [
+                      "firstName",
+                      "lastNameObfuscated",
+                      "title",
+                      "linkedinUrl"
+                    ],
+                    "description": "The one person of the audience to write to at this company. Never an email or a phone."
+                  }
+                },
+                "required": [
+                  "index",
+                  "company",
+                  "person"
+                ]
+              },
+              "description": "The requested page of rows, in index order. A field the provider does not give is null, never invented."
+            },
+            "totalAvailable": {
+              "type": "integer",
+              "description": "Rows built and stored so far for this audience (grows as callers page)."
+            },
+            "nextOffset": {
+              "type": "integer",
+              "nullable": true,
+              "description": "Offset of the next page; null when there is nothing more to ask for."
+            },
+            "done": {
+              "type": "boolean",
+              "description": "True once the list is complete (maxRows reached, or the audience ran out of companies)."
+            },
+            "maxRows": {
+              "type": "integer",
+              "description": "The list's ceiling (100)."
+            }
+          },
+          "required": [
+            "audienceId",
+            "status",
+            "reason",
+            "rows",
+            "totalAvailable",
+            "nextOffset",
+            "done",
+            "maxRows"
+          ]
+        }
+      }
+    }
+  },
   "GET /v1/sales-funnel-campaigns/{id}": {
     "service": "campaign-service",
     "method": "GET",
@@ -1379,6 +2153,189 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "createdAt"
               ]
             }
+          ]
+        }
+      }
+    }
+  },
+  "PATCH /v1/brands/{id}/offers/{offerId}/qualification/criteria/{criterionId}": {
+    "service": "lead-service",
+    "method": "PATCH",
+    "path": "/orgs/brands/{brandId}/offers/{offerId}/qualification/criteria/{criterionId}",
+    "responses": {
+      "200": {
+        "description": "Updated",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "criterion": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "offerId": {
+                  "type": "string",
+                  "description": "The offer the criterion belongs to. It applies to every audience of that offer, never to another offer of the brand."
+                },
+                "title": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "A few plain words naming the check on a card (suggested criteria); null on a hand-made one and on suggestions written before 2026-10-16."
+                },
+                "question": {
+                  "type": "string"
+                },
+                "why": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Why it shows a company needs the offer (suggested criteria); null on a hand-made one."
+                },
+                "mode": {
+                  "type": "string",
+                  "enum": [
+                    "mention",
+                    "must_pass"
+                  ],
+                  "description": "mention = the evidence is offered to the email writer, nobody is dropped; must_pass = a company failing it is declined before its reveal is paid, on every audience of the offer. A suggestion is written with mode = its recommendation (still OFF); PATCH changes it."
+                },
+                "recommendation": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "mode": {
+                      "type": "string",
+                      "enum": [
+                        "mention",
+                        "must_pass"
+                      ]
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "One sentence a client reads on why this role."
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "reason"
+                  ],
+                  "description": "The AI's recommended role, frozen when suggested (a person's later PATCH of mode never changes it). Must have is recommended sparingly: at most ONE per suggestion run, and only on a check answered from data already held (availability in_our_data). null on hand-made criteria and older suggestions."
+                },
+                "enabled": {
+                  "type": "boolean",
+                  "description": "The client's on/off switch. Suggestions are written off. Only enabled criteria apply at serve and show on a lead."
+                },
+                "origin": {
+                  "type": "string",
+                  "enum": [
+                    "suggested",
+                    "custom"
+                  ]
+                },
+                "availability": {
+                  "type": "string",
+                  "enum": [
+                    "in_our_data",
+                    "custom_check"
+                  ],
+                  "description": "in_our_data = answered from firmographics we already hold (no paid call); custom_check = a paid probe on the company."
+                },
+                "source": {
+                  "type": "string",
+                  "description": "The probe in plain words."
+                },
+                "probe": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "nullable": true
+                  },
+                  "description": "`{kind:\"company_data\"}` or `{kind:\"treg\", label, reading:\"text\"|\"screenshot\", calls:[{endpointId, method, params, maxMicro}]}`."
+                },
+                "estimate": {
+                  "type": "object",
+                  "properties": {
+                    "perRowUsd": {
+                      "type": "number",
+                      "description": "Estimated client cost to check ONE lead (probe + AI + storage), from catalogue prices. A company already checked in the last 30 days costs nothing."
+                    },
+                    "probeUsd": {
+                      "type": "number"
+                    },
+                    "aiUsd": {
+                      "type": "number"
+                    },
+                    "storageUsd": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "perRowUsd",
+                    "probeUsd",
+                    "aiUsd",
+                    "storageUsd"
+                  ]
+                },
+                "passRate": {
+                  "type": "object",
+                  "properties": {
+                    "checked": {
+                      "type": "integer",
+                      "description": "People this criterion was applied to (sample runs on leads, must-pass checks on serve candidates)."
+                    },
+                    "yes": {
+                      "type": "integer"
+                    },
+                    "no": {
+                      "type": "integer"
+                    },
+                    "unavailable": {
+                      "type": "integer",
+                      "description": "Nothing could be judged (probe failed, observation cannot answer, no company domain). Never counted as a pass."
+                    },
+                    "passRate": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "yes / checked, 4 decimals (unavailable stays in the denominator). null when nobody was checked yet."
+                    }
+                  },
+                  "required": [
+                    "checked",
+                    "yes",
+                    "no",
+                    "unavailable",
+                    "passRate"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "id",
+                "offerId",
+                "title",
+                "question",
+                "why",
+                "mode",
+                "recommendation",
+                "enabled",
+                "origin",
+                "availability",
+                "source",
+                "probe",
+                "estimate",
+                "passRate",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          },
+          "required": [
+            "criterion"
           ]
         }
       }
@@ -1729,6 +2686,832 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "POST /v1/brands/{id}/icp/suggest": {
+    "service": "brand-service",
+    "method": "POST",
+    "path": "/orgs/brands/{brandId}/icp/suggest",
+    "responses": {
+      "200": {
+        "description": "Suggested ICP",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "icp": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "icp"
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/brands/{id}/offers/{offerId}/qualification/previews": {
+    "service": "lead-service",
+    "method": "POST",
+    "path": "/orgs/brands/{brandId}/offers/{offerId}/qualification/previews",
+    "responses": {
+      "200": {
+        "description": "Finished (or the offer has no enabled check: nothing ran)",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "preview": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "brandId": {
+                  "type": "string"
+                },
+                "offerId": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "running",
+                    "completed",
+                    "failed"
+                  ],
+                  "description": "running = still checking (poll GET .../previews/{previewId}); completed = every check ran; failed = stopped (see error; what was checked before stays readable, asking again reuses it)."
+                },
+                "error": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "insufficient_credit | interrupted | failed"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "finishedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "run": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "The spend run (child of the caller's x-run-id), billed to the calling org."
+                    },
+                    "totalCostUsd": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "Everything the run spent (probes, AI, storage), read from runs-service once the preview stopped; null while running."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "totalCostUsd"
+                  ],
+                  "description": "null when the offer had no enabled check (nothing ran, nothing spent)."
+                },
+                "checks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "criterionId": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "question": {
+                        "type": "string"
+                      },
+                      "mode": {
+                        "type": "string",
+                        "enum": [
+                          "mention",
+                          "must_pass"
+                        ]
+                      },
+                      "source": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "criterionId",
+                      "title",
+                      "question",
+                      "mode",
+                      "source"
+                    ]
+                  },
+                  "description": "The ENABLED checks of the offer when the preview started (frozen), in creation order."
+                },
+                "companies": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "domain": {
+                        "type": "string",
+                        "description": "Normalized (lowercase, no scheme, no www)."
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "mustPass": {
+                        "type": "object",
+                        "properties": {
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "passes",
+                              "fails",
+                              "pending",
+                              "unknown"
+                            ],
+                            "description": "passes = no Must have (must_pass) answered no; an unavailable check never fails a company, as on a live serve. fails = at least one answered no (see failed): its Nice to have (mention) checks are not run (not_checked, reason failed_must_pass), as a live campaign would never email it. pending = running and a Must have is not answered yet. unknown = the preview failed before answering one."
+                          },
+                          "failed": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "criterionId": {
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "question": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "criterionId",
+                                "title",
+                                "question"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "state",
+                          "failed"
+                        ]
+                      },
+                      "qualification": {
+                        "type": "object",
+                        "properties": {
+                          "domain": {
+                            "type": "string"
+                          },
+                          "checks": {
+                            "type": "array",
+                            "items": {
+                              "allOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "criterionId": {
+                                      "type": "string"
+                                    },
+                                    "offerId": {
+                                      "type": "string"
+                                    },
+                                    "question": {
+                                      "type": "string",
+                                      "description": "The yes/no question about the company; yes means it needs the offer."
+                                    },
+                                    "mode": {
+                                      "type": "string",
+                                      "enum": [
+                                        "mention",
+                                        "must_pass"
+                                      ],
+                                      "description": "must_pass = Hard filter (a company failing it is declined before its reveal is paid); mention = Bonus (run once the lead is served, never drops anyone)."
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "description": "The probe in plain words."
+                                    },
+                                    "verdict": {
+                                      "type": "string",
+                                      "enum": [
+                                        "yes",
+                                        "no",
+                                        "unavailable",
+                                        "not_checked"
+                                      ],
+                                      "description": "yes = pass, no = fail, unavailable = could not check (see reason), not_checked = never run on this company (a Hard filter on a serve that did not go through candidates)."
+                                    },
+                                    "yesProbability": {
+                                      "type": "number",
+                                      "nullable": true
+                                    },
+                                    "evidence": {
+                                      "type": "string",
+                                      "nullable": true,
+                                      "description": "One plain sentence with the measured fact supporting the verdict."
+                                    },
+                                    "screenshotUrl": {
+                                      "type": "string",
+                                      "nullable": true,
+                                      "description": "Stored screenshot of what was observed, when the probe reads one."
+                                    },
+                                    "reason": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "checkedAt": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "criterionId",
+                                    "offerId",
+                                    "question",
+                                    "mode",
+                                    "source",
+                                    "verdict",
+                                    "yesProbability",
+                                    "evidence",
+                                    "screenshotUrl",
+                                    "reason",
+                                    "checkedAt"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "title": {
+                                      "type": "string",
+                                      "nullable": true,
+                                      "description": "The criterion's card title (null on a hand-made one)."
+                                    }
+                                  },
+                                  "required": [
+                                    "title"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "domain",
+                          "checks"
+                        ],
+                        "description": "Same shape as a served lead's `qualification` (POST /orgs/buffer/next), each check also titled: what the email writer gets."
+                      }
+                    },
+                    "required": [
+                      "domain",
+                      "name",
+                      "mustPass",
+                      "qualification"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "brandId",
+                "offerId",
+                "status",
+                "error",
+                "createdAt",
+                "finishedAt",
+                "run",
+                "checks",
+                "companies"
+              ]
+            }
+          },
+          "required": [
+            "preview"
+          ]
+        }
+      },
+      "202": {
+        "description": "Still running: poll GET .../previews/{previewId}",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "preview": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "brandId": {
+                  "type": "string"
+                },
+                "offerId": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "running",
+                    "completed",
+                    "failed"
+                  ],
+                  "description": "running = still checking (poll GET .../previews/{previewId}); completed = every check ran; failed = stopped (see error; what was checked before stays readable, asking again reuses it)."
+                },
+                "error": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "description": "insufficient_credit | interrupted | failed"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "message"
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "finishedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "run": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "The spend run (child of the caller's x-run-id), billed to the calling org."
+                    },
+                    "totalCostUsd": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "Everything the run spent (probes, AI, storage), read from runs-service once the preview stopped; null while running."
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "totalCostUsd"
+                  ],
+                  "description": "null when the offer had no enabled check (nothing ran, nothing spent)."
+                },
+                "checks": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "criterionId": {
+                        "type": "string"
+                      },
+                      "title": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "question": {
+                        "type": "string"
+                      },
+                      "mode": {
+                        "type": "string",
+                        "enum": [
+                          "mention",
+                          "must_pass"
+                        ]
+                      },
+                      "source": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "criterionId",
+                      "title",
+                      "question",
+                      "mode",
+                      "source"
+                    ]
+                  },
+                  "description": "The ENABLED checks of the offer when the preview started (frozen), in creation order."
+                },
+                "companies": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "domain": {
+                        "type": "string",
+                        "description": "Normalized (lowercase, no scheme, no www)."
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "mustPass": {
+                        "type": "object",
+                        "properties": {
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "passes",
+                              "fails",
+                              "pending",
+                              "unknown"
+                            ],
+                            "description": "passes = no Must have (must_pass) answered no; an unavailable check never fails a company, as on a live serve. fails = at least one answered no (see failed): its Nice to have (mention) checks are not run (not_checked, reason failed_must_pass), as a live campaign would never email it. pending = running and a Must have is not answered yet. unknown = the preview failed before answering one."
+                          },
+                          "failed": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "criterionId": {
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "question": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "criterionId",
+                                "title",
+                                "question"
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "state",
+                          "failed"
+                        ]
+                      },
+                      "qualification": {
+                        "type": "object",
+                        "properties": {
+                          "domain": {
+                            "type": "string"
+                          },
+                          "checks": {
+                            "type": "array",
+                            "items": {
+                              "allOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "criterionId": {
+                                      "type": "string"
+                                    },
+                                    "offerId": {
+                                      "type": "string"
+                                    },
+                                    "question": {
+                                      "type": "string",
+                                      "description": "The yes/no question about the company; yes means it needs the offer."
+                                    },
+                                    "mode": {
+                                      "type": "string",
+                                      "enum": [
+                                        "mention",
+                                        "must_pass"
+                                      ],
+                                      "description": "must_pass = Hard filter (a company failing it is declined before its reveal is paid); mention = Bonus (run once the lead is served, never drops anyone)."
+                                    },
+                                    "source": {
+                                      "type": "string",
+                                      "description": "The probe in plain words."
+                                    },
+                                    "verdict": {
+                                      "type": "string",
+                                      "enum": [
+                                        "yes",
+                                        "no",
+                                        "unavailable",
+                                        "not_checked"
+                                      ],
+                                      "description": "yes = pass, no = fail, unavailable = could not check (see reason), not_checked = never run on this company (a Hard filter on a serve that did not go through candidates)."
+                                    },
+                                    "yesProbability": {
+                                      "type": "number",
+                                      "nullable": true
+                                    },
+                                    "evidence": {
+                                      "type": "string",
+                                      "nullable": true,
+                                      "description": "One plain sentence with the measured fact supporting the verdict."
+                                    },
+                                    "screenshotUrl": {
+                                      "type": "string",
+                                      "nullable": true,
+                                      "description": "Stored screenshot of what was observed, when the probe reads one."
+                                    },
+                                    "reason": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "checkedAt": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "criterionId",
+                                    "offerId",
+                                    "question",
+                                    "mode",
+                                    "source",
+                                    "verdict",
+                                    "yesProbability",
+                                    "evidence",
+                                    "screenshotUrl",
+                                    "reason",
+                                    "checkedAt"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "title": {
+                                      "type": "string",
+                                      "nullable": true,
+                                      "description": "The criterion's card title (null on a hand-made one)."
+                                    }
+                                  },
+                                  "required": [
+                                    "title"
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "required": [
+                          "domain",
+                          "checks"
+                        ],
+                        "description": "Same shape as a served lead's `qualification` (POST /orgs/buffer/next), each check also titled: what the email writer gets."
+                      }
+                    },
+                    "required": [
+                      "domain",
+                      "name",
+                      "mustPass",
+                      "qualification"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "brandId",
+                "offerId",
+                "status",
+                "error",
+                "createdAt",
+                "finishedAt",
+                "run",
+                "checks",
+                "companies"
+              ]
+            }
+          },
+          "required": [
+            "preview"
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/brands/{id}/offers/{offerId}/qualification/suggestions": {
+    "service": "lead-service",
+    "method": "POST",
+    "path": "/orgs/brands/{brandId}/offers/{offerId}/qualification/suggestions",
+    "responses": {
+      "200": {
+        "description": "The criteria just written, and what the draft proposed that was not kept (with why). Both empty = nothing new to suggest.",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "criteria": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "offerId": {
+                    "type": "string",
+                    "description": "The offer the criterion belongs to. It applies to every audience of that offer, never to another offer of the brand."
+                  },
+                  "title": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "A few plain words naming the check on a card (suggested criteria); null on a hand-made one and on suggestions written before 2026-10-16."
+                  },
+                  "question": {
+                    "type": "string"
+                  },
+                  "why": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Why it shows a company needs the offer (suggested criteria); null on a hand-made one."
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "mention",
+                      "must_pass"
+                    ],
+                    "description": "mention = the evidence is offered to the email writer, nobody is dropped; must_pass = a company failing it is declined before its reveal is paid, on every audience of the offer. A suggestion is written with mode = its recommendation (still OFF); PATCH changes it."
+                  },
+                  "recommendation": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "mode": {
+                        "type": "string",
+                        "enum": [
+                          "mention",
+                          "must_pass"
+                        ]
+                      },
+                      "reason": {
+                        "type": "string",
+                        "description": "One sentence a client reads on why this role."
+                      }
+                    },
+                    "required": [
+                      "mode",
+                      "reason"
+                    ],
+                    "description": "The AI's recommended role, frozen when suggested (a person's later PATCH of mode never changes it). Must have is recommended sparingly: at most ONE per suggestion run, and only on a check answered from data already held (availability in_our_data). null on hand-made criteria and older suggestions."
+                  },
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "The client's on/off switch. Suggestions are written off. Only enabled criteria apply at serve and show on a lead."
+                  },
+                  "origin": {
+                    "type": "string",
+                    "enum": [
+                      "suggested",
+                      "custom"
+                    ]
+                  },
+                  "availability": {
+                    "type": "string",
+                    "enum": [
+                      "in_our_data",
+                      "custom_check"
+                    ],
+                    "description": "in_our_data = answered from firmographics we already hold (no paid call); custom_check = a paid probe on the company."
+                  },
+                  "source": {
+                    "type": "string",
+                    "description": "The probe in plain words."
+                  },
+                  "probe": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "nullable": true
+                    },
+                    "description": "`{kind:\"company_data\"}` or `{kind:\"treg\", label, reading:\"text\"|\"screenshot\", calls:[{endpointId, method, params, maxMicro}]}`."
+                  },
+                  "estimate": {
+                    "type": "object",
+                    "properties": {
+                      "perRowUsd": {
+                        "type": "number",
+                        "description": "Estimated client cost to check ONE lead (probe + AI + storage), from catalogue prices. A company already checked in the last 30 days costs nothing."
+                      },
+                      "probeUsd": {
+                        "type": "number"
+                      },
+                      "aiUsd": {
+                        "type": "number"
+                      },
+                      "storageUsd": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "perRowUsd",
+                      "probeUsd",
+                      "aiUsd",
+                      "storageUsd"
+                    ]
+                  },
+                  "passRate": {
+                    "type": "object",
+                    "properties": {
+                      "checked": {
+                        "type": "integer",
+                        "description": "People this criterion was applied to (sample runs on leads, must-pass checks on serve candidates)."
+                      },
+                      "yes": {
+                        "type": "integer"
+                      },
+                      "no": {
+                        "type": "integer"
+                      },
+                      "unavailable": {
+                        "type": "integer",
+                        "description": "Nothing could be judged (probe failed, observation cannot answer, no company domain). Never counted as a pass."
+                      },
+                      "passRate": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "yes / checked, 4 decimals (unavailable stays in the denominator). null when nobody was checked yet."
+                      }
+                    },
+                    "required": [
+                      "checked",
+                      "yes",
+                      "no",
+                      "unavailable",
+                      "passRate"
+                    ]
+                  },
+                  "createdAt": {
+                    "type": "string"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                },
+                "required": [
+                  "id",
+                  "offerId",
+                  "title",
+                  "question",
+                  "why",
+                  "mode",
+                  "recommendation",
+                  "enabled",
+                  "origin",
+                  "availability",
+                  "source",
+                  "probe",
+                  "estimate",
+                  "passRate",
+                  "createdAt",
+                  "updatedAt"
+                ]
+              }
+            },
+            "dropped": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "question": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "firmographic_not_universal | unclassified_kind:<x> | untitled (the AI gave no card title) | no_usable_source | already_asked (a check the offer keeps asks the same thing, reworded or not)"
+                  }
+                },
+                "required": [
+                  "question",
+                  "reason"
+                ]
+              }
+            },
+            "runId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "criteria",
+            "dropped",
+            "runId"
+          ]
+        }
+      }
+    }
+  },
   "POST /v1/brands/{id}/offers/confirm": {
     "service": "brand-service",
     "method": "POST",
@@ -1947,6 +3730,179 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "mainOfferIndex",
             "mainOfferConfidence",
             "mainOfferBasis"
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/brands/extract-fields": {
+    "service": "brand-service",
+    "method": "POST",
+    "path": "/orgs/brands/extract-fields",
+    "responses": {
+      "200": {
+        "description": "Extracted fields with brands metadata",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "brands": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "brandId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Brand UUID",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                  },
+                  "domain": {
+                    "type": "string",
+                    "description": "Brand domain (falls back to the brand UUID for a no-website brand)",
+                    "example": "acme.com"
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Brand display name",
+                    "example": "Acme Corp"
+                  },
+                  "brandUrl": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Full brand URL. `null` for a no-website brand (extracts from pasted context).",
+                    "example": "https://acme.com"
+                  }
+                },
+                "required": [
+                  "brandId",
+                  "domain",
+                  "name",
+                  "brandUrl"
+                ]
+              },
+              "description": "Metadata for each brand in the request"
+            },
+            "fields": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "nullable": true
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": {
+                          "nullable": true
+                        }
+                      },
+                      {
+                        "nullable": true
+                      }
+                    ],
+                    "description": "Primary value: the single brand's value (1 brand) or LLM-consolidated merge (N brands)",
+                    "example": "SaaS productivity tools"
+                  },
+                  "byBrand": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "nullable": true
+                              }
+                            },
+                            {
+                              "type": "object",
+                              "additionalProperties": {
+                                "nullable": true
+                              }
+                            },
+                            {
+                              "nullable": true
+                            }
+                          ],
+                          "description": "Extracted value for this brand",
+                          "example": "SaaS productivity tools"
+                        },
+                        "cached": {
+                          "type": "boolean",
+                          "description": "Whether this result was served from cache",
+                          "example": true
+                        },
+                        "extractedAt": {
+                          "type": "string",
+                          "description": "ISO timestamp when this value was extracted",
+                          "example": "2026-03-15T10:00:00.000Z"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "ISO timestamp when the cached value expires, or null",
+                          "example": "2026-04-14T10:00:00.000Z"
+                        },
+                        "sourceUrls": {
+                          "type": "array",
+                          "nullable": true,
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Page URLs from which this value was extracted",
+                          "example": [
+                            "https://acme.com/about",
+                            "https://acme.com/"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "value",
+                        "cached",
+                        "extractedAt",
+                        "expiresAt",
+                        "sourceUrls"
+                      ]
+                    },
+                    "description": "Per-brand field details keyed by brand domain. Each entry includes the extracted value, cache status, extraction timestamp, expiry, and source URLs."
+                  }
+                },
+                "required": [
+                  "value",
+                  "byBrand"
+                ]
+              }
+            },
+            "provenance": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string",
+                "enum": [
+                  "confirmed",
+                  "suggested",
+                  "extracted"
+                ]
+              },
+              "description": "Per requested field key → provenance tag (sibling to `fields`, additive). `confirmed` = a user-facing field with a user-validated value (overlaid into `fields`/`byBrand`); `suggested` = a user-facing field not yet confirmed (value = auto-extract prefill); `extracted` = a pure backend field."
+            }
+          },
+          "required": [
+            "brands",
+            "fields",
+            "provenance"
           ]
         }
       }
@@ -2513,6 +4469,1045 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
           },
           "required": [
             "audience"
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/orgs/audiences/portfolio": {
+    "service": "human-service",
+    "method": "POST",
+    "path": "/orgs/audiences/portfolio",
+    "responses": {
+      "200": {
+        "description": "The portfolio (created or replayed)",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "portfolioId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "building",
+                "ready"
+              ],
+              "description": "building = the cold audiences are live and the buying-signal audiences are still being measured in the background (call again to read them; nothing is re-spent); ready = every signal has its outcome."
+            },
+            "brandId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "offerId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "replayed": {
+              "type": "boolean",
+              "description": "true when this (brand, offer) portfolio was already launched (or in flight) and the recorded set is returned; nothing new was created."
+            },
+            "target": {
+              "type": "string",
+              "nullable": true,
+              "description": "The nlPrompt every portfolio audience carries."
+            },
+            "audiences": {
+              "type": "array",
+              "items": {
+                "allOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "orgId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "brandId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "nlPrompt": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "description": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "One-sentence summary of who THIS audience targets, distinct from the shared batch nlPrompt. LLM-generated at /suggest time. null for rows predating this field."
+                      },
+                      "provider": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          "apollo",
+                          "apify",
+                          "crm",
+                          null
+                        ]
+                      },
+                      "apolloAudienceId": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Pointer to the faithful Apollo audience owned by apollo-service ('one filter vocabulary' Wave 2). Set for apollo audiences; null for apify (legacy) rows and pre-Wave-2 rows not yet backfilled. The faithful filters live in apollo-service; the `filters` field below is human-service's opaque cache of them."
+                      },
+                      "crmUploadId": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "The ONE imported CRM source (crm-service upload id) this audience is bound to. When set, every CRM serve made under this audience is restricted to the people that came from that file, so several CRM audiences can coexist for one brand and each behaves as its own audience. null = unbound ⟹ the serve covers the brand's whole imported list (the pre-existing behaviour)."
+                      },
+                      "crmPeople": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                          "signedUp": {
+                            "type": "boolean"
+                          },
+                          "replied": {
+                            "type": "boolean"
+                          },
+                          "reachableBy": {
+                            "type": "string",
+                            "enum": [
+                              "phone",
+                              "email"
+                            ]
+                          },
+                          "segment": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "nullable": true
+                            },
+                            "description": "A part of the brand's own CRM, as crm-service's PeopleSegment states it (passed through verbatim, validated by crm-service): dealStages [{stage, pipeline?}], dealStatuses, tags, reached / notReached (funnel steps), includeClients, includeOptedOut. Lists OR, keys AND; clients and opted-out people are out unless stated. Names come from crm-service GET /orgs/contacts/segments.",
+                            "example": {
+                              "dealStages": [
+                                {
+                                  "pipeline": "Sales Pipeline",
+                                  "stage": "Form Filled - No Appointment"
+                                }
+                              ]
+                            }
+                          }
+                        },
+                        "description": "The PEOPLE-pool filter this CRM audience is bound to: every serve draws from the brand's merged people (everyone its connected tools know, one row per human) who match it, instead of from imported files. null = not people-bound (file-bound via crmUploadId, or the whole imported list)."
+                      },
+                      "crmPeopleByStage": {
+                        "type": "array",
+                        "nullable": true,
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "pipeline": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "stage": {
+                              "type": "string"
+                            },
+                            "served": {
+                              "type": "integer"
+                            },
+                            "remainingSendable": {
+                              "type": "integer"
+                            },
+                            "totalSendable": {
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "pipeline",
+                            "stage",
+                            "served",
+                            "remainingSendable",
+                            "totalSendable"
+                          ]
+                        },
+                        "description": "A people-bound CRM audience whose segment names dealStages: crm-service's counts per stated stage (same snapshot as Size / Remaining). Entries overlap when a person holds deals at two of them. null otherwise."
+                      },
+                      "offerId": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uuid",
+                        "description": "The offer (Org > Brand > Offer > Campaign) this audience belongs to — an id owned by brand-service. An audience is assembled for one distinct thing the brand sells, so it is scoped to that offer rather than to every offer of the brand. null = no offer stated ⟹ the audience is brand-wide, the pre-existing behaviour."
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "suggested",
+                          "active",
+                          "paused",
+                          "archived",
+                          "deprecated"
+                        ],
+                        "description": "Always 'suggested' (inactive) for a freshly-suggested audience."
+                      },
+                      "source": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "profileAudienceId": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uuid",
+                        "description": "The client PROFILE (WHO, a cold audience the client keeps or pauses on the Targeting page) this source list was built for: a buying-signal list (hiring now, new in role, recently funded) or a competitor-post engagement list finds THAT profile's people, screened against the profile's text. Pausing or archiving the profile pauses its lists; resuming it resumes them (unless the source itself is off). null on a profile itself, on a whole-ICP list built before profiles had their own (retired once they do), and on every other audience. Show profiles = rows with null here and channels[0].list = apollo_search; sources = channels[0].list."
+                      },
+                      "canonicalAudienceId": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uuid",
+                        "description": "When this audience is a deprecated provider-variant (e.g. retired '<base> [Apify]' from the apify->apollo migration), the id of its active canonical replacement. Membership/stats reads resolve a deprecated match to this audience. null for non-deprecated / unlinked rows."
+                      },
+                      "filters": {
+                        "type": "object",
+                        "nullable": true,
+                        "additionalProperties": {
+                          "nullable": true
+                        }
+                      },
+                      "avatarUrl": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Audience avatar as a hosted HTTP(S) URL. null until generated."
+                      },
+                      "apolloCount": {
+                        "type": "integer",
+                        "nullable": true
+                      },
+                      "apifyCount": {
+                        "type": "integer",
+                        "nullable": true
+                      },
+                      "countedAt": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "degraded": {
+                        "type": "boolean",
+                        "description": "The chooser's verdict on the audience it picked for this row: true when no attempt apollo-service explored really answered the request and the least-bad one was chosen anyway. INFORMATION for the customer and the dashboard — nothing here blocks, filters or warns on it, and an audience is always chosen. false for rows created before the flag existed and whenever the chooser judged the pick a genuine answer."
+                      },
+                      "createdByUserId": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uuid"
+                      },
+                      "createdAt": {
+                        "type": "string"
+                      },
+                      "updatedAt": {
+                        "type": "string"
+                      },
+                      "targetText": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "THE text of this audience: who the customer wants for THIS audience, in plain language. It is the text to show as the audience AND the text the pre-pay screen (Jev) judges every lead of every list below against, before any paid reveal. Distinct from nlPrompt, which a split shares across all its sibling audiences. null ⟹ see targetTextMissingReason."
+                      },
+                      "targetTextOrigin": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          "segment_target",
+                          "audience_target",
+                          null
+                        ],
+                        "description": "How targetText was written. segment_target: this audience is one of several split from one shared target, and the text was drafted for this audience alone from that target + its own segment. audience_target: the audience is not one of several, so its nlPrompt IS its text. null when targetText is null."
+                      },
+                      "targetTextMissingReason": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          "no_customer_text",
+                          "not_written_yet",
+                          null
+                        ],
+                        "description": "Why targetText is null. no_customer_text: the audience holds no customer text at all (no nlPrompt), so there is nothing to judge leads against. not_written_yet: the text is being drafted (it is written before the audience's first serve; until then the screen judges against nlPrompt and records that it did). null when targetText is set."
+                      },
+                      "channels": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "channel": {
+                              "type": "string",
+                              "enum": [
+                                "cold_email"
+                              ],
+                              "description": "The outreach channel that uses this list. cold_email is the only channel today."
+                            },
+                            "list": {
+                              "type": "string",
+                              "enum": [
+                                "apollo_search",
+                                "apollo_buying_signal",
+                                "linkedin_engagement",
+                                "crm_contacts",
+                                "apify_search"
+                              ],
+                              "description": "What the list is. apollo_search: an Apollo people search. apollo_buying_signal: the same search narrowed to people showing a buying signal (see signal). linkedin_engagement: people who engaged with competitor LinkedIn posts (see signal). crm_contacts: the client's own uploaded contacts. apify_search: legacy search provider."
+                            },
+                            "audienceId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "The audience this list finds people for (always the audience itself)."
+                            },
+                            "sourceId": {
+                              "type": "string",
+                              "format": "uuid",
+                              "description": "Set on a SOURCE of the audience (a buying signal, competitor-post engagement): WHERE its people are also looked for, beside its own list. Absent on the audience's own list (the first entry)."
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "The source's name (e.g. \"Hiring now\"). Absent on the own list."
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "active",
+                                "paused"
+                              ],
+                              "description": "A source's on/off (its source campaign). Absent on the own list."
+                            },
+                            "signal": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "type": {
+                                  "type": "string"
+                                },
+                                "windowDays": {
+                                  "type": "integer",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "type",
+                                "windowDays"
+                              ],
+                              "description": "The buying signal that narrows the list, with its rolling window. null for a plain list."
+                            },
+                            "size": {
+                              "type": "integer",
+                              "nullable": true,
+                              "description": "How many people the list holds. On the audiences LIST it is the same figure as the row's sizeCount. null ⟹ see sizeUnknownReason."
+                            },
+                            "sizeUnknownReason": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "not_built_yet",
+                                "unknown_until_walked",
+                                "not_counted",
+                                null
+                              ],
+                              "description": "Why size is null. not_built_yet: the list's Apollo filters are still being built. unknown_until_walked: no provider count exists for this kind (linkedin_engagement) until serving walks the whole list. not_counted: a CRM list, whose size the provider does not report here."
+                            }
+                          },
+                          "required": [
+                            "channel",
+                            "list",
+                            "audienceId",
+                            "signal",
+                            "size",
+                            "sizeUnknownReason"
+                          ]
+                        },
+                        "description": "WHERE this audience's people are found: its own list first, then one entry per SOURCE of the audience (a buying signal, competitor-post engagement), each with its own size. A source is never an audience of its own. Every lead from every list is screened against targetText before it is used. Empty for an audience with no committed provider."
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "orgId",
+                      "brandId",
+                      "name",
+                      "nlPrompt",
+                      "description",
+                      "provider",
+                      "apolloAudienceId",
+                      "crmUploadId",
+                      "crmPeople",
+                      "offerId",
+                      "status",
+                      "source",
+                      "profileAudienceId",
+                      "canonicalAudienceId",
+                      "filters",
+                      "avatarUrl",
+                      "apolloCount",
+                      "apifyCount",
+                      "countedAt",
+                      "degraded",
+                      "createdByUserId",
+                      "createdAt",
+                      "updatedAt",
+                      "targetText",
+                      "targetTextOrigin",
+                      "targetTextMissingReason",
+                      "channels"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "cold",
+                          "signal"
+                        ],
+                        "description": "cold = a segment of the ICP split (a client profile); signal = one profile narrowed to one buying signal (its profileAudienceId)."
+                      },
+                      "signal": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "hiring",
+                              "job_change",
+                              "funding"
+                            ]
+                          },
+                          "windowDays": {
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "type",
+                          "windowDays"
+                        ],
+                        "description": "The buying signal and its rolling recency window. null on a cold audience."
+                      },
+                      "adopted": {
+                        "type": "boolean",
+                        "description": "True for a cold audience that already existed for this brand + offer (confirmed before payment) and was activated rather than re-created."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "signal",
+                      "adopted"
+                    ]
+                  }
+                ]
+              },
+              "description": "The portfolio's audiences, one per client profile, created/activated ACTIVE. A buying signal is a SOURCE of a profile (its channels[]), never an audience of its own."
+            },
+            "signals": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "hiring",
+                      "job_change",
+                      "funding"
+                    ]
+                  },
+                  "windowDays": {
+                    "type": "integer"
+                  },
+                  "profileAudienceId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "The client profile (a cold audience) this signal was measured for."
+                  },
+                  "profileName": {
+                    "type": "string"
+                  },
+                  "outcome": {
+                    "type": "string",
+                    "enum": [
+                      "created",
+                      "exists",
+                      "below_threshold",
+                      "failed"
+                    ],
+                    "description": "created = a signal list was added for this profile; exists = the profile already had one; below_threshold = the signal reaches fewer than 20 distinct companies for this profile; failed = the profile's build, the coverage read or the creation failed (logged; the cold audiences still shipped)."
+                  },
+                  "people": {
+                    "type": "integer",
+                    "nullable": true,
+                    "description": "Verified-email people the signal reaches for the profile. null when not measured."
+                  },
+                  "companies": {
+                    "type": "integer",
+                    "nullable": true,
+                    "description": "Distinct companies of those people. null when not measured."
+                  },
+                  "companiesExact": {
+                    "type": "boolean",
+                    "nullable": true,
+                    "description": "false = companies counted over the first 500 people (a floor)."
+                  },
+                  "audienceId": {
+                    "type": "string",
+                    "nullable": true,
+                    "format": "uuid",
+                    "description": "The profile audience the signal is a source of (a legacy per-signal audience on outcomes recorded before 2026-10-16). null when none was added."
+                  },
+                  "sourceId": {
+                    "type": "string",
+                    "nullable": true,
+                    "format": "uuid",
+                    "description": "The source of the profile (its channels[] entry with this sourceId). null when none was added."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                },
+                "required": [
+                  "type",
+                  "windowDays",
+                  "profileAudienceId",
+                  "profileName",
+                  "outcome",
+                  "people",
+                  "companies",
+                  "companiesExact",
+                  "audienceId",
+                  "reason"
+                ]
+              },
+              "description": "One outcome per (client profile, buying signal). Empty while status=building."
+            }
+          },
+          "required": [
+            "portfolioId",
+            "status",
+            "brandId",
+            "offerId",
+            "replayed",
+            "target",
+            "audiences",
+            "signals"
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/orgs/audiences/split": {
+    "service": "human-service",
+    "method": "POST",
+    "path": "/orgs/audiences/split",
+    "responses": {
+      "200": {
+        "description": "Proposed segments",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "axes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "geography",
+                  "company_size",
+                  "industry",
+                  "seniority_role"
+                ]
+              },
+              "description": "The axes the segments partition the target along: empty when a single segment is returned, one axis, or two axes crossed. Only axes a people search can filter on."
+            },
+            "segments": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "Short label, max 4 words, unique within the proposal."
+                  },
+                  "description": {
+                    "type": "string",
+                    "description": "One plain-language sentence that fully specifies the segment on its own (who, where, what kind of company, plus this segment's partition value). Becomes the audience's description on confirm."
+                  },
+                  "icon": {
+                    "type": "string",
+                    "enum": [
+                      "globe-hemisphere-west",
+                      "globe-hemisphere-east",
+                      "map-pin",
+                      "user",
+                      "users-three",
+                      "buildings",
+                      "building-office",
+                      "crown",
+                      "briefcase",
+                      "user-circle",
+                      "rocket-launch",
+                      "code",
+                      "cpu",
+                      "storefront",
+                      "shopping-cart",
+                      "factory",
+                      "stethoscope",
+                      "first-aid-kit",
+                      "bank",
+                      "scales",
+                      "graduation-cap",
+                      "megaphone",
+                      "handshake",
+                      "house-line",
+                      "truck",
+                      "fork-knife",
+                      "airplane-tilt",
+                      "leaf",
+                      "paint-brush",
+                      "heartbeat",
+                      "target"
+                    ],
+                    "description": "Phosphor icon name (kebab-case) from a closed vocabulary; `globe-hemisphere-west` renders as <GlobeHemisphereWest /> in @phosphor-icons/react."
+                  },
+                  "iconConfidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1,
+                    "description": "The judge's own certainty about the icon (decorative: the icon is always set)."
+                  },
+                  "estimatedLeadCount": {
+                    "type": "integer",
+                    "nullable": true,
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "description": "Approximate number of people (decision-makers matching the segment) it would reach in a large B2B contact database, estimated by the same generation that writes the segments: no search runs, so it is available instantly with the cards. Right order of magnitude only; the real people-search count is measured after confirm. null when no estimate could be made, never 0."
+                  }
+                },
+                "required": [
+                  "name",
+                  "description",
+                  "icon",
+                  "iconConfidence",
+                  "estimatedLeadCount"
+                ]
+              },
+              "minItems": 1,
+              "maxItems": 6,
+              "description": "1 to 6 mutually exclusive segments that together cover the target. Nothing is persisted."
+            }
+          },
+          "required": [
+            "axes",
+            "segments"
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/orgs/audiences/split/confirm": {
+    "service": "human-service",
+    "method": "POST",
+    "path": "/orgs/audiences/split/confirm",
+    "responses": {
+      "201": {
+        "description": "Audiences created",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "audiences": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "orgId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "brandId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "nlPrompt": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "description": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "One-sentence summary of who THIS audience targets, distinct from the shared batch nlPrompt. LLM-generated at /suggest time. null for rows predating this field."
+                  },
+                  "provider": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "apollo",
+                      "apify",
+                      "crm",
+                      null
+                    ]
+                  },
+                  "apolloAudienceId": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Pointer to the faithful Apollo audience owned by apollo-service ('one filter vocabulary' Wave 2). Set for apollo audiences; null for apify (legacy) rows and pre-Wave-2 rows not yet backfilled. The faithful filters live in apollo-service; the `filters` field below is human-service's opaque cache of them."
+                  },
+                  "crmUploadId": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "The ONE imported CRM source (crm-service upload id) this audience is bound to. When set, every CRM serve made under this audience is restricted to the people that came from that file, so several CRM audiences can coexist for one brand and each behaves as its own audience. null = unbound ⟹ the serve covers the brand's whole imported list (the pre-existing behaviour)."
+                  },
+                  "crmPeople": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "signedUp": {
+                        "type": "boolean"
+                      },
+                      "replied": {
+                        "type": "boolean"
+                      },
+                      "reachableBy": {
+                        "type": "string",
+                        "enum": [
+                          "phone",
+                          "email"
+                        ]
+                      },
+                      "segment": {
+                        "type": "object",
+                        "additionalProperties": {
+                          "nullable": true
+                        },
+                        "description": "A part of the brand's own CRM, as crm-service's PeopleSegment states it (passed through verbatim, validated by crm-service): dealStages [{stage, pipeline?}], dealStatuses, tags, reached / notReached (funnel steps), includeClients, includeOptedOut. Lists OR, keys AND; clients and opted-out people are out unless stated. Names come from crm-service GET /orgs/contacts/segments.",
+                        "example": {
+                          "dealStages": [
+                            {
+                              "pipeline": "Sales Pipeline",
+                              "stage": "Form Filled - No Appointment"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "description": "The PEOPLE-pool filter this CRM audience is bound to: every serve draws from the brand's merged people (everyone its connected tools know, one row per human) who match it, instead of from imported files. null = not people-bound (file-bound via crmUploadId, or the whole imported list)."
+                  },
+                  "crmPeopleByStage": {
+                    "type": "array",
+                    "nullable": true,
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "pipeline": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "stage": {
+                          "type": "string"
+                        },
+                        "served": {
+                          "type": "integer"
+                        },
+                        "remainingSendable": {
+                          "type": "integer"
+                        },
+                        "totalSendable": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "pipeline",
+                        "stage",
+                        "served",
+                        "remainingSendable",
+                        "totalSendable"
+                      ]
+                    },
+                    "description": "A people-bound CRM audience whose segment names dealStages: crm-service's counts per stated stage (same snapshot as Size / Remaining). Entries overlap when a person holds deals at two of them. null otherwise."
+                  },
+                  "offerId": {
+                    "type": "string",
+                    "nullable": true,
+                    "format": "uuid",
+                    "description": "The offer (Org > Brand > Offer > Campaign) this audience belongs to — an id owned by brand-service. An audience is assembled for one distinct thing the brand sells, so it is scoped to that offer rather than to every offer of the brand. null = no offer stated ⟹ the audience is brand-wide, the pre-existing behaviour."
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "suggested",
+                      "active",
+                      "paused",
+                      "archived",
+                      "deprecated"
+                    ],
+                    "description": "Always 'suggested' (inactive) for a freshly-suggested audience."
+                  },
+                  "source": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "profileAudienceId": {
+                    "type": "string",
+                    "nullable": true,
+                    "format": "uuid",
+                    "description": "The client PROFILE (WHO, a cold audience the client keeps or pauses on the Targeting page) this source list was built for: a buying-signal list (hiring now, new in role, recently funded) or a competitor-post engagement list finds THAT profile's people, screened against the profile's text. Pausing or archiving the profile pauses its lists; resuming it resumes them (unless the source itself is off). null on a profile itself, on a whole-ICP list built before profiles had their own (retired once they do), and on every other audience. Show profiles = rows with null here and channels[0].list = apollo_search; sources = channels[0].list."
+                  },
+                  "canonicalAudienceId": {
+                    "type": "string",
+                    "nullable": true,
+                    "format": "uuid",
+                    "description": "When this audience is a deprecated provider-variant (e.g. retired '<base> [Apify]' from the apify->apollo migration), the id of its active canonical replacement. Membership/stats reads resolve a deprecated match to this audience. null for non-deprecated / unlinked rows."
+                  },
+                  "filters": {
+                    "type": "object",
+                    "nullable": true,
+                    "additionalProperties": {
+                      "nullable": true
+                    }
+                  },
+                  "avatarUrl": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Audience avatar as a hosted HTTP(S) URL. null until generated."
+                  },
+                  "apolloCount": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "apifyCount": {
+                    "type": "integer",
+                    "nullable": true
+                  },
+                  "countedAt": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "degraded": {
+                    "type": "boolean",
+                    "description": "The chooser's verdict on the audience it picked for this row: true when no attempt apollo-service explored really answered the request and the least-bad one was chosen anyway. INFORMATION for the customer and the dashboard — nothing here blocks, filters or warns on it, and an audience is always chosen. false for rows created before the flag existed and whenever the chooser judged the pick a genuine answer."
+                  },
+                  "createdByUserId": {
+                    "type": "string",
+                    "nullable": true,
+                    "format": "uuid"
+                  },
+                  "createdAt": {
+                    "type": "string"
+                  },
+                  "updatedAt": {
+                    "type": "string"
+                  },
+                  "targetText": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "THE text of this audience: who the customer wants for THIS audience, in plain language. It is the text to show as the audience AND the text the pre-pay screen (Jev) judges every lead of every list below against, before any paid reveal. Distinct from nlPrompt, which a split shares across all its sibling audiences. null ⟹ see targetTextMissingReason."
+                  },
+                  "targetTextOrigin": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "segment_target",
+                      "audience_target",
+                      null
+                    ],
+                    "description": "How targetText was written. segment_target: this audience is one of several split from one shared target, and the text was drafted for this audience alone from that target + its own segment. audience_target: the audience is not one of several, so its nlPrompt IS its text. null when targetText is null."
+                  },
+                  "targetTextMissingReason": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "no_customer_text",
+                      "not_written_yet",
+                      null
+                    ],
+                    "description": "Why targetText is null. no_customer_text: the audience holds no customer text at all (no nlPrompt), so there is nothing to judge leads against. not_written_yet: the text is being drafted (it is written before the audience's first serve; until then the screen judges against nlPrompt and records that it did). null when targetText is set."
+                  },
+                  "channels": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "channel": {
+                          "type": "string",
+                          "enum": [
+                            "cold_email"
+                          ],
+                          "description": "The outreach channel that uses this list. cold_email is the only channel today."
+                        },
+                        "list": {
+                          "type": "string",
+                          "enum": [
+                            "apollo_search",
+                            "apollo_buying_signal",
+                            "linkedin_engagement",
+                            "crm_contacts",
+                            "apify_search"
+                          ],
+                          "description": "What the list is. apollo_search: an Apollo people search. apollo_buying_signal: the same search narrowed to people showing a buying signal (see signal). linkedin_engagement: people who engaged with competitor LinkedIn posts (see signal). crm_contacts: the client's own uploaded contacts. apify_search: legacy search provider."
+                        },
+                        "audienceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "The audience this list finds people for (always the audience itself)."
+                        },
+                        "sourceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "Set on a SOURCE of the audience (a buying signal, competitor-post engagement): WHERE its people are also looked for, beside its own list. Absent on the audience's own list (the first entry)."
+                        },
+                        "name": {
+                          "type": "string",
+                          "description": "The source's name (e.g. \"Hiring now\"). Absent on the own list."
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "active",
+                            "paused"
+                          ],
+                          "description": "A source's on/off (its source campaign). Absent on the own list."
+                        },
+                        "signal": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "type": {
+                              "type": "string"
+                            },
+                            "windowDays": {
+                              "type": "integer",
+                              "nullable": true
+                            }
+                          },
+                          "required": [
+                            "type",
+                            "windowDays"
+                          ],
+                          "description": "The buying signal that narrows the list, with its rolling window. null for a plain list."
+                        },
+                        "size": {
+                          "type": "integer",
+                          "nullable": true,
+                          "description": "How many people the list holds. On the audiences LIST it is the same figure as the row's sizeCount. null ⟹ see sizeUnknownReason."
+                        },
+                        "sizeUnknownReason": {
+                          "type": "string",
+                          "nullable": true,
+                          "enum": [
+                            "not_built_yet",
+                            "unknown_until_walked",
+                            "not_counted",
+                            null
+                          ],
+                          "description": "Why size is null. not_built_yet: the list's Apollo filters are still being built. unknown_until_walked: no provider count exists for this kind (linkedin_engagement) until serving walks the whole list. not_counted: a CRM list, whose size the provider does not report here."
+                        }
+                      },
+                      "required": [
+                        "channel",
+                        "list",
+                        "audienceId",
+                        "signal",
+                        "size",
+                        "sizeUnknownReason"
+                      ]
+                    },
+                    "description": "WHERE this audience's people are found: its own list first, then one entry per SOURCE of the audience (a buying signal, competitor-post engagement), each with its own size. A source is never an audience of its own. Every lead from every list is screened against targetText before it is used. Empty for an audience with no committed provider."
+                  }
+                },
+                "required": [
+                  "id",
+                  "orgId",
+                  "brandId",
+                  "name",
+                  "nlPrompt",
+                  "description",
+                  "provider",
+                  "apolloAudienceId",
+                  "crmUploadId",
+                  "crmPeople",
+                  "offerId",
+                  "status",
+                  "source",
+                  "profileAudienceId",
+                  "canonicalAudienceId",
+                  "filters",
+                  "avatarUrl",
+                  "apolloCount",
+                  "apifyCount",
+                  "countedAt",
+                  "degraded",
+                  "createdByUserId",
+                  "createdAt",
+                  "updatedAt",
+                  "targetText",
+                  "targetTextOrigin",
+                  "targetTextMissingReason",
+                  "channels"
+                ]
+              },
+              "description": "One ACTIVE audience per confirmed segment, in request order, scoped to the brand and offer, carrying the segment's description. provider=apollo with no apolloAudienceId/filters yet: the Apollo filters are built later by the existing pointer build."
+            }
+          },
+          "required": [
+            "audiences"
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/orgs/audiences/split/estimate": {
+    "service": "human-service",
+    "method": "POST",
+    "path": "/orgs/audiences/split/estimate",
+    "responses": {
+      "200": {
+        "description": "One estimate per segment",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "estimates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "The segment name, as sent."
+                  },
+                  "estimatedPeople": {
+                    "type": "integer",
+                    "nullable": true,
+                    "minimum": 0,
+                    "description": "Approximate number of people with a verified email in Apollo who match a quick draft of Apollo People Search filters written from the segment sentence (one cheap LLM call for the whole list, then one free count per segment). Similar-title matching is switched off, so title-based segments are not inflated (~10x) by Apollo's similar titles. Rounded to 2 significant figures. An order of magnitude to show on a card, NOT the audience's final count: the confirmed audience runs its own full build, whose count can differ. null only when unavailableReason is set."
+                  },
+                  "unavailableReason": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "no_filters_drafted",
+                      "filters_rejected",
+                      null
+                    ],
+                    "description": "Why no number could be measured for this segment (null when estimatedPeople is set): no_filters_drafted = the model wrote no filters for it, twice; filters_rejected = the search refused its filters, twice."
+                  }
+                },
+                "required": [
+                  "name",
+                  "estimatedPeople",
+                  "unavailableReason"
+                ]
+              },
+              "description": "One entry per requested segment, in request order. Nothing is persisted, no audience is created."
+            }
+          },
+          "required": [
+            "estimates"
           ]
         }
       }
@@ -3115,6 +6110,82 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "PUT /v1/billing/accounts/monthly_charge_limit": {
+    "service": "billing-service",
+    "method": "PUT",
+    "path": "/v1/accounts/monthly_charge_limit",
+    "responses": {
+      "200": {
+        "description": "The limit after the change",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "org_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "monthly_charge_limit_cents": {
+              "type": "integer",
+              "nullable": true
+            },
+            "period": {
+              "type": "string",
+              "enum": [
+                "calendar_month_utc"
+              ]
+            },
+            "period_start": {
+              "type": "string"
+            },
+            "period_end": {
+              "type": "string"
+            },
+            "charged_this_period_cents": {
+              "type": "integer",
+              "nullable": true
+            },
+            "spent_this_period_cents": {
+              "type": "string",
+              "nullable": true
+            },
+            "remaining_cents": {
+              "type": "integer",
+              "nullable": true
+            },
+            "limit_reached": {
+              "type": "boolean"
+            },
+            "limit_reached_at": {
+              "type": "string",
+              "nullable": true
+            },
+            "refused_amount_cents": {
+              "type": "integer",
+              "nullable": true
+            },
+            "updated_at": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          "required": [
+            "org_id",
+            "monthly_charge_limit_cents",
+            "period",
+            "period_start",
+            "period_end",
+            "charged_this_period_cents",
+            "spent_this_period_cents",
+            "remaining_cents",
+            "limit_reached",
+            "limit_reached_at",
+            "refused_amount_cents",
+            "updated_at"
+          ]
+        }
+      }
+    }
+  },
   "PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps": {
     "service": "billing-service",
     "method": "PUT",
@@ -3549,6 +6620,112 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "bookingUrl",
             "destinationUrl",
             "legRates"
+          ]
+        }
+      }
+    }
+  },
+  "PUT /v1/brands/{id}/offers/{offerId}/user-fields": {
+    "service": "brand-service",
+    "method": "PUT",
+    "path": "/orgs/brands/{brandId}/offers/{offerId}/user-fields",
+    "responses": {
+      "200": {
+        "description": "Updated user-facing fields with provenance",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "fields": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "array",
+                        "items": {
+                          "nullable": true
+                        }
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": {
+                          "nullable": true
+                        }
+                      },
+                      {
+                        "nullable": true
+                      }
+                    ],
+                    "description": "Confirmed value, or the auto-extract prefill (may be null)"
+                  },
+                  "provenance": {
+                    "type": "string",
+                    "enum": [
+                      "confirmed",
+                      "suggested"
+                    ]
+                  }
+                },
+                "required": [
+                  "value",
+                  "provenance"
+                ]
+              },
+              "description": "Map keyed by user-facing field key (services, dreamOutcome, perceivedLikelihood, socialProof, riskReversal, urgency, scarcity, targetAudience, giveForFree, neverGive). Each value carries the resolved value and its provenance (`confirmed` = user-validated; `suggested` = auto-extract prefill)."
+            }
+          },
+          "required": [
+            "fields"
+          ]
+        }
+      }
+    }
+  },
+  "PUT /v1/brands/{id}/sales-rep": {
+    "service": "brand-service",
+    "method": "PUT",
+    "path": "/orgs/brands/{brandId}/sales-rep",
+    "responses": {
+      "200": {
+        "description": "The saved rep",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "salesRepEmail": {
+              "type": "string",
+              "nullable": true,
+              "description": "The address to copy the rep on when a prospect replies, or `null` when we hold no address for them. `null` is a first-class answer — reps stated before this field existed carry a phone and no email, and nothing is ever inferred from the org owner's account.",
+              "example": "kevin@acme.com"
+            },
+            "salesRepPhone": {
+              "type": "string",
+              "nullable": true,
+              "description": "The number to ring, in strict E.164, or `null` when the rep should be copied but never rung (what the AI meeting-booking channel needs).",
+              "example": "+33770657585"
+            },
+            "salesRepFirstName": {
+              "type": "string",
+              "nullable": true,
+              "description": "The rep's first name, as a hand-over names them (\"I've copied Marie, Head of Partnerships at Doc Dinners\"), or `null` when the brand never stated it. Never inferred from the email address or anywhere else.",
+              "example": "Marie"
+            },
+            "salesRepRole": {
+              "type": "string",
+              "nullable": true,
+              "description": "The rep's role / job title (\"Head of Partnerships\"), or `null` when the brand never stated it. Never inferred.",
+              "example": "Head of Partnerships"
+            }
+          },
+          "required": [
+            "salesRepEmail",
+            "salesRepPhone",
+            "salesRepFirstName",
+            "salesRepRole"
           ]
         }
       }

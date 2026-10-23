@@ -52,6 +52,7 @@ export const DOWNSTREAM_BODY_SOURCES: Record<string, DownstreamBodySource> = {
   "PUT /v1/brands/{id}/sales-rep": { service: "brand-service", method: "PUT", path: "/orgs/brands/{brandId}/sales-rep" },
   "POST /v1/brands/{id}/icp/suggest": { service: "brand-service", method: "POST", path: "/orgs/brands/{id}/icp/suggest" },
   "PUT /v1/brands/{id}/user-fields": { service: "brand-service", method: "PUT", path: "/orgs/brands/{id}/user-fields" },
+  "PUT /v1/brands/{id}/offers/{offerId}/user-fields": { service: "brand-service", method: "PUT", path: "/orgs/brands/{brandId}/offers/{offerId}/user-fields" },
   "PUT /v1/brands/{brandId}/sales-budget": { service: "billing-service", method: "PUT", path: "/v1/brands/{brandId}/sales-budget" },
   "PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps": { service: "billing-service", method: "PUT", path: "/v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps" },
   "POST /v1/emails/manual-qualifications/withdrawals": { service: "email-gateway-service", method: "POST", path: "/orgs/manual-qualifications/withdrawals" },

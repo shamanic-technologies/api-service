@@ -241,26 +241,20 @@ const DESCRIPTION = `API Gateway for distribute.you.
 
 ## Quick Start
 
-This is the full document (every operation your key may call). For the first client, read the short one:
-\`GET /v1/me/openapi.json?view=onboarding\` (also \`GET /openapi.json?view=onboarding\`, no key needed) lists only
-the operations below, in order, with what each one answers.
+This document is large (every operation your key may call). Read it in pieces instead:
 
-**1. Get a key.** Already have one (from the distribute.you dashboard, or \`POST /v1/api-keys\`)? Skip to 2. An AI agent with no account:
-\`POST /v1/agent-signups/start\` with \`{email, phone}\`, read the 6-digit code in that inbox, then
+- \`?view=onboarding\`: open a first client, the same steps in the same order as the dashboard's sign-up flow, each with
+  the route to call, what to send and what to keep (about 6k tokens).
+- \`?view=index\`: every operation on one line, grouped by topic (about 13k tokens).
+- \`?tag=<topic>\` (\`&page=<n>\` when the index says the topic has pages): the full detail of one topic.
+- \`?operation=<operationId>\` (comma-separate several): the full detail of those operations only.
+
+Each works on \`GET /v1/me/openapi.json\` (your key's document) and \`GET /openapi.json\` (no key needed).
+
+**Get a key.** Already have one (from the distribute.you dashboard, or \`POST /v1/api-keys\`)? Use it. An AI agent with no
+account: \`POST /v1/agent-signups/start\` with \`{email, phone}\`, read the 6-digit code in that inbox, then
 \`POST /v1/agent-signups/complete\` with \`{email, code}\`: the answer carries \`apiKey\`. No human needed.
 Send the key as \`Authorization: Bearer distrib.usr_...\` on every call, nothing else.
-
-**2. Open the client's account, in this order.** Each step answers the id the next one takes.
-
-| Step | Operation | Keep from the answer |
-|------|-----------|----------------------|
-| Who am I | \`GET /v1/me\` | your organizations and brands |
-| Brand | \`POST /v1/brands\` \`{url, name?}\` | \`brandId\` |
-| Offer | \`POST /v1/brands/{brandId}/offers/proposals\` \`{description}\`, then \`POST /v1/brands/{brandId}/offers/confirm\` \`{offers}\` with the offer(s) you keep | \`offerId\` (\`GET /v1/brands/{brandId}/offers\` lists them) |
-| Audience | \`POST /v1/orgs/audiences/suggest\` \`{brandId, offerId, nlPrompt}\`, then \`POST /v1/orgs/audiences\` with the one you keep | the audience \`id\` |
-| Preview an email | \`POST /v1/content/preview-email/prepare\` \`{brandId, offerId}\`, then \`POST /v1/content/preview-email\` \`{brandId, offerId, recipient}\` | the email to show your user |
-| Prepay | \`POST /v1/billing/accounts/prepaid_checkout\`: a human pays the \`url\`; \`GET /v1/billing/accounts/prepaid_status\` says when it is \`active\` | |
-| Campaign | \`GET /v1/offers/{offerId}/sales-funnels\` (pick one), \`PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps\` \`{maxBudget, maxVolume}\`, \`POST /v1/sales-funnel-campaigns\` \`{brandId, offerId, salesFunnelId, status: "stopped"}\`, then \`PATCH /v1/sales-funnel-campaigns/{id}\` \`{status: "activate"}\` once your user agrees | the campaign \`id\` |
 
 **How to decide each step** (what to ask your user, what a good offer or audience looks like): read the skills our own
 Copilot follows, \`GET /v1/skills\` then \`GET /v1/skills/{slug}\`.
@@ -427,59 +421,6 @@ export const STAFF_KEY_OPERATIONS = new Set<string>([
 
 export const STAFF_KEY_TAG = "Staff (key)";
 
-/**
- * The first-client path, in the order an agent runs it (the Quick Start table):
- * key, who am I, brand, offer, audience, email preview, prepay, campaign, and
- * the skills that say how to decide each step. `?view=onboarding` on
- * `GET /openapi.json` and `GET /v1/me/openapi.json` serves ONLY these, with
- * every schema they reference, so an agent reads one small document instead of
- * the full one (1 MB). Each must document what it answers:
- * `tests/unit/openapi-onboarding.test.ts`.
- */
-export const ONBOARDING_OPERATIONS: readonly string[] = [
-  "POST /v1/agent-signups/start",
-  "POST /v1/agent-signups/complete",
-  "GET /v1/me",
-  "POST /v1/brands",
-  "GET /v1/brands",
-  "POST /v1/brands/{id}/offers/proposals",
-  "POST /v1/brands/{id}/offers/confirm",
-  "GET /v1/brands/{id}/offers",
-  "GET /v1/brands/{id}/offers/{offerId}",
-  "POST /v1/orgs/audiences/suggest",
-  "POST /v1/orgs/audiences",
-  "GET /v1/orgs/audiences",
-  "POST /v1/content/preview-email/prepare",
-  "POST /v1/content/preview-email",
-  "POST /v1/billing/accounts/prepaid_checkout",
-  "GET /v1/billing/accounts/prepaid_status",
-  "GET /v1/offers/{offerId}/sales-funnels",
-  "PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps",
-  "POST /v1/sales-funnel-campaigns",
-  "PATCH /v1/sales-funnel-campaigns/{id}",
-  "GET /v1/sales-funnel-campaigns/{id}",
-  "GET /v1/skills",
-  "GET /v1/skills/{slug}",
-];
-
-export type DocumentView = "full" | "onboarding";
-
-/**
- * Read `?view=` off a catalogue request: absent = `"full"`; an unknown value is
- * `null`, which the route answers 400 (never a silent fallback to another view).
- */
-export function parseDocumentView(raw: unknown): DocumentView | null {
-  if (raw === undefined) return "full";
-  return raw === "full" || raw === "onboarding" ? raw : null;
-}
-
-export const INVALID_VIEW_ANSWER = {
-  error: "Unknown view",
-  code: "invalid_view",
-  fix: "Use ?view=onboarding for the first-client operations only, or omit view for the full document.",
-  views: ["full", "onboarding"],
-};
-
 /** Security scheme naming the shared platform key (`ADMIN_DISTRIBUTE_API_KEY`). */
 export const PLATFORM_SECURITY_SCHEME = "apiKeyAuth";
 
@@ -506,7 +447,7 @@ export const STAFF_ONLY_TAGS = new Set(["Mailing Lists"]);
  * customer's own key.
  */
 export function buildDocument(
-  options: { audience?: DocumentAudience; view?: DocumentView } = {},
+  options: { audience?: DocumentAudience } = {},
 ): Record<string, unknown> {
   const generator = new OpenApiGeneratorV3(registry.definitions);
 
@@ -578,59 +519,7 @@ export function buildDocument(
     stripNonCustomerSurface(document, STAFF_KEY_OPERATIONS);
   }
 
-  if (options.view === "onboarding") keepOnlyOnboarding(document);
-
   return document;
-}
-
-/**
- * Reduce a built document to `ONBOARDING_OPERATIONS`, in that order, plus the
- * components they reference (transitively) and their tags. Everything else in
- * `info` stays, so the Quick Start reads the same in both views.
- */
-function keepOnlyOnboarding(document: Record<string, unknown>): void {
-  const paths = document.paths as Record<string, Record<string, unknown>>;
-  const kept: Record<string, Record<string, unknown>> = {};
-  for (const key of ONBOARDING_OPERATIONS) {
-    const [method, path] = key.split(" ");
-    const operation = paths[path]?.[method.toLowerCase()];
-    if (!operation) continue;
-    (kept[path] ??= {})[method.toLowerCase()] = operation;
-  }
-  document.paths = kept;
-  document.info = {
-    ...(document.info as Record<string, unknown>),
-    title: "distribute.you API: first client",
-  };
-
-  // Keep every component reachable from the kept operations, nothing else.
-  const components = (document.components ?? {}) as Record<string, Record<string, unknown>>;
-  const reachable = new Set<string>();
-  const visit = (node: unknown): void => {
-    if (Array.isArray(node)) return node.forEach(visit);
-    if (!node || typeof node !== "object") return;
-    const ref = (node as Record<string, unknown>).$ref;
-    if (typeof ref === "string" && ref.startsWith("#/components/") && !reachable.has(ref)) {
-      reachable.add(ref);
-      const [, , section, name] = ref.split("/");
-      visit(components[section]?.[name]);
-    }
-    Object.values(node).forEach(visit);
-  };
-  visit(kept);
-  visit(document["x-response-headers"]);
-  for (const [section, entries] of Object.entries(components)) {
-    if (section === "securitySchemes") continue;
-    for (const name of Object.keys(entries)) {
-      if (!reachable.has(`#/components/${section}/${name}`)) delete entries[name];
-    }
-  }
-
-  const usedTags = new Set(
-    Object.values(kept).flatMap((item) => Object.values(item).flatMap((op) => ((op as { tags?: string[] }).tags ?? []))),
-  );
-  const tags = document.tags as { name: string }[] | undefined;
-  if (tags) document.tags = tags.filter((tag) => usedTags.has(tag.name));
 }
 
 /**
