@@ -272,6 +272,51 @@ router.get("/runs/stats/costs/margin/timeseries", authenticatePlatform, requireS
 });
 
 /**
+ * GET /v1/runs/stats/outcome-coverage → runs-service GET /internal/stats/outcome-coverage — STAFF ONLY.
+ *
+ * The cost ledger's outcome coverage: per UTC day, the share of spend whose run
+ * declared the outcome it produced, fleet-wide and per service (the Monitoring hub
+ * chart). Fleet-wide data, so the same gate and byte passthrough as the margin
+ * reads above: `since`, `until`, `serviceName`, `taskName` (and whatever runs-service
+ * accepts next) forwarded verbatim (#11), status + body piped (#10), errors
+ * field-for-field (#7).
+ */
+router.get("/runs/stats/outcome-coverage", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.runs,
+      `/internal/stats/outcome-coverage${rawQueryString(req.originalUrl)}`,
+      { expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Outcome coverage stats error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to read outcome coverage stats");
+  }
+});
+
+/**
+ * GET /v1/runs/outcome-costs/ledger-check → runs-service GET /internal/outcome-costs/ledger-check — STAFF ONLY.
+ *
+ * The cost ledger's to-the-cent check: every org-day balances on gross, net and
+ * vendor, failing org-days listed. Same gate, same passthrough (`since`, `until`,
+ * `rows` forwarded verbatim). Declared before `/runs/:id` (#13).
+ */
+router.get("/runs/outcome-costs/ledger-check", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.runs,
+      `/internal/outcome-costs/ledger-check${rawQueryString(req.originalUrl)}`,
+      { expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Outcome cost ledger check error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to read outcome cost ledger check");
+  }
+});
+
+/**
  * GET /v1/runs/:id → runs-service GET /v1/runs/:id
  *
  * One run by id, with its cost roll-up and its descendants, forwarded untouched.

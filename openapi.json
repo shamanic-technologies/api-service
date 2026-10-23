@@ -5835,6 +5835,14 @@
         "type": "object",
         "properties": {}
       },
+      "OutcomeCoverageStatsResponse": {
+        "type": "object",
+        "properties": {}
+      },
+      "OutcomeCostLedgerCheckResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "ProviderPaymentSourcesResponse": {
         "type": "object",
         "properties": {}
