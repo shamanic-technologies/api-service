@@ -37,6 +37,7 @@ import { authenticatePlatform } from "../../src/middleware/auth.js";
  */
 
 const PLATFORM_OPERATIONS = [
+  "post /v1/share-tokens/resolve",
   "get /v1/features/audit/send-forecast",
   "post /v1/workflows/{id}/prompt-edit",
   "post /v1/workflows/dynasty/{workflowDynastySlug}/prompt-edit",

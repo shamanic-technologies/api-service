@@ -67,17 +67,30 @@ describe("OpenAPI spec — server URL", () => {
 });
 
 describe("OpenAPI spec — identity header parameters on authenticated endpoints", () => {
+  // Shared header parameters are `$ref`s to components.parameters (declared once).
+  const shared = ((document.components as any)?.parameters ?? {}) as Record<string, { name: string; in: string }>;
   const paramNames = (op: any) =>
-    ((op.parameters ?? []) as Array<{ name: string; in: string }>).map((p) => `${p.in}:${p.name}`);
+    ((op.parameters ?? []) as Array<{ name?: string; in?: string; $ref?: string }>).map((p) => {
+      const resolved = p.$ref ? shared[p.$ref.split("/").pop()!] : p;
+      return `${resolved.in}:${resolved.name}`;
+    });
 
-  it("should inject x-org-id and x-user-id header parameters for authenticated operations", () => {
+  it("should inject the x-org-id and x-brand-id header parameters a customer key may send", () => {
     const secured = operations.filter((o) => o.operation.security?.length);
     expect(secured.length).toBeGreaterThan(0);
     for (const { method, path: p, operation } of secured) {
       const names = paramNames(operation);
       expect(names, `${method.toUpperCase()} ${p}`).toContain("header:x-org-id");
-      expect(names, `${method.toUpperCase()} ${p}`).toContain("header:x-user-id");
+      expect(names, `${method.toUpperCase()} ${p}`).toContain("header:x-brand-id");
+      // Set by our own apps and workflow-service, never by a key holder: staff document only.
+      expect(names, `${method.toUpperCase()} ${p}`).not.toContain("header:x-user-id");
     }
+  });
+
+  it("the staff document still documents every identity header", () => {
+    const staff = buildDocument({ audience: "staff" });
+    const params = Object.values(((staff.components as any).parameters ?? {}) as Record<string, { name: string }>).map((p) => p.name);
+    expect(params).toEqual(expect.arrayContaining(["x-org-id", "x-user-id", "x-campaign-id", "x-brand-id", "x-workflow-slug", "x-feature-slug"]));
   });
 
   it("should only add identity headers to operations that have security defined", () => {

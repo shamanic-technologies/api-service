@@ -130,28 +130,39 @@ describe("OpenAPI — rate-limit documentation", () => {
     expect(missing).toEqual([]);
   });
 
-  it("documents Retry-After on every 429", () => {
+  it("documents Retry-After on every 429 (the shared RateLimited answer)", () => {
+    const components = document.components as Record<string, Record<string, any>>;
     const missing = ops
       .filter((o) => {
-        const headers = (o.operation.responses?.["429"] as { headers?: Record<string, unknown> })
-          ?.headers;
-        return !headers?.["Retry-After"];
+        let response = o.operation.responses?.["429"] as { $ref?: string; headers?: Record<string, unknown> } | undefined;
+        if (response?.$ref) response = components.responses[response.$ref.split("/").pop()!];
+        return !response?.headers?.["Retry-After"];
       })
       .map((o) => `${o.method.toUpperCase()} ${o.path}`);
     expect(missing).toEqual([]);
   });
 
-  it("documents the RateLimit headers on every response of every operation", () => {
-    const missing: string[] = [];
+  // The headers every response carries are declared ONCE (components.headers +
+  // the root `x-response-headers` list), not copied onto each response: the
+  // copies were 4 MB of a 6.3 MB document no agent could read (2026-10-23).
+  it("declares the RateLimit and correlation headers once, for every response", () => {
+    const listed = (document["x-response-headers"] as { always: string[] }).always;
+    const headers = (document.components as Record<string, Record<string, unknown>>).headers;
+    for (const name of ["RateLimit", "RateLimit-Policy", "RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset", "x-request-id"]) {
+      expect(listed).toContain(`#/components/headers/${name}`);
+      expect(headers[name]).toBeDefined();
+    }
+  });
+
+  it("never copies the shared headers onto a success response again", () => {
+    const copied: string[] = [];
     for (const { method, path, operation } of ops) {
       for (const [code, response] of Object.entries(operation.responses ?? {})) {
         const headers = (response as { headers?: Record<string, unknown> }).headers ?? {};
-        for (const name of ["RateLimit", "RateLimit-Policy", "RateLimit-Limit", "RateLimit-Remaining", "RateLimit-Reset"]) {
-          if (!headers[name]) missing.push(`${method.toUpperCase()} ${path} ${code} — ${name}`);
-        }
+        if (headers.RateLimit || headers.Deprecation) copied.push(`${method.toUpperCase()} ${path} ${code}`);
       }
     }
-    expect(missing).toEqual([]);
+    expect(copied).toEqual([]);
   });
 
   it("describes the rate-limit policy in the document description", () => {
@@ -182,17 +193,13 @@ describe("OpenAPI — deprecation policy", () => {
     expect(description).toContain("RFC 9745");
   });
 
-  it("documents the Deprecation / Sunset / Link headers on every response", () => {
-    const missing: string[] = [];
-    for (const { method, path, operation } of ops) {
-      for (const [code, response] of Object.entries(operation.responses ?? {})) {
-        const headers = (response as { headers?: Record<string, unknown> }).headers ?? {};
-        for (const name of ["Deprecation", "Sunset", "Link"]) {
-          if (!headers[name]) missing.push(`${method.toUpperCase()} ${path} ${code} — ${name}`);
-        }
-      }
+  it("declares the Deprecation / Sunset / Link headers once, for deprecated operations", () => {
+    const listed = (document["x-response-headers"] as { onDeprecatedOperations: string[] }).onDeprecatedOperations;
+    const headers = (document.components as Record<string, Record<string, unknown>>).headers;
+    for (const name of ["Deprecation", "Sunset", "Link"]) {
+      expect(listed).toContain(`#/components/headers/${name}`);
+      expect(headers[name]).toBeDefined();
     }
-    expect(missing).toEqual([]);
   });
 });
 
@@ -233,8 +240,9 @@ describe("postProcessOperations", () => {
   it("adds the correlation-id parameter to an operation that has none", () => {
     const doc = { paths: { "/a": { get: { responses: {} } } } } as Record<string, unknown>;
     postProcessOperations(doc);
-    const params = ((doc.paths as any)["/a"].get.parameters ?? []) as Array<{ name: string }>;
-    expect(params.map((p) => p.name)).toContain("x-request-id");
+    const params = ((doc.paths as any)["/a"].get.parameters ?? []) as Array<{ $ref: string }>;
+    expect(params.map((p) => p.$ref)).toContain("#/components/parameters/XRequestId");
+    expect((doc.components as any).parameters.XRequestId.name).toBe("x-request-id");
   });
 
   it("adds identity header parameters only to secured operations", () => {
@@ -245,8 +253,11 @@ describe("postProcessOperations", () => {
       },
     } as Record<string, unknown>;
     postProcessOperations(doc);
+    const params = (doc.components as any).parameters;
     const names = (p: string) =>
-      (((doc.paths as any)[p].get.parameters ?? []) as Array<{ name: string }>).map((x) => x.name);
+      (((doc.paths as any)[p].get.parameters ?? []) as Array<{ $ref: string }>).map(
+        (x) => params[x.$ref.split("/").pop()!].name,
+      );
     expect(names("/secured")).toContain("x-org-id");
     expect(names("/public")).not.toContain("x-org-id");
     expect(names("/public")).toContain("x-request-id");

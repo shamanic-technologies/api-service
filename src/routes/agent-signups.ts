@@ -108,7 +108,7 @@ router.post("/agent-signups/complete", async (req, res) => {
     email: account.email,
     contactPhone: account.contactPhone,
     created: account.created,
-    usage: "Send it as `Authorization: Bearer <apiKey>` on every call. First call: GET /v1/me.",
+    usage: "Send it as `Authorization: Bearer <apiKey>` on every call. First call: GET /v1/me. To open a first client (brand, offer, audience, email preview, prepay, campaign), follow GET /v1/me/openapi.json?view=onboarding in order; GET /v1/skills says how to decide each step.",
     prepay: prepayInstructions(),
   });
 });

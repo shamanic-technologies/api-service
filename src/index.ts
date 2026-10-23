@@ -79,7 +79,7 @@ import repliesRoutes from "./routes/replies.js";
 import orgsRoutes from "./routes/orgs.js";
 import { rateLimit } from "./middleware/rate-limit.js";
 import { authenticatePlatform } from "./middleware/auth.js";
-import { buildDocument } from "./openapi/document.js";
+import { buildDocument, parseDocumentView, INVALID_VIEW_ANSWER } from "./openapi/document.js";
 import { requestId } from "./middleware/request-id.js";
 import { recordCustomerCalls } from "./lib/call-log.js";
 import { upstreamUnreachable } from "./middleware/upstream-unreachable.js";
@@ -173,7 +173,14 @@ const openapiPath = join(__dirname, "..", "openapi.json");
 // The catalogue documents answer conditional requests (ETag + If-None-Match ->
 // 304, no body) and are serialized once per process: see src/lib/catalogue-response.ts.
 let publishedDocument: CatalogueBody | null = null;
+let publishedOnboarding: CatalogueBody | null = null;
 app.get("/openapi.json", (req, res) => {
+  const view = parseDocumentView(req.query.view);
+  if (!view) return res.status(400).json(INVALID_VIEW_ANSWER);
+  if (view === "onboarding") {
+    publishedOnboarding ??= catalogueBody(buildDocument({ view: "onboarding" }));
+    return sendCatalogue(req, res, publishedOnboarding);
+  }
   if (existsSync(openapiPath)) {
     publishedDocument ??= catalogueBody(JSON.parse(readFileSync(openapiPath, "utf-8")));
     sendCatalogue(req, res, publishedDocument);
