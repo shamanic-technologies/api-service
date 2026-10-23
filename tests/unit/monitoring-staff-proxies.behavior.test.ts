@@ -22,6 +22,8 @@ const { RUNS_BASE, COSTS_BASE, INSTANTLY_BASE } = vi.hoisted(() => {
  *   GET /v1/runs/stats/costs/vendor → runs-service      GET /internal/stats/costs/vendor
  *   GET /v1/runs/stats/costs/margin → runs-service      GET /internal/stats/costs/margin
  *   GET /v1/runs/stats/costs/margin/timeseries → runs-service GET /internal/stats/costs/margin/timeseries
+ *   GET /v1/runs/stats/outcome-coverage → runs-service GET /internal/stats/outcome-coverage
+ *   GET /v1/runs/outcome-costs/ledger-check → runs-service GET /internal/outcome-costs/ledger-check
  *   GET /v1/costs/vendor-costs      → costs-service     GET /internal/vendor-costs
  *   GET /v1/costs/provider-payment-sources → costs-service GET /internal/provider-payment-sources
  *   GET /v1/costs/email-send-price  → costs-service     GET /internal/email-send-price
@@ -79,6 +81,18 @@ const ROUTES = [
     path: "/v1/runs/stats/costs/margin/timeseries",
     query: "?orgId=0b2d6f1e-3c4a-4d5e-8f60-718293a4b5c6",
     downstream: `${RUNS_BASE}/internal/stats/costs/margin/timeseries`,
+    key: "runs-test-key",
+  },
+  {
+    path: "/v1/runs/stats/outcome-coverage",
+    query: "?since=2026-10-01&until=2026-10-23&serviceName=chat-service&taskName=x%20y",
+    downstream: `${RUNS_BASE}/internal/stats/outcome-coverage`,
+    key: "runs-test-key",
+  },
+  {
+    path: "/v1/runs/outcome-costs/ledger-check",
+    query: "?since=2026-10-01&until=2026-10-23&rows=50",
+    downstream: `${RUNS_BASE}/internal/outcome-costs/ledger-check`,
     key: "runs-test-key",
   },
   {

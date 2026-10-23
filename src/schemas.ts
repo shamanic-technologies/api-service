@@ -9015,6 +9015,57 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/runs/stats/outcome-coverage",
+  tags: ["Runs"],
+  summary: "Share of spend whose run declared its outcome, per UTC day (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide. " +
+    "Byte passthrough to runs-service GET /internal/stats/outcome-coverage: per UTC day, the share of spend whose run declared the outcome it produced, fleet-wide and per service. Query string forwarded verbatim (the parameters below are the ones documented today, not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      since: z.string().optional().openapi({ description: "Start of the window (runs-service validates it)" }),
+      until: z.string().optional().openapi({ description: "End of the window (runs-service validates it)" }),
+      serviceName: z.string().optional().openapi({ description: "Restrict to one service" }),
+      taskName: z.string().optional().openapi({ description: "Restrict to one task" }),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("OutcomeCoverageStatsResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/runs/outcome-costs/ledger-check",
+  tags: ["Runs"],
+  summary: "Cost ledger to-the-cent check per org-day (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide. " +
+    "Byte passthrough to runs-service GET /internal/outcome-costs/ledger-check: every org-day balances on gross, net and vendor, failing org-days listed. Query string forwarded verbatim (the parameters below are the ones documented today, not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      since: z.string().optional().openapi({ description: "Start of the window (runs-service validates it)" }),
+      until: z.string().optional().openapi({ description: "End of the window (runs-service validates it)" }),
+      rows: z.string().optional().openapi({ description: "Max failing org-days listed (runs-service validates it)" }),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("OutcomeCostLedgerCheckResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/costs/provider-payment-sources",
   tags: ["Costs"],
   summary: "Which of our payment accounts pays each provider (staff only)",
