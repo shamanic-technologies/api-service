@@ -1,16 +1,23 @@
 import { describe, it, expect, vi, afterAll } from "vitest";
 import request from "supertest";
 import express from "express";
-import { buildDocument, HTTP_METHODS, ONBOARDING_OPERATIONS } from "../../src/openapi/document.js";
+import { buildDocument, HTTP_METHODS } from "../../src/openapi/document.js";
 import { isEmptyBodySchema } from "../../src/openapi/downstream-bodies.js";
 import { DOWNSTREAM_RESPONSE_SOURCES, DOWNSTREAM_RESPONSE_SNAPSHOT } from "../../src/openapi/downstream-responses.js";
+import {
+  ONBOARDING_OPERATIONS,
+  ONBOARDING_STEPS,
+  parseSelection,
+  selectDocument,
+  tagPages,
+  isSelectionError,
+} from "../../src/openapi/views.js";
 
 /**
- * API-ONBOARD-DOC-1023: an AI agent with a fresh customer key reads ONE document
- * and knows how to open a client's account end to end. Before: the document it
- * was pointed to was 6.3 MB (6.9 MB served), answer shapes were empty objects
- * (an agent created a brand and never learned its id), and the Quick Start told
- * an agent that had just got its key to "create an API key in the dashboard".
+ * API-ONBOARD-DOC-1023: an AI agent with a fresh customer key reads the API in
+ * pieces it can hold. The full document (~300k tokens) stays the default for
+ * the MCP; an agent reads the onboarding guide (the dashboard's sign-up flow,
+ * step for step), the one-line index, a topic, or single operations.
  */
 
 type Json = Record<string, any>;
@@ -32,8 +39,13 @@ vi.mock("../../src/middleware/auth.js", async (importOriginal) => {
 import meRouter from "../../src/routes/me.js";
 
 const full = buildDocument();
-const onboarding = buildDocument({ view: "onboarding" });
-const size = (doc: unknown) => JSON.stringify(doc).length;
+/** Tokens a model reads, at ~4 characters per token. */
+const tokens = (doc: unknown) => Math.round(JSON.stringify(doc).length / 4);
+const slice = (sel: Parameters<typeof selectDocument>[1]) => {
+  const out = selectDocument(full, sel);
+  if (isSelectionError(out)) throw new Error(JSON.stringify(out));
+  return out as Json;
+};
 
 function operationKeys(doc: Json): string[] {
   const out: string[] = [];
@@ -52,24 +64,44 @@ function successSchemas(doc: Json, key: string): Json[] {
     .filter(Boolean);
 }
 
-describe("document size an agent can read", () => {
-  it("the full customer document stays under 1.5 MB (6.3 MB before shared components)", () => {
-    expect(size(full)).toBeLessThan(1_500_000);
+describe("every read an agent is pointed to fits its budget (tokens)", () => {
+  it("onboarding guide <= 8k tokens", () => expect(tokens(slice({ kind: "onboarding" }))).toBeLessThan(8_000));
+  it("index <= 20k tokens", () => expect(tokens(slice({ kind: "index" }))).toBeLessThan(20_000));
+  it("every topic page <= 22k tokens, in both customer and staff-key documents", () => {
+    const over: string[] = [];
+    for (const audience of ["public", "staff-key"] as const) {
+      const doc = buildDocument({ audience });
+      for (const [tag, pages] of tagPages(doc)) {
+        pages.forEach((_, i) => {
+          const n = tokens(selectDocument(doc, { kind: "tag", tag, page: i + 1 }));
+          if (n > 22_000) over.push(`${audience} ${tag} p${i + 1}: ${n}`);
+        });
+      }
+    }
+    expect(over).toEqual([]);
   });
-
-  it("the onboarding view stays under 250 KB", () => {
-    expect(size(onboarding)).toBeLessThan(250_000);
-  });
+  it("one operation <= 5k tokens", () => expect(tokens(slice({ kind: "operations", ids: ["postV1Brands"] }))).toBeLessThan(5_000));
 });
 
-describe("?view=onboarding: the first-client path, in order", () => {
-  it("lists exactly ONBOARDING_OPERATIONS, every one a customer operation", () => {
-    const fullKeys = new Set(operationKeys(full));
-    for (const key of ONBOARDING_OPERATIONS) expect(fullKeys.has(key), `${key} is not in the customer document`).toBe(true);
-    expect(operationKeys(onboarding).sort()).toEqual([...ONBOARDING_OPERATIONS].sort());
+describe("the slices together cover the whole document, and only it", () => {
+  it("topic pages hold every operation exactly once", () => {
+    const fromPages = [...tagPages(full).values()].flat(2);
+    expect([...fromPages].sort()).toEqual(operationKeys(full).sort());
   });
 
-  it("every $ref in the onboarding view resolves inside it", () => {
+  it("the index lists every operationId", () => {
+    const text = slice({ kind: "index" }).info.description as string;
+    const missing = operationKeys(full)
+      .map((k) => {
+        const [m, p] = k.split(" ");
+        return full.paths[p][m.toLowerCase()].operationId as string;
+      })
+      .filter((id) => !text.includes(`\`${id}\``));
+    expect(missing).toEqual([]);
+  });
+
+  it("an operation slice resolves every $ref it carries", () => {
+    const doc = slice({ kind: "operations", ids: ["postV1BrandsByIdOffersConfirm", "postV1SalesFunnelCampaigns"] });
     const broken: string[] = [];
     const visit = (node: unknown): void => {
       if (Array.isArray(node)) return node.forEach(visit);
@@ -77,15 +109,29 @@ describe("?view=onboarding: the first-client path, in order", () => {
       const ref = (node as Json).$ref;
       if (typeof ref === "string") {
         const [, , section, name] = ref.split("/");
-        if (!(onboarding.components as Json)?.[section]?.[name]) broken.push(ref);
+        if (!doc.components?.[section]?.[name]) broken.push(ref);
       }
       Object.values(node).forEach(visit);
     };
-    visit(onboarding);
+    visit(doc);
     expect(broken).toEqual([]);
+    expect(operationKeys(doc).sort()).toEqual(["POST /v1/brands/{id}/offers/confirm", "POST /v1/sales-funnel-campaigns"]);
+  });
+});
+
+describe("onboarding = the dashboard's sign-up flow", () => {
+  it("names the dashboard's steps in the dashboard's order", () => {
+    const titles = ONBOARDING_STEPS.map((s) => s.title);
+    const order = ["We found your next clients", "Your company", "What you sell", "Who to write to", "Your signals", "What a client is worth", "Your offer, in six points", "What you give away", "Companies in your audience", "Pick your email style", "Your campaigns", "Prepay", "Start"];
+    const at = order.map((t) => titles.findIndex((x) => x.startsWith(t)));
+    expect(at.every((i) => i >= 0), JSON.stringify(order.filter((_, i) => at[i] < 0))).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
   });
 
-  it("every onboarding operation documents what it answers (no empty shape)", () => {
+  it("every route of the flow is a customer operation that documents what it answers", () => {
+    const keys = new Set(operationKeys(full));
+    const missing = ONBOARDING_OPERATIONS.filter((k) => !keys.has(k));
+    expect(missing).toEqual([]);
     const empty = ONBOARDING_OPERATIONS.filter((key) => {
       const schemas = successSchemas(full, key);
       return schemas.length === 0 || schemas.every((s) => isEmptyBodySchema(full, s));
@@ -93,15 +139,17 @@ describe("?view=onboarding: the first-client path, in order", () => {
     expect(empty).toEqual([]);
   });
 
-  it("creating a brand documents the brandId it returns (brand-service's served shape)", () => {
-    const [schema] = successSchemas(full, "POST /v1/brands");
-    expect(Object.keys(schema.properties)).toContain("brandId");
+  it("the guide names each route with its operationId, what to send and what it answers", () => {
+    const text = slice({ kind: "onboarding" }).info.description as string;
+    expect(text).toContain("`POST /v1/brands` (`postV1Brands`): send `url`, `name`; answers `brandId`");
+    expect(text).toMatch(/`POST \/v1\/brands\/\{id\}\/offers\/confirm` \(`postV1BrandsByIdOffersConfirm`\): send `offers`\*, `chosenIndex`; answers `offers`, `chosenOfferId`/);
+    expect(text).toContain('status: "ongoing"');
   });
 
-  it("confirming offers documents the offerId of each offer created (brand-service's served shape)", () => {
-    const [schema] = successSchemas(full, "POST /v1/brands/{id}/offers/confirm");
-    const offer = schema.properties.offers.items;
-    expect(Object.keys(offer.properties)).toContain("offerId");
+  it("brand create and offer confirm document the ids they return (brand-service's served shape)", () => {
+    expect(Object.keys(successSchemas(full, "POST /v1/brands")[0].properties)).toContain("brandId");
+    const confirm = successSchemas(full, "POST /v1/brands/{id}/offers/confirm")[0];
+    expect(Object.keys(confirm.properties.offers.items.properties)).toContain("offerId");
   });
 
   it("every response source maps to a registered operation and has a snapshot", () => {
@@ -115,18 +163,27 @@ describe("?view=onboarding: the first-client path, in order", () => {
 
 describe("Quick Start", () => {
   const description = (full.info as Json).description as string;
-
-  it("states the first-client path in order and points to the skills", () => {
-    const order = ["GET /v1/me", "POST /v1/brands", "/offers/proposals", "/offers/confirm", "/v1/orgs/audiences/suggest", "/v1/content/preview-email", "prepaid_checkout", "POST /v1/sales-funnel-campaigns", "PATCH /v1/sales-funnel-campaigns/{id}"];
-    const at = order.map((s) => description.indexOf(s));
-    expect(at.every((i) => i >= 0), JSON.stringify(order.filter((_, i) => at[i] < 0))).toBe(true);
-    expect([...at].sort((a, b) => a - b)).toEqual(at);
-    expect(description).toContain("GET /v1/skills");
-    expect(description).toContain("?view=onboarding");
+  it("points to the readable slices and the skills", () => {
+    for (const s of ["?view=onboarding", "?view=index", "?tag=", "?operation=", "GET /v1/skills"]) expect(description).toContain(s);
   });
-
   it("never tells an agent that just signed up to create a key in the dashboard", () => {
     expect(description).not.toMatch(/1\. Create an API key in the/);
+  });
+});
+
+describe("parseSelection", () => {
+  it("reads each selection", () => {
+    expect(parseSelection({})).toEqual({ kind: "full" });
+    expect(parseSelection({ view: "index" })).toEqual({ kind: "index" });
+    expect(parseSelection({ tag: "Brand", page: "2" })).toEqual({ kind: "tag", tag: "Brand", page: 2 });
+    expect(parseSelection({ operation: "getV1Me, postV1Brands" })).toEqual({ kind: "operations", ids: ["getV1Me", "postV1Brands"] });
+  });
+  it("refuses unknown or mixed selections, never a silent fallback", () => {
+    for (const q of [{ view: "short" }, { view: "index", tag: "Brand" }, { tag: "Brand", page: "0" }, { page: "2" }, { operation: "" }]) {
+      expect(isSelectionError(parseSelection(q)), JSON.stringify(q)).toBe(true);
+    }
+    expect(isSelectionError(selectDocument(full, { kind: "tag", tag: "Nope", page: 1 }))).toBe(true);
+    expect(isSelectionError(selectDocument(full, { kind: "operations", ids: ["nope"] }))).toBe(true);
   });
 });
 
@@ -152,7 +209,7 @@ describe("only what a customer key may call", () => {
         } else if (layer.name === "router" && layer.handle?.stack) {
           const src: string = layer.regexp?.source ?? "";
           const m = src.match(/^\^\\\/([a-z0-9-]+)/);
-          walk(layer.handle.stack, prefix + (m && !src.startsWith("^\\/?") ? `/${m[1]}` : ""));
+          walk(layer.handle.stack, prefix + (m ? `/${m[1]}` : ""));
         }
       }
     };
@@ -163,25 +220,32 @@ describe("only what a customer key may call", () => {
   });
 });
 
-describe("GET /v1/me/openapi.json?view=", () => {
+describe("GET /v1/me/openapi.json selections", () => {
   const app = express().use("/v1", meRouter);
   const auth = { Authorization: "Bearer distrib.usr_abcdefghijklmnopqrstuvwxyz0123456789" };
 
-  it("onboarding serves only the first-client operations", async () => {
+  it("?view=onboarding serves the guide, small", async () => {
     const res = await request(app).get("/v1/me/openapi.json?view=onboarding").set(auth);
     expect(res.status).toBe(200);
-    expect(operationKeys(res.body).sort()).toEqual([...ONBOARDING_OPERATIONS].sort());
+    expect(res.body.info.description).toContain("## Open a first client, step by step");
+    expect(res.text.length / 4).toBeLessThan(8_000);
     expect(res.headers.etag).toMatch(/^W\//);
   });
 
-  it("no view serves the full document", async () => {
+  it("?operation= serves those operations only", async () => {
+    const res = await request(app).get("/v1/me/openapi.json?operation=postV1Brands").set(auth);
+    expect(operationKeys(res.body)).toEqual(["POST /v1/brands"]);
+  });
+
+  it("no selection serves the full document", async () => {
     const res = await request(app).get("/v1/me/openapi.json").set(auth);
     expect(operationKeys(res.body).length).toBe(operationKeys(full).length);
   });
 
-  it("an unknown view is refused, never silently swapped", async () => {
-    const res = await request(app).get("/v1/me/openapi.json?view=short").set(auth);
+  it("an unknown selection is refused with the fix", async () => {
+    const res = await request(app).get("/v1/me/openapi.json?tag=Nope").set(auth);
     expect(res.status).toBe(400);
-    expect(res.body.code).toBe("invalid_view");
+    expect(res.body.code).toBe("invalid_tag");
+    expect(res.body.tags).toContain("Brand");
   });
 });

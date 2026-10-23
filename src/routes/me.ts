@@ -3,8 +3,9 @@ import { authenticateUser, AuthenticatedRequest } from "../middleware/auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { fetchBrandMemberships, fetchOrganizationNames } from "../lib/org-scope.js";
-import { buildDocument, parseDocumentView, INVALID_VIEW_ANSWER } from "../openapi/document.js";
-import { catalogueBody, sendCatalogue, type CatalogueBody } from "../lib/catalogue-response.js";
+import { catalogueFor } from "../openapi/serve.js";
+import { isSelectionError } from "../openapi/views.js";
+import { sendCatalogue } from "../lib/catalogue-response.js";
 
 const router = Router();
 
@@ -152,7 +153,7 @@ export function filterOrganizations(orgs: MeOrgWithBrands[], q: string): MeOrgWi
  * GET /v1/me/openapi.json — the API document for THIS key.
  *
  * A customer key gets the public document (the one `GET /openapi.json` serves).
- * `?view=onboarding` serves only the first-client operations (`ONBOARDING_OPERATIONS`).
+ * `?view=onboarding|index`, `?tag=`, `?operation=` serve a slice (src/openapi/views.ts).
  * A staff member's key gets the `"staff-key"` audience: the public document plus
  * the staff operations a staff key may call (`STAFF_KEY_OPERATIONS`), each
  * `x-staff-only: true`. The distribute.you MCP searches this document per
@@ -160,19 +161,12 @@ export function filterOrganizations(orgs: MeOrgWithBrands[], q: string): MeOrgWi
  * sees them. Gateway-built from the registry; cached per audience (the registry
  * does not change while the process runs).
  */
-const documentCache = new Map<string, CatalogueBody>();
 router.get("/me/openapi.json", authenticateUser, (req: AuthenticatedRequest, res) => {
-  const view = parseDocumentView(req.query.view);
-  if (!view) return res.status(400).json(INVALID_VIEW_ANSWER);
   const audience = req.authType === "user_key" && req.userKeyScope?.isStaff ? "staff-key" : "public";
-  const cacheKey = `${audience}:${view}`;
-  let doc = documentCache.get(cacheKey);
-  if (!doc) {
-    doc = catalogueBody(buildDocument({ audience, view }));
-    documentCache.set(cacheKey, doc);
-  }
-  // ETag per audience; If-None-Match on it -> 304, no body (src/lib/catalogue-response.ts).
-  sendCatalogue(req, res, doc);
+  const body = catalogueFor(audience, req.query as Record<string, unknown>);
+  if (isSelectionError(body)) return res.status(400).json(body);
+  // ETag per audience and selection; If-None-Match on it -> 304, no body (src/lib/catalogue-response.ts).
+  sendCatalogue(req, res, body);
 });
 
 function orgLabel(o: MeOrg): string {
