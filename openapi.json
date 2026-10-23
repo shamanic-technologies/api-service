@@ -9819,6 +9819,10 @@
         "type": "object",
         "properties": {}
       },
+      "MergeTemplateDynastyRequest": {
+        "type": "object",
+        "properties": {}
+      },
       "RetireWorkflowsByContentResponse": {
         "type": "object",
         "properties": {}
@@ -13941,6 +13945,16 @@
       },
       "ErrorResponse422NeutralityBlindRuleRefusalForwardedVerbatim": {
         "description": "Neutrality / blind rule refusal (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409DIFFERENTPIPEDIFFERENTIDENTITYDYNASTYMERGEDForwardedVerbatim": {
+        "description": "DIFFERENT_PIPE / DIFFERENT_IDENTITY / DYNASTY_MERGED (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {
