@@ -200,6 +200,13 @@ registry.registerPath({
     "Returns the OpenAPI 3.0 JSON document for this API — the document you are reading. " +
     "It describes every operation you can call with your API key. The response carries an `ETag`; send it back as " +
     "`If-None-Match` and an unchanged document answers 304 with no body.",
+  request: {
+    query: z.object({
+      view: z.enum(["full", "onboarding"]).optional().describe(
+        "`onboarding`: only the operations that open a first client (brand, offer, audience, email preview, prepay, campaign), in order, with what each answers (about 100 KB). Omit for the full document.",
+      ),
+    }),
+  },
   responses: {
     304: { description: "Not modified: the copy named by `If-None-Match` is current. No body." },
     200: {
@@ -4127,7 +4134,7 @@ registry.registerPath({
 export const BrandUpsertRequestSchema = z
   .object({
     url: z.string().min(1).optional().describe("Brand website URL (omit for a no-website brand)"),
-    name: z.string().min(1).optional().describe("Brand name — identity source when no URL is provided"),
+    name: z.string().min(1).optional().describe("Brand name. With `url`: the display name. Without `url`: the brand's identity (a no-website brand)"),
   })
   .passthrough()
   .openapi("BrandUpsertRequest");
@@ -4419,9 +4426,10 @@ registry.registerPath({
   method: "post",
   path: "/v1/brands",
   tags: ["Brand"],
-  summary: "Upsert brand",
+  summary: "Create (or find) a brand",
   description:
-    "Upsert a brand from a URL. Returns the brandId.",
+    "Create the brand from its website `url` (add `name` for its display name), or from a `name` alone for a no-website brand. " +
+    "The same website twice answers the same brand. The answer's `brandId` is the id every brand route takes (`/v1/brands/{id}/...`).",
   security: authed,
   request: {
     body: {
@@ -5571,7 +5579,7 @@ registry.registerPath({
     "share credential in a URL lands in access logs and proxy traces. Downstream 404s unknown, " +
     "revoked and rotated-away credentials alike, and that propagates verbatim. Response shape is " +
     "owned by the downstream service.",
-  security: authed,
+  security: platformAuth,
   request: {
     body: {
       content: {
@@ -17229,9 +17237,17 @@ registry.registerPath({
     "Revalidate instead of re-downloading: the response carries an `ETag`; send it back as `If-None-Match` and an unchanged " +
     "document answers 304 with no body. Reads of this document are not recorded on your conversation thread.",
   security: authed,
+  request: {
+    query: z.object({
+      view: z.enum(["full", "onboarding"]).optional().describe(
+        "`onboarding`: only the operations that open a first client (brand, offer, audience, email preview, prepay, campaign), in order, with what each answers (about 100 KB). Omit for the full document.",
+      ),
+    }),
+  },
   responses: {
     200: { description: "OpenAPI 3 document (header `ETag` names this version)", content: { "application/json": { schema: z.object({}).passthrough().openapi("KeyOpenApiDocument") } } },
     304: { description: "Not modified: the copy named by `If-None-Match` is current. No body." },
+    400: { description: "`invalid_view`: unknown `view`", content: errorContent },
     401: { description: "Missing or refused key", content: errorContent },
   },
 });

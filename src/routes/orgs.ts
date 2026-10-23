@@ -262,7 +262,7 @@ router.post("/orgs/:orgId/members", authenticateUser, requireUser, requireStaffA
     apiKey: minted.key,
     apiKeyId: minted.id,
     apiKeyName: minted.name,
-    usage: "The person sends it as `Authorization: Bearer <apiKey>` (Claude Code / the distribute MCP). It reaches only the organizations this person is a member of. First call: GET /v1/me.",
+    usage: "The person sends it as `Authorization: Bearer <apiKey>` (Claude Code / the distribute MCP). It reaches only the organizations this person is a member of. First call: GET /v1/me. To open a first client, follow GET /v1/me/openapi.json?view=onboarding in order; GET /v1/skills says how to decide each step.",
   });
 });
 
