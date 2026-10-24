@@ -9095,6 +9095,30 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/runs/outcome-costs/reconciliation",
+  tags: ["Runs"],
+  summary: "Cost ledger reconciliation per UTC day (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide. " +
+    "Byte passthrough to runs-service GET /internal/outcome-costs/reconciliation: per UTC day since the first day of spend, fleet-wide spend split into declared production, normal loss, unpooled loss, undeclared and support, plus undeclared services, unknown-provenance outcomes and the reconciled verdict. Query string forwarded verbatim (the parameters below are the ones documented today, not a whitelist); status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      since: z.string().optional().openapi({ description: "YYYY-MM-DD, default the first day of spend (runs-service validates it)" }),
+      until: z.string().optional().openapi({ description: "YYYY-MM-DD inclusive, default yesterday UTC (runs-service validates it)" }),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("OutcomeCostReconciliationResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/costs/provider-payment-sources",
   tags: ["Costs"],
   summary: "Which of our payment accounts pays each provider (staff only)",
