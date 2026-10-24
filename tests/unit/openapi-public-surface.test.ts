@@ -183,6 +183,7 @@ const PLATFORM_OPERATIONS = [
   "get /v1/admin/brands/{brandId}/sourcing-investment/people",
   "get /v1/admin/brands/{brandId}/sourcing-investment/companies",
   "post /v1/platform-uploads",
+  "get /v1/subscriber-links/{linkId}",
   "get /v1/mailing-lists/{slug}/subscribers",
   "post /v1/mailing-lists/{slug}/subscribers",
   "delete /v1/mailing-lists/{slug}/subscribers",

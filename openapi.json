@@ -5598,6 +5598,10 @@
         "type": "object",
         "properties": {}
       },
+      "SubscriberLinkResolution": {
+        "type": "object",
+        "properties": {}
+      },
       "PromoCodeResponse": {
         "type": "object",
         "properties": {}
@@ -11807,6 +11811,56 @@
       },
       "ErrorResponse400NoPaymentMethodOnFile": {
         "description": "No payment method on file",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400TamperedLinkIdPassThroughBody": {
+        "description": "Tampered link id (pass-through body)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse401MissingOrInvalidPlatformAPIKey": {
+        "description": "Missing or invalid platform API key",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse403RequestCarriesAUserOrgIdentityServerToServerOnly": {
+        "description": "Request carries a user/org identity (server_to_server_only)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404UnknownLinkIdPassThroughBody": {
+        "description": "Unknown link id (pass-through body)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse410RevokedLinkPassThroughBody": {
+        "description": "Revoked link (pass-through body)",
         "content": {
           "application/json": {
             "schema": {
