@@ -3345,6 +3345,19 @@
           "linkedinUrl"
         ]
       },
+      "BrandCompetitors": {
+        "type": "object",
+        "properties": {}
+      },
+      "DiscoverBrandCompetitorsBody": {
+        "type": "object",
+        "properties": {
+          "refresh": {
+            "type": "boolean",
+            "description": "true recomputes even when a stored answer exists; omitted/false reuses the stored answer."
+          }
+        }
+      },
       "SalesRepResponse": {
         "type": "object",
         "properties": {}
@@ -11283,6 +11296,46 @@
           }
         }
       },
+      "ErrorResponse400InvalidRequestForwardedVerbatim": {
+        "description": "Invalid request (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse402InsufficientCreditsForwardedVerbatim": {
+        "description": "Insufficient credits (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse422NothingKnownAboutTheBrandToDiscoverFromForwardedVerbatim": {
+        "description": "Nothing known about the brand to discover from (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502ADownstreamStepFailedForwardedVerbatim": {
+        "description": "A downstream step failed (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
       "ErrorResponse400InvalidBrandIDOrARepBrandServiceRefusesForwardedVerbatim": {
         "description": "Invalid brand ID, or a rep brand-service refuses (forwarded verbatim)",
         "content": {
@@ -11305,16 +11358,6 @@
       },
       "ErrorResponse404ShareTokenNotFoundForwardedVerbatim": {
         "description": "Share token not found (forwarded verbatim)",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "ErrorResponse402InsufficientCreditsForwardedVerbatim": {
-        "description": "Insufficient credits (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {
@@ -12215,16 +12258,6 @@
       },
       "ErrorResponse503EconomicsNotComputedYetForwardedVerbatim": {
         "description": "Economics not computed yet (forwarded verbatim)",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "ErrorResponse400InvalidRequestForwardedVerbatim": {
-        "description": "Invalid request (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {
@@ -25137,6 +25170,389 @@
           }
         },
         "operationId": "deleteV1BrandsByIdLinkedinPage"
+      }
+    },
+    "/v1/brands/{id}/competitors": {
+      "get": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "Read the brand's competitors",
+        "description": "Proxy to brand-service GET /orgs/brands/{brandId}/competitors. Reads what is stored: never computes, never spends; status not_computed means discovery has not run yet. The brand's direct competitors. Answers { brandId, status: not_computed | computed, discoveredAt, provenance, competitors: [{ name, domain, websiteConfidence, linkedinUrl, linkedinSource }], competitorsWithoutWebsite: [{ name }] }. A competitor is listed with a website only when that site was judged to be that company; otherwise it is in competitorsWithoutWebsite. Shape owned by brand-service (passthrough).\n\nResponse: documented from brand-service GET /orgs/brands/{brandId}/competitors, which owns it; the gateway forwards it unchanged.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID"
+            },
+            "required": true,
+            "description": "Brand ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The stored answer (or not_computed)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "brandId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "not_computed",
+                        "computed"
+                      ]
+                    },
+                    "discoveredAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "provenance": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "method": {
+                          "type": "string",
+                          "enum": [
+                            "llm_named_then_website_read"
+                          ]
+                        },
+                        "model": {
+                          "type": "string"
+                        },
+                        "proposedCount": {
+                          "type": "integer",
+                          "description": "Competitors the model named before unreadable/duplicate ones were dropped"
+                        },
+                        "runId": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "method",
+                        "model",
+                        "proposedCount",
+                        "runId"
+                      ]
+                    },
+                    "competitors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "domain": {
+                            "type": "string",
+                            "description": "Registrable domain of the competitor website, e.g. `acme.com`, judged to be that company's own site"
+                          },
+                          "websiteConfidence": {
+                            "type": "number",
+                            "description": "Jev's probability (0.5..1) that `domain` is the company's own site"
+                          },
+                          "linkedinUrl": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "`https://www.linkedin.com/company/<slug>/`, or null when its website links none"
+                          },
+                          "linkedinSource": {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                              "competitor_website",
+                              null
+                            ]
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "domain",
+                          "websiteConfidence",
+                          "linkedinUrl",
+                          "linkedinSource"
+                        ]
+                      },
+                      "description": "Competitors with a website judged to be theirs, most direct first"
+                    },
+                    "competitorsWithoutWebsite": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ]
+                      },
+                      "description": "Competitors named whose own website could not be confirmed: show the name, link nothing"
+                    }
+                  },
+                  "required": [
+                    "brandId",
+                    "status",
+                    "discoveredAt",
+                    "provenance",
+                    "competitors",
+                    "competitorsWithoutWebsite"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidRequestForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse403BrandNotInCallerSOrgForwardedVerbatim"
+          },
+          "404": {
+            "description": "Brand not found (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500UpstreamError"
+          }
+        },
+        "operationId": "getV1BrandsByIdCompetitors"
+      }
+    },
+    "/v1/brands/{id}/competitors/discover": {
+      "post": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "Discover the brand's competitors",
+        "description": "Proxy to brand-service POST /orgs/brands/{brandId}/competitors/discover. Computes once and stores the answer; later calls reuse it unless { refresh: true }. Spends org credits (402 when the org cannot pay). The brand's direct competitors. Answers { brandId, status: not_computed | computed, discoveredAt, provenance, competitors: [{ name, domain, websiteConfidence, linkedinUrl, linkedinSource }], competitorsWithoutWebsite: [{ name }] }. A competitor is listed with a website only when that site was judged to be that company; otherwise it is in competitorsWithoutWebsite. Shape owned by brand-service (passthrough).\n\nResponse: documented from brand-service POST /orgs/brands/{brandId}/competitors/discover, which owns it; the gateway forwards it unchanged.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand ID"
+            },
+            "required": true,
+            "description": "Brand ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscoverBrandCompetitorsBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The stored or freshly computed answer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "brandId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "not_computed",
+                        "computed"
+                      ]
+                    },
+                    "discoveredAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "provenance": {
+                      "type": "object",
+                      "nullable": true,
+                      "properties": {
+                        "method": {
+                          "type": "string",
+                          "enum": [
+                            "llm_named_then_website_read"
+                          ]
+                        },
+                        "model": {
+                          "type": "string"
+                        },
+                        "proposedCount": {
+                          "type": "integer",
+                          "description": "Competitors the model named before unreadable/duplicate ones were dropped"
+                        },
+                        "runId": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "method",
+                        "model",
+                        "proposedCount",
+                        "runId"
+                      ]
+                    },
+                    "competitors": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "domain": {
+                            "type": "string",
+                            "description": "Registrable domain of the competitor website, e.g. `acme.com`, judged to be that company's own site"
+                          },
+                          "websiteConfidence": {
+                            "type": "number",
+                            "description": "Jev's probability (0.5..1) that `domain` is the company's own site"
+                          },
+                          "linkedinUrl": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "`https://www.linkedin.com/company/<slug>/`, or null when its website links none"
+                          },
+                          "linkedinSource": {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                              "competitor_website",
+                              null
+                            ]
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "domain",
+                          "websiteConfidence",
+                          "linkedinUrl",
+                          "linkedinSource"
+                        ]
+                      },
+                      "description": "Competitors with a website judged to be theirs, most direct first"
+                    },
+                    "competitorsWithoutWebsite": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name"
+                        ]
+                      },
+                      "description": "Competitors named whose own website could not be confirmed: show the name, link nothing"
+                    }
+                  },
+                  "required": [
+                    "brandId",
+                    "status",
+                    "discoveredAt",
+                    "provenance",
+                    "competitors",
+                    "competitorsWithoutWebsite"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidRequestForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/ErrorResponse402InsufficientCreditsForwardedVerbatim"
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse403BrandNotInCallerSOrgForwardedVerbatim"
+          },
+          "404": {
+            "description": "Brand not found (forwarded verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ErrorResponse422NothingKnownAboutTheBrandToDiscoverFromForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500UpstreamError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ADownstreamStepFailedForwardedVerbatim"
+          }
+        },
+        "operationId": "postV1BrandsByIdCompetitorsDiscover"
       }
     },
     "/v1/brands/{id}/sales-rep": {

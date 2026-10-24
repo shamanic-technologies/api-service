@@ -50,8 +50,11 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
   },
   {
     title: "Your company, then Competitors",
-    how: "Read what we found about the company and its competitors, and show it to your user to check.",
-    operations: ["POST /v1/brands/extract-fields"],
+    how:
+      "Read what we found about the company, then its competitors (`competitors/discover` once, `refresh: true` to " +
+      "recompute; a competitor with no website judged to be it comes in `competitorsWithoutWebsite`), and show both to " +
+      "your user to check.",
+    operations: ["POST /v1/brands/extract-fields", "POST /v1/brands/{id}/competitors/discover", "GET /v1/brands/{id}/competitors"],
   },
   {
     title: "What you sell",

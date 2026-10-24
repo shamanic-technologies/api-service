@@ -5237,6 +5237,75 @@ registry.registerPath({
 });
 
 // ===================================================================
+// Brand – competitors (proxy to brand-service /orgs/brands/{brandId}/competitors[/discover])
+// Customer surface (org + user). Passthrough: brand-service owns every body and
+// which website is judged to be each competitor.
+// ===================================================================
+const BrandCompetitorsSchema = z.object({}).passthrough().openapi("BrandCompetitors");
+const DiscoverBrandCompetitorsBodySchema = z
+  .object({
+    refresh: z
+      .boolean()
+      .optional()
+      .describe("true recomputes even when a stored answer exists; omitted/false reuses the stored answer."),
+  })
+  .passthrough()
+  .openapi("DiscoverBrandCompetitorsBody");
+
+const BRAND_COMPETITORS_NOTE =
+  "The brand's direct competitors. Answers { brandId, status: not_computed | computed, discoveredAt, provenance, " +
+  "competitors: [{ name, domain, websiteConfidence, linkedinUrl, linkedinSource }], competitorsWithoutWebsite: " +
+  "[{ name }] }. A competitor is listed with a website only when that site was judged to be that company; otherwise " +
+  "it is in competitorsWithoutWebsite. Shape owned by brand-service (passthrough).";
+
+const brandCompetitorsErrors = {
+  400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  403: { description: "Brand not in caller's org (forwarded verbatim)", content: errorContent },
+  404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
+  500: { description: "Upstream error", content: errorContent },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{id}/competitors",
+  tags: ["Brand"],
+  summary: "Read the brand's competitors",
+  description:
+    "Proxy to brand-service GET /orgs/brands/{brandId}/competitors. Reads what is stored: never computes, never " +
+    "spends; status not_computed means discovery has not run yet. " + BRAND_COMPETITORS_NOTE,
+  security: authed,
+  request: { params: BrandIdParam },
+  responses: {
+    200: { description: "The stored answer (or not_computed)", content: { "application/json": { schema: BrandCompetitorsSchema } } },
+    ...brandCompetitorsErrors,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{id}/competitors/discover",
+  tags: ["Brand"],
+  summary: "Discover the brand's competitors",
+  description:
+    "Proxy to brand-service POST /orgs/brands/{brandId}/competitors/discover. Computes once and stores the answer; " +
+    "later calls reuse it unless { refresh: true }. Spends org credits (402 when the org cannot pay). " +
+    BRAND_COMPETITORS_NOTE,
+  security: authed,
+  request: {
+    params: BrandIdParam,
+    body: { required: false, content: { "application/json": { schema: DiscoverBrandCompetitorsBodySchema } } },
+  },
+  responses: {
+    200: { description: "The stored or freshly computed answer", content: { "application/json": { schema: BrandCompetitorsSchema } } },
+    ...brandCompetitorsErrors,
+    402: { description: "Insufficient credits (forwarded verbatim)", content: errorContent },
+    422: { description: "Nothing known about the brand to discover from (forwarded verbatim)", content: errorContent },
+    502: { description: "A downstream step failed (forwarded verbatim)", content: errorContent },
+  },
+});
+
+// ===================================================================
 // Brand – Sales Rep (proxy to brand-service /orgs/brands/{brandId}/sales-rep)
 // The one person to reach when a sales interest lands on this brand: the address
 // to copy on the prospect's thread and the number to ring. Downstream owns the

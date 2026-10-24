@@ -50,6 +50,8 @@ export const DOWNSTREAM_RESPONSE_SOURCES: Record<string, DownstreamResponseSourc
   "PATCH /v1/sales-funnel-campaigns/{id}": { service: "campaign-service", method: "PATCH", path: "/sales-funnel-campaigns/{id}" },
   "POST /v1/brands/extract-fields": { service: "brand-service", method: "POST", path: "/orgs/brands/extract-fields" },
   "POST /v1/brands/{id}/icp/suggest": { service: "brand-service", method: "POST", path: "/orgs/brands/{brandId}/icp/suggest" },
+  "GET /v1/brands/{id}/competitors": { service: "brand-service", method: "GET", path: "/orgs/brands/{brandId}/competitors" },
+  "POST /v1/brands/{id}/competitors/discover": { service: "brand-service", method: "POST", path: "/orgs/brands/{brandId}/competitors/discover" },
   "GET /v1/brands/{id}/offers/{offerId}/user-fields": { service: "brand-service", method: "GET", path: "/orgs/brands/{brandId}/offers/{offerId}/user-fields" },
   "PUT /v1/brands/{id}/offers/{offerId}/user-fields": { service: "brand-service", method: "PUT", path: "/orgs/brands/{brandId}/offers/{offerId}/user-fields" },
   "GET /v1/brands/{id}/sales-rep": { service: "brand-service", method: "GET", path: "/orgs/brands/{brandId}/sales-rep" },
