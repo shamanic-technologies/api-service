@@ -93,6 +93,8 @@ The gateway's public surface is consumed by LLM function-calling layers and codi
 
 **`downstreamUrl` in `src/lib/service-client.ts` refuses any downstream path carrying a dot-segment (400), in every spelling the URL parser honours (`..`, `%2e%2e`, `\\` as separator).** Express DECODES `%2F` inside `req.params`, and ~35 routes interpolate a param without `encodeURIComponent` (`/internal/brands/${req.params.id}`), so `/v1/brands/..%2F..%2Finternal%2F<x>` used to reach any `/internal/*` route on that downstream. The guard sits under every `callExternalService` / `pipeExternalService` / `streamExternalService` / `forwardMultipartUpload`; do not build a downstream URL any other way.
 
+**A SERVER-TO-SERVER read for our own apps with no user (an anonymous landing visitor) = `authenticatePlatform` + `refuseForwardedIdentity`** (`src/routes/subscriber-links.ts`, `GET /v1/subscriber-links/:linkId`, 2026-10-24): every browser-facing proxy holding the platform key (dashboard `/api/v1`, `/api/anon/v1`, admin) stamps `x-external-org-id`/`x-external-user-id` (or an org) and cannot drop them, so any identity header → 403 `server_to_server_only` before the downstream call. Use it when the answer carries PII (a subscriber's email) no browser may read. `tests/unit/subscriber-links.behavior.test.ts`.
+
 Do NOT invent a new staff-role flag. Do NOT gate a staff-only route with `authenticatePlatform` alone — a customer's dashboard session carries the same admin key, so it would leak. Use `requireStaff` for the staff signal.
 
 ### A user API key belongs to the USER, across their organizations (`src/lib/org-scope.ts`)

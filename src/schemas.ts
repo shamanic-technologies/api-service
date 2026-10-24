@@ -8210,6 +8210,35 @@ const PromoCodeParam = z.object({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/subscriber-links/{linkId}",
+  tags: ["Platform"],
+  summary: "Resolve a newsletter link id to its subscriber (server-to-server)",
+  description:
+    "Who a newsletter link's `dy_sub` id names. Platform API key only, and refused 403 " +
+    "(`server_to_server_only`) when the request carries any user/org identity header, so a " +
+    "browser-facing proxy cannot read a subscriber's email. Pass-through from " +
+    "transactional-email-service: 200 valid (subscriber + list), 400 tampered, 404 unknown, 410 revoked.",
+  security: platformAuth,
+  request: {
+    params: z.object({
+      linkId: z.string().openapi({ description: "The opaque `dy_sub` value from the link" }),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Valid link: the subscriber and list (pass-through)",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("SubscriberLinkResolution") } },
+    },
+    400: { description: "Tampered link id (pass-through body)", content: errorContent },
+    401: { description: "Missing or invalid platform API key", content: errorContent },
+    403: { description: "Request carries a user/org identity (server_to_server_only)", content: errorContent },
+    404: { description: "Unknown link id (pass-through body)", content: errorContent },
+    410: { description: "Revoked link (pass-through body)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/promo-codes/{code}",
   tags: ["Promo codes"],
   summary: "Get a promo code's grant amount (staff only)",
