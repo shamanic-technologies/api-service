@@ -24,6 +24,7 @@ const { RUNS_BASE, COSTS_BASE, INSTANTLY_BASE } = vi.hoisted(() => {
  *   GET /v1/runs/stats/costs/margin/timeseries → runs-service GET /internal/stats/costs/margin/timeseries
  *   GET /v1/runs/stats/outcome-coverage → runs-service GET /internal/stats/outcome-coverage
  *   GET /v1/runs/outcome-costs/ledger-check → runs-service GET /internal/outcome-costs/ledger-check
+ *   GET /v1/runs/outcome-costs/reconciliation → runs-service GET /internal/outcome-costs/reconciliation
  *   GET /v1/costs/vendor-costs      → costs-service     GET /internal/vendor-costs
  *   GET /v1/costs/provider-payment-sources → costs-service GET /internal/provider-payment-sources
  *   GET /v1/costs/email-send-price  → costs-service     GET /internal/email-send-price
@@ -93,6 +94,12 @@ const ROUTES = [
     path: "/v1/runs/outcome-costs/ledger-check",
     query: "?since=2026-10-01&until=2026-10-23&rows=50",
     downstream: `${RUNS_BASE}/internal/outcome-costs/ledger-check`,
+    key: "runs-test-key",
+  },
+  {
+    path: "/v1/runs/outcome-costs/reconciliation",
+    query: "?since=2026-09-01&until=2026-10-23",
+    downstream: `${RUNS_BASE}/internal/outcome-costs/reconciliation`,
     key: "runs-test-key",
   },
   {
