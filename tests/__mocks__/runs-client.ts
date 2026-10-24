@@ -61,6 +61,7 @@ export type CreateRunParams = {
   serviceName: string;
   taskName: string;
   parentRunId?: string;
+  support?: { kind: string; reason: string };
 };
 
 export type CostItem = {

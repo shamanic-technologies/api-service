@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { timingSafeEqual } from "crypto";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { createRun, updateRun } from "@distribute/runs-client";
+import { supportFunctionFor } from "../lib/support-function.js";
 import { looksLikeUserKey, respondAuthFailure } from "../lib/auth-failure.js";
 import { isStaffEmail, staffEmailAllowlist } from "../lib/staff.js";
 import { loadUserKeyScope, resolveTargetOrg, respondTargetFailure, UserKeyScope } from "../lib/org-scope.js";
@@ -194,11 +195,13 @@ async function authenticateImpl(
         if (req.workflowSlug) runHeaders["x-workflow-slug"] = req.workflowSlug;
         if (req.featureSlug) runHeaders["x-feature-slug"] = req.featureSlug;
 
+        const support = supportFunctionFor(req.method, `${req.baseUrl}${req.path}`);
         const run = await createRun({
           orgId: req.orgId,
           userId: req.userId,
           serviceName: "api-service",
           taskName: `${req.method} ${req.baseUrl}${req.path}`,
+          ...(support ? { support } : {}),
         }, runHeaders);
         req.runId = run.id;
 
