@@ -18306,6 +18306,37 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/v1/content/model-dynasties/{slug}/outputs",
+  tags: ["Content"],
+  summary: "The last emails one LLM dynasty (every version) wrote on one pipe, newest first (staff only)",
+  description:
+    "Every org; `{ slug, name, featureSlug, legKey, modelIds, outputs }`, per output the generation id, when, channel, workflow version (`workflowSlug`), " +
+    "template version (`promptType`) and its template dynasty (`{ slug, name, position }`), the exact model, tokens, subject and each email's text + delay " +
+    "(never org/lead ids or the raw prompt). `featureSlug` + `legKey` required (400 at the producer), `limit` 1..20, default 5 at the producer. " +
+    "Proxies content-generation-service GET /internal/model-dynasties/{slug}/outputs, query string verbatim.",
+  security: platformAuth,
+  request: {
+    params: z.object({ slug: z.string().describe("LLM dynasty slug (e.g. gemini-pro)") }),
+    query: z
+      .object({
+        featureSlug: z.string().optional().describe("Pipe feature slug (required by the producer)"),
+        legKey: z.string().optional().describe("Pipe leg key (required by the producer)"),
+        limit: z.string().optional().describe("How many outputs (producer default 5, producer bounds)"),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "`{ slug, name, featureSlug, legKey, modelIds, outputs }`", content: { "application/json": { schema: z.object({}).passthrough().openapi("ModelDynastyOutputs") } } },
+    400: { description: "Missing featureSlug/legKey or bad limit (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "MODEL_DYNASTY_NOT_FOUND (forwarded verbatim)", content: errorContent },
+    502: { description: "MODEL_CATALOGUE_UNAVAILABLE (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/content/template-dynasties/{slug}/versions",
   tags: ["Content"],
