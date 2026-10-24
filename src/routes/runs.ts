@@ -317,6 +317,30 @@ router.get("/runs/outcome-costs/ledger-check", authenticatePlatform, requireStaf
 });
 
 /**
+ * GET /v1/runs/outcome-costs/reconciliation → runs-service GET /internal/outcome-costs/reconciliation — STAFF ONLY.
+ *
+ * The cost ledger's reconciliation: per UTC day since the first day of spend,
+ * fleet-wide spend split into declared production, normal loss, unpooled loss,
+ * undeclared and support, plus undeclared services, unknown-provenance outcomes
+ * and the reconciled verdict (the Monitoring hub chart). Same gate, same byte
+ * passthrough as the ledger check above (query forwarded verbatim, #11; status +
+ * body piped, #10). Declared before `/runs/:id` (#13).
+ */
+router.get("/runs/outcome-costs/reconciliation", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.runs,
+      `/internal/outcome-costs/reconciliation${rawQueryString(req.originalUrl)}`,
+      { expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Outcome cost reconciliation error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to read outcome cost reconciliation");
+  }
+});
+
+/**
  * GET /v1/runs/:id → runs-service GET /v1/runs/:id
  *
  * One run by id, with its cost roll-up and its descendants, forwarded untouched.

@@ -5847,6 +5847,10 @@
         "type": "object",
         "properties": {}
       },
+      "OutcomeCostReconciliationResponse": {
+        "type": "object",
+        "properties": {}
+      },
       "ProviderPaymentSourcesResponse": {
         "type": "object",
         "properties": {}
