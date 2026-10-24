@@ -66,6 +66,8 @@ export interface CreateRunParams {
   serviceName: string;
   taskName: string;
   parentRunId?: string;
+  /** Marks the run SUPPORT at creation (runs-service support function): spend that produces no outcome by design. */
+  support?: { kind: string; reason: string };
 }
 
 export interface CostItem {
