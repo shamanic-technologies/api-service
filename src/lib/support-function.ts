@@ -50,6 +50,7 @@ export const SUPPORT_RULES: readonly Rule[] = [
   rule("POST", "/v1/orgs/audiences/:id/preview/companies/:id/email-check", "product_feature", "audience preview email check"),
   rule("POST", "/v1/orgs/audiences/:id/preview/email-checks/next", "product_feature", "audience preview email check"),
   rule("POST", "/v1/brands/:id/icp/suggest", "product_feature", "onboarding: ICP suggestion"),
+  rule("POST", "/v1/brands/:id/competitors/discover", "product_feature", "onboarding: competitor discovery"),
   rule("POST", "/v1/brands/:id/personas/:id/avatar/regenerate", "product_feature", "persona avatar"),
   rule("POST", "/v1/brands/:id/offers/:id/image", "product_feature", "offer image"),
   rule("POST", "/v1/brands/:id/offers/:id/qualification/previews", "product_feature", "qualification preview"),

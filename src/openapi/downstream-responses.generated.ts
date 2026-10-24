@@ -105,6 +105,128 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "GET /v1/brands/{id}/competitors": {
+    "service": "brand-service",
+    "method": "GET",
+    "path": "/orgs/brands/{brandId}/competitors",
+    "responses": {
+      "200": {
+        "description": "The stored answer (or not_computed)",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "not_computed",
+                "computed"
+              ]
+            },
+            "discoveredAt": {
+              "type": "string",
+              "nullable": true
+            },
+            "provenance": {
+              "type": "object",
+              "nullable": true,
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "llm_named_then_website_read"
+                  ]
+                },
+                "model": {
+                  "type": "string"
+                },
+                "proposedCount": {
+                  "type": "integer",
+                  "description": "Competitors the model named before unreadable/duplicate ones were dropped"
+                },
+                "runId": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "method",
+                "model",
+                "proposedCount",
+                "runId"
+              ]
+            },
+            "competitors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "domain": {
+                    "type": "string",
+                    "description": "Registrable domain of the competitor website, e.g. `acme.com`, judged to be that company's own site"
+                  },
+                  "websiteConfidence": {
+                    "type": "number",
+                    "description": "Jev's probability (0.5..1) that `domain` is the company's own site"
+                  },
+                  "linkedinUrl": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "`https://www.linkedin.com/company/<slug>/`, or null when its website links none"
+                  },
+                  "linkedinSource": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "competitor_website",
+                      null
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "domain",
+                  "websiteConfidence",
+                  "linkedinUrl",
+                  "linkedinSource"
+                ]
+              },
+              "description": "Competitors with a website judged to be theirs, most direct first"
+            },
+            "competitorsWithoutWebsite": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              },
+              "description": "Competitors named whose own website could not be confirmed: show the name, link nothing"
+            }
+          },
+          "required": [
+            "brandId",
+            "status",
+            "discoveredAt",
+            "provenance",
+            "competitors",
+            "competitorsWithoutWebsite"
+          ]
+        }
+      }
+    }
+  },
   "GET /v1/brands/{id}/offers": {
     "service": "brand-service",
     "method": "GET",
@@ -2681,6 +2803,128 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "domain",
             "name",
             "created"
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/brands/{id}/competitors/discover": {
+    "service": "brand-service",
+    "method": "POST",
+    "path": "/orgs/brands/{brandId}/competitors/discover",
+    "responses": {
+      "200": {
+        "description": "The stored answer after discovery",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "not_computed",
+                "computed"
+              ]
+            },
+            "discoveredAt": {
+              "type": "string",
+              "nullable": true
+            },
+            "provenance": {
+              "type": "object",
+              "nullable": true,
+              "properties": {
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "llm_named_then_website_read"
+                  ]
+                },
+                "model": {
+                  "type": "string"
+                },
+                "proposedCount": {
+                  "type": "integer",
+                  "description": "Competitors the model named before unreadable/duplicate ones were dropped"
+                },
+                "runId": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "method",
+                "model",
+                "proposedCount",
+                "runId"
+              ]
+            },
+            "competitors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "domain": {
+                    "type": "string",
+                    "description": "Registrable domain of the competitor website, e.g. `acme.com`, judged to be that company's own site"
+                  },
+                  "websiteConfidence": {
+                    "type": "number",
+                    "description": "Jev's probability (0.5..1) that `domain` is the company's own site"
+                  },
+                  "linkedinUrl": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "`https://www.linkedin.com/company/<slug>/`, or null when its website links none"
+                  },
+                  "linkedinSource": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "competitor_website",
+                      null
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "domain",
+                  "websiteConfidence",
+                  "linkedinUrl",
+                  "linkedinSource"
+                ]
+              },
+              "description": "Competitors with a website judged to be theirs, most direct first"
+            },
+            "competitorsWithoutWebsite": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
+                ]
+              },
+              "description": "Competitors named whose own website could not be confirmed: show the name, link nothing"
+            }
+          },
+          "required": [
+            "brandId",
+            "status",
+            "discoveredAt",
+            "provenance",
+            "competitors",
+            "competitorsWithoutWebsite"
           ]
         }
       }
