@@ -603,6 +603,45 @@ for (const method of ["get", "put", "delete"] as const) {
 }
 
 /**
+ * GET /v1/brands/:id/competitors
+ * POST /v1/brands/:id/competitors/discover
+ * Proxy to brand-service GET /orgs/brands/{brandId}/competitors (pure read: never
+ * computes, `not_computed` is a valid answer) and POST
+ * /orgs/brands/{brandId}/competitors/discover (body `{ refresh? }`: computes once,
+ * reuses the stored answer after, spends org credits through chat-service). Shapes,
+ * and which website is judged to be each competitor, are brand-service's: status and
+ * body pass through verbatim (402 insufficient credits, 403 foreign brand, 404,
+ * 422 nothing known about the brand, 502 included).
+ */
+router.get("/brands/:id/competitors", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/competitors`,
+      { method: "GET", headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Brand competitors (get) error:", error.message);
+    respondUpstreamError(res, error, "Failed to read the brand's competitors");
+  }
+});
+
+router.post("/brands/:id/competitors/discover", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.brand,
+      `/orgs/brands/${req.params.id}/competitors/discover`,
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body ?? {} },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Brand competitors (discover) error:", error.message);
+    respondUpstreamError(res, error, "Failed to discover the brand's competitors");
+  }
+});
+
+/**
  * GET|PUT|DELETE /v1/brands/:id/sales-rep
  * Proxy to brand-service {GET,PUT,DELETE} /orgs/brands/{brandId}/sales-rep.
  * The one person to reach when a sales interest lands on this brand: the address
