@@ -599,6 +599,7 @@ describe("Auth middleware — run creation is mandatory", () => {
         userId: "user-uuid-456",
         serviceName: "api-service",
         taskName: "GET /v1/workflows",
+        support: { kind: "product_feature", reason: "api-service: dashboard read" },
       },
       {
         "x-brand-id": "brand-abc",
