@@ -9823,6 +9823,10 @@
         "type": "object",
         "properties": {}
       },
+      "ModelDynastyOutputs": {
+        "type": "object",
+        "properties": {}
+      },
       "AddTemplateDynastyVersionRequest": {
         "type": "object",
         "properties": {}
@@ -13933,6 +13937,36 @@
       },
       "ErrorResponse502WorkflowServiceCouldNotResolveTheDynastyVersionsForwardedVer": {
         "description": "workflow-service could not resolve the dynasty versions (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400MissingFeatureSlugLegKeyOrBadLimitForwardedVerbatim": {
+        "description": "Missing featureSlug/legKey or bad limit (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404MODELDYNASTYNOTFOUNDForwardedVerbatim": {
+        "description": "MODEL_DYNASTY_NOT_FOUND (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502MODELCATALOGUEUNAVAILABLEForwardedVerbatim": {
+        "description": "MODEL_CATALOGUE_UNAVAILABLE (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {
