@@ -71,6 +71,35 @@ const router = Router();
 // ---------------------------------------------------------------------------
 
 /**
+ * Whose work a platform upload is, on the cost ledger (LEDGER-RESIDUAL-1025-UPLOADS).
+ *
+ * runs-service is the ledger of what each outcome costs to produce: every
+ * spending run either rides a caller run (child of x-run-id) or carries the
+ * support function it serves. A staff platform upload has no caller run (this
+ * route opens none: no org, no user), so it states a support function in the
+ * body, the shape cloudflare-service's `/internal/upload/base64` documents.
+ * Without it each R2 store lands as an UNDECLARED cloudflare-storage run and
+ * keeps the ledger reconciliation red.
+ *
+ * Default: `product_feature`, what the staff images of the investor-update
+ * composer are (cloudflare-service classified the past ones the same way).
+ * A caller that states its own `support` keeps it, forwarded as sent: the
+ * caller knows its purpose better than this gateway, and an invalid one is
+ * cloudflare-service's 400 to raise (rule #7). No x-run-id is ever sent here,
+ * so the "both" refusal cannot fire. Everything else in the body is untouched.
+ */
+export const PLATFORM_UPLOAD_SUPPORT = {
+  kind: "product_feature",
+  reason: "Staff platform asset uploaded through api-service /v1/platform-uploads (investor-update composer images)",
+} as const;
+
+function withSupport(body: unknown): unknown {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return body;
+  if ("support" in body) return body;
+  return { ...body, support: PLATFORM_UPLOAD_SUPPORT };
+}
+
+/**
  * POST /v1/platform-uploads → cloudflare-service POST /internal/upload/base64
  *
  * `x-service-name` is the caller identity that route's `platformAuth` requires
@@ -88,7 +117,7 @@ router.post(
         "/internal/upload/base64",
         {
           method: "POST",
-          body: req.body,
+          body: withSupport(req.body),
           headers: { "x-service-name": "api-service" },
         },
       );
