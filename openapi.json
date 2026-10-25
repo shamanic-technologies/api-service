@@ -487,6 +487,13 @@
           "nullable": true
         }
       },
+      "StaffSecurityAdvisoriesResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "StaffRevenueResponse": {
         "type": "object",
         "properties": {},
@@ -11921,6 +11928,16 @@
           }
         }
       },
+      "ErrorResponse400InvalidQueryForwardedVerbatim": {
+        "description": "Invalid query (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
       "ErrorResponse400RejectedByFeaturesServiceBodyForwardedVerbatim": {
         "description": "Rejected by features-service — body forwarded verbatim",
         "content": {
@@ -13743,16 +13760,6 @@
       },
       "ErrorResponse404RefusedByBillingServiceBodyErrorCodeForwardedFieldForField": {
         "description": "Refused by billing-service — body { error, code } forwarded field-for-field.",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "ErrorResponse400InvalidQueryForwardedVerbatim": {
-        "description": "Invalid query (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {

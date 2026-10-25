@@ -1042,6 +1042,32 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/audit/security-advisories",
+  tags: ["Features"],
+  summary: "Open security advisories per prod repo per day, with the red/green verdict (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org context. " +
+    "Byte passthrough to features-service GET /internal/security-advisories: the last `days` UTC days of the owner's daily npm/pnpm audit per " +
+    "prod repo (critical/high/moderate/low, packages with high/critical findings, audit error), fleet totals per day, and the served verdict the " +
+    "Monitoring hub renders as-is (red on any critical/high or failed audit in the latest report, on no report for more than 36 hours, or when " +
+    "nothing was ever reported). Query string forwarded verbatim; status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().openapi({ description: "Window in UTC days, 1 to 365, default 30 (features-service validates it)" }),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffSecurityAdvisoriesResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/features/audit/revenue",
   tags: ["Features"],
   summary: "Staff fleet realized-revenue history (staff only)",
