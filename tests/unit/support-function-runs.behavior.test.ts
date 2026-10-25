@@ -77,6 +77,9 @@ describe("supportFunctionFor", () => {
     expect(supportFunctionFor("POST", "/v1/chat/sessions")).toBeNull();
     expect(supportFunctionFor("POST", "/v1/orgs/opportunities/x/reply")).toBeNull();
     expect(supportFunctionFor("POST", "/v1/emails/send")).toBeNull();
+    // A campaign edit can resume the campaign: its workflow then runs under this request run.
+    expect(supportFunctionFor("PATCH", "/v1/campaigns/f4306262-c845-401a-92a8-fdb923754875")).toBeNull();
+    expect(supportFunctionFor("POST", "/v1/campaigns/c1/stop")).toBeNull();
     expect(supportFunctionFor("POST", "/v1/brands/extract-fields")?.kind).toBe("brand_setup");
     expect(supportFunctionFor("POST", "/v1/features/sales-cold-email-outreach/prefill")?.kind).toBe("product_feature");
     expect(supportFunctionFor("POST", "/v1/orgs/audiences/a1/preview/companies/2/email-check")?.kind).toBe("product_feature");
