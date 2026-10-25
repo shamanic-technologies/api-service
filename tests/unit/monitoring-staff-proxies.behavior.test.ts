@@ -3,18 +3,21 @@ import request from "supertest";
 import express from "express";
 
 // externalServices snapshots *_SERVICE_URL at module load — set before the router imports.
-const { RUNS_BASE, COSTS_BASE, INSTANTLY_BASE } = vi.hoisted(() => {
+const { RUNS_BASE, COSTS_BASE, INSTANTLY_BASE, FEATURES_BASE } = vi.hoisted(() => {
   const RUNS_BASE = "http://runs.test.local";
   const COSTS_BASE = "http://costs.test.local";
   const INSTANTLY_BASE = "http://instantly.test.local";
+  const FEATURES_BASE = "http://features.test.local";
   process.env.RUNS_SERVICE_URL = RUNS_BASE;
   process.env.RUNS_SERVICE_API_KEY = "runs-test-key";
   process.env.COSTS_SERVICE_URL = COSTS_BASE;
   process.env.COSTS_SERVICE_API_KEY = "costs-test-key";
   process.env.INSTANTLY_SERVICE_URL = INSTANTLY_BASE;
   process.env.INSTANTLY_SERVICE_API_KEY = "instantly-test-key";
+  process.env.FEATURES_SERVICE_URL = FEATURES_BASE;
+  process.env.FEATURES_SERVICE_API_KEY = "features-test-key";
   process.env.ADMIN_DISTRIBUTE_API_KEY = "admin-test-key";
-  return { RUNS_BASE, COSTS_BASE, INSTANTLY_BASE };
+  return { RUNS_BASE, COSTS_BASE, INSTANTLY_BASE, FEATURES_BASE };
 });
 
 /**
@@ -30,6 +33,7 @@ const { RUNS_BASE, COSTS_BASE, INSTANTLY_BASE } = vi.hoisted(() => {
  *   GET /v1/costs/email-send-price  → costs-service     GET /internal/email-send-price
  *   GET /v1/costs/subscription-costs → costs-service    GET /internal/subscription-costs
  *   GET /v1/instantly/stats         → instantly-service GET /public/stats
+ *   GET /v1/features/audit/security-advisories → features-service GET /internal/security-advisories
  *
  * No auth mock: the real authenticatePlatform + requireStaff run, and every refusal
  * asserts ZERO outbound calls. Bodies are fixtures — the producers own the shape.
@@ -37,6 +41,7 @@ const { RUNS_BASE, COSTS_BASE, INSTANTLY_BASE } = vi.hoisted(() => {
 import runsRouter from "../../src/routes/runs.js";
 import costsRouter from "../../src/routes/costs-staff.js";
 import instantlyRouter from "../../src/routes/instantly.js";
+import featuresRouter from "../../src/routes/features.js";
 
 function buildApp() {
   const app = express();
@@ -44,6 +49,7 @@ function buildApp() {
   app.use(costsRouter);
   app.use("/v1", instantlyRouter);
   app.use("/v1", runsRouter);
+  app.use("/v1", featuresRouter);
   return app;
 }
 
@@ -155,6 +161,12 @@ const ROUTES = [
     query: "?groupBy=featureSlug",
     downstream: `${INSTANTLY_BASE}/public/stats`,
     key: "instantly-test-key",
+  },
+  {
+    path: "/v1/features/audit/security-advisories",
+    query: "?days=30",
+    downstream: `${FEATURES_BASE}/internal/security-advisories`,
+    key: "features-test-key",
   },
 ];
 

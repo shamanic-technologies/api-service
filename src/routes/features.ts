@@ -911,6 +911,27 @@ router.get("/features/audit/customer-success", authenticatePlatform, requireStaf
   }
 });
 
+/**
+ * GET /v1/features/audit/security-advisories → features-service GET /internal/security-advisories — STAFF ONLY.
+ * Open security advisories per prod repo per day (the owner's daily npm/pnpm audit) plus the served red/green
+ * verdict the Monitoring hub chart renders as-is (SEC-ADVISORIES-SERIES-1025). Fleet-wide, no org context, so
+ * gated by authenticatePlatform + requireStaff like the other fleet audits. Byte passthrough (status + body piped,
+ * #10); query string (`days`) forwarded verbatim (#11). Declared before `/features/:slug/*`.
+ */
+router.get("/features/audit/security-advisories", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.features,
+      `/internal/security-advisories${rawQueryString(req.originalUrl)}`,
+      { headers: staffHeaders(req), expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Staff security advisories read error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to read security advisories");
+  }
+});
+
 // ── Staff stated monthly amounts (platform key + STAFF_EMAILS) ───────────────
 //
 // Full CRUD over the staff-writable record of what a HUMAN says a brand is worth per month, over a
