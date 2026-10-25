@@ -24,7 +24,7 @@ vi.hoisted(() => {
 const CLOUDFLARE_BASE = "http://cloudflare.test.local";
 const STAFF_EMAIL = "kevin.lourd@gmail.com";
 
-import platformUploadsRouter from "../../src/routes/uploads.js";
+import platformUploadsRouter, { PLATFORM_UPLOAD_SUPPORT } from "../../src/routes/uploads.js";
 
 function buildApp() {
   const app = express();
@@ -115,11 +115,33 @@ describe("POST /v1/platform-uploads — over the wire", () => {
     expect(calls[0].options.headers["x-org-id"]).toBeUndefined();
   });
 
-  it("forwards the body byte-identically, including fields this gateway does not name", async () => {
+  it("forwards every caller field untouched, including fields this gateway does not name", async () => {
     const bodyWithFutureField = { ...UPLOAD_BODY, somethingCloudflareAddsLater: "keep me" };
     await staffPost(bodyWithFutureField);
 
-    expect(JSON.parse(calls[0].options.body)).toEqual(bodyWithFutureField);
+    expect(JSON.parse(calls[0].options.body)).toEqual({
+      ...bodyWithFutureField,
+      support: PLATFORM_UPLOAD_SUPPORT,
+    });
+  });
+
+  it("states whose work the upload is on the cost ledger: support product_feature, never undeclared", async () => {
+    await staffPost(UPLOAD_BODY);
+
+    const sent = JSON.parse(calls[0].options.body);
+    expect(sent.support).toEqual({
+      kind: "product_feature",
+      reason: expect.stringContaining("/v1/platform-uploads"),
+    });
+    // x-run-id OR support, never both: cloudflare-service 400s on both.
+    expect(calls[0].options.headers["x-run-id"]).toBeUndefined();
+  });
+
+  it("keeps a support function the caller states itself, as sent", async () => {
+    const callerSupport = { kind: "staff_experiment", reason: "verify probe" };
+    await staffPost({ ...UPLOAD_BODY, support: callerSupport });
+
+    expect(JSON.parse(calls[0].options.body).support).toEqual(callerSupport);
   });
 
   it("returns cloudflare-service's body unchanged, so the composer gets the public URL", async () => {

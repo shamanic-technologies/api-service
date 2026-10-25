@@ -17151,7 +17151,8 @@ registry.registerPath({
     "asset — no org owns it, no org is billed for it — and the response carries the " +
     "permanent public `url`, which renders in an <img> with no auth. A ~5MB image is ~6.7MB " +
     "base64, within this gateway's 10mb JSON body limit. Body and response shapes are owned " +
-    "by the downstream service.",
+    "by the downstream service. Cost ledger: the gateway adds `support: {kind: \"product_feature\", " +
+    "reason}` so the upload's run is never undeclared; a caller that sends its own `support` keeps it.",
   security: platformAuth,
   request: {
     body: { content: { "application/json": { schema: PlatformUploadRequest } } },
