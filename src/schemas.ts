@@ -1,4 +1,6 @@
 import { z } from "zod";
+// Side effect: zod 3 wording for default validation messages (API response shape).
+import "./lib/zod-v3-messages.js";
 import {
   OpenAPIRegistry,
   extendZodWithOpenApi,
@@ -288,7 +290,7 @@ const EmailStatsSchema = z.object({
   clicked: z.number().describe("Total email clicks"),
   bounced: z.number().describe("Total emails bounced"),
   unsubscribed: z.number().describe("Total unsubscribes"),
-  stepStats: z.array(z.record(z.unknown())).describe("Per-step breakdown"),
+  stepStats: z.array(z.record(z.string(), z.unknown())).describe("Per-step breakdown"),
 }).openapi("EmailStats");
 
 // ===================================================================
@@ -1301,7 +1303,7 @@ export const CreateCampaignRequestSchema = z
     brandIds: z.array(z.string().min(1)).min(1).optional().describe("Brand UUIDs of already-created brands (no-website path). First id is the primary brand. When provided, api-service skips the brandUrls→brand upsert and forwards these ids straight to campaign-service. Provide this OR brandUrls — exactly one."),
     featureSlug: z.string().min(1).optional().describe("Exact versioned feature slug. Use for pinning to a specific version. Provide this OR featureDynastySlug."),
     featureDynastySlug: z.string().min(1).optional().describe("Stable dynasty slug for the feature lineage (e.g. 'pr-cold-email-outreach'). Campaign-service resolves to the latest version automatically. Preferred over featureSlug for dashboard use."),
-    featureInputs: z.record(z.unknown()).describe("Opaque feature inputs. Validated by key-presence against features-service, never inspected by api-service."),
+    featureInputs: z.record(z.string(), z.unknown()).describe("Opaque feature inputs. Validated by key-presence against features-service, never inspected by api-service."),
     maxBudgetDailyUsd: z.union([z.string(), z.number()]).optional().describe("Max daily budget in USD"),
     maxBudgetWeeklyUsd: z.union([z.string(), z.number()]).optional().describe("Max weekly budget in USD"),
     maxBudgetMonthlyUsd: z.union([z.string(), z.number()]).optional().describe("Max monthly budget in USD"),
@@ -1496,7 +1498,7 @@ const CampaignSchema = z
     brandIds: z.array(z.string()).describe("Brand IDs"),
     featureSlug: z.string().nullable().describe("Exact versioned feature slug for tracking"),
     featureDynastySlug: z.string().nullable().describe("Stable dynasty slug for the feature lineage (unversioned)"),
-    featureInputs: z.record(z.unknown()).nullable().describe("Free-form JSONB inputs for the feature"),
+    featureInputs: z.record(z.string(), z.unknown()).nullable().describe("Free-form JSONB inputs for the feature"),
     maxBudgetDailyUsd: z.string().nullable().describe("Max daily budget in USD"),
     maxBudgetWeeklyUsd: z.string().nullable().describe("Max weekly budget in USD"),
     maxBudgetMonthlyUsd: z.string().nullable().describe("Max monthly budget in USD"),
@@ -1793,7 +1795,7 @@ const ReportTriggerEventRequestSchema = z
       .optional()
       .openapi({ description: "Who the occurrence is about, by identity: `email`, or an E.164 `phone` when you have no email (one of the two is required). Each campaign the trigger reaches files them as a lead of the brand and runs for them." }),
     item: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .optional()
       .openapi({
         description:
@@ -3004,7 +3006,7 @@ registry.registerPath({
         "application/json": {
           schema: z
             .object({
-              leads: z.array(z.record(z.unknown())).describe(
+              leads: z.array(z.record(z.string(), z.unknown())).describe(
                 "Array of LeadDetail objects from lead-service. Each item includes top-level fields " +
                 "(id, leadId, email, namespace, apolloPersonId, emailStatus, status, statusReason, statusDetails, " +
                 "parentRunId, runId, brandIds, campaignId, orgId, userId, workflowSlug, featureSlug, servedAt, " +
@@ -6035,7 +6037,7 @@ registry.registerPath({
           schema: z
             .object({
               groups: z.array(z.object({
-                dimensions: z.record(z.string().nullable()).describe("Dimension key-value pairs (e.g. { brandId: '...' })"),
+                dimensions: z.record(z.string(), z.string().nullable()).describe("Dimension key-value pairs (e.g. { brandId: '...' })"),
                 totalCostInUsdCents: z.string(),
                 actualCostInUsdCents: z.string(),
                 provisionedCostInUsdCents: z.string(),
@@ -6644,8 +6646,8 @@ const DAGNodeSchema = z
   .object({
     id: z.string().describe("Unique node identifier within the DAG"),
     type: z.string().describe("Node type (e.g. 'http.call', 'condition', 'wait', 'for-each', 'script')"),
-    config: z.record(z.unknown()).optional().describe("Node-specific configuration"),
-    inputMapping: z.record(z.unknown()).optional().describe("Maps input variables to this node"),
+    config: z.record(z.string(), z.unknown()).optional().describe("Node-specific configuration"),
+    inputMapping: z.record(z.string(), z.unknown()).optional().describe("Maps input variables to this node"),
     retries: z.number().int().min(0).optional().describe("Number of retry attempts on failure. Defaults to 3 if omitted. Set to 0 for non-idempotent operations."),
   })
   .openapi("DAGNode");
@@ -7110,7 +7112,7 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z.object({
-            inputs: z.record(z.any()).optional().describe("Runtime inputs accessible via $ref:flow_input.fieldName"),
+            inputs: z.record(z.string(), z.any()).optional().describe("Runtime inputs accessible via $ref:flow_input.fieldName"),
           }).openapi("ExecuteWorkflowRequest"),
         },
       },
@@ -7379,7 +7381,7 @@ export const ChatMessageRequestSchema = z
         'a different org, the stream returns a "Session not found." error and closes.',
       ),
     context: z
-      .record(z.unknown())
+      .record(z.string(), z.unknown())
       .optional()
       .describe(
         "Free-form JSON injected into the system prompt for this request only (not stored). " +
@@ -7427,7 +7429,7 @@ export const SSEToolCallEventSchema = z
     type: z.literal("tool_call"),
     id: z.string().describe("Unique identifier (format: tc_<uuid>) — use this to match with the corresponding tool_result"),
     name: z.string().describe("The MCP tool name being invoked"),
-    args: z.record(z.unknown()).describe("Input arguments passed to the tool, as a JSON object"),
+    args: z.record(z.string(), z.unknown()).describe("Input arguments passed to the tool, as a JSON object"),
   })
   .openapi("SSEToolCallEvent");
 
@@ -11948,7 +11950,7 @@ export const SendEmailRequestSchema = z
     brandId: z.string().optional().describe("Brand ID for tracking"),
     campaignId: z.string().optional().describe("Campaign ID for tracking"),
     productId: z.string().optional().describe("Product/instance ID for product-scoped dedup (e.g. webinar ID)"),
-    metadata: z.record(z.unknown()).optional().describe("Template variables for {{variable}} interpolation"),
+    metadata: z.record(z.string(), z.unknown()).optional().describe("Template variables for {{variable}} interpolation"),
   })
   .openapi("SendEmailRequest");
 
@@ -12499,7 +12501,7 @@ export const CreateStripeProductRequestSchema = z
   .object({
     name: z.string().min(1).describe("Product name"),
     description: z.string().optional().describe("Product description"),
-    metadata: z.record(z.string()).optional().describe("Arbitrary key-value metadata"),
+    metadata: z.record(z.string(), z.string()).optional().describe("Arbitrary key-value metadata"),
   })
   .openapi("CreateStripeProductRequest");
 
@@ -12546,7 +12548,7 @@ export const CreateStripeCheckoutRequestSchema = z
     customerEmail: z.string().email().optional().describe("Pre-fill customer email"),
     customerId: z.string().optional().describe("Existing Stripe customer ID"),
     discounts: z.array(DiscountSchema).optional().describe("Coupons to apply"),
-    metadata: z.record(z.string()).optional().describe("Metadata for the checkout session"),
+    metadata: z.record(z.string(), z.string()).optional().describe("Metadata for the checkout session"),
   })
   .openapi("CreateStripeCheckoutRequest");
 
@@ -12580,7 +12582,7 @@ registry.registerPath({
             name: z.string().describe("Product name"),
             description: z.string().nullable().describe("Product description"),
             active: z.boolean().describe("Whether the product is active"),
-            metadata: z.record(z.string()).describe("Product metadata"),
+            metadata: z.record(z.string(), z.string()).describe("Product metadata"),
           }).openapi("StripeProductResponse"),
         },
       },
@@ -13052,7 +13054,9 @@ export const ContentComposeRequestSchema = z
     theme: z.string().describe("Theme text"),
     text: z.string().describe("Quote text to overlay"),
     outputBlobToken: z.string().describe("Vercel Blob write token for the output"),
-    layout: z.enum(["quote-top", "webcam-top"]).default("quote-top").optional().describe("Video layout variant"),
+    // zod 4 lets an outer .optional() fall through to an inner .default(), which would
+    // inject layout into the forwarded body; documented default only, as in zod 3.
+    layout: z.enum(["quote-top", "webcam-top"]).optional().openapi({ default: "quote-top" }).describe("Video layout variant"),
   })
   .openapi("ContentComposeRequest");
 
@@ -13431,7 +13435,7 @@ registry.registerPath({
             slug: z.string(),
             brandId: z.string(),
             format: z.enum(["text", "full"]),
-            prefilled: z.record(z.unknown()),
+            prefilled: z.record(z.string(), z.unknown()),
           }).openapi("PrefillFeatureResponse"),
         },
       },
@@ -15972,8 +15976,8 @@ const googleRoutes: Array<{
   description: string;
   status?: number;
   body?: boolean;
-  params?: z.AnyZodObject;
-  query?: z.AnyZodObject;
+  params?: z.ZodObject;
+  query?: z.ZodObject;
 }> = [
   {
     method: "post",
