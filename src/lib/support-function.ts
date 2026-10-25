@@ -18,6 +18,13 @@
  * replying to an opportunity, sending an email, activating an audience) is NOT
  * listed: its spend left undeclared must stay visible as "undeclared" until its
  * producer declares it, never be hidden as support. An unlisted route = no mark.
+ *
+ * `PATCH /v1/campaigns/:id` (and its `/stop` twin) is deliberately UNLISTED although
+ * most edits spend nothing: resuming a campaign makes campaign-service start the
+ * campaign's workflow AS A CHILD of this request run (prod 2026-10-25, LEDGER-RESIDUAL-1025:
+ * 3 such roots carried lead serve + Apollo enrichment/verify-email + judgments). A mark
+ * here would relabel that undeclared PRODUCTION as support. A past edit whose subtree
+ * holds no workflow is marked by run id through the owner door instead.
  */
 
 export type SupportFunction = "copilot" | "product_feature" | "brand_setup" | "retired_product";
