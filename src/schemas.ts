@@ -1068,6 +1068,33 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/audit/box-health",
+  tags: ["Features"],
+  summary: "Is the production box overloaded? Red/green verdict, daily + 48 h series, top containers (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org context. " +
+    "Byte passthrough to features-service GET /internal/box-health: the served verdict from the latest box sample (red on load average 5 min > " +
+    "1.5 x cores, MemAvailable < 1024 MB, swap > 50 % or no swap, an OOM kill in the last 24 hours, or no sample for 20 minutes) with its " +
+    "thresholds and reasons, a daily series per UTC day (mean/max load, min MemAvailable, max swap %, OOM kills; days without samples absent), " +
+    "every sample of the last 48 hours, the latest sample, and the top 10 containers by CPU and by memory averaged over the last hour. " +
+    "Query string forwarded verbatim; status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().openapi({ description: "Window in UTC days, 1 to 90, default 30 (features-service validates it)" }),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffBoxHealthResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/features/audit/revenue",
   tags: ["Features"],
   summary: "Staff fleet realized-revenue history (staff only)",

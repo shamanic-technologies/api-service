@@ -932,6 +932,28 @@ router.get("/features/audit/security-advisories", authenticatePlatform, requireS
   }
 });
 
+/**
+ * GET /v1/features/audit/box-health → features-service GET /internal/box-health — STAFF ONLY.
+ * Is the production Hetzner box overloaded? The served red/green verdict + thresholds, the daily series, the last 48 h,
+ * the latest sample and the top containers by CPU and memory (BOX-OVERLOAD-1026-SERIES). Fleet-wide, no org context:
+ * authenticatePlatform + requireStaff like the other fleet audits. Byte passthrough (status + body piped); query string
+ * (`days`) forwarded verbatim. The INGEST route (`POST /internal/box-health/samples`) is NOT exposed: the box posts in-container.
+ * Declared before `/features/:slug/*`.
+ */
+router.get("/features/audit/box-health", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.features,
+      `/internal/box-health${rawQueryString(req.originalUrl)}`,
+      { headers: staffHeaders(req), expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Staff box health read error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to read box health");
+  }
+});
+
 // ── Staff stated monthly amounts (platform key + STAFF_EMAILS) ───────────────
 //
 // Full CRUD over the staff-writable record of what a HUMAN says a brand is worth per month, over a
