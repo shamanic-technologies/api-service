@@ -494,6 +494,13 @@
           "nullable": true
         }
       },
+      "StaffBoxHealthResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "StaffRevenueResponse": {
         "type": "object",
         "properties": {},
