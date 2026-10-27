@@ -15764,6 +15764,31 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/lead-sourcing/sources",
+  tags: ["Audiences"],
+  summary: "Which lead sources Lead Sourcing uses for one brand x offer",
+  description:
+    "Proxy to human-service GET /orgs/lead-sourcing/sources, which owns the decision. Answers whether the offer's " +
+    "Lead Sourcing channel is ON (leadSourcingOn), the origins it chose (chosenOriginSlugs) among those it may use " +
+    "(universeOriginSlugs), and per source whether it is chosen and why (sources[].reason, measured evidence). " +
+    "Read-only, spends nothing. The gateway forwards EVERY query param verbatim: the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required)"),
+      offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID (required)"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "The Lead Sourcing source choice, as human-service returns it", content: { "application/json": { schema: z.object({}).passthrough().openapi("LeadSourcingSourcesResponse") } } },
+    400: { description: "Missing / invalid brandId or offerId, forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "A producer read failed, forwarded verbatim", content: errorContent },
+  },
+});
+
 const AudiencePreviewResponse = z.object({}).passthrough().openapi("AudiencePreviewResponse");
 
 registry.registerPath({
