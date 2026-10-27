@@ -73,7 +73,29 @@ describe("/v1/crm/ops/whatsapp-lines", () => {
     expect(calls[0].options.method).toBe("POST");
   });
 
-  for (const [method, path] of [["get", "/v1/crm/ops/whatsapp-lines"], ["post", "/v1/crm/ops/whatsapp-lines/check"]] as const) {
+  it("GET /trigger-reports forwards the query verbatim to crm-service and returns its body byte-equal", async () => {
+    // Odd spacing + unknown field on purpose: byte-for-byte means NOT re-serialized.
+    const body = '{"triggers":[{"trigger":"whatsapp_number_given", "status":"red","stuck":{"no_greeting":1}}],"someNewField":true}';
+    stub(200, body);
+    const res = await request(buildApp()).get("/v1/crm/ops/trigger-reports?days=7&x=a&x=b").set(STAFF);
+    expect(res.status).toBe(200);
+    expect(res.text).toBe(body);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${CRM_BASE}/internal/ops/trigger-reports?days=7&x=a&x=b`);
+    expect(calls[0].options.method ?? "GET").toBe("GET");
+    expect(calls[0].options.headers["X-API-Key"] ?? calls[0].options.headers["x-api-key"]).toBe("crm-test-key");
+    expect(calls[0].options.headers["x-org-id"]).toBeUndefined();
+  });
+
+  it("GET /trigger-reports relays crm-service's 400 status and body", async () => {
+    const body = JSON.stringify({ type: "validation", error: "days must be an integer from 1 to 90" });
+    stub(400, body);
+    const res = await request(buildApp()).get("/v1/crm/ops/trigger-reports?days=999").set(STAFF);
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual(JSON.parse(body));
+  });
+
+  for (const [method, path] of [["get", "/v1/crm/ops/whatsapp-lines"], ["post", "/v1/crm/ops/whatsapp-lines/check"], ["get", "/v1/crm/ops/trigger-reports"]] as const) {
     it(`${method.toUpperCase()} ${path} refuses no credentials (401)`, async () => {
       const res = await (request(buildApp()) as any)[method](path);
       expect(res.status).toBe(401);
