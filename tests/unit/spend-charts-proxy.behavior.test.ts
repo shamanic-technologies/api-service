@@ -69,6 +69,19 @@ describe("spend-charts proxies", () => {
     expect(calls[0].init.headers["x-user-id"]).toBe("user_test123");
   });
 
+  it("offer outcome-cost-series: forwards to the exact features-service path, query verbatim, authenticated identity, body byte-equal", async () => {
+    const q = `?brandId=${BRAND}&pricing=net`;
+    const res = await request(app()).get(`/v1/offers/${OFFER}/outcome-cost-series${q}`).set("x-org-id", "org_other");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(BODY);
+    expect(calls).toHaveLength(1);
+    const u = new URL(calls[0].url);
+    expect(u.pathname + u.search).toBe(`/offers/${OFFER}/outcome-cost-series${q}`);
+    expect(calls[0].init.headers["x-org-id"]).toBe("org_authenticated");
+    expect(calls[0].init.headers["x-user-id"]).toBe("user_test123");
+    expect(calls[0].init.headers["x-run-id"]).toBe("run_test789");
+  });
+
   it("relays refusals field-for-field with their status", async () => {
     global.fetch = vi.fn().mockImplementation(async () => new Response('{"error":"no","reason":"sales_funnel_campaign_not_found"}', { status: 404, headers: { "content-type": "application/json" } }));
     const c = await request(app()).get(`/v1/features/brands/${BRAND}/sales-funnel-campaigns/${SFC}/spend-charts`);
@@ -85,5 +98,6 @@ describe("spend-charts proxies", () => {
     const doc: any = buildDocument();
     expect(doc.paths["/v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/spend-charts"]?.get).toBeDefined();
     expect(doc.paths["/v1/offers/{offerId}/spend-charts"]?.get).toBeDefined();
+    expect(doc.paths["/v1/offers/{offerId}/outcome-cost-series"]?.get).toBeDefined();
   });
 });

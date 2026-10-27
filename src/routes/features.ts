@@ -1396,6 +1396,11 @@ const OFFER_ROUTES = [
   // day's spend bought per action and the expected values. `brandId`/`pricing` ride the raw query;
   // features-service owns the chart and every refusal (400 brand_id_required, 404, 502).
   { suffix: "spend-charts", what: "offer spend charts" },
+  // What one outcome costs, per month and since inception, for every outcome step of the offer
+  // (owner 2026-10-27, OUTCOME-COST-SERIES-1027): spend of the offer's campaigns ÷ outcomes reached
+  // by people we contacted. `brandId`/`pricing` ride the raw query; features-service owns the
+  // figures and every refusal (400 brand_id_required, 404, 502).
+  { suffix: "outcome-cost-series", what: "offer outcome cost series" },
 ] as const;
 
 // ── Brand grain ──────────────────────────────────────────────────────────────
