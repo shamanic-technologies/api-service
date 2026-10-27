@@ -11554,6 +11554,33 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/crm/ops/trigger-reports",
+  tags: ["CRM Ops"],
+  summary: "Get, per trigger, whether reported people reached their campaign, now and per day (staff only)",
+  description:
+    "Powers the trigger section of dashboard v2 Monitoring: people who gave their WhatsApp number, filled a CRM form, "
+    + "replied positively or had an account event, and whether each report reached its campaign. Per trigger: status "
+    + "ok|red, stuck counts by reason, the stuck reports, and a daily series (sent / skipped / notSent). "
+    + "Staff-only (platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to crm-service GET /internal/ops/trigger-reports. The query string is forwarded "
+    + "verbatim; a bad `days` answers crm-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Series window in days; crm-service owns the default (30) and bounds (1..90)"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Trigger report health — pass-through from crm-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CrmOpsTriggerReportsResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/instantly/ops/sender-health",
   tags: ["Instantly"],
   summary: "Get the mailboxes kept out of prospect mail per day, and why (staff only)",
