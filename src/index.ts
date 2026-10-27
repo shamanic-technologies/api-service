@@ -88,6 +88,7 @@ import { isSelectionError } from "./openapi/views.js";
 import { requestId } from "./middleware/request-id.js";
 import { recordCustomerCalls } from "./lib/call-log.js";
 import { upstreamUnreachable } from "./middleware/upstream-unreachable.js";
+import { upstreamRefusal } from "./middleware/upstream-refusal.js";
 import { catalogueBody, sendCatalogue, type CatalogueBody } from "./lib/catalogue-response.js";
 import { agentPaymentRequired } from "./middleware/payment-required.js";
 import { apiReference } from "@scalar/express-api-reference";
@@ -163,6 +164,12 @@ app.use(agentPaymentRequired);
 // `upstream_timeout` with `Retry-After`, even from a route whose catch rebuilds
 // its own `{ error }` envelope. A downstream's own error body is never touched.
 app.use(upstreamUnreachable);
+
+// ── A downstream refusal keeps its status and body ─────────────────────────
+// A route catch that rebuilds `{ error: err.message }` (hard-coded 500, or the
+// producer's JSON stringified into `error`) is answered as the producer did:
+// its 4xx stays a 4xx, its `code` stays a field. See the module.
+app.use(upstreamRefusal);
 
 // ── OpenAPI ─────────────────────────────────────────────────────────────────
 // `openapi.json` is generated for the PUBLIC audience (see
