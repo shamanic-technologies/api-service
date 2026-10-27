@@ -177,6 +177,7 @@ const PLATFORM_OPERATIONS = [
   "get /v1/instantly/ops/sender-health",
   "get /v1/crm/ops/whatsapp-lines",
   "post /v1/crm/ops/whatsapp-lines/check",
+  "get /v1/crm/ops/trigger-reports",
   "put /internal/emails/templates",
   "get /v1/admin/brands",
   "get /v1/admin/brands/{brandId}/audience-snapshot",

@@ -66,5 +66,8 @@ function registerCrmOps(method: "GET" | "POST", suffix: string, label: string): 
 registerCrmOps("GET", "whatsapp-lines", "read the WhatsApp line health");
 // POST /v1/crm/ops/whatsapp-lines/check — run one WhatsApp line watch pass now (staff only).
 registerCrmOps("POST", "whatsapp-lines/check", "run the WhatsApp line check");
+// GET /v1/crm/ops/trigger-reports?days=30 — per trigger: did the people it reported reach their campaign? (staff only,
+// TRIGGER-REPORTS-MONITORING-1027). Status ok|red, stuck counts by reason, stuck reports, daily sent/skipped/notSent.
+registerCrmOps("GET", "trigger-reports", "read the trigger report health");
 
 export default router;

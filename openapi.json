@@ -7710,6 +7710,13 @@
           "nullable": true
         }
       },
+      "CrmOpsTriggerReportsResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "InstantlyOpsSenderHealthResponse": {
         "type": "object",
         "properties": {},
