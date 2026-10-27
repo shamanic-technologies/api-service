@@ -9317,6 +9317,13 @@
           "nullable": true
         }
       },
+      "OfferOutcomeCostSeriesResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "OfferSalesPathsResponse": {
         "type": "object",
         "properties": {},
@@ -41267,6 +41274,99 @@
           }
         },
         "operationId": "getV1OffersByOfferIdSpendCharts"
+      }
+    },
+    "/v1/offers/{offerId}/outcome-cost-series": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Cost per outcome of one offer, per month and since inception",
+        "description": "What one outcome costs, for every outcome step of one offer: per calendar month and cumulative since inception, spend of the offer's campaigns divided by the outcomes reached by people we contacted. Proxied to features-service GET /offers/{offerId}/outcome-cost-series, which owns every figure. The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "offer-uuid-123",
+              "description": "Offer UUID"
+            },
+            "required": true,
+            "description": "Offer UUID",
+            "name": "offerId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "brand-uuid-123",
+              "description": "Brand UUID (required) — an offer belongs to a brand"
+            },
+            "required": true,
+            "description": "Brand UUID (required) — an offer belongs to a brand",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "net",
+              "description": "gross | net — validated by features-service"
+            },
+            "required": false,
+            "description": "gross | net — validated by features-service",
+            "name": "pricing",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Offer outcome cost series (passthrough of features-service's body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferOutcomeCostSeriesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BrandIdRequiredOrPricingUnrecognisedForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "description": "Brand or offer not found, forwarded verbatim",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ASpendOrPeopleReadFailedForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1OffersByOfferIdOutcomeCostSeries"
       }
     },
     "/v1/offers/{offerId}/sales-paths": {
