@@ -7,6 +7,7 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { noteUpstreamStatus } from "./upstream-payment.js";
 import { noteUpstreamUnreachable } from "../middleware/upstream-unreachable.js";
+import { noteUpstreamRefusal } from "../middleware/upstream-refusal.js";
 
 // Shared undici dispatcher for journalists-quotes-service.
 // /orgs/opportunities/discover (batch scorer) and /next run heavy RAG scoring on
@@ -452,6 +453,7 @@ export async function callExternalServiceWithStatus<T>(
       // Passthrough upstream body verbatim — gateway is transparent (CLAUDE.md rule #6).
       // LLM/MCP callers need the real root cause; generic "Service call failed" is undebuggable.
       const message = errorText || `Service call failed: ${response.status}`;
+      noteUpstreamRefusal(response.status, message);
       const err = new Error(message) as Error & { statusCode: number };
       err.statusCode = response.status;
       throw err;
@@ -545,6 +547,7 @@ export async function pipeExternalService(
       const errorText = await response.text();
       console.error(`[pipeExternalService] ${method} ${url} upstream error ${response.status}:`, errorText);
       noteUpstreamStatus(response.status, errorText);
+      noteUpstreamRefusal(response.status, errorText || `Service call failed: ${response.status}`);
       const err = new Error(errorText || `Service call failed: ${response.status}`) as Error & {
         statusCode: number;
       };
@@ -617,6 +620,7 @@ export async function streamExternalService(
     const errorText = await response.text();
     console.warn(`[streamExternalService] ${method} ${path} upstream error: ${response.status}`, errorText);
     noteUpstreamStatus(response.status, errorText);
+    noteUpstreamRefusal(response.status, errorText || `Upstream error: ${response.status}`);
     expressRes.status(response.status).json({ error: errorText || `Upstream error: ${response.status}` });
     return;
   }
@@ -733,6 +737,7 @@ export async function forwardMultipartUpload<T>(
     console.error(`[forwardMultipartUpload] POST ${url} upstream error ${response.status}:`, errorText);
     noteUpstreamStatus(response.status, errorText);
     const message = errorText || `Service call failed: ${response.status}`;
+    noteUpstreamRefusal(response.status, message);
     const err = new Error(message) as Error & { statusCode: number };
     err.statusCode = response.status;
     throw err;
