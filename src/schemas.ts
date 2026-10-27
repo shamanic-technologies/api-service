@@ -13785,6 +13785,33 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/offers/{offerId}/outcome-cost-series",
+  tags: ["Features"],
+  summary: "Cost per outcome of one offer, per month and since inception",
+  description:
+    "What one outcome costs, for every outcome step of one offer: per calendar month and cumulative since inception, " +
+    "spend of the offer's campaigns divided by the outcomes reached by people we contacted. " +
+    "Proxied to features-service GET /offers/{offerId}/outcome-cost-series, which owns every figure. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+      pricing: z.string().optional().openapi({ example: "net" }).describe("gross | net — validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer outcome cost series (passthrough of features-service's body)", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferOutcomeCostSeriesResponse") } } },
+    400: { description: "brand_id_required or pricing_unrecognised, forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand or offer not found, forwarded verbatim", content: errorContent },
+    502: { description: "A spend or people read failed, forwarded verbatim", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/offers/{offerId}/sales-paths",
   tags: ["Features"],
   summary: "Offer sales paths",
