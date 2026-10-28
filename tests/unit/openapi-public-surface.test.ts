@@ -178,6 +178,7 @@ const PLATFORM_OPERATIONS = [
   "get /v1/crm/ops/whatsapp-lines",
   "post /v1/crm/ops/whatsapp-lines/check",
   "get /v1/crm/ops/trigger-reports",
+  "get /v1/crm/ops/connector-intake",
   "get /v1/campaigns/ops/stuck-occurrences",
   "get /v1/campaigns/ops/trigger-health",
   "put /internal/emails/templates",
