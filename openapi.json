@@ -944,6 +944,11 @@
             "nullable": true,
             "description": "Notification destination"
           },
+          "whatsappSenderPhone": {
+            "type": "string",
+            "nullable": true,
+            "description": "The WhatsApp line this campaign writes from, in E.164 (one of its brand's linked lines); null = the brand's default line"
+          },
           "createdAt": {
             "type": "string",
             "description": "ISO timestamp"
@@ -980,6 +985,7 @@
           "notifyFrequency",
           "notifyChannel",
           "notifyDestination",
+          "whatsappSenderPhone",
           "createdAt",
           "updatedAt"
         ]
@@ -1119,6 +1125,11 @@
             "nullable": true,
             "minLength": 1,
             "description": "Campaign's click-destination URL"
+          },
+          "whatsappSenderPhone": {
+            "type": "string",
+            "nullable": true,
+            "description": "The WhatsApp line this campaign writes from: one of its brand's linked WhatsApp lines, as that line's own number in E.164 (e.g. '+33612345678'). Spaces and dashes are dropped; anything else not E.164 is refused by campaign-service. null clears it (the brand's default line); omitted leaves it untouched."
           }
         },
         "required": [
@@ -1519,6 +1530,26 @@
         "required": [
           "campaign"
         ]
+      },
+      "UpdateCampaignRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Campaign name"
+          },
+          "whatsappSenderPhone": {
+            "type": "string",
+            "nullable": true,
+            "description": "The WhatsApp line this campaign writes from: one of its brand's linked WhatsApp lines, as that line's own number in E.164 (e.g. '+33612345678'). Spaces and dashes are dropped; anything else not E.164 is refused by campaign-service. null clears it (the brand's default line); omitted leaves it untouched."
+          }
+        },
+        "additionalProperties": {
+          "nullable": true
+        },
+        "example": {
+          "whatsappSenderPhone": "+33612345678"
+        }
       },
       "StopCampaignResponse": {
         "type": "object",
@@ -19632,7 +19663,7 @@
           "Campaigns"
         ],
         "summary": "Update a campaign",
-        "description": "Update campaign fields (name, settings, etc.)",
+        "description": "Update campaign fields (name, settings, etc.). The body is a PASSTHROUGH forwarded unchanged to campaign-service: the fields below are documented, every other field campaign-service accepts goes through too. `whatsappSenderPhone` picks which of the brand's linked WhatsApp lines this campaign writes from.",
         "security": [
           {
             "bearerAuth": []
@@ -19659,6 +19690,15 @@
             "$ref": "#/components/parameters/XBrandId"
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCampaignRequest"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Updated campaign",
