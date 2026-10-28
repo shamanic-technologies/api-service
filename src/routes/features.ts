@@ -3,6 +3,7 @@ import { authenticate, authenticatePlatform, requireOrg, requireUser, requireSta
 import { callExternalService, callExternalServiceWithStatus, pipeExternalService, externalServices } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
+import { requireStaffKeyOrPlatform } from "../middleware/staff-gate.js";
 
 const router = Router();
 
@@ -954,6 +955,33 @@ router.get("/features/audit/box-health", authenticatePlatform, requireStaff, asy
   }
 });
 
+/**
+ * GTM Factory step 1, SHADOW ONLY (FACTORY-P1-BRIEF-JUDGE-SHADOW-PLAN) — STAFF ONLY, fleet-wide, no org context:
+ *   GET /v1/features/audit/factory-shadow/monitoring → features-service GET /internal/factory-shadow/monitoring
+ *     per client org and day, the funnel campaigns whose shadow plan or Jev pick differs from what runs (dashboard v2 Monitoring)
+ *   GET /v1/features/audit/factory-shadow/eval       → features-service GET /internal/factory-shadow/eval
+ *     the brief judge's last proof: agreement rate + every disagreement
+ * Gate `requireStaffKeyOrPlatform`: the dashboard's platform key + staff x-email, or a staff member's own key (MCP,
+ * `STAFF_KEY_OPERATIONS`); a customer key is 403. Byte passthrough (status + body piped), query verbatim (`days`).
+ * The triggers (`POST /internal/factory-shadow/sweep`, `POST /internal/factory-shadow/eval`) are NOT exposed.
+ * Declared before `/features/:slug/*`.
+ */
+for (const [view, what] of [["monitoring", "factory shadow monitoring"], ["eval", "factory shadow eval"]] as const) {
+  router.get(`/features/audit/factory-shadow/${view}`, requireStaffKeyOrPlatform, async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.features,
+        `/internal/factory-shadow/${view}${rawQueryString(req.originalUrl)}`,
+        { headers: staffHeaders(req), expressRes: res },
+      );
+    } catch (error: any) {
+      console.error(`[api-service] Staff ${what} read error:`, error.message);
+      if (res.headersSent) { res.end(); return; }
+      respondUpstreamError(res, error, `Failed to read ${what}`);
+    }
+  });
+}
+
 // ── Staff stated monthly amounts (platform key + STAFF_EMAILS) ───────────────
 //
 // Full CRUD over the staff-writable record of what a HUMAN says a brand is worth per month, over a
@@ -1700,6 +1728,36 @@ router.get(
     } catch (error: any) {
       console.error("Failed to get campaign next steps:", error.message);
       respondUpstreamError(res, error, "Failed to get campaign next steps");
+    }
+  },
+);
+
+/**
+ * GET /v1/features/brands/:brandId/sales-funnel-campaigns/:salesFunnelCampaignId/factory-shadow
+ *   → features-service GET /brands/{brandId}/sales-funnel-campaigns/{id}/factory-shadow
+ *
+ * GTM Factory step 1, SHADOW ONLY (owner 2026-10-28, FACTORY-P1-BRIEF-JUDGE-SHADOW-PLAN): per pipe, the play Jev would
+ * pick from the campaign's brief beside the one running, and the best-ROI line of pipes to the campaign's Target beside
+ * the running funnel. Read by dashboard v2 and the MCP. Same auth and identity forwarding as next-steps above (the org is
+ * the authenticated one, features-service scopes on it: another org's campaign is its 404); query verbatim (#11); status
+ * and body relayed (#7), 404 `factory_shadow_not_computed` included.
+ */
+router.get(
+  "/features/brands/:brandId/sales-funnel-campaigns/:salesFunnelCampaignId/factory-shadow",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.features,
+        `/brands/${encodeURIComponent(req.params.brandId)}/sales-funnel-campaigns/${encodeURIComponent(req.params.salesFunnelCampaignId)}/factory-shadow${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("Failed to get campaign factory shadow:", error.message);
+      respondUpstreamError(res, error, "Failed to get campaign factory shadow");
     }
   },
 );

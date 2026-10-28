@@ -505,6 +505,20 @@
           "nullable": true
         }
       },
+      "StaffFactoryShadowMonitoringResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "StaffFactoryShadowEvalResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "StaffRevenueResponse": {
         "type": "object",
         "properties": {},
@@ -1472,6 +1486,13 @@
         }
       },
       "CampaignNextStepsResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "CampaignFactoryShadowResponse": {
         "type": "object",
         "properties": {},
         "additionalProperties": {
@@ -12254,6 +12275,16 @@
           }
         }
       },
+      "ErrorResponse404NoProofComputedYetForwardedVerbatim": {
+        "description": "No proof computed yet (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
       "ErrorResponse400RejectedByFeaturesServiceBodyForwardedVerbatim": {
         "description": "Rejected by features-service — body forwarded verbatim",
         "content": {
@@ -12466,6 +12497,26 @@
       },
       "ErrorResponse502AProducerUnreadableForwardedVerbatim": {
         "description": "A producer unreadable, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404FactoryShadowNotComputedOrNotThisOrgSBrandSForwardedVerbatim": {
+        "description": "factory_shadow_not_computed (or not this org's / brand's), forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse500StoreUnreadableForwardedVerbatim": {
+        "description": "Store unreadable, forwarded verbatim",
         "content": {
           "application/json": {
             "schema": {
@@ -18674,6 +18725,69 @@
           }
         },
         "operationId": "getV1FeaturesBrandsByBrandIdSalesFunnelCampaignsBySalesFunnelCampaignIdNextSteps"
+      }
+    },
+    "/v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/factory-shadow": {
+      "get": {
+        "tags": [
+          "Campaigns"
+        ],
+        "summary": "GTM Factory shadow of one funnel campaign: the play Jev would pick per pipe from the brief, and the best-ROI line to its Target",
+        "description": "Proxy to features-service GET /brands/{brandId}/sales-funnel-campaigns/{id}/factory-shadow. SHADOW ONLY: nothing runs from it. The last stored pass (every 3 hours, never computed on the read): per pipe with plays, the play Jev picked from the campaign's brief beside the play running today; then the best-ROI straight line of pipes from where the campaign starts to its Target, beside the running funnel priced the same way (expected cost per Target and ROI on both). The org is the authenticated one; another org's campaign answers 404. 404 `factory_shadow_not_computed` before the first pass. Any query is forwarded verbatim. Status and body relayed verbatim.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "salesFunnelCampaignId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The campaign's shadow plan",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignFactoryShadowResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404FactoryShadowNotComputedOrNotThisOrgSBrandSForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500StoreUnreadableForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1FeaturesBrandsByBrandIdSalesFunnelCampaignsBySalesFunnelCampaignIdFactoryShadow"
       }
     },
     "/v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/spend-charts": {
