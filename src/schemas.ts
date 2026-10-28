@@ -6404,6 +6404,11 @@ export const CreateWorkflowRequestSchema = z
       .string()
       .min(1)
       .describe("Feature slug for the generated workflow (e.g. 'pr-cold-email-outreach')"),
+    pipeId: z
+      .string()
+      .min(1)
+      .optional()
+      .describe("The pipe the workflow runs on, `<channel slug>|<leg key>` (GET /v1/catalogue/pipes). Absent = workflow-service picks the featureSlug channel's pipe"),
     description: z
       .string()
       .min(10)
@@ -7152,7 +7157,8 @@ registry.registerPath({
   tags: ["Workflows"],
   summary: "Create a workflow",
   description:
-    "Create a new workflow with a DAG definition. The workflow is deployed to the execution engine and can then be executed via POST /v1/workflows/{id}/execute.",
+    "Create a new workflow with a DAG definition. The workflow is deployed to the execution engine and can then be executed via POST /v1/workflows/{id}/execute. " +
+    "The body is forwarded verbatim to workflow-service POST /workflows: state `pipeId` (`<channel slug>|<leg key>`, GET /v1/catalogue/pipes) to create it ON that pipe (registered there by features-service).",
   security: authed,
   request: {
     body: {
@@ -9853,6 +9859,230 @@ registry.registerPath({
     409: { description: "`leg_exists` / `trigger_not_fired` (forwarded verbatim)", content: errorContent },
     502: { description: "Upstream error", content: errorContent },
   },
+});
+
+const declarationResponses = (ok: number, okDescription: string, refusals: { 400?: string; 404?: string; 409?: string }) => ({
+  [ok]: { description: okDescription, content: { "application/json": { schema: z.object({}).passthrough() } } },
+  ...(refusals[400] ? { 400: { description: `${refusals[400]} (forwarded verbatim)`, content: errorContent } } : {}),
+  401: { description: "Unauthorized", content: errorContent },
+  403: { description: "Not staff (`staff_only`)", content: errorContent },
+  ...(refusals[404] ? { 404: { description: `${refusals[404]} (forwarded verbatim)`, content: errorContent } } : {}),
+  ...(refusals[409] ? { 409: { description: `${refusals[409]} (forwarded verbatim)`, content: errorContent } } : {}),
+  502: { description: "Upstream error", content: errorContent },
+});
+
+const channelSlugParam = z.object({ slug: z.string().openapi({ description: "The channel slug (kebab-case, GET /v1/catalogue/channels)" }) });
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/declarations/channels",
+  tags: ["Features"],
+  summary: "Declare a new channel (staff only)",
+  description:
+    "Fleet-wide catalogue write: a new acquisition channel, shared by every org. Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. A declared channel reaches no client until it performs a published leg AND is published " +
+    "(PATCH /v1/declarations/channels/{slug} with `published: true`). Add its legs (pipes) with POST /v1/catalogue/pipes or POST /v1/declarations/channels/{slug}/legs. " +
+    "`createdBy` is recorded as the authenticated staff email (a body value is replaced). Answers 201 with the channel view (slug, name, declared, published, " +
+    "visibleToClients, declaration, channel, legs). Refusals forwarded verbatim: 400 `slug_invalid` / `channel_type_unrecognised` / `operated_by_unrecognised` / " +
+    "`performed_by_unrecognised` / `customer_channel_must_be_person` / `customer_channel_daily_cost` / `icon_invalid`; 409 `channel_exists` / `channel_name_taken`. " +
+    "Byte passthrough to features-service POST /internal/declarations/channels.",
+  security: platformAuth,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              slug: z.string().openapi({ description: "kebab-case id, e.g. `threads-post` (64 characters at most)" }),
+              name: z.string().openapi({ description: "Display name, unique among channels (120 characters at most)" }),
+              description: z.string().openapi({ description: "What the channel does (2000 characters at most)" }),
+              shortDescription: z.string().openapi({ description: "One line (80 characters at most)" }),
+              icon: z.string().openapi({ description: "A Phosphor icon name (kebab-case)" }),
+              channelType: z.string().openapi({ description: "`sourcing`, `outbound`, `conversion`, `paid`, `earned` or `pr`" }),
+              operatedBy: z.string().openapi({ description: "`platform` (we run it) or `customer` (the client's own team)" }),
+              performedBy: z.string().openapi({ description: "`software` or `person` (a customer-operated channel is performed by a person)" }),
+              dailyOperatingCostCents: z.number().int().optional().openapi({ description: "Daily operating cost in cents (0 for a customer-operated channel)" }),
+              minimumCommitmentDays: z.number().int().optional().openapi({ description: "Minimum commitment in days (>= 1)" }),
+              maxDaysToFirstProduction: z.number().int().optional().openapi({ description: "Days at most before the first outcome (>= 0)" }),
+              requestedByOrgId: z.string().nullable().optional().openapi({ description: "The org whose request led to this channel, if any (provenance only)" }),
+            })
+            .passthrough()
+            .openapi("DeclareChannelRequest"),
+        },
+      },
+    },
+  },
+  responses: declarationResponses(201, "The channel view, pass-through from features-service", {
+    400: "Invalid channel",
+    409: "`channel_exists` / `channel_name_taken`",
+  }),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/declarations/channels/{slug}",
+  tags: ["Features"],
+  summary: "Read one channel with all its legs, published or not (staff only)",
+  description:
+    "The channel as declared: `declared` (created at run time vs stated in code), `published`, `visibleToClients`, the stored `declaration`, the catalogue " +
+    "`channel` entry (null while a declared channel performs no leg), and every `legs[]` entry (legKey, fromStep, toStep, mode, triggerId, declared, published, " +
+    "visibleToClients, pricing). Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. 404 `channel_not_found` forwarded verbatim. Byte passthrough to features-service GET /internal/declarations/channels/{slug}.",
+  security: platformAuth,
+  request: { params: channelSlugParam },
+  responses: declarationResponses(200, "The channel view, pass-through from features-service", { 404: "`channel_not_found`" }),
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/declarations/channels/{slug}",
+  tags: ["Features"],
+  summary: "Update or publish a declared channel (staff only)",
+  description:
+    "Changes a DECLARED channel (`published: true` publishes it to every client; also name, description, shortDescription, icon, dailyOperatingCostCents, " +
+    "minimumCommitmentDays, maxDaysToFirstProduction). slug, channelType, operatedBy and performedBy never change. Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. `updatedBy` is recorded as the " +
+    "authenticated staff email (a body value is replaced). Answers 200 with the channel view. Refusals forwarded verbatim: 400 `field_immutable` / " +
+    "`published_invalid` / `nothing_to_update`; 404 `channel_not_found`; 409 `channel_coded` (stated in code) / `channel_name_taken`. " +
+    "Byte passthrough to features-service PATCH /internal/declarations/channels/{slug}.",
+  security: platformAuth,
+  request: {
+    params: channelSlugParam,
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              published: z.boolean().optional().openapi({ description: "true = served to clients (once it performs a published leg)" }),
+              name: z.string().optional(),
+              description: z.string().optional(),
+              shortDescription: z.string().optional(),
+              icon: z.string().optional(),
+            })
+            .passthrough()
+            .openapi("UpdateChannelDeclarationRequest"),
+        },
+      },
+    },
+  },
+  responses: declarationResponses(200, "The channel view, pass-through from features-service", {
+    400: "`field_immutable` / `published_invalid` / `nothing_to_update`",
+    404: "`channel_not_found`",
+    409: "`channel_coded` / `channel_name_taken`",
+  }),
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/declarations/channels/{slug}/legs",
+  tags: ["Features"],
+  summary: "Declare a leg (pipe) on a channel (staff only)",
+  description:
+    "A new leg on the channel, from one step to the next (`{fromStep, toStep, mode, triggerId?, published?}`), i.e. the pipe `<slug>|<leg key>`. " +
+    "POST /v1/catalogue/pipes does the same and also takes `conversionRatePct` for a leg with no known rate. Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. `createdBy` is recorded as the " +
+    "authenticated staff email (a body value is replaced). Answers 201 `{leg, channel}`. Refusals forwarded verbatim: 400 `from_step_required` / " +
+    "`step_unrecognised` / `leg_goes_nowhere` / `mode_unrecognised` / `trigger_required` / `proactive_leg_has_trigger`; 404 `channel_not_found` / " +
+    "`trigger_not_found`; 409 `leg_exists` / `trigger_not_fired`. Byte passthrough to features-service POST /internal/declarations/channels/{slug}/legs.",
+  security: platformAuth,
+  request: {
+    params: channelSlugParam,
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              fromStep: z.string().nullable().openapi({ description: "The step the leg starts from (GET /v1/catalogue/steps); null = from Start" }),
+              toStep: z.string().openapi({ description: "The step the leg leads to" }),
+              mode: z.string().openapi({ description: "`proactive` or `reactive`" }),
+              triggerId: z.string().optional().openapi({ description: "Reactive only: the trigger that asks for this leg (GET /v1/catalogue/triggers)" }),
+              published: z.boolean().optional().openapi({ description: "false = a draft" }),
+              requestedByOrgId: z.string().nullable().optional().openapi({ description: "Provenance only" }),
+            })
+            .passthrough()
+            .openapi("DeclareLegRequest"),
+        },
+      },
+    },
+  },
+  responses: declarationResponses(201, "`{leg, channel}`, pass-through from features-service", {
+    400: "Invalid leg",
+    404: "`channel_not_found` / `trigger_not_found`",
+    409: "`leg_exists` / `trigger_not_fired`",
+  }),
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/declarations/channels/{slug}/legs/{legKey}",
+  tags: ["Features"],
+  summary: "Publish or change how a declared leg runs (staff only)",
+  description:
+    "Changes a DECLARED leg: `published`, `mode`, `triggerId` (fromStep, toStep and legKey never change: declare a new leg). Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. `updatedBy` is " +
+    "recorded as the authenticated staff email. Answers 200 `{leg, channel}`. Refusals forwarded verbatim: 400 `field_immutable` / `published_invalid` / " +
+    "`nothing_to_update`; 404 `channel_not_found` / `leg_not_found`; 409 `leg_coded`. Byte passthrough to features-service " +
+    "PATCH /internal/declarations/channels/{slug}/legs/{legKey}.",
+  security: platformAuth,
+  request: {
+    params: channelSlugParam.extend({ legKey: z.string().openapi({ description: "`<from step>_to_<to step>`, e.g. `start_to_post_published`" }) }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              published: z.boolean().optional(),
+              mode: z.string().optional(),
+              triggerId: z.string().nullable().optional(),
+            })
+            .passthrough()
+            .openapi("UpdateLegDeclarationRequest"),
+        },
+      },
+    },
+  },
+  responses: declarationResponses(200, "`{leg, channel}`, pass-through from features-service", {
+    400: "`field_immutable` / `published_invalid` / `nothing_to_update`",
+    404: "`channel_not_found` / `leg_not_found`",
+    409: "`leg_coded`",
+  }),
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/catalogue/steps",
+  tags: ["Features"],
+  summary: "Declare a new step (outcome) (staff only)",
+  description:
+    "A new step every org's pipes may lead to. Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. `createdBy` is recorded as the authenticated staff email (a body value is replaced). Answers 201 " +
+    "`{object: \"step\", id, name, icon, line, valueUsd, declared, producedBy, ...}`. Refusals forwarded verbatim: 400 `step_key_invalid` / `icon_invalid` / " +
+    "`subjectKind_required` / `towardStep_required`; 404 `toward_step_not_found`; 409 `step_exists` / `step_label_taken`. " +
+    "Byte passthrough to features-service POST /internal/catalogue/steps.",
+  security: platformAuth,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              key: z.string().openapi({ description: "snake_case id (48 characters at most)" }),
+              label: z.string().openapi({ description: "Display name, unique among steps (60 characters at most)" }),
+              description: z.string().openapi({ description: "500 characters at most" }),
+              shortDescription: z.string().openapi({ description: "80 characters at most" }),
+              icon: z.string().openapi({ description: "A Phosphor icon name (kebab-case)" }),
+              subjectKind: z.string().openapi({ description: "What one occurrence is about: `person` or `object`" }),
+              towardStep: z.string().nullable().optional().openapi({ description: "The step it leads to on the way to a paying client; null = leads to no step (no value)" }),
+              towardRatePct: z.number().nullable().optional().openapi({ description: "Share (0, 100] reaching towardStep" }),
+              producedBy: z.string().nullable().optional().openapi({ description: "The service that produces it" }),
+              lifecycleRung: z.string().nullable().optional().openapi({ description: "Its rung on the lifecycle ladder" }),
+              requestedByOrgId: z.string().nullable().optional().openapi({ description: "Provenance only" }),
+            })
+            .passthrough()
+            .openapi("DeclareStepRequest"),
+        },
+      },
+    },
+  },
+  responses: declarationResponses(201, "The step as created, pass-through from features-service", {
+    400: "Invalid step",
+    404: "`toward_step_not_found`",
+    409: "`step_exists` / `step_label_taken`",
+  }),
 });
 
 registry.registerPath({
