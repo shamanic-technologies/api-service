@@ -4827,6 +4827,11 @@
             "minLength": 1,
             "description": "Feature slug for the generated workflow (e.g. 'pr-cold-email-outreach')"
           },
+          "pipeId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The pipe the workflow runs on, `<channel slug>|<leg key>` (GET /v1/catalogue/pipes). Absent = workflow-service picks the featureSlug channel's pipe"
+          },
           "description": {
             "type": "string",
             "minLength": 10,
@@ -7107,6 +7112,219 @@
           "fromStep",
           "toStep",
           "mode"
+        ],
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "DeclareChannelRequest": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "description": "kebab-case id, e.g. `threads-post` (64 characters at most)"
+          },
+          "name": {
+            "type": "string",
+            "description": "Display name, unique among channels (120 characters at most)"
+          },
+          "description": {
+            "type": "string",
+            "description": "What the channel does (2000 characters at most)"
+          },
+          "shortDescription": {
+            "type": "string",
+            "description": "One line (80 characters at most)"
+          },
+          "icon": {
+            "type": "string",
+            "description": "A Phosphor icon name (kebab-case)"
+          },
+          "channelType": {
+            "type": "string",
+            "description": "`sourcing`, `outbound`, `conversion`, `paid`, `earned` or `pr`"
+          },
+          "operatedBy": {
+            "type": "string",
+            "description": "`platform` (we run it) or `customer` (the client's own team)"
+          },
+          "performedBy": {
+            "type": "string",
+            "description": "`software` or `person` (a customer-operated channel is performed by a person)"
+          },
+          "dailyOperatingCostCents": {
+            "type": "integer",
+            "description": "Daily operating cost in cents (0 for a customer-operated channel)"
+          },
+          "minimumCommitmentDays": {
+            "type": "integer",
+            "description": "Minimum commitment in days (>= 1)"
+          },
+          "maxDaysToFirstProduction": {
+            "type": "integer",
+            "description": "Days at most before the first outcome (>= 0)"
+          },
+          "requestedByOrgId": {
+            "type": "string",
+            "nullable": true,
+            "description": "The org whose request led to this channel, if any (provenance only)"
+          }
+        },
+        "required": [
+          "slug",
+          "name",
+          "description",
+          "shortDescription",
+          "icon",
+          "channelType",
+          "operatedBy",
+          "performedBy"
+        ],
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "UpdateChannelDeclarationRequest": {
+        "type": "object",
+        "properties": {
+          "published": {
+            "type": "boolean",
+            "description": "true = served to clients (once it performs a published leg)"
+          },
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "shortDescription": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "DeclareLegRequest": {
+        "type": "object",
+        "properties": {
+          "fromStep": {
+            "type": "string",
+            "nullable": true,
+            "description": "The step the leg starts from (GET /v1/catalogue/steps); null = from Start"
+          },
+          "toStep": {
+            "type": "string",
+            "description": "The step the leg leads to"
+          },
+          "mode": {
+            "type": "string",
+            "description": "`proactive` or `reactive`"
+          },
+          "triggerId": {
+            "type": "string",
+            "description": "Reactive only: the trigger that asks for this leg (GET /v1/catalogue/triggers)"
+          },
+          "published": {
+            "type": "boolean",
+            "description": "false = a draft"
+          },
+          "requestedByOrgId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Provenance only"
+          }
+        },
+        "required": [
+          "fromStep",
+          "toStep",
+          "mode"
+        ],
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "UpdateLegDeclarationRequest": {
+        "type": "object",
+        "properties": {
+          "published": {
+            "type": "boolean"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "triggerId": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "DeclareStepRequest": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "snake_case id (48 characters at most)"
+          },
+          "label": {
+            "type": "string",
+            "description": "Display name, unique among steps (60 characters at most)"
+          },
+          "description": {
+            "type": "string",
+            "description": "500 characters at most"
+          },
+          "shortDescription": {
+            "type": "string",
+            "description": "80 characters at most"
+          },
+          "icon": {
+            "type": "string",
+            "description": "A Phosphor icon name (kebab-case)"
+          },
+          "subjectKind": {
+            "type": "string",
+            "description": "What one occurrence is about: `person` or `object`"
+          },
+          "towardStep": {
+            "type": "string",
+            "nullable": true,
+            "description": "The step it leads to on the way to a paying client; null = leads to no step (no value)"
+          },
+          "towardRatePct": {
+            "type": "number",
+            "nullable": true,
+            "description": "Share (0, 100] reaching towardStep"
+          },
+          "producedBy": {
+            "type": "string",
+            "nullable": true,
+            "description": "The service that produces it"
+          },
+          "lifecycleRung": {
+            "type": "string",
+            "nullable": true,
+            "description": "Its rung on the lifecycle ladder"
+          },
+          "requestedByOrgId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Provenance only"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "description",
+          "shortDescription",
+          "icon",
+          "subjectKind"
         ],
         "additionalProperties": {
           "nullable": true
@@ -14076,6 +14294,36 @@
           }
         }
       },
+      "ErrorResponse400InvalidStepForwardedVerbatim": {
+        "description": "Invalid step (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404TowardStepNotFoundForwardedVerbatim": {
+        "description": "`toward_step_not_found` (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409StepExistsStepLabelTakenForwardedVerbatim": {
+        "description": "`step_exists` / `step_label_taken` (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
       "ErrorResponse404UnknownIdForwardedVerbatim": {
         "description": "Unknown id (forwarded verbatim)",
         "content": {
@@ -14128,6 +14376,96 @@
       },
       "ErrorResponse409LegExistsTriggerNotFiredForwardedVerbatim": {
         "description": "`leg_exists` / `trigger_not_fired` (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400InvalidChannelForwardedVerbatim": {
+        "description": "Invalid channel (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409ChannelExistsChannelNameTakenForwardedVerbatim": {
+        "description": "`channel_exists` / `channel_name_taken` (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404ChannelNotFoundForwardedVerbatim": {
+        "description": "`channel_not_found` (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400FieldImmutablePublishedInvalidNothingToUpdateForwardedVerbat": {
+        "description": "`field_immutable` / `published_invalid` / `nothing_to_update` (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409ChannelCodedChannelNameTakenForwardedVerbatim": {
+        "description": "`channel_coded` / `channel_name_taken` (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400InvalidLegForwardedVerbatim": {
+        "description": "Invalid leg (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404ChannelNotFoundTriggerNotFoundForwardedVerbatim": {
+        "description": "`channel_not_found` / `trigger_not_found` (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404ChannelNotFoundLegNotFoundForwardedVerbatim": {
+        "description": "`channel_not_found` / `leg_not_found` (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409LegCodedForwardedVerbatim": {
+        "description": "`leg_coded` (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {
@@ -30068,7 +30406,7 @@
           "Workflows"
         ],
         "summary": "Create a workflow",
-        "description": "Create a new workflow with a DAG definition. The workflow is deployed to the execution engine and can then be executed via POST /v1/workflows/{id}/execute.",
+        "description": "Create a new workflow with a DAG definition. The workflow is deployed to the execution engine and can then be executed via POST /v1/workflows/{id}/execute. The body is forwarded verbatim to workflow-service POST /workflows: state `pipeId` (`<channel slug>|<leg key>`, GET /v1/catalogue/pipes) to create it ON that pipe (registered there by features-service).",
         "security": [
           {
             "bearerAuth": []

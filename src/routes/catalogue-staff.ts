@@ -246,6 +246,56 @@ for (const object of ["sales-funnels", "sales-paths"] as const) {
   router.post(`/v1/catalogue/${object}`, authenticateUser, customerKeyOrStaff, (req: AuthenticatedRequest, res) => create(req, res, object));
 }
 
+/**
+ * STAFF RELAY of a features-service catalogue declaration (THREADS-CAMPAIGN-1028, owner 2026-10-12 mcp-first: every
+ * catalogue object is created through the MCP, never a staff script). Gate: a staff member's own key
+ * (`requireStaffActor`, listed in `STAFF_KEY_OPERATIONS`) or the platform key + a staff x-email; a customer key gets
+ * 403 `staff_only` (features-service refuses a customer channel / leg / step itself, and a channel PATCH publishes for
+ * every org). The author field the producer records (`createdBy` on a create, `updatedBy` on an edit) is the
+ * AUTHENTICATED staff email, never a body value (CLAUDE.md rule #4, third exception); everything else is forwarded
+ * verbatim, status and body byte-for-byte (refusals included).
+ */
+function staffRelay(method: "GET" | "POST" | "PATCH", downstreamPath: (req: AuthenticatedRequest) => string, author: "createdBy" | "updatedBy" | null, what: string) {
+  return async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await pipeExternalService(externalServices.features, downstreamPath(req), {
+        method,
+        ...(author ? { body: { ...(req.body ?? {}), [author]: req.staffEmail } } : {}),
+        expressRes: res,
+      });
+    } catch (error: any) {
+      console.error(`[api-service] Failed to ${what}:`, error.message);
+      if (res.headersSent) { res.end(); return; }
+      respondUpstreamError(res, error, `Failed to ${what}`);
+    }
+  };
+}
+
+const slugOf = (req: AuthenticatedRequest) => encodeURIComponent(req.params.slug);
+
+/** POST /v1/declarations/channels → features-service POST /internal/declarations/channels: declare a new channel (unpublished until PATCHed). */
+router.post("/v1/declarations/channels", authenticateUser, requireStaffActor, staffRelay("POST", () => "/internal/declarations/channels", "createdBy", "declare channel"));
+
+/** GET /v1/declarations/channels/:slug → features-service GET /internal/declarations/channels/:slug: one channel with every leg, published or not. */
+router.get("/v1/declarations/channels/:slug", authenticateUser, requireStaffActor, staffRelay("GET", (req) => `/internal/declarations/channels/${slugOf(req)}`, null, "read channel declaration"));
+
+/** PATCH /v1/declarations/channels/:slug → features-service PATCH /internal/declarations/channels/:slug (`published: true` publishes it). */
+router.patch("/v1/declarations/channels/:slug", authenticateUser, requireStaffActor, staffRelay("PATCH", (req) => `/internal/declarations/channels/${slugOf(req)}`, "updatedBy", "update channel declaration"));
+
+/** POST /v1/declarations/channels/:slug/legs → features-service POST /internal/declarations/channels/:slug/legs: a leg (pipe) on the channel. */
+router.post("/v1/declarations/channels/:slug/legs", authenticateUser, requireStaffActor, staffRelay("POST", (req) => `/internal/declarations/channels/${slugOf(req)}/legs`, "createdBy", "declare leg"));
+
+/** PATCH /v1/declarations/channels/:slug/legs/:legKey → features-service PATCH .../legs/:legKey (publish a draft, change mode/trigger). */
+router.patch(
+  "/v1/declarations/channels/:slug/legs/:legKey",
+  authenticateUser,
+  requireStaffActor,
+  staffRelay("PATCH", (req) => `/internal/declarations/channels/${slugOf(req)}/legs/${encodeURIComponent(req.params.legKey)}`, "updatedBy", "update leg declaration"),
+);
+
+/** POST /v1/catalogue/steps → features-service POST /internal/catalogue/steps: declare a new step (outcome). */
+router.post("/v1/catalogue/steps", authenticateUser, requireStaffActor, staffRelay("POST", () => "/internal/catalogue/steps", "createdBy", "declare step"));
+
 async function create(req: AuthenticatedRequest, res: Response, object: "pipes" | "sales-funnels" | "sales-paths") {
   const body: Record<string, unknown> = { ...(req.body ?? {}) };
   if (req.catalogueCustomer) {
