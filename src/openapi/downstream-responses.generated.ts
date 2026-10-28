@@ -2068,6 +2068,35 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "checkedAt"
                   ]
                 },
+                "target": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "brief": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "briefUpdatedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "briefUpdatedByUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "mode": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "proactive",
+                    "reactive",
+                    null
+                  ]
+                },
+                "triggerId": {
+                  "type": "string",
+                  "nullable": true
+                },
                 "createdAt": {
                   "type": "string"
                 },
@@ -2128,6 +2157,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "instruction",
                 "githubIssue",
                 "githubIssueCheck",
+                "target",
+                "brief",
+                "briefUpdatedAt",
+                "briefUpdatedByUserId",
+                "mode",
+                "triggerId",
                 "createdAt",
                 "updatedAt",
                 "units"
@@ -2597,6 +2632,35 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "checkedAt"
                   ]
                 },
+                "target": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "brief": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "briefUpdatedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "briefUpdatedByUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "mode": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "proactive",
+                    "reactive",
+                    null
+                  ]
+                },
+                "triggerId": {
+                  "type": "string",
+                  "nullable": true
+                },
                 "createdAt": {
                   "type": "string"
                 },
@@ -2657,6 +2721,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "instruction",
                 "githubIssue",
                 "githubIssueCheck",
+                "target",
+                "brief",
+                "briefUpdatedAt",
+                "briefUpdatedByUserId",
+                "mode",
+                "triggerId",
                 "createdAt",
                 "updatedAt",
                 "units"
@@ -6011,6 +6081,35 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "checkedAt"
                   ]
                 },
+                "target": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "brief": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "briefUpdatedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "briefUpdatedByUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "mode": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "proactive",
+                    "reactive",
+                    null
+                  ]
+                },
+                "triggerId": {
+                  "type": "string",
+                  "nullable": true
+                },
                 "createdAt": {
                   "type": "string"
                 },
@@ -6071,6 +6170,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "instruction",
                 "githubIssue",
                 "githubIssueCheck",
+                "target",
+                "brief",
+                "briefUpdatedAt",
+                "briefUpdatedByUserId",
+                "mode",
+                "triggerId",
                 "createdAt",
                 "updatedAt",
                 "units"
@@ -6246,6 +6351,35 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "checkedAt"
                   ]
                 },
+                "target": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "brief": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "briefUpdatedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "briefUpdatedByUserId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "mode": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "proactive",
+                    "reactive",
+                    null
+                  ]
+                },
+                "triggerId": {
+                  "type": "string",
+                  "nullable": true
+                },
                 "createdAt": {
                   "type": "string"
                 },
@@ -6306,6 +6440,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "instruction",
                 "githubIssue",
                 "githubIssueCheck",
+                "target",
+                "brief",
+                "briefUpdatedAt",
+                "briefUpdatedByUserId",
+                "mode",
+                "triggerId",
                 "createdAt",
                 "updatedAt",
                 "units"

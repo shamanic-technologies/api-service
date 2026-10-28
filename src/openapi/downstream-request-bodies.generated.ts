@@ -257,6 +257,17 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "nullable": true,
           "minLength": 1,
           "maxLength": 4000
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "brief": {
+          "type": "string",
+          "nullable": true,
+          "minLength": 1,
+          "maxLength": 8000
         }
       },
       "additionalProperties": false
@@ -2844,6 +2855,16 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
             "number"
           ],
           "additionalProperties": false
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "brief": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8000
         }
       },
       "required": [
