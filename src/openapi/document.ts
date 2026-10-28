@@ -491,6 +491,7 @@ export function buildDocument(
       { name: "Internal", description: "Platform-level operations (API key auth, no identity headers)" },
       { name: "Platform", description: "Service discovery" },
       { name: "Google CRM", description: "Google CRM (Gmail + People bronze) ingestion" },
+      { name: "Threads", description: "Threads accounts connected to a brand: connect, list, set the account type, disconnect, publish (meta-service proxy)" },
       { name: "CRM Contacts", description: "Client B2C CRM CSV contact ingestion (crm-service proxy)" },
       { name: "Expert Quotes", description: "Expert quote outreach (journalists-quotes-service proxy)" },
       { name: "AI Visibility", description: "AI visibility-score audits (ai-visibility-score-service proxy)" },
