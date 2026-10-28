@@ -11600,6 +11600,33 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/crm/ops/connector-intake",
+  tags: ["CRM Ops"],
+  summary: "Get, per connected tool, how many records it took in per day and whether it went quiet (staff only)",
+  description:
+    "Powers the Connected tools section of dashboard v2 Monitoring: every client connection (GoHighLevel, PostHog, "
+    + "Stripe, Clerk) with its sync state, status ok|red|paused, the reasons in plain words, the newest record day, "
+    + "quiet days vs the usual longest quiet stretch, and a daily records series. "
+    + "Staff-only (platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to crm-service GET /internal/ops/connector-intake. The query string is forwarded "
+    + "verbatim; a bad `days` answers crm-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Series window in days; crm-service owns the default and bounds"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Connector intake health — pass-through from crm-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CrmOpsConnectorIntakeResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/campaigns/ops/stuck-occurrences",
   tags: ["Campaign Ops"],
   summary: "Get the prospects waiting on a blocked campaign answer, now and per day (staff only)",

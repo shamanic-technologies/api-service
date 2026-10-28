@@ -95,7 +95,19 @@ describe("/v1/crm/ops/whatsapp-lines", () => {
     expect(res.body).toEqual(JSON.parse(body));
   });
 
-  for (const [method, path] of [["get", "/v1/crm/ops/whatsapp-lines"], ["post", "/v1/crm/ops/whatsapp-lines/check"], ["get", "/v1/crm/ops/trigger-reports"]] as const) {
+  it("GET /connector-intake forwards the query verbatim to crm-service and returns its body byte-equal", async () => {
+    const body = '{"status":"red","connections":[{"source":"gohighlevel", "status":"red","quietDays":8}],"someNewField":true}';
+    stub(200, body);
+    const res = await request(buildApp()).get("/v1/crm/ops/connector-intake?days=30").set(STAFF);
+    expect(res.status).toBe(200);
+    expect(res.text).toBe(body);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${CRM_BASE}/internal/ops/connector-intake?days=30`);
+    expect(calls[0].options.method ?? "GET").toBe("GET");
+    expect(calls[0].options.headers["x-org-id"]).toBeUndefined();
+  });
+
+  for (const [method, path] of [["get", "/v1/crm/ops/whatsapp-lines"], ["post", "/v1/crm/ops/whatsapp-lines/check"], ["get", "/v1/crm/ops/trigger-reports"], ["get", "/v1/crm/ops/connector-intake"]] as const) {
     it(`${method.toUpperCase()} ${path} refuses no credentials (401)`, async () => {
       const res = await (request(buildApp()) as any)[method](path);
       expect(res.status).toBe(401);
