@@ -69,5 +69,8 @@ registerCrmOps("POST", "whatsapp-lines/check", "run the WhatsApp line check");
 // GET /v1/crm/ops/trigger-reports?days=30 — per trigger: did the people it reported reach their campaign? (staff only,
 // TRIGGER-REPORTS-MONITORING-1027). Status ok|red, stuck counts by reason, stuck reports, daily sent/skipped/notSent.
 registerCrmOps("GET", "trigger-reports", "read the trigger report health");
+// GET /v1/crm/ops/connector-intake?days=30 — per connected tool (GoHighLevel, PostHog, Stripe, Clerk): records taken in
+// per day, quiet days vs usual, status ok|red|paused (staff only, CONNECTOR-INTAKE-MONITORING-1028).
+registerCrmOps("GET", "connector-intake", "read the connector intake health");
 
 export default router;
