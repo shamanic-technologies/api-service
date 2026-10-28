@@ -397,6 +397,8 @@ export const STAFF_KEY_OPERATIONS = new Set<string>([
   "PATCH /v1/declarations/channels/{slug}/legs/{legKey}",
   "POST /v1/catalogue/pipes/{pipeId}/retire",
   "POST /v1/catalogue/plays/{playId}/retire",
+  "GET /v1/features/audit/factory-shadow/monitoring",
+  "GET /v1/features/audit/factory-shadow/eval",
   "GET /v1/catalogue/workflows",
   "GET /v1/catalogue/workflows/{id}",
   "GET /v1/catalogue/tactics",

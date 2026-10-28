@@ -1095,6 +1095,52 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/audit/factory-shadow/monitoring",
+  tags: ["Features"],
+  summary: "GTM Factory shadow Monitoring: per client org and day, funnel campaigns whose shadow plan or Jev pick differs from what runs (staff only)",
+  description:
+    "Staff-only (a staff member's own key, or platform API key + STAFF_EMAILS x-email), fleet-wide, no org context. SHADOW ONLY " +
+    "(FACTORY-P1-BRIEF-JUDGE-SHADOW-PLAN). Byte passthrough to features-service GET /internal/factory-shadow/monitoring: the verdict " +
+    "(red when the brief judge or the plan failed for a campaign on the last pass, the last pass is stale, or none ever ran), the last pass, " +
+    "one row per UTC day x org, and one row per campaign of the last pass. Query string forwarded verbatim; status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().openapi({ description: "Window in UTC days, 1 to 90, default 30 (features-service validates it)" }),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffFactoryShadowMonitoringResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/audit/factory-shadow/eval",
+  tags: ["Features"],
+  summary: "GTM Factory brief judge's last proof: agreement rate and every disagreement (staff only)",
+  description:
+    "Staff-only (a staff member's own key, or platform API key + STAFF_EMAILS x-email), fleet-wide, no org context. SHADOW ONLY " +
+    "(FACTORY-P1-BRIEF-JUDGE-SHADOW-PLAN). Byte passthrough to features-service GET /internal/factory-shadow/eval: on every live funnel " +
+    "campaign, a brief written from the plays it runs today and the play Jev re-picks per pipe, with the agreement rate. The trigger that " +
+    "runs a new proof is not exposed. Status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { query: z.object({}).passthrough() },
+  responses: {
+    200: { description: "Pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffFactoryShadowEvalResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "No proof computed yet (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/features/audit/revenue",
   tags: ["Features"],
   summary: "Staff fleet realized-revenue history (staff only)",
@@ -2032,6 +2078,32 @@ registry.registerPath({
     200: { description: "The campaign's next steps", content: { "application/json": { schema: CampaignNextStepsResponseSchema } } },
     404: { description: "sales_funnel_campaign_not_found or brand_not_found, forwarded verbatim", content: errorContent },
     502: { description: "campaign-service unreadable, forwarded verbatim", content: errorContent },
+  },
+});
+
+const CampaignFactoryShadowResponseSchema = z.object({}).passthrough().openapi("CampaignFactoryShadowResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/factory-shadow",
+  tags: ["Campaigns"],
+  summary: "GTM Factory shadow of one funnel campaign: the play Jev would pick per pipe from the brief, and the best-ROI line to its Target",
+  description:
+    "Proxy to features-service GET /brands/{brandId}/sales-funnel-campaigns/{id}/factory-shadow. SHADOW ONLY: nothing runs from it. " +
+    "The last stored pass (every 3 hours, never computed on the read): per pipe with plays, the play Jev picked from the campaign's " +
+    "brief beside the play running today; then the best-ROI straight line of pipes from where the campaign starts to its Target, " +
+    "beside the running funnel priced the same way (expected cost per Target and ROI on both). The org is the authenticated one; " +
+    "another org's campaign answers 404. 404 `factory_shadow_not_computed` before the first pass. Any query is forwarded verbatim. " +
+    "Status and body relayed verbatim.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string(), salesFunnelCampaignId: z.string() }),
+    query: z.object({}).passthrough(),
+  },
+  responses: {
+    200: { description: "The campaign's shadow plan", content: { "application/json": { schema: CampaignFactoryShadowResponseSchema } } },
+    404: { description: "factory_shadow_not_computed (or not this org's / brand's), forwarded verbatim", content: errorContent },
+    500: { description: "Store unreadable, forwarded verbatim", content: errorContent },
   },
 });
 
