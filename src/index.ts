@@ -28,6 +28,7 @@ import rewardTasksRoutes from "./routes/reward-tasks.js";
 import brandAudienceRoutes from "./routes/brand-audience.js";
 import crmRoutes from "./routes/crm.js";
 import crmOpsRoutes from "./routes/crm-ops.js";
+import campaignOpsRoutes from "./routes/campaign-ops.js";
 import googleRoutes from "./routes/google.js";
 import scrapingRoutes from "./routes/scraping.js";
 import leadsRoutes from "./routes/leads.js";
@@ -312,6 +313,7 @@ app.use("/platform-prompts", platformPromptsRoutes);
 // Authenticated routes
 app.use("/v1", meRoutes);
 app.use("/v1", keysRoutes);
+app.use("/v1", campaignOpsRoutes); // staff /campaigns/ops/* — before campaignsRoutes so :id never matches "ops"
 app.use("/v1", campaignsRoutes);
 app.use("/v1", searchRoutes);
 app.use("/v1", qualifyRoutes);

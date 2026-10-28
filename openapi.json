@@ -7748,6 +7748,13 @@
           "nullable": true
         }
       },
+      "CampaignOpsStuckOccurrencesResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "InstantlyOpsSenderHealthResponse": {
         "type": "object",
         "properties": {},

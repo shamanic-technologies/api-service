@@ -11600,6 +11600,33 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/campaigns/ops/stuck-occurrences",
+  tags: ["Campaign Ops"],
+  summary: "Get the prospects waiting on a blocked campaign answer, now and per day (staff only)",
+  description:
+    "Powers the reactive campaigns section of dashboard v2 Monitoring: whether any prospect waits on a campaign "
+    + "answer that is blocked rather than simply queued. Status ok|red, stuck and queued counts, stuck counts by "
+    + "reason, the stuck occurrences, and a daily series (answered / answeredLate / skipped / failed / waiting). "
+    + "Staff-only (platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to campaign-service GET /internal/ops/stuck-occurrences. The query string is "
+    + "forwarded verbatim; a bad `days` answers campaign-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Series window in days; campaign-service owns the default (14) and bounds (1..90)"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Stuck occurrences — pass-through from campaign-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CampaignOpsStuckOccurrencesResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/instantly/ops/sender-health",
   tags: ["Instantly"],
   summary: "Get the mailboxes kept out of prospect mail per day, and why (staff only)",
