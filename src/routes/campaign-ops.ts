@@ -59,4 +59,9 @@ function registerCampaignOps(suffix: string, label: string): void {
 // stuck counts by reason, the stuck occurrences, daily answered/answeredLate/skipped/failed/waiting (staff only).
 registerCampaignOps("stuck-occurrences", "read the stuck campaign occurrences");
 
+// GET /v1/campaigns/ops/trigger-health?days=14 — per watched trigger: verdict ok|red|unknown, reason, sentence,
+// daily events + stored verdict; hub status red when any watched trigger is red (staff only,
+// TRIGGER-SILENCE-NO-EMAIL-1028: replaces the trigger_silent staff email).
+registerCampaignOps("trigger-health", "read the trigger health");
+
 export default router;
