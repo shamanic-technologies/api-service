@@ -11,8 +11,8 @@ const { CAMPAIGN_BASE } = vi.hoisted(() => {
 });
 
 /**
- * /v1/campaigns/ops/stuck-occurrences — staff byte passthrough to campaign-service
- * (REACTIVE-THROUGHPUT-1028). Real gate, no auth mock.
+ * /v1/campaigns/ops/{stuck-occurrences,trigger-health} — staff byte passthrough to campaign-service
+ * (REACTIVE-THROUGHPUT-1028, TRIGGER-SILENCE-NO-EMAIL-1028). Real gate, no auth mock.
  */
 import campaignOpsRouter from "../../src/routes/campaign-ops.js";
 import campaignsRouter from "../../src/routes/campaigns.js";
@@ -26,7 +26,11 @@ function buildApp() {
 }
 
 const STAFF = { "x-api-key": "platform-test-key", "x-email": "kevin.lourd@gmail.com" };
-const PATH = "/v1/campaigns/ops/stuck-occurrences";
+for (const [suffix, sample] of [
+  ["stuck-occurrences", '{"status":"red", "stuck":2,"queued":5,"stuckByReason":[{"reason":"x","count":2}],"byDay":[],"someNewField":true}'],
+  ["trigger-health", '{"status":"red", "triggers":[{"triggerId":"t","verdict":"red","reason":"never_fired","sentence":"s","byDay":[]}],"someNewField":true}'],
+] as const) {
+const PATH = `/v1/campaigns/ops/${suffix}`;
 
 describe(PATH, () => {
   let calls: Array<{ url: string; options: any }>;
@@ -45,13 +49,13 @@ describe(PATH, () => {
 
   it("forwards the query verbatim to campaign-service and returns its body byte-equal", async () => {
     // Odd spacing + unknown field on purpose: byte-for-byte means NOT re-serialized.
-    const body = '{"status":"red", "stuck":2,"queued":5,"stuckByReason":[{"reason":"x","count":2}],"byDay":[],"someNewField":true}';
+    const body = sample;
     stub(200, body);
     const res = await request(buildApp()).get(`${PATH}?days=7&x=a&x=b`).set(STAFF);
     expect(res.status).toBe(200);
     expect(res.text).toBe(body);
     expect(calls).toHaveLength(1);
-    expect(calls[0].url).toBe(`${CAMPAIGN_BASE}/internal/ops/stuck-occurrences?days=7&x=a&x=b`);
+    expect(calls[0].url).toBe(`${CAMPAIGN_BASE}/internal/ops/${suffix}?days=7&x=a&x=b`);
     expect(calls[0].options.method ?? "GET").toBe("GET");
     expect(calls[0].options.headers["X-API-Key"] ?? calls[0].options.headers["x-api-key"]).toBe("campaign-test-key");
     expect(calls[0].options.headers["x-email"]).toBe("kevin.lourd@gmail.com");
@@ -85,3 +89,4 @@ describe(PATH, () => {
     expect(calls).toHaveLength(0);
   });
 });
+}
