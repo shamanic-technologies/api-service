@@ -11983,6 +11983,34 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/campaigns/ops/plan-following",
+  tags: ["Campaign Ops"],
+  summary: "Get whether each funnel campaign following its plan can follow it, now and per day (staff only)",
+  description:
+    "Powers the plan follower section of dashboard v2 Monitoring: status ok|red, staleReason, how many campaigns "
+    + "follow their plan, the red list (a campaign whose plan is refused or cannot apply: no_plan | plan_unreadable "
+    + "| plan_not_ready | plan_not_runnable | plan_outside_caps | apply_failed; it keeps running what it ran), and a "
+    + "daily series (following / red / changesApplied). Status is also red when the follower has not checked for "
+    + "30 min. Staff-only (platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to campaign-service GET /internal/ops/plan-following. The query string is "
+    + "forwarded verbatim; a bad `days` answers campaign-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Series window in days; campaign-service owns the default and bounds"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Plan following — pass-through from campaign-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CampaignOpsPlanFollowingResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/instantly/ops/sender-health",
   tags: ["Instantly"],
   summary: "Get the mailboxes kept out of prospect mail per day, and why (staff only)",
