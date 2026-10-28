@@ -16286,6 +16286,115 @@ for (const route of googleRoutes) {
   });
 }
 
+// ─── Threads (meta-service /orgs/threads/*) ─────────────────────────────────
+// Transparent passthrough: request and response bodies are owned by
+// meta-service (CLAUDE.md rule #8 and its request-body corollary); request
+// bodies are documented from meta-service's own openapi via
+// DOWNSTREAM_BODY_SOURCES. Query strings are byte-copied.
+const ThreadsPassthroughResponse = z.object({}).passthrough().openapi("ThreadsPassthroughResponse");
+const ThreadsPassthroughRequest = z.object({}).passthrough().openapi("ThreadsPassthroughRequest");
+const threadsErrorResponses = {
+  400: { description: "Bad request, forwarded verbatim from meta-service (names the field or the reason)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  404: { description: "Threads account not found in this org, forwarded verbatim", content: errorContent },
+  409: {
+    description: "Threads no longer accepts this account's login: `{ error, reason: \"needs_reconnect\", accountId }`, forwarded verbatim",
+    content: errorContent,
+  },
+  500: { description: "Internal error", content: errorContent },
+  502: {
+    description: "Threads refused the call (Threads' own code and message) or our Threads app keys are not configured (names the key), forwarded verbatim",
+    content: errorContent,
+  },
+};
+const threadsAccountId = z.object({ id: z.string().openapi({ description: "Threads account id (uuid) from GET /v1/orgs/threads/accounts" }) });
+
+const threadsRoutes: Array<{
+  method: "get" | "post" | "patch" | "delete";
+  path: string;
+  summary: string;
+  description: string;
+  status?: number;
+  body?: boolean;
+  params?: z.ZodObject;
+  query?: z.ZodObject;
+}> = [
+  {
+    method: "post",
+    path: "/v1/orgs/threads/auth/start",
+    summary: "Start connecting a Threads account to a brand (Threads login)",
+    description:
+      "Proxy to meta-service POST /orgs/threads/auth/start. Body `{ brandId, accountType, redirectUri }` forwarded untransformed; returns `{ authorizationUrl, state, expiresAt }`: send the user to `authorizationUrl`. Threads redirects to `redirectUri` with `code` and `state`; hand them to POST /v1/orgs/threads/auth/callback.",
+    body: true,
+  },
+  {
+    method: "post",
+    path: "/v1/orgs/threads/auth/callback",
+    summary: "Finish connecting a Threads account (exchange code, store the account)",
+    description:
+      "Proxy to meta-service POST /orgs/threads/auth/callback. Body `{ code, state }` from Threads' redirect; returns `{ account, created }` (`created: false` = already connected, refreshed).",
+    body: true,
+  },
+  {
+    method: "get",
+    path: "/v1/orgs/threads/accounts",
+    summary: "List the Threads accounts connected to the org (optionally one brand)",
+    description:
+      "Proxy to meta-service GET /orgs/threads/accounts. Response `{ accounts: [...] }` owned by meta-service; each account carries its `accountType` and `health` (`needs_reconnect` = a human must connect it again).",
+    query: z.object({ brandId: z.string().optional().openapi({ description: "Only this brand's accounts" }) }).passthrough(),
+  },
+  {
+    method: "patch",
+    path: "/v1/orgs/threads/accounts/{id}",
+    summary: "Set a Threads account's type",
+    description: "Proxy to meta-service PATCH /orgs/threads/accounts/{id}. Body `{ accountType }` forwarded untransformed; returns `{ account }`.",
+    body: true,
+    params: threadsAccountId,
+  },
+  {
+    method: "delete",
+    path: "/v1/orgs/threads/accounts/{id}",
+    summary: "Disconnect a Threads account",
+    description: "Proxy to meta-service DELETE /orgs/threads/accounts/{id}.",
+    params: threadsAccountId,
+  },
+  {
+    method: "post",
+    path: "/v1/orgs/threads/accounts/{id}/posts",
+    summary: "Publish a post or a reply on a Threads account",
+    description:
+      "Proxy to meta-service POST /orgs/threads/accounts/{id}/posts. Body `{ text, replyToPostId? }` forwarded untransformed; answers 201 `{ accountId, postId, permalink, replyToPostId }`. 409 `needs_reconnect` when Threads no longer accepts the login.",
+    status: 201,
+    body: true,
+    params: threadsAccountId,
+  },
+];
+
+for (const route of threadsRoutes) {
+  registry.registerPath({
+    method: route.method,
+    path: route.path,
+    tags: ["Threads"],
+    summary: route.summary,
+    description: route.description,
+    security: authed,
+    request: {
+      ...(route.params ? { params: route.params } : {}),
+      ...(route.query ? { query: route.query } : {}),
+      ...(route.body
+        ? { body: { content: { "application/json": { schema: ThreadsPassthroughRequest } } } }
+        : {}),
+    },
+    responses: {
+      [route.status ?? 200]: {
+        description: "As returned by meta-service",
+        content: { "application/json": { schema: ThreadsPassthroughResponse } },
+      },
+      ...threadsErrorResponses,
+    },
+  });
+}
+
 const crmErrorResponses = {
   400: { description: "Bad request, forwarded verbatim from crm-service", content: errorContent },
   401: { description: "Unauthorized", content: errorContent },

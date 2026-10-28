@@ -88,6 +88,10 @@
       "description": "Google CRM (Gmail + People bronze) ingestion"
     },
     {
+      "name": "Threads",
+      "description": "Threads accounts connected to a brand: connect, list, set the account type, disconnect, publish (meta-service proxy)"
+    },
+    {
       "name": "CRM Contacts",
       "description": "Client B2C CRM CSV contact ingestion (crm-service proxy)"
     },
@@ -10848,6 +10852,20 @@
           "nullable": true
         }
       },
+      "ThreadsPassthroughResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "ThreadsPassthroughRequest": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "CrmPassthroughResponse": {
         "type": "object",
         "properties": {},
@@ -15136,6 +15154,46 @@
       },
       "ErrorResponse502GoogleServiceUnreachableNotConfigured": {
         "description": "google-service unreachable / not configured",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400BadRequestForwardedVerbatimFromMetaServiceNamesTheFieldOrThe": {
+        "description": "Bad request, forwarded verbatim from meta-service (names the field or the reason)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404ThreadsAccountNotFoundInThisOrgForwardedVerbatim": {
+        "description": "Threads account not found in this org, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409ThreadsNoLongerAcceptsThisAccountSLoginErrorReasonNeedsRecon": {
+        "description": "Threads no longer accepts this account's login: `{ error, reason: \"needs_reconnect\", accountId }`, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502ThreadsRefusedTheCallThreadsOwnCodeAndMessageOrOurThreadsApp": {
+        "description": "Threads refused the call (Threads' own code and message) or our Threads app keys are not configured (names the key), forwarded verbatim",
         "content": {
           "application/json": {
             "schema": {
@@ -50837,6 +50895,506 @@
             "$ref": "#/components/parameters/XBrandId"
           }
         ]
+      }
+    },
+    "/v1/orgs/threads/auth/start": {
+      "post": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "Start connecting a Threads account to a brand (Threads login)",
+        "description": "Proxy to meta-service POST /orgs/threads/auth/start. Body `{ brandId, accountType, redirectUri }` forwarded untransformed; returns `{ authorizationUrl, state, expiresAt }`: send the user to `authorizationUrl`. Threads redirects to `redirectUri` with `code` and `state`; hand them to POST /v1/orgs/threads/auth/callback.\n\nRequest body: documented from meta-service POST /orgs/threads/auth/start, which owns and validates it; the gateway forwards it unchanged.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "brandId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Brand the account is connected to"
+                  },
+                  "accountType": {
+                    "type": "string",
+                    "enum": [
+                      "pro_human",
+                      "personal_human",
+                      "pro_ai"
+                    ],
+                    "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
+                  },
+                  "redirectUri": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Page Threads sends the user back to with `code` and `state`. Must be registered, byte for byte, as a redirect callback URL of our Threads app."
+                  }
+                },
+                "required": [
+                  "brandId",
+                  "accountType",
+                  "redirectUri"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "As returned by meta-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadsPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestForwardedVerbatimFromMetaServiceNamesTheFieldOrThe"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404ThreadsAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409ThreadsNoLongerAcceptsThisAccountSLoginErrorReasonNeedsRecon"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ThreadsRefusedTheCallThreadsOwnCodeAndMessageOrOurThreadsApp"
+          }
+        },
+        "operationId": "postV1OrgsThreadsAuthStart",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ]
+      }
+    },
+    "/v1/orgs/threads/auth/callback": {
+      "post": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "Finish connecting a Threads account (exchange code, store the account)",
+        "description": "Proxy to meta-service POST /orgs/threads/auth/callback. Body `{ code, state }` from Threads' redirect; returns `{ account, created }` (`created: false` = already connected, refreshed).\n\nRequest body: documented from meta-service POST /orgs/threads/auth/callback, which owns and validates it; the gateway forwards it unchanged.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "`code` from Threads' redirect"
+                  },
+                  "state": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "`state` from Threads' redirect"
+                  }
+                },
+                "required": [
+                  "code",
+                  "state"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "As returned by meta-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadsPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestForwardedVerbatimFromMetaServiceNamesTheFieldOrThe"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404ThreadsAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409ThreadsNoLongerAcceptsThisAccountSLoginErrorReasonNeedsRecon"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ThreadsRefusedTheCallThreadsOwnCodeAndMessageOrOurThreadsApp"
+          }
+        },
+        "operationId": "postV1OrgsThreadsAuthCallback",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ]
+      }
+    },
+    "/v1/orgs/threads/accounts": {
+      "get": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "List the Threads accounts connected to the org (optionally one brand)",
+        "description": "Proxy to meta-service GET /orgs/threads/accounts. Response `{ accounts: [...] }` owned by meta-service; each account carries its `accountType` and `health` (`needs_reconnect` = a human must connect it again).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Only this brand's accounts"
+            },
+            "required": false,
+            "description": "Only this brand's accounts",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "As returned by meta-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadsPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestForwardedVerbatimFromMetaServiceNamesTheFieldOrThe"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404ThreadsAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409ThreadsNoLongerAcceptsThisAccountSLoginErrorReasonNeedsRecon"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ThreadsRefusedTheCallThreadsOwnCodeAndMessageOrOurThreadsApp"
+          }
+        },
+        "operationId": "getV1OrgsThreadsAccounts"
+      }
+    },
+    "/v1/orgs/threads/accounts/{id}": {
+      "patch": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "Set a Threads account's type",
+        "description": "Proxy to meta-service PATCH /orgs/threads/accounts/{id}. Body `{ accountType }` forwarded untransformed; returns `{ account }`.\n\nRequest body: documented from meta-service PATCH /orgs/threads/accounts/{id}, which owns and validates it; the gateway forwards it unchanged.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Threads account id (uuid) from GET /v1/orgs/threads/accounts"
+            },
+            "required": true,
+            "description": "Threads account id (uuid) from GET /v1/orgs/threads/accounts",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "accountType": {
+                    "type": "string",
+                    "enum": [
+                      "pro_human",
+                      "personal_human",
+                      "pro_ai"
+                    ],
+                    "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
+                  }
+                },
+                "required": [
+                  "accountType"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "As returned by meta-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadsPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestForwardedVerbatimFromMetaServiceNamesTheFieldOrThe"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404ThreadsAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409ThreadsNoLongerAcceptsThisAccountSLoginErrorReasonNeedsRecon"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ThreadsRefusedTheCallThreadsOwnCodeAndMessageOrOurThreadsApp"
+          }
+        },
+        "operationId": "patchV1OrgsThreadsAccountsById"
+      },
+      "delete": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "Disconnect a Threads account",
+        "description": "Proxy to meta-service DELETE /orgs/threads/accounts/{id}.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Threads account id (uuid) from GET /v1/orgs/threads/accounts"
+            },
+            "required": true,
+            "description": "Threads account id (uuid) from GET /v1/orgs/threads/accounts",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "As returned by meta-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadsPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestForwardedVerbatimFromMetaServiceNamesTheFieldOrThe"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404ThreadsAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409ThreadsNoLongerAcceptsThisAccountSLoginErrorReasonNeedsRecon"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ThreadsRefusedTheCallThreadsOwnCodeAndMessageOrOurThreadsApp"
+          }
+        },
+        "operationId": "deleteV1OrgsThreadsAccountsById"
+      }
+    },
+    "/v1/orgs/threads/accounts/{id}/posts": {
+      "post": {
+        "tags": [
+          "Threads"
+        ],
+        "summary": "Publish a post or a reply on a Threads account",
+        "description": "Proxy to meta-service POST /orgs/threads/accounts/{id}/posts. Body `{ text, replyToPostId? }` forwarded untransformed; answers 201 `{ accountId, postId, permalink, replyToPostId }`. 409 `needs_reconnect` when Threads no longer accepts the login.\n\nRequest body: documented from meta-service POST /orgs/threads/accounts/{id}/posts, which owns and validates it; the gateway forwards it unchanged.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Threads account id (uuid) from GET /v1/orgs/threads/accounts"
+            },
+            "required": true,
+            "description": "Threads account id (uuid) from GET /v1/orgs/threads/accounts",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500,
+                    "description": "Post text, at most 500 characters (Threads' limit)"
+                  },
+                  "replyToPostId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Publish as a reply under this Threads post id (e.g. the postId a previous call returned)"
+                  }
+                },
+                "required": [
+                  "text"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "As returned by meta-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ThreadsPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestForwardedVerbatimFromMetaServiceNamesTheFieldOrThe"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404ThreadsAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409ThreadsNoLongerAcceptsThisAccountSLoginErrorReasonNeedsRecon"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ThreadsRefusedTheCallThreadsOwnCodeAndMessageOrOurThreadsApp"
+          }
+        },
+        "operationId": "postV1OrgsThreadsAccountsByIdPosts"
       }
     },
     "/v1/orgs/contacts/upload": {
