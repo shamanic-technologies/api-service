@@ -11627,6 +11627,33 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/campaigns/ops/trigger-health",
+  tags: ["Campaign Ops"],
+  summary: "Get whether each watched trigger is broken, now and per day (staff only)",
+  description:
+    "Powers the triggers section of dashboard v2 Monitoring: per watched trigger, the current verdict "
+    + "ok|red|unknown, its reason (never_fired | facts_without_event | facts_unreadable), a one-line sentence, "
+    + "and a daily series (events per day + the stored verdict per day). Hub status is red when any watched "
+    + "trigger is red. Staff-only (platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to campaign-service GET /internal/ops/trigger-health. The query string is "
+    + "forwarded verbatim; a bad `days` answers campaign-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Series window in days; campaign-service owns the default (14) and bounds (1..90)"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Trigger health — pass-through from campaign-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CampaignOpsTriggerHealthResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/instantly/ops/sender-health",
   tags: ["Instantly"],
   summary: "Get the mailboxes kept out of prospect mail per day, and why (staff only)",
