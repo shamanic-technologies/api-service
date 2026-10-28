@@ -8012,6 +8012,13 @@
           "nullable": true
         }
       },
+      "CampaignOpsPlanFollowingResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "InstantlyOpsSenderHealthResponse": {
         "type": "object",
         "properties": {},

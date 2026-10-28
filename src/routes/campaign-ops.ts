@@ -64,4 +64,9 @@ registerCampaignOps("stuck-occurrences", "read the stuck campaign occurrences");
 // TRIGGER-SILENCE-NO-EMAIL-1028: replaces the trigger_silent staff email).
 registerCampaignOps("trigger-health", "read the trigger health");
 
+// GET /v1/campaigns/ops/plan-following?days=14 — funnel campaigns following their plan: status ok|red, staleReason,
+// following count, the red list (a plan refused: no_plan, plan_unreadable, plan_outside_caps, apply_failed...),
+// daily following/red/changesApplied (staff only, FACTORY-P1-PLAN-FOLLOWING-RELAY).
+registerCampaignOps("plan-following", "read the plan following");
+
 export default router;
