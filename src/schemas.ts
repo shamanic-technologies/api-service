@@ -2245,6 +2245,28 @@ registry.registerPath({
   },
 });
 
+const SalesFunnelCampaignPlanChangesResponseSchema = z.object({}).passthrough().openapi("SalesFunnelCampaignPlanChangesResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/sales-funnel-campaigns/{id}/plan-changes",
+  tags: ["Campaigns"],
+  summary: "Every plan change a sales funnel campaign applied (newest first)",
+  description:
+    "Proxy to campaign-service GET /sales-funnel-campaigns/{id}/plan-changes. " +
+    salesFunnelCampaignDescription +
+    " For a campaign that follows its plan: each change (when, from which sales funnel to which, what each unit did: " +
+    "born on a new pipe, kept, or draining = left the plan and still answers the people it owes), plus the switch, " +
+    "the running funnel and the latest plan check. An empty `changes` list = no change applied yet.",
+  security: authed,
+  request: { params: z.object({ id: z.string() }) },
+  responses: {
+    200: { description: "{ salesFunnelCampaignId, followsPlan, salesFunnelId, runningSalesFunnelId, planCheck, changes: [...] }", content: { "application/json": { schema: SalesFunnelCampaignPlanChangesResponseSchema } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Not found in this org, forwarded verbatim", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/campaigns/{id}",

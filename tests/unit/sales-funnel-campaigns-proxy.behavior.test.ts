@@ -94,6 +94,31 @@ describe("sales funnel campaigns + caps — pass-through", () => {
     expect(new URL(upstream().url).pathname).toBe(`/sales-funnel-campaigns/${SFC}`);
   });
 
+  it("GET plan-changes: forwards to /sales-funnel-campaigns/{id}/plan-changes with the authenticated org, relays status + body", async () => {
+    const history = `{"salesFunnelCampaignId":"${SFC}","followsPlan":true,"salesFunnelId":"a","runningSalesFunnelId":"b","planCheck":null,"changes":[{"id":"c1","fromSalesFunnelId":"a","toSalesFunnelId":"b","planComputedAt":null,"appliedAt":"2026-10-28T10:00:00.000Z","units":[]}]}`;
+    global.fetch = vi.fn().mockImplementation(async (url: string, init: any) => {
+      calls.push({ url, init });
+      return respond(200, history);
+    });
+    const res = await request(buildApp()).get(`/v1/sales-funnel-campaigns/${SFC}/plan-changes`).set("x-org-id", "org_someone_else");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(JSON.parse(history));
+    const { url, init } = upstream();
+    expect(new URL(url).pathname).toBe(`/sales-funnel-campaigns/${SFC}/plan-changes`);
+    expect(init.method ?? "GET").toBe("GET");
+    expect(init.headers["x-org-id"]).toBe("org_authenticated");
+  });
+
+  it("GET plan-changes: relays a 404 verbatim", async () => {
+    global.fetch = vi.fn().mockImplementation(async (url: string, init: any) => {
+      calls.push({ url, init });
+      return respond(404, '{"error":"Sales funnel campaign not found"}');
+    });
+    const res = await request(buildApp()).get(`/v1/sales-funnel-campaigns/${SFC}/plan-changes`);
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Sales funnel campaign not found" });
+  });
+
   it("PATCH: forwards {status} untouched and relays a 409 refusal field-for-field", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string, init: any) => {
       calls.push({ url, init });
