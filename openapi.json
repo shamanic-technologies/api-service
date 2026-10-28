@@ -1534,6 +1534,13 @@
           "nullable": true
         }
       },
+      "SalesFunnelCampaignPlanChangesResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "GetCampaignResponse": {
         "type": "object",
         "properties": {
@@ -20299,6 +20306,61 @@
           }
         },
         "operationId": "deleteV1SalesFunnelCampaignsById"
+      }
+    },
+    "/v1/sales-funnel-campaigns/{id}/plan-changes": {
+      "get": {
+        "tags": [
+          "Campaigns"
+        ],
+        "summary": "Every plan change a sales funnel campaign applied (newest first)",
+        "description": "Proxy to campaign-service GET /sales-funnel-campaigns/{id}/plan-changes. A SALES FUNNEL CAMPAIGN (owner 2026-10-10) is brand x offer x sales funnel: it owns one unit (an ordinary campaign) per pipe of the funnel and is run or paused as a whole. Its money is the funnel's caps at billing (GET /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps); no max budget = held unfunded. The org is the authenticated one. Status and body (with `reason` on a refusal) relayed verbatim. HOW each pipe behaves is fixed by the funnel's plays (`<leg>@<channel>~<strategy id>` in the funnel id; see the Plays tag: tactic, strategy, play on a pipe, a funnel carrying it, a campaign on that funnel). To change a behaviour (for example replies that carry an offer document as an attachment), launch a campaign on a funnel carrying the right play, created with `status: stopped` until the client agrees. For a campaign that follows its plan: each change (when, from which sales funnel to which, what each unit did: born on a new pipe, kept, or draining = left the plan and still answers the people it owes), plus the switch, the running funnel and the latest plan check. An empty `changes` list = no change applied yet.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "{ salesFunnelCampaignId, followsPlan, salesFunnelId, runningSalesFunnelId, planCheck, changes: [...] }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesFunnelCampaignPlanChangesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404NotFoundInThisOrgForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "operationId": "getV1SalesFunnelCampaignsByIdPlanChanges"
       }
     },
     "/v1/campaigns/{id}": {
