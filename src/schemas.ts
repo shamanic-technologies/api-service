@@ -1368,6 +1368,7 @@ export const CreateCampaignRequestSchema = z
     goal: z.string().min(1).nullable().optional().describe("Campaign's own optimization goal. Vocabulary owned by campaign-service — not enumerated here."),
     servicesOffered: z.array(z.string().min(1)).nullable().optional().describe("Services offered by this campaign"),
     clickDestinationUrl: z.string().min(1).nullable().optional().describe("Campaign's click-destination URL"),
+    whatsappSenderPhone: z.string().nullable().optional().describe("The WhatsApp line this campaign writes from: one of its brand's linked WhatsApp lines, as that line's own number in E.164 (e.g. '+33612345678'). Spaces and dashes are dropped; anything else not E.164 is refused by campaign-service. null clears it (the brand's default line); omitted leaves it untouched."),
   })
   // Forward every other field campaign-service accepts — `offerId` + `legKey` (what a sales
   // campaign sells and the leg it is bought for) and whatever it adds next — byte-identical.
@@ -1568,10 +1569,22 @@ const CampaignSchema = z
     notifyFrequency: z.string().nullable().describe("Notification frequency"),
     notifyChannel: z.string().nullable().describe("Notification channel"),
     notifyDestination: z.string().nullable().describe("Notification destination"),
+    whatsappSenderPhone: z.string().nullable().describe("The WhatsApp line this campaign writes from, in E.164 (one of its brand's linked lines); null = the brand's default line"),
     createdAt: z.string().describe("ISO timestamp"),
     updatedAt: z.string().describe("ISO timestamp"),
   })
   .openapi("Campaign");
+
+// PATCH /v1/campaigns/{id} forwards the body byte-identical (no validation here): this
+// schema only DOCUMENTS fields campaign-service accepts; every other field it accepts
+// is forwarded unchanged and campaign-service's own 400 comes back verbatim.
+const UpdateCampaignRequestSchema = z
+  .object({
+    name: z.string().optional().describe("Campaign name"),
+    whatsappSenderPhone: z.string().nullable().optional().describe("The WhatsApp line this campaign writes from: one of its brand's linked WhatsApp lines, as that line's own number in E.164 (e.g. '+33612345678'). Spaces and dashes are dropped; anything else not E.164 is refused by campaign-service. null clears it (the brand's default line); omitted leaves it untouched."),
+  })
+  .passthrough()
+  .openapi("UpdateCampaignRequest", { example: { whatsappSenderPhone: "+33612345678" } });
 
 // -- Paths --
 
@@ -2187,9 +2200,15 @@ registry.registerPath({
   path: "/v1/campaigns/{id}",
   tags: ["Campaigns"],
   summary: "Update a campaign",
-  description: "Update campaign fields (name, settings, etc.)",
+  description:
+    "Update campaign fields (name, settings, etc.). The body is a PASSTHROUGH forwarded unchanged to campaign-service: " +
+    "the fields below are documented, every other field campaign-service accepts goes through too. " +
+    "`whatsappSenderPhone` picks which of the brand's linked WhatsApp lines this campaign writes from.",
   security: authed,
-  request: { params: CampaignIdParam },
+  request: {
+    params: CampaignIdParam,
+    body: { content: { "application/json": { schema: UpdateCampaignRequestSchema } } },
+  },
   responses: {
     200: {
       description: "Updated campaign",
