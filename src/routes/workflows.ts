@@ -833,7 +833,7 @@ router.post("/workflows/create", authenticate, requireOrg, requireUser, async (r
       });
     }
 
-    const { featureSlug, description, hints } = parsed.data;
+    const { featureSlug, pipeId, description, hints } = parsed.data;
 
     const result = await callExternalService(
       externalServices.workflow,
@@ -845,6 +845,7 @@ router.post("/workflows/create", authenticate, requireOrg, requireUser, async (r
           orgId: req.orgId,
           userId: req.userId,
           featureSlug,
+          ...(pipeId ? { pipeId } : {}),
           description,
           hints,
         },
