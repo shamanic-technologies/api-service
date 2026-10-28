@@ -216,6 +216,28 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       ]
     }
   },
+  "PATCH /v1/orgs/threads/accounts/{id}": {
+    "service": "meta-service",
+    "method": "PATCH",
+    "path": "/orgs/threads/accounts/{id}",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "accountType": {
+          "type": "string",
+          "enum": [
+            "pro_human",
+            "personal_human",
+            "pro_ai"
+          ],
+          "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
+        }
+      },
+      "required": [
+        "accountType"
+      ]
+    }
+  },
   "PATCH /v1/sales-funnel-campaigns/{id}": {
     "service": "campaign-service",
     "method": "PATCH",
@@ -2608,6 +2630,88 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       },
       "required": [
         "brandId"
+      ]
+    }
+  },
+  "POST /v1/orgs/threads/accounts/{id}/posts": {
+    "service": "meta-service",
+    "method": "POST",
+    "path": "/orgs/threads/accounts/{id}/posts",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Post text, at most 500 characters (Threads' limit)"
+        },
+        "replyToPostId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Publish as a reply under this Threads post id (e.g. the postId a previous call returned)"
+        }
+      },
+      "required": [
+        "text"
+      ]
+    }
+  },
+  "POST /v1/orgs/threads/auth/callback": {
+    "service": "meta-service",
+    "method": "POST",
+    "path": "/orgs/threads/auth/callback",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "description": "`code` from Threads' redirect"
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1,
+          "description": "`state` from Threads' redirect"
+        }
+      },
+      "required": [
+        "code",
+        "state"
+      ]
+    }
+  },
+  "POST /v1/orgs/threads/auth/start": {
+    "service": "meta-service",
+    "method": "POST",
+    "path": "/orgs/threads/auth/start",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "brandId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Brand the account is connected to"
+        },
+        "accountType": {
+          "type": "string",
+          "enum": [
+            "pro_human",
+            "personal_human",
+            "pro_ai"
+          ],
+          "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
+        },
+        "redirectUri": {
+          "type": "string",
+          "format": "uri",
+          "description": "Page Threads sends the user back to with `code` and `state`. Must be registered, byte for byte, as a redirect callback URL of our Threads app."
+        }
+      },
+      "required": [
+        "brandId",
+        "accountType",
+        "redirectUri"
       ]
     }
   },

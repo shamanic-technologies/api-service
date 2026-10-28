@@ -29,6 +29,8 @@ process.env.STRIPE_SERVICE_URL = "http://localhost:3022";
 process.env.STRIPE_SERVICE_API_KEY = "test-stripe-service-api-key";
 process.env.GOOGLE_SERVICE_URL = "http://localhost:3033";
 process.env.GOOGLE_SERVICE_API_KEY = "test-google-service-api-key";
+process.env.META_SERVICE_URL = "http://localhost:3034";
+process.env.META_SERVICE_API_KEY = "test-meta-service-api-key";
 
 beforeAll(() => console.log("Test suite starting..."));
 afterAll(() => console.log("Test suite complete."));
