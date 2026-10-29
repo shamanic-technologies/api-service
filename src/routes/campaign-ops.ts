@@ -69,4 +69,9 @@ registerCampaignOps("trigger-health", "read the trigger health");
 // daily following/red/changesApplied (staff only, FACTORY-P1-PLAN-FOLLOWING-RELAY).
 registerCampaignOps("plan-following", "read the plan following");
 
+// GET /v1/campaigns/ops/unsent-answers?days=14 — answers owed to a person who acted that never left: status ok|red,
+// the unsent list with refusal codes, daily answered/answeredByTeam/replaying/refused/failed (staff only,
+// ONE-AI-REFUSED-ANSWERS-1029).
+registerCampaignOps("unsent-answers", "read the unsent answers");
+
 export default router;
