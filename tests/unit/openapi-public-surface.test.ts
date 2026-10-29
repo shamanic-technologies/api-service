@@ -138,6 +138,7 @@ const PLATFORM_OPERATIONS = [
   "get /v1/chat/skills/{slug}/versions",
   "get /v1/chat/skills/{slug}/versions/{version}",
   "get /v1/chat/staff-requests",
+  "get /v1/chat/ops/channel-replies/daily",
   "get /v1/catalogue/workflows",
   "get /v1/catalogue/workflows/{id}",
   "get /v1/catalogue/tactics",
