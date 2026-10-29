@@ -341,6 +341,32 @@ router.get("/runs/outcome-costs/reconciliation", authenticatePlatform, requireSt
 });
 
 /**
+ * GET /v1/runs/brands/:brandId/ledger → runs-service GET /internal/brands/:brandId/ledger — STAFF ONLY.
+ * GET /v1/runs/brands/:brandId/ledger/runs → runs-service GET /internal/brands/:brandId/ledger/runs — STAFF ONLY.
+ *
+ * The books of one brand (FACTORY-P4-PAGES, the dashboard's staff Ledger page): standard cost
+ * charged, reuse gain, spend of runs producing none and the runs spend reconciled to the cent,
+ * per UTC day; and the brand's production orders newest first. Cost data, so the same staff gate
+ * and byte passthrough as the ledger reads above (query forwarded verbatim, status + body piped).
+ * Declared before `/runs/:id` (#13).
+ */
+for (const suffix of ["", "/runs"] as const) {
+  router.get(`/runs/brands/:brandId/ledger${suffix}`, authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.runs,
+        `/internal/brands/${encodeURIComponent(String(req.params.brandId))}/ledger${suffix}${rawQueryString(req.originalUrl)}`,
+        { expressRes: res },
+      );
+    } catch (error: any) {
+      console.error(`[api-service] Brand ledger${suffix} error:`, error.message);
+      if (res.headersSent) { res.end(); return; }
+      respondUpstreamError(res, error, "Failed to read the brand ledger");
+    }
+  });
+}
+
+/**
  * GET /v1/runs/:id → runs-service GET /v1/runs/:id
  *
  * One run by id, with its cost roll-up and its descendants, forwarded untouched.

@@ -110,6 +110,18 @@ const ROUTES = [
     key: "runs-test-key",
   },
   {
+    path: "/v1/runs/brands/b%201/ledger",
+    query: "?since=2026-09-01&until=2026-10-29",
+    downstream: `${RUNS_BASE}/internal/brands/b%201/ledger`,
+    key: "runs-test-key",
+  },
+  {
+    path: "/v1/runs/brands/brand-1/ledger/runs",
+    query: "?before=2026-10-29T10:00:00.123456%2B00&beforeId=0b2d6f1e-3c4a-4d5e-8f60-718293a4b5c6&limit=50",
+    downstream: `${RUNS_BASE}/internal/brands/brand-1/ledger/runs`,
+    key: "runs-test-key",
+  },
+  {
     path: "/v1/costs/provider-payment-sources",
     query: "?x=a",
     downstream: `${COSTS_BASE}/internal/provider-payment-sources`,
