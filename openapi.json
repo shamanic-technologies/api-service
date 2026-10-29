@@ -11951,6 +11951,146 @@
         "additionalProperties": {
           "nullable": true
         }
+      },
+      "ScriptResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "CreateScriptRequest": {
+        "type": "object",
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,62}$",
+            "description": "A features-service catalogue step key, e.g. `message_written`."
+          },
+          "dynasty": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,62}$",
+            "description": "A new dynasty name, e.g. `dy_hook_writer`."
+          },
+          "code": {
+            "type": "string",
+            "description": "TypeScript text whose default export is `run(ctx)`; it may import TYPES only (no runtime imports, no env, no DB, no network). `ctx.get(\"<outcome>\")` (the outcome named by a string LITERAL) returns a material Unit `{id, outcome, subject, ageDays, content}` handed by the workflow; `ctx.vendor.call(name, args)` calls a metered vendor and returns `{ok, data}` (vendors: `llm.complete` with `{message, systemPrompt?, responseSchema?, provider?, model?, temperature?, maxTokens?}`; the LLM is the call's else the tactic `llm: {provider, model}`, never a default); `ctx.storage.get/set/delete/count(table, key)` are its Engine's notes for this org; `ctx.subject`, `ctx.tactics`, `ctx.day`, `ctx.request` are read-only inputs. Return `{content: {...}}` (one Unit made) or `null` (none). Shape: `export default async function run(ctx) { const m = ctx.get(\"<material outcome>\"); if (!m) return null; const r = await ctx.vendor.call(\"llm.complete\", { message: \"...\" }); return r.ok ? { content: { text: r.data } } : null; }`"
+          },
+          "description": {
+            "type": "string",
+            "description": "What the script does, in plain words (1-2000 chars)."
+          },
+          "tactics": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            },
+            "description": "Data the script reads as `ctx.tactics` (e.g. `llm: {provider, model}`, `systemPrompt`)."
+          }
+        },
+        "required": [
+          "outcome",
+          "dynasty",
+          "code",
+          "description"
+        ],
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "UpgradeScriptRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "TypeScript text whose default export is `run(ctx)`; it may import TYPES only (no runtime imports, no env, no DB, no network). `ctx.get(\"<outcome>\")` (the outcome named by a string LITERAL) returns a material Unit `{id, outcome, subject, ageDays, content}` handed by the workflow; `ctx.vendor.call(name, args)` calls a metered vendor and returns `{ok, data}` (vendors: `llm.complete` with `{message, systemPrompt?, responseSchema?, provider?, model?, temperature?, maxTokens?}`; the LLM is the call's else the tactic `llm: {provider, model}`, never a default); `ctx.storage.get/set/delete/count(table, key)` are its Engine's notes for this org; `ctx.subject`, `ctx.tactics`, `ctx.day`, `ctx.request` are read-only inputs. Return `{content: {...}}` (one Unit made) or `null` (none). Shape: `export default async function run(ctx) { const m = ctx.get(\"<material outcome>\"); if (!m) return null; const r = await ctx.vendor.call(\"llm.complete\", { message: \"...\" }); return r.ok ? { content: { text: r.data } } : null; }`"
+          },
+          "description": {
+            "type": "string",
+            "description": "New description; default: the active version's."
+          },
+          "tactics": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            },
+            "description": "Data the script reads as `ctx.tactics` (e.g. `llm: {provider, model}`, `systemPrompt`)."
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "ForkScriptRequest": {
+        "type": "object",
+        "properties": {
+          "dynasty": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]{1,62}$",
+            "description": "The new dynasty's name."
+          },
+          "description": {
+            "type": "string",
+            "description": "What the fork does differently (1-2000 chars)."
+          },
+          "code": {
+            "type": "string",
+            "description": "Absent: the source's active code. TypeScript text whose default export is `run(ctx)`; it may import TYPES only (no runtime imports, no env, no DB, no network). `ctx.get(\"<outcome>\")` (the outcome named by a string LITERAL) returns a material Unit `{id, outcome, subject, ageDays, content}` handed by the workflow; `ctx.vendor.call(name, args)` calls a metered vendor and returns `{ok, data}` (vendors: `llm.complete` with `{message, systemPrompt?, responseSchema?, provider?, model?, temperature?, maxTokens?}`; the LLM is the call's else the tactic `llm: {provider, model}`, never a default); `ctx.storage.get/set/delete/count(table, key)` are its Engine's notes for this org; `ctx.subject`, `ctx.tactics`, `ctx.day`, `ctx.request` are read-only inputs. Return `{content: {...}}` (one Unit made) or `null` (none). Shape: `export default async function run(ctx) { const m = ctx.get(\"<material outcome>\"); if (!m) return null; const r = await ctx.vendor.call(\"llm.complete\", { message: \"...\" }); return r.ok ? { content: { text: r.data } } : null; }`"
+          },
+          "tactics": {
+            "type": "object",
+            "additionalProperties": {
+              "nullable": true
+            },
+            "description": "Data the script reads as `ctx.tactics` (e.g. `llm: {provider, model}`, `systemPrompt`)."
+          }
+        },
+        "required": [
+          "dynasty",
+          "description"
+        ],
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "ScriptDynastyStatusRequest": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "deprecated"
+            ],
+            "description": "`deprecated` = retire, `active` = restore"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Why (1-500 chars)."
+          }
+        },
+        "required": [
+          "status",
+          "reason"
+        ],
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "ReplayScriptRequest": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Absent: the dynasty's active code. TypeScript text whose default export is `run(ctx)`; it may import TYPES only (no runtime imports, no env, no DB, no network). `ctx.get(\"<outcome>\")` (the outcome named by a string LITERAL) returns a material Unit `{id, outcome, subject, ageDays, content}` handed by the workflow; `ctx.vendor.call(name, args)` calls a metered vendor and returns `{ok, data}` (vendors: `llm.complete` with `{message, systemPrompt?, responseSchema?, provider?, model?, temperature?, maxTokens?}`; the LLM is the call's else the tactic `llm: {provider, model}`, never a default); `ctx.storage.get/set/delete/count(table, key)` are its Engine's notes for this org; `ctx.subject`, `ctx.tactics`, `ctx.day`, `ctx.request` are read-only inputs. Return `{content: {...}}` (one Unit made) or `null` (none). Shape: `export default async function run(ctx) { const m = ctx.get(\"<material outcome>\"); if (!m) return null; const r = await ctx.vendor.call(\"llm.complete\", { message: \"...\" }); return r.ok ? { content: { text: r.data } } : null; }`"
+          }
+        },
+        "additionalProperties": {
+          "nullable": true
+        }
       }
     },
     "parameters": {
@@ -16361,6 +16501,86 @@
       },
       "ErrorResponse409DIFFERENTPIPEDIFFERENTIDENTITYDYNASTYMERGEDForwardedVerbatim": {
         "description": "DIFFERENT_PIPE / DIFFERENT_IDENTITY / DYNASTY_MERGED (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400InvalidStatusForwardedVerbatim": {
+        "description": "Invalid status (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404UnknownScriptOrDynastyForwardedVerbatim": {
+        "description": "Unknown script or dynasty (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400InvalidCodeSlugOrOutcomeForwardedVerbatim": {
+        "description": "Invalid code, slug or outcome (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409DynastyExistsForwardedVerbatim": {
+        "description": "Dynasty exists (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse422APortSReplayFailedReplayFailedForwardedVerbatim": {
+        "description": "A port's replay failed: `replay_failed` (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400InvalidIdForwardedVerbatim": {
+        "description": "Invalid id (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse422ReplayFailedReplayFailedWithCaseIdsForwardedVerbatim": {
+        "description": "Replay failed: `replay_failed` with case ids (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409DynastyNameTakenForwardedVerbatim": {
+        "description": "Dynasty name taken (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {
@@ -59933,6 +60153,230 @@
           }
         },
         "operationId": "getV1LeadsByIdRelationship"
+      }
+    },
+    "/v1/scripts": {
+      "get": {
+        "tags": [
+          "Scripts"
+        ],
+        "summary": "List scripts (no code)",
+        "description": "A script is code stored as data in workflow-service: it makes ONE Unit of its outcome (or none) per run, and is versioned in dynasties. Create = a new dynasty at version 1, upgrade = the next version of the same idea, fork = a different idea in a new dynasty, status = retire or restore a whole dynasty. A create or upgrade takes effect on the NEXT run that uses the script: no deploy. The outcome must be a features-service catalogue step key. A dynasty carrying recorded production cases is a PORT: every new version must replay 100 % of them before it is stored, else 422 `replay_failed` naming the failing case ids. A behaviour change to a port is therefore a fork (new dynasty), never an upgrade. Dry-run first with POST /v1/scripts/dynasty/{outcome}/{dynasty}/replay. Code contract: TypeScript text whose default export is `run(ctx)`; it may import TYPES only (no runtime imports, no env, no DB, no network). `ctx.get(\"<outcome>\")` (the outcome named by a string LITERAL) returns a material Unit `{id, outcome, subject, ageDays, content}` handed by the workflow; `ctx.vendor.call(name, args)` calls a metered vendor and returns `{ok, data}` (vendors: `llm.complete` with `{message, systemPrompt?, responseSchema?, provider?, model?, temperature?, maxTokens?}`; the LLM is the call's else the tactic `llm: {provider, model}`, never a default); `ctx.storage.get/set/delete/count(table, key)` are its Engine's notes for this org; `ctx.subject`, `ctx.tactics`, `ctx.day`, `ctx.request` are read-only inputs. Return `{content: {...}}` (one Unit made) or `null` (none). Shape: `export default async function run(ctx) { const m = ctx.get(\"<material outcome>\"); if (!m) return null; const r = await ctx.vendor.call(\"llm.complete\", { message: \"...\" }); return r.ok ? { content: { text: r.data } } : null; }` `status=active` (default) = runnable (version AND dynasty active), `deprecated` = its complement, `all`. Each row carries outcome, dynasty, version, scriptSlug, description, materials, vendors, tactics, status, dynastyStatus, replay proof and `cases` (recorded cases: > 0 = a port). Read the code with GET /v1/scripts/{id}. Transparent proxy to workflow-service GET /scripts; the query string is forwarded verbatim.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Only this outcome (step key)"
+            },
+            "required": false,
+            "description": "Only this outcome (step key)",
+            "name": "outcome",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Only this dynasty"
+            },
+            "required": false,
+            "description": "Only this dynasty",
+            "name": "dynasty",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "deprecated",
+                "all"
+              ],
+              "description": "Default `active`"
+            },
+            "required": false,
+            "description": "Default `active`",
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`{ scripts: [...] }` (pass-through from workflow-service)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScriptResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidStatusForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404UnknownScriptOrDynastyForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamFailureForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1Scripts"
+      }
+    },
+    "/v1/scripts/{id}": {
+      "get": {
+        "tags": [
+          "Scripts"
+        ],
+        "summary": "One script version, with its code",
+        "description": "A script is code stored as data in workflow-service: it makes ONE Unit of its outcome (or none) per run, and is versioned in dynasties. Create = a new dynasty at version 1, upgrade = the next version of the same idea, fork = a different idea in a new dynasty, status = retire or restore a whole dynasty. A create or upgrade takes effect on the NEXT run that uses the script: no deploy. The outcome must be a features-service catalogue step key. A dynasty carrying recorded production cases is a PORT: every new version must replay 100 % of them before it is stored, else 422 `replay_failed` naming the failing case ids. A behaviour change to a port is therefore a fork (new dynasty), never an upgrade. Dry-run first with POST /v1/scripts/dynasty/{outcome}/{dynasty}/replay. Code contract: TypeScript text whose default export is `run(ctx)`; it may import TYPES only (no runtime imports, no env, no DB, no network). `ctx.get(\"<outcome>\")` (the outcome named by a string LITERAL) returns a material Unit `{id, outcome, subject, ageDays, content}` handed by the workflow; `ctx.vendor.call(name, args)` calls a metered vendor and returns `{ok, data}` (vendors: `llm.complete` with `{message, systemPrompt?, responseSchema?, provider?, model?, temperature?, maxTokens?}`; the LLM is the call's else the tactic `llm: {provider, model}`, never a default); `ctx.storage.get/set/delete/count(table, key)` are its Engine's notes for this org; `ctx.subject`, `ctx.tactics`, `ctx.day`, `ctx.request` are read-only inputs. Return `{content: {...}}` (one Unit made) or `null` (none). Shape: `export default async function run(ctx) { const m = ctx.get(\"<material outcome>\"); if (!m) return null; const r = await ctx.vendor.call(\"llm.complete\", { message: \"...\" }); return r.ok ? { content: { text: r.data } } : null; }` Transparent proxy to workflow-service GET /scripts/{id}.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Script version id"
+            },
+            "required": true,
+            "description": "Script version id",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The version with its `code` (pass-through from workflow-service)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScriptResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidIdForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404UnknownScriptOrDynastyForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamFailureForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1ScriptsById"
+      }
+    },
+    "/v1/scripts/dynasty/{outcome}/{dynasty}": {
+      "get": {
+        "tags": [
+          "Scripts"
+        ],
+        "summary": "Every version of one script dynasty (newest first, no code)",
+        "description": "A script is code stored as data in workflow-service: it makes ONE Unit of its outcome (or none) per run, and is versioned in dynasties. Create = a new dynasty at version 1, upgrade = the next version of the same idea, fork = a different idea in a new dynasty, status = retire or restore a whole dynasty. A create or upgrade takes effect on the NEXT run that uses the script: no deploy. The outcome must be a features-service catalogue step key. A dynasty carrying recorded production cases is a PORT: every new version must replay 100 % of them before it is stored, else 422 `replay_failed` naming the failing case ids. A behaviour change to a port is therefore a fork (new dynasty), never an upgrade. Dry-run first with POST /v1/scripts/dynasty/{outcome}/{dynasty}/replay. Code contract: TypeScript text whose default export is `run(ctx)`; it may import TYPES only (no runtime imports, no env, no DB, no network). `ctx.get(\"<outcome>\")` (the outcome named by a string LITERAL) returns a material Unit `{id, outcome, subject, ageDays, content}` handed by the workflow; `ctx.vendor.call(name, args)` calls a metered vendor and returns `{ok, data}` (vendors: `llm.complete` with `{message, systemPrompt?, responseSchema?, provider?, model?, temperature?, maxTokens?}`; the LLM is the call's else the tactic `llm: {provider, model}`, never a default); `ctx.storage.get/set/delete/count(table, key)` are its Engine's notes for this org; `ctx.subject`, `ctx.tactics`, `ctx.day`, `ctx.request` are read-only inputs. Return `{content: {...}}` (one Unit made) or `null` (none). Shape: `export default async function run(ctx) { const m = ctx.get(\"<material outcome>\"); if (!m) return null; const r = await ctx.vendor.call(\"llm.complete\", { message: \"...\" }); return r.ok ? { content: { text: r.data } } : null; }` Answers `{ outcome, dynasty, cases, versions }`; `cases` > 0 means the dynasty is a port. Transparent proxy to workflow-service GET /scripts/dynasty/{outcome}/{dynasty}.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{1,62}$",
+              "description": "The features-service catalogue step key the script makes one Unit of, e.g. `message_written`."
+            },
+            "required": true,
+            "description": "The features-service catalogue step key the script makes one Unit of, e.g. `message_written`.",
+            "name": "outcome",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9_]{1,62}$",
+              "description": "The dynasty (lineage) name, e.g. `dy_hook_writer`."
+            },
+            "required": true,
+            "description": "The dynasty (lineage) name, e.g. `dy_hook_writer`.",
+            "name": "dynasty",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Versions (pass-through from workflow-service)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScriptResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404UnknownScriptOrDynastyForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamFailureForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1ScriptsDynastyByOutcomeByDynasty"
       }
     }
   },
