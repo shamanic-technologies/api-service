@@ -152,6 +152,8 @@ const PLATFORM_OPERATIONS = [
   "get /v1/runs/stats/outcome-coverage",
   "get /v1/runs/outcome-costs/ledger-check",
   "get /v1/runs/outcome-costs/reconciliation",
+  "get /v1/runs/brands/{brandId}/ledger",
+  "get /v1/runs/brands/{brandId}/ledger/runs",
   "get /v1/costs/provider-payment-sources",
   "get /v1/costs/email-send-price",
   "get /v1/costs/subscription-costs",

@@ -9362,6 +9362,57 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/runs/brands/{brandId}/ledger",
+  tags: ["Runs"],
+  summary: "The books of one brand, reconciled to the cent (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email). " +
+    "Byte passthrough to runs-service GET /internal/brands/{brandId}/ledger: standard cost charged - reuse gain + spend of runs producing none + abnormal loss = the runs spend, per basis, over a range and per UTC day, plus what the brand's runs produced per outcome. Query string forwarded verbatim; status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    params: z.object({ brandId: z.string() }),
+    query: z.object({
+      since: z.string().optional().openapi({ description: "YYYY-MM-DD, default since inception (runs-service validates it)" }),
+      until: z.string().optional().openapi({ description: "YYYY-MM-DD inclusive, default today (runs-service validates it)" }),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandLedgerResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/runs/brands/{brandId}/ledger/runs",
+  tags: ["Runs"],
+  summary: "One brand's production orders, newest first (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email). " +
+    "Byte passthrough to runs-service GET /internal/brands/{brandId}/ledger/runs: each run of the brand with its own cost, the outcomes it declared produced and consumed, and its support mark; a page reads at most 24 hours before `before`, follow `nextBefore` + `nextBeforeId`. Query string forwarded verbatim.",
+  security: platformAuth,
+  request: {
+    params: z.object({ brandId: z.string() }),
+    query: z.object({
+      before: z.string().optional(),
+      beforeId: z.string().optional(),
+      limit: z.string().optional(),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandLedgerRunsResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/costs/provider-payment-sources",
   tags: ["Costs"],
   summary: "Which of our payment accounts pays each provider (staff only)",
