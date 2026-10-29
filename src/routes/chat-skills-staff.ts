@@ -85,4 +85,13 @@ router.get("/v1/chat/staff-requests", authenticatePlatform, requireStaff, (req: 
   pipe(req, res, `/internal/staff-requests${rawQueryString(req.originalUrl)}`, "Failed to list Copilot staff requests"),
 );
 
+/**
+ * GET /v1/chat/ops/channel-replies/daily → chat-service GET /internal/copilot/channel-replies/daily
+ * (`days` forwarded verbatim; chat-service owns the default 30 and bounds 1..90). Per UTC day, how many
+ * of Sophie's (the Copilot on WhatsApp) replies were delivered vs not: dashboard v2 Monitoring chart.
+ */
+router.get("/v1/chat/ops/channel-replies/daily", authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) =>
+  pipe(req, res, `/internal/copilot/channel-replies/daily${rawQueryString(req.originalUrl)}`, "Failed to read Copilot channel reply delivery"),
+);
+
 export default router;

@@ -7661,6 +7661,13 @@
           "nullable": true
         }
       },
+      "CopilotChannelRepliesDailyResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "BrandLinkedinPostsResponse": {
         "type": "object",
         "properties": {},
@@ -14792,6 +14799,16 @@
       },
       "ErrorResponse404UnknownSkillOrVersionForwardedVerbatim": {
         "description": "Unknown skill or version (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400DownstreamRejectedDaysForwardedVerbatim": {
+        "description": "Downstream rejected `days` (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {

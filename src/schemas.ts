@@ -10834,6 +10834,31 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/chat/ops/channel-replies/daily",
+  tags: ["Chat"],
+  summary: "Per UTC day, the Copilot's channel replies delivered vs not delivered (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. Powers the Sophie (Copilot on WhatsApp) delivery chart of dashboard v2 Monitoring. " +
+    "Byte passthrough to chat-service GET /internal/copilot/channel-replies/daily: `{ days: [{ day, received, delivered, notDelivered }] }`. Query string forwarded verbatim (the parameters below are the ones documented today, not a whitelist); a bad `days` answers chat-service's own 400. Status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z
+      .object({
+        days: z.string().optional().openapi({ description: "Series window in days; chat-service owns the default (30) and bounds (1..90)" }),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CopilotChannelRepliesDailyResponse") } } },
+    400: { description: "Downstream rejected `days` (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/social/brands/{brandId}/linkedin-posts",
   tags: ["Social"],
   summary: "A brand's own LinkedIn company page posts, LinkedIn-card shaped (staff only)",
