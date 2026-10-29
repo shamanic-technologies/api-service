@@ -6610,6 +6610,20 @@
           "nullable": true
         }
       },
+      "BrandLedgerResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "BrandLedgerRunsResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "ProviderPaymentSourcesResponse": {
         "type": "object",
         "properties": {},
