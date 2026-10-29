@@ -8047,6 +8047,13 @@
           "nullable": true
         }
       },
+      "CampaignOpsUnsentAnswersResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "ScriptsOpsMonitoringResponse": {
         "type": "object",
         "properties": {},

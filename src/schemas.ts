@@ -12109,6 +12109,33 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/campaigns/ops/unsent-answers",
+  tags: ["Campaign Ops"],
+  summary: "Get the answers owed to a person who acted that never left, now and per day (staff only)",
+  description:
+    "Powers the unsent answers section of dashboard v2 Monitoring: per occurrence where a person acted, whether "
+    + "the answer we owed them was refused by the sender or given up. Status ok|red, the unsent list with refusal "
+    + "codes, and a daily series (answered / answeredByTeam / replaying / refused / failed). "
+    + "Staff-only (platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to campaign-service GET /internal/ops/unsent-answers. The query string is "
+    + "forwarded verbatim; a bad `days` answers campaign-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Series window in days; campaign-service owns the default and bounds"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Unsent answers — pass-through from campaign-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CampaignOpsUnsentAnswersResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/scripts/ops/monitoring",
   tags: ["Scripts Ops"],
   summary: "Get the daily series of every outcome an Engines script makes, script path vs service path (staff only)",
