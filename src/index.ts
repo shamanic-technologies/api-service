@@ -39,6 +39,7 @@ import conversationsRoutes from "./routes/conversations.js";
 import activityRoutes from "./routes/activity.js";
 import workflowsRoutes from "./routes/workflows.js";
 import scriptsRoutes from "./routes/scripts.js";
+import scriptsOpsRoutes from "./routes/scripts-ops.js";
 import promptsRoutes from "./routes/prompts.js";
 import chatRoutes from "./routes/chat.js";
 import chatSkillsStaffRoutes from "./routes/chat-skills-staff.js";
@@ -317,6 +318,7 @@ app.use("/v1", meRoutes);
 app.use("/v1", keysRoutes);
 app.use("/v1", campaignOpsRoutes); // staff /campaigns/ops/* — before campaignsRoutes so :id never matches "ops"
 app.use("/v1", campaignsRoutes);
+app.use("/v1", scriptsOpsRoutes); // staff /scripts/ops/* — before scriptsRoutes so no /scripts/... handler sees "ops"
 app.use("/v1", searchRoutes);
 app.use("/v1", qualifyRoutes);
 // Mount BEFORE brandRoutes: /brands/:brandId/pause forwards to campaign-service,
