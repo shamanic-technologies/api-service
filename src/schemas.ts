@@ -12084,6 +12084,32 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/scripts/ops/monitoring",
+  tags: ["Scripts Ops"],
+  summary: "Get the daily series of every outcome an Engines script makes, script path vs service path (staff only)",
+  description:
+    "Powers the Engines scripts section of dashboard v2 Monitoring: the stored daily series of every outcome a "
+    + "stored script makes (script path vs service path) plus the roll-back guard block. Staff-only (platform API "
+    + "key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to workflow-service GET /internal/scripts/monitoring. The query string is "
+    + "forwarded verbatim; a bad `days` answers workflow-service's own 400. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Series window in days; workflow-service owns the default and bounds"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Scripts monitoring — pass-through from workflow-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("ScriptsOpsMonitoringResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/instantly/ops/sender-health",
   tags: ["Instantly"],
   summary: "Get the mailboxes kept out of prospect mail per day, and why (staff only)",
