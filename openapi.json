@@ -8040,6 +8040,13 @@
           "nullable": true
         }
       },
+      "ScriptsOpsMonitoringResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "InstantlyOpsSenderHealthResponse": {
         "type": "object",
         "properties": {},
