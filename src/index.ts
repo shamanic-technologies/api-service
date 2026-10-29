@@ -38,6 +38,7 @@ import qualificationRoutes from "./routes/qualification.js";
 import conversationsRoutes from "./routes/conversations.js";
 import activityRoutes from "./routes/activity.js";
 import workflowsRoutes from "./routes/workflows.js";
+import scriptsRoutes from "./routes/scripts.js";
 import promptsRoutes from "./routes/prompts.js";
 import chatRoutes from "./routes/chat.js";
 import chatSkillsStaffRoutes from "./routes/chat-skills-staff.js";
@@ -336,6 +337,7 @@ app.use("/v1", qualificationRoutes);
 app.use("/v1", conversationsRoutes);
 app.use("/v1", activityRoutes);
 app.use("/v1", workflowsRoutes);
+app.use("/v1", scriptsRoutes);
 app.use("/v1", promptsRoutes);
 app.use("/v1", chatRoutes);
 app.use("/v1", agentSignupsRoutes); // public: an AI agent opens an account and gets a key (no auth)

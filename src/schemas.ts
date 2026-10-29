@@ -19245,3 +19245,290 @@ registry.registerPath({
     403: { description: "Not staff", content: errorContent },
   },
 });
+
+// ─── Scripts (FACTORY-P2-ENGINES): code stored as data in workflow-service ──────────────────────────────────────────
+// Byte passthroughs (src/routes/scripts.ts). Request schemas document the producer's body and validate nothing here.
+
+const scriptIntro =
+  "A script is code stored as data in workflow-service: it makes ONE Unit of its outcome (or none) per run, and is " +
+  "versioned in dynasties. Create = a new dynasty at version 1, upgrade = the next version of the same idea, fork = a " +
+  "different idea in a new dynasty, status = retire or restore a whole dynasty. A create or upgrade takes effect on the " +
+  "NEXT run that uses the script: no deploy. ";
+
+const scriptPortRule =
+  "A dynasty carrying recorded production cases is a PORT: every new version must replay 100 % of them before it is " +
+  "stored, else 422 `replay_failed` naming the failing case ids. A behaviour change to a port is therefore a fork " +
+  "(new dynasty), never an upgrade. Dry-run first with POST /v1/scripts/dynasty/{outcome}/{dynasty}/replay. ";
+
+const scriptCodeContract =
+  "TypeScript text whose default export is `run(ctx)`; it may import TYPES only (no runtime imports, no env, no DB, no " +
+  "network). `ctx.get(\"<outcome>\")` (the outcome named by a string LITERAL) returns a material Unit " +
+  "`{id, outcome, subject, ageDays, content}` handed by the workflow; `ctx.vendor.call(name, args)` calls a metered " +
+  "vendor and returns `{ok, data}` (vendors: `llm.complete` with `{message, systemPrompt?, responseSchema?, provider?, " +
+  "model?, temperature?, maxTokens?}`; the LLM is the call's else the tactic `llm: {provider, model}`, never a default); " +
+  "`ctx.storage.get/set/delete/count(table, key)` are its Engine's notes for this org; `ctx.subject`, `ctx.tactics`, " +
+  "`ctx.day`, `ctx.request` are read-only inputs. Return `{content: {...}}` (one Unit made) or `null` (none). " +
+  "Shape: `export default async function run(ctx) { const m = ctx.get(\"<material outcome>\"); " +
+  "if (!m) return null; const r = await ctx.vendor.call(\"llm.complete\", { message: \"...\" }); " +
+  "return r.ok ? { content: { text: r.data } } : null; }`";
+
+const scriptStaffOnly =
+  "Staff only: a script is a cross-org catalogue object; a distribute.you staff member's own key or the platform key " +
+  "with a staff x-email; any other key gets 403 `staff_only`. The staff email is recorded as the author. ";
+
+const scriptGuide =
+  scriptIntro + "The outcome must be a features-service catalogue step key. " + scriptPortRule + "Code contract: " + scriptCodeContract + " ";
+
+const scriptSlugField = (what: string) =>
+  z.string().regex(/^[a-z][a-z0-9_]{1,62}$/).describe(what);
+
+const scriptDynastyParams = z.object({
+  outcome: scriptSlugField("The features-service catalogue step key the script makes one Unit of, e.g. `message_written`."),
+  dynasty: scriptSlugField("The dynasty (lineage) name, e.g. `dy_hook_writer`."),
+});
+
+const scriptCode = z.string().describe(scriptCodeContract);
+const scriptTactics = z
+  .record(z.string(), z.unknown())
+  .optional()
+  .describe("Data the script reads as `ctx.tactics` (e.g. `llm: {provider, model}`, `systemPrompt`).");
+
+const ScriptPassthroughResponse = z.object({}).passthrough().openapi("ScriptResponse");
+const scriptErrors = {
+  401: { description: "Unauthorized", content: errorContent },
+  404: { description: "Unknown script or dynasty (forwarded verbatim)", content: errorContent },
+  502: { description: "Upstream failure (forwarded verbatim)", content: errorContent },
+};
+const scriptStaffErrors = {
+  ...scriptErrors,
+  400: { description: "Invalid code, slug or outcome (forwarded verbatim)", content: errorContent },
+  403: { description: "Not staff (`staff_only`)", content: errorContent },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/scripts",
+  tags: ["Scripts"],
+  summary: "List scripts (no code)",
+  description:
+    scriptGuide +
+    "`status=active` (default) = runnable (version AND dynasty active), `deprecated` = its complement, `all`. Each row " +
+    "carries outcome, dynasty, version, scriptSlug, description, materials, vendors, tactics, status, dynastyStatus, " +
+    "replay proof and `cases` (recorded cases: > 0 = a port). Read the code with GET /v1/scripts/{id}. Transparent proxy " +
+    "to workflow-service GET /scripts; the query string is forwarded verbatim.",
+  security: authed,
+  request: {
+    query: z
+      .object({
+        outcome: z.string().optional().describe("Only this outcome (step key)"),
+        dynasty: z.string().optional().describe("Only this dynasty"),
+        status: z.enum(["active", "deprecated", "all"]).optional().describe("Default `active`"),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "`{ scripts: [...] }` (pass-through from workflow-service)", content: { "application/json": { schema: ScriptPassthroughResponse } } },
+    400: { description: "Invalid status (forwarded verbatim)", content: errorContent },
+    ...scriptErrors,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/scripts/{id}",
+  tags: ["Scripts"],
+  summary: "One script version, with its code",
+  description: scriptGuide + "Transparent proxy to workflow-service GET /scripts/{id}.",
+  security: authed,
+  request: { params: z.object({ id: z.string().uuid().describe("Script version id") }) },
+  responses: {
+    200: { description: "The version with its `code` (pass-through from workflow-service)", content: { "application/json": { schema: ScriptPassthroughResponse } } },
+    400: { description: "Invalid id (forwarded verbatim)", content: errorContent },
+    ...scriptErrors,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/scripts/dynasty/{outcome}/{dynasty}",
+  tags: ["Scripts"],
+  summary: "Every version of one script dynasty (newest first, no code)",
+  description:
+    scriptGuide +
+    "Answers `{ outcome, dynasty, cases, versions }`; `cases` > 0 means the dynasty is a port. " +
+    "Transparent proxy to workflow-service GET /scripts/dynasty/{outcome}/{dynasty}.",
+  security: authed,
+  request: { params: scriptDynastyParams },
+  responses: {
+    200: { description: "Versions (pass-through from workflow-service)", content: { "application/json": { schema: ScriptPassthroughResponse } } },
+    ...scriptErrors,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/scripts",
+  tags: ["Scripts"],
+  summary: "Create a script (a new dynasty, version 1)",
+  description:
+    scriptGuide +
+    "The outcome must be a features-service catalogue step key (the ledger refuses any other). The code is checked in " +
+    "the sandbox (it loads, exports run(ctx), names every material by a literal). 409 when the dynasty exists: use " +
+    "upgrade or fork. " + scriptStaffOnly + "Byte passthrough to workflow-service POST /scripts.",
+  security: platformAuth,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              outcome: scriptSlugField("A features-service catalogue step key, e.g. `message_written`."),
+              dynasty: scriptSlugField("A new dynasty name, e.g. `dy_hook_writer`."),
+              code: scriptCode,
+              description: z.string().describe("What the script does, in plain words (1-2000 chars)."),
+              tactics: scriptTactics,
+            })
+            .passthrough()
+            .openapi("CreateScriptRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    201: { description: "Created: the version with its code (pass-through from workflow-service)", content: { "application/json": { schema: ScriptPassthroughResponse } } },
+    ...scriptStaffErrors,
+    409: { description: "Dynasty exists (forwarded verbatim)", content: errorContent },
+    422: { description: "A port's replay failed: `replay_failed` (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/scripts/dynasty/{outcome}/{dynasty}/upgrade",
+  tags: ["Scripts"],
+  summary: "Upgrade a script: the next version of the same idea",
+  description:
+    scriptGuide +
+    "The active version is deprecated and the new one becomes active in one transaction. " +
+    scriptStaffOnly + "Byte passthrough to workflow-service POST /scripts/dynasty/{outcome}/{dynasty}/upgrade.",
+  security: platformAuth,
+  request: {
+    params: scriptDynastyParams,
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              code: scriptCode,
+              description: z.string().optional().describe("New description; default: the active version's."),
+              tactics: scriptTactics,
+            })
+            .passthrough()
+            .openapi("UpgradeScriptRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    201: { description: "New version (pass-through from workflow-service)", content: { "application/json": { schema: ScriptPassthroughResponse } } },
+    ...scriptStaffErrors,
+    422: { description: "Replay failed: `replay_failed` with case ids (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/scripts/dynasty/{outcome}/{dynasty}/fork",
+  tags: ["Scripts"],
+  summary: "Fork a script: a different idea, a new dynasty (version 1)",
+  description:
+    scriptGuide +
+    "Copies the source dynasty into a new one on the same outcome, with new code or (code absent) the source's active " +
+    "code under different tactics. The way to change a port's behaviour. " + scriptStaffOnly +
+    "Byte passthrough to workflow-service POST /scripts/dynasty/{outcome}/{dynasty}/fork.",
+  security: platformAuth,
+  request: {
+    params: scriptDynastyParams,
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              dynasty: scriptSlugField("The new dynasty's name."),
+              description: z.string().describe("What the fork does differently (1-2000 chars)."),
+              code: scriptCode.optional().describe("Absent: the source's active code. " + scriptCodeContract),
+              tactics: scriptTactics,
+            })
+            .passthrough()
+            .openapi("ForkScriptRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    201: { description: "New dynasty (pass-through from workflow-service)", content: { "application/json": { schema: ScriptPassthroughResponse } } },
+    ...scriptStaffErrors,
+    409: { description: "Dynasty name taken (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/scripts/dynasty/{outcome}/{dynasty}/status",
+  tags: ["Scripts"],
+  summary: "Retire or restore a whole script dynasty",
+  description:
+    scriptGuide + "`deprecated` retires the dynasty (no version runs), `active` restores it. A reason is required. " + scriptStaffOnly +
+    "Byte passthrough to workflow-service PUT /scripts/dynasty/{outcome}/{dynasty}/status.",
+  security: platformAuth,
+  request: {
+    params: scriptDynastyParams,
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              status: z.enum(["active", "deprecated"]).describe("`deprecated` = retire, `active` = restore"),
+              reason: z.string().describe("Why (1-500 chars)."),
+            })
+            .passthrough()
+            .openapi("ScriptDynastyStatusRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "`{ versions }` after the change (pass-through from workflow-service)", content: { "application/json": { schema: ScriptPassthroughResponse } } },
+    ...scriptStaffErrors,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/scripts/dynasty/{outcome}/{dynasty}/replay",
+  tags: ["Scripts"],
+  summary: "Replay code on a dynasty's recorded cases (a dry proof, nothing written)",
+  description:
+    scriptGuide + "Runs the given code (absent: the dynasty's active code) on every recorded production case of the dynasty and " +
+    "answers `{ cases, matches, failures }` (at most 5 failures, 3 differences each, never a case body). Use it before " +
+    "an upgrade: a port stores a version only at matches == cases. 404 when the dynasty carries no case. " +
+    scriptStaffOnly + "Byte passthrough to workflow-service POST /scripts/dynasty/{outcome}/{dynasty}/replay.",
+  security: platformAuth,
+  request: {
+    params: scriptDynastyParams,
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({ code: scriptCode.optional().describe("Absent: the dynasty's active code. " + scriptCodeContract) })
+            .passthrough()
+            .openapi("ReplayScriptRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "The proof (pass-through from workflow-service)", content: { "application/json": { schema: ScriptPassthroughResponse } } },
+    ...scriptStaffErrors,
+  },
+});
