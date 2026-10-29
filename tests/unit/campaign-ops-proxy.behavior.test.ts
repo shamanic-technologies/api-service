@@ -11,7 +11,7 @@ const { CAMPAIGN_BASE } = vi.hoisted(() => {
 });
 
 /**
- * /v1/campaigns/ops/{stuck-occurrences,trigger-health,plan-following} — staff byte passthrough to campaign-service
+ * /v1/campaigns/ops/{stuck-occurrences,trigger-health,plan-following,unsent-answers} — staff byte passthrough to campaign-service
  * (REACTIVE-THROUGHPUT-1028, TRIGGER-SILENCE-NO-EMAIL-1028, FACTORY-P1-PLAN-FOLLOWING-RELAY). Real gate, no auth mock.
  */
 import campaignOpsRouter from "../../src/routes/campaign-ops.js";
@@ -30,6 +30,7 @@ for (const [suffix, sample] of [
   ["stuck-occurrences", '{"status":"red", "stuck":2,"queued":5,"stuckByReason":[{"reason":"x","count":2}],"byDay":[],"someNewField":true}'],
   ["trigger-health", '{"status":"red", "triggers":[{"triggerId":"t","verdict":"red","reason":"never_fired","sentence":"s","byDay":[]}],"someNewField":true}'],
   ["plan-following", '{"status":"red", "staleReason":null,"following":3,"red":[{"campaignId":"c","reason":"plan_outside_caps"}],"byDay":[],"someNewField":true}'],
+  ["unsent-answers", '{"status":"red", "unsent":[{"campaignId":"c","refusalCode":"email_not_verified"}],"byDay":[],"someNewField":true}'],
 ] as const) {
 const PATH = `/v1/campaigns/ops/${suffix}`;
 
