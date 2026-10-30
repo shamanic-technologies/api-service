@@ -94,4 +94,13 @@ router.get("/v1/chat/ops/channel-replies/daily", authenticatePlatform, requireSt
   pipe(req, res, `/internal/copilot/channel-replies/daily${rawQueryString(req.originalUrl)}`, "Failed to read Copilot channel reply delivery"),
 );
 
+/**
+ * GET /v1/chat/ops/vendor-credit → chat-service GET /internal/vendor-credit (`days` forwarded verbatim;
+ * chat-service owns the default 30 and bounds 1..90). Per AI vendor: out of credit or not (red on dashboard v2
+ * Monitoring until a call on it succeeds), the fallback model its calls go to, and a daily series (VENDOR-CREDIT-1030).
+ */
+router.get("/v1/chat/ops/vendor-credit", authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) =>
+  pipe(req, res, `/internal/vendor-credit${rawQueryString(req.originalUrl)}`, "Failed to read AI vendor credit"),
+);
+
 export default router;
