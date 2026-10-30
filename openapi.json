@@ -7675,6 +7675,13 @@
           "nullable": true
         }
       },
+      "ChatVendorCreditResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "BrandLinkedinPostsResponse": {
         "type": "object",
         "properties": {},

@@ -20,6 +20,7 @@ const { CHAT_BASE } = vi.hoisted(() => {
  *   GET /v1/chat/skills/:slug/versions/:version      → GET /internal/skills/:slug/versions/:version
  *   GET /v1/chat/staff-requests                      → GET /internal/staff-requests
  *   GET /v1/chat/ops/channel-replies/daily           → GET /internal/copilot/channel-replies/daily
+ *   GET /v1/chat/ops/vendor-credit                   → GET /internal/vendor-credit
  *
  * No auth mock: the real authenticatePlatform + requireStaff run, and every refusal
  * asserts ZERO outbound calls. Bodies are fixtures — chat-service owns the shape.
@@ -57,6 +58,7 @@ const ROUTES: Array<{ method: "get" | "put"; path: string; downstream: string; b
   { method: "get", path: "/v1/chat/skills/campaigns/versions/3", downstream: `${CHAT_BASE}/internal/skills/campaigns/versions/3` },
   { method: "get", path: "/v1/chat/staff-requests", downstream: `${CHAT_BASE}/internal/staff-requests` },
   { method: "get", path: "/v1/chat/ops/channel-replies/daily", downstream: `${CHAT_BASE}/internal/copilot/channel-replies/daily` },
+  { method: "get", path: "/v1/chat/ops/vendor-credit", downstream: `${CHAT_BASE}/internal/vendor-credit` },
 ];
 
 for (const r of ROUTES) {
@@ -171,6 +173,28 @@ describe("staff — GET /v1/chat/ops/channel-replies/daily", () => {
     upstream(200, BODY);
     const res = await request(buildApp())
       .get("/v1/chat/ops/channel-replies/daily?days=14")
+      .set("X-API-Key", "admin-test-key")
+      .set("x-email", "customer@example.com");
+    expect(res.status).toBe(403);
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("staff — GET /v1/chat/ops/vendor-credit", () => {
+  const BODY = '{"vendors":[{"provider":"deepseek","outOfCredit":true}],"days":[]}';
+
+  it("forwards ?days=30 verbatim and returns chat-service's body byte-for-byte", async () => {
+    upstream(200, BODY);
+    const res = await request(buildApp()).get("/v1/chat/ops/vendor-credit?days=30").set(STAFF);
+    expect(res.status).toBe(200);
+    expect(res.text).toBe(BODY);
+    expect(calls[0].url).toBe(`${CHAT_BASE}/internal/vendor-credit?days=30`);
+  });
+
+  it("refuses a non-staff caller (403) and calls nothing", async () => {
+    upstream(200, BODY);
+    const res = await request(buildApp())
+      .get("/v1/chat/ops/vendor-credit")
       .set("X-API-Key", "admin-test-key")
       .set("x-email", "customer@example.com");
     expect(res.status).toBe(403);
