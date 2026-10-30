@@ -11182,6 +11182,20 @@
           "nullable": true
         }
       },
+      "XAccountsPassthroughResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "XAccountsPassthroughRequest": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "CrmPassthroughResponse": {
         "type": "object",
         "properties": {},
@@ -15810,6 +15824,56 @@
       },
       "ErrorResponse502ThreadsRefusedTheCallThreadsOwnCodeAndMessageOrOurThreadsApp": {
         "description": "Threads refused the call (Threads' own code and message) or our Threads app keys are not configured (names the key), forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400BadRequestTypeValidationOrXRefusedTheLoginTypeXLoginInvalidF": {
+        "description": "Bad request (`type: \"validation\"`) or X refused the login (`type: \"x_login_invalid\"`), forwarded verbatim from social-service",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse402InsufficientBalanceToConnectAnAccountForwardedVerbatimFromSo": {
+        "description": "Insufficient balance to connect an account, forwarded verbatim from social-service",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404XAccountNotFoundInThisOrgForwardedVerbatim": {
+        "description": "X account not found in this org, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409TypeNeedsReconnectXNoLongerAcceptsThisLoginWithAccountIdAmbi": {
+        "description": "`type: \"needs_reconnect\"` (X no longer accepts this login, with `accountId`), `ambiguous` or `already_held`, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502TypeXNotConfiguredWithDetailsProviderTheMissingXAppKeyOrXIts": {
+        "description": "`type: \"x_not_configured\"` with `details.provider` (the missing X app key), or X itself failed (`type: \"upstream\"`), forwarded verbatim",
         "content": {
           "application/json": {
             "schema": {
@@ -52370,6 +52434,427 @@
           }
         },
         "operationId": "postV1OrgsThreadsAccountsByIdPosts"
+      }
+    },
+    "/v1/orgs/x/auth/start": {
+      "post": {
+        "tags": [
+          "X"
+        ],
+        "summary": "Start connecting an X account to a brand (X login)",
+        "description": "Proxy to social-service POST /orgs/x/auth/start. Body `{ brandId, accountType, redirectUri }` forwarded untransformed; returns `{ authorizationUrl, state, expiresAt }`: send the user to `authorizationUrl`. X redirects to `redirectUri` with `code` and `state`; hand them to POST /v1/orgs/x/auth/callback.\n\nRequest body: documented from social-service POST /orgs/x/auth/start, which owns and validates it; the gateway forwards it unchanged.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "brandId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Brand the account is connected to"
+                  },
+                  "accountType": {
+                    "type": "string",
+                    "enum": [
+                      "pro_human",
+                      "personal_human",
+                      "pro_ai"
+                    ],
+                    "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
+                  },
+                  "redirectUri": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Page X sends the user back to with `code` and `state`. Must be registered, byte for byte, as a callback URL of the X app named by X_OAUTH_CONNECT_APP. Production: https://dashboard.distribute.you/connections/x/callback"
+                  }
+                },
+                "required": [
+                  "brandId",
+                  "accountType",
+                  "redirectUri"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "As returned by social-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/XAccountsPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestTypeValidationOrXRefusedTheLoginTypeXLoginInvalidF"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/ErrorResponse402InsufficientBalanceToConnectAnAccountForwardedVerbatimFromSo"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404XAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409TypeNeedsReconnectXNoLongerAcceptsThisLoginWithAccountIdAmbi"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502TypeXNotConfiguredWithDetailsProviderTheMissingXAppKeyOrXIts"
+          }
+        },
+        "operationId": "postV1OrgsXAuthStart",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ]
+      }
+    },
+    "/v1/orgs/x/auth/callback": {
+      "post": {
+        "tags": [
+          "X"
+        ],
+        "summary": "Finish connecting an X account (exchange code, store the account)",
+        "description": "Proxy to social-service POST /orgs/x/auth/callback. Body `{ code, state }` from X's redirect; returns `{ account, created }` (`created: false` = already connected, refreshed).\n\nRequest body: documented from social-service POST /orgs/x/auth/callback, which owns and validates it; the gateway forwards it unchanged.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "`code` from X's redirect"
+                  },
+                  "state": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "`state` from X's redirect"
+                  }
+                },
+                "required": [
+                  "code",
+                  "state"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "As returned by social-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/XAccountsPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestTypeValidationOrXRefusedTheLoginTypeXLoginInvalidF"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/ErrorResponse402InsufficientBalanceToConnectAnAccountForwardedVerbatimFromSo"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404XAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409TypeNeedsReconnectXNoLongerAcceptsThisLoginWithAccountIdAmbi"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502TypeXNotConfiguredWithDetailsProviderTheMissingXAppKeyOrXIts"
+          }
+        },
+        "operationId": "postV1OrgsXAuthCallback",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ]
+      }
+    },
+    "/v1/orgs/x/accounts": {
+      "get": {
+        "tags": [
+          "X"
+        ],
+        "summary": "List the X accounts connected to the org (optionally one brand)",
+        "description": "Proxy to social-service GET /orgs/x/accounts. Response `{ accounts: [...] }` owned by social-service; each account carries its `accountType` and its health (`needs_reconnect` = a human must connect it again).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Only this brand's accounts"
+            },
+            "required": false,
+            "description": "Only this brand's accounts",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "As returned by social-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/XAccountsPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestTypeValidationOrXRefusedTheLoginTypeXLoginInvalidF"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/ErrorResponse402InsufficientBalanceToConnectAnAccountForwardedVerbatimFromSo"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404XAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409TypeNeedsReconnectXNoLongerAcceptsThisLoginWithAccountIdAmbi"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502TypeXNotConfiguredWithDetailsProviderTheMissingXAppKeyOrXIts"
+          }
+        },
+        "operationId": "getV1OrgsXAccounts"
+      }
+    },
+    "/v1/orgs/x/accounts/{id}": {
+      "patch": {
+        "tags": [
+          "X"
+        ],
+        "summary": "Set an X account's type",
+        "description": "Proxy to social-service PATCH /orgs/x/accounts/{id}. Body `{ accountType }` forwarded untransformed; returns `{ account }`.\n\nRequest body: documented from social-service PATCH /orgs/x/accounts/{id}, which owns and validates it; the gateway forwards it unchanged.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "X account id (uuid) from GET /v1/orgs/x/accounts"
+            },
+            "required": true,
+            "description": "X account id (uuid) from GET /v1/orgs/x/accounts",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "accountType": {
+                    "type": "string",
+                    "enum": [
+                      "pro_human",
+                      "personal_human",
+                      "pro_ai"
+                    ],
+                    "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
+                  }
+                },
+                "required": [
+                  "accountType"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "As returned by social-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/XAccountsPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestTypeValidationOrXRefusedTheLoginTypeXLoginInvalidF"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/ErrorResponse402InsufficientBalanceToConnectAnAccountForwardedVerbatimFromSo"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404XAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409TypeNeedsReconnectXNoLongerAcceptsThisLoginWithAccountIdAmbi"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502TypeXNotConfiguredWithDetailsProviderTheMissingXAppKeyOrXIts"
+          }
+        },
+        "operationId": "patchV1OrgsXAccountsById"
+      },
+      "delete": {
+        "tags": [
+          "X"
+        ],
+        "summary": "Disconnect an X account",
+        "description": "Proxy to social-service DELETE /orgs/x/accounts/{id}.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "X account id (uuid) from GET /v1/orgs/x/accounts"
+            },
+            "required": true,
+            "description": "X account id (uuid) from GET /v1/orgs/x/accounts",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "As returned by social-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/XAccountsPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestTypeValidationOrXRefusedTheLoginTypeXLoginInvalidF"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/ErrorResponse402InsufficientBalanceToConnectAnAccountForwardedVerbatimFromSo"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404XAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409TypeNeedsReconnectXNoLongerAcceptsThisLoginWithAccountIdAmbi"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502TypeXNotConfiguredWithDetailsProviderTheMissingXAppKeyOrXIts"
+          }
+        },
+        "operationId": "deleteV1OrgsXAccountsById"
       }
     },
     "/v1/orgs/contacts/upload": {
