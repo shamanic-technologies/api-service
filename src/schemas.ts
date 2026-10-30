@@ -1095,6 +1095,32 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/audit/box-checks",
+  tags: ["Features"],
+  summary: "Are the production box watchdogs green? Verdict + daily and recent series per check (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org context. " +
+    "Byte passthrough to features-service GET /internal/box-checks: the served verdict and the daily + recent series of each production " +
+    "box watchdog (deploy pipeline, service health, workflow queue, Jev chain, own-org balance). " +
+    "Query string forwarded verbatim; status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().openapi({ description: "Window in UTC days (features-service validates it)" }),
+      expect: z.string().optional().openapi({ description: "Comma-separated check names expected to report (features-service validates it)" }),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffBoxChecksResponse") } } },
+    400: { description: "Invalid query (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/features/audit/factory-shadow/monitoring",
   tags: ["Features"],
   summary: "GTM Factory shadow Monitoring: per client org and day, funnel campaigns whose shadow plan or Jev pick differs from what runs (staff only)",
