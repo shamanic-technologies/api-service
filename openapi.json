@@ -505,6 +505,13 @@
           "nullable": true
         }
       },
+      "StaffBoxChecksResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "StaffFactoryShadowMonitoringResponse": {
         "type": "object",
         "properties": {},
