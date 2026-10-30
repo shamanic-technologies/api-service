@@ -238,6 +238,28 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       ]
     }
   },
+  "PATCH /v1/orgs/x/accounts/{id}": {
+    "service": "social-service",
+    "method": "PATCH",
+    "path": "/orgs/x/accounts/{id}",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "accountType": {
+          "type": "string",
+          "enum": [
+            "pro_human",
+            "personal_human",
+            "pro_ai"
+          ],
+          "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
+        }
+      },
+      "required": [
+        "accountType"
+      ]
+    }
+  },
   "PATCH /v1/sales-funnel-campaigns/{id}": {
     "service": "campaign-service",
     "method": "PATCH",
@@ -2717,6 +2739,64 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "type": "string",
           "format": "uri",
           "description": "Page Threads sends the user back to with `code` and `state`. Must be registered, byte for byte, as a redirect callback URL of our Threads app."
+        }
+      },
+      "required": [
+        "brandId",
+        "accountType",
+        "redirectUri"
+      ]
+    }
+  },
+  "POST /v1/orgs/x/auth/callback": {
+    "service": "social-service",
+    "method": "POST",
+    "path": "/orgs/x/auth/callback",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "description": "`code` from X's redirect"
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1,
+          "description": "`state` from X's redirect"
+        }
+      },
+      "required": [
+        "code",
+        "state"
+      ]
+    }
+  },
+  "POST /v1/orgs/x/auth/start": {
+    "service": "social-service",
+    "method": "POST",
+    "path": "/orgs/x/auth/start",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "brandId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Brand the account is connected to"
+        },
+        "accountType": {
+          "type": "string",
+          "enum": [
+            "pro_human",
+            "personal_human",
+            "pro_ai"
+          ],
+          "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
+        },
+        "redirectUri": {
+          "type": "string",
+          "format": "uri",
+          "description": "Page X sends the user back to with `code` and `state`. Must be registered, byte for byte, as a callback URL of the X app named by X_OAUTH_CONNECT_APP. Production: https://dashboard.distribute.you/connections/x/callback"
         }
       },
       "required": [

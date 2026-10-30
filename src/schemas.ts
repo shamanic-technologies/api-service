@@ -16981,6 +16981,107 @@ for (const route of threadsRoutes) {
   });
 }
 
+// ─── X accounts (social-service /orgs/x/*) ──────────────────────────────────
+// Transparent passthrough, same contract as the Threads block above: bodies are
+// owned by social-service and documented from its openapi via
+// DOWNSTREAM_BODY_SOURCES; query strings are byte-copied.
+const XAccountsPassthroughResponse = z.object({}).passthrough().openapi("XAccountsPassthroughResponse");
+const XAccountsPassthroughRequest = z.object({}).passthrough().openapi("XAccountsPassthroughRequest");
+const xAccountsErrorResponses = {
+  400: {
+    description: "Bad request (`type: \"validation\"`) or X refused the login (`type: \"x_login_invalid\"`), forwarded verbatim from social-service",
+    content: errorContent,
+  },
+  401: { description: "Unauthorized", content: errorContent },
+  402: { description: "Insufficient balance to connect an account, forwarded verbatim from social-service", content: errorContent },
+  404: { description: "X account not found in this org, forwarded verbatim", content: errorContent },
+  409: {
+    description: "`type: \"needs_reconnect\"` (X no longer accepts this login, with `accountId`), `ambiguous` or `already_held`, forwarded verbatim",
+    content: errorContent,
+  },
+  500: { description: "Internal error", content: errorContent },
+  502: {
+    description: "`type: \"x_not_configured\"` with `details.provider` (the missing X app key), or X itself failed (`type: \"upstream\"`), forwarded verbatim",
+    content: errorContent,
+  },
+};
+const xAccountId = z.object({ id: z.string().openapi({ description: "X account id (uuid) from GET /v1/orgs/x/accounts" }) });
+
+const xAccountsRoutes: Array<{
+  method: "get" | "post" | "patch" | "delete";
+  path: string;
+  summary: string;
+  description: string;
+  body?: boolean;
+  params?: z.ZodObject;
+  query?: z.ZodObject;
+}> = [
+  {
+    method: "post",
+    path: "/v1/orgs/x/auth/start",
+    summary: "Start connecting an X account to a brand (X login)",
+    description:
+      "Proxy to social-service POST /orgs/x/auth/start. Body `{ brandId, accountType, redirectUri }` forwarded untransformed; returns `{ authorizationUrl, state, expiresAt }`: send the user to `authorizationUrl`. X redirects to `redirectUri` with `code` and `state`; hand them to POST /v1/orgs/x/auth/callback.",
+    body: true,
+  },
+  {
+    method: "post",
+    path: "/v1/orgs/x/auth/callback",
+    summary: "Finish connecting an X account (exchange code, store the account)",
+    description:
+      "Proxy to social-service POST /orgs/x/auth/callback. Body `{ code, state }` from X's redirect; returns `{ account, created }` (`created: false` = already connected, refreshed).",
+    body: true,
+  },
+  {
+    method: "get",
+    path: "/v1/orgs/x/accounts",
+    summary: "List the X accounts connected to the org (optionally one brand)",
+    description:
+      "Proxy to social-service GET /orgs/x/accounts. Response `{ accounts: [...] }` owned by social-service; each account carries its `accountType` and its health (`needs_reconnect` = a human must connect it again).",
+    query: z.object({ brandId: z.string().optional().openapi({ description: "Only this brand's accounts" }) }).passthrough(),
+  },
+  {
+    method: "patch",
+    path: "/v1/orgs/x/accounts/{id}",
+    summary: "Set an X account's type",
+    description: "Proxy to social-service PATCH /orgs/x/accounts/{id}. Body `{ accountType }` forwarded untransformed; returns `{ account }`.",
+    body: true,
+    params: xAccountId,
+  },
+  {
+    method: "delete",
+    path: "/v1/orgs/x/accounts/{id}",
+    summary: "Disconnect an X account",
+    description: "Proxy to social-service DELETE /orgs/x/accounts/{id}.",
+    params: xAccountId,
+  },
+];
+
+for (const route of xAccountsRoutes) {
+  registry.registerPath({
+    method: route.method,
+    path: route.path,
+    tags: ["X"],
+    summary: route.summary,
+    description: route.description,
+    security: authed,
+    request: {
+      ...(route.params ? { params: route.params } : {}),
+      ...(route.query ? { query: route.query } : {}),
+      ...(route.body
+        ? { body: { content: { "application/json": { schema: XAccountsPassthroughRequest } } } }
+        : {}),
+    },
+    responses: {
+      200: {
+        description: "As returned by social-service",
+        content: { "application/json": { schema: XAccountsPassthroughResponse } },
+      },
+      ...xAccountsErrorResponses,
+    },
+  });
+}
+
 const crmErrorResponses = {
   400: { description: "Bad request, forwarded verbatim from crm-service", content: errorContent },
   401: { description: "Unauthorized", content: errorContent },
