@@ -956,6 +956,27 @@ router.get("/features/audit/box-health", authenticatePlatform, requireStaff, asy
 });
 
 /**
+ * GET /v1/features/audit/box-checks → features-service GET /internal/box-checks — STAFF ONLY.
+ * Are the production box watchdogs green? The served verdict + daily and recent series of each box check (deploy pipeline,
+ * service health, workflow queue, Jev chain, own-org balance; BOX-WATCHDOGS-1030). Fleet-wide, no org context:
+ * authenticatePlatform + requireStaff like box-health. Byte passthrough (status + body piped); query string (`days`,
+ * `expect`) forwarded verbatim. The INGEST route is NOT exposed: the box posts in-container. Declared before `/features/:slug/*`.
+ */
+router.get("/features/audit/box-checks", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.features,
+      `/internal/box-checks${rawQueryString(req.originalUrl)}`,
+      { headers: staffHeaders(req), expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Staff box checks read error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to read box checks");
+  }
+});
+
+/**
  * GTM Factory step 1, SHADOW ONLY (FACTORY-P1-BRIEF-JUDGE-SHADOW-PLAN) — STAFF ONLY, fleet-wide, no org context:
  *   GET /v1/features/audit/factory-shadow/monitoring → features-service GET /internal/factory-shadow/monitoring
  *     per client org and day, the funnel campaigns whose shadow plan or Jev pick differs from what runs (dashboard v2 Monitoring)
