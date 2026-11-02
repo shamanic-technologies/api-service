@@ -236,6 +236,93 @@ describe("/v1/orgs/people* → crm-service", () => {
     expect(calls).toHaveLength(0);
   });
 
+  const HANDLE = "5a6b7c8d-5555-4e6f-9a0b-000000000005";
+
+  it("POST /orgs/people/handles forwards the body verbatim + identity, passes 201 and body through", async () => {
+    reply = { status: 201, body: { handle: { handleId: HANDLE, phone: "+33612345678", preferred: true }, duplicate: false } };
+    const body = {
+      brandId: BRAND,
+      personKey: "phone:+33600000000",
+      phone: "+33612345678",
+      preferred: true,
+      channel: "whatsapp",
+      evidence: { source: "matrix", roomId: "!r:hs", eventId: "$e", text: "reach me on +33612345678" },
+    };
+    const res = await request(buildApp()).post("/v1/orgs/people/handles").send(body);
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual(reply.body);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/people/handles`);
+    expect(calls[0].options.method).toBe("POST");
+    expect(JSON.parse(calls[0].options.body)).toEqual(body);
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("POST /orgs/people/handles passes a 200 duplicate through unchanged", async () => {
+    reply = { status: 200, body: { handle: { handleId: HANDLE }, duplicate: true } };
+    const res = await request(buildApp()).post("/v1/orgs/people/handles").send({ brandId: BRAND, personId: P1, email: "a@b.co" });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(reply.body);
+  });
+
+  for (const [status, reason] of [[400, "validation"], [404, "person_not_found"], [422, "invalid_handle"]] as const) {
+    it(`POST /orgs/people/handles returns crm-service's ${status} ${reason} verbatim`, async () => {
+      reply = { status, body: { type: "refused", reason, error: `refused: ${reason}` } };
+      const res = await request(buildApp()).post("/v1/orgs/people/handles").send({ brandId: BRAND, personId: P1, phone: "x" });
+      expect(res.status).toBe(status);
+      expect(res.body).toEqual({ type: "refused", reason, error: `refused: ${reason}` });
+    });
+  }
+
+  it("GET /orgs/people/handles forwards the query string byte-for-byte + identity", async () => {
+    reply = { status: 200, body: { brandId: BRAND, handles: [] } };
+    const res = await request(buildApp()).get(`/v1/orgs/people/handles?brandId=${BRAND}&personId=${P1}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ brandId: BRAND, handles: [] });
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/people/handles?brandId=${BRAND}&personId=${P1}`);
+    expect(calls[0].options.method).toBe("GET");
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("GET /orgs/people/handles returns crm-service's 404 person_not_found verbatim", async () => {
+    reply = { status: 404, body: { type: "refused", reason: "person_not_found", error: "person not found" } };
+    const res = await request(buildApp()).get(`/v1/orgs/people/handles?brandId=${BRAND}&personId=${P1}`);
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ type: "refused", reason: "person_not_found", error: "person not found" });
+  });
+
+  it("POST /orgs/people/handles/:handleId/undo reaches its own downstream path, body verbatim", async () => {
+    reply = { status: 200, body: { handle: { handleId: HANDLE, active: false } } };
+    const res = await request(buildApp()).post(`/v1/orgs/people/handles/${HANDLE}/undo`).send({ brandId: BRAND });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(reply.body);
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/people/handles/${HANDLE}/undo`);
+    expect(calls[0].options.method).toBe("POST");
+    expect(JSON.parse(calls[0].options.body)).toEqual({ brandId: BRAND });
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("POST /orgs/people/handles/:handleId/undo returns crm-service's 404 handle_not_found verbatim", async () => {
+    reply = { status: 404, body: { type: "refused", reason: "handle_not_found", error: "handle not found" } };
+    const res = await request(buildApp()).post(`/v1/orgs/people/handles/${HANDLE}/undo`).send({ brandId: BRAND });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ type: "refused", reason: "handle_not_found", error: "handle not found" });
+  });
+
+  it("refuses the handle routes with no user identity, before reaching crm-service", async () => {
+    const app = buildApp();
+    const create = await request(app).post("/v1/orgs/people/handles").set("x-test-no-user", "1").send({ brandId: BRAND, personId: P1, phone: "+1" });
+    const list = await request(app).get(`/v1/orgs/people/handles?brandId=${BRAND}&personId=${P1}`).set("x-test-no-user", "1");
+    const undo = await request(app).post(`/v1/orgs/people/handles/${HANDLE}/undo`).set("x-test-no-user", "1").send({ brandId: BRAND });
+    for (const res of [create, list, undo]) {
+      expect(res.status).toBe(401);
+      expect(res.body.error).toBe("User identity required");
+    }
+    expect(calls).toHaveLength(0);
+  });
+
   const CORRECTION = "9e1f2a3b-4444-4c5d-8e6f-000000000004";
 
   it("POST /orgs/people/corrections forwards the body verbatim + identity, passes 201 and body through", async () => {

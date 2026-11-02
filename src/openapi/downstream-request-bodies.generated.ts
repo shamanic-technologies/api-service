@@ -2548,6 +2548,97 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       ]
     }
   },
+  "POST /v1/orgs/people/handles": {
+    "service": "crm-service",
+    "method": "POST",
+    "path": "/orgs/people/handles",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "brandId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "personId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The person's personId (GET /orgs/people, or item.personId of the Lead event). Exactly one of personId / personKey."
+        },
+        "personKey": {
+          "type": "string",
+          "description": "Any identity key the person holds, like GET /orgs/people/timeline: `phone:+<digits>` (the number they wrote from), `email:<address>`."
+        },
+        "phone": {
+          "type": "string",
+          "description": "International number (+ and country code). Exactly one of phone / email."
+        },
+        "email": {
+          "type": "string"
+        },
+        "preferred": {
+          "type": "boolean",
+          "description": "Default true: reach them there from now on. false = only record that it is theirs."
+        },
+        "channel": {
+          "type": "string",
+          "description": "Where they want to be reached on it (whatsapp, email, telegram ...)."
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "evidence": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "description": "Who read it: assistant, staff, mcp ..."
+            },
+            "channel": {
+              "type": "string"
+            },
+            "roomId": {
+              "type": "string"
+            },
+            "eventId": {
+              "type": "string"
+            },
+            "conversationId": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string",
+              "maxLength": 4000,
+              "description": "The person's own words."
+            }
+          },
+          "required": [
+            "source"
+          ]
+        }
+      },
+      "required": [
+        "brandId"
+      ]
+    }
+  },
+  "POST /v1/orgs/people/handles/{handleId}/undo": {
+    "service": "crm-service",
+    "method": "POST",
+    "path": "/orgs/people/handles/{handleId}/undo",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "brandId": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "brandId"
+      ]
+    }
+  },
   "POST /v1/orgs/people/merges": {
     "service": "crm-service",
     "method": "POST",
