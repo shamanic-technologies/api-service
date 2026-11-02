@@ -10026,6 +10026,20 @@
           "nullable": true
         }
       },
+      "CustomerBrandLedger": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "CustomerBrandLedgerRuns": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "QuoteRequestsListResponse": {
         "type": "object",
         "properties": {
@@ -45895,6 +45909,192 @@
           }
         },
         "operationId": "getV1BrandsByBrandIdSourcingInvestmentCompanies"
+      }
+    },
+    "/v1/brands/{brandId}/ledger": {
+      "get": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "The books of one of your brands, reconciled to the cent",
+        "description": "Scoped to the caller's organization: the brand must belong to it (else 404 brand_not_in_org) and only that organization's data is returned. Proxy to runs-service GET /v1/brands/{brandId}/ledger (standard cost charged - reuse gain + spend of runs producing none + abnormal loss = the runs spend, over the range, per UTC day and per outcome; only your organization's runs, billed gross + net); query string forwarded (the params documented here are today's, not a whitelist), response shape owned by the downstream service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand UUID"
+            },
+            "required": true,
+            "description": "Brand UUID",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "YYYY-MM-DD, default since inception (runs-service validates it)"
+            },
+            "required": false,
+            "description": "YYYY-MM-DD, default since inception (runs-service validates it)",
+            "name": "since",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "YYYY-MM-DD inclusive, default today (runs-service validates it)"
+            },
+            "required": false,
+            "description": "YYYY-MM-DD inclusive, default today (runs-service validates it)",
+            "name": "until",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pass-through from the downstream service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerBrandLedger"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidBrandIdOrQueryForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404BrandNotInTheCallerSOrganization"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamError"
+          }
+        },
+        "operationId": "getV1BrandsByBrandIdLedger"
+      }
+    },
+    "/v1/brands/{brandId}/ledger/runs": {
+      "get": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "The production orders that ran for one of your brands, newest first",
+        "description": "Scoped to the caller's organization: the brand must belong to it (else 404 brand_not_in_org) and only that organization's data is returned. Proxy to runs-service GET /v1/brands/{brandId}/ledger/runs (each run of your organization for the brand with its own billed cost, the outcomes it produced and consumed, and its support mark); query string forwarded (the params documented here are today's, not a whitelist), response shape owned by the downstream service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Brand UUID"
+            },
+            "required": true,
+            "description": "Brand UUID",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Timestamp: read runs started before it (follow `nextBefore`)"
+            },
+            "required": false,
+            "description": "Timestamp: read runs started before it (follow `nextBefore`)",
+            "name": "before",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Run id tie-break (follow `nextBeforeId`)"
+            },
+            "required": false,
+            "description": "Run id tie-break (follow `nextBeforeId`)",
+            "name": "beforeId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Page size (runs-service owns the range and default)"
+            },
+            "required": false,
+            "description": "Page size (runs-service owns the range and default)",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Production-order tab filter (runs-service owns the vocabulary)"
+            },
+            "required": false,
+            "description": "Production-order tab filter (runs-service owns the vocabulary)",
+            "name": "kind",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pass-through from the downstream service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerBrandLedgerRuns"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidBrandIdOrQueryForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404BrandNotInTheCallerSOrganization"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamError"
+          }
+        },
+        "operationId": "getV1BrandsByBrandIdLedgerRuns"
       }
     },
     "/v1/orgs/quote-requests": {

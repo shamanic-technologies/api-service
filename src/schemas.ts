@@ -15401,6 +15401,57 @@ for (const read of [
   });
 }
 
+for (const read of [
+  {
+    path: "ledger",
+    summary: "The books of one of your brands, reconciled to the cent",
+    query: z
+      .object({
+        since: z.string().optional().openapi({ description: "YYYY-MM-DD, default since inception (runs-service validates it)" }),
+        until: z.string().optional().openapi({ description: "YYYY-MM-DD inclusive, default today (runs-service validates it)" }),
+      })
+      .passthrough(),
+    schema: "CustomerBrandLedger",
+    downstream:
+      "runs-service GET /v1/brands/{brandId}/ledger (standard cost charged - reuse gain + spend of runs producing none + abnormal loss = the runs spend, over the range, per UTC day and per outcome; only your organization's runs, billed gross + net)",
+  },
+  {
+    path: "ledger/runs",
+    summary: "The production orders that ran for one of your brands, newest first",
+    query: z
+      .object({
+        before: z.string().optional().openapi({ description: "Timestamp: read runs started before it (follow `nextBefore`)" }),
+        beforeId: z.string().optional().openapi({ description: "Run id tie-break (follow `nextBeforeId`)" }),
+        limit: z.string().optional().openapi({ description: "Page size (runs-service owns the range and default)" }),
+        kind: z.string().optional().openapi({ description: "Production-order tab filter (runs-service owns the vocabulary)" }),
+      })
+      .passthrough(),
+    schema: "CustomerBrandLedgerRuns",
+    downstream:
+      "runs-service GET /v1/brands/{brandId}/ledger/runs (each run of your organization for the brand with its own billed cost, the outcomes it produced and consumed, and its support mark)",
+  },
+]) {
+  registry.registerPath({
+    method: "get",
+    path: `/v1/brands/{brandId}/${read.path}`,
+    tags: ["Brand"],
+    summary: read.summary,
+    description:
+      customerOrgScopeNote +
+      `Proxy to ${read.downstream}; query string forwarded (the params documented here are today's, not a whitelist), ` +
+      "response shape owned by the downstream service.",
+    security: authed,
+    request: { params: audienceSnapshotParams, query: read.query },
+    responses: {
+      200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi(read.schema) } } },
+      400: { description: "Invalid brand id or query (forwarded verbatim)", content: errorContent },
+      401: { description: "Unauthorized", content: errorContent },
+      404: { description: "Brand not in the caller's organization", content: errorContent },
+      502: { description: "Upstream error", content: errorContent },
+    },
+  });
+}
+
 // ===================================================================
 // EXPERT QUOTES (journalists-quotes-service proxy)
 // ===================================================================
