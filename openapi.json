@@ -15742,6 +15742,46 @@
           }
         }
       },
+      "ErrorResponse400InvalidRequestOrNotAnAudienceStatedInApolloFilters": {
+        "description": "Invalid request, or not an audience stated in Apollo filters",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404AudienceNotFound": {
+        "description": "Audience not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse422QuickEnrichCannotEnforceThisAudienceSFiltersReasonsListed": {
+        "description": "QuickEnrich cannot enforce this audience's filters (reasons listed)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502HumanServiceApolloServiceUnreachable": {
+        "description": "human-service / apollo-service unreachable",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
       "ErrorResponse400InvalidBodyForwardedVerbatimFromCloudflareService": {
         "description": "Invalid body, forwarded verbatim from cloudflare-service",
         "content": {
@@ -50964,6 +51004,99 @@
           }
         },
         "operationId": "patchV1OrgsAudiencesByIdStatus"
+      }
+    },
+    "/v1/orgs/audiences/{id}/serve-source": {
+      "patch": {
+        "tags": [
+          "Audiences"
+        ],
+        "summary": "Choose where an Apollo audience finds its people: Apollo or the free QuickEnrich search",
+        "description": "Proxy to human-service PATCH /orgs/audiences/{id}/serve-source. Body { serveSource: \"apollo\" | \"quickenrich\" }. quickenrich finds people with a FREE QuickEnrich search on job titles (+ excluded titles), person location, employee and revenue bands, then finds and verifies each email before use; once QuickEnrich has nobody left, Apollo serves as before. An audience whose filters QuickEnrich cannot enforce (keyword tags, industries, seniorities, organization locations) answers 422 with every reason. Request + response shapes owned by human-service; status and body forwarded verbatim.\n\nRequest body: documented from human-service PATCH /orgs/audiences/{id}/serve-source, which owns and validates it; the gateway forwards it unchanged.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Audience ID"
+            },
+            "required": true,
+            "description": "Audience ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "serveSource": {
+                    "type": "string",
+                    "enum": [
+                      "apollo",
+                      "quickenrich"
+                    ],
+                    "description": "quickenrich: people are found by a FREE QuickEnrich search (title + person location), their email found and verified before use; once QuickEnrich has nobody left the Apollo search serves as before. apollo: the default Apollo search."
+                  }
+                },
+                "required": [
+                  "serveSource"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Serve source set: { audience, serveSource, quickenrich: { expressible, reasons } }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidRequestOrNotAnAudienceStatedInApolloFilters"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404AudienceNotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ErrorResponse422QuickEnrichCannotEnforceThisAudienceSFiltersReasonsListed"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502HumanServiceApolloServiceUnreachable"
+          }
+        },
+        "operationId": "patchV1OrgsAudiencesByIdServeSource"
       }
     },
     "/v1/orgs/uploads": {

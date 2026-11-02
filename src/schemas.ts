@@ -16603,6 +16603,28 @@ registry.registerPath({
 
 registry.registerPath({
   method: "patch",
+  path: "/v1/orgs/audiences/{id}/serve-source",
+  tags: ["Audiences"],
+  summary: "Choose where an Apollo audience finds its people: Apollo or the free QuickEnrich search",
+  description:
+    "Proxy to human-service PATCH /orgs/audiences/{id}/serve-source. Body { serveSource: \"apollo\" | \"quickenrich\" }. quickenrich finds people with a FREE QuickEnrich search on job titles (+ excluded titles), person location, employee and revenue bands, then finds and verifies each email before use; once QuickEnrich has nobody left, Apollo serves as before. An audience whose filters QuickEnrich cannot enforce (keyword tags, industries, seniorities, organization locations) answers 422 with every reason. Request + response shapes owned by human-service; status and body forwarded verbatim.",
+  security: authed,
+  request: {
+    params: AudienceIdParam,
+    body: { content: { "application/json": { schema: AudiencePassthroughBody } } },
+  },
+  responses: {
+    200: { description: "Serve source set: { audience, serveSource, quickenrich: { expressible, reasons } }", content: { "application/json": { schema: AudiencePassthroughBody } } },
+    400: { description: "Invalid request, or not an audience stated in Apollo filters", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Audience not found", content: errorContent },
+    422: { description: "QuickEnrich cannot enforce this audience's filters (reasons listed)", content: errorContent },
+    502: { description: "human-service / apollo-service unreachable", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
   path: "/v1/orgs/audiences/{id}",
   tags: ["Audiences"],
   summary: "Update an audience",

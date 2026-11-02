@@ -358,6 +358,24 @@ router.patch("/orgs/audiences/:id/status", ...authChain, async (req: Authenticat
   }
 });
 
+// PATCH /v1/orgs/audiences/:id/serve-source → human-service PATCH /orgs/audiences/{id}/serve-source
+// Where an Apollo audience finds its people (Apollo or the free QuickEnrich
+// search). Status (200, 400, 404, 422 not expressible with its reasons, 502) and
+// body forwarded field for field.
+router.patch("/orgs/audiences/:id/serve-source", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.human,
+      `/orgs/audiences/${encodeURIComponent(req.params.id)}/serve-source`,
+      { method: "PATCH", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Audience serve-source error:", error.message);
+    respondUpstreamError(res, error, "Failed to call audiences/serve-source");
+  }
+});
+
 // GET /v1/orgs/audiences/:id → human-service GET /orgs/audiences/{id}
 router.get("/orgs/audiences/:id", ...authChain, async (req: AuthenticatedRequest, res) => {
   try {
