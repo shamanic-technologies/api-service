@@ -65,6 +65,37 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       "additionalProperties": false
     }
   },
+  "PATCH /v1/orgs/audiences/{id}/sources/{sourceId}": {
+    "service": "human-service",
+    "method": "PATCH",
+    "path": "/orgs/audiences/{id}/sources/{sourceId}",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "jobTitles": {
+          "type": "array",
+          "nullable": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "maxItems": 30,
+          "description": "hiring only: job titles the employer must have POSTED in the window (e.g. [\"QA\", \"Test Automation\", \"SDET\"]). Only people at companies with such a posting are served, and the served person's signal fact names that posting. Matched as words inside the posted title. Empty / null = any role.",
+          "example": [
+            "QA",
+            "Test Automation",
+            "SDET",
+            "Quality Engineering"
+          ]
+        }
+      },
+      "required": [
+        "jobTitles"
+      ],
+      "additionalProperties": false
+    }
+  },
   "PATCH /v1/orgs/audiences/{id}/status": {
     "service": "human-service",
     "method": "PATCH",
@@ -1655,6 +1686,51 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "description": "Optional image prompt override (the dashboard AI-chat tool can steer the avatar). Omitted ⟹ chat-service is prompted from the audience's own descriptors."
         }
       },
+      "additionalProperties": false
+    }
+  },
+  "POST /v1/orgs/audiences/{id}/sources": {
+    "service": "human-service",
+    "method": "POST",
+    "path": "/orgs/audiences/{id}/sources",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "hiring",
+            "job_change",
+            "funding"
+          ],
+          "description": "hiring: the employer posted a job in the window. job_change: the person started their current role in the window. funding: the employer raised a round in the window."
+        },
+        "windowDays": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 365,
+          "description": "Rolling window, in days. Omitted = hiring 30, job_change 90, funding 90."
+        },
+        "jobTitles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "maxItems": 30,
+          "description": "hiring only: job titles the employer must have POSTED in the window (e.g. [\"QA\", \"Test Automation\", \"SDET\"]). Only people at companies with such a posting are served, and the served person's signal fact names that posting. Matched as words inside the posted title. Empty / null = any role.",
+          "example": [
+            "QA",
+            "Test Automation",
+            "SDET",
+            "Quality Engineering"
+          ]
+        }
+      },
+      "required": [
+        "type"
+      ],
       "additionalProperties": false
     }
   },

@@ -80,6 +80,8 @@ export const DOWNSTREAM_BODY_SOURCES: Record<string, DownstreamBodySource> = {
   "PATCH /v1/orgs/audiences/{id}": { service: "human-service", method: "PATCH", path: "/orgs/audiences/{id}" },
   "PATCH /v1/orgs/audiences/{id}/status": { service: "human-service", method: "PATCH", path: "/orgs/audiences/{id}/status" },
   "PATCH /v1/orgs/audiences/{id}/serve-source": { service: "human-service", method: "PATCH", path: "/orgs/audiences/{id}/serve-source" },
+  "POST /v1/orgs/audiences/{id}/sources": { service: "human-service", method: "POST", path: "/orgs/audiences/{id}/sources" },
+  "PATCH /v1/orgs/audiences/{id}/sources/{sourceId}": { service: "human-service", method: "PATCH", path: "/orgs/audiences/{id}/sources/{sourceId}" },
   "POST /v1/orgs/google/auth/start": { service: "google-service", method: "POST", path: "/orgs/google/auth/start" },
   "POST /v1/orgs/google/sync": { service: "google-service", method: "POST", path: "/orgs/google/sync" },
   "PUT /v1/orgs/google/contact-links": { service: "google-service", method: "PUT", path: "/orgs/google/contact-links" },
