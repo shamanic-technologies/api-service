@@ -43,6 +43,28 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       "additionalProperties": false
     }
   },
+  "PATCH /v1/orgs/audiences/{id}/serve-source": {
+    "service": "human-service",
+    "method": "PATCH",
+    "path": "/orgs/audiences/{id}/serve-source",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "serveSource": {
+          "type": "string",
+          "enum": [
+            "apollo",
+            "quickenrich"
+          ],
+          "description": "quickenrich: people are found by a FREE QuickEnrich search (title + person location), their email found and verified before use; once QuickEnrich has nobody left the Apollo search serves as before. apollo: the default Apollo search."
+        }
+      },
+      "required": [
+        "serveSource"
+      ],
+      "additionalProperties": false
+    }
+  },
   "PATCH /v1/orgs/audiences/{id}/status": {
     "service": "human-service",
     "method": "PATCH",
