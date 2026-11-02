@@ -17,6 +17,10 @@
  * shapes, see downstream-bodies.ts / downstream-responses.ts), never hand-typed.
  */
 import { HTTP_METHODS } from "./document.js";
+import { USER_YES_EXTENSION } from "./user-yes.js";
+
+/** Appended to an index / onboarding line whose operation needs the user's yes first. */
+const YES_FLAG = " [ASK YOUR USER FIRST]";
 
 type Json = Record<string, any>;
 
@@ -384,7 +388,8 @@ function onboardingGuide(doc: Json): string {
       const success = Object.entries(op.responses ?? {}).find(([code]) => code.startsWith("2"))?.[1] as Json | undefined;
       const answers = fieldList(doc, success?.content?.["application/json"]?.schema, false);
       const bits = [query && `query ${query}`, body && `send ${body}`, answers && `answers ${answers}`].filter(Boolean);
-      lines.push(`- \`${key}\` (\`${op.operationId}\`)${bits.length ? ": " + bits.join("; ") : ""}`);
+      const flag = op[USER_YES_EXTENSION] ? YES_FLAG : "";
+      lines.push(`- \`${key}\` (\`${op.operationId}\`)${bits.length ? ": " + bits.join("; ") : ""}${flag}`);
     }
     lines.push("");
   });
@@ -400,12 +405,16 @@ function operationIndex(doc: Json): string {
     "",
     "One line per operation: `operationId` METHOD path: summary. Full detail: `?operation=<operationId>` (comma-separate",
     "several), or a whole topic with `?tag=<topic>` (and `&page=<n>` when it has pages).",
+    `${YES_FLAG.trim()} = the operation spends money, starts work or sends something to a person (\`${USER_YES_EXTENSION}\`):`,
+    "ask your user and get their explicit yes before calling it.",
     "",
   ];
   for (const [tag, refs] of byTag) {
     const n = pages.get(tag)?.length ?? 1;
     lines.push(`### ${tag} (\`?tag=${encodeURIComponent(tag)}\`${n > 1 ? `, pages 1-${n}` : ""})`);
-    for (const { key, op } of refs) lines.push(`- \`${op.operationId}\` ${key}: ${op.summary ?? ""}`);
+    for (const { key, op } of refs) {
+      lines.push(`- \`${op.operationId}\` ${key}: ${op.summary ?? ""}${op[USER_YES_EXTENSION] ? YES_FLAG : ""}`);
+    }
     lines.push("");
   }
   return lines.join("\n");
