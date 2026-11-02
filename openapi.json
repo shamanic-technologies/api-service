@@ -1506,6 +1506,20 @@
           "nullable": true
         }
       },
+      "CampaignMilestonesResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "CampaignPeopleJourneysResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "CampaignSpendChartsResponse": {
         "type": "object",
         "properties": {},
@@ -9675,6 +9689,13 @@
           "nullable": true
         }
       },
+      "OfferEnginePicksResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "OfferOutcomeCostSeriesResponse": {
         "type": "object",
         "properties": {},
@@ -12742,8 +12763,8 @@
           }
         }
       },
-      "ErrorResponse400PricingUnrecognisedForwardedVerbatim": {
-        "description": "pricing_unrecognised, forwarded verbatim",
+      "ErrorResponse404BrandNotFoundOrSalesFunnelCampaignNotFoundForwardedVerbatim": {
+        "description": "brand_not_found or sales_funnel_campaign_not_found, forwarded verbatim",
         "content": {
           "application/json": {
             "schema": {
@@ -12752,8 +12773,18 @@
           }
         }
       },
-      "ErrorResponse404BrandNotFoundOrSalesFunnelCampaignNotFoundForwardedVerbatim": {
-        "description": "brand_not_found or sales_funnel_campaign_not_found, forwarded verbatim",
+      "ErrorResponse502ADownstreamReadFailedForwardedVerbatim": {
+        "description": "A downstream read failed, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400PricingUnrecognisedForwardedVerbatim": {
+        "description": "pricing_unrecognised, forwarded verbatim",
         "content": {
           "application/json": {
             "schema": {
@@ -15324,6 +15355,16 @@
       },
       "ErrorResponse404BrandNotFoundOrOfferHasNoCampaignsForwardedVerbatim": {
         "description": "brand_not_found or offer_has_no_campaigns, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400BrandIdRequiredForwardedVerbatim": {
+        "description": "brand_id_required, forwarded verbatim",
         "content": {
           "application/json": {
             "schema": {
@@ -19227,6 +19268,152 @@
           }
         },
         "operationId": "getV1FeaturesBrandsByBrandIdSalesFunnelCampaignsBySalesFunnelCampaignIdFactoryShadow"
+      }
+    },
+    "/v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/milestones": {
+      "get": {
+        "tags": [
+          "Campaigns"
+        ],
+        "summary": "Milestones table of one funnel campaign",
+        "description": "Proxy to features-service GET /brands/{brandId}/sales-funnel-campaigns/{id}/milestones. One funnel campaign's milestones table, as features-service serves it. The org is the authenticated one; another org's campaign answers 404. Any query is forwarded verbatim. Status and body relayed verbatim.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "salesFunnelCampaignId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pass-through from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignMilestonesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query, forwarded verbatim",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404BrandNotFoundOrSalesFunnelCampaignNotFoundForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ADownstreamReadFailedForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1FeaturesBrandsByBrandIdSalesFunnelCampaignsBySalesFunnelCampaignIdMilestones"
+      }
+    },
+    "/v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/people-journeys": {
+      "get": {
+        "tags": [
+          "Campaigns"
+        ],
+        "summary": "What one funnel campaign's people went through",
+        "description": "Proxy to features-service GET /brands/{brandId}/sales-funnel-campaigns/{id}/people-journeys. What the people of one funnel campaign went through, as features-service serves it. The org is the authenticated one; another org's campaign answers 404. Any query is forwarded verbatim. Status and body relayed verbatim.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "salesFunnelCampaignId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pass-through from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignPeopleJourneysResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query, forwarded verbatim",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404BrandNotFoundOrSalesFunnelCampaignNotFoundForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ADownstreamReadFailedForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1FeaturesBrandsByBrandIdSalesFunnelCampaignsBySalesFunnelCampaignIdPeopleJourneys"
       }
     },
     "/v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/spend-charts": {
@@ -42708,6 +42895,88 @@
           }
         },
         "operationId": "getV1OffersByOfferIdSpendCharts"
+      }
+    },
+    "/v1/offers/{offerId}/engine-picks": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Latest Engine picks of one offer's live campaigns, and why each was picked",
+        "description": "The latest Engine picks of the offer's live campaigns, each with the reason it was picked. Proxied to features-service GET /offers/{offerId}/engine-picks, which owns every pick. The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "offer-uuid-123",
+              "description": "Offer UUID"
+            },
+            "required": true,
+            "description": "Offer UUID",
+            "name": "offerId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "brand-uuid-123",
+              "description": "Brand UUID (required) — an offer belongs to a brand"
+            },
+            "required": true,
+            "description": "Brand UUID (required) — an offer belongs to a brand",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Offer engine picks (passthrough of features-service's body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferEnginePicksResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BrandIdRequiredForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "description": "Brand or offer not found, forwarded verbatim",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ADownstreamReadFailedForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1OffersByOfferIdEnginePicks"
       }
     },
     "/v1/offers/{offerId}/outcome-cost-series": {
