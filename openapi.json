@@ -15844,6 +15844,36 @@
           }
         }
       },
+      "ErrorResponse409TheAudienceAlreadyHasASourceOfThisTypeBodyCarriesItsSourceId": {
+        "description": "The audience already has a source of this type (body carries its sourceId)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400InvalidRequestOrNotAHiringSource": {
+        "description": "Invalid request, or not a hiring source",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404AudienceOrSourceNotFound": {
+        "description": "Audience or source not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
       "ErrorResponse400InvalidBodyForwardedVerbatimFromCloudflareService": {
         "description": "Invalid body, forwarded verbatim from cloudflare-service",
         "content": {
@@ -51833,6 +51863,231 @@
           }
         },
         "operationId": "patchV1OrgsAudiencesByIdServeSource"
+      }
+    },
+    "/v1/orgs/audiences/{id}/sources": {
+      "post": {
+        "tags": [
+          "Audiences"
+        ],
+        "summary": "Add a buying-signal source (hiring / job_change / funding) to an audience, a hiring one optionally narrowed to posted job titles",
+        "description": "Proxy to human-service POST /orgs/audiences/{id}/sources. Body { type: \"hiring\" | \"job_change\" | \"funding\", windowDays?, jobTitles? }. The audience says WHO; a source says WHERE we also look for them. jobTitles (hiring only, up to 30) = job titles the employer must have POSTED in the window (e.g. [\"QA\", \"Test Automation\", \"SDET\"]): only people at companies with such a posting are served. One source per signal type per audience: a second answers 409 carrying the existing sourceId (change its titles with PATCH .../sources/{sourceId}). Request + response shapes owned by human-service; status and body forwarded verbatim.\n\nRequest body: documented from human-service POST /orgs/audiences/{id}/sources, which owns and validates it; the gateway forwards it unchanged.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Audience ID"
+            },
+            "required": true,
+            "description": "Audience ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "hiring",
+                      "job_change",
+                      "funding"
+                    ],
+                    "description": "hiring: the employer posted a job in the window. job_change: the person started their current role in the window. funding: the employer raised a round in the window."
+                  },
+                  "windowDays": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 365,
+                    "description": "Rolling window, in days. Omitted = hiring 30, job_change 90, funding 90."
+                  },
+                  "jobTitles": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "maxItems": 30,
+                    "description": "hiring only: job titles the employer must have POSTED in the window (e.g. [\"QA\", \"Test Automation\", \"SDET\"]). Only people at companies with such a posting are served, and the served person's signal fact names that posting. Matched as words inside the posted title. Empty / null = any role.",
+                    "example": [
+                      "QA",
+                      "Test Automation",
+                      "SDET",
+                      "Quality Engineering"
+                    ]
+                  }
+                },
+                "required": [
+                  "type"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Source added: { audience, sourceId, changed: true }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404AudienceNotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409TheAudienceAlreadyHasASourceOfThisTypeBodyCarriesItsSourceId"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502HumanServiceApolloServiceUnreachable"
+          }
+        },
+        "operationId": "postV1OrgsAudiencesByIdSources"
+      }
+    },
+    "/v1/orgs/audiences/{id}/sources/{sourceId}": {
+      "patch": {
+        "tags": [
+          "Audiences"
+        ],
+        "summary": "Set the posted job titles a hiring source looks for (null = any role)",
+        "description": "Proxy to human-service PATCH /orgs/audiences/{id}/sources/{sourceId}. Body { jobTitles: string[] | null }. For a hiring source of the audience: rebuilds the source's search with the titles (only companies with such a posting in the window are served) and keeps its on/off. Unchanged titles = nothing rebuilt (changed=false). Request + response shapes owned by human-service; status and body forwarded verbatim.\n\nRequest body: documented from human-service PATCH /orgs/audiences/{id}/sources/{sourceId}, which owns and validates it; the gateway forwards it unchanged.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Audience ID"
+            },
+            "required": true,
+            "description": "Audience ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Source ID (sourceId returned when the source was added, or channels[].sourceId on the audience)"
+            },
+            "required": true,
+            "description": "Source ID (sourceId returned when the source was added, or channels[].sourceId on the audience)",
+            "name": "sourceId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "jobTitles": {
+                    "type": "array",
+                    "nullable": true,
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "maxItems": 30,
+                    "description": "hiring only: job titles the employer must have POSTED in the window (e.g. [\"QA\", \"Test Automation\", \"SDET\"]). Only people at companies with such a posting are served, and the served person's signal fact names that posting. Matched as words inside the posted title. Empty / null = any role.",
+                    "example": [
+                      "QA",
+                      "Test Automation",
+                      "SDET",
+                      "Quality Engineering"
+                    ]
+                  }
+                },
+                "required": [
+                  "jobTitles"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Titles set: { audience, sourceId, changed }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidRequestOrNotAHiringSource"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404AudienceOrSourceNotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502HumanServiceApolloServiceUnreachable"
+          }
+        },
+        "operationId": "patchV1OrgsAudiencesByIdSourcesBySourceId"
       }
     },
     "/v1/orgs/uploads": {

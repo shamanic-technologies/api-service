@@ -361,6 +361,8 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
     [{ status: "paused" }, { status: "archived" }],
   ),
   "PATCH /v1/orgs/audiences/{id}/serve-source": NO,
+  "POST /v1/orgs/audiences/{id}/sources": NO,
+  "PATCH /v1/orgs/audiences/{id}/sources/{sourceId}": NO,
 
   // ── Connected accounts (Google, Threads, X, CRM connectors) ────────────────
   "POST /v1/orgs/google/auth/start": NO,

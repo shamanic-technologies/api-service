@@ -16738,6 +16738,52 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/audiences/{id}/sources",
+  tags: ["Audiences"],
+  summary: "Add a buying-signal source (hiring / job_change / funding) to an audience, a hiring one optionally narrowed to posted job titles",
+  description:
+    "Proxy to human-service POST /orgs/audiences/{id}/sources. Body { type: \"hiring\" | \"job_change\" | \"funding\", windowDays?, jobTitles? }. The audience says WHO; a source says WHERE we also look for them. jobTitles (hiring only, up to 30) = job titles the employer must have POSTED in the window (e.g. [\"QA\", \"Test Automation\", \"SDET\"]): only people at companies with such a posting are served. One source per signal type per audience: a second answers 409 carrying the existing sourceId (change its titles with PATCH .../sources/{sourceId}). Request + response shapes owned by human-service; status and body forwarded verbatim.",
+  security: authed,
+  request: {
+    params: AudienceIdParam,
+    body: { content: { "application/json": { schema: AudiencePassthroughBody } } },
+  },
+  responses: {
+    201: { description: "Source added: { audience, sourceId, changed: true }", content: { "application/json": { schema: AudiencePassthroughBody } } },
+    400: { description: "Invalid request", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Audience not found", content: errorContent },
+    409: { description: "The audience already has a source of this type (body carries its sourceId)", content: errorContent },
+    502: { description: "human-service / apollo-service unreachable", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/v1/orgs/audiences/{id}/sources/{sourceId}",
+  tags: ["Audiences"],
+  summary: "Set the posted job titles a hiring source looks for (null = any role)",
+  description:
+    "Proxy to human-service PATCH /orgs/audiences/{id}/sources/{sourceId}. Body { jobTitles: string[] | null }. For a hiring source of the audience: rebuilds the source's search with the titles (only companies with such a posting in the window are served) and keeps its on/off. Unchanged titles = nothing rebuilt (changed=false). Request + response shapes owned by human-service; status and body forwarded verbatim.",
+  security: authed,
+  request: {
+    params: z.object({
+      id: z.string().describe("Audience ID"),
+      sourceId: z.string().describe("Source ID (sourceId returned when the source was added, or channels[].sourceId on the audience)"),
+    }),
+    body: { content: { "application/json": { schema: AudiencePassthroughBody } } },
+  },
+  responses: {
+    200: { description: "Titles set: { audience, sourceId, changed }", content: { "application/json": { schema: AudiencePassthroughBody } } },
+    400: { description: "Invalid request, or not a hiring source", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Audience or source not found", content: errorContent },
+    502: { description: "human-service / apollo-service unreachable", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "patch",
   path: "/v1/orgs/audiences/{id}",
   tags: ["Audiences"],
