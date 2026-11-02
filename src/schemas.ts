@@ -2133,6 +2133,43 @@ registry.registerPath({
   },
 });
 
+for (const { suffix, name, summary, detail } of [
+  {
+    suffix: "milestones",
+    name: "CampaignMilestonesResponse",
+    summary: "Milestones table of one funnel campaign",
+    detail: "One funnel campaign's milestones table, as features-service serves it.",
+  },
+  {
+    suffix: "people-journeys",
+    name: "CampaignPeopleJourneysResponse",
+    summary: "What one funnel campaign's people went through",
+    detail: "What the people of one funnel campaign went through, as features-service serves it.",
+  },
+]) {
+  registry.registerPath({
+    method: "get",
+    path: `/v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/${suffix}`,
+    tags: ["Campaigns"],
+    summary,
+    description:
+      `Proxy to features-service GET /brands/{brandId}/sales-funnel-campaigns/{id}/${suffix}. ${detail} ` +
+      "The org is the authenticated one; another org's campaign answers 404. Any query is forwarded verbatim. " +
+      "Status and body relayed verbatim.",
+    security: authed,
+    request: {
+      params: z.object({ brandId: z.string(), salesFunnelCampaignId: z.string() }),
+      query: z.object({}).passthrough(),
+    },
+    responses: {
+      200: { description: "Pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi(name) } } },
+      400: { description: "Invalid query, forwarded verbatim", content: errorContent },
+      404: { description: "brand_not_found or sales_funnel_campaign_not_found, forwarded verbatim", content: errorContent },
+      502: { description: "A downstream read failed, forwarded verbatim", content: errorContent },
+    },
+  });
+}
+
 const CampaignSpendChartsResponseSchema = z.object({}).passthrough().openapi("CampaignSpendChartsResponse");
 
 registry.registerPath({
@@ -14412,6 +14449,31 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "brand_not_found or offer_has_no_campaigns, forwarded verbatim", content: errorContent },
     502: { description: "A spend or people read failed, forwarded verbatim", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/offers/{offerId}/engine-picks",
+  tags: ["Features"],
+  summary: "Latest Engine picks of one offer's live campaigns, and why each was picked",
+  description:
+    "The latest Engine picks of the offer's live campaigns, each with the reason it was picked. " +
+    "Proxied to features-service GET /offers/{offerId}/engine-picks, which owns every pick. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Offer engine picks (passthrough of features-service's body)", content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferEnginePicksResponse") } } },
+    400: { description: "brand_id_required, forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand or offer not found, forwarded verbatim", content: errorContent },
+    502: { description: "A downstream read failed, forwarded verbatim", content: errorContent },
   },
 });
 

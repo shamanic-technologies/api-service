@@ -1450,6 +1450,10 @@ const OFFER_ROUTES = [
   // by people we contacted. `brandId`/`pricing` ride the raw query; features-service owns the
   // figures and every refusal (400 brand_id_required, 404, 502).
   { suffix: "outcome-cost-series", what: "offer outcome cost series" },
+  // The latest Engine picks of the offer's live campaigns, each with why it was picked (owner
+  // 2026-11-02, FACTORY-USER-DASHBOARD-1102). `brandId` rides the raw query; features-service owns
+  // the picks and every refusal.
+  { suffix: "engine-picks", what: "offer engine picks" },
 ] as const;
 
 // ── Brand grain ──────────────────────────────────────────────────────────────
@@ -1782,6 +1786,41 @@ router.get(
     }
   },
 );
+
+/**
+ * GET /v1/features/brands/:brandId/sales-funnel-campaigns/:salesFunnelCampaignId/{milestones,people-journeys}
+ *   → features-service GET /brands/{brandId}/sales-funnel-campaigns/{id}/{milestones,people-journeys}
+ *
+ * GTM Factory customer dashboard (owner 2026-11-02, FACTORY-USER-DASHBOARD-1102): one funnel campaign's milestones table,
+ * and what its people went through. Same auth and identity forwarding as factory-shadow above (the org is the
+ * authenticated one, features-service scopes on it); query verbatim (#11); status and body relayed (#7).
+ */
+const CAMPAIGN_FACTORY_READS = [
+  { suffix: "milestones", what: "campaign milestones" },
+  { suffix: "people-journeys", what: "campaign people journeys" },
+] as const;
+
+for (const { suffix, what } of CAMPAIGN_FACTORY_READS) {
+  router.get(
+    `/features/brands/:brandId/sales-funnel-campaigns/:salesFunnelCampaignId/${suffix}`,
+    authenticate,
+    requireOrg,
+    requireUser,
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const { status, data } = await callExternalServiceWithStatus(
+          externalServices.features,
+          `/brands/${encodeURIComponent(req.params.brandId)}/sales-funnel-campaigns/${encodeURIComponent(req.params.salesFunnelCampaignId)}/${suffix}${rawQueryString(req.originalUrl)}`,
+          { headers: buildInternalHeaders(req) },
+        );
+        res.status(status).json(data);
+      } catch (error: any) {
+        console.error(`Failed to get ${what}:`, error.message);
+        respondUpstreamError(res, error, `Failed to get ${what}`);
+      }
+    },
+  );
+}
 
 /**
  * GET /v1/features/brands/:brandId/sales-funnel-campaigns/:salesFunnelCampaignId/spend-charts
