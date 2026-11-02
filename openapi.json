@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "distribute.you API",
-    "description": "API Gateway for distribute.you.\n\n## Quick Start\n\nThis document is large (every operation your key may call). Read it in pieces instead:\n\n- `?view=onboarding`: open a first client, the same steps in the same order as the dashboard's sign-up flow, each with\n  the route to call, what to send and what to keep (about 6k tokens).\n- `?view=index`: every operation on one line, grouped by topic (about 13k tokens).\n- `?tag=<topic>` (`&page=<n>` when the index says the topic has pages): the full detail of one topic.\n- `?operation=<operationId>` (comma-separate several): the full detail of those operations only.\n\nEach works on `GET /v1/me/openapi.json` (your key's document) and `GET /openapi.json` (no key needed).\n\n**Get a key.** Already have one (from the distribute.you dashboard, or `POST /v1/api-keys`)? Use it. An AI agent with no\naccount: `POST /v1/agent-signups/start` with `{email, phone}`, read the 6-digit code in that inbox, then\n`POST /v1/agent-signups/complete` with `{email, code}`: the answer carries `apiKey`. No human needed.\nSend the key as `Authorization: Bearer distrib.usr_...` on every call, nothing else.\n\n**How to decide each step** (what to ask your user, what a good offer or audience looks like): read the skills our own\nCopilot follows, `GET /v1/skills` then `GET /v1/skills/{slug}`.\n\nAccounts opened through `/v1/agent-signups` have no free credit: free calls work at once; a call that spends money\nanswers `402 payment_required` until the prepay is paid (minimum $10, plus a required auto top-up: at least $15\nwhenever the balance falls below at least $5).\n\n**`GET /v1/me`** says which user the key acts as and lists every organization\nthe key can act in (by name), each with its brands. A key belongs to its USER, not to one\norganization: membership is checked on every request, so leaving an organization removes it\nfrom the key. A key never carries staff, admin or beta powers. The dashboard is at\nhttps://dashboard.distribute.you.\n\n**Each request acts in ONE organization.** Name a brand (`?brandId=<id>`, the `x-brand-id`\nheader, or `brandId` in a JSON body; brand routes like `/v1/brands/{id}` name it in the path),\nwhich selects the organization holding it, or name the organization (`?orgId=<id>` or the\n`x-org-id` header). If you belong to exactly one organization you need to name nothing. If you\nbelong to several and name nothing, the request is refused with `400 org_target_required` and\nthe list of your organizations; no organization is ever picked by default.\n\n## Storing provider keys (BYOK)\n\nTo store your own provider API keys (e.g. OpenAI, Anthropic) for use in workflows:\n\n```\nPOST /v1/keys\nAuthorization: Bearer distrib.usr_abc123...\n\n{ \"provider\": \"openai\", \"apiKey\": \"sk-...\" }\n```\n\n## Error codes\n\n| Code | Meaning |\n|------|---------|\n| 401 | Missing or invalid Bearer token. The body's `code` says which: `missing_credentials`, `wrong_header` (key sent in a header other than `Authorization`), `invalid_admin_key`, `malformed_key`, `key_not_recognized` (mistyped OR revoked: revoked keys are erased, so the two cannot be told apart); `fix` says what to do |\n| 503 | `key_validation_unavailable`: the key could not be checked right now; retry, do not replace the key |\n| 400 | `org_target_required`: you belong to several organizations and the request named none (`organizations` lists them); `brand_in_several_orgs`: the brand is held by several of your organizations, add `orgId`; `brands_span_orgs`: the named brands are not in one organization |\n| 403 | `org_not_member`: the named organization is not one of yours; `no_organization`: the key's user belongs to no organization |\n| 404 | `brand_not_found`: none of your organizations holds that brand |\n| 503 | `membership_unavailable`: your organizations could not be checked right now; retry |\n| 402 | `payment_required` (accounts opened through `/v1/agent-signups`): the call costs money and the balance cannot cover it. `prepay` gives the route, minimums and an example body; `upstream` is the refusing service's own answer |\n| 429 | Rate limit exceeded — see below |\n| 502 | Identity resolution failed (internal service unreachable) |\n\n## Rate limits\n\nEvery response carries your current rate-limit state, so you never have to guess\nhow fast you may go:\n\n```\nRateLimit: limit=600, remaining=597, reset=42\nRateLimit-Policy: \"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60\nRateLimit-Limit: 600\nRateLimit-Remaining: 597\nRateLimit-Reset: 42\n```\n\n`reset` is **seconds until the current window rolls over**, not a timestamp.\n\n| Policy | Applies to | Budget |\n|--------|-----------|--------|\n| `authenticated` | One API key (`Authorization: Bearer distrib.*`) | 600 requests / 60s |\n| `anonymous` | One client IP, for endpoints that need no key | 120 requests / 60s |\n\nExceeding a budget returns **429** with a `Retry-After` header in seconds. Wait\nthat long and retry — the window is fixed, so a single wait clears it. Requests\nmade while throttled still count, so back off rather than polling the 429.\n\n## Deprecation policy\n\nNothing in this document is deprecated today. To set what a campaign may\nspend, use its sales funnel caps:\n`PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps`\n(the old per-campaign daily-budget operations are gone).\n\nWhen something is deprecated, you learn it mechanically, from the API itself,\nand with at least\n**180 days** of notice:\n\n- The operation is marked `deprecated: true` in this document.\n- Every response it returns carries `Deprecation: @<unix-seconds>` (RFC 9745)\n  and `Sunset: <HTTP-date>` (RFC 8594). `Sunset` is the earliest date the\n  operation may stop working — never sooner than 180 days\n  after `Deprecation`.\n- A `Link: <url>; rel=\"deprecation\"` header points at the replacement\n  operation or the changelog entry.\n- A deprecated operation keeps working until its sunset date. Deprecation is an\n  announcement, not a removal.\n- Removal happens only behind a new URL version prefix. `/v1` never changes\n  meaning underneath a caller: a breaking change ships as `/v2`.\n\nThe same policy is machine-readable at the root of this document under\n`x-deprecation-policy`.\n",
+    "description": "API Gateway for distribute.you.\n\n## Quick Start\n\nThis document is large (every operation your key may call). Read it in pieces instead:\n\n- `?view=onboarding`: open a first client, the same steps in the same order as the dashboard's sign-up flow, each with\n  the route to call, what to send and what to keep (about 6k tokens).\n- `?view=index`: every operation on one line, grouped by topic (about 13k tokens).\n- `?tag=<topic>` (`&page=<n>` when the index says the topic has pages): the full detail of one topic.\n- `?operation=<operationId>` (comma-separate several): the full detail of those operations only.\n\nEach works on `GET /v1/me/openapi.json` (your key's document) and `GET /openapi.json` (no key needed).\n\n**Get a key.** Already have one (from the distribute.you dashboard, or `POST /v1/api-keys`)? Use it. An AI agent with no\naccount: `POST /v1/agent-signups/start` with `{email, phone}`, read the 6-digit code in that inbox, then\n`POST /v1/agent-signups/complete` with `{email, code}`: the answer carries `apiKey`. No human needed.\nSend the key as `Authorization: Bearer distrib.usr_...` on every call, nothing else.\n\n**How to decide each step** (what to ask your user, what a good offer or audience looks like): read the skills our own\nCopilot follows, `GET /v1/skills` then `GET /v1/skills/{slug}`.\n\nAccounts opened through `/v1/agent-signups` have no free credit: free calls work at once; a call that spends money\nanswers `402 payment_required` until the prepay is paid (minimum $10, plus a required auto top-up: at least $15\nwhenever the balance falls below at least $5).\n\n**`GET /v1/me`** says which user the key acts as and lists every organization\nthe key can act in (by name), each with its brands. A key belongs to its USER, not to one\norganization: membership is checked on every request, so leaving an organization removes it\nfrom the key. A key never carries staff, admin or beta powers. The dashboard is at\nhttps://dashboard.distribute.you.\n\n**Each request acts in ONE organization.** Name a brand (`?brandId=<id>`, the `x-brand-id`\nheader, or `brandId` in a JSON body; brand routes like `/v1/brands/{id}` name it in the path),\nwhich selects the organization holding it, or name the organization (`?orgId=<id>` or the\n`x-org-id` header). If you belong to exactly one organization you need to name nothing. If you\nbelong to several and name nothing, the request is refused with `400 org_target_required` and\nthe list of your organizations; no organization is ever picked by default.\n\n## Ask your user before you spend, start or send\n\nSome operations spend the account's money, start work that will spend (a campaign, a workflow run) or send something\nto a person (an email, a reply, a post, an invitation). Each of them carries `x-needs-user-yes` in this\ndocument (and `[ASK YOUR USER FIRST]` in `?view=index`). **Before calling one, tell your user what it will do and\nget their explicit yes.** The marker holds:\n\n- `because`: one or more of `spends_money`, `starts_work`, `sends_to_person`.\n- `why`: one line saying what the call does, to put in your question.\n- `notNeededWhen` (sometimes): request-body values that make this call harmless (a campaign created\n  `status: \"stopped\"`), each entry matched when every key equals the body's top-level field. Such a call needs no yes.\n\nAn operation without the marker needs no yes: reads, settings, and anything created stopped, off or paused.\nThe API does not check the yes for you: asking is your job.\n\n## Storing provider keys (BYOK)\n\nTo store your own provider API keys (e.g. OpenAI, Anthropic) for use in workflows:\n\n```\nPOST /v1/keys\nAuthorization: Bearer distrib.usr_abc123...\n\n{ \"provider\": \"openai\", \"apiKey\": \"sk-...\" }\n```\n\n## Error codes\n\n| Code | Meaning |\n|------|---------|\n| 401 | Missing or invalid Bearer token. The body's `code` says which: `missing_credentials`, `wrong_header` (key sent in a header other than `Authorization`), `invalid_admin_key`, `malformed_key`, `key_not_recognized` (mistyped OR revoked: revoked keys are erased, so the two cannot be told apart); `fix` says what to do |\n| 503 | `key_validation_unavailable`: the key could not be checked right now; retry, do not replace the key |\n| 400 | `org_target_required`: you belong to several organizations and the request named none (`organizations` lists them); `brand_in_several_orgs`: the brand is held by several of your organizations, add `orgId`; `brands_span_orgs`: the named brands are not in one organization |\n| 403 | `org_not_member`: the named organization is not one of yours; `no_organization`: the key's user belongs to no organization |\n| 404 | `brand_not_found`: none of your organizations holds that brand |\n| 503 | `membership_unavailable`: your organizations could not be checked right now; retry |\n| 402 | `payment_required` (accounts opened through `/v1/agent-signups`): the call costs money and the balance cannot cover it. `prepay` gives the route, minimums and an example body; `upstream` is the refusing service's own answer |\n| 429 | Rate limit exceeded — see below |\n| 502 | Identity resolution failed (internal service unreachable) |\n\n## Rate limits\n\nEvery response carries your current rate-limit state, so you never have to guess\nhow fast you may go:\n\n```\nRateLimit: limit=600, remaining=597, reset=42\nRateLimit-Policy: \"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60\nRateLimit-Limit: 600\nRateLimit-Remaining: 597\nRateLimit-Reset: 42\n```\n\n`reset` is **seconds until the current window rolls over**, not a timestamp.\n\n| Policy | Applies to | Budget |\n|--------|-----------|--------|\n| `authenticated` | One API key (`Authorization: Bearer distrib.*`) | 600 requests / 60s |\n| `anonymous` | One client IP, for endpoints that need no key | 120 requests / 60s |\n\nExceeding a budget returns **429** with a `Retry-After` header in seconds. Wait\nthat long and retry — the window is fixed, so a single wait clears it. Requests\nmade while throttled still count, so back off rather than polling the 429.\n\n## Deprecation policy\n\nNothing in this document is deprecated today. To set what a campaign may\nspend, use its sales funnel caps:\n`PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps`\n(the old per-campaign daily-budget operations are gone).\n\nWhen something is deprecated, you learn it mechanically, from the API itself,\nand with at least\n**180 days** of notice:\n\n- The operation is marked `deprecated: true` in this document.\n- Every response it returns carries `Deprecation: @<unix-seconds>` (RFC 9745)\n  and `Sunset: <HTTP-date>` (RFC 8594). `Sunset` is the earliest date the\n  operation may stop working — never sooner than 180 days\n  after `Deprecation`.\n- A `Link: <url>; rel=\"deprecation\"` header points at the replacement\n  operation or the changelog entry.\n- A deprecated operation keeps working until its sunset date. Deprecation is an\n  announcement, not a removal.\n- Removal happens only behind a new URL version prefix. `/v1` never changes\n  meaning underneath a caller: a breaking change ships as `/v2`.\n\nThe same policy is machine-readable at the root of this document under\n`x-deprecation-policy`.\n",
     "version": "1.0.0"
   },
   "servers": [
@@ -15742,6 +15742,46 @@
           }
         }
       },
+      "ErrorResponse400InvalidRequestOrNotAnAudienceStatedInApolloFilters": {
+        "description": "Invalid request, or not an audience stated in Apollo filters",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404AudienceNotFound": {
+        "description": "Audience not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse422QuickEnrichCannotEnforceThisAudienceSFiltersReasonsListed": {
+        "description": "QuickEnrich cannot enforce this audience's filters (reasons listed)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502HumanServiceApolloServiceUnreachable": {
+        "description": "human-service / apollo-service unreachable",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
       "ErrorResponse400InvalidBodyForwardedVerbatimFromCloudflareService": {
         "description": "Invalid body, forwarded verbatim from cloudflare-service",
         "content": {
@@ -18587,7 +18627,14 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "starts_work",
+            "spends_money"
+          ],
+          "why": "Creates a campaign that runs: it finds and contacts people and spends the budget."
+        }
       }
     },
     "/v1/campaigns/start-funded-pair": {
@@ -18662,7 +18709,14 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "starts_work",
+            "spends_money"
+          ],
+          "why": "Starts a campaign: it finds and contacts people and spends the budget."
+        }
       }
     },
     "/v1/offers/{offerId}/trigger-events/summary": {
@@ -18821,7 +18875,15 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "sends_to_person",
+            "starts_work",
+            "spends_money"
+          ],
+          "why": "Fires a trigger for a person: the campaign on it writes to them (an email pushed this way is sent)."
+        }
       }
     },
     "/v1/offers/{offerId}/trigger-events": {
@@ -20001,7 +20063,19 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "starts_work",
+            "spends_money"
+          ],
+          "why": "Launches a sales funnel campaign running: it finds and contacts people and spends up to the funnel's max budget.",
+          "notNeededWhen": [
+            {
+              "status": "stopped"
+            }
+          ]
+        }
       }
     },
     "/v1/sales-funnel-campaigns/{id}": {
@@ -20609,7 +20683,19 @@
             "$ref": "#/components/responses/ErrorResponse502BillingUnavailableForwardedVerbatim"
           }
         },
-        "operationId": "patchV1SalesFunnelCampaignsById"
+        "operationId": "patchV1SalesFunnelCampaignsById",
+        "x-needs-user-yes": {
+          "because": [
+            "starts_work",
+            "spends_money"
+          ],
+          "why": "Sets the whole sales funnel campaign running: it finds and contacts people and spends up to the funnel's max budget.",
+          "notNeededWhen": [
+            {
+              "status": "stop"
+            }
+          ]
+        }
       },
       "delete": {
         "tags": [
@@ -20844,7 +20930,19 @@
             "$ref": "#/components/responses/ErrorResponse500InternalError"
           }
         },
-        "operationId": "patchV1CampaignsById"
+        "operationId": "patchV1CampaignsById",
+        "x-needs-user-yes": {
+          "because": [
+            "starts_work",
+            "spends_money"
+          ],
+          "why": "Edits a campaign; resuming it starts finding and contacting people again.",
+          "notNeededWhen": [
+            {
+              "status": "stopped"
+            }
+          ]
+        }
       }
     },
     "/v1/campaigns/{id}/stop": {
@@ -32003,7 +32101,14 @@
             "$ref": "#/components/responses/ErrorResponse500InternalError"
           }
         },
-        "operationId": "postV1WorkflowsByIdExecute"
+        "operationId": "postV1WorkflowsByIdExecute",
+        "x-needs-user-yes": {
+          "because": [
+            "starts_work",
+            "spends_money"
+          ],
+          "why": "Runs a workflow now: it spends and may contact people."
+        }
       }
     },
     "/v1/workflow-runs": {
@@ -32917,7 +33022,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Changes how much the account may be charged per month."
+        }
       },
       "delete": {
         "tags": [
@@ -32965,7 +33076,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Removes the monthly charge limit: charges are no longer capped."
+        }
       }
     },
     "/v1/billing/accounts/pay_balance": {
@@ -33039,7 +33156,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Charges the saved card for what the account owes."
+        }
       }
     },
     "/v1/billing/accounts/topup_minimums": {
@@ -33308,7 +33431,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Sets the card to be charged automatically when the balance runs low."
+        }
       },
       "delete": {
         "tags": [
@@ -33601,7 +33730,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Changes how the account is charged (prepaid or postpaid)."
+        }
       }
     },
     "/v1/billing/accounts/subscription": {
@@ -33708,7 +33843,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Changes the monthly amount charged to the card."
+        }
       }
     },
     "/v1/billing/accounts/subscription/checkout_session": {
@@ -33832,7 +33973,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Starts the monthly plan: the card is charged."
+        }
       }
     },
     "/v1/billing/accounts/subscription/cancel": {
@@ -33932,7 +34079,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Resumes the monthly plan: the card is charged again."
+        }
       }
     },
     "/v1/billing/accounts/subscription/pause": {
@@ -34053,7 +34206,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Unpauses the monthly plan: the card is charged again."
+        }
       }
     },
     "/v1/billing/accounts/subscriptions": {
@@ -34163,7 +34322,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Starts a monthly plan: the first month is charged now."
+        }
       }
     },
     "/v1/billing/accounts/subscriptions/{subscriptionId}": {
@@ -34238,7 +34403,13 @@
             "$ref": "#/components/responses/ErrorResponse502UpstreamError"
           }
         },
-        "operationId": "patchV1BillingAccountsSubscriptionsBySubscriptionId"
+        "operationId": "patchV1BillingAccountsSubscriptionsBySubscriptionId",
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Changes the monthly amount charged to the card."
+        }
       }
     },
     "/v1/billing/accounts/subscriptions/{subscriptionId}/cancel": {
@@ -34364,7 +34535,13 @@
             "$ref": "#/components/responses/ErrorResponse502UpstreamError"
           }
         },
-        "operationId": "postV1BillingAccountsSubscriptionsBySubscriptionIdResume"
+        "operationId": "postV1BillingAccountsSubscriptionsBySubscriptionIdResume",
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Resumes a monthly plan: the card is charged again."
+        }
       }
     },
     "/v1/billing/accounts/subscriptions/{subscriptionId}/pause": {
@@ -34505,7 +34682,13 @@
             "$ref": "#/components/responses/ErrorResponse502UpstreamError"
           }
         },
-        "operationId": "postV1BillingAccountsSubscriptionsBySubscriptionIdUnpause"
+        "operationId": "postV1BillingAccountsSubscriptionsBySubscriptionIdUnpause",
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Unpauses a monthly plan: the card is charged again."
+        }
       }
     },
     "/v1/skills": {
@@ -37373,7 +37556,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Opens a payment page that charges the card."
+        }
       }
     },
     "/v1/billing/accounts/charge": {
@@ -37456,7 +37645,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Charges the saved card the stated amount."
+        }
       }
     },
     "/v1/billing/portal-sessions": {
@@ -37694,7 +37889,13 @@
             "$ref": "#/components/responses/ErrorResponse500UpstreamError"
           }
         },
-        "operationId": "patchV1BrandsByBrandIdDailyBudget"
+        "operationId": "patchV1BrandsByBrandIdDailyBudget",
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Changes how much the brand may spend per day."
+        }
       }
     },
     "/v1/brands/{brandId}/sales-budget": {
@@ -37838,7 +38039,13 @@
             "$ref": "#/components/responses/ErrorResponse500UpstreamError"
           }
         },
-        "operationId": "putV1BrandsByBrandIdSalesBudget"
+        "operationId": "putV1BrandsByBrandIdSalesBudget",
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Changes how much the brand may spend per day."
+        }
       },
       "delete": {
         "tags": [
@@ -37897,7 +38104,13 @@
             "$ref": "#/components/responses/ErrorResponse500UpstreamError"
           }
         },
-        "operationId": "deleteV1BrandsByBrandIdSalesBudget"
+        "operationId": "deleteV1BrandsByBrandIdSalesBudget",
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Removes the brand's daily budget: each campaign's own ceiling applies again."
+        }
       }
     },
     "/v1/brands/{brandId}/sales-budget/history": {
@@ -38532,7 +38745,13 @@
             "$ref": "#/components/responses/ErrorResponse502SalesFunnelCatalogueUnavailableForwardedVerbatim"
           }
         },
-        "operationId": "putV1BrandsByBrandIdOffersByOfferIdSalesFunnelsBySalesFunnelIdCaps"
+        "operationId": "putV1BrandsByBrandIdOffersByOfferIdSalesFunnelsBySalesFunnelIdCaps",
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Changes the sales funnel's max budget and max volume: what its campaign may spend."
+        }
       },
       "delete": {
         "tags": [
@@ -38610,7 +38829,13 @@
             "$ref": "#/components/responses/ErrorResponse502SalesFunnelCatalogueUnavailableForwardedVerbatim"
           }
         },
-        "operationId": "deleteV1BrandsByBrandIdOffersByOfferIdSalesFunnelsBySalesFunnelIdCaps"
+        "operationId": "deleteV1BrandsByBrandIdOffersByOfferIdSalesFunnelsBySalesFunnelIdCaps",
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Clears the sales funnel's max budget and max volume."
+        }
       }
     },
     "/v1/brands/{brandId}/sales-funnel-caps": {
@@ -38997,7 +39222,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "sends_to_person"
+          ],
+          "why": "Sends an email."
+        }
       }
     },
     "/v1/emails/stats": {
@@ -40060,7 +40291,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Opens a payment page that charges the card."
+        }
       }
     },
     "/v1/stripe/stats": {
@@ -40501,7 +40738,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Renders a personalized video (billed to the account)."
+        }
       }
     },
     "/v1/content/generate-expert-quote-pitch": {
@@ -45894,7 +46137,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Scores a batch of opportunities with AI (billed to the account)."
+        }
       }
     },
     "/v1/orgs/opportunities/{id}/reply": {
@@ -45980,7 +46229,13 @@
             "$ref": "#/components/responses/RateLimited"
           }
         },
-        "operationId": "postV1OrgsOpportunitiesByIdReply"
+        "operationId": "postV1OrgsOpportunitiesByIdReply",
+        "x-needs-user-yes": {
+          "because": [
+            "sends_to_person"
+          ],
+          "why": "Sends a pitch reply to a journalist."
+        }
       }
     },
     "/v1/orgs/visibility-score-runs": {
@@ -46135,7 +46390,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Runs an AI visibility audit (billed to the account)."
+        }
       }
     },
     "/v1/orgs/visibility-score-runs/{id}": {
@@ -46622,7 +46883,19 @@
             "$ref": "#/components/responses/ErrorResponse500InternalError"
           }
         },
-        "operationId": "patchV1BrandsByBrandIdPause"
+        "operationId": "patchV1BrandsByBrandIdPause",
+        "x-needs-user-yes": {
+          "because": [
+            "starts_work",
+            "spends_money"
+          ],
+          "why": "Unpausing a brand lets every campaign of it run again: contacting people and spending.",
+          "notNeededWhen": [
+            {
+              "paused": true
+            }
+          ]
+        }
       }
     },
     "/v1/brands/{brandId}/spendable-budget": {
@@ -50287,7 +50560,13 @@
             "$ref": "#/components/responses/ErrorResponse502HumanServiceUnreachableProviderOrVerificationErrorForwardedV"
           }
         },
-        "operationId": "postV1OrgsAudiencesByIdPreviewEmailChecksNext"
+        "operationId": "postV1OrgsAudiencesByIdPreviewEmailChecksNext",
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Checks one more email (billed per check)."
+        }
       }
     },
     "/v1/orgs/audiences/{id}/preview/companies": {
@@ -50683,7 +50962,13 @@
             "$ref": "#/components/responses/ErrorResponse502HumanServiceUnreachableProviderOrVerificationErrorForwardedV"
           }
         },
-        "operationId": "postV1OrgsAudiencesByIdPreviewCompaniesByIndexEmailCheck"
+        "operationId": "postV1OrgsAudiencesByIdPreviewCompaniesByIndexEmailCheck",
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Checks an email (billed per check)."
+        }
       }
     },
     "/v1/orgs/audiences/{id}": {
@@ -50963,7 +51248,115 @@
             "$ref": "#/components/responses/ErrorResponse502HumanServiceUnreachableNotConfigured"
           }
         },
-        "operationId": "patchV1OrgsAudiencesByIdStatus"
+        "operationId": "patchV1OrgsAudiencesByIdStatus",
+        "x-needs-user-yes": {
+          "because": [
+            "starts_work",
+            "spends_money"
+          ],
+          "why": "An active audience feeds the brand's running campaigns: they find and contact its people.",
+          "notNeededWhen": [
+            {
+              "status": "paused"
+            },
+            {
+              "status": "archived"
+            }
+          ]
+        }
+      }
+    },
+    "/v1/orgs/audiences/{id}/serve-source": {
+      "patch": {
+        "tags": [
+          "Audiences"
+        ],
+        "summary": "Choose where an Apollo audience finds its people: Apollo or the free QuickEnrich search",
+        "description": "Proxy to human-service PATCH /orgs/audiences/{id}/serve-source. Body { serveSource: \"apollo\" | \"quickenrich\" }. quickenrich finds people with a FREE QuickEnrich search on job titles (+ excluded titles), person location, employee and revenue bands, then finds and verifies each email before use; once QuickEnrich has nobody left, Apollo serves as before. An audience whose filters QuickEnrich cannot enforce (keyword tags, industries, seniorities, organization locations) answers 422 with every reason. Request + response shapes owned by human-service; status and body forwarded verbatim.\n\nRequest body: documented from human-service PATCH /orgs/audiences/{id}/serve-source, which owns and validates it; the gateway forwards it unchanged.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Audience ID"
+            },
+            "required": true,
+            "description": "Audience ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "serveSource": {
+                    "type": "string",
+                    "enum": [
+                      "apollo",
+                      "quickenrich"
+                    ],
+                    "description": "quickenrich: people are found by a FREE QuickEnrich search (title + person location), their email found and verified before use; once QuickEnrich has nobody left the Apollo search serves as before. apollo: the default Apollo search."
+                  }
+                },
+                "required": [
+                  "serveSource"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Serve source set: { audience, serveSource, quickenrich: { expressible, reasons } }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {},
+                  "additionalProperties": {
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidRequestOrNotAnAudienceStatedInApolloFilters"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404AudienceNotFound"
+          },
+          "422": {
+            "$ref": "#/components/responses/ErrorResponse422QuickEnrichCannotEnforceThisAudienceSFiltersReasonsListed"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502HumanServiceApolloServiceUnreachable"
+          }
+        },
+        "operationId": "patchV1OrgsAudiencesByIdServeSource"
       }
     },
     "/v1/orgs/uploads": {
@@ -52453,7 +52846,13 @@
             "$ref": "#/components/responses/ErrorResponse502ThreadsRefusedTheCallThreadsOwnCodeAndMessageOrOurThreadsApp"
           }
         },
-        "operationId": "postV1OrgsThreadsAccountsByIdPosts"
+        "operationId": "postV1OrgsThreadsAccountsByIdPosts",
+        "x-needs-user-yes": {
+          "because": [
+            "sends_to_person"
+          ],
+          "why": "Publishes a post or a reply on Threads, in public."
+        }
       }
     },
     "/v1/orgs/x/auth/start": {
@@ -53691,7 +54090,14 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "starts_work",
+            "spends_money"
+          ],
+          "why": "Hands the next contacts to the brand's campaign, which writes to them."
+        }
       }
     },
     "/v1/orgs/matrix/connections": {
@@ -54371,7 +54777,18 @@
             "$ref": "#/components/responses/ErrorResponse502CrmServiceUnreachableNotConfigured"
           }
         },
-        "operationId": "patchV1OrgsMatrixLinksByLinkId"
+        "operationId": "patchV1OrgsMatrixLinksByLinkId",
+        "x-needs-user-yes": {
+          "because": [
+            "sends_to_person"
+          ],
+          "why": "Can let our AI write to people from this WhatsApp / Telegram / Discord account.",
+          "notNeededWhen": [
+            {
+              "automationAllowed": false
+            }
+          ]
+        }
       }
     },
     "/v1/orgs/gohighlevel/connections": {
@@ -57443,7 +57860,13 @@
             "$ref": "#/components/responses/ErrorResponse500UpstreamError"
           }
         },
-        "operationId": "postV1BrandsByIdOffersByOfferIdQualificationSuggestions"
+        "operationId": "postV1BrandsByIdOffersByOfferIdQualificationSuggestions",
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Writes qualification criteria with AI (billed to the account)."
+        }
       }
     },
     "/v1/brands/{id}/offers/{offerId}/qualification/criteria": {
@@ -58112,7 +58535,18 @@
             "$ref": "#/components/responses/ErrorResponse500UpstreamError"
           }
         },
-        "operationId": "patchV1BrandsByIdOffersByOfferIdQualificationCriteriaByCriterionId"
+        "operationId": "patchV1BrandsByIdOffersByOfferIdQualificationCriteriaByCriterionId",
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Turning a qualification check on runs it, billed, on every new lead of the offer.",
+          "notNeededWhen": [
+            {
+              "enabled": false
+            }
+          ]
+        }
       },
       "delete": {
         "tags": [
@@ -58317,7 +58751,13 @@
             "$ref": "#/components/responses/ErrorResponse500UpstreamError"
           }
         },
-        "operationId": "postV1BrandsByIdOffersByOfferIdQualificationCriteriaByCriterionIdSample"
+        "operationId": "postV1BrandsByIdOffersByOfferIdQualificationCriteriaByCriterionIdSample",
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Runs a qualification check on real leads (billed per lead)."
+        }
       }
     },
     "/v1/brands/{id}/offers/{offerId}/qualification/previews": {
@@ -59013,7 +59453,13 @@
             "$ref": "#/components/responses/ErrorResponse500UpstreamError"
           }
         },
-        "operationId": "postV1BrandsByIdOffersByOfferIdQualificationPreviews"
+        "operationId": "postV1BrandsByIdOffersByOfferIdQualificationPreviews",
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Runs the offer's qualification checks on sample companies (billed per company)."
+        }
       }
     },
     "/v1/brands/{id}/offers/{offerId}/qualification/previews/{previewId}": {
@@ -59703,7 +60149,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "spends_money"
+          ],
+          "why": "Opens a payment for the amount chosen, with an automatic top-up."
+        }
       }
     },
     "/v1/billing/accounts/prepaid_status": {
@@ -60027,7 +60479,13 @@
           {
             "$ref": "#/components/parameters/XBrandId"
           }
-        ]
+        ],
+        "x-needs-user-yes": {
+          "because": [
+            "sends_to_person"
+          ],
+          "why": "Sends a reply to a person in their email thread."
+        }
       }
     },
     "/v1/orgs/{orgId}/member-invitations": {
@@ -60121,7 +60579,13 @@
             "$ref": "#/components/responses/RateLimited"
           }
         },
-        "operationId": "postV1OrgsByOrgIdMemberInvitations"
+        "operationId": "postV1OrgsByOrgIdMemberInvitations",
+        "x-needs-user-yes": {
+          "because": [
+            "sends_to_person"
+          ],
+          "why": "Emails an invitation to join the account to that person."
+        }
       },
       "get": {
         "tags": [
@@ -61267,5 +61731,14 @@
       "#/components/headers/Sunset",
       "#/components/headers/Link"
     ]
+  },
+  "x-needs-user-yes": {
+    "description": "Operations marked x-needs-user-yes spend the account's money, start work that will spend, or send something to a person. Before calling one, get your user's explicit yes. Unmarked operations need none. The API does not enforce it: the caller asks.",
+    "reasons": {
+      "spends_money": "Charges the account, changes how much it may be charged, or runs a paid action.",
+      "starts_work": "Sets running something that will spend or contact people on its own.",
+      "sends_to_person": "Sends, or lets us send, a message to a human."
+    },
+    "notNeededWhen": "Optional on a marker: a list of request-body matches (every key equal to the body's top-level field); a call matching one needs no yes."
   }
 }
