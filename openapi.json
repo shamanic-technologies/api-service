@@ -358,6 +358,13 @@
           "nullable": true
         }
       },
+      "ResearchEnginePlacesResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "PublicCostPerOutcomeLifetimeResponse": {
         "type": "object",
         "properties": {},
