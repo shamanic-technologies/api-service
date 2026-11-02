@@ -16012,6 +16012,26 @@
           }
         }
       },
+      "ErrorResponse404RefusedCrmServiceSBodyForwardedVerbatimReasonNamesWhy": {
+        "description": "Refused, crm-service's body forwarded verbatim (`reason` names why)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse422RefusedCrmServiceSBodyForwardedVerbatimReasonNamesWhy": {
+        "description": "Refused, crm-service's body forwarded verbatim (`reason` names why)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
       "ErrorResponse404RefusedCrmServiceSTypeRefusedReasonErrorForwardedVerbatim": {
         "description": "Refused, crm-service's `{ type: \"refused\", reason, error }` forwarded verbatim",
         "content": {
@@ -56434,6 +56454,302 @@
           }
         },
         "operationId": "postV1OrgsPeopleMergesByMergeIdUndo"
+      }
+    },
+    "/v1/orgs/people/handles": {
+      "post": {
+        "tags": [
+          "CRM Contacts"
+        ],
+        "summary": "Record a contact handle a person stated (\"reach me on +X\")",
+        "description": "Record a phone number or email a person told the brand to use (\"don't message me here, reach me on +33... on WhatsApp\"). Proxy to crm-service POST /orgs/people/handles, body forwarded verbatim: `{ brandId, personId | personKey (exactly one; personKey = \"phone:+<digits>\" or \"email:<addr>\"), phone | email (exactly one), preferred?, channel?, reason?, evidence? { source, channel?, roomId?, eventId?, conversationId?, text? } }`. A preferred handle shows as `preferredContact` on GET /v1/orgs/people and the timeline. Idempotent: the same handle again answers 200 with the existing record (201 for a new one). Refusals cross verbatim: 400 validation, 404 `person_not_found`, 422 `invalid_handle`. Take it back with POST /v1/orgs/people/handles/{handleId}/undo. Requires x-user-id (recorded as who stated it). Response shape owned by crm-service.\n\nRequest body: documented from crm-service POST /orgs/people/handles, which owns and validates it; the gateway forwards it unchanged.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "brandId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "personId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "The person's personId (GET /orgs/people, or item.personId of the Lead event). Exactly one of personId / personKey."
+                  },
+                  "personKey": {
+                    "type": "string",
+                    "description": "Any identity key the person holds, like GET /orgs/people/timeline: `phone:+<digits>` (the number they wrote from), `email:<address>`."
+                  },
+                  "phone": {
+                    "type": "string",
+                    "description": "International number (+ and country code). Exactly one of phone / email."
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "preferred": {
+                    "type": "boolean",
+                    "description": "Default true: reach them there from now on. false = only record that it is theirs."
+                  },
+                  "channel": {
+                    "type": "string",
+                    "description": "Where they want to be reached on it (whatsapp, email, telegram ...)."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "evidence": {
+                    "type": "object",
+                    "properties": {
+                      "source": {
+                        "type": "string",
+                        "description": "Who read it: assistant, staff, mcp ..."
+                      },
+                      "channel": {
+                        "type": "string"
+                      },
+                      "roomId": {
+                        "type": "string"
+                      },
+                      "eventId": {
+                        "type": "string"
+                      },
+                      "conversationId": {
+                        "type": "string"
+                      },
+                      "text": {
+                        "type": "string",
+                        "maxLength": 4000,
+                        "description": "The person's own words."
+                      }
+                    },
+                    "required": [
+                      "source"
+                    ]
+                  }
+                },
+                "required": [
+                  "brandId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Already recorded (duplicate), same body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrmPassthroughResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Handle recorded (crm-service body verbatim)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrmPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestForwardedVerbatimFromCrmService"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404RefusedCrmServiceSBodyForwardedVerbatimReasonNamesWhy"
+          },
+          "422": {
+            "$ref": "#/components/responses/ErrorResponse422RefusedCrmServiceSBodyForwardedVerbatimReasonNamesWhy"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502CrmServiceUnreachableNotConfigured"
+          }
+        },
+        "operationId": "postV1OrgsPeopleHandles",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ]
+      },
+      "get": {
+        "tags": [
+          "CRM Contacts"
+        ],
+        "summary": "List the contact handles a person stated",
+        "description": "Proxy to crm-service GET /orgs/people/handles: `{ brandId, handles[] }`, every handle stated for the person (undone ones included). The whole query string is forwarded byte-for-byte (`brandId` and `personId` required downstream). An unknown person is 404 `person_not_found`, crm-service's body verbatim. Requires x-user-id. Response shape owned by crm-service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "personId",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Handles as returned by crm-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrmPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestForwardedVerbatimFromCrmService"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404RefusedCrmServiceSBodyForwardedVerbatimReasonNamesWhy"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502CrmServiceUnreachableNotConfigured"
+          }
+        },
+        "operationId": "getV1OrgsPeopleHandles"
+      }
+    },
+    "/v1/orgs/people/handles/{handleId}/undo": {
+      "post": {
+        "tags": [
+          "CRM Contacts"
+        ],
+        "summary": "Undo a stated contact handle",
+        "description": "Take back a handle recorded with POST /v1/orgs/people/handles. Proxy to crm-service POST /orgs/people/handles/{handleId}/undo, body `{ brandId }` forwarded verbatim. An unknown handle is 404 `handle_not_found`, crm-service's body verbatim. Requires x-user-id. Response shape owned by crm-service.\n\nRequest body: documented from crm-service POST /orgs/people/handles/{handleId}/undo, which owns and validates it; the gateway forwards it unchanged.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "handleId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "brandId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "brandId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Undone, as returned by crm-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrmPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestForwardedVerbatimFromCrmService"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404RefusedCrmServiceSBodyForwardedVerbatimReasonNamesWhy"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502CrmServiceUnreachableNotConfigured"
+          }
+        },
+        "operationId": "postV1OrgsPeopleHandlesByHandleIdUndo"
       }
     },
     "/v1/orgs/people/corrections": {
