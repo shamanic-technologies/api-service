@@ -136,4 +136,41 @@ for (const { suffix, label } of SOURCING_INVESTMENT_READS) {
   );
 }
 
+// GET /v1/brands/:brandId/ledger[/runs] (FACTORY-USER-LEDGER-1102: the Ledger page for every client)
+// → runs-service GET /v1/brands/{brandId}/ledger[/runs], its CUSTOMER twin of the staff
+// /internal/brands/:brandId/ledger read: scoped by runs-service on the x-org-id it receives (only
+// that org's runs and stored rows; a brand held by several orgs reads its own books) and carrying
+// no vendor figure, so this stays a byte pipe. Ownership is still checked first (404, no read).
+// Staff keep GET /v1/runs/brands/:brandId/ledger[/runs] (src/routes/runs.ts), brand-wide.
+const BRAND_LEDGER_READS = [
+  { suffix: "", label: "brand ledger" },
+  { suffix: "/runs", label: "brand production orders" },
+] as const;
+
+for (const { suffix, label } of BRAND_LEDGER_READS) {
+  router.get(
+    `/brands/:brandId/ledger${suffix}`,
+    authenticate,
+    requireOrg,
+    requireUser,
+    async (req: AuthenticatedRequest, res) => {
+      const brandId = req.params.brandId as string;
+      try {
+        if (!(await ensureBrandInOrg(req, res, brandId))) return;
+        const qIndex = req.originalUrl.indexOf("?");
+        const rawQuery = qIndex === -1 ? "" : req.originalUrl.slice(qIndex);
+        await pipeExternalService(
+          externalServices.runs,
+          `/v1/brands/${encodeURIComponent(brandId)}/ledger${suffix}${rawQuery}`,
+          { headers: buildInternalHeaders(req), expressRes: res },
+        );
+      } catch (error: any) {
+        if (res.headersSent) { res.end(); return; }
+        console.error(`[api-service] Read ${label} error:`, error, { brandId, orgId: req.orgId });
+        respondUpstreamError(res, error, `Failed to read ${label}`);
+      }
+    },
+  );
+}
+
 export default router;
