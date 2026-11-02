@@ -3,6 +3,7 @@ import { registry } from "../schemas.js";
 import { DEPRECATION_POLICY, MINIMUM_NOTICE_DAYS } from "../lib/deprecation.js";
 import { attachDownstreamBodies } from "./downstream-bodies.js";
 import { attachDownstreamResponses } from "./downstream-responses.js";
+import { USER_YES_EXTENSION, attachUserYes } from "./user-yes.js";
 import {
   ANONYMOUS_POLICY,
   AUTHENTICATED_POLICY,
@@ -276,6 +277,21 @@ which selects the organization holding it, or name the organization (\`?orgId=<i
 belong to several and name nothing, the request is refused with \`400 org_target_required\` and
 the list of your organizations; no organization is ever picked by default.
 
+## Ask your user before you spend, start or send
+
+Some operations spend the account's money, start work that will spend (a campaign, a workflow run) or send something
+to a person (an email, a reply, a post, an invitation). Each of them carries \`${USER_YES_EXTENSION}\` in this
+document (and \`[ASK YOUR USER FIRST]\` in \`?view=index\`). **Before calling one, tell your user what it will do and
+get their explicit yes.** The marker holds:
+
+- \`because\`: one or more of \`spends_money\`, \`starts_work\`, \`sends_to_person\`.
+- \`why\`: one line saying what the call does, to put in your question.
+- \`notNeededWhen\` (sometimes): request-body values that make this call harmless (a campaign created
+  \`status: "stopped"\`), each entry matched when every key equals the body's top-level field. Such a call needs no yes.
+
+An operation without the marker needs no yes: reads, settings, and anything created stopped, off or paused.
+The API does not check the yes for you: asking is your job.
+
 ## Storing provider keys (BYOK)
 
 To store your own provider API keys (e.g. OpenAI, Anthropic) for use in workflows:
@@ -351,6 +367,22 @@ and with at least
 The same policy is machine-readable at the root of this document under
 \`x-deprecation-policy\`.
 `;
+
+/** Root-level, machine-readable statement of what the per-operation marker means. */
+const USER_YES_POLICY = {
+  description:
+    "Operations marked x-needs-user-yes spend the account's money, start work that will spend, or send something " +
+    "to a person. Before calling one, get your user's explicit yes. Unmarked operations need none. " +
+    "The API does not enforce it: the caller asks.",
+  reasons: {
+    spends_money: "Charges the account, changes how much it may be charged, or runs a paid action.",
+    starts_work: "Sets running something that will spend or contact people on its own.",
+    sends_to_person: "Sends, or lets us send, a message to a human.",
+  },
+  notNeededWhen:
+    "Optional on a marker: a list of request-body matches (every key equal to the body's top-level field); " +
+    "a call matching one needs no yes.",
+};
 
 /**
  * Which audience a built document is for.
@@ -531,6 +563,8 @@ export function buildDocument(
   });
   attachDownstreamBodies(document);
   attachDownstreamResponses(document);
+  attachUserYes(document);
+  document[USER_YES_EXTENSION] = USER_YES_POLICY;
 
   if (audience === "public") {
     stripNonCustomerSurface(document, new Set());
