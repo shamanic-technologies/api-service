@@ -376,6 +376,42 @@ router.patch("/orgs/audiences/:id/serve-source", ...authChain, async (req: Authe
   }
 });
 
+// POST /v1/orgs/audiences/:id/sources → human-service POST /orgs/audiences/{id}/sources
+// Add a buying-signal source (hiring / job_change / funding) to an audience, a
+// hiring one optionally narrowed to posted job titles (HIRING-TITLES-1102).
+// Status (201, 400, 404, 409 with the existing sourceId, 502) and body forwarded
+// field for field.
+router.post("/orgs/audiences/:id/sources", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.human,
+      `/orgs/audiences/${encodeURIComponent(req.params.id)}/sources`,
+      { method: "POST", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Audience add source error:", error.message);
+    respondUpstreamError(res, error, "Failed to call audiences/sources");
+  }
+});
+
+// PATCH /v1/orgs/audiences/:id/sources/:sourceId → human-service PATCH /orgs/audiences/{id}/sources/{sourceId}
+// Set the posted job titles a hiring source looks for (null = any role). Status
+// (200, 400, 404, 502) and body forwarded field for field.
+router.patch("/orgs/audiences/:id/sources/:sourceId", ...authChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.human,
+      `/orgs/audiences/${encodeURIComponent(req.params.id)}/sources/${encodeURIComponent(req.params.sourceId)}`,
+      { method: "PATCH", headers: buildInternalHeaders(req), body: req.body },
+    );
+    res.status(status).json(data);
+  } catch (error: any) {
+    console.error("[api-service] Audience source job titles error:", error.message);
+    respondUpstreamError(res, error, "Failed to call audiences/sources/{sourceId}");
+  }
+});
+
 // GET /v1/orgs/audiences/:id → human-service GET /orgs/audiences/{id}
 router.get("/orgs/audiences/:id", ...authChain, async (req: AuthenticatedRequest, res) => {
   try {
