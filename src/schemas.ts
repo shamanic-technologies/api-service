@@ -17697,6 +17697,61 @@ registry.registerPath({
   },
 });
 
+// Stated contact handles: a person says "reach me on +X, not here".
+const peopleHandleRefusal = { description: "Refused, crm-service's body forwarded verbatim (`reason` names why)", content: errorContent };
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/people/handles",
+  tags: ["CRM Contacts"],
+  summary: "Record a contact handle a person stated (\"reach me on +X\")",
+  description:
+    "Record a phone number or email a person told the brand to use (\"don't message me here, reach me on +33... on WhatsApp\"). Proxy to crm-service POST /orgs/people/handles, body forwarded verbatim: `{ brandId, personId | personKey (exactly one; personKey = \"phone:+<digits>\" or \"email:<addr>\"), phone | email (exactly one), preferred?, channel?, reason?, evidence? { source, channel?, roomId?, eventId?, conversationId?, text? } }`. A preferred handle shows as `preferredContact` on GET /v1/orgs/people and the timeline. Idempotent: the same handle again answers 200 with the existing record (201 for a new one). Refusals cross verbatim: 400 validation, 404 `person_not_found`, 422 `invalid_handle`. Take it back with POST /v1/orgs/people/handles/{handleId}/undo. Requires x-user-id (recorded as who stated it). Response shape owned by crm-service.",
+  security: authed,
+  request: { body: { content: { "application/json": { schema: CrmPassthroughRequest } } } },
+  responses: {
+    201: { description: "Handle recorded (crm-service body verbatim)", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    200: { description: "Already recorded (duplicate), same body", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: peopleHandleRefusal,
+    422: peopleHandleRefusal,
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/people/handles",
+  tags: ["CRM Contacts"],
+  summary: "List the contact handles a person stated",
+  description:
+    "Proxy to crm-service GET /orgs/people/handles: `{ brandId, handles[] }`, every handle stated for the person (undone ones included). The whole query string is forwarded byte-for-byte (`brandId` and `personId` required downstream). An unknown person is 404 `person_not_found`, crm-service's body verbatim. Requires x-user-id. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: z.object({ brandId: z.string(), personId: z.string() }).passthrough() },
+  responses: {
+    200: { description: "Handles as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: peopleHandleRefusal,
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/people/handles/{handleId}/undo",
+  tags: ["CRM Contacts"],
+  summary: "Undo a stated contact handle",
+  description:
+    "Take back a handle recorded with POST /v1/orgs/people/handles. Proxy to crm-service POST /orgs/people/handles/{handleId}/undo, body `{ brandId }` forwarded verbatim. An unknown handle is 404 `handle_not_found`, crm-service's body verbatim. Requires x-user-id. Response shape owned by crm-service.",
+  security: authed,
+  request: {
+    params: z.object({ handleId: z.string() }),
+    body: { content: { "application/json": { schema: CrmPassthroughRequest } } },
+  },
+  responses: {
+    200: { description: "Undone, as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: peopleHandleRefusal,
+    ...crmErrorResponses,
+  },
+});
+
 // Corrections: a user corrects how the people were matched (a tag, a person's company, a domain verdict).
 const peopleCorrectionRefusal = { description: "Refused, crm-service's `{ type: \"refused\", reason, error }` forwarded verbatim", content: errorContent };
 registry.registerPath({

@@ -631,6 +631,56 @@ router.post("/orgs/people/merges/:mergeId/undo", ...orgUserChain, async (req: Au
   }
 });
 
+// ─── Stated contact handles: "don't message me here, reach me on +X" ───────
+// crm-service owns the statement, its refusals (404 person_not_found /
+// handle_not_found, 422 invalid_handle) and the person's `preferredContact`;
+// the status (201 new, 200 duplicate) and the body cross unchanged.
+
+// POST /v1/orgs/people/handles → crm-service POST /orgs/people/handles
+router.post("/orgs/people/handles", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.crm,
+      "/orgs/people/handles",
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error) {
+    console.error("[api-service] State contact handle error:", error);
+    respondUpstreamError(res, error, "State contact handle error");
+  }
+});
+
+// GET /v1/orgs/people/handles → crm-service GET /orgs/people/handles
+router.get("/orgs/people/handles", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.crm,
+      `/orgs/people/handles${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error) {
+    console.error("[api-service] List contact handles error:", error);
+    respondUpstreamError(res, error, "List contact handles error");
+  }
+});
+
+// POST /v1/orgs/people/handles/:handleId/undo → crm-service POST /orgs/people/handles/:handleId/undo
+router.post("/orgs/people/handles/:handleId/undo", ...orgUserChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { status, data } = await callExternalServiceWithStatus(
+      externalServices.crm,
+      `/orgs/people/handles/${encodeURIComponent(req.params.handleId)}/undo`,
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req) },
+    );
+    res.status(status).json(data);
+  } catch (error) {
+    console.error("[api-service] Undo contact handle error:", error);
+    respondUpstreamError(res, error, "Undo contact handle error");
+  }
+});
+
 // ─── Corrections: a user corrects a tag, a person's company, a domain verdict ─
 // Same shape as the stated merges above: crm-service owns the statement, its
 // refusals (`{ type: "refused", … }` as 404 / 422) and the rebuild it kicks; the
