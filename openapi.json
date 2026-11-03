@@ -55482,6 +55482,148 @@
         "operationId": "deleteV1OrgsGohighlevelConnectionsById"
       }
     },
+    "/v1/orgs/gohighlevel/connections/{id}/booking-access": {
+      "post": {
+        "tags": [
+          "CRM Contacts"
+        ],
+        "summary": "Check again whether a GoHighLevel token can book meetings",
+        "description": "Proxy to crm-service POST /orgs/gohighlevel/connections/{id}/booking-access. An empty-body write probe at GoHighLevel (nothing is created); run it after the customer changed the token's scopes. Answers the connection view as crm-service returns it. The whole query string is forwarded untransformed. Response shape owned by crm-service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Connection ID"
+            },
+            "required": true,
+            "description": "Connection ID",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Brand ID (optional: identity context)"
+            },
+            "required": false,
+            "description": "Brand ID (optional: identity context)",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Connection as returned by crm-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrmPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestForwardedVerbatimFromCrmService"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404NoSuchConnectionForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502CrmServiceUnreachableNotConfigured"
+          }
+        },
+        "operationId": "postV1OrgsGohighlevelConnectionsByIdBookingAccess"
+      }
+    },
+    "/v1/orgs/gohighlevel/scopes": {
+      "get": {
+        "tags": [
+          "CRM Contacts"
+        ],
+        "summary": "The GoHighLevel token scopes to grant",
+        "description": "Proxy to crm-service GET /orgs/gohighlevel/scopes: `mirror` (read the CRM) and `booking` (book meetings for prospects). The whole query string is forwarded untransformed. Response shape owned by crm-service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Brand ID (optional: identity context)"
+            },
+            "required": false,
+            "description": "Brand ID (optional: identity context)",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Scopes as returned by crm-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrmPassthroughResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestForwardedVerbatimFromCrmService"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502CrmServiceUnreachableNotConfigured"
+          }
+        },
+        "operationId": "getV1OrgsGohighlevelScopes"
+      }
+    },
     "/v1/orgs/gohighlevel/contacts": {
       "get": {
         "tags": [

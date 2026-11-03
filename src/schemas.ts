@@ -16699,6 +16699,11 @@ const CrmBrandIdQuery = z.object({
   brandId: z.string().uuid().openapi({ description: "Brand ID (required by crm-service)" }),
 });
 
+// Brand context the dashboard sends so identity headers carry it; crm-service does not require it there.
+const CrmOptionalBrandIdQuery = z.object({
+  brandId: z.string().uuid().optional().openapi({ description: "Brand ID (optional: identity context)" }),
+});
+
 const CrmServeStatsQuery = CrmBrandIdQuery.extend({
   pool: z.enum(["csv", "people"]).optional().openapi({ description: "csv (default: imported CRM files) or people (the brand's merged CRM people)" }),
   segment: z
@@ -17429,6 +17434,37 @@ registry.registerPath({
   responses: {
     200: { description: "Disconnection result as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
     404: { description: "No such connection (forwarded verbatim)", content: errorContent },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/gohighlevel/connections/{id}/booking-access",
+  tags: ["CRM Contacts"],
+  summary: "Check again whether a GoHighLevel token can book meetings",
+  description:
+    "Proxy to crm-service POST /orgs/gohighlevel/connections/{id}/booking-access. An empty-body write probe at GoHighLevel (nothing is created); run it after the customer changed the token's scopes. Answers the connection view as crm-service returns it. The whole query string is forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: { params: GhlConnectionIdParam, query: CrmOptionalBrandIdQuery },
+  responses: {
+    200: { description: "Connection as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
+    404: { description: "No such connection (forwarded verbatim)", content: errorContent },
+    ...crmErrorResponses,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/orgs/gohighlevel/scopes",
+  tags: ["CRM Contacts"],
+  summary: "The GoHighLevel token scopes to grant",
+  description:
+    "Proxy to crm-service GET /orgs/gohighlevel/scopes: `mirror` (read the CRM) and `booking` (book meetings for prospects). The whole query string is forwarded untransformed. Response shape owned by crm-service.",
+  security: authed,
+  request: { query: CrmOptionalBrandIdQuery },
+  responses: {
+    200: { description: "Scopes as returned by crm-service", content: { "application/json": { schema: CrmPassthroughResponse } } },
     ...crmErrorResponses,
   },
 });

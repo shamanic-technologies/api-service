@@ -395,6 +395,7 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "POST /v1/orgs/gohighlevel/connections": NO,
   "PATCH /v1/orgs/gohighlevel/connections/{id}": NO,
   "DELETE /v1/orgs/gohighlevel/connections/{id}": NO,
+  "POST /v1/orgs/gohighlevel/connections/{id}/booking-access": NO,
   "POST /v1/orgs/posthog/connections": NO,
   "PATCH /v1/orgs/posthog/connections/{id}": NO,
   "DELETE /v1/orgs/posthog/connections/{id}": NO,
