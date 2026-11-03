@@ -184,6 +184,52 @@ describe("/v1/orgs/gohighlevel/* → crm-service", () => {
     });
   });
 
+  it("POST /orgs/gohighlevel/connections/:id/booking-access reaches its own path with the query string, no body", async () => {
+    const res = await request(buildApp()).post(
+      "/v1/orgs/gohighlevel/connections/conn-uuid-1/booking-access?brandId=b1",
+    );
+
+    expect(res.status).toBe(200);
+    const call = calls[0];
+    expect(call.url).toBe(`${CRM_BASE}/orgs/gohighlevel/connections/conn-uuid-1/booking-access?brandId=b1`);
+    expect(call.options.method).toBe("POST");
+    expect(call.options.body).toBeUndefined();
+    expect(call.options.headers["x-org-id"]).toBe("org_test456");
+  });
+
+  it("booking-access returns the upstream connection view untransformed, and its 404 verbatim", async () => {
+    const view = { connection: { id: "conn-uuid-1", bookingAccess: { canBook: false, missingScopes: ["calendars/events.write"] } } };
+    (global.fetch as any).mockImplementationOnce(async (url: string, options: any) => {
+      calls.push({ url, options });
+      return { ok: true, status: 200, json: () => Promise.resolve(view) };
+    });
+    const ok = await request(buildApp()).post("/v1/orgs/gohighlevel/connections/conn-uuid-1/booking-access");
+    expect(ok.body).toEqual(view);
+
+    (global.fetch as any).mockImplementationOnce(async () => ({
+      ok: false,
+      status: 404,
+      text: () => Promise.resolve('{"type":"not_found","error":"connection not found"}'),
+    }));
+    const missing = await request(buildApp()).post("/v1/orgs/gohighlevel/connections/conn-uuid-2/booking-access");
+    expect(missing.status).toBe(404);
+    expect(missing.body).toEqual({ type: "not_found", error: "connection not found" });
+  });
+
+  it("GET /orgs/gohighlevel/scopes forwards the query string + org identity and returns the body untransformed", async () => {
+    const scopes = { scopes: { mirror: ["contacts.readonly"], booking: ["calendars/events.write"] } };
+    (global.fetch as any).mockImplementationOnce(async (url: string, options: any) => {
+      calls.push({ url, options });
+      return { ok: true, status: 200, json: () => Promise.resolve(scopes) };
+    });
+    const res = await request(buildApp()).get("/v1/orgs/gohighlevel/scopes?brandId=b1");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(scopes);
+    expect(calls[0].url).toBe(`${CRM_BASE}/orgs/gohighlevel/scopes?brandId=b1`);
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+  });
+
   it("a credential GoHighLevel refuses reaches the caller with the VENDOR's own reason", async () => {
     // This body is the only thing telling the customer which field to fix, so every
     // field survives — rebuilding it into `{ error: "<stringified body>" }` would
