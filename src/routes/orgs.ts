@@ -27,6 +27,14 @@ import { isStaffEmail } from "../lib/staff.js";
  *   and membership-checked by `authenticate`; the downstream path carries the
  *   AUTHENTICATED org.
  *
+ * - `POST /v1/orgs/:orgId/phone-members` → the same path under `/internal`: a
+ *   PHONE NUMBER becomes a member of the org with no email, nothing sent, no key
+ *   minted, so Sophie's next WhatsApp/Telegram turn from that number lands in
+ *   this account. Same gate as the invitations (any member of THEIR org; a staff
+ *   key counts as a member of every org). Body passes through untouched; a
+ *   number that already answers for another account is client-service's 409
+ *   `phone_belongs_to_another_account`, piped verbatim.
+ *
  * - `POST /v1/orgs/:orgId/members` → `POST /internal/orgs/:orgId/members`, then
  *   key-service `POST /api-keys`: staff add a person (by email) to a client's org
  *   WITHOUT any email reaching them, and get back an API key that belongs to THAT
@@ -167,6 +175,25 @@ router.delete(
       );
     } catch (error) {
       respondUpstreamError(res, error, "Failed to revoke the invitation");
+    }
+  },
+);
+
+router.post(
+  "/orgs/:orgId/phone-members",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    if (pathOrgMismatch(req, res)) return;
+    try {
+      await pipeExternalService(
+        externalServices.client,
+        `/internal/orgs/${encodeURIComponent(req.orgId!)}/phone-members`,
+        { expressRes: res, method: "POST", body: req.body, headers: buildInternalHeaders(req) },
+      );
+    } catch (error) {
+      respondUpstreamError(res, error, "Failed to add the phone number");
     }
   },
 );
