@@ -79,7 +79,8 @@ async function main() {
       continue;
     }
     const paths = (doc.paths ?? {}) as Record<string, Json>;
-    const match = Object.entries(paths).find(([p]) => shape(p) === shape(src.path));
+    // Two producer templates can share a shape (`/links/{linkId}` PATCH, `/links/{channel}` DELETE): take the one carrying the method.
+    const match = Object.entries(paths).find(([p, item]) => shape(p) === shape(src.path) && item?.[src.method.toLowerCase()]);
     const op = match?.[1]?.[src.method.toLowerCase()] as Json | undefined;
     if (!op) {
       problems.push(`${key}: ${src.service} documents no ${src.method} ${src.path}`);
@@ -105,7 +106,8 @@ async function main() {
       continue;
     }
     const paths = (doc.paths ?? {}) as Record<string, Json>;
-    const match = Object.entries(paths).find(([p]) => shape(p) === shape(src.path));
+    // Two producer templates can share a shape (`/links/{linkId}` PATCH, `/links/{channel}` DELETE): take the one carrying the method.
+    const match = Object.entries(paths).find(([p, item]) => shape(p) === shape(src.path) && item?.[src.method.toLowerCase()]);
     const op = match?.[1]?.[src.method.toLowerCase()] as Json | undefined;
     if (!op) {
       problems.push(`${key}: ${src.service} documents no ${src.method} ${src.path}`);

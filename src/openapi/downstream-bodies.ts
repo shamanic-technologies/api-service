@@ -35,6 +35,7 @@ export interface DownstreamBodySource {
 /** `"<METHOD> <gateway path template>"` → the producer route the body is forwarded to. */
 export const DOWNSTREAM_BODY_SOURCES: Record<string, DownstreamBodySource> = {
   "POST /v1/sales-funnel-campaigns": { service: "campaign-service", method: "POST", path: "/sales-funnel-campaigns" },
+  "POST /v1/agent-signups/start": { service: "client-service", method: "POST", path: "/internal/agent-signups/start" },
   "PATCH /v1/sales-funnel-campaigns/{id}": { service: "campaign-service", method: "PATCH", path: "/sales-funnel-campaigns/{id}" },
   "POST /v1/keys/brands/{brandId}": { service: "key-service", method: "POST", path: "/keys/brands/{brandId}" },
   "POST /v1/leads/crm-pairings/rulings": { service: "lead-service", method: "POST", path: "/orgs/leads/crm-pairings/rulings" },
