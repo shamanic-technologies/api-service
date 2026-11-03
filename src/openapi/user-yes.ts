@@ -337,6 +337,7 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "PUT /v1/orgs/{orgId}/membership-limit": NO,
   "POST /v1/orgs/{orgId}/member-invitations": yes(SEND, "Emails an invitation to join the account to that person."),
   "DELETE /v1/orgs/{orgId}/member-invitations/{invitationId}": NO,
+  "POST /v1/orgs/{orgId}/phone-members": NO,
   "POST /v1/orgs/{orgId}/owner-telegram/link-codes": NO,
   "DELETE /v1/orgs/{orgId}/owner-telegram": NO,
 
