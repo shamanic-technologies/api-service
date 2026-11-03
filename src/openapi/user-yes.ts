@@ -102,6 +102,7 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "POST /v1/users/resolve": NO,
   "POST /v1/agent-signups/start": NO,
   "POST /v1/agent-signups/complete": NO,
+  "POST /v1/agent-signups/approve": NO,
 
   // ── Leads ──────────────────────────────────────────────────────────────────
   "POST /v1/leads/search": NO,
