@@ -129,7 +129,6 @@ describe("header forwarding audit", () => {
       "src/routes/keys.ts",
       "src/routes/qualify.ts",
       "src/routes/billing.ts",
-      "src/routes/stripe.ts",
       "src/routes/emails.ts",
       "src/routes/activity.ts",
       "src/routes/users.ts",

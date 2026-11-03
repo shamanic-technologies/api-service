@@ -274,10 +274,6 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   ),
   "PUT /v1/billing/usage-discount": NO,
   "DELETE /v1/billing/usage-discount": NO,
-  "POST /v1/stripe/products": NO,
-  "POST /v1/stripe/prices": NO,
-  "POST /v1/stripe/coupons": NO,
-  "POST /v1/stripe/checkout": yes(SPEND, "Opens a payment page that charges the card."),
 
   // ── Emails / conversations ─────────────────────────────────────────────────
   "POST /v1/emails/send": yes(SEND, "Sends an email."),

@@ -54,18 +54,30 @@ export const SalesFunnelCapSchema = z
 export const ErrorResponseSchema = z
   .object({
     error: z.string().describe("Error message"),
-    reason: z
-      .string()
-      .optional()
-      .describe(
-        "On a 402 only: present when the spend was refused because the campaign (sales funnel) reached its MAX BUDGET " +
-          "(`sales_funnel_max_budget_reached`) or its max budget could not be read (`sales_funnel_max_budget_unreadable`). " +
-          "Adding credit does not help: raise the campaign's max budget. Absent on a plain insufficient-balance refusal.",
-      ),
-    sales_funnel_cap: SalesFunnelCapSchema.optional().describe("On a 402 with `reason`: the cap billing-service applied, verbatim"),
+    code: z.string().optional().describe("Machine-readable reason, when the route names one"),
     message: z.string().optional().describe("Plain-words explanation, when the error carries one"),
   })
   .openapi("ErrorResponse");
+
+/**
+ * The 402 body. Only a 402 can carry the campaign max-budget fields, so they
+ * live on this schema alone: `postProcessOperations` (src/openapi/document.ts)
+ * points every documented 402 at it, and every other status keeps the plain
+ * `ErrorResponse` (an outside developer read "On a 402 only" on each 400/409 of
+ * the WhatsApp link routes, CLIENT-FRICTION-API-1103).
+ */
+export const PaymentRequiredErrorSchema = ErrorResponseSchema.extend({
+  reason: z
+    .string()
+    .optional()
+    .describe(
+      "Present when the spend was refused because the campaign (sales funnel) reached its MAX BUDGET " +
+        "(`sales_funnel_max_budget_reached`) or its max budget could not be read (`sales_funnel_max_budget_unreadable`). " +
+        "Adding credit does not help: raise the campaign's max budget. Absent on a plain insufficient-balance refusal.",
+    ),
+  sales_funnel_cap: SalesFunnelCapSchema.optional().describe("With `reason`: the cap billing-service applied, verbatim"),
+}).openapi("PaymentRequiredError");
+registry.register("PaymentRequiredError", PaymentRequiredErrorSchema);
 
 const errorContent = {
   "application/json": { schema: ErrorResponseSchema },
@@ -5208,6 +5220,7 @@ registry.registerPath({
   description:
     "Proxy to brand-service PUT /orgs/brands/{brandId}/sales-rep-phone. " +
     "States (or changes) the one number to ring when a sales interest lands on this brand. " +
+    "On a linked WhatsApp line, this is also the number a chat is handed over to when the AI cannot answer (skill GET /v1/skills/whatsapp-line). " +
     "Body + response shapes, and what counts as a valid number, are owned by the downstream " +
     "service; it normalizes what it accepts and refuses the rest with a 400 that propagates verbatim.",
   security: authed,
@@ -5640,13 +5653,13 @@ registry.registerPath({
   description:
     "Proxy to brand-service GET /orgs/brands/{id}/share-token. Returns the credential " +
     "currently letting someone outside the org open a read-only view of this brand, or " +
-    "{ token: null } when the brand has never been shared. A READ: it does NOT mint one, so " +
+    "nulls when the brand has never been shared. A READ: it does NOT mint one, so " +
     "opening a share menu cannot accidentally start sharing a brand. Response shape is owned " +
     "by the downstream service.",
   security: authed,
   request: { params: BrandIdParam },
   responses: {
-    200: { description: "Current share credential (token null when unshared)", content: { "application/json": { schema: BrandShareTokenResponseSchema } } },
+    200: { description: "Current share credential (nulls when unshared)", content: { "application/json": { schema: BrandShareTokenResponseSchema } } },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
     404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
@@ -5668,7 +5681,8 @@ registry.registerPath({
   security: authed,
   request: { params: BrandIdParam },
   responses: {
-    200: { description: "Share credential", content: { "application/json": { schema: BrandShareTokenResponseSchema } } },
+    200: { description: "Brand already had a credential; returned untouched", content: { "application/json": { schema: BrandShareTokenResponseSchema } } },
+    201: { description: "Credential minted", content: { "application/json": { schema: BrandShareTokenResponseSchema } } },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Brand does not belong to the caller's org (forwarded verbatim)", content: errorContent },
     404: { description: "Brand not found (forwarded verbatim)", content: errorContent },
@@ -13118,337 +13132,6 @@ registry.registerPath({
 });
 
 // ===================================================================
-// STRIPE (e-commerce — products, prices, coupons, checkout)
-// ===================================================================
-
-export const CreateStripeProductRequestSchema = z
-  .object({
-    name: z.string().min(1).describe("Product name"),
-    description: z.string().optional().describe("Product description"),
-    metadata: z.record(z.string(), z.string()).optional().describe("Arbitrary key-value metadata"),
-  })
-  .openapi("CreateStripeProductRequest");
-
-export const CreateStripePriceRequestSchema = z
-  .object({
-    productId: z.string().min(1).describe("Stripe product ID"),
-    unitAmountCents: z.number().int().min(0).describe("Price in cents"),
-    currency: z.string().min(3).max(3).default("usd").describe("ISO 4217 currency code"),
-    recurring: z
-      .object({
-        interval: z.enum(["day", "week", "month", "year"]).describe("Billing interval"),
-      })
-      .optional()
-      .describe("Recurring pricing config (omit for one-time)"),
-  })
-  .openapi("CreateStripePriceRequest");
-
-export const CreateStripeCouponRequestSchema = z
-  .object({
-    id: z.string().optional().describe("Custom coupon ID (auto-generated if omitted)"),
-    percentOff: z.number().min(0).max(100).optional().describe("Percent discount (0-100)"),
-    amountOffCents: z.number().int().min(0).optional().describe("Fixed discount in cents"),
-    currency: z.string().min(3).max(3).optional().describe("Currency for amountOff (required if amountOff is set)"),
-    duration: z.enum(["once", "repeating", "forever"]).describe("How long the coupon applies"),
-    durationInMonths: z.number().int().min(1).optional().describe("Months for 'repeating' duration"),
-  })
-  .openapi("CreateStripeCouponRequest");
-
-const LineItemSchema = z.object({
-  priceId: z.string().min(1).describe("Stripe price ID"),
-  quantity: z.number().int().min(1).default(1).describe("Quantity"),
-});
-
-const DiscountSchema = z.object({
-  couponId: z.string().min(1).describe("Stripe coupon ID"),
-});
-
-export const CreateStripeCheckoutRequestSchema = z
-  .object({
-    lineItems: z.array(LineItemSchema).min(1).describe("Line items for checkout"),
-    mode: z.literal("payment").optional().describe("Checkout mode (payment only)"),
-    successUrl: z.string().url().describe("Redirect URL after success"),
-    cancelUrl: z.string().url().describe("Redirect URL after cancel"),
-    customerEmail: z.string().email().optional().describe("Pre-fill customer email"),
-    customerId: z.string().optional().describe("Existing Stripe customer ID"),
-    discounts: z.array(DiscountSchema).optional().describe("Coupons to apply"),
-    metadata: z.record(z.string(), z.string()).optional().describe("Metadata for the checkout session"),
-  })
-  .openapi("CreateStripeCheckoutRequest");
-
-export const StripeStatsRequestSchema = z
-  .object({
-    brandId: z.string().optional().describe("Filter by brand ID"),
-    campaignId: z.string().optional().describe("Filter by campaign ID"),
-    runIds: z.array(z.string()).optional().describe("Filter by run IDs"),
-  })
-  .openapi("StripeStatsRequest");
-
-// --- OpenAPI registrations ---
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/stripe/products/{productId}",
-  tags: ["Stripe"],
-  summary: "Get a Stripe product",
-  description: "Retrieve a Stripe product by ID. Uses the app's Stripe key via key-service. No org context required.",
-  security: authed,
-  request: {
-    params: z.object({ productId: z.string().describe("Stripe product ID") }),
-  },
-  responses: {
-    200: {
-      description: "Stripe product",
-      content: {
-        "application/json": {
-          schema: z.object({
-            id: z.string().describe("Stripe product ID"),
-            name: z.string().describe("Product name"),
-            description: z.string().nullable().describe("Product description"),
-            active: z.boolean().describe("Whether the product is active"),
-            metadata: z.record(z.string(), z.string()).describe("Product metadata"),
-          }).openapi("StripeProductResponse"),
-        },
-      },
-    },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/stripe/products",
-  tags: ["Stripe"],
-  summary: "Create a Stripe product",
-  description: "Create a new Stripe product. Idempotent — returns existing product if the ID already exists. No org context required (app-level operation).",
-  security: authed,
-  request: {
-    body: {
-      content: { "application/json": { schema: CreateStripeProductRequestSchema } },
-    },
-  },
-  responses: {
-    200: {
-      description: "Created/existing product",
-      content: {
-        "application/json": {
-          schema: z.object({
-            id: z.string().describe("Stripe product ID"),
-            name: z.string().describe("Product name"),
-            active: z.boolean().describe("Whether the product is active"),
-          }).openapi("CreateStripeProductResponse"),
-        },
-      },
-    },
-    400: { description: "Validation error", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/stripe/products/{productId}/prices",
-  tags: ["Stripe"],
-  summary: "List prices for a product",
-  description: "List all active prices for a Stripe product. No org context required.",
-  security: authed,
-  request: {
-    params: z.object({ productId: z.string().describe("Stripe product ID") }),
-  },
-  responses: {
-    200: {
-      description: "List of active prices",
-      content: {
-        "application/json": {
-          schema: z.object({
-            prices: z.array(z.object({
-              id: z.string().describe("Stripe price ID"),
-              unitAmount: z.number().describe("Price in smallest currency unit (cents)"),
-              currency: z.string().describe("ISO 4217 currency code"),
-              recurring: z.object({
-                interval: z.string().describe("Billing interval"),
-              }).nullable().describe("Null for one-time prices"),
-              active: z.boolean().describe("Whether the price is active"),
-            })),
-          }).openapi("ListPricesResponse"),
-        },
-      },
-    },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/stripe/prices",
-  tags: ["Stripe"],
-  summary: "Create a Stripe price",
-  description: "Create a new price for a product. Supports one-time and recurring pricing. No org context required (app-level operation).",
-  security: authed,
-  request: {
-    body: {
-      content: { "application/json": { schema: CreateStripePriceRequestSchema } },
-    },
-  },
-  responses: {
-    200: {
-      description: "Created price",
-      content: {
-        "application/json": {
-          schema: z.object({
-            id: z.string().describe("Stripe price ID"),
-            unitAmount: z.number().describe("Price in cents"),
-            currency: z.string().describe("Currency code"),
-          }).openapi("CreateStripePriceResponse"),
-        },
-      },
-    },
-    400: { description: "Validation error", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/stripe/coupons/{couponId}",
-  tags: ["Stripe"],
-  summary: "Get a Stripe coupon",
-  description: "Retrieve a Stripe coupon by ID. No org context required.",
-  security: authed,
-  request: {
-    params: z.object({ couponId: z.string().describe("Stripe coupon ID") }),
-  },
-  responses: {
-    200: {
-      description: "Stripe coupon",
-      content: {
-        "application/json": {
-          schema: z.object({
-            id: z.string().describe("Coupon ID"),
-            percentOff: z.number().nullable().describe("Percent discount"),
-            amountOff: z.number().nullable().describe("Fixed discount in smallest currency unit"),
-            currency: z.string().nullable().describe("Currency for amountOff"),
-            duration: z.string().describe("Duration type"),
-            valid: z.boolean().describe("Whether the coupon is still valid"),
-          }).openapi("StripeCouponResponse"),
-        },
-      },
-    },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/stripe/coupons",
-  tags: ["Stripe"],
-  summary: "Create a Stripe coupon",
-  description: "Create a new coupon. Supports percent or fixed-amount discounts. No org context required (app-level operation).",
-  security: authed,
-  request: {
-    body: {
-      content: { "application/json": { schema: CreateStripeCouponRequestSchema } },
-    },
-  },
-  responses: {
-    200: {
-      description: "Created coupon",
-      content: {
-        "application/json": {
-          schema: z.object({
-            id: z.string().describe("Coupon ID"),
-            percentOff: z.number().nullable(),
-            amountOff: z.number().nullable(),
-            duration: z.string(),
-          }).openapi("CreateStripeCouponResponse"),
-        },
-      },
-    },
-    400: { description: "Validation error", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "post",
-  path: "/v1/stripe/checkout",
-  tags: ["Stripe"],
-  summary: "Create a Stripe Checkout session",
-  description:
-    "Create a Stripe Checkout session for one-time payment. Returns the checkout URL to redirect the customer.",
-  security: authed,
-  request: {
-    body: {
-      content: { "application/json": { schema: CreateStripeCheckoutRequestSchema } },
-    },
-  },
-  responses: {
-    200: {
-      description: "Checkout session with URL",
-      content: {
-        "application/json": {
-          schema: z.object({
-            url: z.string().describe("Stripe Checkout URL to redirect the customer to"),
-            sessionId: z.string().describe("Stripe Checkout session ID"),
-          }).openapi("StripeCheckoutResponse"),
-        },
-      },
-    },
-    400: { description: "Validation error", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/stripe/stats",
-  tags: ["Stripe"],
-  summary: "Get Stripe sales stats",
-  description: "Get aggregated sales stats. Filterable by brandId, campaignId, runIds, workflowSlug, featureSlug, workflowDynastySlug, or featureDynastySlug.",
-  security: authed,
-  request: {
-    query: z.object({
-      brandId: z.string().optional().describe("Filter by brand ID"),
-      campaignId: z.string().optional().describe("Filter by campaign ID"),
-      runIds: z.string().optional().describe("Comma-separated run IDs"),
-      workflowSlug: z.string().optional().describe("Filter by exact workflow slug"),
-      featureSlug: z.string().optional().describe("Filter by exact feature slug"),
-      workflowDynastySlug: z.string().optional().describe("Filter by workflow dynasty slug (resolved to all versioned slugs)"),
-      featureDynastySlug: z.string().optional().describe("Filter by feature dynasty slug (resolved to all versioned slugs)"),
-    }),
-  },
-  responses: {
-    200: {
-      description: "Aggregated sales stats",
-      content: {
-        "application/json": {
-          schema: z
-            .object({
-              totalPayments: z.number().describe("Total number of payments"),
-              totalAmountInCents: z.number().describe("Total payment amount in cents"),
-              successCount: z.number().describe("Successful payments"),
-              failureCount: z.number().describe("Failed payments"),
-              refundCount: z.number().describe("Refunded payments"),
-              disputeCount: z.number().describe("Disputed payments"),
-            })
-            .openapi("StripeStatsResponse"),
-        },
-      },
-    },
-    400: { description: "Validation error", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    500: { description: "Internal error", content: errorContent },
-  },
-});
-
-// ===================================================================
 // USERS
 // ===================================================================
 
@@ -13590,7 +13273,12 @@ registry.registerPath({
 });
 
 const ServiceNameParam = z.object({
-  service: z.string().describe("Service name (e.g. 'lead', 'campaign', 'workflow')"),
+  service: z
+    .string()
+    .describe(
+      "Registry name of the service: the `-service` name this document prints, without `-service` " +
+        "(`crm` for crm-service, `lead` for lead-service). GET /v1/platform/services lists them.",
+    ),
 });
 
 registry.registerPath({
@@ -13600,7 +13288,9 @@ registry.registerPath({
   summary: "Get OpenAPI spec for a service",
   description:
     "Returns the full OpenAPI specification for a specific platform service. " +
-    "Proxied from api-registry. Use this to discover available endpoints, request/response schemas, and more.",
+    "Proxied from api-registry. Use this to discover available endpoints, request/response schemas, and more. " +
+    "A route of this document that says \"documented from crm-service\" or \"owned by crm-service\" is described in full at " +
+    "GET /v1/platform/services/crm.",
   security: authed,
   request: {
     params: ServiceNameParam,
@@ -17387,7 +17077,7 @@ registry.registerPath({
   tags: ["CRM Contacts"],
   summary: "Update a linked account: outreach default, automation allowed, sender persona",
   description:
-    "Proxy to crm-service PATCH /orgs/matrix/links/{linkId}. Send `brandId` plus at least one of: `outreachDefault: true` (a first WhatsApp message to a person no linked account already talks with goes out from this account; an existing conversation keeps its account; one per brand and channel, the others lose it), `automationAllowed` (whether automated messages may go out from this account), `persona` (the sender persona `{name?, role?, instructions?}`, or null to clear it). Request body forwarded verbatim. Status and body of every refusal are forwarded verbatim. Response shape owned by crm-service.",
+    "Proxy to crm-service PATCH /orgs/matrix/links/{linkId}. Send `brandId` plus at least one of: `outreachDefault: true` (a first WhatsApp message to a person no linked account already talks with goes out from this account; an existing conversation keeps its account; one per brand and channel, the others lose it), `automationAllowed` (whether automated messages may go out from this account), `persona` (the sender persona `{name?, role?, instructions?}`, or null to clear it), `accountType` (`pro_ai` = automated replies write from it; the full list is in the body below). Request body forwarded verbatim. A line that should answer people by itself and hand a chat to the brand's sales rep phone when stuck: read the skill GET /v1/skills/whatsapp-line. Status and body of every refusal are forwarded verbatim. Response shape owned by crm-service.",
   security: authed,
   request: {
     params: z.object({ linkId: z.string().openapi({ description: "Link id (the account's `linkId` from GET /v1/orgs/matrix/links)" }) }),
@@ -18455,18 +18145,14 @@ registry.registerPath({
 // ---------------------------------------------------------------------------
 
 const AGENT_FLOW =
-  "Agent flow, no human needed except to pay: (1) POST /v1/agent-signups/start with your email + phone, " +
-  "(2) read the 6-digit code in that inbox, (3) POST /v1/agent-signups/complete with email + code → `apiKey`, " +
+  "Agent flow: (1) POST /v1/agent-signups/start with your email + phone, " +
+  "(2) read the 6-digit code in that inbox (an agent with no inbox access needs the inbox owner to relay it), (3) POST /v1/agent-signups/complete with email + code → `apiKey`, " +
   "(4) call any free endpoint with `Authorization: Bearer <apiKey>`, (5) before anything that spends money, " +
   "POST /v1/billing/accounts/prepaid_checkout and have the returned `url` paid. There is no free credit.";
 
-export const AgentSignupStartRequestSchema = z
-  .object({
-    email: z.string().describe("An inbox you can read: the code is sent there, and account updates go there").openapi({ example: "agent@example.com" }),
-    phone: z.string().describe("A phone number in international format, for urgent matters (WhatsApp). Format-checked, not verified").openapi({ example: "+33612345678" }),
-  })
-  .passthrough()
-  .openapi("AgentSignupStartRequest");
+// Documented from client-service (DOWNSTREAM_BODY_SOURCES): what the signup accepts (phone required or
+// not, its checks) is client-service's call, and the doc follows it at each sync (CLIENT-FRICTION-API-1103).
+export const AgentSignupStartRequestSchema = z.object({}).passthrough().openapi("AgentSignupStartRequest");
 
 registry.registerPath({
   method: "post",

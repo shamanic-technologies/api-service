@@ -222,6 +222,27 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
             }
           },
           "description": "Who writes from this account. Omitted fields keep their value; null or \"\" clears one; persona: null clears all."
+        },
+        "accountType": {
+          "type": "string",
+          "nullable": true,
+          "enum": [
+            "pro_human",
+            "personal_human",
+            "pro_ai",
+            null
+          ],
+          "description": "Pick this account's type: `pro_human` (Pro, human), `personal_human` (Personal, human: also turns automated sends off on it) or `pro_ai` (Pro, AI: needs automated sends allowed). Any number of accounts per type; `null` clears. Needs a linked account."
+        },
+        "lineRole": {
+          "type": "string",
+          "nullable": true,
+          "enum": [
+            "assistant",
+            "founder",
+            null
+          ],
+          "description": "Older word for `accountType` (`assistant` = pro_ai, `founder` = pro_human, null clears). Not with `accountType`."
         }
       },
       "required": [
@@ -343,6 +364,9 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "nullable": true,
           "minLength": 1,
           "maxLength": 8000
+        },
+        "followsPlan": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false
@@ -402,6 +426,33 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "event"
       ],
       "description": "A conversion event reported by a client's website pixel."
+    }
+  },
+  "POST /v1/agent-signups/start": {
+    "service": "client-service",
+    "method": "POST",
+    "path": "/internal/agent-signups/start",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "maxLength": 254,
+          "format": "email",
+          "description": "The person's real email. Case-insensitive; stored lowercased.",
+          "example": "agent@example.com"
+        },
+        "phone": {
+          "type": "string",
+          "pattern": "^\\+[1-9]\\d{6,14}$",
+          "description": "Urgent-contact phone (WhatsApp) for the person, E.164. Format-checked only, never verified (owner decision 2026-10-12).",
+          "example": "+33612345678"
+        }
+      },
+      "required": [
+        "email",
+        "phone"
+      ]
     }
   },
   "POST /v1/brands/{brandId}/conversions/{conversionId}/withdraw": {
@@ -718,18 +769,38 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
     "method": "POST",
     "path": "/orgs/brands/{brandId}/offers/proposals",
     "schema": {
-      "type": "object",
-      "properties": {
-        "description": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 20000,
-          "description": "What the brand sells, in the customer's own words (e.g. prefilled from their website)."
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "enum": [
+                "site"
+              ],
+              "description": "Read the brand's OWN website instead of a text: its homepage (saved copy, else a free read, else one scrape billed to the asking org) and every other page of the site already saved by the site read. A brand with no website reads its pasted business context. No text to send."
+            }
+          },
+          "required": [
+            "source"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "description": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 20000,
+              "description": "What the brand sells, in the customer's own words (\"Something else\", typed by a person)."
+            }
+          },
+          "required": [
+            "description"
+          ]
         }
-      },
-      "required": [
-        "description"
-      ]
+      ],
+      "description": "EITHER `{ description }` (a person typed what they sell) OR `{ source: \"site\" }` (read the brand's site), never both."
     }
   },
   "POST /v1/content/generate-expert-quote-pitch": {
@@ -2872,6 +2943,12 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "type": "string",
           "minLength": 1,
           "description": "Publish as a reply under this Threads post id (e.g. the postId a previous call returned)"
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "description": "Caller's own key, unique per org. The same key again answers the publication it already made (200, `replayed: true`) and never calls Threads twice. The same key with another account, text or parent post is a 409 `idempotency_key_reused`."
         }
       },
       "required": [
@@ -3134,6 +3211,9 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "type": "string",
           "minLength": 1,
           "maxLength": 8000
+        },
+        "followsPlan": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -3545,8 +3625,8 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           }
         },
         "status": {
-          "type": "string",
-          "nullable": true
+          "nullable": true,
+          "type": "string"
         }
       },
       "required": [
