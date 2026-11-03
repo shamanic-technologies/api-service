@@ -75,7 +75,6 @@ const PLATFORM_OPERATIONS = [
   "get /v1/features/audit/factory-shadow/monitoring",
   "get /v1/features/audit/factory-shadow/eval",
   "get /v1/features/{featureSlug}/revenue/actual-cost",
-  "get /v1/features/workflow-return-history/actual-cost",
   "get /v1/features/research",
   "get /v1/features/research/conclusions",
   "get /v1/features/research/studies",

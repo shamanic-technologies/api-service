@@ -179,67 +179,6 @@ describe("GET /v1/public/features/best", () => {
   });
 });
 
-describe("GET /v1/public/features/revenue", () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it("proxies brand-grouped public revenue to features-service without auth and returns the body verbatim", async () => {
-    const app = createApp();
-    mockCallExternalService.mockImplementation((service: any, path: string) => {
-      if (service.url === "http://mock-features" && path.startsWith("/public/stats/revenue")) {
-        return Promise.resolve(MOCK_PUBLIC_BRAND_REVENUE);
-      }
-      return Promise.resolve({});
-    });
-
-    const res = await request(app).get("/v1/public/features/revenue?featureSlug=sales-cold-email-outreach&groupBy=brand");
-
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual(MOCK_PUBLIC_BRAND_REVENUE);
-
-    const call = mockCallExternalService.mock.calls.find(
-      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/public/stats/revenue"),
-    );
-    expect(call).toBeDefined();
-    const url = call![1] as string;
-    expect(url).toContain("featureSlug=sales-cold-email-outreach");
-    expect(url).toContain("groupBy=brand");
-  });
-
-  it("proxies workflow-grouped public revenue to features-service without auth and returns the body verbatim", async () => {
-    const app = createApp();
-    mockCallExternalService.mockResolvedValue(MOCK_PUBLIC_WORKFLOW_REVENUE);
-
-    const res = await request(app).get("/v1/public/features/revenue?featureSlug=sales-cold-email-outreach&groupBy=workflow");
-
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual(MOCK_PUBLIC_WORKFLOW_REVENUE);
-
-    const call = mockCallExternalService.mock.calls.find(
-      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/public/stats/revenue"),
-    );
-    expect(call).toBeDefined();
-    const url = call![1] as string;
-    expect(url).toContain("featureSlug=sales-cold-email-outreach");
-    expect(url).toContain("groupBy=workflow");
-  });
-
-  it("does not forward private dashboard filters to public revenue", async () => {
-    const app = createApp();
-    mockCallExternalService.mockResolvedValue(MOCK_PUBLIC_BRAND_REVENUE);
-
-    await request(app).get("/v1/public/features/revenue?featureSlug=sales-cold-email-outreach&groupBy=brand&brandId=brand-1&campaignId=campaign-1&workflowSlug=workflow-1");
-
-    const call = mockCallExternalService.mock.calls.find(
-      (c: any[]) => typeof c[1] === "string" && c[1].startsWith("/public/stats/revenue"),
-    );
-    expect(call).toBeDefined();
-    const url = call![1] as string;
-    expect(url).not.toContain("brandId=");
-    expect(url).not.toContain("campaignId=");
-    expect(url).not.toContain("workflowSlug=");
-  });
-});
-
 describe("GET /v1/public/features/workflow-engagement-latency", () => {
   beforeEach(() => vi.clearAllMocks());
 
@@ -317,39 +256,6 @@ const MOCK_PIPELINE_ACTIVITY = {
     },
   ],
   producerOwnedField: "kept",
-};
-
-const MOCK_PUBLIC_BRAND_REVENUE = {
-  featureSlug: "sales-cold-email-outreach",
-  groupBy: "brand",
-  results: [
-    {
-      brand: { id: "brand-1", name: "Acme", domain: "acme.test" },
-      headline: { totalPipelineUsd: 12000 },
-      costEconomics: { totalCostUsd: 60, costOfAcquisitionPct: 0.5, roiMultiple: 200 },
-    },
-  ],
-};
-
-const MOCK_PUBLIC_WORKFLOW_REVENUE = {
-  featureSlug: "sales-cold-email-outreach",
-  groupBy: "workflow",
-  results: [
-    {
-      workflow: {
-        id: "workflow-1",
-        workflowSlug: "sales-email-cold-outreach-mintaka-v3",
-        workflowName: "Mintaka",
-        workflowDynastyName: "Mintaka",
-        workflowDynastySlug: "sales-email-cold-outreach-mintaka",
-        version: 3,
-        featureSlug: "sales-cold-email-outreach",
-        createdForBrandId: null,
-      },
-      headline: { totalPipelineUsd: 42000 },
-      costEconomics: { totalCostUsd: 210, costOfAcquisitionPct: 0.5, roiMultiple: 200 },
-    },
-  ],
 };
 
 const MOCK_PUBLIC_WORKFLOW_ENGAGEMENT_LATENCY = {

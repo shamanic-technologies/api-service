@@ -176,14 +176,12 @@ describe("public acquisition-channel reads — anonymous pass-through", () => {
     await request(app).get("/v1/public/features");
     await request(app).get("/v1/public/features/ranked?featureSlug=x");
     await request(app).get("/v1/public/features/best?featureSlug=x");
-    await request(app).get("/v1/public/features/revenue?featureSlug=x");
     await request(app).get("/v1/public/features/cost-projection?featureSlug=x");
 
     expect(seen[0]).toBe(`${FEATURES_BASE}/public/features`);
     expect(seen[1]).toContain("/public/stats/ranked?");
     expect(seen[2]).toContain("/public/stats/best?");
-    expect(seen[3]).toContain("/public/stats/revenue?");
-    expect(seen[4]).toContain("/public/stats/cost-projection?");
+    expect(seen[3]).toContain("/public/stats/cost-projection?");
     expect(seen.some((u) => u.includes("/public/channels"))).toBe(false);
   });
 });

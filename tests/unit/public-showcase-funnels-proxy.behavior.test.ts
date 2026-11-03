@@ -139,13 +139,11 @@ describe("GET /v1/public/features/showcase-funnels — anonymous pass-through", 
     });
 
     const app = buildApp();
-    await request(app).get("/v1/public/features/return-on-spend");
     await request(app).get("/v1/public/features/ranked?groupBy=brand");
     await request(app).get("/v1/public/channels");
 
-    expect(seen[0]).toBe(`${FEATURES_BASE}/public/stats/return-on-spend`);
-    expect(seen[1]).toContain("/public/stats/ranked?");
-    expect(seen[2]).toBe(`${FEATURES_BASE}/public/channels`);
+    expect(seen[0]).toContain("/public/stats/ranked?");
+    expect(seen[1]).toBe(`${FEATURES_BASE}/public/channels`);
     expect(seen.some((u) => u.includes("showcase-funnels"))).toBe(false);
   });
 });

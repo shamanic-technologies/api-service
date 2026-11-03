@@ -310,11 +310,6 @@ const bestQueryParams = z.object({
   groupBy: z.enum(["workflow", "brand"]).openapi({ example: "workflow" }).describe("'workflow' or 'brand' — group results by workflow or by brand."),
 });
 
-const publicRevenueQueryParams = z.object({
-  featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
-  groupBy: z.enum(["brand", "workflow"]).openapi({ example: "workflow" }).describe("Group public revenue results by brand or workflow."),
-});
-
 const publicWorkflowEngagementLatencyQueryParams = z.object({
   featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required)."),
   groupBy: z.enum(["workflow"]).openapi({ example: "workflow" }).describe("Group public workflow engagement latency results by workflow."),
@@ -356,31 +351,8 @@ const publicCostPerOutcomeDistributionQueryParams = z.object({
 // The parameters features-service documents today, not a whitelist: the handler
 // forwards the caller's raw query string, so anything it ships next arrives
 // without an edit here (CLAUDE.md #11).
-const publicReturnOnSpendQueryParams = z.object({
-  featureSlug: z.string().optional().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug the return is measured over."),
-  minSpendUsd: z.string().optional().openapi({ example: "100" }).describe("Spend floor in USD selecting the brand population the median is taken over. Producer-owned default; a non-numeric or negative value is a 400 at features-service."),
-}).passthrough();
-
-// The parameters features-service documents today, not a whitelist: the handler
-// forwards the caller's raw query string, so anything it ships next arrives
-// without an edit here (CLAUDE.md #11).
-const publicFunnelReturnOnSpendQueryParams = z.object({
-  channelSlug: z.string().optional().openapi({ example: "sales-cold-email-outreach" }).describe("Narrow to one acquisition channel. Omitted returns every published channel's pairs. An unknown slug is a 404 at features-service, never an empty pair list."),
-  minSpendUsd: z.string().optional().openapi({ example: "100" }).describe("Spend floor in USD selecting the brand population each pair's medians are taken over. Producer-owned default; a non-numeric or negative value is a 400 at features-service."),
-}).passthrough();
-
-// The parameters features-service documents today, not a whitelist: the handler
-// forwards the caller's raw query string, so anything it ships next arrives
-// without an edit here (CLAUDE.md #11).
 const publicChannelFunnelEconomicsQueryParams = z.object({
   channelSlug: z.string().optional().openapi({ example: "sales-cold-email-outreach" }).describe("Narrow to one channel. Omitted returns every pair in the catalogue. An unknown slug is a 404 at features-service, never an empty pair list."),
-}).passthrough();
-
-// The parameters features-service documents today, not a whitelist: the handler
-// forwards the caller's raw query string (CLAUDE.md #11).
-const publicOutcomeReturnOnSpendQueryParams = z.object({
-  channelSlug: z.string().optional().openapi({ example: "sales-cold-email-outreach" }).describe("Narrow to one acquisition channel. An unknown slug is a 404 at features-service."),
-  minSpendUsd: z.string().optional().openapi({ example: "100" }).describe("Spend floor in USD selecting the brand population each median is taken over. Producer-owned default; a non-numeric or negative value is a 400 at features-service."),
 }).passthrough();
 
 // The parameters features-service documents today, not a whitelist (CLAUDE.md #11).
@@ -460,7 +432,7 @@ const WorkflowMetadataSchema = z
 
 const rankedResponse = {
   200: {
-    description: "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). For groupBy=brand, result items may include optional public-safe timeline points: date, cumulativePipelineUsd, emailsSent, emailsOpened, emailsClicked, emailsReplied. Use GET /v1/features/stats/registry for the canonical stats key list.",
+    description: "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). Use GET /v1/features/stats/registry for the canonical stats key list.",
     content: {
       "application/json": {
         schema: z.object({}).passthrough().openapi("RankedResponse"),
@@ -504,23 +476,6 @@ registry.registerPath({
   description: "Public hero records — best cost-per-outcome. Proxied to features-service. featureSlug and groupBy are required. No authentication required.",
   request: { query: bestQueryParams },
   responses: bestResponse,
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/public/features/revenue",
-  tags: ["Features"],
-  summary: "Public feature revenue",
-  description:
-    "Public expected-pipeline revenue, cost-of-acquisition percentage, and ROI multiple for a feature, grouped by brand or workflow. " +
-    "Proxied to features-service GET /public/stats/revenue. Response is producer-owned and may include brand or workflow results with headline.totalPipelineUsd and costEconomics. No authentication required.",
-  request: { query: publicRevenueQueryParams },
-  responses: {
-    200: { description: "Public feature revenue — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicFeatureRevenueResponse") } } },
-    400: { description: "Bad request from features-service", content: errorContent },
-    404: { description: "Feature not found", content: errorContent },
-    502: { description: "Upstream service error", content: errorContent },
-  },
 });
 
 registry.registerPath({
@@ -608,13 +563,6 @@ registry.registerPath({
   },
 });
 
-const workflowReturnHistoryQueryParams = z
-  .object({
-    featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug (required downstream)."),
-    workflowDynastySlug: z.string().describe("Workflow dynasty (all its versions), the key workflow-cost-per-outcome rows carry (required downstream)."),
-  })
-  .passthrough();
-
 registry.registerPath({
   method: "get",
   path: "/v1/public/features/leg-workflow-ranking",
@@ -634,45 +582,6 @@ registry.registerPath({
     200: { description: "Leg workflow ranking — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicLegWorkflowRankingResponse") } } },
     400: { description: "Missing or unknown parameters", content: errorContent },
     404: { description: "Feature not found", content: errorContent },
-    502: { description: "Upstream service error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/public/features/workflow-return-history",
-  tags: ["Features"],
-  summary: "Public per-workflow return history (billed basis)",
-  description:
-    "One workflow dynasty's fleet-wide dated spend, value and return on spend across every client org, on the billed basis. " +
-    "Proxied to features-service GET /public/stats/workflow-return-history; query forwarded verbatim (featureSlug and workflowDynastySlug are the ones documented today, not a whitelist). " +
-    "Response is producer-owned. No authentication required.",
-  request: { query: workflowReturnHistoryQueryParams },
-  responses: {
-    200: { description: "Workflow return history — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicWorkflowReturnHistoryResponse") } } },
-    400: { description: "Missing parameters", content: errorContent },
-    404: { description: "Feature or workflow dynasty not found", content: errorContent },
-    502: { description: "Upstream service error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/features/workflow-return-history/actual-cost",
-  tags: ["Features"],
-  summary: "Per-workflow return history at actual vendor cost (staff only)",
-  description:
-    "The /v1/public/features/workflow-return-history curve with its spend leg at what vendors actually charged, before markup. " +
-    "Reveals margin, so staff-only: platform API key + a STAFF_EMAILS x-email, refused with 403 before any downstream call. Fleet-wide, no org context. " +
-    "Transparent proxy to features-service GET /internal/stats/workflow-return-history/actual-cost; query forwarded verbatim; response owned by features-service.",
-  security: platformAuth,
-  request: { query: workflowReturnHistoryQueryParams },
-  responses: {
-    200: { description: "Actual-cost workflow return history — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("WorkflowReturnHistoryActualCostResponse") } } },
-    400: { description: "Missing parameters", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff", content: errorContent },
-    404: { description: "Feature or workflow dynasty not found", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
   },
 });
@@ -748,46 +657,6 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
-  path: "/v1/public/features/return-on-spend",
-  tags: ["Features"],
-  summary: "Public median return on spend across client brands",
-  description:
-    "The median return on spend our clients get — each brand's own realized expected pipeline over its committed spend, taken per brand and then across brands — plus the number of brands that median was taken over and the spread around it. " +
-    "Public by design at the producer: the landing that renders it is statically generated for an anonymous visitor, so no identity is required here either. " +
-    "Proxied to features-service GET /public/stats/return-on-spend. The caller's query string is forwarded verbatim; the parameters documented below are the ones features-service publishes today, not a whitelist — the spend floor selects the population, so it is never defaulted or dropped here. " +
-    "Response is producer-owned and distinguishes a measured figure from the reasons it cannot be stated. No authentication required.",
-  request: { query: publicReturnOnSpendQueryParams },
-  responses: {
-    200: { description: "Fleet median return on spend, or the explicit unmeasurable answer — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicReturnOnSpendResponse") } } },
-    400: { description: "Bad request from features-service", content: errorContent },
-    404: { description: "Unknown feature slug", content: errorContent },
-    502: { description: "Upstream service error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/public/features/funnel-return-on-spend",
-  tags: ["Features"],
-  summary: "Public median return on spend per (acquisition channel x sales funnel) pair",
-  description:
-    "What a dollar through one SALES FUNNEL came back as for our clients: per (acquisition channel x sales funnel), the MEDIAN across brands of each brand's own realized expected pipeline over its committed spend \u2014 the same ratio that brand reads as ROI on its own dashboard \u2014 with the quartiles and the median cost per paying client beside it. " +
-    "A median, never a mean, and nothing is pooled across channels or funnels: a pair with too few brands past the spend floor says so rather than borrowing a wider population. " +
-    "This is a REALIZED figure and is NOT the projected returnPerDollar on /v1/public/channel-funnel-economics (a pooled unit price through mean declared rates and a mean lifetime revenue); the two answer different questions and both are served. " +
-    "Public by design at the producer: the figures describe our clients in aggregate and name no brand, so no identity is required here either. " +
-    "Proxied to features-service GET /public/stats/funnel-return-on-spend. The caller's query string is forwarded verbatim; the parameters documented below are the ones features-service publishes today, not a whitelist \u2014 the spend floor selects the population, so it is never defaulted or dropped here. " +
-    "Response is producer-owned: every pair in the catalogue is listed, measured or not, and an unmeasured pair names which kind it is. No authentication required.",
-  request: { query: publicFunnelReturnOnSpendQueryParams },
-  responses: {
-    200: { description: "Per-pair median return on spend, each pair measured or explicitly unmeasurable \u2014 pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicFunnelReturnOnSpendResponse") } } },
-    400: { description: "Bad request from features-service", content: errorContent },
-    404: { description: "Unknown acquisition-channel slug", content: errorContent },
-    502: { description: "Upstream service error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
   path: "/v1/public/features/showcase-funnels",
   tags: ["Features"],
   summary: "Public funnel counts for the named client brands on our homepage",
@@ -798,24 +667,6 @@ registry.registerPath({
     "Proxied to features-service GET /public/stats/showcase-funnels. Response is producer-owned and forwarded field-for-field: a step's peopleReached tells a measured 0 apart from an unknown null, and a brand nothing could be walked for names its own reason. No authentication required.",
   responses: {
     200: { description: "Ordered funnel counts for every allowlisted showcase brand \u2014 pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicShowcaseFunnelsResponse") } } },
-    502: { description: "Upstream service error", content: errorContent },
-  },
-});
-
-registry.registerPath({
-  method: "get",
-  path: "/v1/public/features/outcome-return-on-spend",
-  tags: ["Features"],
-  summary: "Public median realized return per (channel x leg) and (channel x outcome)",
-  description:
-    "The funnel-free twin of /v1/public/features/funnel-return-on-spend: the fleet MEDIAN realized return per (acquisition channel x leg) and (acquisition channel x outcome), taken over brands past the spend floor. " +
-    "REALIZED, and NOT the projected returnPerDollar on /v1/public/channel-outcome-economics. Public by design at the producer, so no identity is required here either. " +
-    "Proxied to features-service GET /public/stats/outcome-return-on-spend. The caller's query string is forwarded verbatim; the parameters documented below are the ones features-service publishes today, not a whitelist. Response is producer-owned. No authentication required.",
-  request: { query: publicOutcomeReturnOnSpendQueryParams },
-  responses: {
-    200: { description: "Per-leg / per-outcome realized medians \u2014 pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicOutcomeReturnOnSpendResponse") } } },
-    400: { description: "Bad request from features-service", content: errorContent },
-    404: { description: "Unknown acquisition-channel slug", content: errorContent },
     502: { description: "Upstream service error", content: errorContent },
   },
 });
@@ -14281,20 +14132,21 @@ registry.registerPath({
   method: "get",
   path: "/v1/features/{featureSlug}/revenue/actual-cost",
   tags: ["Features"],
-  summary: "Feature return curve at actual vendor cost (staff only)",
+  summary: "Feature revenue groups at actual vendor cost (staff only)",
   description:
-    "The /v1/features/{featureSlug}/revenue return curve costed at what vendors actually charged, before markup. " +
+    "The /v1/features/{featureSlug}/revenue groups (groupBy=workflow or groupBy=campaignId) costed at what vendors actually charged, before markup. " +
+    "groupBy is REQUIRED by features-service (400 group_by_required without it: the un-grouped return curve was deleted, ROI-CONSISTENCY-1103); the gateway forwards the query as sent and adds nothing. " +
     "Reveals margin, so staff-only: platform API key + a STAFF_EMAILS x-email, refused with 403 before any downstream call; " +
     "org + user identity (x-org-id/x-user-id or x-external-org-id/x-external-user-id) select the org being viewed. " +
     "Transparent proxy to features-service GET /internal/features/{featureSlug}/revenue/actual-cost; query forwarded verbatim " +
-    "(brandId, workflow, campaignId, offerId, cause are the ones documented today, not a whitelist); response owned by features-service.",
+    "(brandId, groupBy, campaignId, offerId, cause are the ones documented today, not a whitelist); response owned by features-service.",
   security: platformAuth,
   request: {
     params: z.object({ featureSlug: z.string().openapi({ example: "sales-cold-email-outreach" }).describe("Feature slug") }),
     query: z
       .object({
         brandId: z.string().describe("Brand UUID (required downstream)"),
-        workflow: z.string().describe("Workflow the curve is drawn for (required downstream)"),
+        groupBy: z.string().describe("Which groups to serve at vendor cost: workflow or campaignId (required downstream, 400 group_by_required without it)"),
         campaignId: z.string().optional().describe("Narrow to one campaign"),
         offerId: z.string().optional().describe("Narrow to one offer"),
         cause: z.string().optional().describe("Narrow to one cause"),
@@ -14302,7 +14154,7 @@ registry.registerPath({
       .passthrough(),
   },
   responses: {
-    200: { description: "Actual-cost return curve — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureActualCostRevenueResponse") } } },
+    200: { description: "Actual-cost revenue groups — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("FeatureActualCostRevenueResponse") } } },
     400: { description: "Missing or invalid query parameters", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Not staff", content: errorContent },

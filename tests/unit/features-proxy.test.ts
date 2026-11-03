@@ -379,20 +379,6 @@ describe("Public features proxy routes", () => {
     expect(content).toContain('"/public/features"');
   });
 
-  it("should have GET /public/features/revenue without auth middleware", () => {
-    const line = content.split("\n").find((l) =>
-      l.includes("router.get") && l.includes('"/public/features/revenue"')
-    );
-    expect(line).toBeDefined();
-    expect(line).not.toContain("authenticate");
-    expect(line).not.toContain("requireOrg");
-  });
-
-  it("should proxy public feature revenue to /public/stats/revenue on features-service", () => {
-    expect(content).toContain('"/public/features/revenue"');
-    expect(content).toContain("`/public/stats/revenue");
-  });
-
   it("should have GET /public/features/workflow-engagement-latency without auth middleware", () => {
     const line = content.split("\n").find((l) =>
       l.includes("router.get") && l.includes('"/public/features/workflow-engagement-latency"')
@@ -496,11 +482,6 @@ describe("Public features proxy routes", () => {
 describe("Public features OpenAPI schemas", () => {
   it("should register GET /public/features", () => {
     expect(schemaContent).toContain('path: "/public/features"');
-  });
-
-  it("should register GET /v1/public/features/revenue", () => {
-    expect(schemaContent).toContain('path: "/v1/public/features/revenue"');
-    expect(schemaContent).toContain("PublicFeatureRevenueResponse");
   });
 
   it("should register GET /v1/public/features/workflow-engagement-latency", () => {

@@ -19,7 +19,6 @@ function buildParams(query: Record<string, unknown>, keys: string[]): URLSearchP
 
 const PUBLIC_RANKED_PARAMS = ["featureSlug", "objective", "groupBy", "limit"];
 const PUBLIC_BEST_PARAMS = ["featureSlug", "groupBy"];
-const PUBLIC_REVENUE_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_WORKFLOW_ENGAGEMENT_LATENCY_PARAMS = ["featureSlug", "groupBy"];
 const PUBLIC_COST_PROJECTION_PARAMS = ["featureSlug"];
 const PUBLIC_COST_PER_OUTCOME_TREND_PARAMS = ["featureSlug", "objective", "days", "windowOutcomes"];
@@ -84,26 +83,6 @@ router.get("/public/features/best", async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("[api-service] Public best features error:", error.message);
     res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public best features" });
-  }
-});
-
-/**
- * GET /v1/public/features/revenue
- * Public expected-pipeline revenue and ROI grouped by brand or workflow.
- * Proxied to features-service GET /public/stats/revenue.
- */
-router.get("/public/features/revenue", async (req: Request, res: Response) => {
-  try {
-    const params = buildParams(req.query as Record<string, unknown>, PUBLIC_REVENUE_PARAMS);
-    const result = await callExternalService(
-      externalServices.features,
-      `/public/stats/revenue?${params}`,
-      {},
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("[api-service] Public feature revenue error:", error.message);
-    res.status(error.statusCode || 502).json({ error: error.message || "Failed to get public feature revenue" });
   }
 });
 
@@ -208,31 +187,6 @@ router.get("/public/features/workflow-cost-per-outcome", async (req: Request, re
 });
 
 /**
- * GET /v1/public/features/workflow-return-history
- * One workflow dynasty's fleet-wide dated spend, value and return on spend, across every
- * client org, on the BILLED basis (what clients were charged). The dated twin of
- * /v1/public/features/workflow-cost-per-outcome. Proxied to features-service
- * GET /public/stats/workflow-return-history.
- *
- * No identity of any kind (the producer route is public). The query string is forwarded
- * verbatim (CLAUDE.md #11) — featureSlug and workflowDynastySlug are the parameters
- * documented today, not a whitelist — and a downstream error is forwarded field-for-field
- * (#7). The body is producer-owned (#8).
- */
-router.get("/public/features/workflow-return-history", async (req: Request, res: Response) => {
-  try {
-    const result = await callExternalService(
-      externalServices.features,
-      `/public/stats/workflow-return-history${rawQueryString(req.originalUrl)}`,
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("[api-service] Public workflow return history error:", error.message);
-    respondUpstreamError(res, error, "Failed to get the public workflow return history");
-  }
-});
-
-/**
  * GET /v1/public/features/leg-workflow-ranking
  * Every workflow on one leg, ranked at the fleet grain (every org's campaigns on the leg),
  * for the dashboard's Research pages, which name no org, brand, offer, campaign or audience.
@@ -296,59 +250,6 @@ router.get("/public/features/cost-per-outcome-distribution", async (req: Request
 });
 
 /**
- * GET /v1/public/features/return-on-spend
- * The median return on spend our clients get, plus the number of brands that
- * median was taken over. Proxied to features-service GET /public/stats/return-on-spend.
- *
- * No identity of any kind: the public landing is statically rendered for an
- * anonymous visitor. The caller's query string is forwarded verbatim — the
- * producer's spend floor selects the POPULATION the median is taken over, so a
- * stripped or defaulted parameter would state a figure over a population nobody
- * asked for. The body is producer-owned: it distinguishes a measured figure from
- * the two reasons it cannot be stated, and the landing branches on that.
- */
-router.get("/public/features/return-on-spend", async (req: Request, res: Response) => {
-  try {
-    const result = await callExternalService(
-      externalServices.features,
-      `/public/stats/return-on-spend${rawQueryString(req.originalUrl)}`,
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("[api-service] Public fleet return-on-spend error:", error.message);
-    respondUpstreamError(res, error, "Failed to get the public fleet return on spend");
-  }
-});
-
-/**
- * GET /v1/public/features/funnel-return-on-spend
- * What a dollar through one SALES FUNNEL came back as for our clients, per
- * (acquisition channel x sales funnel) — the median across brands, plus the
- * median cost per paying client and the counts each was taken over. Proxied to
- * features-service GET /public/stats/funnel-return-on-spend.
- *
- * No identity of any kind: the read is public at the producer because the
- * figures describe our own clients in aggregate and name no brand. The caller's
- * query string is forwarded verbatim — the spend floor selects the POPULATION
- * each median is taken over, so a stripped or defaulted parameter would state a
- * figure over a population nobody asked for. The body is producer-owned: it
- * lists every pair in the catalogue and distinguishes a measured figure from the
- * reasons it cannot be stated, and the consumer branches on that.
- */
-router.get("/public/features/funnel-return-on-spend", async (req: Request, res: Response) => {
-  try {
-    const result = await callExternalService(
-      externalServices.features,
-      `/public/stats/funnel-return-on-spend${rawQueryString(req.originalUrl)}`,
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("[api-service] Public funnel return-on-spend error:", error.message);
-    respondUpstreamError(res, error, "Failed to get the public per-funnel return on spend");
-  }
-});
-
-/**
  * GET /v1/public/features/showcase-funnels
  * The current funnel counts of the named client brands our public homepage states.
  * Proxied to features-service GET /public/stats/showcase-funnels.
@@ -373,29 +274,6 @@ router.get("/public/features/showcase-funnels", async (req: Request, res: Respon
   } catch (error: any) {
     console.error("[api-service] Public showcase funnels error:", error.message);
     respondUpstreamError(res, error, "Failed to get the public showcase funnel counts");
-  }
-});
-
-/**
- * GET /v1/public/features/outcome-return-on-spend
- * The funnel-free twin of /v1/public/features/funnel-return-on-spend: the fleet
- * MEDIAN realized return per (channel x leg) and (channel x outcome). Proxied to
- * features-service GET /public/stats/outcome-return-on-spend.
- *
- * Public at the producer, so no identity here. The query string is forwarded
- * verbatim — the spend floor selects the population each median is taken over.
- * The body is producer-owned and forwarded field-for-field.
- */
-router.get("/public/features/outcome-return-on-spend", async (req: Request, res: Response) => {
-  try {
-    const result = await callExternalService(
-      externalServices.features,
-      `/public/stats/outcome-return-on-spend${rawQueryString(req.originalUrl)}`,
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("[api-service] Public outcome return-on-spend error:", error.message);
-    respondUpstreamError(res, error, "Failed to get the public per-outcome return on spend");
   }
 });
 
@@ -1084,38 +962,6 @@ router.delete("/features/stated-monthly-amounts/:id", authenticatePlatform, requ
 });
 
 /**
- * GET /v1/features/workflow-return-history/actual-cost — STAFF ONLY.
- * The /v1/public/features/workflow-return-history curve with its spend leg at what the
- * vendors actually charged us before markup. It reveals our margin, so it is gated by
- * authenticatePlatform + requireStaff — both network-free, so a non-staff caller is
- * refused before any downstream call. Fleet-wide (every org), so no org identity is
- * involved and requireOrg is deliberately absent; only the verified staff email is
- * forwarded, for attribution.
- *
- * Byte passthrough to features-service GET /internal/stats/workflow-return-history/actual-cost:
- * query verbatim (#11), status + body piped (#10), errors field-for-field (#7). Declared
- * BEFORE `/features/:slug/*` so `workflow-return-history` is never bound as a slug.
- */
-router.get(
-  "/features/workflow-return-history/actual-cost",
-  authenticatePlatform,
-  requireStaff,
-  async (req: AuthenticatedRequest, res) => {
-    try {
-      await pipeExternalService(
-        externalServices.features,
-        `/internal/stats/workflow-return-history/actual-cost${rawQueryString(req.originalUrl)}`,
-        { headers: staffHeaders(req), expressRes: res },
-      );
-    } catch (error: any) {
-      console.error("[api-service] Staff workflow return history actual-cost error:", error.message);
-      if (res.headersSent) { res.end(); return; }
-      respondUpstreamError(res, error, "Failed to get the workflow return history on actual cost");
-    }
-  },
-);
-
-/**
  * GET /v1/features/research[/conclusions|/studies|/catalog|/templates|/performance|/engine-places] — STAFF ONLY.
  * features-service's live Research file (the staff Research page of dashboard v2): the whole
  * file (`?basis=user|actual`; `actual` reveals our margin), the conclusion studies and the
@@ -1262,9 +1108,11 @@ router.get("/features/:slug/revenue", authenticate, requireOrg, requireUser, asy
 
 /**
  * GET /v1/features/:slug/revenue/actual-cost — STAFF ONLY.
- * The same return curve as /v1/features/:slug/revenue, costed at what the vendors
- * actually charged us before markup instead of what the customer was billed. It
- * reveals our margin, so a non-staff caller must never reach it.
+ * The /v1/features/:slug/revenue groups (`groupBy=workflow|campaignId`) costed at
+ * what the vendors actually charged us before markup instead of what the customer
+ * was billed. It reveals our margin, so a non-staff caller must never reach it.
+ * `groupBy` is REQUIRED by features-service (400 `group_by_required` without it:
+ * its un-grouped return curve was deleted, ROI-CONSISTENCY-1103); forwarded as sent.
  *
  * Gate order is deliberate: `authenticatePlatform` + `requireStaff` first, which
  * need no network at all, so a non-staff caller is refused before ANY downstream
