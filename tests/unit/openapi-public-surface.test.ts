@@ -192,6 +192,7 @@ const PLATFORM_OPERATIONS = [
   "get /v1/instantly/ops/lead-source-yield",
   "post /v1/instantly/ops/lead-source-yield/sync",
   "get /v1/instantly/ops/seed-placement/daily",
+  "get /v1/instantly/ops/seed-placement/opt-out",
   "get /v1/instantly/ops/sender-health",
   "get /v1/crm/ops/whatsapp-lines",
   "post /v1/crm/ops/whatsapp-lines/check",

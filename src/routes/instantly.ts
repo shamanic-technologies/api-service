@@ -448,6 +448,8 @@ registerStaffInternalCall("lead-source-yield", "POST", "/sync", "sync the lead p
 // passthrough; the query string (`days`, `from`, `to`) is forwarded verbatim.
 // GET /v1/instantly/ops/seed-placement/daily — seed inbox % per day at Google, Microsoft 365, Outlook.com (staff only).
 registerStaffInternalCall("seed-placement", "GET", "/daily", "read the seed placement series");
+// GET /v1/instantly/ops/seed-placement/opt-out — inbox placement per opt-out header option, and which one prospect mail carries now (staff only).
+registerStaffInternalCall("seed-placement", "GET", "/opt-out", "read the seed placement opt-out comparison");
 // GET /v1/instantly/ops/sender-health — mailboxes kept out of prospect mail per day, and why (staff only).
 registerStaffInternalCall("sender-health", "GET", "", "read the sender health series");
 

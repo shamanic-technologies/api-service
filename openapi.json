@@ -7991,6 +7991,13 @@
           "nullable": true
         }
       },
+      "InstantlyOpsSeedPlacementOptOutResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "CrmOpsWhatsappLinesResponse": {
         "type": "object",
         "properties": {},
