@@ -145,6 +145,8 @@ The Hetzner migration (2026-08-07/08) moved 24 services; the rest exist nowhere,
 
 **Still routed, still 500ing, retirement NOT yet decided** — `ai-visibility-score-service` (`src/routes/visibility.ts`), `expert-quotes-requests-service` + `journalists-quotes-service` (`src/routes/quotes.ts`). These are the `ai-visibility-scoring` and `pr-expert-quote-outreach` features, both with campaigns in the last 30 days; whether they come back is a product call (distribute.you#3310). Remove their routes the same way once that call is made.
 
+**Deleted features-service return reads — do NOT re-add (ROI-CONSISTENCY-1103, owner 2026-11-03: a return exists only where a value lands).** `GET /v1/public/features/{revenue,return-on-spend,funnel-return-on-spend,outcome-return-on-spend,workflow-return-history}` and staff `GET /v1/features/workflow-return-history/actual-cost` are gone with their features-service routes. `GET /v1/features/:slug/revenue/actual-cost` stays: features-service now requires `groupBy=workflow|campaignId` there (400 `group_by_required`), forwarded as sent.
+
 **`src/routes/admin.ts` is NOT in this class.** Its `SERVICE_DB_REGISTRY` maps a service name to a `*_DATABASE_URL` and opens a Postgres pool directly — it never calls the service. Six of the retired services still have a restored database on the box, so those entries keep working. Read what a route actually reaches before removing it by name.
 
 ### `list_service_endpoints` LAGS a downstream merge — read the producer's `origin/main` when a route is hours old

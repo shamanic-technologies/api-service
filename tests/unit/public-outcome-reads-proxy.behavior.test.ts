@@ -11,7 +11,7 @@ const { FEATURES_BASE } = vi.hoisted(() => {
 });
 
 /**
- * Wave C4 — the three funnel-free public reads, forwarded exactly like their funnel-keyed
+ * Wave C4 — the funnel-free public reads, forwarded exactly like their funnel-keyed
  * siblings: anonymous, query string verbatim, body byte-for-byte, upstream errors field-for-field.
  * `authenticate` is deliberately NOT mocked: these must answer an anonymous visitor.
  */
@@ -26,7 +26,6 @@ function buildApp() {
 }
 
 const CASES = [
-  { gateway: "/v1/public/features/outcome-return-on-spend", downstream: "/public/stats/outcome-return-on-spend" },
   { gateway: "/v1/public/features/showcase-outcomes", downstream: "/public/stats/showcase-outcomes" },
   { gateway: "/v1/public/channel-outcome-economics", downstream: "/public/channel-outcome-economics" },
 ];
@@ -85,12 +84,10 @@ describe("the funnel-keyed siblings stay on their own downstream paths", () => {
       return new Response("{}", { status: 200, headers: { "content-type": "application/json" } });
     });
     const app = buildApp();
-    await request(app).get("/v1/public/features/funnel-return-on-spend");
     await request(app).get("/v1/public/features/showcase-funnels");
     await request(app).get("/v1/public/channel-funnel-economics");
 
     expect(seen).toEqual([
-      `${FEATURES_BASE}/public/stats/funnel-return-on-spend`,
       `${FEATURES_BASE}/public/stats/showcase-funnels`,
       `${FEATURES_BASE}/public/channel-funnel-economics`,
     ]);

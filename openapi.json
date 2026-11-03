@@ -253,13 +253,6 @@
           "nullable": true
         }
       },
-      "PublicFeatureRevenueResponse": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": {
-          "nullable": true
-        }
-      },
       "PublicWorkflowEngagementLatencyResponse": {
         "type": "object",
         "properties": {},
@@ -296,20 +289,6 @@
         }
       },
       "PublicLegWorkflowRankingResponse": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": {
-          "nullable": true
-        }
-      },
-      "PublicWorkflowReturnHistoryResponse": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": {
-          "nullable": true
-        }
-      },
-      "WorkflowReturnHistoryActualCostResponse": {
         "type": "object",
         "properties": {},
         "additionalProperties": {
@@ -379,28 +358,7 @@
           "nullable": true
         }
       },
-      "PublicReturnOnSpendResponse": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": {
-          "nullable": true
-        }
-      },
-      "PublicFunnelReturnOnSpendResponse": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": {
-          "nullable": true
-        }
-      },
       "PublicShowcaseFunnelsResponse": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": {
-          "nullable": true
-        }
-      },
-      "PublicOutcomeReturnOnSpendResponse": {
         "type": "object",
         "properties": {},
         "additionalProperties": {
@@ -12454,18 +12412,8 @@
           }
         }
       },
-      "ErrorResponse400MissingParameters": {
-        "description": "Missing parameters",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "ErrorResponse404FeatureOrWorkflowDynastyNotFound": {
-        "description": "Feature or workflow dynasty not found",
+      "ErrorResponse400InvalidParameters": {
+        "description": "Invalid parameters",
         "content": {
           "application/json": {
             "schema": {
@@ -12494,38 +12442,8 @@
           }
         }
       },
-      "ErrorResponse400InvalidParameters": {
-        "description": "Invalid parameters",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
       "ErrorResponse503ResearchNotComputedYet": {
         "description": "Research not computed yet",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "ErrorResponse404UnknownFeatureSlug": {
-        "description": "Unknown feature slug",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "ErrorResponse404UnknownAcquisitionChannelSlug": {
-        "description": "Unknown acquisition-channel slug",
         "content": {
           "application/json": {
             "schema": {
@@ -17099,7 +17017,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). For groupBy=brand, result items may include optional public-safe timeline points: date, cumulativePipelineUsd, emailsSent, emailsOpened, emailsClicked, emailsReplied. Use GET /v1/features/stats/registry for the canonical stats key list.",
+            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). Use GET /v1/features/stats/registry for the canonical stats key list.",
             "content": {
               "application/json": {
                 "schema": {
@@ -17184,71 +17102,6 @@
           }
         },
         "operationId": "getV1PublicFeaturesBest"
-      }
-    },
-    "/v1/public/features/revenue": {
-      "get": {
-        "tags": [
-          "Features"
-        ],
-        "summary": "Public feature revenue",
-        "description": "Public expected-pipeline revenue, cost-of-acquisition percentage, and ROI multiple for a feature, grouped by brand or workflow. Proxied to features-service GET /public/stats/revenue. Response is producer-owned and may include brand or workflow results with headline.totalPipelineUsd and costEconomics. No authentication required.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "example": "sales-cold-email-outreach",
-              "description": "Feature slug (required)."
-            },
-            "required": true,
-            "description": "Feature slug (required).",
-            "name": "featureSlug",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "brand",
-                "workflow"
-              ],
-              "example": "workflow",
-              "description": "Group public revenue results by brand or workflow."
-            },
-            "required": true,
-            "description": "Group public revenue results by brand or workflow.",
-            "name": "groupBy",
-            "in": "query"
-          },
-          {
-            "$ref": "#/components/parameters/XRequestId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Public feature revenue — pass-through from features-service",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicFeatureRevenueResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/ErrorResponse400BadRequestFromFeaturesService"
-          },
-          "404": {
-            "$ref": "#/components/responses/ErrorResponse404FeatureNotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/RateLimited"
-          },
-          "502": {
-            "$ref": "#/components/responses/ErrorResponse502UpstreamServiceError"
-          }
-        },
-        "operationId": "getV1PublicFeaturesRevenue"
       }
     },
     "/v1/public/features/workflow-engagement-latency": {
@@ -17651,66 +17504,6 @@
         "operationId": "getV1PublicFeaturesLegWorkflowRanking"
       }
     },
-    "/v1/public/features/workflow-return-history": {
-      "get": {
-        "tags": [
-          "Features"
-        ],
-        "summary": "Public per-workflow return history (billed basis)",
-        "description": "One workflow dynasty's fleet-wide dated spend, value and return on spend across every client org, on the billed basis. Proxied to features-service GET /public/stats/workflow-return-history; query forwarded verbatim (featureSlug and workflowDynastySlug are the ones documented today, not a whitelist). Response is producer-owned. No authentication required.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "example": "sales-cold-email-outreach",
-              "description": "Feature slug (required downstream)."
-            },
-            "required": true,
-            "description": "Feature slug (required downstream).",
-            "name": "featureSlug",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Workflow dynasty (all its versions), the key workflow-cost-per-outcome rows carry (required downstream)."
-            },
-            "required": true,
-            "description": "Workflow dynasty (all its versions), the key workflow-cost-per-outcome rows carry (required downstream).",
-            "name": "workflowDynastySlug",
-            "in": "query"
-          },
-          {
-            "$ref": "#/components/parameters/XRequestId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Workflow return history — pass-through from features-service",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicWorkflowReturnHistoryResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/ErrorResponse400MissingParameters"
-          },
-          "404": {
-            "$ref": "#/components/responses/ErrorResponse404FeatureOrWorkflowDynastyNotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/RateLimited"
-          },
-          "502": {
-            "$ref": "#/components/responses/ErrorResponse502UpstreamServiceError"
-          }
-        },
-        "operationId": "getV1PublicFeaturesWorkflowReturnHistory"
-      }
-    },
     "/v1/public/features/cost-per-outcome-lifetime": {
       "get": {
         "tags": [
@@ -17833,128 +17626,6 @@
         "operationId": "getV1PublicFeaturesCostPerOutcomeDistribution"
       }
     },
-    "/v1/public/features/return-on-spend": {
-      "get": {
-        "tags": [
-          "Features"
-        ],
-        "summary": "Public median return on spend across client brands",
-        "description": "The median return on spend our clients get — each brand's own realized expected pipeline over its committed spend, taken per brand and then across brands — plus the number of brands that median was taken over and the spread around it. Public by design at the producer: the landing that renders it is statically generated for an anonymous visitor, so no identity is required here either. Proxied to features-service GET /public/stats/return-on-spend. The caller's query string is forwarded verbatim; the parameters documented below are the ones features-service publishes today, not a whitelist — the spend floor selects the population, so it is never defaulted or dropped here. Response is producer-owned and distinguishes a measured figure from the reasons it cannot be stated. No authentication required.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "example": "sales-cold-email-outreach",
-              "description": "Feature slug the return is measured over."
-            },
-            "required": false,
-            "description": "Feature slug the return is measured over.",
-            "name": "featureSlug",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "example": "100",
-              "description": "Spend floor in USD selecting the brand population the median is taken over. Producer-owned default; a non-numeric or negative value is a 400 at features-service."
-            },
-            "required": false,
-            "description": "Spend floor in USD selecting the brand population the median is taken over. Producer-owned default; a non-numeric or negative value is a 400 at features-service.",
-            "name": "minSpendUsd",
-            "in": "query"
-          },
-          {
-            "$ref": "#/components/parameters/XRequestId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Fleet median return on spend, or the explicit unmeasurable answer — pass-through from features-service",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicReturnOnSpendResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/ErrorResponse400BadRequestFromFeaturesService"
-          },
-          "404": {
-            "$ref": "#/components/responses/ErrorResponse404UnknownFeatureSlug"
-          },
-          "429": {
-            "$ref": "#/components/responses/RateLimited"
-          },
-          "502": {
-            "$ref": "#/components/responses/ErrorResponse502UpstreamServiceError"
-          }
-        },
-        "operationId": "getV1PublicFeaturesReturnOnSpend"
-      }
-    },
-    "/v1/public/features/funnel-return-on-spend": {
-      "get": {
-        "tags": [
-          "Features"
-        ],
-        "summary": "Public median return on spend per (acquisition channel x sales funnel) pair",
-        "description": "What a dollar through one SALES FUNNEL came back as for our clients: per (acquisition channel x sales funnel), the MEDIAN across brands of each brand's own realized expected pipeline over its committed spend — the same ratio that brand reads as ROI on its own dashboard — with the quartiles and the median cost per paying client beside it. A median, never a mean, and nothing is pooled across channels or funnels: a pair with too few brands past the spend floor says so rather than borrowing a wider population. This is a REALIZED figure and is NOT the projected returnPerDollar on /v1/public/channel-funnel-economics (a pooled unit price through mean declared rates and a mean lifetime revenue); the two answer different questions and both are served. Public by design at the producer: the figures describe our clients in aggregate and name no brand, so no identity is required here either. Proxied to features-service GET /public/stats/funnel-return-on-spend. The caller's query string is forwarded verbatim; the parameters documented below are the ones features-service publishes today, not a whitelist — the spend floor selects the population, so it is never defaulted or dropped here. Response is producer-owned: every pair in the catalogue is listed, measured or not, and an unmeasured pair names which kind it is. No authentication required.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "example": "sales-cold-email-outreach",
-              "description": "Narrow to one acquisition channel. Omitted returns every published channel's pairs. An unknown slug is a 404 at features-service, never an empty pair list."
-            },
-            "required": false,
-            "description": "Narrow to one acquisition channel. Omitted returns every published channel's pairs. An unknown slug is a 404 at features-service, never an empty pair list.",
-            "name": "channelSlug",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "example": "100",
-              "description": "Spend floor in USD selecting the brand population each pair's medians are taken over. Producer-owned default; a non-numeric or negative value is a 400 at features-service."
-            },
-            "required": false,
-            "description": "Spend floor in USD selecting the brand population each pair's medians are taken over. Producer-owned default; a non-numeric or negative value is a 400 at features-service.",
-            "name": "minSpendUsd",
-            "in": "query"
-          },
-          {
-            "$ref": "#/components/parameters/XRequestId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Per-pair median return on spend, each pair measured or explicitly unmeasurable — pass-through from features-service",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicFunnelReturnOnSpendResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/ErrorResponse400BadRequestFromFeaturesService"
-          },
-          "404": {
-            "$ref": "#/components/responses/ErrorResponse404UnknownAcquisitionChannelSlug"
-          },
-          "429": {
-            "$ref": "#/components/responses/RateLimited"
-          },
-          "502": {
-            "$ref": "#/components/responses/ErrorResponse502UpstreamServiceError"
-          }
-        },
-        "operationId": "getV1PublicFeaturesFunnelReturnOnSpend"
-      }
-    },
     "/v1/public/features/showcase-funnels": {
       "get": {
         "tags": [
@@ -17986,67 +17657,6 @@
             "$ref": "#/components/parameters/XRequestId"
           }
         ]
-      }
-    },
-    "/v1/public/features/outcome-return-on-spend": {
-      "get": {
-        "tags": [
-          "Features"
-        ],
-        "summary": "Public median realized return per (channel x leg) and (channel x outcome)",
-        "description": "The funnel-free twin of /v1/public/features/funnel-return-on-spend: the fleet MEDIAN realized return per (acquisition channel x leg) and (acquisition channel x outcome), taken over brands past the spend floor. REALIZED, and NOT the projected returnPerDollar on /v1/public/channel-outcome-economics. Public by design at the producer, so no identity is required here either. Proxied to features-service GET /public/stats/outcome-return-on-spend. The caller's query string is forwarded verbatim; the parameters documented below are the ones features-service publishes today, not a whitelist. Response is producer-owned. No authentication required.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "example": "sales-cold-email-outreach",
-              "description": "Narrow to one acquisition channel. An unknown slug is a 404 at features-service."
-            },
-            "required": false,
-            "description": "Narrow to one acquisition channel. An unknown slug is a 404 at features-service.",
-            "name": "channelSlug",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "example": "100",
-              "description": "Spend floor in USD selecting the brand population each median is taken over. Producer-owned default; a non-numeric or negative value is a 400 at features-service."
-            },
-            "required": false,
-            "description": "Spend floor in USD selecting the brand population each median is taken over. Producer-owned default; a non-numeric or negative value is a 400 at features-service.",
-            "name": "minSpendUsd",
-            "in": "query"
-          },
-          {
-            "$ref": "#/components/parameters/XRequestId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Per-leg / per-outcome realized medians — pass-through from features-service",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicOutcomeReturnOnSpendResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/ErrorResponse400BadRequestFromFeaturesService"
-          },
-          "404": {
-            "$ref": "#/components/responses/ErrorResponse404UnknownAcquisitionChannelSlug"
-          },
-          "429": {
-            "$ref": "#/components/responses/RateLimited"
-          },
-          "502": {
-            "$ref": "#/components/responses/ErrorResponse502UpstreamServiceError"
-          }
-        },
-        "operationId": "getV1PublicFeaturesOutcomeReturnOnSpend"
       }
     },
     "/v1/public/features/showcase-outcomes": {
@@ -18442,7 +18052,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). For groupBy=brand, result items may include optional public-safe timeline points: date, cumulativePipelineUsd, emailsSent, emailsOpened, emailsClicked, emailsReplied. Use GET /v1/features/stats/registry for the canonical stats key list.",
+            "description": "Pass-through from features-service. Each result has a stats object with dynamic keys matching the feature's outputs (e.g. recipientsSent, recipientsRepliesPositive, recipientPositiveReplyRate, costPerRecipientPositiveReplyCents). Use GET /v1/features/stats/registry for the canonical stats key list.",
             "content": {
               "application/json": {
                 "schema": {
