@@ -1,5 +1,5 @@
-import { Router } from "express";
-import { callExternalService, externalServices } from "../lib/service-client.js";
+import express, { Router } from "express";
+import { callExternalService, externalServices, pipeExternalService } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 import { prepayInstructions } from "../lib/agent-prepay.js";
 
@@ -53,6 +53,44 @@ router.post("/agent-signups/start", async (req, res) => {
   }
 });
 
+/** `?a=b` part of the URL the caller sent, byte-identical (rule #11). */
+function rawQueryString(originalUrl: string): string {
+  const i = originalUrl.indexOf("?");
+  return i === -1 ? "" : originalUrl.slice(i);
+}
+
+// GET /v1/agent-signups/approve?token= → client-service GET /internal/agent-signups/approve.
+// The link of the signup email, opened by the inbox owner (RFC 8628 device-flow shape,
+// client-service #202): an HTML confirm page that approves nothing. Piped with the
+// caller's Accept so a browser gets the page and an agent can ask for JSON.
+router.get("/agent-signups/approve", async (req, res) => {
+  try {
+    await pipeExternalService(externalServices.client, `/internal/agent-signups/approve${rawQueryString(req.originalUrl)}`, {
+      headers: { accept: req.get("accept") ?? "text/html" },
+      expressRes: res,
+    });
+  } catch (error) {
+    respondUpstreamError(res, error, "Failed to open the approval page");
+  }
+});
+
+// POST /v1/agent-signups/approve → client-service POST /internal/agent-signups/approve.
+// The page's Confirm button posts a form (`token=...`) to its own URL (`?token=`): the
+// form token travels as JSON, the only body encoding the service client sends.
+router.post("/agent-signups/approve", express.urlencoded({ extended: false }), async (req, res) => {
+  try {
+    const token = isObject(req.body) ? req.body.token : undefined;
+    await pipeExternalService(externalServices.client, `/internal/agent-signups/approve${rawQueryString(req.originalUrl)}`, {
+      method: "POST",
+      body: token === undefined ? undefined : { token },
+      headers: { accept: req.get("accept") ?? "text/html" },
+      expressRes: res,
+    });
+  } catch (error) {
+    respondUpstreamError(res, error, "Failed to confirm the signup");
+  }
+});
+
 // POST /v1/agent-signups/complete → client-service POST /internal/agent-signups/complete,
 // then key-service POST /api-keys for the returned org + user.
 router.post("/agent-signups/complete", async (req, res) => {
@@ -70,7 +108,8 @@ router.post("/agent-signups/complete", async (req, res) => {
     account = await callExternalService<AgentSignupAccount>(
       externalServices.client,
       "/internal/agent-signups/complete",
-      { method: "POST", body: { email: body.email, code: body.code } },
+      // Everything but the gateway's own `keyName` (code OR pollToken, client-service decides).
+      { method: "POST", body: Object.fromEntries(Object.entries(body).filter(([k]) => k !== "keyName")) },
     );
   } catch (error) {
     console.error("[agent-signups] complete error:", (error as Error).message);
