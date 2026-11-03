@@ -736,6 +736,13 @@ export function postProcessOperations(
       // Every operation goes through the limiter, so every operation can 429.
       const responses = (operation.responses ??= {});
       responses["429"] ??= { $ref: "#/components/responses/RateLimited" } as never;
+      // Only a 402 carries the campaign max-budget fields (`PaymentRequiredError`);
+      // every other status keeps the plain `ErrorResponse`.
+      const media402 = (responses["402"] as { content?: Record<string, { schema?: { $ref?: string } }> } | undefined)
+        ?.content?.["application/json"];
+      if (media402?.schema?.$ref === "#/components/schemas/ErrorResponse") {
+        media402.schema = { $ref: "#/components/schemas/PaymentRequiredError" };
+      }
       // An error answer that is only a description over a shared schema is
       // declared once (`Error401Unauthorized`) and referenced. Success answers
       // stay inline: they are what a reader came for.

@@ -32,9 +32,12 @@ describe("request bodies of proxied writes are described (owner gap 2026-10-12)"
   });
 
   it("the documented bodies the MCP had to guess now carry their fields", () => {
+    // A producer body may be a union (`anyOf` of two accepted shapes): its fields are every branch's.
     const props = (key: string) => {
       const [method, path] = key.split(" ");
-      return Object.keys(publicDoc.paths[path][method.toLowerCase()].requestBody.content["application/json"].schema.properties ?? {});
+      const schema = publicDoc.paths[path][method.toLowerCase()].requestBody.content["application/json"].schema;
+      const branches = [schema, ...((schema.anyOf ?? schema.oneOf ?? []) as Json[])];
+      return branches.flatMap((b: Json) => Object.keys((b.properties as Json | undefined) ?? {}));
     };
     expect(props("POST /v1/brands/{id}/offers/proposals").length).toBeGreaterThan(0);
     expect(props("POST /v1/brands/{id}/offers/confirm").length).toBeGreaterThan(0);

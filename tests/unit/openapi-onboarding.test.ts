@@ -79,7 +79,8 @@ describe("every read an agent is pointed to fits its budget (tokens)", () => {
       }
     }
     expect(over).toEqual([]);
-  });
+    // Cuts every page of two full documents (~290 producer answers inlined): seconds, not the 5 s default.
+  }, 60_000);
   it("one operation <= 5k tokens", () => expect(tokens(slice({ kind: "operations", ids: ["postV1Brands"] }))).toBeLessThan(5_000));
 });
 
