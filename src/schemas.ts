@@ -11878,6 +11878,29 @@ registry.registerPath({
   },
 });
 
+registry.registerPath({
+  method: "get",
+  path: "/v1/instantly/ops/seed-placement/opt-out",
+  tags: ["Instantly"],
+  summary: "Compare seed inbox placement across the three opt-out options, and which one prospect emails use now (staff only)",
+  description:
+    DELIVERABILITY_INTRO
+    + "Transparent byte passthrough to instantly-service GET /internal/seed-placement/opt-out (inbox placement of "
+    + "the seed tests per opt-out header option, and the option prospect emails carry now). The query string is "
+    + "forwarded verbatim. Response owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z.object({}).passthrough(),
+  },
+  responses: {
+    200: { description: "Opt-out comparison — pass-through from instantly-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("InstantlyOpsSeedPlacementOptOutResponse") } } },
+    400: { description: "Downstream rejected the query", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
 const WHATSAPP_LINES_INTRO =
   "Platform-scoped staff surface over crm-service's WhatsApp line watch (cross-org ops data, NOT customer data). "
   + "Powers the WhatsApp section of dashboard v2 Monitoring: one row per linked line per day, red when the line "
