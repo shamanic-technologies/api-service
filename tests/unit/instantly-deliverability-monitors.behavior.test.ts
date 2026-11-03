@@ -54,6 +54,19 @@ describe("deliverability monitors — over the wire", () => {
     expect(calls[0].options.headers["x-org-id"]).toBeUndefined();
   });
 
+  it("GET seed-placement/opt-out reaches /internal/seed-placement/opt-out byte for byte", async () => {
+    const payload = '{"current":"tracker_link","variants":[{"variant":"none","found":12,"inbox":11}]}';
+    stub(200, payload);
+    const res = await request(buildApp()).get("/v1/instantly/ops/seed-placement/opt-out").set(STAFF);
+
+    expect(res.status).toBe(200);
+    expect(res.text).toBe(payload);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${INSTANTLY_BASE}/internal/seed-placement/opt-out`);
+    expect(calls[0].options.method).toBe("GET");
+    expect(calls[0].options.headers["x-org-id"]).toBeUndefined();
+  });
+
   it("GET sender-health reaches /internal/sender-health with days forwarded", async () => {
     const payload = '{"asOf":"2026-10-19T00:00:00.000Z","from":"2026-09-20","to":"2026-10-19","current":null,"days":[]}';
     stub(200, payload);
@@ -80,7 +93,7 @@ describe("deliverability monitors — staff gate", () => {
     });
   });
 
-  for (const path of ["/v1/instantly/ops/seed-placement/daily", "/v1/instantly/ops/sender-health"]) {
+  for (const path of ["/v1/instantly/ops/seed-placement/daily", "/v1/instantly/ops/seed-placement/opt-out", "/v1/instantly/ops/sender-health"]) {
     it(`refuses GET ${path} with no credentials`, async () => {
       const res = await request(buildApp()).get(path);
       expect(res.status).toBe(401);
