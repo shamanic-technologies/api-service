@@ -398,6 +398,43 @@ router.delete(
   },
 );
 
+// POST /v1/orgs/gohighlevel/connections/:id/booking-access → crm-service POST /orgs/gohighlevel/connections/{id}/booking-access
+// Asks GoHighLevel again whether the brand's token can book meetings (after the
+// customer changed its scopes). Empty-body probe; crm-service answers the connection view.
+router.post(
+  "/orgs/gohighlevel/connections/:id/booking-access",
+  ...orgChain,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const result = await callExternalService(
+        externalServices.crm,
+        `/orgs/gohighlevel/connections/${encodeURIComponent(req.params.id)}/booking-access${rawQueryString(req.originalUrl)}`,
+        { method: "POST", headers: buildInternalHeaders(req) },
+      );
+      res.json(result);
+    } catch (error) {
+      console.error("[api-service] Check gohighlevel booking access error:", error);
+      respondUpstreamError(res, error, "Check gohighlevel booking access error");
+    }
+  },
+);
+
+// GET /v1/orgs/gohighlevel/scopes → crm-service GET /orgs/gohighlevel/scopes
+// The token scopes the customer grants: `mirror` (read the CRM) and `booking` (book meetings).
+router.get("/orgs/gohighlevel/scopes", ...orgChain, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.crm,
+      `/orgs/gohighlevel/scopes${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req) },
+    );
+    res.json(result);
+  } catch (error) {
+    console.error("[api-service] Get gohighlevel scopes error:", error);
+    respondUpstreamError(res, error, "Get gohighlevel scopes error");
+  }
+});
+
 // GET /v1/orgs/gohighlevel/connections → crm-service GET /orgs/gohighlevel/connections
 router.get("/orgs/gohighlevel/connections", ...orgChain, async (req: AuthenticatedRequest, res) => {
   try {
