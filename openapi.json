@@ -11752,6 +11752,36 @@
           "nullable": true
         }
       },
+      "PhoneMemberExisting": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "PhoneMemberAdded": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "AddPhoneMemberRequest": {
+        "type": "object",
+        "properties": {
+          "phone": {
+            "type": "string",
+            "example": "+15551234567",
+            "description": "The person's phone number, E.164."
+          }
+        },
+        "required": [
+          "phone"
+        ],
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "MemberInvitationList": {
         "type": "object",
         "properties": {},
@@ -16546,6 +16576,36 @@
       },
       "ErrorResponse422InvitationRefusedEGAlreadyAMemberForwardedVerbatim": {
         "description": "`invitation_refused` (e.g. already a member), forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400InvalidRequestPhoneNotE164ForwardedVerbatim": {
+        "description": "`invalid_request` (phone not E.164), forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409PhoneBelongsToAnotherAccountNeverMovedOrOrgHasNoIdentityForw": {
+        "description": "`phone_belongs_to_another_account` (never moved) or `org_has_no_identity`, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse422MemberRefusedTheIdentityProviderRefusedMessageIsItsSentence": {
+        "description": "`member_refused`: the identity provider refused; `message` is its sentence",
         "content": {
           "application/json": {
             "schema": {
@@ -61373,6 +61433,102 @@
           }
         },
         "operationId": "getV1OrgsByOrgIdMemberInvitations"
+      }
+    },
+    "/v1/orgs/{orgId}/phone-members": {
+      "post": {
+        "tags": [
+          "Organizations"
+        ],
+        "summary": "Add a teammate to the organization by phone number only",
+        "description": "Make a phone number a member of this organization, with no email: send `phone` in E.164 (`+15551234567`), the number the person writes to us from on WhatsApp or Telegram. From then on their messages reach this account (its campaigns, figures and settings) instead of a new empty one. Nothing is sent to the person and no API key is created. Adding a number that already belongs to this organization returns 200 (replay). A number that already belongs to ANOTHER account is refused 409 `phone_belongs_to_another_account` and never moved. Any member of the organization may add one. Pass-through to client-service POST /internal/orgs/{orgId}/phone-members.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The organization (from GET /v1/me)"
+            },
+            "required": true,
+            "description": "The organization (from GET /v1/me)",
+            "name": "orgId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddPhoneMemberRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The number already answers for this organization (replay)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhoneMemberExisting"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Added: `{ member: { userId, phone, orgId, role }, userCreated, membershipCreated }`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhoneMemberAdded"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidRequestPhoneNotE164ForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse403NotAMemberOfThisOrganization"
+          },
+          "404": {
+            "description": "`org_not_found`, forwarded verbatim",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409PhoneBelongsToAnotherAccountNeverMovedOrOrgHasNoIdentityForw"
+          },
+          "422": {
+            "$ref": "#/components/responses/ErrorResponse422MemberRefusedTheIdentityProviderRefusedMessageIsItsSentence"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "operationId": "postV1OrgsByOrgIdPhoneMembers"
       }
     },
     "/v1/orgs/{orgId}/member-invitations/{invitationId}": {

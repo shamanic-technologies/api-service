@@ -111,6 +111,46 @@ describe("/v1/orgs/:orgId/member-invitations → client-service", () => {
   });
 });
 
+describe("POST /v1/orgs/:orgId/phone-members → client-service", () => {
+  const ORG = "66666666-6666-6666-6666-666666666666";
+
+  it("pipes the body byte-identical and the 201 back", async () => {
+    identity.current = { ...CLIENT_KEY, userId: "user-client", orgId: ORG };
+    const added = { member: { userId: "u1", clerkUserId: "c1", phone: "+15551234567", orgId: ORG, role: "org:admin" }, userCreated: true, membershipCreated: true };
+    fetchMock.mockResolvedValue(upstream(201, added));
+    const res = await request(app()).post(`/v1/orgs/${ORG}/phone-members`).send({ phone: "+15551234567" });
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual(added);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${CLIENT_BASE}/internal/orgs/${ORG}/phone-members`);
+    expect(JSON.parse(init.body as string)).toEqual({ phone: "+15551234567" });
+  });
+
+  it("a number of another account: the producer's 409 reaches the caller verbatim", async () => {
+    identity.current = { ...CLIENT_KEY, userId: "user-client", orgId: ORG };
+    const refusal = { error: "phone_belongs_to_another_account", message: "This phone number already answers for another account; it is not moved." };
+    fetchMock.mockResolvedValue(upstream(409, refusal));
+    const res = await request(app()).post(`/v1/orgs/${ORG}/phone-members`).send({ phone: "+15551234567" });
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual(refusal);
+  });
+
+  it("an unknown org: the producer's 404 reaches the caller verbatim", async () => {
+    identity.current = { ...STAFF_KEY, orgId: ORG };
+    fetchMock.mockResolvedValue(upstream(404, { error: "org_not_found", message: "No such org" }));
+    const res = await request(app()).post(`/v1/orgs/${ORG}/phone-members`).send({ phone: "+15551234567" });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "org_not_found", message: "No such org" });
+  });
+
+  it("a path org that is not the authenticated one is refused before any call", async () => {
+    identity.current = { ...CLIENT_KEY, userId: "user-client", orgId: ORG };
+    const res = await request(app()).post("/v1/orgs/33333333-3333-3333-3333-333333333333/phone-members").send({ phone: "+1555" });
+    expect(res.status).toBe(403);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe("POST /v1/orgs/:orgId/members → client-service member add + key-service key for that person", () => {
   const ORG = "44444444-4444-4444-4444-444444444444";
   const PERSON = "55555555-5555-5555-5555-555555555555";

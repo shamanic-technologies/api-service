@@ -19045,6 +19045,46 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/v1/orgs/{orgId}/phone-members",
+  tags: ["Organizations"],
+  summary: "Add a teammate to the organization by phone number only",
+  description:
+    "Make a phone number a member of this organization, with no email: send `phone` in E.164 (`+15551234567`), the number " +
+    "the person writes to us from on WhatsApp or Telegram. From then on their messages reach this account (its campaigns, " +
+    "figures and settings) instead of a new empty one. Nothing is sent to the person and no API key is created. Adding a " +
+    "number that already belongs to this organization returns 200 (replay). A number that already belongs to ANOTHER " +
+    "account is refused 409 `phone_belongs_to_another_account` and never moved. Any member of the organization may add one. " +
+    "Pass-through to client-service POST /internal/orgs/{orgId}/phone-members.",
+  security: authed,
+  request: {
+    params: z.object({ orgId: z.string().uuid().openapi({ description: "The organization (from GET /v1/me)" }) }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              phone: z.string().openapi({ example: "+15551234567", description: "The person's phone number, E.164." }),
+            })
+            .passthrough()
+            .openapi("AddPhoneMemberRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    201: passthroughResponse("Added: `{ member: { userId, phone, orgId, role }, userCreated, membershipCreated }`", "PhoneMemberAdded"),
+    200: passthroughResponse("The number already answers for this organization (replay)", "PhoneMemberExisting"),
+    400: { description: "`invalid_request` (phone not E.164), forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not a member of this organization", content: errorContent },
+    404: { description: "`org_not_found`, forwarded verbatim", content: errorContent },
+    409: { description: "`phone_belongs_to_another_account` (never moved) or `org_has_no_identity`, forwarded verbatim", content: errorContent },
+    422: { description: "`member_refused`: the identity provider refused; `message` is its sentence", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "get",
   path: "/v1/orgs/{orgId}/member-invitations",
   tags: ["Organizations"],
