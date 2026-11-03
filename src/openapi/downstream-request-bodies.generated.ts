@@ -357,7 +357,9 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "target": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 200
+          "maxLength": 200,
+          "description": "The OUTCOME this campaign aims at: a step key of the channel catalogue, never free text. Accepted values = exactly the `steps[].key` values served by `GET /v1/public/channels` (no authentication), read live on every create/update, so the list is always the one validation uses (e.g. \"paid_client\", \"meeting_booked\", \"signup\"). Omitted on create = the sales funnel's last step. Any other value = 400 `unknown_target_step`, whose body lists the accepted values in `acceptedTargets`.",
+          "example": "paid_client"
         },
         "brief": {
           "type": "string",
@@ -445,13 +447,12 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "phone": {
           "type": "string",
           "pattern": "^\\+[1-9]\\d{6,14}$",
-          "description": "Urgent-contact phone (WhatsApp) for the person, E.164. Format-checked only, never verified (owner decision 2026-10-12).",
+          "description": "OPTIONAL urgent-contact phone (WhatsApp) for the person, E.164. Omit it when you do not have the person's real number: never invent one. Format-checked only and NEVER verified, so it is stored as an unverified contact (`contactPhone`), never as the account's channel identity (WhatsApp/Telegram routing reads only a channel-verified number, see `whatsappPhone` on complete). A later signup without a phone keeps the contact already on the account.",
           "example": "+33612345678"
         }
       },
       "required": [
-        "email",
-        "phone"
+        "email"
       ]
     }
   },
@@ -1658,9 +1659,10 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "enum": [
             "apollo",
             "apify",
-            "crm"
+            "crm",
+            "google_maps"
           ],
-          "description": "The provider this audience commits to. apollo/apify when persisting a candidate from /suggest; crm for a brand whose audience is its uploaded contact list (served by crm-service — no filters/apolloAudienceId, brand-scoped). Omit for a neutral audience."
+          "description": "The provider this audience commits to. apollo/apify when persisting a candidate from /suggest; crm for a brand whose audience is its uploaded contact list (served by crm-service — no filters/apolloAudienceId, brand-scoped); google_maps for local businesses found on Google Maps (GMAPS-SOURCE-1103): state `nlPrompt` in plain words (\"restaurants and cafes in Astana\") and the Google Maps searches are written for you (needs x-user-id), or pass `filters: {google_maps: {queries, country, language}}` yourself. Each serve hands out one business: phone (E.164), website, address, no email, no person name. Omit for a neutral audience."
         },
         "nlPrompt": {
           "type": "string",
@@ -3205,7 +3207,9 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "target": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 200
+          "maxLength": 200,
+          "description": "The OUTCOME this campaign aims at: a step key of the channel catalogue, never free text. Accepted values = exactly the `steps[].key` values served by `GET /v1/public/channels` (no authentication), read live on every create/update, so the list is always the one validation uses (e.g. \"paid_client\", \"meeting_booked\", \"signup\"). Omitted on create = the sales funnel's last step. Any other value = 400 `unknown_target_step`, whose body lists the accepted values in `acceptedTargets`.",
+          "example": "paid_client"
         },
         "brief": {
           "type": "string",

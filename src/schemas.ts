@@ -10579,7 +10579,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "The sales funnels we can run today",
   description:
-    "Byte passthrough to features-service GET /public/catalogue/sales-funnels: one page of runnable sales funnels (id, name, face, line, type, costUsd, costPer, roi, ...), ROI first; `runnable` is forced on by the producer. Query string forwarded verbatim (containsChannels, paths, q, limit). No authentication required.",
+    "Byte passthrough to features-service GET /public/catalogue/sales-funnels: one page of runnable sales funnels (id, name, face, line, type, costUsd, costPer, roi, ...), ROI first; `runnable` is forced on by the producer. Query string forwarded verbatim (containsChannels, paths, q, limit, offset: page with `nextOffset` until it is null to read every row). No authentication required.",
   request: {
     query: z
       .object({
@@ -10587,6 +10587,7 @@ registry.registerPath({
         paths: z.string().optional(),
         q: z.string().optional(),
         limit: z.string().optional().openapi({ description: "1..25, default 10" }),
+        offset: z.string().optional().openapi({ description: "Rows to skip before this page (whole number >= 0, default 0; else 400 `offset_unrecognised`). To read EVERY row: start at 0, then ask again with `offset` = the answer's `nextOffset` until it is null. Same filters on every page: rows keep one order (ROI first, then id), so no row is read twice and none is missed." }),
       })
       .passthrough(),
   },
@@ -18146,7 +18147,8 @@ registry.registerPath({
 
 const AGENT_FLOW =
   "Agent flow: (1) POST /v1/agent-signups/start with your email + phone, " +
-  "(2) read the 6-digit code in that inbox (an agent with no inbox access needs the inbox owner to relay it), (3) POST /v1/agent-signups/complete with email + code → `apiKey`, " +
+  "(2) read the 6-digit code in that inbox, or, with no inbox access, have the inbox owner click the approval link in the same email " +
+  "while you poll complete with the answered `pollToken`, (3) POST /v1/agent-signups/complete with email + code (or pollToken) → `apiKey`, " +
   "(4) call any free endpoint with `Authorization: Bearer <apiKey>`, (5) before anything that spends money, " +
   "POST /v1/billing/accounts/prepaid_checkout and have the returned `url` paid. There is no free credit.";
 
@@ -18176,7 +18178,15 @@ registry.registerPath({
 export const AgentSignupCompleteRequestSchema = z
   .object({
     email: z.string().describe("The email the code was sent to").openapi({ example: "agent@example.com" }),
-    code: z.string().describe("The 6-digit code from the email").openapi({ example: "123456" }),
+    code: z.string().optional().describe("The 6-digit code from the email (valid 15 minutes). Send `code` OR `pollToken`, never both").openapi({ example: "123456" }),
+    pollToken: z
+      .string()
+      .optional()
+      .describe(
+        "The `pollToken` POST /v1/agent-signups/start answered, for an agent that cannot read the inbox: poll with it " +
+          "every `pollIntervalSeconds` until the inbox owner clicks the approval link in the same email (valid until " +
+          "`approvalExpiresAt`, 24 h). Answers 400 `authorization_pending` until then",
+      ),
     keyName: z.string().optional().describe("Label for the new API key (default: `Agent key <timestamp>`)"),
   })
   .openapi("AgentSignupCompleteRequest");
@@ -18219,7 +18229,8 @@ registry.registerPath({
   tags: ["Agent Signup"],
   summary: "Verify the code and get an API key (no API key needed)",
   description:
-    "Step 2: send the email and the 6-digit code; get back a working API key plus your org and user ids. A new email " +
+    "Step 2: send the email and the 6-digit code (or, with no inbox access, the `pollToken` start answered, once the " +
+    "inbox owner has clicked the approval link); get back a working API key plus your org and user ids. A new email " +
     "opens an account (organization + user; the email is the account's contact, the person can later sign in to the " +
     "dashboard with it). An email that already has an account gets a NEW additional key for that same account " +
     "(`created: false`): call start + complete again whenever you need another key. The account has NO free credit: " +
@@ -18230,10 +18241,46 @@ registry.registerPath({
   request: { body: { content: { "application/json": { schema: AgentSignupCompleteRequestSchema } } } },
   responses: {
     200: { description: "The account and a new API key", content: { "application/json": { schema: AgentSignupCompleteResponseSchema } } },
-    400: { description: "`code_invalid` (wrong code, `attemptsLeft` says how many tries remain) or `invalid_request` (email/code missing or malformed)", content: errorContent },
-    404: { description: "`no_pending_code`: no code was requested for this email; call POST /v1/agent-signups/start", content: errorContent },
-    410: { description: "`code_expired`: request a new code with POST /v1/agent-signups/start", content: errorContent },
+    400: { description: "`authorization_pending` (pollToken: the inbox owner has not clicked the approval link yet, poll again), `code_invalid` (wrong code, `attemptsLeft` says how many tries remain) or `invalid_request` (email/code missing or malformed, or both code and pollToken sent)", content: errorContent },
+    404: { description: "`no_pending_code`: no code was requested for this email, or a newer start replaced it; `poll_token_unknown`: call POST /v1/agent-signups/start", content: errorContent },
+    410: { description: "`code_expired` / `approval_expired`: request a new one with POST /v1/agent-signups/start", content: errorContent },
     502: { description: "`identity_provider_failed` / `billing_unavailable` (account not opened, retry), or `key_minting_failed` (account ready, no key: call complete again with the same code)", content: errorContent },
+  },
+});
+
+const AgentSignupApproveQuerySchema = z.object({
+  token: z.string().describe("The token of the approval link emailed by POST /v1/agent-signups/start"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/agent-signups/approve",
+  tags: ["Agent Signup"],
+  summary: "Approval page of an agent signup (the link in the signup email)",
+  description:
+    "The page the inbox owner opens from the signup email. It names the email and what confirming grants, and NEVER " +
+    "approves anything by itself (mail scanners open links): its Confirm button posts to POST /v1/agent-signups/approve. " +
+    "Answers HTML for a browser, JSON with `Accept: application/json`. Page and states are client-service's, piped as-is.",
+  request: { query: AgentSignupApproveQuerySchema },
+  responses: {
+    200: { description: "The confirm page (text/html) or its state as JSON", content: { "text/html": { schema: z.string() } } },
+    400: { description: "`invalid_request`: the token is missing", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/agent-signups/approve",
+  tags: ["Agent Signup"],
+  summary: "Confirm an agent signup (the inbox owner's click)",
+  description:
+    "Posted by the Confirm button of the approval page (form `token=...`, or `?token=`). Once confirmed, the agent's " +
+    "POST /v1/agent-signups/complete with its `pollToken` answers the account and a new API key. Repeating it changes " +
+    "nothing. Page and states are client-service's, piped as-is.",
+  request: { query: AgentSignupApproveQuerySchema.partial() },
+  responses: {
+    200: { description: "The confirmation page (text/html) or its state as JSON", content: { "text/html": { schema: z.string() } } },
+    400: { description: "`invalid_request`: the token is missing", content: errorContent },
   },
 });
 

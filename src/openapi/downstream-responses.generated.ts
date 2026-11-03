@@ -3755,6 +3755,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "linkedin_engagement",
                       "crm_contacts",
                       "apify_search",
+                      "google_maps_search",
                       null
                     ],
                     "description": "What list this audience holds (same vocabulary as Audience.channels[].list). null ⟹ no committed provider."
@@ -3958,6 +3959,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                             "linkedin_engagement",
                             "crm_contacts",
                             "apify_search",
+                            "google_maps_search",
                             null
                           ],
                           "description": "What list this audience holds (same vocabulary as Audience.channels[].list). null ⟹ no committed provider."
@@ -4019,6 +4021,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                             "linkedin_engagement",
                             "crm_contacts",
                             "apify_search",
+                            "google_maps_search",
                             null
                           ],
                           "description": "What list this audience holds (same vocabulary as Audience.channels[].list). null ⟹ no committed provider."
@@ -4180,6 +4183,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                             "linkedin_engagement",
                             "crm_contacts",
                             "apify_search",
+                            "google_maps_search",
                             null
                           ],
                           "description": "What list this audience holds (same vocabulary as Audience.channels[].list). null ⟹ no committed provider."
@@ -4258,6 +4262,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                             "linkedin_engagement",
                             "crm_contacts",
                             "apify_search",
+                            "google_maps_search",
                             null
                           ],
                           "description": "What list this audience holds (same vocabulary as Audience.channels[].list). null ⟹ no committed provider."
@@ -10902,6 +10907,15 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 ]
               },
               "description": "Per-offer read only: each missing step and how many set-aside rows it accounts for, most first."
+            },
+            "offset": {
+              "type": "integer",
+              "description": "Rows skipped before this page (the `offset` asked, 0 when none)."
+            },
+            "nextOffset": {
+              "type": "integer",
+              "nullable": true,
+              "description": "The `offset` of the next page; null on the last page. `truncated` = `nextOffset` is not null."
             }
           },
           "required": [
@@ -10910,7 +10924,9 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "order",
             "total",
             "truncated",
-            "rows"
+            "rows",
+            "offset",
+            "nextOffset"
           ]
         }
       }
@@ -20542,6 +20558,15 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 ]
               },
               "description": "Per-offer read only: each missing step and how many set-aside rows it accounts for, most first."
+            },
+            "offset": {
+              "type": "integer",
+              "description": "Rows skipped before this page (the `offset` asked, 0 when none)."
+            },
+            "nextOffset": {
+              "type": "integer",
+              "nullable": true,
+              "description": "The `offset` of the next page; null on the last page. `truncated` = `nextOffset` is not null."
             }
           },
           "required": [
@@ -20550,7 +20575,9 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "order",
             "total",
             "truncated",
-            "rows"
+            "rows",
+            "offset",
+            "nextOffset"
           ]
         }
       }
@@ -21058,7 +21085,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                                 "apollo_buying_signal",
                                 "linkedin_engagement",
                                 "crm_contacts",
-                                "apify_search"
+                                "apify_search",
+                                "google_maps_search"
                               ],
                               "description": "What the list is. apollo_search: an Apollo people search. apollo_buying_signal: the same search narrowed to people showing a buying signal (see signal). linkedin_engagement: people who engaged with competitor LinkedIn posts (see signal). crm_contacts: the client's own uploaded contacts. apify_search: legacy search provider."
                             },
@@ -21452,7 +21480,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "apollo_buying_signal",
                           "linkedin_engagement",
                           "crm_contacts",
-                          "apify_search"
+                          "apify_search",
+                          "google_maps_search"
                         ],
                         "description": "What the list is. apollo_search: an Apollo people search. apollo_buying_signal: the same search narrowed to people showing a buying signal (see signal). linkedin_engagement: people who engaged with competitor LinkedIn posts (see signal). crm_contacts: the client's own uploaded contacts. apify_search: legacy search provider."
                       },
@@ -30149,7 +30178,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
     "path": "/public/catalogue/sales-funnels",
     "responses": {
       "200": {
-        "description": "One page, ROI first.",
+        "description": "One page, ROI first. Page through every row with `offset` / `nextOffset`.",
         "schema": {
           "type": "object",
           "properties": {
@@ -30342,6 +30371,15 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "mixed"
                 ]
               }
+            },
+            "offset": {
+              "type": "integer",
+              "description": "Rows skipped before this page (the `offset` asked, 0 when none)."
+            },
+            "nextOffset": {
+              "type": "integer",
+              "nullable": true,
+              "description": "The `offset` of the next page; null on the last page. `truncated` = `nextOffset` is not null."
             }
           },
           "required": [
@@ -30350,7 +30388,9 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "order",
             "total",
             "truncated",
-            "rows"
+            "rows",
+            "offset",
+            "nextOffset"
           ]
         }
       }
@@ -32482,7 +32522,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "apollo_buying_signal",
                           "linkedin_engagement",
                           "crm_contacts",
-                          "apify_search"
+                          "apify_search",
+                          "google_maps_search"
                         ],
                         "description": "What the list is. apollo_search: an Apollo people search. apollo_buying_signal: the same search narrowed to people showing a buying signal (see signal). linkedin_engagement: people who engaged with competitor LinkedIn posts (see signal). crm_contacts: the client's own uploaded contacts. apify_search: legacy search provider."
                       },
@@ -32844,7 +32885,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "apollo_buying_signal",
                           "linkedin_engagement",
                           "crm_contacts",
-                          "apify_search"
+                          "apify_search",
+                          "google_maps_search"
                         ],
                         "description": "What the list is. apollo_search: an Apollo people search. apollo_buying_signal: the same search narrowed to people showing a buying signal (see signal). linkedin_engagement: people who engaged with competitor LinkedIn posts (see signal). crm_contacts: the client's own uploaded contacts. apify_search: legacy search provider."
                       },
@@ -33234,7 +33276,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "apollo_buying_signal",
                           "linkedin_engagement",
                           "crm_contacts",
-                          "apify_search"
+                          "apify_search",
+                          "google_maps_search"
                         ],
                         "description": "What the list is. apollo_search: an Apollo people search. apollo_buying_signal: the same search narrowed to people showing a buying signal (see signal). linkedin_engagement: people who engaged with competitor LinkedIn posts (see signal). crm_contacts: the client's own uploaded contacts. apify_search: legacy search provider."
                       },
@@ -33607,7 +33650,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "apollo_buying_signal",
                           "linkedin_engagement",
                           "crm_contacts",
-                          "apify_search"
+                          "apify_search",
+                          "google_maps_search"
                         ],
                         "description": "What the list is. apollo_search: an Apollo people search. apollo_buying_signal: the same search narrowed to people showing a buying signal (see signal). linkedin_engagement: people who engaged with competitor LinkedIn posts (see signal). crm_contacts: the client's own uploaded contacts. apify_search: legacy search provider."
                       },
@@ -35303,13 +35347,28 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "maxAttempts": {
               "type": "integer",
               "description": "Wrong guesses allowed on this code before it dies (`too_many_attempts`)."
+            },
+            "pollToken": {
+              "type": "string",
+              "description": "For an agent that cannot read the inbox (OAuth 2.0 Device Authorization Grant shape, RFC 8628). The same email carries a link; once the inbox owner clicks it and confirms (any time before `approvalExpiresAt`), POST /internal/agent-signups/complete with `{email, pollToken}` returns the account. Until then it answers 400 `authorization_pending`: wait `pollIntervalSeconds` and poll again. Secret: returned only here, keep it private."
+            },
+            "approvalExpiresAt": {
+              "type": "string",
+              "description": "ISO instant after which the link and the poll token are refused (`approval_expired`)."
+            },
+            "pollIntervalSeconds": {
+              "type": "integer",
+              "description": "Suggested wait between two polls. Advice only: nothing is throttled."
             }
           },
           "required": [
             "email",
             "expiresAt",
             "codeTtlMinutes",
-            "maxAttempts"
+            "maxAttempts",
+            "pollToken",
+            "approvalExpiresAt",
+            "pollIntervalSeconds"
           ]
         }
       }
@@ -42369,7 +42428,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "apollo_buying_signal",
                           "linkedin_engagement",
                           "crm_contacts",
-                          "apify_search"
+                          "apify_search",
+                          "google_maps_search"
                         ],
                         "description": "What the list is. apollo_search: an Apollo people search. apollo_buying_signal: the same search narrowed to people showing a buying signal (see signal). linkedin_engagement: people who engaged with competitor LinkedIn posts (see signal). crm_contacts: the client's own uploaded contacts. apify_search: legacy search provider."
                       },
@@ -42731,7 +42791,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "apollo_buying_signal",
                           "linkedin_engagement",
                           "crm_contacts",
-                          "apify_search"
+                          "apify_search",
+                          "google_maps_search"
                         ],
                         "description": "What the list is. apollo_search: an Apollo people search. apollo_buying_signal: the same search narrowed to people showing a buying signal (see signal). linkedin_engagement: people who engaged with competitor LinkedIn posts (see signal). crm_contacts: the client's own uploaded contacts. apify_search: legacy search provider."
                       },
@@ -43332,7 +43393,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "apollo_buying_signal",
                           "linkedin_engagement",
                           "crm_contacts",
-                          "apify_search"
+                          "apify_search",
+                          "google_maps_search"
                         ],
                         "description": "What the list is. apollo_search: an Apollo people search. apollo_buying_signal: the same search narrowed to people showing a buying signal (see signal). linkedin_engagement: people who engaged with competitor LinkedIn posts (see signal). crm_contacts: the client's own uploaded contacts. apify_search: legacy search provider."
                       },
@@ -43694,7 +43756,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "apollo_buying_signal",
                           "linkedin_engagement",
                           "crm_contacts",
-                          "apify_search"
+                          "apify_search",
+                          "google_maps_search"
                         ],
                         "description": "What the list is. apollo_search: an Apollo people search. apollo_buying_signal: the same search narrowed to people showing a buying signal (see signal). linkedin_engagement: people who engaged with competitor LinkedIn posts (see signal). crm_contacts: the client's own uploaded contacts. apify_search: legacy search provider."
                       },
@@ -44100,7 +44163,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                                 "apollo_buying_signal",
                                 "linkedin_engagement",
                                 "crm_contacts",
-                                "apify_search"
+                                "apify_search",
+                                "google_maps_search"
                               ],
                               "description": "What the list is. apollo_search: an Apollo people search. apollo_buying_signal: the same search narrowed to people showing a buying signal (see signal). linkedin_engagement: people who engaged with competitor LinkedIn posts (see signal). crm_contacts: the client's own uploaded contacts. apify_search: legacy search provider."
                             },
@@ -44598,7 +44662,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "apollo_buying_signal",
                           "linkedin_engagement",
                           "crm_contacts",
-                          "apify_search"
+                          "apify_search",
+                          "google_maps_search"
                         ],
                         "description": "What the list is. apollo_search: an Apollo people search. apollo_buying_signal: the same search narrowed to people showing a buying signal (see signal). linkedin_engagement: people who engaged with competitor LinkedIn posts (see signal). crm_contacts: the client's own uploaded contacts. apify_search: legacy search provider."
                       },
@@ -45070,7 +45135,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                             "apollo_buying_signal",
                             "linkedin_engagement",
                             "crm_contacts",
-                            "apify_search"
+                            "apify_search",
+                            "google_maps_search"
                           ],
                           "description": "What the list is. apollo_search: an Apollo people search. apollo_buying_signal: the same search narrowed to people showing a buying signal (see signal). linkedin_engagement: people who engaged with competitor LinkedIn posts (see signal). crm_contacts: the client's own uploaded contacts. apify_search: legacy search provider."
                         },
