@@ -180,6 +180,8 @@ export const DOWNSTREAM_RESPONSE_SOURCES: Record<string, DownstreamResponseSourc
   "GET /v1/public/catalogue/steps": { service: "features-service", method: "GET", path: "/public/catalogue/steps" },
   "GET /v1/public/catalogue/sales-funnels": { service: "features-service", method: "GET", path: "/public/catalogue/sales-funnels" },
   "GET /v1/conversations": { service: "instantly-service", method: "GET", path: "/orgs/conversations" },
+  "GET /v1/conversations/index": { service: "instantly-service", method: "GET", path: "/orgs/conversations/index" },
+  "GET /v1/conversations/messages": { service: "instantly-service", method: "GET", path: "/orgs/conversations/messages" },
   "GET /v1/email-sequences": { service: "instantly-service", method: "GET", path: "/orgs/email-sequences" },
   "POST /v1/followup-cuts": { service: "instantly-service", method: "POST", path: "/orgs/followup-cuts" },
   "GET /v1/followup-cuts": { service: "instantly-service", method: "GET", path: "/orgs/followup-cuts" },

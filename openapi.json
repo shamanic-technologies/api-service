@@ -7742,6 +7742,20 @@
           "nullable": true
         }
       },
+      "ConversationIndexResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "ConversationMessagesResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "EmailSequencesResponse": {
         "type": "object",
         "properties": {},
@@ -14476,6 +14490,46 @@
       },
       "ErrorResponse502TheSequenceExistsButItsThreadCouldNotBeReadCodeThreadUnavail": {
         "description": "The sequence exists but its thread could not be read — `code: thread_unavailable`",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404NoConversationInThisOrgForThatLeadCodeCampaignNotFound": {
+        "description": "No conversation in this org for that lead — `code: campaign_not_found`",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502TheThreadExistsButCouldNotBeReadCodeThreadUnavailable": {
+        "description": "The thread exists but could not be read — `code: thread_unavailable`",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400MissingOrInvalidQueryParametersIdsMissingOrMoreThan50": {
+        "description": "Missing or invalid query parameters (ids missing or more than 50)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404CampaignNotFoundOrMessageNotFoundWithMissingIds": {
+        "description": "`campaign_not_found`, or `message_not_found` with `missingIds`",
         "content": {
           "application/json": {
             "schema": {
@@ -23626,7 +23680,7 @@
                   "brief": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 8000
+                    "maxLength": 12000
                   },
                   "followsPlan": {
                     "type": "boolean"
@@ -24718,7 +24772,7 @@
                     "type": "string",
                     "nullable": true,
                     "minLength": 1,
-                    "maxLength": 8000
+                    "maxLength": 12000
                   },
                   "followsPlan": {
                     "type": "boolean"
@@ -56504,6 +56558,566 @@
           }
         },
         "operationId": "getV1Conversations"
+      }
+    },
+    "/v1/conversations/index": {
+      "get": {
+        "tags": [
+          "Conversations"
+        ],
+        "summary": "List every message of a conversation with a lead, short, newest first",
+        "description": "Step 1 of reading a conversation with a prospect, made for an agent whose tool cuts long answers. Pass-through to instantly-service GET /orgs/conversations/index. Same lookup, query and refusals as GET /v1/conversations, but each message is one short line: `id`, `at`, `direction` (inbound = the prospect wrote it, outbound = we did), from, to, subject, a one-line `preview` and its length. NEWEST FIRST, so a reader that truncates only loses the oldest messages, never our latest answers. `inboundCount`, `outboundCount`, `lastInboundAt`, `lastOutboundAt` say who wrote last. Read any message in full with GET /v1/conversations/messages and its `id`. The whole query string is forwarded verbatim (the parameters listed here are the ones documented today, not a whitelist); upstream error bodies are forwarded field-for-field (404 `campaign_not_found`, 502 `thread_unavailable`). Declares no cost.\n\nResponse: documented from instantly-service GET /orgs/conversations/index, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/instantly.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The lead whose conversation to read"
+            },
+            "required": true,
+            "description": "The lead whose conversation to read",
+            "name": "email",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Logical campaign id. Optional: omit it to read every thread this org holds with the address."
+            },
+            "required": false,
+            "description": "Logical campaign id. Optional: omit it to read every thread this org holds with the address.",
+            "name": "campaign_id",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every message, short, newest first, as returned by instantly-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "conversation": {
+                      "type": "object",
+                      "properties": {
+                        "campaignId": {
+                          "type": "string",
+                          "description": "The campaign id asked for, unchanged. When none was named: the campaign the prospect wrote in LAST (`threads[0]`), else the one with the newest message."
+                        },
+                        "campaignIds": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Every stored campaign row of this campaign holding this lead, oldest first. campaign-service keeps an ancestor row per workflow change, so one campaign is routinely many rows and a prospect emailed over months sits in several — the exchange spans all of them."
+                        },
+                        "instantlyCampaignId": {
+                          "type": "string",
+                          "description": "The asked row's sequence id; each message carries the row it came from"
+                        },
+                        "leadEmail": {
+                          "type": "string",
+                          "description": "The stored casing, which may differ from the one asked for"
+                        },
+                        "accountEmail": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "The asked row's mailbox; null on a row predating the account persist"
+                        },
+                        "transport": {
+                          "type": "string",
+                          "enum": [
+                            "instantly",
+                            "smtp"
+                          ],
+                          "description": "The asked row's pipe — the caller does not need to know this to ask"
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "mirror",
+                            "self_send",
+                            "provider"
+                          ],
+                          "description": "Where the ASKED row's messages were read from; `sequences` says it per row."
+                        },
+                        "messageCount": {
+                          "type": "integer"
+                        },
+                        "sequences": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "campaignId": {
+                                "type": "string"
+                              },
+                              "instantlyCampaignId": {
+                                "type": "string"
+                              },
+                              "accountEmail": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "transport": {
+                                "type": "string",
+                                "enum": [
+                                  "instantly",
+                                  "smtp"
+                                ]
+                              },
+                              "source": {
+                                "type": "string",
+                                "enum": [
+                                  "mirror",
+                                  "self_send",
+                                  "provider"
+                                ],
+                                "description": "Where the messages were read from. mirror: our own copy — the bronze mirror of the Instantly Unibox, or for a sequence never mirrored the emails and replies our webhook events recorded; the normal case, and the one that survives the Instantly plan being cancelled. self_send: the sequence we dispatched ourselves. provider: read live from Instantly because neither our mirror nor our event record held the words of a sequence that did exchange mail."
+                              },
+                              "messageCount": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "campaignId",
+                              "instantlyCampaignId",
+                              "accountEmail",
+                              "transport",
+                              "source",
+                              "messageCount"
+                            ]
+                          },
+                          "description": "What each contributing row carried, oldest first"
+                        },
+                        "threads": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "campaignId": {
+                                "type": "string",
+                                "description": "A campaign of this org that holds the prospect: pass it as `campaign_id` to POST /orgs/replies to answer in this thread"
+                              },
+                              "lastMessageAt": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Newest message of this thread, either direction (ISO 8601 UTC). Null when none is recorded."
+                              },
+                              "lastInboundAt": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "Newest message the PROSPECT wrote in this thread (ISO 8601 UTC). Null when they never wrote in it."
+                              },
+                              "replied": {
+                                "type": "boolean",
+                                "description": "True when the prospect wrote back in this campaign — the same test POST /orgs/replies uses to find a thread"
+                              }
+                            },
+                            "required": [
+                              "campaignId",
+                              "lastMessageAt",
+                              "lastInboundAt",
+                              "replied"
+                            ]
+                          },
+                          "description": "ONLY when `campaign_id` was omitted: every campaign of this org holding the prospect (the population POST /orgs/replies resolves a thread from), the one they wrote in LAST first, then by newest message. Absent on a named read."
+                        },
+                        "order": {
+                          "type": "string",
+                          "enum": [
+                            "newest_first"
+                          ]
+                        },
+                        "inboundCount": {
+                          "type": "integer",
+                          "description": "Messages the prospect wrote"
+                        },
+                        "outboundCount": {
+                          "type": "integer",
+                          "description": "Messages we sent"
+                        },
+                        "lastMessageAt": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Newest message, either direction. Null when none is dated."
+                        },
+                        "lastInboundAt": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Newest message the prospect wrote. Null when they never wrote."
+                        },
+                        "lastOutboundAt": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Newest message we sent. Null when we sent none."
+                        },
+                        "messages": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "description": "This message's id: pass it to GET /orgs/conversations/messages to read it in full. Derived from the message itself, so it is the same on every read."
+                              },
+                              "at": {
+                                "type": "string",
+                                "description": "ISO 8601 UTC. Empty only when the source carried no timestamp."
+                              },
+                              "direction": {
+                                "type": "string",
+                                "enum": [
+                                  "inbound",
+                                  "outbound"
+                                ],
+                                "description": "inbound: the prospect wrote it. outbound: we did."
+                              },
+                              "from": {
+                                "type": "string"
+                              },
+                              "to": {
+                                "type": "string"
+                              },
+                              "subject": {
+                                "type": "string"
+                              },
+                              "preview": {
+                                "type": "string",
+                                "description": "The message's own words on one line (quoted history cut), at most 140 characters."
+                              },
+                              "chars": {
+                                "type": "integer",
+                                "description": "Length of the full text, in characters"
+                              },
+                              "campaignId": {
+                                "type": "string",
+                                "description": "The stored campaign row this message was exchanged under"
+                              },
+                              "hasAttachments": {
+                                "type": "boolean",
+                                "description": "True when this answer of ours carried offer documents as files"
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "at",
+                              "direction",
+                              "from",
+                              "to",
+                              "subject",
+                              "preview",
+                              "chars",
+                              "campaignId",
+                              "hasAttachments"
+                            ]
+                          },
+                          "description": "EVERY message of the conversation, short, NEWEST FIRST (undated ones last)."
+                        }
+                      },
+                      "required": [
+                        "campaignId",
+                        "campaignIds",
+                        "instantlyCampaignId",
+                        "leadEmail",
+                        "accountEmail",
+                        "transport",
+                        "source",
+                        "messageCount",
+                        "sequences",
+                        "order",
+                        "inboundCount",
+                        "outboundCount",
+                        "lastMessageAt",
+                        "lastInboundAt",
+                        "lastOutboundAt",
+                        "messages"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "conversation"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400MissingOrInvalidQueryParameters"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404NoConversationInThisOrgForThatLeadCodeCampaignNotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500UpstreamError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502TheThreadExistsButCouldNotBeReadCodeThreadUnavailable"
+          }
+        },
+        "operationId": "getV1ConversationsIndex"
+      }
+    },
+    "/v1/conversations/messages": {
+      "get": {
+        "tags": [
+          "Conversations"
+        ],
+        "summary": "Read one or several messages of a conversation in full, by id",
+        "description": "Step 2 of reading a conversation with a prospect. Pass-through to instantly-service GET /orgs/conversations/messages: the messages named in `ids` (from GET /v1/conversations/index, `messages[].id`), each in full (markup-stripped `text`, attachments) plus its `id`, in the order asked. Same identity and query as GET /v1/conversations/index. Any id the conversation does not hold = 404 `message_not_found` naming them in `missingIds`; nothing partial. The whole query string is forwarded verbatim; upstream error bodies are forwarded field-for-field. Declares no cost.\n\nResponse: documented from instantly-service GET /orgs/conversations/messages, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/instantly.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The lead whose conversation to read"
+            },
+            "required": true,
+            "description": "The lead whose conversation to read",
+            "name": "email",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated message ids from GET /v1/conversations/index, 1 to 50"
+            },
+            "required": true,
+            "description": "Comma-separated message ids from GET /v1/conversations/index, 1 to 50",
+            "name": "ids",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Logical campaign id, as on GET /v1/conversations/index"
+            },
+            "required": false,
+            "description": "Logical campaign id, as on GET /v1/conversations/index",
+            "name": "campaign_id",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The messages asked for, in full, as returned by instantly-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "campaignId": {
+                      "type": "string"
+                    },
+                    "leadEmail": {
+                      "type": "string"
+                    },
+                    "messages": {
+                      "type": "array",
+                      "items": {
+                        "allOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "direction": {
+                                "type": "string",
+                                "enum": [
+                                  "inbound",
+                                  "outbound"
+                                ],
+                                "description": "inbound: the prospect wrote it. outbound: we did."
+                              },
+                              "from": {
+                                "type": "string"
+                              },
+                              "to": {
+                                "type": "string"
+                              },
+                              "at": {
+                                "type": "string",
+                                "description": "ISO 8601 UTC. Empty only when the source carried no timestamp."
+                              },
+                              "subject": {
+                                "type": "string"
+                              },
+                              "text": {
+                                "type": "string",
+                                "description": "The message as readable TEXT — markup stripped, never HTML"
+                              },
+                              "campaignId": {
+                                "type": "string",
+                                "description": "The stored campaign row this message was exchanged under"
+                              },
+                              "instantlyCampaignId": {
+                                "type": "string",
+                                "description": "That row's sequence id"
+                              },
+                              "outreachFact": {
+                                "type": "object",
+                                "nullable": true,
+                                "properties": {
+                                  "subjectKey": {
+                                    "type": "string",
+                                    "description": "The `subjectKey` of the `email_sent` fact in GET /internal/outreach-facts, byte for byte (`ievt:<event id>`)."
+                                  },
+                                  "step": {
+                                    "type": "integer",
+                                    "nullable": true,
+                                    "description": "That fact's step (1 = first email). Null where the feed serves none (poll-only sends)."
+                                  },
+                                  "position": {
+                                    "type": "string",
+                                    "enum": [
+                                      "first",
+                                      "followup"
+                                    ],
+                                    "description": "That fact's position: first email or a follow-up."
+                                  }
+                                },
+                                "required": [
+                                  "subjectKey",
+                                  "step",
+                                  "position"
+                                ],
+                                "description": "WHICH served `email_sent` outreach fact this outbound message is, tied by the stored email's identity (never by time). Null on every inbound message, and on an outbound one no served fact recorded (a manual answer, a send the event stream never saw, a send younger than the feed's ~2 min emission tick)."
+                              },
+                              "attachments": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "documentId": {
+                                      "type": "string",
+                                      "description": "The brand-service offer document id"
+                                    },
+                                    "filename": {
+                                      "type": "string"
+                                    },
+                                    "contentType": {
+                                      "type": "string"
+                                    },
+                                    "sizeBytes": {
+                                      "type": "integer"
+                                    },
+                                    "md5": {
+                                      "type": "string",
+                                      "description": "Hex md5 of the exact bytes attached"
+                                    }
+                                  },
+                                  "required": [
+                                    "documentId",
+                                    "filename",
+                                    "contentType",
+                                    "sizeBytes",
+                                    "md5"
+                                  ]
+                                },
+                                "description": "Offer documents this answer of ours carried as files (POST /orgs/replies `attachments`). Absent when none."
+                              }
+                            },
+                            "required": [
+                              "direction",
+                              "from",
+                              "to",
+                              "at",
+                              "subject",
+                              "text",
+                              "campaignId",
+                              "instantlyCampaignId",
+                              "outreachFact"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "id"
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "success",
+                    "campaignId",
+                    "leadEmail",
+                    "messages"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400MissingOrInvalidQueryParametersIdsMissingOrMoreThan50"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404CampaignNotFoundOrMessageNotFoundWithMissingIds"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500UpstreamError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502TheThreadExistsButCouldNotBeReadCodeThreadUnavailable"
+          }
+        },
+        "operationId": "getV1ConversationsMessages"
       }
     },
     "/v1/email-sequences": {
@@ -99703,7 +100317,7 @@
                       "human",
                       "automation"
                     ],
-                    "description": "Who asked for this answer to be sent. It decides ONE thing: whether the human-takeover gate applies. An `automation` reply is refused (409 `human_took_over`) once a person has answered the thread since the prospect last wrote and that answer is not yet counted as our touch; a `human` reply is never gated. Absent resolves to `automation` — the automated responder is the only caller today, so the gate is live without waiting on it, and a human surface declares `human` explicitly."
+                    "description": "Who asked for this answer to be sent. Only an `automation` reply goes through the hand-over and stated-not-to-brand gates; a `human` reply never does. A person's earlier hand reply on the thread never refuses an automated one: it stays in the conversation the responder reads. Absent resolves to `automation`; a human surface declares `human` explicitly."
                   },
                   "attachments": {
                     "type": "array",

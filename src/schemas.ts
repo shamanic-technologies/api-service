@@ -10999,6 +10999,74 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/conversations/index",
+  tags: ["Conversations"],
+  summary: "List every message of a conversation with a lead, short, newest first",
+  description:
+    "Step 1 of reading a conversation with a prospect, made for an agent whose tool cuts long answers. " +
+    "Pass-through to instantly-service GET /orgs/conversations/index. Same lookup, query and refusals as " +
+    "GET /v1/conversations, but each message is one short line: `id`, `at`, `direction` (inbound = the " +
+    "prospect wrote it, outbound = we did), from, to, subject, a one-line `preview` and its length. NEWEST " +
+    "FIRST, so a reader that truncates only loses the oldest messages, never our latest answers. " +
+    "`inboundCount`, `outboundCount`, `lastInboundAt`, `lastOutboundAt` say who wrote last. Read any message " +
+    "in full with GET /v1/conversations/messages and its `id`. The whole query string is forwarded verbatim " +
+    "(the parameters listed here are the ones documented today, not a whitelist); upstream error bodies are " +
+    "forwarded field-for-field (404 `campaign_not_found`, 502 `thread_unavailable`). Declares no cost.",
+  security: authed,
+  request: {
+    query: z.object({
+      email: z.string().openapi({ description: "The lead whose conversation to read" }),
+      campaign_id: z.string().optional().openapi({ description: "Logical campaign id. Optional: omit it to read every thread this org holds with the address." }),
+    }).passthrough(),
+  },
+  responses: {
+    200: {
+      description: "Every message, short, newest first, as returned by instantly-service",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("ConversationIndexResponse") } },
+    },
+    400: { description: "Missing or invalid query parameters", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No conversation in this org for that lead — `code: campaign_not_found`", content: errorContent },
+    502: { description: "The thread exists but could not be read — `code: thread_unavailable`", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/conversations/messages",
+  tags: ["Conversations"],
+  summary: "Read one or several messages of a conversation in full, by id",
+  description:
+    "Step 2 of reading a conversation with a prospect. Pass-through to instantly-service GET " +
+    "/orgs/conversations/messages: the messages named in `ids` (from GET /v1/conversations/index, " +
+    "`messages[].id`), each in full (markup-stripped `text`, attachments) plus its `id`, in the order asked. " +
+    "Same identity and query as GET /v1/conversations/index. Any id the conversation does not hold = 404 " +
+    "`message_not_found` naming them in `missingIds`; nothing partial. The whole query string is forwarded " +
+    "verbatim; upstream error bodies are forwarded field-for-field. Declares no cost.",
+  security: authed,
+  request: {
+    query: z.object({
+      email: z.string().openapi({ description: "The lead whose conversation to read" }),
+      ids: z.string().openapi({ description: "Comma-separated message ids from GET /v1/conversations/index, 1 to 50" }),
+      campaign_id: z.string().optional().openapi({ description: "Logical campaign id, as on GET /v1/conversations/index" }),
+    }).passthrough(),
+  },
+  responses: {
+    200: {
+      description: "The messages asked for, in full, as returned by instantly-service",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("ConversationMessagesResponse") } },
+    },
+    400: { description: "Missing or invalid query parameters (ids missing or more than 50)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "`campaign_not_found`, or `message_not_found` with `missingIds`", content: errorContent },
+    502: { description: "The thread exists but could not be read — `code: thread_unavailable`", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/email-sequences",
   tags: ["Conversations"],
   summary: "Every email we run for a brand, sent, bounced or queued, per prospect",
