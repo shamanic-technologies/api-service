@@ -365,7 +365,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "type": "string",
           "nullable": true,
           "minLength": 1,
-          "maxLength": 8000
+          "maxLength": 12000
         },
         "followsPlan": {
           "type": "boolean"
@@ -3102,7 +3102,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
             "human",
             "automation"
           ],
-          "description": "Who asked for this answer to be sent. It decides ONE thing: whether the human-takeover gate applies. An `automation` reply is refused (409 `human_took_over`) once a person has answered the thread since the prospect last wrote and that answer is not yet counted as our touch; a `human` reply is never gated. Absent resolves to `automation` — the automated responder is the only caller today, so the gate is live without waiting on it, and a human surface declares `human` explicitly."
+          "description": "Who asked for this answer to be sent. Only an `automation` reply goes through the hand-over and stated-not-to-brand gates; a `human` reply never does. A person's earlier hand reply on the thread never refuses an automated one: it stays in the conversation the responder reads. Absent resolves to `automation`; a human surface declares `human` explicitly."
         },
         "attachments": {
           "type": "array",
@@ -3214,7 +3214,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "brief": {
           "type": "string",
           "minLength": 1,
-          "maxLength": 8000
+          "maxLength": 12000
         },
         "followsPlan": {
           "type": "boolean"

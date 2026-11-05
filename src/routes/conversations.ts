@@ -80,6 +80,55 @@ router.get(
 );
 
 /**
+ * GET /v1/conversations/index and GET /v1/conversations/messages — the two-step read
+ * of a long conversation (AGENT-READS-THREAD-1105), pass-throughs to instantly-service
+ * GET /orgs/conversations/index and GET /orgs/conversations/messages.
+ *
+ * Why: an LLM agent (Sophie, a client's agent on the MCP) reading GET /v1/conversations
+ * got a body too big for its tool, cut after the oldest messages, and missed our latest
+ * answers. Step 1 lists EVERY message short (id, when, direction, a one-line preview),
+ * NEWEST FIRST, so a truncating reader only ever loses the oldest lines; step 2 reads
+ * the messages named by `ids` in full. GET /v1/conversations is unchanged.
+ *
+ * Same identity, query and refusals as GET /v1/conversations: authenticated org via
+ * `buildInternalHeaders`, query string forwarded verbatim (rule #11; `campaign_id` is
+ * optional downstream, so the only local check is `email`, plus `ids` on step 2), and
+ * upstream bodies field-for-field (rule #7): 404 `campaign_not_found`, 404
+ * `message_not_found` + `missingIds`, 502 `thread_unavailable`.
+ */
+for (const [path, required] of [
+  ["/conversations/index", ["email"]],
+  ["/conversations/messages", ["email", "ids"]],
+] as const) {
+  router.get(
+    path,
+    authenticate,
+    requireOrg,
+    requireUser,
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const missing = required.filter((name) => !req.query[name]);
+        if (missing.length > 0) {
+          return res
+            .status(400)
+            .json({ error: `Missing required query parameter${missing.length > 1 ? "s" : ""}: ${missing.join(" and ")}` });
+        }
+
+        const result = await callExternalService(
+          externalServices.instantly,
+          `/orgs${path}${rawQueryString(req.originalUrl)}`,
+          { headers: buildInternalHeaders(req) },
+        );
+        res.json(result);
+      } catch (error: any) {
+        console.error(`[api-service] GET ${path} error:`, error.message);
+        respondUpstreamError(res, error, "Failed to read the conversation");
+      }
+    },
+  );
+}
+
+/**
  * GET /v1/sending-schedule — pass-through to instantly-service GET /orgs/sending-schedule.
  *
  * When we may email ONE lead: the weekdays, the local start/end hour and the lead's
