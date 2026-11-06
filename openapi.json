@@ -1508,6 +1508,13 @@
           "nullable": true
         }
       },
+      "BrandCampaignTargetsResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "SalesFunnelCampaignListResponse": {
         "type": "object",
         "properties": {},
@@ -12340,6 +12347,26 @@
       },
       "ErrorResponse502ASpendOrPeopleReadFailedForwardedVerbatim": {
         "description": "A spend or people read failed, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400BadPricingForwardedVerbatim": {
+        "description": "Bad pricing, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502AReadFailedForwardedVerbatim": {
+        "description": "A read failed, forwarded verbatim",
         "content": {
           "application/json": {
             "schema": {
@@ -23226,6 +23253,321 @@
           }
         },
         "operationId": "getV1FeaturesBrandsByBrandIdSalesFunnelCampaignsBySalesFunnelCampaignIdSpendCharts"
+      }
+    },
+    "/v1/features/brands/{brandId}/campaign-targets": {
+      "get": {
+        "tags": [
+          "Campaigns"
+        ],
+        "summary": "One row per ongoing campaign of a brand, on its Target outcome",
+        "description": "Proxy to features-service GET /brands/{brandId}/campaign-targets. Read by the Today page: for each ongoing funnel campaign of the brand, its Target outcome (with its Lifecycle rung), the Target outcomes reached to date, the $ per outcome (everything the campaign spent divided by that count), the measured return or the reason it is not served, one point per UTC day in the past, a projection for the next 30 days and the next expected outcome time. The past is measured and never moves with the Plan; only the projection reads it. `pricing=gross` = list prices (default net, what the org pays). The org is the authenticated one. Any query is forwarded verbatim. Status and body relayed verbatim.\n\nResponse: documented from features-service GET /brands/{brandId}/campaign-targets, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "gross",
+              "description": "gross | net (default net) — validated by features-service"
+            },
+            "required": false,
+            "description": "gross | net (default net) — validated by features-service",
+            "name": "pricing",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One row per ongoing campaign Target",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "brandId": {
+                      "type": "string"
+                    },
+                    "pricing": {
+                      "type": "string",
+                      "enum": [
+                        "gross",
+                        "net"
+                      ]
+                    },
+                    "costBasis": {
+                      "type": "string",
+                      "enum": [
+                        "charged"
+                      ]
+                    },
+                    "computedAt": {
+                      "type": "string"
+                    },
+                    "targets": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "salesFunnelCampaignId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "offerId": {
+                            "type": "string"
+                          },
+                          "target": {
+                            "type": "object",
+                            "nullable": true,
+                            "properties": {
+                              "key": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              },
+                              "lifecycleRung": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "key",
+                              "label",
+                              "lifecycleRung"
+                            ]
+                          },
+                          "outcomesToDate": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "outcomesUnavailableReason": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "spentUsd": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "costPerOutcomeUsd": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "costPerOutcomeUnavailableReason": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "measuredReturn": {
+                            "type": "object",
+                            "properties": {
+                              "roiMultiple": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "valueUsd": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "spentUsd": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "unavailableReason": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "roiMultiple",
+                              "valueUsd",
+                              "spentUsd",
+                              "unavailableReason"
+                            ]
+                          },
+                          "past": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "date": {
+                                  "type": "string"
+                                },
+                                "outcomes": {
+                                  "type": "number"
+                                },
+                                "cumulativeOutcomes": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "date",
+                                "outcomes",
+                                "cumulativeOutcomes"
+                              ]
+                            }
+                          },
+                          "pastUnavailableReason": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "projection": {
+                            "type": "object",
+                            "properties": {
+                              "planComputedAt": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "planFunnelId": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "costPerTargetUsd": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "costPerTargetBasis": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "spendPerDayUsd": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "spendPerDaySource": {
+                                "type": "string",
+                                "nullable": true,
+                                "enum": [
+                                  "daily_budget",
+                                  "spend_pace_7d",
+                                  null
+                                ]
+                              },
+                              "outcomesPerDay": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "daily": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "date": {
+                                      "type": "string"
+                                    },
+                                    "expectedOutcomes": {
+                                      "type": "number"
+                                    },
+                                    "cumulativeExpectedOutcomes": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "date",
+                                    "expectedOutcomes",
+                                    "cumulativeExpectedOutcomes"
+                                  ]
+                                }
+                              },
+                              "nextExpectedAt": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "nextExpectedInHours": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "unavailableReason": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "planComputedAt",
+                              "planFunnelId",
+                              "costPerTargetUsd",
+                              "costPerTargetBasis",
+                              "spendPerDayUsd",
+                              "spendPerDaySource",
+                              "outcomesPerDay",
+                              "daily",
+                              "nextExpectedAt",
+                              "nextExpectedInHours",
+                              "unavailableReason"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "salesFunnelCampaignId",
+                          "name",
+                          "offerId",
+                          "target",
+                          "outcomesToDate",
+                          "outcomesUnavailableReason",
+                          "spentUsd",
+                          "costPerOutcomeUsd",
+                          "costPerOutcomeUnavailableReason",
+                          "measuredReturn",
+                          "past",
+                          "pastUnavailableReason",
+                          "projection"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "brandId",
+                    "pricing",
+                    "costBasis",
+                    "computedAt",
+                    "targets"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadPricingForwardedVerbatim"
+          },
+          "404": {
+            "description": "Brand not found, forwarded verbatim",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502AReadFailedForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1FeaturesBrandsByBrandIdCampaignTargets"
       }
     },
     "/v1/sales-funnel-campaigns": {

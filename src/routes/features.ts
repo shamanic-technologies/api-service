@@ -1700,4 +1700,33 @@ router.get(
   },
 );
 
+/**
+ * GET /v1/features/brands/:brandId/campaign-targets
+ *   → features-service GET /brands/{brandId}/campaign-targets
+ *
+ * The customer Today page, one row of cards per campaign Target (owner 2026-11-06, OUTCOME-RUNG-AND-TARGET-1106): per
+ * ongoing funnel campaign of the brand, its Target outcomes to date, $ per outcome, measured return or a reason, the
+ * past per day, a projection and the next expected time, all computed by features-service. Same auth and identity
+ * forwarding as next-steps above; query verbatim (#11, `pricing`); status and body relayed (#7).
+ */
+router.get(
+  "/features/brands/:brandId/campaign-targets",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.features,
+        `/brands/${encodeURIComponent(req.params.brandId)}/campaign-targets${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("Failed to get campaign targets:", error.message);
+      respondUpstreamError(res, error, "Failed to get campaign targets");
+    }
+  },
+);
+
 export default router;
