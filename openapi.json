@@ -1515,6 +1515,13 @@
           "nullable": true
         }
       },
+      "BrandPublishedUnitsResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "SalesFunnelCampaignListResponse": {
         "type": "object",
         "properties": {},
@@ -10791,6 +10798,20 @@
           "nullable": true
         }
       },
+      "LinkedinAccountsPassthroughResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "LinkedinAccountsPassthroughRequest": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "CrmPassthroughResponse": {
         "type": "object",
         "properties": {},
@@ -12367,6 +12388,16 @@
       },
       "ErrorResponse502AReadFailedForwardedVerbatim": {
         "description": "A read failed, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400UnknownOutcomeOrBadPricingForwardedVerbatim": {
+        "description": "Unknown outcome or bad pricing, forwarded verbatim",
         "content": {
           "application/json": {
             "schema": {
@@ -15597,6 +15628,36 @@
       },
       "ErrorResponse502TypeXNotConfiguredWithDetailsProviderTheMissingXAppKeyOrXIts": {
         "description": "`type: \"x_not_configured\"` with `details.provider` (the missing X app key), or X itself failed (`type: \"upstream\"`), forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400BadRequestTypeValidationEGProfileUrlNotALinkedInProfileOrCom": {
+        "description": "Bad request (`type: \"validation\"`: e.g. profileUrl not a LinkedIn profile or company page) or LinkedIn refused the login (`type: \"linkedin_login_invalid\"`: unknown, used or expired, start again), forwarded verbatim from social-service",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404LinkedInAccountNotFoundInThisOrgForwardedVerbatim": {
+        "description": "LinkedIn account not found in this org, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502TypeLinkedinNotConfiguredWithDetailsProviderOurLinkedInAppOr": {
+        "description": "`type: \"linkedin_not_configured\"` with `details.provider` (our LinkedIn app or key is not set yet), or LinkedIn itself failed (`type: \"upstream\"`), forwarded verbatim",
         "content": {
           "application/json": {
             "schema": {
@@ -23516,6 +23577,187 @@
                               "nextExpectedInHours",
                               "unavailableReason"
                             ]
+                          },
+                          "targetCountSource": {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                              "ledger",
+                              "campaign_people",
+                              null
+                            ],
+                            "description": "Where the Target's count comes from (its milestone card's `countSource`)."
+                          },
+                          "milestones": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "step": {
+                                  "type": "string"
+                                },
+                                "label": {
+                                  "type": "string"
+                                },
+                                "lifecycleRung": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "isTarget": {
+                                  "type": "boolean"
+                                },
+                                "count": {
+                                  "type": "number",
+                                  "nullable": true
+                                },
+                                "countSource": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "enum": [
+                                    "ledger",
+                                    "campaign_people",
+                                    null
+                                  ],
+                                  "description": "`ledger` = the Units the campaign's runs produced (runs-service ledger, any outcome, posts included); `campaign_people` = no run of the campaign declares this outcome (a reply judged by an org-day run, a signup the client's team makes): its own people count."
+                                },
+                                "countUnavailableReason": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "past": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "date": {
+                                        "type": "string"
+                                      },
+                                      "outcomes": {
+                                        "type": "number"
+                                      },
+                                      "cumulativeOutcomes": {
+                                        "type": "number"
+                                      }
+                                    },
+                                    "required": [
+                                      "date",
+                                      "outcomes",
+                                      "cumulativeOutcomes"
+                                    ]
+                                  }
+                                },
+                                "pastUnavailableReason": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "costPerUnitUsd": {
+                                  "type": "number",
+                                  "nullable": true,
+                                  "description": "What the units landing on this milestone spent ÷ its count."
+                                },
+                                "costPerUnitUnavailableReason": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "costFromStartUsd": {
+                                  "type": "number",
+                                  "nullable": true,
+                                  "description": "What every unit up to this milestone spent ÷ its count."
+                                },
+                                "costFromStartUnavailableReason": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "conversionToNextPct": {
+                                  "type": "number",
+                                  "nullable": true
+                                },
+                                "conversionToNextUnavailableReason": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "projection": {
+                                  "type": "object",
+                                  "properties": {
+                                    "outcomesPerDay": {
+                                      "type": "number",
+                                      "nullable": true
+                                    },
+                                    "daily": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "date": {
+                                            "type": "string"
+                                          },
+                                          "expectedOutcomes": {
+                                            "type": "number"
+                                          },
+                                          "cumulativeExpectedOutcomes": {
+                                            "type": "number"
+                                          }
+                                        },
+                                        "required": [
+                                          "date",
+                                          "expectedOutcomes",
+                                          "cumulativeExpectedOutcomes"
+                                        ]
+                                      }
+                                    },
+                                    "nextExpectedAt": {
+                                      "type": "string",
+                                      "nullable": true
+                                    },
+                                    "nextExpectedInHours": {
+                                      "type": "number",
+                                      "nullable": true
+                                    },
+                                    "unavailableReason": {
+                                      "type": "string",
+                                      "nullable": true
+                                    }
+                                  },
+                                  "required": [
+                                    "outcomesPerDay",
+                                    "daily",
+                                    "nextExpectedAt",
+                                    "nextExpectedInHours",
+                                    "unavailableReason"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "step",
+                                "label",
+                                "lifecycleRung",
+                                "isTarget",
+                                "count",
+                                "countSource",
+                                "countUnavailableReason",
+                                "past",
+                                "pastUnavailableReason",
+                                "costPerUnitUsd",
+                                "costPerUnitUnavailableReason",
+                                "costFromStartUsd",
+                                "costFromStartUnavailableReason",
+                                "conversionToNextPct",
+                                "conversionToNextUnavailableReason",
+                                "projection"
+                              ]
+                            },
+                            "description": "One card per milestone of the campaign from Start to its Target (the chain of its own units, never the plan line); the last is the Target and carries the row's count."
+                          },
+                          "milestonesUnavailableReason": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "ledgerDaysMissing": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "Ledger days runs-service has not computed yet: their counts may still move."
                           }
                         },
                         "required": [
@@ -23531,7 +23773,11 @@
                           "measuredReturn",
                           "past",
                           "pastUnavailableReason",
-                          "projection"
+                          "projection",
+                          "targetCountSource",
+                          "milestones",
+                          "milestonesUnavailableReason",
+                          "ledgerDaysMissing"
                         ]
                       }
                     }
@@ -23568,6 +23814,323 @@
           }
         },
         "operationId": "getV1FeaturesBrandsByBrandIdCampaignTargets"
+      }
+    },
+    "/v1/features/brands/{brandId}/published-units/{outcomeKey}": {
+      "get": {
+        "tags": [
+          "Campaigns"
+        ],
+        "summary": "Every Unit of one published outcome of a brand: posts or newsletter emails, with what each led to",
+        "description": "Proxy to features-service GET /brands/{brandId}/published-units/{outcomeKey}. Read by the Outcome pages of the published outcomes (threads_post_published, x_post_published, linkedin_post_published, newsletter_email_sent): one row per post (or newsletter release) with its text, link, date, account, who performed it (ours, or the client's team for a hand post imported off a connected account), views, engagements, website visits through its link, signups from those visits and $ spent; the totals (all, and ours); $ per signup on ours (null while learning); one point per UTC day. `pricing=gross` = list prices (default net, what the org pays). The org is the authenticated one. Any query is forwarded verbatim. Status and body relayed verbatim.\n\nResponse: documented from features-service GET /brands/{brandId}/published-units/{outcomeKey}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "x_post_published"
+            },
+            "required": true,
+            "name": "outcomeKey",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "gross",
+              "description": "gross | net (default net) — validated by features-service"
+            },
+            "required": false,
+            "description": "gross | net (default net) — validated by features-service",
+            "name": "pricing",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The brand's Units of this outcome",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "brandId": {
+                      "type": "string"
+                    },
+                    "pricing": {
+                      "type": "string",
+                      "enum": [
+                        "gross",
+                        "net"
+                      ]
+                    },
+                    "outcomeKey": {
+                      "type": "string"
+                    },
+                    "computedAt": {
+                      "type": "string"
+                    },
+                    "rows": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "publishedAt": {
+                            "type": "string"
+                          },
+                          "account": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "performedBy": {
+                            "type": "string",
+                            "enum": [
+                              "ours",
+                              "client_team"
+                            ]
+                          },
+                          "text": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "url": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "units": {
+                            "type": "number"
+                          },
+                          "views": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "engagements": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "spentUsd": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "visits": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "signups": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "ledgerUnavailableReason": {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                              "not_on_ledger_yet",
+                              null
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "publishedAt",
+                          "account",
+                          "performedBy",
+                          "text",
+                          "url",
+                          "units",
+                          "views",
+                          "engagements",
+                          "spentUsd",
+                          "visits",
+                          "signups",
+                          "ledgerUnavailableReason"
+                        ]
+                      }
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "all": {
+                          "type": "object",
+                          "properties": {
+                            "rows": {
+                              "type": "number"
+                            },
+                            "units": {
+                              "type": "number"
+                            },
+                            "views": {
+                              "type": "number"
+                            },
+                            "engagements": {
+                              "type": "number"
+                            },
+                            "visits": {
+                              "type": "number"
+                            },
+                            "signups": {
+                              "type": "number"
+                            },
+                            "spentUsd": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "rows",
+                            "units",
+                            "views",
+                            "engagements",
+                            "visits",
+                            "signups",
+                            "spentUsd"
+                          ]
+                        },
+                        "ours": {
+                          "type": "object",
+                          "properties": {
+                            "rows": {
+                              "type": "number"
+                            },
+                            "units": {
+                              "type": "number"
+                            },
+                            "views": {
+                              "type": "number"
+                            },
+                            "engagements": {
+                              "type": "number"
+                            },
+                            "visits": {
+                              "type": "number"
+                            },
+                            "signups": {
+                              "type": "number"
+                            },
+                            "spentUsd": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "rows",
+                            "units",
+                            "views",
+                            "engagements",
+                            "visits",
+                            "signups",
+                            "spentUsd"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "all",
+                        "ours"
+                      ]
+                    },
+                    "costPerSignupUsd": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "learning": {
+                      "type": "boolean"
+                    },
+                    "daily": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string"
+                          },
+                          "units": {
+                            "type": "number"
+                          },
+                          "oursUnits": {
+                            "type": "number"
+                          },
+                          "views": {
+                            "type": "number"
+                          },
+                          "visits": {
+                            "type": "number"
+                          },
+                          "signups": {
+                            "type": "number"
+                          },
+                          "spentUsd": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "date",
+                          "units",
+                          "oursUnits",
+                          "views",
+                          "visits",
+                          "signups",
+                          "spentUsd"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "brandId",
+                    "pricing",
+                    "outcomeKey",
+                    "computedAt",
+                    "rows",
+                    "totals",
+                    "costPerSignupUsd",
+                    "learning",
+                    "daily"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400UnknownOutcomeOrBadPricingForwardedVerbatim"
+          },
+          "404": {
+            "description": "Brand not found, forwarded verbatim",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502AReadFailedForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1FeaturesBrandsByBrandIdPublishedUnitsByOutcomeKey"
       }
     },
     "/v1/sales-funnel-campaigns": {
@@ -23688,10 +24251,6 @@
                                 "leadId"
                               ]
                             }
-                          },
-                          "instruction": {
-                            "type": "string",
-                            "nullable": true
                           },
                           "githubIssue": {
                             "type": "object",
@@ -23892,7 +24451,6 @@
                           "stopReason",
                           "createdByUserId",
                           "people",
-                          "instruction",
                           "githubIssue",
                           "githubIssueCheck",
                           "target",
@@ -23986,11 +24544,6 @@
                     },
                     "minItems": 1,
                     "maxItems": 50
-                  },
-                  "instruction": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 4000
                   },
                   "githubIssue": {
                     "type": "object",
@@ -24098,10 +24651,6 @@
                               "leadId"
                             ]
                           }
-                        },
-                        "instruction": {
-                          "type": "string",
-                          "nullable": true
                         },
                         "githubIssue": {
                           "type": "object",
@@ -24302,7 +24851,6 @@
                         "stopReason",
                         "createdByUserId",
                         "people",
-                        "instruction",
                         "githubIssue",
                         "githubIssueCheck",
                         "target",
@@ -24421,10 +24969,6 @@
                             ]
                           }
                         },
-                        "instruction": {
-                          "type": "string",
-                          "nullable": true
-                        },
                         "githubIssue": {
                           "type": "object",
                           "nullable": true,
@@ -24624,7 +25168,6 @@
                         "stopReason",
                         "createdByUserId",
                         "people",
-                        "instruction",
                         "githubIssue",
                         "githubIssueCheck",
                         "target",
@@ -24814,10 +25357,6 @@
                             ]
                           }
                         },
-                        "instruction": {
-                          "type": "string",
-                          "nullable": true
-                        },
                         "githubIssue": {
                           "type": "object",
                           "nullable": true,
@@ -25017,7 +25556,6 @@
                         "stopReason",
                         "createdByUserId",
                         "people",
-                        "instruction",
                         "githubIssue",
                         "githubIssueCheck",
                         "target",
@@ -25096,12 +25634,6 @@
                       "activate",
                       "stop"
                     ]
-                  },
-                  "instruction": {
-                    "type": "string",
-                    "nullable": true,
-                    "minLength": 1,
-                    "maxLength": 4000
                   },
                   "target": {
                     "type": "string",
@@ -25185,10 +25717,6 @@
                             ]
                           }
                         },
-                        "instruction": {
-                          "type": "string",
-                          "nullable": true
-                        },
                         "githubIssue": {
                           "type": "object",
                           "nullable": true,
@@ -25388,7 +25916,6 @@
                         "stopReason",
                         "createdByUserId",
                         "people",
-                        "instruction",
                         "githubIssue",
                         "githubIssueCheck",
                         "target",
@@ -31332,13 +31859,33 @@
                                   "after_first_delivery",
                                   "before_first_delivery",
                                   "event_undated",
-                                  "never_delivered"
-                                ]
+                                  "never_delivered",
+                                  "after_step_not_ours",
+                                  "undated_after_our_step"
+                                ],
+                                "description": "after_step_not_ours — after our first touch, but another step of the person that was NOT ours came at or before it; undated_after_our_step — undated, and every other step of the person was ours."
                               },
                               "firstDeliveredAt": {
                                 "type": "string",
                                 "nullable": true,
                                 "description": "Our first delivered email to this person at brand scope — the rule's other input."
+                              },
+                              "afterStep": {
+                                "type": "object",
+                                "properties": {
+                                  "event": {
+                                    "type": "string"
+                                  },
+                                  "occurredAt": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "event",
+                                  "occurredAt"
+                                ],
+                                "description": "The person's step a cross-step reason leans on."
                               }
                             },
                             "required": [
@@ -31584,13 +32131,33 @@
                                 "after_first_delivery",
                                 "before_first_delivery",
                                 "event_undated",
-                                "never_delivered"
-                              ]
+                                "never_delivered",
+                                "after_step_not_ours",
+                                "undated_after_our_step"
+                              ],
+                              "description": "after_step_not_ours — after our first touch, but another step of the person that was NOT ours came at or before it; undated_after_our_step — undated, and every other step of the person was ours."
                             },
                             "firstDeliveredAt": {
                               "type": "string",
                               "nullable": true,
                               "description": "Our first delivered email to this person at brand scope — the rule's other input."
+                            },
+                            "afterStep": {
+                              "type": "object",
+                              "properties": {
+                                "event": {
+                                  "type": "string"
+                                },
+                                "occurredAt": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "event",
+                                "occurredAt"
+                              ],
+                              "description": "The person's step a cross-step reason leans on."
                             }
                           },
                           "required": [
@@ -31829,13 +32396,33 @@
                                 "after_first_delivery",
                                 "before_first_delivery",
                                 "event_undated",
-                                "never_delivered"
-                              ]
+                                "never_delivered",
+                                "after_step_not_ours",
+                                "undated_after_our_step"
+                              ],
+                              "description": "after_step_not_ours — after our first touch, but another step of the person that was NOT ours came at or before it; undated_after_our_step — undated, and every other step of the person was ours."
                             },
                             "firstDeliveredAt": {
                               "type": "string",
                               "nullable": true,
                               "description": "Our first delivered email to this person at brand scope — the rule's other input."
+                            },
+                            "afterStep": {
+                              "type": "object",
+                              "properties": {
+                                "event": {
+                                  "type": "string"
+                                },
+                                "occurredAt": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "event",
+                                "occurredAt"
+                              ],
+                              "description": "The person's step a cross-step reason leans on."
                             }
                           },
                           "required": [
@@ -51276,7 +51863,14 @@
                         },
                         "allowedActiveWorkflowCount": {
                           "type": "integer",
-                          "description": "Active workflows of the pipe the strategy allows. 0 = nothing can run the play: never runnable."
+                          "description": "Active workflows of the pipe the strategy allows. 0 with no kept script = nothing can run the play: never runnable."
+                        },
+                        "keptScriptDynasties": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "MIGRATE-1105 S0b: the runnable scripts of the pipe's Engine (its outcome, stating its channel) the strategy keeps. Non-empty = the play runs, workflow or none (the Engine runs it)."
                         },
                         "excludedWorkflowDynastySlugs": {
                           "type": "array",
@@ -51293,6 +51887,7 @@
                         "strategyDescription",
                         "default",
                         "allowedActiveWorkflowCount",
+                        "keptScriptDynasties",
                         "excludedWorkflowDynastySlugs"
                       ],
                       "description": "Owner 2026-10-13 (TACTIC = a yes/no tag Jev puts on every workflow version; STRATEGY = tactics it requires and excludes; PLAY = a pipe x a strategy). The play this object IS: a pipe id is its default play, `<pipe id>~<strategy id>` another play. Null = the pipe catalogues no play (every assigned workflow runs, as always). Not the dashboard's Strategy page."
@@ -51377,6 +51972,14 @@
                             },
                             "description": "WHICH active workflows (dynasty slugs) the play may run, sorted. Null on a pipe cataloguing no play (every assigned workflow runs)."
                           },
+                          "keptScriptDynasties": {
+                            "type": "array",
+                            "nullable": true,
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "MIGRATE-1105 S0b: the runnable scripts of the pipe's Engine (its outcome, stating its channel) the strategy keeps, sorted. A play allowing no workflow runs when one is kept (the Engine runs it). Null on a pipe cataloguing no play."
+                          },
                           "runnable": {
                             "type": "boolean",
                             "description": "We run it today: published, and worked by the customer's own team or on a MANAGED channel (a workflow exists). An unmanaged channel is listed but campaign-service refuses its launch (409 `no_workflow`). A customer surface shows only `runnable` objects."
@@ -51415,6 +52018,7 @@
                           "measuredBasis",
                           "allowedActiveWorkflowCount",
                           "allowedWorkflowDynastySlugs",
+                          "keptScriptDynasties",
                           "runnable",
                           "notRunnableReason",
                           "notRunnableDetail"
@@ -81300,6 +81904,14 @@
                     "minLength": 1,
                     "maxLength": 512,
                     "description": "Caller's own key, unique per org. The same key again answers the publication it already made (200, `replayed: true`) and never calls Threads twice. The same key with another account, text or parent post is a 409 `idempotency_key_reused`."
+                  },
+                  "outcomeKey": {
+                    "type": "string",
+                    "enum": [
+                      "post_published",
+                      "threads_post_published"
+                    ],
+                    "description": "The outcome a MAIN post declares on the caller's run. Default `post_published` (what the live Threads script declares today). `threads_post_published` = the Threads-specific outcome (OUTCOME-FINEST-1106), the one every imported post declares: a script opts in by sending it. Kept on the publication; a replay answers the stored one."
                   }
                 },
                 "required": [
@@ -81364,7 +81976,8 @@
                         "outcomeKey": {
                           "type": "string",
                           "enum": [
-                            "post_published"
+                            "post_published",
+                            "threads_post_published"
                           ]
                         },
                         "declared": {
@@ -81381,7 +81994,7 @@
                         "declared",
                         "error"
                       ],
-                      "description": "The `post_published` outcome declared on the caller's run (x-run-id), main posts only; null for a reply"
+                      "description": "The outcome (`post_published` by default, `threads_post_published` when asked) declared on the caller's run (x-run-id), main posts only; null for a reply"
                     }
                   },
                   "required": [
@@ -82169,6 +82782,806 @@
           }
         },
         "operationId": "deleteV1OrgsXAccountsById"
+      }
+    },
+    "/v1/orgs/linkedin/auth/start": {
+      "post": {
+        "tags": [
+          "LinkedIn"
+        ],
+        "summary": "Start connecting a LinkedIn account to a brand (LinkedIn login)",
+        "description": "Proxy to social-service POST /orgs/linkedin/auth/start. Body `{ brandId, accountType, profileUrl, redirectUri }` forwarded untransformed (`profileUrl` = the member's profile or the company page whose posts are imported: LinkedIn's login never names it); returns `{ authorizationUrl, state, expiresAt }`: send the user to `authorizationUrl`. LinkedIn redirects to `redirectUri` with `code` and `state`; hand them to POST /v1/orgs/linkedin/auth/callback.\n\nRequest body: documented from social-service POST /orgs/linkedin/auth/start, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from social-service POST /orgs/linkedin/auth/start, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/social.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "brandId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "accountType": {
+                    "type": "string",
+                    "enum": [
+                      "pro_human",
+                      "personal_human",
+                      "pro_ai"
+                    ],
+                    "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
+                  },
+                  "profileUrl": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The public LinkedIn page whose posts are imported: the member's profile (https://www.linkedin.com/in/<slug>/) or a company page (https://www.linkedin.com/company/<slug>/). LinkedIn's login never names it, so the member states it."
+                  },
+                  "redirectUri": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "Page LinkedIn sends the user back to with `code` and `state`. Must be registered, byte for byte, as an Authorized redirect URL of the LinkedIn app named by LINKEDIN_OAUTH_CONNECT_APP. Production: https://dashboard.distribute.you/connections/linkedin/callback"
+                  }
+                },
+                "required": [
+                  "brandId",
+                  "accountType",
+                  "profileUrl",
+                  "redirectUri"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "As returned by social-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "authorizationUrl": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "state": {
+                      "type": "string"
+                    },
+                    "expiresAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "authorizationUrl",
+                    "state",
+                    "expiresAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestTypeValidationEGProfileUrlNotALinkedInProfileOrCom"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404LinkedInAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502TypeLinkedinNotConfiguredWithDetailsProviderOurLinkedInAppOr"
+          }
+        },
+        "operationId": "postV1OrgsLinkedinAuthStart",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ]
+      }
+    },
+    "/v1/orgs/linkedin/auth/callback": {
+      "post": {
+        "tags": [
+          "LinkedIn"
+        ],
+        "summary": "Finish connecting a LinkedIn account (exchange code, store the account)",
+        "description": "Proxy to social-service POST /orgs/linkedin/auth/callback. Body `{ code, state }` from LinkedIn's redirect; returns `{ account, created }` (`created: false` = the same member already connected to the brand: this is the Reconnect).\n\nRequest body: documented from social-service POST /orgs/linkedin/auth/callback, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from social-service POST /orgs/linkedin/auth/callback, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/social.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "state": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "code",
+                  "state"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "As returned by social-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "account": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "brandId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "memberSub": {
+                          "type": "string",
+                          "description": "LinkedIn's id of the member who logged in (OpenID `sub`)"
+                        },
+                        "name": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "pictureUrl": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "profileUrl": {
+                          "type": "string",
+                          "description": "The page whose posts are imported"
+                        },
+                        "pageKind": {
+                          "type": "string",
+                          "enum": [
+                            "profile",
+                            "company"
+                          ]
+                        },
+                        "accountType": {
+                          "type": "string",
+                          "enum": [
+                            "pro_human",
+                            "personal_human",
+                            "pro_ai"
+                          ],
+                          "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
+                        },
+                        "accountTypeLabel": {
+                          "type": "string"
+                        },
+                        "health": {
+                          "type": "string",
+                          "enum": [
+                            "connected",
+                            "needs_reconnect"
+                          ]
+                        },
+                        "healthReason": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "reconnectBy": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "When the login ends and must be reconnected (LinkedIn logins last 60 days unless LinkedIn grants a refresh token)"
+                        },
+                        "connectedByUserId": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "uuid"
+                        },
+                        "tokenRefreshedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        },
+                        "import": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "historyComplete": {
+                              "type": "boolean"
+                            },
+                            "pagesRead": {
+                              "type": "number"
+                            },
+                            "postsImported": {
+                              "type": "number"
+                            },
+                            "lastReadAt": {
+                              "type": "string",
+                              "nullable": true
+                            }
+                          },
+                          "required": [
+                            "historyComplete",
+                            "pagesRead",
+                            "postsImported",
+                            "lastReadAt"
+                          ],
+                          "description": "Where the post history import stands (null before the first pass)"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "brandId",
+                        "memberSub",
+                        "name",
+                        "pictureUrl",
+                        "profileUrl",
+                        "pageKind",
+                        "accountType",
+                        "accountTypeLabel",
+                        "health",
+                        "healthReason",
+                        "reconnectBy",
+                        "connectedByUserId",
+                        "tokenRefreshedAt",
+                        "createdAt",
+                        "updatedAt",
+                        "import"
+                      ]
+                    },
+                    "created": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "account",
+                    "created"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestTypeValidationEGProfileUrlNotALinkedInProfileOrCom"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404LinkedInAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502TypeLinkedinNotConfiguredWithDetailsProviderOurLinkedInAppOr"
+          }
+        },
+        "operationId": "postV1OrgsLinkedinAuthCallback",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ]
+      }
+    },
+    "/v1/orgs/linkedin/accounts": {
+      "get": {
+        "tags": [
+          "LinkedIn"
+        ],
+        "summary": "List the LinkedIn accounts connected to the org (optionally one brand)",
+        "description": "Proxy to social-service GET /orgs/linkedin/accounts. Response `{ accounts: [...] }` owned by social-service; each account carries its `accountType`, the page imported (`profileUrl`, `pageKind`), its health (`needs_reconnect` = a human must connect it again, `reconnectBy`) and its post history `import` (`historyComplete`, `pagesRead`, `postsImported`, `lastReadAt`).\n\nResponse: documented from social-service GET /orgs/linkedin/accounts, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/social.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Only this brand's accounts"
+            },
+            "required": false,
+            "description": "Only this brand's accounts",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "As returned by social-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accounts": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "brandId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "memberSub": {
+                            "type": "string",
+                            "description": "LinkedIn's id of the member who logged in (OpenID `sub`)"
+                          },
+                          "name": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "pictureUrl": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "profileUrl": {
+                            "type": "string",
+                            "description": "The page whose posts are imported"
+                          },
+                          "pageKind": {
+                            "type": "string",
+                            "enum": [
+                              "profile",
+                              "company"
+                            ]
+                          },
+                          "accountType": {
+                            "type": "string",
+                            "enum": [
+                              "pro_human",
+                              "personal_human",
+                              "pro_ai"
+                            ],
+                            "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
+                          },
+                          "accountTypeLabel": {
+                            "type": "string"
+                          },
+                          "health": {
+                            "type": "string",
+                            "enum": [
+                              "connected",
+                              "needs_reconnect"
+                            ]
+                          },
+                          "healthReason": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "reconnectBy": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "When the login ends and must be reconnected (LinkedIn logins last 60 days unless LinkedIn grants a refresh token)"
+                          },
+                          "connectedByUserId": {
+                            "type": "string",
+                            "nullable": true,
+                            "format": "uuid"
+                          },
+                          "tokenRefreshedAt": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "createdAt": {
+                            "type": "string"
+                          },
+                          "updatedAt": {
+                            "type": "string"
+                          },
+                          "import": {
+                            "type": "object",
+                            "nullable": true,
+                            "properties": {
+                              "historyComplete": {
+                                "type": "boolean"
+                              },
+                              "pagesRead": {
+                                "type": "number"
+                              },
+                              "postsImported": {
+                                "type": "number"
+                              },
+                              "lastReadAt": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "historyComplete",
+                              "pagesRead",
+                              "postsImported",
+                              "lastReadAt"
+                            ],
+                            "description": "Where the post history import stands (null before the first pass)"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "brandId",
+                          "memberSub",
+                          "name",
+                          "pictureUrl",
+                          "profileUrl",
+                          "pageKind",
+                          "accountType",
+                          "accountTypeLabel",
+                          "health",
+                          "healthReason",
+                          "reconnectBy",
+                          "connectedByUserId",
+                          "tokenRefreshedAt",
+                          "createdAt",
+                          "updatedAt",
+                          "import"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "accounts"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestTypeValidationEGProfileUrlNotALinkedInProfileOrCom"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404LinkedInAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502TypeLinkedinNotConfiguredWithDetailsProviderOurLinkedInAppOr"
+          }
+        },
+        "operationId": "getV1OrgsLinkedinAccounts"
+      }
+    },
+    "/v1/orgs/linkedin/accounts/{id}": {
+      "patch": {
+        "tags": [
+          "LinkedIn"
+        ],
+        "summary": "Set a LinkedIn account's type or the page it imports",
+        "description": "Proxy to social-service PATCH /orgs/linkedin/accounts/{id}. Body `{ accountType?, profileUrl? }` forwarded untransformed; returns `{ account }`.\n\nRequest body: documented from social-service PATCH /orgs/linkedin/accounts/{id}, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from social-service PATCH /orgs/linkedin/accounts/{id}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/social.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "LinkedIn account id (uuid) from GET /v1/orgs/linkedin/accounts"
+            },
+            "required": true,
+            "description": "LinkedIn account id (uuid) from GET /v1/orgs/linkedin/accounts",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "accountType": {
+                    "type": "string",
+                    "enum": [
+                      "pro_human",
+                      "personal_human",
+                      "pro_ai"
+                    ],
+                    "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
+                  },
+                  "profileUrl": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The public LinkedIn page whose posts are imported: the member's profile (https://www.linkedin.com/in/<slug>/) or a company page (https://www.linkedin.com/company/<slug>/). LinkedIn's login never names it, so the member states it."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "As returned by social-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "account": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "brandId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "memberSub": {
+                          "type": "string",
+                          "description": "LinkedIn's id of the member who logged in (OpenID `sub`)"
+                        },
+                        "name": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "pictureUrl": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "profileUrl": {
+                          "type": "string",
+                          "description": "The page whose posts are imported"
+                        },
+                        "pageKind": {
+                          "type": "string",
+                          "enum": [
+                            "profile",
+                            "company"
+                          ]
+                        },
+                        "accountType": {
+                          "type": "string",
+                          "enum": [
+                            "pro_human",
+                            "personal_human",
+                            "pro_ai"
+                          ],
+                          "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
+                        },
+                        "accountTypeLabel": {
+                          "type": "string"
+                        },
+                        "health": {
+                          "type": "string",
+                          "enum": [
+                            "connected",
+                            "needs_reconnect"
+                          ]
+                        },
+                        "healthReason": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "reconnectBy": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "When the login ends and must be reconnected (LinkedIn logins last 60 days unless LinkedIn grants a refresh token)"
+                        },
+                        "connectedByUserId": {
+                          "type": "string",
+                          "nullable": true,
+                          "format": "uuid"
+                        },
+                        "tokenRefreshedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "updatedAt": {
+                          "type": "string"
+                        },
+                        "import": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "historyComplete": {
+                              "type": "boolean"
+                            },
+                            "pagesRead": {
+                              "type": "number"
+                            },
+                            "postsImported": {
+                              "type": "number"
+                            },
+                            "lastReadAt": {
+                              "type": "string",
+                              "nullable": true
+                            }
+                          },
+                          "required": [
+                            "historyComplete",
+                            "pagesRead",
+                            "postsImported",
+                            "lastReadAt"
+                          ],
+                          "description": "Where the post history import stands (null before the first pass)"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "brandId",
+                        "memberSub",
+                        "name",
+                        "pictureUrl",
+                        "profileUrl",
+                        "pageKind",
+                        "accountType",
+                        "accountTypeLabel",
+                        "health",
+                        "healthReason",
+                        "reconnectBy",
+                        "connectedByUserId",
+                        "tokenRefreshedAt",
+                        "createdAt",
+                        "updatedAt",
+                        "import"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "account"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestTypeValidationEGProfileUrlNotALinkedInProfileOrCom"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404LinkedInAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502TypeLinkedinNotConfiguredWithDetailsProviderOurLinkedInAppOr"
+          }
+        },
+        "operationId": "patchV1OrgsLinkedinAccountsById"
+      },
+      "delete": {
+        "tags": [
+          "LinkedIn"
+        ],
+        "summary": "Disconnect a LinkedIn account",
+        "description": "Proxy to social-service DELETE /orgs/linkedin/accounts/{id}.\n\nResponse: documented from social-service DELETE /orgs/linkedin/accounts/{id}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/social.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "LinkedIn account id (uuid) from GET /v1/orgs/linkedin/accounts"
+            },
+            "required": true,
+            "description": "LinkedIn account id (uuid) from GET /v1/orgs/linkedin/accounts",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "As returned by social-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestTypeValidationEGProfileUrlNotALinkedInProfileOrCom"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404LinkedInAccountNotFoundInThisOrgForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502TypeLinkedinNotConfiguredWithDetailsProviderOurLinkedInAppOr"
+          }
+        },
+        "operationId": "deleteV1OrgsLinkedinAccountsById"
       }
     },
     "/v1/orgs/contacts/upload": {
@@ -91641,13 +93054,11 @@
                         "status": {
                           "type": "string",
                           "enum": [
-                            "ok",
-                            "failed"
+                            "ok"
                           ],
-                          "description": "failed = features-service could not be read: every person's family is null for THAT reason, never \"nobody has a family\" (see error)."
+                          "description": "Always ok: the verdicts ride on each person (lead-service's, relayed at build)."
                         },
                         "error": {
-                          "type": "string",
                           "nullable": true
                         },
                         "filter": {
@@ -91657,14 +93068,12 @@
                             "won",
                             "hot",
                             "lost",
-                            "cold",
                             null
                           ],
-                          "description": "The family this page is filtered on (null = All)."
+                          "description": "The verdict this page is filtered on (null = All)."
                         },
                         "counts": {
                           "type": "object",
-                          "nullable": true,
                           "properties": {
                             "won": {
                               "type": "integer"
@@ -91674,73 +93083,34 @@
                             },
                             "lost": {
                               "type": "integer"
-                            },
-                            "cold": {
-                              "type": "integer"
                             }
                           },
                           "required": [
                             "won",
                             "hot",
-                            "lost",
-                            "cold"
+                            "lost"
                           ],
-                          "description": "People per family over THIS list's population (source / includeAutomated / q applied, family not): what each filter button returns. Sums to withFamily."
+                          "description": "People per verdict over THIS list's population (source / includeAutomated / q applied, family not): what each filter button returns. Sums to withFamily."
                         },
-                        "lostBreakdown": {
+                        "lostReasons": {
                           "type": "object",
-                          "nullable": true,
-                          "properties": {
-                            "wentCold": {
-                              "type": "integer"
-                            },
-                            "ruledOut": {
-                              "type": "integer"
-                            }
+                          "additionalProperties": {
+                            "type": "integer"
                           },
-                          "required": [
-                            "wentCold",
-                            "ruledOut"
-                          ]
+                          "description": "Lost people per lost reason (lead-service's: not_reachable | wrong_fit | not_interested); a person can hold several."
                         },
                         "withFamily": {
-                          "type": "integer",
-                          "nullable": true
+                          "type": "integer"
                         },
                         "withoutFamily": {
                           "type": "integer",
-                          "nullable": true,
-                          "description": "People of the population who are not one of our leads (shown under All only)."
+                          "description": "People of the population neither won, hot nor lost (open leads, and people lead-service serves no lead state for)."
                         },
-                        "producerCounts": {
-                          "type": "object",
-                          "nullable": true,
-                          "properties": {
-                            "won": {
-                              "type": "integer"
-                            },
-                            "hot": {
-                              "type": "integer"
-                            },
-                            "lost": {
-                              "type": "integer"
-                            },
-                            "cold": {
-                              "type": "integer"
-                            }
-                          },
-                          "required": [
-                            "won",
-                            "hot",
-                            "lost",
-                            "cold"
-                          ],
-                          "description": "features-service's own counts over ALL the brand's leads, most never in conversation with the brand (for reconciliation)."
-                        },
-                        "readAt": {
+                        "source": {
                           "type": "string",
-                          "nullable": true,
-                          "description": "When crm-service read features-service (a read is shared for up to 60s)."
+                          "enum": [
+                            "lead_service"
+                          ]
                         }
                       },
                       "required": [
@@ -91748,13 +93118,12 @@
                         "error",
                         "filter",
                         "counts",
-                        "lostBreakdown",
+                        "lostReasons",
                         "withFamily",
                         "withoutFamily",
-                        "producerCounts",
-                        "readAt"
+                        "source"
                       ],
-                      "description": "The Unibox family filters (Won clients, Hot leads, Lost leads, Cold leads)."
+                      "description": "Won / Hot / Lost (LEAD-GENERIC-1106): lead-service's verdict on the lead, read from its ONE lead vocabulary. \"Cold\" does not exist."
                     },
                     "groupMembersHidden": {
                       "type": "integer",
@@ -91848,8 +93217,8 @@
                               },
                               "state": {
                                 "type": "string",
-                                "example": "sales_interest",
-                                "description": "The ONE state, set by `stateSource` (first that applies): lead_service = lead-service's standing TAG verbatim (unresolved | not_contacted | contacted | engaged | sales_interest | website_visit | customer | opted_out; the standing's own `state` rides in `stateDetail.standing`; Disqualified is not a state, see `disqualification`), or `unavailable` when lead-service could not be asked; stripe = subscription_active | subscription_trialing | subscription_past_due | subscription_unpaid | paid | refunded | subscription_canceled; gohighlevel = deal_won | deal_open | deal_lost | deal_abandoned; matrix = new | qualifying | negotiating | won | lost | unresponsive; instantly = replied | clicked; none = in_conversation. Render it; never recompute it."
+                                "example": "hot",
+                                "description": "The ONE state, set by `stateSource` (first that applies): lead_service = lead-service's verdict on the lead (LEAD-GENERIC-1106, its ONE lead vocabulary): won | hot | lost, else open (the whole `leadState` beside it), or `unavailable` when lead-service could not be asked; stripe = subscription_active | subscription_trialing | subscription_past_due | subscription_unpaid | paid | refunded | subscription_canceled; gohighlevel = deal_won | deal_open | deal_lost | deal_abandoned; matrix = new | qualifying | negotiating | won | lost | unresponsive; instantly = replied | clicked; none = in_conversation. Render it; never recompute it."
                               },
                               "stateSource": {
                                 "type": "string",
@@ -91868,6 +93237,106 @@
                                 "additionalProperties": {
                                   "nullable": true
                                 }
+                              },
+                              "leadState": {
+                                "type": "object",
+                                "nullable": true,
+                                "properties": {
+                                  "lifecycle": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                      "key": {
+                                        "type": "string"
+                                      },
+                                      "rank": {
+                                        "type": "number"
+                                      },
+                                      "label": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "key",
+                                      "rank",
+                                      "label"
+                                    ],
+                                    "description": "The highest rung of the ONE ladder the lead reached; null = none yet."
+                                  },
+                                  "won": {
+                                    "type": "boolean"
+                                  },
+                                  "hot": {
+                                    "type": "boolean"
+                                  },
+                                  "lost": {
+                                    "type": "object",
+                                    "nullable": true,
+                                    "properties": {
+                                      "reasons": {
+                                        "type": "array",
+                                        "items": {
+                                          "type": "string"
+                                        }
+                                      },
+                                      "reachable": {
+                                        "type": "string",
+                                        "nullable": true
+                                      },
+                                      "fit": {
+                                        "type": "string",
+                                        "nullable": true
+                                      }
+                                    },
+                                    "required": [
+                                      "reasons",
+                                      "reachable",
+                                      "fit"
+                                    ]
+                                  },
+                                  "reachable": {
+                                    "type": "string"
+                                  },
+                                  "conversation": {
+                                    "type": "string"
+                                  },
+                                  "fit": {
+                                    "type": "string"
+                                  },
+                                  "fitNote": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "interest": {
+                                    "type": "string"
+                                  },
+                                  "clientStatus": {
+                                    "type": "string"
+                                  },
+                                  "nextFollowupAt": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "nextFollowupBasis": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "lifecycle",
+                                  "won",
+                                  "hot",
+                                  "lost",
+                                  "reachable",
+                                  "conversation",
+                                  "fit",
+                                  "fitNote",
+                                  "interest",
+                                  "clientStatus",
+                                  "nextFollowupAt",
+                                  "nextFollowupBasis"
+                                ],
+                                "description": "lead-service's ONE lead vocabulary for the person (LEAD-GENERIC-1106), relayed verbatim from its Unibox row (the row holding the person's lead, else their human's first row): Lifecycle (the one ladder), won / hot / lost (+ reasons), reachable, conversation, fit, interest, client status, next follow-up. Null = lead-service serves no lead state for them (stateSource is not lead_service, or unavailable)."
                               },
                               "disqualification": {
                                 "type": "object",
@@ -92001,7 +93470,7 @@
                                   "optedOut",
                                   "doNotContact"
                                 ],
-                                "description": "lead-service's HUMAN block for the lead the state was read from, relayed verbatim (its `human` on the lead row): what holds for the human wherever they work, whichever evidence decided the state (an unsubscribe under this brand reads state opted_out AND optedOut true). Null = the person is not one of our leads, or lead-service could not resolve the standing (never read as false). Never derived here."
+                                "description": "lead-service's HUMAN block for the lead the state was read from, relayed verbatim (its `human` on the lead row): what holds for the human wherever they work, whichever evidence decided the state (an unsubscribe under this brand reads state opted_out AND optedOut true). Null = the person is not one of our leads, or lead-service could not resolve it (never read as false). Never derived here."
                               },
                               "presences": {
                                 "type": "array",
@@ -92661,6 +94130,7 @@
                               "state",
                               "stateSource",
                               "stateDetail",
+                              "leadState",
                               "disqualification",
                               "companyTags",
                               "humanTags",
@@ -92689,20 +94159,20 @@
                                   "won",
                                   "hot",
                                   "lost",
-                                  "cold",
                                   null
                                 ],
-                                "description": "features-service's verdict on this person as our lead, verbatim; a person with several lead addresses takes the strongest (won > hot > lost > cold). Null = not one of our leads, or families.status = failed."
+                                "description": "lead-service's verdict on this person as a lead (= `state` when `stateSource` is lead_service). Null = open, or no lead state."
                               },
                               "familyLostReason": {
                                 "type": "string",
                                 "nullable": true,
                                 "enum": [
-                                  "went_cold",
-                                  "ruled_out",
+                                  "not_reachable",
+                                  "wrong_fit",
+                                  "not_interested",
                                   null
                                 ],
-                                "description": "lost only: went_cold or ruled_out (features-service's reason)."
+                                "description": "lost only: lead-service's strongest lost reason (all of them in `leadState.lost.reasons`)."
                               },
                               "matches": {
                                 "type": "array",
@@ -92960,8 +94430,8 @@
                         },
                         "state": {
                           "type": "string",
-                          "example": "sales_interest",
-                          "description": "The ONE state, set by `stateSource` (first that applies): lead_service = lead-service's standing TAG verbatim (unresolved | not_contacted | contacted | engaged | sales_interest | website_visit | customer | opted_out; the standing's own `state` rides in `stateDetail.standing`; Disqualified is not a state, see `disqualification`), or `unavailable` when lead-service could not be asked; stripe = subscription_active | subscription_trialing | subscription_past_due | subscription_unpaid | paid | refunded | subscription_canceled; gohighlevel = deal_won | deal_open | deal_lost | deal_abandoned; matrix = new | qualifying | negotiating | won | lost | unresponsive; instantly = replied | clicked; none = in_conversation. Render it; never recompute it."
+                          "example": "hot",
+                          "description": "The ONE state, set by `stateSource` (first that applies): lead_service = lead-service's verdict on the lead (LEAD-GENERIC-1106, its ONE lead vocabulary): won | hot | lost, else open (the whole `leadState` beside it), or `unavailable` when lead-service could not be asked; stripe = subscription_active | subscription_trialing | subscription_past_due | subscription_unpaid | paid | refunded | subscription_canceled; gohighlevel = deal_won | deal_open | deal_lost | deal_abandoned; matrix = new | qualifying | negotiating | won | lost | unresponsive; instantly = replied | clicked; none = in_conversation. Render it; never recompute it."
                         },
                         "stateSource": {
                           "type": "string",
@@ -92980,6 +94450,106 @@
                           "additionalProperties": {
                             "nullable": true
                           }
+                        },
+                        "leadState": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "lifecycle": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "key": {
+                                  "type": "string"
+                                },
+                                "rank": {
+                                  "type": "number"
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "key",
+                                "rank",
+                                "label"
+                              ],
+                              "description": "The highest rung of the ONE ladder the lead reached; null = none yet."
+                            },
+                            "won": {
+                              "type": "boolean"
+                            },
+                            "hot": {
+                              "type": "boolean"
+                            },
+                            "lost": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "reasons": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "reachable": {
+                                  "type": "string",
+                                  "nullable": true
+                                },
+                                "fit": {
+                                  "type": "string",
+                                  "nullable": true
+                                }
+                              },
+                              "required": [
+                                "reasons",
+                                "reachable",
+                                "fit"
+                              ]
+                            },
+                            "reachable": {
+                              "type": "string"
+                            },
+                            "conversation": {
+                              "type": "string"
+                            },
+                            "fit": {
+                              "type": "string"
+                            },
+                            "fitNote": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "interest": {
+                              "type": "string"
+                            },
+                            "clientStatus": {
+                              "type": "string"
+                            },
+                            "nextFollowupAt": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "nextFollowupBasis": {
+                              "type": "string",
+                              "nullable": true
+                            }
+                          },
+                          "required": [
+                            "lifecycle",
+                            "won",
+                            "hot",
+                            "lost",
+                            "reachable",
+                            "conversation",
+                            "fit",
+                            "fitNote",
+                            "interest",
+                            "clientStatus",
+                            "nextFollowupAt",
+                            "nextFollowupBasis"
+                          ],
+                          "description": "lead-service's ONE lead vocabulary for the person (LEAD-GENERIC-1106), relayed verbatim from its Unibox row (the row holding the person's lead, else their human's first row): Lifecycle (the one ladder), won / hot / lost (+ reasons), reachable, conversation, fit, interest, client status, next follow-up. Null = lead-service serves no lead state for them (stateSource is not lead_service, or unavailable)."
                         },
                         "disqualification": {
                           "type": "object",
@@ -93113,7 +94683,7 @@
                             "optedOut",
                             "doNotContact"
                           ],
-                          "description": "lead-service's HUMAN block for the lead the state was read from, relayed verbatim (its `human` on the lead row): what holds for the human wherever they work, whichever evidence decided the state (an unsubscribe under this brand reads state opted_out AND optedOut true). Null = the person is not one of our leads, or lead-service could not resolve the standing (never read as false). Never derived here."
+                          "description": "lead-service's HUMAN block for the lead the state was read from, relayed verbatim (its `human` on the lead row): what holds for the human wherever they work, whichever evidence decided the state (an unsubscribe under this brand reads state opted_out AND optedOut true). Null = the person is not one of our leads, or lead-service could not resolve it (never read as false). Never derived here."
                         },
                         "presences": {
                           "type": "array",
@@ -93773,6 +95343,7 @@
                         "state",
                         "stateSource",
                         "stateDetail",
+                        "leadState",
                         "disqualification",
                         "companyTags",
                         "humanTags",
