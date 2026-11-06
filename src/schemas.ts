@@ -2063,6 +2063,35 @@ registry.registerPath({
   },
 });
 
+const BrandCampaignTargetsResponseSchema = z.object({}).passthrough().openapi("BrandCampaignTargetsResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/brands/{brandId}/campaign-targets",
+  tags: ["Campaigns"],
+  summary: "One row per ongoing campaign of a brand, on its Target outcome",
+  description:
+    "Proxy to features-service GET /brands/{brandId}/campaign-targets. Read by the Today page: for each ongoing funnel " +
+    "campaign of the brand, its Target outcome (with its Lifecycle rung), the Target outcomes reached to date, the $ per " +
+    "outcome (everything the campaign spent divided by that count), the measured return or the reason it is not served, one " +
+    "point per UTC day in the past, a projection for the next 30 days and the next expected outcome time. The past is " +
+    "measured and never moves with the Plan; only the projection reads it. `pricing=gross` = list prices (default net, " +
+    "what the org pays). The org is the authenticated one. Any query is forwarded verbatim. Status and body relayed verbatim.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string() }),
+    query: z.object({
+      pricing: z.string().optional().openapi({ example: "gross" }).describe("gross | net (default net) — validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "One row per ongoing campaign Target", content: { "application/json": { schema: BrandCampaignTargetsResponseSchema } } },
+    400: { description: "Bad pricing, forwarded verbatim", content: errorContent },
+    404: { description: "Brand not found, forwarded verbatim", content: errorContent },
+    502: { description: "A read failed, forwarded verbatim", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/sales-funnel-campaigns",
