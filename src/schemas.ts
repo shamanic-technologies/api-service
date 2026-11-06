@@ -2092,6 +2092,36 @@ registry.registerPath({
   },
 });
 
+const BrandPublishedUnitsResponseSchema = z.object({}).passthrough().openapi("BrandPublishedUnitsResponse");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/features/brands/{brandId}/published-units/{outcomeKey}",
+  tags: ["Campaigns"],
+  summary: "Every Unit of one published outcome of a brand: posts or newsletter emails, with what each led to",
+  description:
+    "Proxy to features-service GET /brands/{brandId}/published-units/{outcomeKey}. Read by the Outcome pages of the published " +
+    "outcomes (threads_post_published, x_post_published, linkedin_post_published, newsletter_email_sent): one row per post " +
+    "(or newsletter release) with its text, link, date, account, who performed it (ours, or the client's team for a hand post " +
+    "imported off a connected account), views, engagements, website visits through its link, signups from those visits and " +
+    "$ spent; the totals (all, and ours); $ per signup on ours (null while learning); one point per UTC day. `pricing=gross` = " +
+    "list prices (default net, what the org pays). The org is the authenticated one. Any query is forwarded verbatim. Status " +
+    "and body relayed verbatim.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string(), outcomeKey: z.string().openapi({ example: "x_post_published" }) }),
+    query: z.object({
+      pricing: z.string().optional().openapi({ example: "gross" }).describe("gross | net (default net) — validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "The brand's Units of this outcome", content: { "application/json": { schema: BrandPublishedUnitsResponseSchema } } },
+    400: { description: "Unknown outcome or bad pricing, forwarded verbatim", content: errorContent },
+    404: { description: "Brand not found, forwarded verbatim", content: errorContent },
+    502: { description: "A read failed, forwarded verbatim", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/sales-funnel-campaigns",
@@ -16928,6 +16958,85 @@ for (const route of xAccountsRoutes) {
         content: { "application/json": { schema: XAccountsPassthroughResponse } },
       },
       ...xAccountsErrorResponses,
+    },
+  });
+}
+
+// LinkedIn accounts (LINKEDIN-ACCOUNTS-1106): the X accounts model, same passthrough.
+const LinkedinAccountsPassthroughResponse = z.object({}).passthrough().openapi("LinkedinAccountsPassthroughResponse");
+const LinkedinAccountsPassthroughRequest = z.object({}).passthrough().openapi("LinkedinAccountsPassthroughRequest");
+const linkedinAccountsErrorResponses = {
+  400: {
+    description: "Bad request (`type: \"validation\"`: e.g. profileUrl not a LinkedIn profile or company page) or LinkedIn refused the login (`type: \"linkedin_login_invalid\"`: unknown, used or expired, start again), forwarded verbatim from social-service",
+    content: errorContent,
+  },
+  404: { description: "LinkedIn account not found in this org, forwarded verbatim", content: errorContent },
+  500: { description: "Internal error", content: errorContent },
+  502: {
+    description: "`type: \"linkedin_not_configured\"` with `details.provider` (our LinkedIn app or key is not set yet), or LinkedIn itself failed (`type: \"upstream\"`), forwarded verbatim",
+    content: errorContent,
+  },
+};
+const linkedinAccountId = z.object({ id: z.string().openapi({ description: "LinkedIn account id (uuid) from GET /v1/orgs/linkedin/accounts" }) });
+
+const linkedinAccountsRoutes: Array<{ method: "get" | "post" | "patch" | "delete"; path: string; summary: string; description: string; body?: boolean; params?: z.ZodObject; query?: z.ZodObject }> = [
+  {
+    method: "post",
+    path: "/v1/orgs/linkedin/auth/start",
+    summary: "Start connecting a LinkedIn account to a brand (LinkedIn login)",
+    description:
+      "Proxy to social-service POST /orgs/linkedin/auth/start. Body `{ brandId, accountType, profileUrl, redirectUri }` forwarded untransformed (`profileUrl` = the member's profile or the company page whose posts are imported: LinkedIn's login never names it); returns `{ authorizationUrl, state, expiresAt }`: send the user to `authorizationUrl`. LinkedIn redirects to `redirectUri` with `code` and `state`; hand them to POST /v1/orgs/linkedin/auth/callback.",
+    body: true,
+  },
+  {
+    method: "post",
+    path: "/v1/orgs/linkedin/auth/callback",
+    summary: "Finish connecting a LinkedIn account (exchange code, store the account)",
+    description:
+      "Proxy to social-service POST /orgs/linkedin/auth/callback. Body `{ code, state }` from LinkedIn's redirect; returns `{ account, created }` (`created: false` = the same member already connected to the brand: this is the Reconnect).",
+    body: true,
+  },
+  {
+    method: "get",
+    path: "/v1/orgs/linkedin/accounts",
+    summary: "List the LinkedIn accounts connected to the org (optionally one brand)",
+    description:
+      "Proxy to social-service GET /orgs/linkedin/accounts. Response `{ accounts: [...] }` owned by social-service; each account carries its `accountType`, the page imported (`profileUrl`, `pageKind`), its health (`needs_reconnect` = a human must connect it again, `reconnectBy`) and its post history `import` (`historyComplete`, `pagesRead`, `postsImported`, `lastReadAt`).",
+    query: z.object({ brandId: z.string().optional().openapi({ description: "Only this brand's accounts" }) }).passthrough(),
+  },
+  {
+    method: "patch",
+    path: "/v1/orgs/linkedin/accounts/{id}",
+    summary: "Set a LinkedIn account's type or the page it imports",
+    description: "Proxy to social-service PATCH /orgs/linkedin/accounts/{id}. Body `{ accountType?, profileUrl? }` forwarded untransformed; returns `{ account }`.",
+    body: true,
+    params: linkedinAccountId,
+  },
+  {
+    method: "delete",
+    path: "/v1/orgs/linkedin/accounts/{id}",
+    summary: "Disconnect a LinkedIn account",
+    description: "Proxy to social-service DELETE /orgs/linkedin/accounts/{id}.",
+    params: linkedinAccountId,
+  },
+];
+
+for (const route of linkedinAccountsRoutes) {
+  registry.registerPath({
+    method: route.method,
+    path: route.path,
+    tags: ["LinkedIn"],
+    summary: route.summary,
+    description: route.description,
+    security: authed,
+    request: {
+      ...(route.params ? { params: route.params } : {}),
+      ...(route.query ? { query: route.query } : {}),
+      ...(route.body ? { body: { content: { "application/json": { schema: LinkedinAccountsPassthroughRequest } } } } : {}),
+    },
+    responses: {
+      200: { description: "As returned by social-service", content: { "application/json": { schema: LinkedinAccountsPassthroughResponse } } },
+      ...linkedinAccountsErrorResponses,
     },
   });
 }

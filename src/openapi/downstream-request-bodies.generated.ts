@@ -159,6 +159,30 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       ]
     }
   },
+  "PATCH /v1/orgs/linkedin/accounts/{id}": {
+    "service": "social-service",
+    "method": "PATCH",
+    "path": "/orgs/linkedin/accounts/{id}",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "accountType": {
+          "type": "string",
+          "enum": [
+            "pro_human",
+            "personal_human",
+            "pro_ai"
+          ],
+          "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
+        },
+        "profileUrl": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The public LinkedIn page whose posts are imported: the member's profile (https://www.linkedin.com/in/<slug>/) or a company page (https://www.linkedin.com/company/<slug>/). LinkedIn's login never names it, so the member states it."
+        }
+      }
+    }
+  },
   "PATCH /v1/orgs/matrix/connections/{id}": {
     "service": "crm-service",
     "method": "PATCH",
@@ -347,12 +371,6 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
             "activate",
             "stop"
           ]
-        },
-        "instruction": {
-          "type": "string",
-          "nullable": true,
-          "minLength": 1,
-          "maxLength": 4000
         },
         "target": {
           "type": "string",
@@ -2499,6 +2517,67 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
     "path": "/orgs/google/sync",
     "schema": null
   },
+  "POST /v1/orgs/linkedin/auth/callback": {
+    "service": "social-service",
+    "method": "POST",
+    "path": "/orgs/linkedin/auth/callback",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "code",
+        "state"
+      ]
+    }
+  },
+  "POST /v1/orgs/linkedin/auth/start": {
+    "service": "social-service",
+    "method": "POST",
+    "path": "/orgs/linkedin/auth/start",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "brandId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "accountType": {
+          "type": "string",
+          "enum": [
+            "pro_human",
+            "personal_human",
+            "pro_ai"
+          ],
+          "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
+        },
+        "profileUrl": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The public LinkedIn page whose posts are imported: the member's profile (https://www.linkedin.com/in/<slug>/) or a company page (https://www.linkedin.com/company/<slug>/). LinkedIn's login never names it, so the member states it."
+        },
+        "redirectUri": {
+          "type": "string",
+          "format": "uri",
+          "description": "Page LinkedIn sends the user back to with `code` and `state`. Must be registered, byte for byte, as an Authorized redirect URL of the LinkedIn app named by LINKEDIN_OAUTH_CONNECT_APP. Production: https://dashboard.distribute.you/connections/linkedin/callback"
+        }
+      },
+      "required": [
+        "brandId",
+        "accountType",
+        "profileUrl",
+        "redirectUri"
+      ]
+    }
+  },
   "POST /v1/orgs/matrix/connections": {
     "service": "crm-service",
     "method": "POST",
@@ -2951,6 +3030,14 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "minLength": 1,
           "maxLength": 512,
           "description": "Caller's own key, unique per org. The same key again answers the publication it already made (200, `replayed: true`) and never calls Threads twice. The same key with another account, text or parent post is a 409 `idempotency_key_reused`."
+        },
+        "outcomeKey": {
+          "type": "string",
+          "enum": [
+            "post_published",
+            "threads_post_published"
+          ],
+          "description": "The outcome a MAIN post declares on the caller's run. Default `post_published` (what the live Threads script declares today). `threads_post_published` = the Threads-specific outcome (OUTCOME-FINEST-1106), the one every imported post declares: a script opts in by sending it. Kept on the publication; a replay answers the stored one."
         }
       },
       "required": [
@@ -3178,11 +3265,6 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           },
           "minItems": 1,
           "maxItems": 50
-        },
-        "instruction": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 4000
         },
         "githubIssue": {
           "type": "object",
