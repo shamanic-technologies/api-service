@@ -1729,4 +1729,33 @@ router.get(
   },
 );
 
+/**
+ * GET /v1/features/brands/:brandId/published-units/:outcomeKey
+ *   → features-service GET /brands/{brandId}/published-units/{outcomeKey}
+ *
+ * The customer Outcome page of one published outcome (owner 2026-11-06, OUTCOME-FINEST-1106: Threads posts, X posts,
+ * LinkedIn posts, newsletter emails): every Unit with its creative, who performed it, views, visits, signups, $ spent,
+ * the totals and $ per signup, all computed by features-service. Same auth and identity forwarding as campaign-targets
+ * above; query verbatim (#11, `pricing`); status and body relayed (#7).
+ */
+router.get(
+  "/features/brands/:brandId/published-units/:outcomeKey",
+  authenticate,
+  requireOrg,
+  requireUser,
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status, data } = await callExternalServiceWithStatus(
+        externalServices.features,
+        `/brands/${encodeURIComponent(req.params.brandId)}/published-units/${encodeURIComponent(req.params.outcomeKey)}${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req) },
+      );
+      res.status(status).json(data);
+    } catch (error: any) {
+      console.error("Failed to get published units:", error.message);
+      respondUpstreamError(res, error, "Failed to get published units");
+    }
+  },
+);
+
 export default router;
