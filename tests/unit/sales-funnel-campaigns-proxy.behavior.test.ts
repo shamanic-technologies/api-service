@@ -119,6 +119,22 @@ describe("sales funnel campaigns + caps — pass-through", () => {
     expect(res.body).toEqual({ error: "Sales funnel campaign not found" });
   });
 
+  it("POST entries: forwards {salesFunnelId} to /sales-funnel-campaigns/{id}/entries with the authenticated org, relays the 201", async () => {
+    const ok = `{"salesFunnelCampaign":{"id":"${SFC}"},"bornUnitIds":["u9"]}`;
+    global.fetch = vi.fn().mockImplementation(async (url: string, init: any) => {
+      calls.push({ url, init });
+      return respond(201, ok);
+    });
+    const res = await request(buildApp()).post(`/v1/sales-funnel-campaigns/${SFC}/entries`).set("x-org-id", "org_someone_else").send({ salesFunnelId: "trigger:lead_event+start_to_paid_client@ai-follow-up-email" });
+    expect(res.status).toBe(201);
+    expect(res.body).toEqual(JSON.parse(ok));
+    const { url, init } = upstream();
+    expect(new URL(url).pathname).toBe(`/sales-funnel-campaigns/${SFC}/entries`);
+    expect(init.method).toBe("POST");
+    expect(init.headers["x-org-id"]).toBe("org_authenticated");
+    expect(JSON.parse(init.body)).toEqual({ salesFunnelId: "trigger:lead_event+start_to_paid_client@ai-follow-up-email" });
+  });
+
   it("PATCH: forwards {status} untouched and relays a 409 refusal field-for-field", async () => {
     global.fetch = vi.fn().mockImplementation(async (url: string, init: any) => {
       calls.push({ url, init });

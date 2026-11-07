@@ -1557,6 +1557,24 @@
           "nullable": true
         }
       },
+      "SalesFunnelCampaignEntryResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "SalesFunnelCampaignEntryBody": {
+        "type": "object",
+        "properties": {
+          "salesFunnelId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "salesFunnelId"
+        ]
+      },
       "GetCampaignResponse": {
         "type": "object",
         "properties": {
@@ -12516,6 +12534,16 @@
       },
       "ErrorResponse502DependencyUnavailableReasonRunsUnavailableBillingUnavailable": {
         "description": "Dependency unavailable (reason runs_unavailable | billing_unavailable), forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400ReasonSalesFunnelIdRequiredEntryNeedsTriggerLineForwardedVer": {
+        "description": "reason sales_funnel_id_required | entry_needs_trigger_line, forwarded verbatim",
         "content": {
           "application/json": {
             "schema": {
@@ -26255,6 +26283,91 @@
           }
         },
         "operationId": "getV1SalesFunnelCampaignsByIdPlanChanges"
+      }
+    },
+    "/v1/sales-funnel-campaigns/{id}/entries": {
+      "post": {
+        "tags": [
+          "Campaigns"
+        ],
+        "summary": "A campaign answers its own leads' events too (another entry)",
+        "description": "Proxy to campaign-service POST /sales-funnel-campaigns/{id}/entries. A SALES FUNNEL CAMPAIGN (owner 2026-10-10) is brand x offer x sales funnel: it owns one unit (an ordinary campaign) per pipe of the funnel and is run or paused as a whole. Its money is the funnel's caps at billing (GET /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps); no max budget = held unfunded. The org is the authenticated one. Status and body (with `reason` on a refusal) relayed verbatim. HOW each pipe behaves is fixed by the funnel's plays (`<leg>@<channel>~<strategy id>` in the funnel id; see the Plays tag: tactic, strategy, play on a pipe, a funnel carrying it, a campaign on that funnel). To change a behaviour (for example replies that carry an offer document as an attachment), launch a campaign on a funnel carrying the right play, created with `status: stopped` until the client agrees. Body `{salesFunnelId}` = a line a trigger starts (`trigger:<id>+…`, e.g. `trigger:lead_event+start_to_paid_client@ai-follow-up-email`): its steps are born INSIDE this campaign, on its offer, money and brief, and run on that trigger only, so this campaign answers its own leads' events (form fills, replies, callbacks) with no separate campaign. Idempotent (200 when nothing new is born). Stop the separate campaign that answered the same events right after (one answer per lead).",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SalesFunnelCampaignEntryBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Nothing new born: { salesFunnelCampaign, bornUnitIds: [] }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesFunnelCampaignEntryResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "{ salesFunnelCampaign, bornUnitIds }",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SalesFunnelCampaignEntryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400ReasonSalesFunnelIdRequiredEntryNeedsTriggerLineForwardedVer"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404NotFoundInThisOrgForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "operationId": "postV1SalesFunnelCampaignsByIdEntries",
+        "x-needs-user-yes": {
+          "because": [
+            "sends_to_person",
+            "starts_work",
+            "spends_money"
+          ],
+          "why": "The campaign starts answering its own leads' events (form fills, replies, callbacks): it writes to them and may call them."
+        }
       }
     },
     "/v1/campaigns/{id}": {
