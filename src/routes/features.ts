@@ -1308,7 +1308,7 @@ const OFFER_ROUTES = [
 // ── Brand grain ──────────────────────────────────────────────────────────────
 
 /**
- * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths}
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths,spend-charts,outcome-cost-series}
  *
  * The offer grain above, one level further up. A brand holds several offers and
  * each of those runs several channels, so a brand screen built on a per-feature
@@ -1354,6 +1354,12 @@ const GRAIN_SUFFIXES = [
   // paid clients, revenue, cost and ROI, ranked overall and per sales funnel campaign, beside
   // the catalogue's expected figures. `?offerId=` / `?pricing=` ride the raw query.
   { suffix: "lived-sales-paths", what: "lived sales paths" },
+  // The offer-grain spend-charts and outcome-cost-series reads above, one level up (owner
+  // 2026-11-07, AUDIENCE-PER-OFFER-1107: the brand is the dashboard's scope). features-service
+  // sums the brand's offers itself and names them in `offerIds`; `pricing` rides the raw query
+  // and features-service owns the figures and every refusal (400, 404, 502).
+  { suffix: "spend-charts", what: "spend charts" },
+  { suffix: "outcome-cost-series", what: "outcome cost series" },
 ] as const;
 
 for (const { suffix, what } of OFFER_ROUTES) {

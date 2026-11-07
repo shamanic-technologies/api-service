@@ -9361,6 +9361,20 @@
           "nullable": true
         }
       },
+      "BrandSpendChartsResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "BrandOutcomeCostSeriesResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "BrandLivedSalesPathsResponse": {
         "type": "object",
         "properties": {},
@@ -15065,6 +15079,16 @@
       },
       "ErrorResponse409TheBrandSChannelsPriceDifferently": {
         "description": "The brand's channels price differently",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502ASpendReadFailedForwardedVerbatim": {
+        "description": "A spend read failed, forwarded verbatim",
         "content": {
           "application/json": {
             "schema": {
@@ -66753,6 +66777,170 @@
           }
         },
         "operationId": "getV1BrandsByBrandIdDealsValue"
+      }
+    },
+    "/v1/brands/{brandId}/spend-charts": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Daily spend chart of one brand, across all its offers",
+        "description": "The brand-wide daily spend ledger chart: one point per UTC day since the brand's first activity, summed by features-service over every offer of the brand (named in `offerIds`) and the sales funnel campaigns behind them. Response shape: features-service component BrandSpendChartsResponse. Proxied to features-service GET /brands/{brandId}/spend-charts. The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "brand-uuid-123",
+              "description": "Brand UUID"
+            },
+            "required": true,
+            "description": "Brand UUID",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "net",
+              "description": "gross | net — validated by features-service"
+            },
+            "required": false,
+            "description": "gross | net — validated by features-service",
+            "name": "pricing",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brand spend charts (passthrough of features-service's body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandSpendChartsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400PricingUnrecognisedForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "description": "Brand not found, forwarded verbatim",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ASpendReadFailedForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1BrandsByBrandIdSpendCharts"
+      }
+    },
+    "/v1/brands/{brandId}/outcome-cost-series": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Cost per outcome of one brand, per month and since inception, across all its offers",
+        "description": "What one outcome costs, for every outcome step of the brand: per calendar month and cumulative since inception, spend of the brand's campaigns divided by the outcomes reached by people we contacted, over every offer (named in `offerIds`). Response shape: features-service component BrandOutcomeCostSeriesResponse. Proxied to features-service GET /brands/{brandId}/outcome-cost-series, which owns every figure. The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "brand-uuid-123",
+              "description": "Brand UUID"
+            },
+            "required": true,
+            "description": "Brand UUID",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "net",
+              "description": "gross | net — validated by features-service"
+            },
+            "required": false,
+            "description": "gross | net — validated by features-service",
+            "name": "pricing",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brand outcome cost series (passthrough of features-service's body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandOutcomeCostSeriesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400PricingUnrecognisedForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "description": "Brand not found, forwarded verbatim",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ASpendOrPeopleReadFailedForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1BrandsByBrandIdOutcomeCostSeries"
       }
     },
     "/v1/brands/{brandId}/lived-sales-paths": {

@@ -12,7 +12,7 @@ const { FEATURES_BASE } = vi.hoisted(() => {
 });
 
 /**
- * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths} — BEHAVIOURAL cover.
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths,spend-charts,outcome-cost-series} — BEHAVIOURAL cover.
  *
  * The offer-grain sibling's reasoning applies verbatim (see
  * offer-grain-proxy.behavior.test.ts): a source-substring test cannot see a template
@@ -148,6 +148,24 @@ const LIVED_SALES_PATHS_BODY = {
   byCampaign: [],
 };
 
+// Brand spend charts: the brand-wide ledger chart, summed by features-service over the brand's offers.
+const SPEND_CHARTS_BODY = {
+  brandId: BRAND_ID,
+  offerIds: ["offer-1", "offer-2"],
+  pricing: "net",
+  costBasis: "net",
+  salesFunnelCampaignIds: ["sfc-1"],
+  brand: { days: [{ date: "2026-11-06", spendUsd: 12.5 }] },
+};
+
+// Brand outcome cost series: the offer body without offerId, plus offerIds.
+const OUTCOME_COST_SERIES_BODY = {
+  brandId: BRAND_ID,
+  offerIds: ["offer-1", "offer-2"],
+  pricing: "net",
+  outcomes: [{ step: "positive_reply", months: [{ month: "2026-10", costPerOutcomeUsd: 41.2 }], sinceInception: { costPerOutcomeUsd: 38.9 } }],
+};
+
 const READS = [
   { suffix: "revenue", body: REVENUE_BODY, query: "pricing=net" },
   { suffix: "audience-stats", body: AUDIENCE_STATS_BODY, query: "pricing=net" },
@@ -156,6 +174,8 @@ const READS = [
   { suffix: "contacted-value", body: CONTACTED_VALUE_BODY, query: "cursor=lead-0" },
   { suffix: "deals-value", body: DEALS_VALUE_BODY, query: "refresh=1" },
   { suffix: "lived-sales-paths", body: LIVED_SALES_PATHS_BODY, query: "offerId=offer-1&pricing=net" },
+  { suffix: "spend-charts", body: SPEND_CHARTS_BODY, query: "pricing=net" },
+  { suffix: "outcome-cost-series", body: OUTCOME_COST_SERIES_BODY, query: "pricing=net" },
 ] as const;
 
 describe("GET /v1/brands/:brandId/* — over the wire", () => {

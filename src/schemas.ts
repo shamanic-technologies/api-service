@@ -14555,6 +14555,60 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/brands/{brandId}/spend-charts",
+  tags: ["Features"],
+  summary: "Daily spend chart of one brand, across all its offers",
+  description:
+    "The brand-wide daily spend ledger chart: one point per UTC day since the brand's first activity, summed by features-service " +
+    "over every offer of the brand (named in `offerIds`) and the sales funnel campaigns behind them. " +
+    "Response shape: features-service component BrandSpendChartsResponse. " +
+    "Proxied to features-service GET /brands/{brandId}/spend-charts. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID") }),
+    query: z.object({
+      pricing: z.string().optional().openapi({ example: "net" }).describe("gross | net — validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Brand spend charts (passthrough of features-service's body)", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandSpendChartsResponse") } } },
+    400: { description: "pricing_unrecognised, forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found, forwarded verbatim", content: errorContent },
+    502: { description: "A spend read failed, forwarded verbatim", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/outcome-cost-series",
+  tags: ["Features"],
+  summary: "Cost per outcome of one brand, per month and since inception, across all its offers",
+  description:
+    "What one outcome costs, for every outcome step of the brand: per calendar month and cumulative since inception, " +
+    "spend of the brand's campaigns divided by the outcomes reached by people we contacted, over every offer (named in `offerIds`). " +
+    "Response shape: features-service component BrandOutcomeCostSeriesResponse. " +
+    "Proxied to features-service GET /brands/{brandId}/outcome-cost-series, which owns every figure. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID") }),
+    query: z.object({
+      pricing: z.string().optional().openapi({ example: "net" }).describe("gross | net — validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Brand outcome cost series (passthrough of features-service's body)", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandOutcomeCostSeriesResponse") } } },
+    400: { description: "pricing_unrecognised, forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found, forwarded verbatim", content: errorContent },
+    502: { description: "A spend or people read failed, forwarded verbatim", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/brands/{brandId}/lived-sales-paths",
   tags: ["Features"],
   summary: "Brand lived sales paths: which way paid clients actually came, with cost, revenue and ROI",
