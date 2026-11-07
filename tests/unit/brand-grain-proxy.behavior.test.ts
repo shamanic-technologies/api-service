@@ -12,7 +12,7 @@ const { FEATURES_BASE } = vi.hoisted(() => {
 });
 
 /**
- * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths,spend-charts,outcome-cost-series} — BEHAVIOURAL cover.
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths,spend-charts,outcome-cost-series,campaign-revenue} — BEHAVIOURAL cover.
  *
  * The offer-grain sibling's reasoning applies verbatim (see
  * offer-grain-proxy.behavior.test.ts): a source-substring test cannot see a template
@@ -166,6 +166,16 @@ const OUTCOME_COST_SERIES_BODY = {
   outcomes: [{ step: "positive_reply", months: [{ month: "2026-10", costPerOutcomeUsd: 41.2 }], sinceInception: { costPerOutcomeUsd: 38.9 } }],
 };
 
+// One body per channel, each the per-channel grouped-by-campaign read (CAMPAIGN-MONEY-ONE-READ-1108).
+const CAMPAIGN_REVENUE_BODY = {
+  brandId: BRAND_ID,
+  pricing: "net",
+  channels: [
+    { featureSlug: "sales-cold-email-outreach", costBasis: "charged", groupBy: "campaignId", groups: [{ campaignId: "campaign-a", costEconomics: { committedCostUsd: 40.07 } }] },
+    { featureSlug: "ai-follow-up-email", error: "Failed to compute feature revenue", reason: "channel_read_failed" },
+  ],
+};
+
 const READS = [
   { suffix: "revenue", body: REVENUE_BODY, query: "pricing=net" },
   { suffix: "audience-stats", body: AUDIENCE_STATS_BODY, query: "pricing=net" },
@@ -176,6 +186,7 @@ const READS = [
   { suffix: "lived-sales-paths", body: LIVED_SALES_PATHS_BODY, query: "offerId=offer-1&pricing=net" },
   { suffix: "spend-charts", body: SPEND_CHARTS_BODY, query: "pricing=net" },
   { suffix: "outcome-cost-series", body: OUTCOME_COST_SERIES_BODY, query: "pricing=net" },
+  { suffix: "campaign-revenue", body: CAMPAIGN_REVENUE_BODY, query: "pricing=net" },
 ] as const;
 
 describe("GET /v1/brands/:brandId/* — over the wire", () => {

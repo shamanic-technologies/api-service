@@ -14582,6 +14582,35 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/brands/{brandId}/campaign-revenue",
+  tags: ["Features"],
+  summary: "Every campaign's money for one brand, across all its channels, in one read",
+  description:
+    "One element of `channels[]` per acquisition channel the brand has campaigns on; each element is the body " +
+    "GET /v1/features/{featureSlug}/revenue?brandId=&groupBy=campaignId serves for that channel (one lean group per campaign: " +
+    "costEconomics, outcomes, expectedReturn, campaignIdentity), so the campaign list costs one read instead of one per channel. " +
+    "A channel whose read failed states {featureSlug, error, reason} in its slot. " +
+    "Response shape: features-service component BrandCampaignRevenueResponse. " +
+    "Proxied to features-service GET /brands/{brandId}/campaign-revenue, which owns every figure. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID") }),
+    query: z.object({
+      pricing: z.string().optional().openapi({ example: "net" }).describe("gross | net — validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Per-channel campaign money (passthrough of features-service's body)", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandCampaignRevenueResponse") } } },
+    400: { description: "Invalid pricing or cause, forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found, forwarded verbatim", content: errorContent },
+    502: { description: "The brand's campaign rows could not be read, forwarded verbatim", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/brands/{brandId}/outcome-cost-series",
   tags: ["Features"],
   summary: "Cost per outcome of one brand, per month and since inception, across all its offers",
