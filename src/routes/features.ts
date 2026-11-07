@@ -1308,7 +1308,7 @@ const OFFER_ROUTES = [
 // ── Brand grain ──────────────────────────────────────────────────────────────
 
 /**
- * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths,spend-charts,outcome-cost-series}
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths,spend-charts,outcome-cost-series,campaign-revenue}
  *
  * The offer grain above, one level further up. A brand holds several offers and
  * each of those runs several channels, so a brand screen built on a per-feature
@@ -1360,6 +1360,11 @@ const GRAIN_SUFFIXES = [
   // and features-service owns the figures and every refusal (400, 404, 502).
   { suffix: "spend-charts", what: "spend charts" },
   { suffix: "outcome-cost-series", what: "outcome cost series" },
+  // Every campaign's money (ROI, $ invested, outcomes) for the brand across ALL its channels in
+  // one read (CAMPAIGN-MONEY-ONE-READ-1108): one body per channel, each the same body as that
+  // channel's `/features/:slug/revenue?groupBy=campaignId`, so the dashboard's campaign list costs
+  // one call instead of one per channel. `pricing` rides the raw query.
+  { suffix: "campaign-revenue", what: "campaign revenue" },
 ] as const;
 
 for (const { suffix, what } of OFFER_ROUTES) {
