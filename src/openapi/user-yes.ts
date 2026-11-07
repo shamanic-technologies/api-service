@@ -79,6 +79,10 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
     [{ status: "stop" }],
   ),
   "DELETE /v1/sales-funnel-campaigns/{id}": NO,
+  "POST /v1/sales-funnel-campaigns/{id}/entries": yes(
+    ["sends_to_person", "starts_work", "spends_money"],
+    "The campaign starts answering its own leads' events (form fills, replies, callbacks): it writes to them and may call them.",
+  ),
   "PATCH /v1/campaigns/{id}": yes(START, "Edits a campaign; resuming it starts finding and contacting people again.", [
     { status: "stopped" },
   ]),
