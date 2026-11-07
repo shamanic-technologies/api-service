@@ -2253,6 +2253,31 @@ registry.registerPath({
   },
 });
 
+const SalesFunnelCampaignEntryResponseSchema = z.object({}).passthrough().openapi("SalesFunnelCampaignEntryResponse");
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/sales-funnel-campaigns/{id}/entries",
+  tags: ["Campaigns"],
+  summary: "A campaign answers its own leads' events too (another entry)",
+  description:
+    "Proxy to campaign-service POST /sales-funnel-campaigns/{id}/entries. " +
+    salesFunnelCampaignDescription +
+    " Body `{salesFunnelId}` = a line a trigger starts (`trigger:<id>+…`, e.g. `trigger:lead_event+start_to_paid_client@ai-follow-up-email`): " +
+    "its steps are born INSIDE this campaign, on its offer, money and brief, and run on that trigger only, so this campaign answers its own " +
+    "leads' events (form fills, replies, callbacks) with no separate campaign. Idempotent (200 when nothing new is born). " +
+    "Stop the separate campaign that answered the same events right after (one answer per lead).",
+  security: authed,
+  request: { params: z.object({ id: z.string() }), body: { content: { "application/json": { schema: z.object({ salesFunnelId: z.string() }).openapi("SalesFunnelCampaignEntryBody") } } } },
+  responses: {
+    200: { description: "Nothing new born: { salesFunnelCampaign, bornUnitIds: [] }", content: { "application/json": { schema: SalesFunnelCampaignEntryResponseSchema } } },
+    201: { description: "{ salesFunnelCampaign, bornUnitIds }", content: { "application/json": { schema: SalesFunnelCampaignEntryResponseSchema } } },
+    400: { description: "reason sales_funnel_id_required | entry_needs_trigger_line, forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Not found in this org, forwarded verbatim", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/campaigns/{id}",
