@@ -209,9 +209,9 @@ describe("GET /v1/catalogue/pipes/:id with a person's own key", () => {
     expect(calls[0].url).toBe(`${FEATURES_BASE}/internal/catalogue/pipes?runnable=false`);
   });
 
-  it("a CLIENT key is still refused 403 staff_only on workflows, tactics, strategies, plays", async () => {
+  it("a CLIENT key is still refused 403 staff_only on workflows and plays (tactics, strategies: CATALOGUE-FOR-CLIENTS-1107)", async () => {
     identity.current = CLIENT_KEY;
-    for (const o of ["workflows", "tactics", "strategies", "plays"]) {
+    for (const o of ["workflows", "plays"]) {
       const res = await request(app()).get(`/v1/catalogue/${o}`).set("authorization", "Bearer distrib.usr_x");
       expect(res.status).toBe(403);
       expect(res.body.code).toBe("staff_only");
