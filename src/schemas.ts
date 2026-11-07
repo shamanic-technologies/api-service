@@ -10153,7 +10153,7 @@ registry.registerPath({
     "PATCH /internal/declarations/channels/{slug}/legs/{legKey}.",
   security: platformAuth,
   request: {
-    params: channelSlugParam.extend({ legKey: z.string().openapi({ description: "`<from step>_to_<to step>`, e.g. `start_to_post_published`" }) }),
+    params: channelSlugParam.extend({ legKey: z.string().openapi({ description: "`<from step>_to_<to step>`, e.g. `start_to_threads_post_published`" }) }),
     body: {
       content: {
         "application/json": {
