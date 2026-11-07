@@ -13975,6 +13975,69 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "GET /v1/engines/{outcome}": {
+    "service": "workflow-service",
+    "method": "GET",
+    "path": "/internal/engines/{outcome}",
+    "responses": {
+      "200": {
+        "description": "The state",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "outcome": {
+              "type": "string"
+            },
+            "orgId": {
+              "type": "string",
+              "nullable": true
+            },
+            "live": {
+              "type": "boolean",
+              "description": "true: dispatch this org's campaigns whose next outcome is this one to `POST /engines/{outcome}/execute`; false: their workflow, as before."
+            },
+            "scope": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "org",
+                "fleet",
+                null
+              ],
+              "description": "Which switch decides: the org's own (one client switched alone, or held back), the fleet's, or none."
+            },
+            "provenOn": {
+              "type": "string",
+              "nullable": true,
+              "description": "The dynasty the switch was proven on; the Rating picks among every runnable dynasty at run time."
+            },
+            "switchedAt": {
+              "type": "string",
+              "nullable": true
+            },
+            "rolledBackAt": {
+              "type": "string",
+              "nullable": true
+            },
+            "rollbackReason": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          "required": [
+            "outcome",
+            "orgId",
+            "live",
+            "scope",
+            "provenOn",
+            "switchedAt",
+            "rolledBackAt",
+            "rollbackReason"
+          ]
+        }
+      }
+    }
+  },
   "GET /v1/features/brands/{brandId}/campaign-targets": {
     "service": "features-service",
     "method": "GET",

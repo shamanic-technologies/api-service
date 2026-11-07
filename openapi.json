@@ -11649,6 +11649,13 @@
           "nullable": true
         }
       },
+      "EngineStateResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "ScriptResponse": {
         "type": "object",
         "properties": {},
@@ -16468,6 +16475,16 @@
       },
       "ErrorResponse409DIFFERENTPIPEDIFFERENTIDENTITYDYNASTYMERGEDForwardedVerbatim": {
         "description": "DIFFERENT_PIPE / DIFFERENT_IDENTITY / DYNASTY_MERGED (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400NotAnOutcomeKeyOrMissingIdentityHeadersOnThePlatformKeyForwa": {
+        "description": "Not an outcome key, or missing identity headers on the platform key (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {
@@ -48680,7 +48697,7 @@
           }
         ],
         "summary": "List tactics",
-        "description": "One page of tactics (id, name, description, how many workflows were judged on it and how many follow it). Query string forwarded verbatim (documented today: q, limit; not a whitelist). A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). A new tactic reaches no older strategy by itself: a strategy that names nothing about it lets its workflows through either way, so exclude it (or require it) there. Editing a strategy's tactics or description is staff only (`PATCH /v1/strategies/{id}`), because it changes what every client's campaigns on its plays run. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it too. Read only: every write keeps its own gate. One page of tactics (id, name, description, how many workflows were judged on it and how many follow it). Query string forwarded verbatim (documented today: q, limit; not a whitelist). A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). A new tactic reaches no older strategy by itself: a strategy that names nothing about it lets its workflows through either way, so exclude it (or require it) there. Editing a strategy's tactics or description is staff only (`PATCH /v1/strategies/{id}`), because it changes what every client's campaigns on its plays run. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
         "parameters": [
           {
             "schema": {
@@ -48816,7 +48833,7 @@
           }
         ],
         "summary": "Read one tactic",
-        "description": "One tactic with every workflow version judged on it (follows yes/no, probability). A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). A new tactic reaches no older strategy by itself: a strategy that names nothing about it lets its workflows through either way, so exclude it (or require it) there. Editing a strategy's tactics or description is staff only (`PATCH /v1/strategies/{id}`), because it changes what every client's campaigns on its plays run. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it too. Read only: every write keeps its own gate. One tactic with every workflow version judged on it (follows yes/no, probability). A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). A new tactic reaches no older strategy by itself: a strategy that names nothing about it lets its workflows through either way, so exclude it (or require it) there. Editing a strategy's tactics or description is staff only (`PATCH /v1/strategies/{id}`), because it changes what every client's campaigns on its plays run. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
         "parameters": [
           {
             "schema": {
@@ -48958,7 +48975,7 @@
           }
         ],
         "summary": "List strategies",
-        "description": "One page of strategies (id, name, description, tactics required and excluded, pipes that already catalogue a play on it). Query string forwarded verbatim (documented today: q, limit; not a whitelist). A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). A new tactic reaches no older strategy by itself: a strategy that names nothing about it lets its workflows through either way, so exclude it (or require it) there. Editing a strategy's tactics or description is staff only (`PATCH /v1/strategies/{id}`), because it changes what every client's campaigns on its plays run. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it too. Read only: every write keeps its own gate. One page of strategies (id, name, description, tactics required and excluded, pipes that already catalogue a play on it). Query string forwarded verbatim (documented today: q, limit; not a whitelist). A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). A new tactic reaches no older strategy by itself: a strategy that names nothing about it lets its workflows through either way, so exclude it (or require it) there. Editing a strategy's tactics or description is staff only (`PATCH /v1/strategies/{id}`), because it changes what every client's campaigns on its plays run. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
         "parameters": [
           {
             "schema": {
@@ -49097,7 +49114,7 @@
           }
         ],
         "summary": "Read one strategy",
-        "description": "One strategy: its tactics required and excluded and the pipes that catalogue a play on it. A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). A new tactic reaches no older strategy by itself: a strategy that names nothing about it lets its workflows through either way, so exclude it (or require it) there. Editing a strategy's tactics or description is staff only (`PATCH /v1/strategies/{id}`), because it changes what every client's campaigns on its plays run. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it too. Read only: every write keeps its own gate. One strategy: its tactics required and excluded and the pipes that catalogue a play on it. A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). A STRATEGY is a rule over tactics: the tactics a workflow must follow (`requires`) and must not follow (`excludes`), for example \"Valid + Catch-all\". A PLAY is a pipe x a strategy (a pipe is one channel x one leg, id `<channel slug>|<leg key>`, e.g. `sales-cold-email-outreach|lead_found_to_website_visit`): the pipe runs only the workflows its strategy allows, picked by ROI. Every pipe has a default play (id = the bare pipe id); another play's id is `<pipe id>~<strategy id>`. This catalogue is shared by every client: read it before creating, names and descriptions are unique fleet-wide. It is HOW you change what a campaign does (for example \"its AI meeting booking replies carry an offer document as an attachment\"): (1) a tactic naming the behaviour (`GET /v1/tactics?q=...` first, else `POST /v1/tactics`); (2) a strategy requiring it (`POST /v1/strategies`); (3) a play = that strategy on the pipe that should behave so (`POST /v1/plays`, e.g. pipe `ai-meeting-booking|conversation_to_meeting_booked`); (4) a sales funnel running that play: in `GET /v1/offers/{offerId}/sales-funnels` each pipe of a funnel id reads `<leg>@<channel>` for its default play and `<leg>@<channel>~<strategy id>` for another play; (5) a sales funnel campaign on that funnel (`POST /v1/sales-funnel-campaigns`, create it with `status: stopped`, then run it when the client agrees). An existing campaign keeps its own funnel and plays: a new behaviour is a new campaign. A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). A new tactic reaches no older strategy by itself: a strategy that names nothing about it lets its workflows through either way, so exclude it (or require it) there. Editing a strategy's tactics or description is staff only (`PATCH /v1/strategies/{id}`), because it changes what every client's campaigns on its plays run. Byte passthrough to features-service; status and body (including 400/404/409 with a named `reason`) owned by it.",
         "parameters": [
           {
             "schema": {
@@ -49370,7 +49387,7 @@
           "Features"
         ],
         "summary": "List catalogue steps",
-        "description": "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. Steps are the outcomes a lead moves through (Lead found, Positive reply, Meeting booked, Paid client...): the words every leg, pipe and funnel is built from. Byte passthrough to features-service GET /internal/catalogue/steps: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: q, limit (1..25, default 10); not a whitelist); status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/steps, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. Steps are the outcomes a lead moves through (Lead found, Positive reply, Meeting booked, Paid client...): the words every leg, pipe and funnel is built from. Byte passthrough to features-service GET /internal/catalogue/steps: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: q, limit (1..25, default 10); not a whitelist); status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/steps, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
         "security": [
           {
             "bearerAuth": []
@@ -49634,7 +49651,7 @@
           "Features"
         ],
         "summary": "Read one catalogue step",
-        "description": "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. Steps are the outcomes a lead moves through (Lead found, Positive reply, Meeting booked, Paid client...): the words every leg, pipe and funnel is built from. Byte passthrough to features-service GET /internal/catalogue/steps/{id}. Query string forwarded verbatim; status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/steps/{id}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. Steps are the outcomes a lead moves through (Lead found, Positive reply, Meeting booked, Paid client...): the words every leg, pipe and funnel is built from. Byte passthrough to features-service GET /internal/catalogue/steps/{id}. Query string forwarded verbatim; status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/steps/{id}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
         "security": [
           {
             "bearerAuth": []
@@ -49900,7 +49917,7 @@
           "Features"
         ],
         "summary": "List catalogue sales paths",
-        "description": "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A sales path is a chain of legs from Start (or a trigger) to Paid client, with no channel yet: pick one, then the pipes that work each leg (GET /v1/catalogue/pipes?paths=<id>). With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). Byte passthrough to features-service GET /internal/catalogue/sales-paths: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: containsSteps, q, limit; not a whitelist); status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/sales-paths, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A sales path is a chain of legs from Start (or a trigger) to Paid client, with no channel yet: pick one, then the pipes that work each leg (GET /v1/catalogue/pipes?paths=<id>). With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). Byte passthrough to features-service GET /internal/catalogue/sales-paths: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: containsSteps, q, limit; not a whitelist); status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/sales-paths, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
         "security": [
           {
             "bearerAuth": []
@@ -50564,7 +50581,7 @@
           "Features"
         ],
         "summary": "Read one catalogue sales path",
-        "description": "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A sales path is a chain of legs from Start (or a trigger) to Paid client, with no channel yet: pick one, then the pipes that work each leg (GET /v1/catalogue/pipes?paths=<id>). Byte passthrough to features-service GET /internal/catalogue/sales-paths/{id}. Query string forwarded verbatim; status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/sales-paths/{id}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A sales path is a chain of legs from Start (or a trigger) to Paid client, with no channel yet: pick one, then the pipes that work each leg (GET /v1/catalogue/pipes?paths=<id>). Byte passthrough to features-service GET /internal/catalogue/sales-paths/{id}. Query string forwarded verbatim; status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/sales-paths/{id}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
         "security": [
           {
             "bearerAuth": []
@@ -50991,7 +51008,7 @@
           "Features"
         ],
         "summary": "List catalogue channels",
-        "description": "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A channel is what works a leg (cold email, AI meeting booking, your own team...). With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). Byte passthrough to features-service GET /internal/catalogue/channels: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: forPaths, legKeys, q, limit; not a whitelist); status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/channels, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A channel is what works a leg (cold email, AI meeting booking, your own team...). With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). Byte passthrough to features-service GET /internal/catalogue/channels: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: forPaths, legKeys, q, limit; not a whitelist); status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/channels, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
         "security": [
           {
             "bearerAuth": []
@@ -51165,7 +51182,7 @@
           "Features"
         ],
         "summary": "Read one catalogue channel",
-        "description": "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A channel is what works a leg (cold email, AI meeting booking, your own team...). Byte passthrough to features-service GET /internal/catalogue/channels/{id}. Query string forwarded verbatim; status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/channels/{id}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A channel is what works a leg (cold email, AI meeting booking, your own team...). Byte passthrough to features-service GET /internal/catalogue/channels/{id}. Query string forwarded verbatim; status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/channels/{id}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
         "security": [
           {
             "bearerAuth": []
@@ -51437,7 +51454,7 @@
           "Features"
         ],
         "summary": "List catalogue pipes",
-        "description": "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A pipe is one channel working one leg (id `<channel slug>|<leg key>`): a sales funnel names one pipe per leg (POST /v1/catalogue/sales-funnels). With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). Byte passthrough to features-service GET /internal/catalogue/pipes: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: paths, channels, legKeys, q, limit; not a whitelist); status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/pipes, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A pipe is one channel working one leg (id `<channel slug>|<leg key>`): a sales funnel names one pipe per leg (POST /v1/catalogue/sales-funnels). With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). Byte passthrough to features-service GET /internal/catalogue/pipes: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: paths, channels, legKeys, q, limit; not a whitelist); status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/pipes, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
         "security": [
           {
             "bearerAuth": []
@@ -51662,7 +51679,7 @@
           "Features"
         ],
         "summary": "Read one catalogue pipe",
-        "description": "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A pipe is one channel working one leg (id `<channel slug>|<leg key>`): a sales funnel names one pipe per leg (POST /v1/catalogue/sales-funnels). Byte passthrough to features-service GET /internal/catalogue/pipes/{id}. Query string forwarded verbatim; status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/pipes/{id}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A pipe is one channel working one leg (id `<channel slug>|<leg key>`): a sales funnel names one pipe per leg (POST /v1/catalogue/sales-funnels). Byte passthrough to features-service GET /internal/catalogue/pipes/{id}. Query string forwarded verbatim; status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/pipes/{id}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
         "security": [
           {
             "bearerAuth": []
@@ -54962,7 +54979,7 @@
           "Features"
         ],
         "summary": "List catalogue sales funnels",
-        "description": "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A sales funnel is a sales path with one pipe per leg; its id is what POST /v1/sales-funnel-campaigns takes. With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). Byte passthrough to features-service GET /internal/catalogue/sales-funnels: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: paths, containsChannels, q, limit; not a whitelist); status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/sales-funnels, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A sales funnel is a sales path with one pipe per leg; its id is what POST /v1/sales-funnel-campaigns takes. With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). Byte passthrough to features-service GET /internal/catalogue/sales-funnels: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: paths, containsChannels, q, limit; not a whitelist); status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/sales-funnels, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
         "security": [
           {
             "bearerAuth": []
@@ -55443,7 +55460,7 @@
           "Features"
         ],
         "summary": "Read one catalogue sales funnel",
-        "description": "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A sales funnel is a sales path with one pipe per leg; its id is what POST /v1/sales-funnel-campaigns takes. Byte passthrough to features-service GET /internal/catalogue/sales-funnels/{id}. Query string forwarded verbatim; status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/sales-funnels/{id}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A sales funnel is a sales path with one pipe per leg; its id is what POST /v1/sales-funnel-campaigns takes. Byte passthrough to features-service GET /internal/catalogue/sales-funnels/{id}. Query string forwarded verbatim; status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/sales-funnels/{id}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
         "security": [
           {
             "bearerAuth": []
@@ -56147,7 +56164,7 @@
           "Features"
         ],
         "summary": "List catalogue triggers",
-        "description": "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A trigger is an entry door that starts a reactive funnel: an OUTCOME trigger (an outcome was just reached, the only kind callable from outside, through POST /v1/trigger-events) or a CONDITION trigger (computed by us: an outcome + a delay + still not another, or an integration state). New triggers are never created here: ask for one with a feature request. Byte passthrough to features-service GET /internal/catalogue/triggers: one page of triggers, what starts a reactive pipe (id, name, icon, eventIcon, line, fromStep, firedBy, coded, pipeCount, ...). Query string forwarded verbatim (documented today: q, limit; not a whitelist); status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/triggers, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A trigger is an entry door that starts a reactive funnel: an OUTCOME trigger (an outcome was just reached, the only kind callable from outside, through POST /v1/trigger-events) or a CONDITION trigger (computed by us: an outcome + a delay + still not another, or an integration state). New triggers are never created here: ask for one with a feature request. Byte passthrough to features-service GET /internal/catalogue/triggers: one page of triggers, what starts a reactive pipe (id, name, icon, eventIcon, line, fromStep, firedBy, coded, pipeCount, ...). Query string forwarded verbatim (documented today: q, limit; not a whitelist); status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/triggers, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
         "security": [
           {
             "bearerAuth": []
@@ -56363,7 +56380,7 @@
           "Features"
         ],
         "summary": "Read one catalogue trigger",
-        "description": "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A trigger is an entry door that starts a reactive funnel: an OUTCOME trigger (an outcome was just reached, the only kind callable from outside, through POST /v1/trigger-events) or a CONDITION trigger (computed by us: an outcome + a delay + still not another, or an integration state). New triggers are never created here: ask for one with a feature request. Byte passthrough to features-service GET /internal/catalogue/triggers/{id}: the trigger and the reactive pipes it starts. Query string forwarded verbatim; status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/triggers/{id}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A trigger is an entry door that starts a reactive funnel: an OUTCOME trigger (an outcome was just reached, the only kind callable from outside, through POST /v1/trigger-events) or a CONDITION trigger (computed by us: an outcome + a delay + still not another, or an integration state). New triggers are never created here: ask for one with a feature request. Byte passthrough to features-service GET /internal/catalogue/triggers/{id}: the trigger and the reactive pipes it starts. Query string forwarded verbatim; status and body owned by the downstream service.\n\nResponse: documented from features-service GET /internal/catalogue/triggers/{id}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
         "security": [
           {
             "bearerAuth": []
@@ -56646,6 +56663,282 @@
           }
         },
         "operationId": "getV1CatalogueTriggersById"
+      }
+    },
+    "/v1/catalogue/tactics": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "List catalogue tactics",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. Byte passthrough to features-service GET /internal/catalogue/tactics: one page of tactics, the yes/no tags Jev puts on every workflow version (e.g. Catch-all). Query string forwarded verbatim (documented today: q, limit; not a whitelist); status and body owned by the downstream service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pass-through from the downstream service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueTacticsListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidFilterForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse403NotStaff"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ErrorResponse503EconomicsNotComputedYetForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1CatalogueTactics"
+      }
+    },
+    "/v1/catalogue/tactics/{id}": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Read one catalogue tactic",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. Byte passthrough to features-service GET /internal/catalogue/tactics/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "a tactic id"
+            },
+            "required": true,
+            "description": "a tactic id",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pass-through from the downstream service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueTacticsDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse403NotStaff"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404UnknownIdForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ErrorResponse503EconomicsNotComputedYetForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1CatalogueTacticsById"
+      }
+    },
+    "/v1/catalogue/strategies": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "List catalogue strategies",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. Byte passthrough to features-service GET /internal/catalogue/strategies: one page of strategies, the tactics a workflow must / must not follow (e.g. Valid only, Valid + Catch-all). Query string forwarded verbatim (documented today: q, limit; not a whitelist); status and body owned by the downstream service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pass-through from the downstream service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueStrategiesListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidFilterForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse403NotStaff"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ErrorResponse503EconomicsNotComputedYetForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1CatalogueStrategies"
+      }
+    },
+    "/v1/catalogue/strategies/{id}": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Read one catalogue strategy",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. Byte passthrough to features-service GET /internal/catalogue/strategies/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "a strategy id"
+            },
+            "required": true,
+            "description": "a strategy id",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pass-through from the downstream service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogueStrategiesDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse403NotStaff"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404UnknownIdForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ErrorResponse503EconomicsNotComputedYetForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1CatalogueStrategiesById"
       }
     },
     "/v1/public/catalogue/steps": {
@@ -105533,13 +105826,133 @@
         "operationId": "getV1LeadsByIdRelationship"
       }
     },
+    "/v1/engines/{outcome}": {
+      "get": {
+        "tags": [
+          "Scripts"
+        ],
+        "summary": "Read one Engine (is it running campaigns?)",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. An Engine is the one thing per outcome that makes it; the scripts competing in it are GET /v1/scripts?outcome=<outcome>. The answer says whether the Engine runs campaigns (`live`), at which scope (`fleet` or `org`), the dynasty it was proven on and when it was switched on or rolled back. A client reads the fleet answer, the same one staff get without `orgId` (a client's `orgId` is dropped). Staff may pass `orgId` to ask about one org's campaigns. Every other query parameter is forwarded verbatim. Byte passthrough to workflow-service GET /internal/engines/{outcome}; status and body owned by the downstream service.\n\nResponse: documented from workflow-service GET /internal/engines/{outcome}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/workflow.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "the outcome key (a catalogue step key, e.g. meeting_booked)"
+            },
+            "required": true,
+            "description": "the outcome key (a catalogue step key, e.g. meeting_booked)",
+            "name": "outcome",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Staff only: one org's campaigns (dropped for a client, who reads the fleet answer)"
+            },
+            "required": false,
+            "description": "Staff only: one org's campaigns (dropped for a client, who reads the fleet answer)",
+            "name": "orgId",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pass-through from workflow-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "outcome": {
+                      "type": "string"
+                    },
+                    "orgId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "live": {
+                      "type": "boolean",
+                      "description": "true: dispatch this org's campaigns whose next outcome is this one to `POST /engines/{outcome}/execute`; false: their workflow, as before."
+                    },
+                    "scope": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "org",
+                        "fleet",
+                        null
+                      ],
+                      "description": "Which switch decides: the org's own (one client switched alone, or held back), the fleet's, or none."
+                    },
+                    "provenOn": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "The dynasty the switch was proven on; the Rating picks among every runnable dynasty at run time."
+                    },
+                    "switchedAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "rolledBackAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "rollbackReason": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "outcome",
+                    "orgId",
+                    "live",
+                    "scope",
+                    "provenOn",
+                    "switchedAt",
+                    "rolledBackAt",
+                    "rollbackReason"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400NotAnOutcomeKeyOrMissingIdentityHeadersOnThePlatformKeyForwa"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamFailureForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1EnginesByOutcome"
+      }
+    },
     "/v1/scripts": {
       "get": {
         "tags": [
           "Scripts"
         ],
         "summary": "List scripts (no code)",
-        "description": "A script is code stored as data in workflow-service: it makes ONE Unit of its outcome (or none) per run, and is versioned in dynasties. Create = a new dynasty at version 1, upgrade = the next version of the same idea, fork = a different idea in a new dynasty, status = retire or restore a whole dynasty. A create or upgrade takes effect on the NEXT run that uses the script: no deploy. The outcome must be a features-service catalogue step key. A dynasty carrying recorded production cases is a PORT: every new version must replay 100 % of them before it is stored, else 422 `replay_failed` naming the failing case ids. A behaviour change to a port is therefore a fork (new dynasty), never an upgrade. Dry-run first with POST /v1/scripts/dynasty/{outcome}/{dynasty}/replay. Code contract: TypeScript text whose default export is `run(ctx)`; it may import TYPES only (no runtime imports, no env, no DB, no network). `ctx.get(\"<outcome>\")` (the outcome named by a string LITERAL) returns a material Unit `{id, outcome, subject, ageDays, content}` handed by the workflow; `ctx.vendor.call(name, args)` calls a metered vendor and returns `{ok, data}` (vendors: `llm.complete` with `{message, systemPrompt?, responseSchema?, provider?, model?, temperature?, maxTokens?}`; the LLM is the call's else the tactic `llm: {provider, model}`, never a default); `ctx.storage.get/set/delete/count(table, key)` are its Engine's notes for this org; `ctx.subject`, `ctx.tactics`, `ctx.day`, `ctx.request` are read-only inputs. Return `{content: {...}}` (one Unit made) or `null` (none). Shape: `export default async function run(ctx) { const m = ctx.get(\"<material outcome>\"); if (!m) return null; const r = await ctx.vendor.call(\"llm.complete\", { message: \"...\" }); return r.ok ? { content: { text: r.data } } : null; }` `status=active` (default) = runnable (version AND dynasty active), `deprecated` = its complement, `all`. Each row carries outcome, dynasty, version, scriptSlug, description, materials, vendors, tactics, status, dynastyStatus, replay proof and `cases` (recorded cases: > 0 = a port). Read the code with GET /v1/scripts/{id}. Transparent proxy to workflow-service GET /scripts; the query string is forwarded verbatim.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it too. Read only: every write keeps its own gate. A script is code stored as data in workflow-service: it makes ONE Unit of its outcome (or none) per run, and is versioned in dynasties. Create = a new dynasty at version 1, upgrade = the next version of the same idea, fork = a different idea in a new dynasty, status = retire or restore a whole dynasty. A create or upgrade takes effect on the NEXT run that uses the script: no deploy. The outcome must be a features-service catalogue step key. A dynasty carrying recorded production cases is a PORT: every new version must replay 100 % of them before it is stored, else 422 `replay_failed` naming the failing case ids. A behaviour change to a port is therefore a fork (new dynasty), never an upgrade. Dry-run first with POST /v1/scripts/dynasty/{outcome}/{dynasty}/replay. Code contract: TypeScript text whose default export is `run(ctx)`; it may import TYPES only (no runtime imports, no env, no DB, no network). `ctx.get(\"<outcome>\")` (the outcome named by a string LITERAL) returns a material Unit `{id, outcome, subject, ageDays, content}` handed by the workflow; `ctx.vendor.call(name, args)` calls a metered vendor and returns `{ok, data}` (vendors: `llm.complete` with `{message, systemPrompt?, responseSchema?, provider?, model?, temperature?, maxTokens?}`; the LLM is the call's else the tactic `llm: {provider, model}`, never a default); `ctx.storage.get/set/delete/count(table, key)` are its Engine's notes for this org; `ctx.subject`, `ctx.tactics`, `ctx.day`, `ctx.request` are read-only inputs. Return `{content: {...}}` (one Unit made) or `null` (none). Shape: `export default async function run(ctx) { const m = ctx.get(\"<material outcome>\"); if (!m) return null; const r = await ctx.vendor.call(\"llm.complete\", { message: \"...\" }); return r.ok ? { content: { text: r.data } } : null; }` `status=active` (default) = runnable (version AND dynasty active), `deprecated` = its complement, `all`. Each row carries outcome, dynasty, version, scriptSlug, description, materials, vendors, tactics, status, dynastyStatus, replay proof and `cases` (recorded cases: > 0 = a port). Read the code with GET /v1/scripts/{id}. Transparent proxy to workflow-service GET /scripts; the query string is forwarded verbatim.",
         "security": [
           {
             "bearerAuth": []
@@ -105627,7 +106040,7 @@
           "Scripts"
         ],
         "summary": "One script version, with its code",
-        "description": "A script is code stored as data in workflow-service: it makes ONE Unit of its outcome (or none) per run, and is versioned in dynasties. Create = a new dynasty at version 1, upgrade = the next version of the same idea, fork = a different idea in a new dynasty, status = retire or restore a whole dynasty. A create or upgrade takes effect on the NEXT run that uses the script: no deploy. The outcome must be a features-service catalogue step key. A dynasty carrying recorded production cases is a PORT: every new version must replay 100 % of them before it is stored, else 422 `replay_failed` naming the failing case ids. A behaviour change to a port is therefore a fork (new dynasty), never an upgrade. Dry-run first with POST /v1/scripts/dynasty/{outcome}/{dynasty}/replay. Code contract: TypeScript text whose default export is `run(ctx)`; it may import TYPES only (no runtime imports, no env, no DB, no network). `ctx.get(\"<outcome>\")` (the outcome named by a string LITERAL) returns a material Unit `{id, outcome, subject, ageDays, content}` handed by the workflow; `ctx.vendor.call(name, args)` calls a metered vendor and returns `{ok, data}` (vendors: `llm.complete` with `{message, systemPrompt?, responseSchema?, provider?, model?, temperature?, maxTokens?}`; the LLM is the call's else the tactic `llm: {provider, model}`, never a default); `ctx.storage.get/set/delete/count(table, key)` are its Engine's notes for this org; `ctx.subject`, `ctx.tactics`, `ctx.day`, `ctx.request` are read-only inputs. Return `{content: {...}}` (one Unit made) or `null` (none). Shape: `export default async function run(ctx) { const m = ctx.get(\"<material outcome>\"); if (!m) return null; const r = await ctx.vendor.call(\"llm.complete\", { message: \"...\" }); return r.ok ? { content: { text: r.data } } : null; }` Transparent proxy to workflow-service GET /scripts/{id}.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it too. Read only: every write keeps its own gate. A script is code stored as data in workflow-service: it makes ONE Unit of its outcome (or none) per run, and is versioned in dynasties. Create = a new dynasty at version 1, upgrade = the next version of the same idea, fork = a different idea in a new dynasty, status = retire or restore a whole dynasty. A create or upgrade takes effect on the NEXT run that uses the script: no deploy. The outcome must be a features-service catalogue step key. A dynasty carrying recorded production cases is a PORT: every new version must replay 100 % of them before it is stored, else 422 `replay_failed` naming the failing case ids. A behaviour change to a port is therefore a fork (new dynasty), never an upgrade. Dry-run first with POST /v1/scripts/dynasty/{outcome}/{dynasty}/replay. Code contract: TypeScript text whose default export is `run(ctx)`; it may import TYPES only (no runtime imports, no env, no DB, no network). `ctx.get(\"<outcome>\")` (the outcome named by a string LITERAL) returns a material Unit `{id, outcome, subject, ageDays, content}` handed by the workflow; `ctx.vendor.call(name, args)` calls a metered vendor and returns `{ok, data}` (vendors: `llm.complete` with `{message, systemPrompt?, responseSchema?, provider?, model?, temperature?, maxTokens?}`; the LLM is the call's else the tactic `llm: {provider, model}`, never a default); `ctx.storage.get/set/delete/count(table, key)` are its Engine's notes for this org; `ctx.subject`, `ctx.tactics`, `ctx.day`, `ctx.request` are read-only inputs. Return `{content: {...}}` (one Unit made) or `null` (none). Shape: `export default async function run(ctx) { const m = ctx.get(\"<material outcome>\"); if (!m) return null; const r = await ctx.vendor.call(\"llm.complete\", { message: \"...\" }); return r.ok ? { content: { text: r.data } } : null; }` Transparent proxy to workflow-service GET /scripts/{id}.",
         "security": [
           {
             "bearerAuth": []
@@ -105691,7 +106104,7 @@
           "Scripts"
         ],
         "summary": "Every version of one script dynasty (newest first, no code)",
-        "description": "A script is code stored as data in workflow-service: it makes ONE Unit of its outcome (or none) per run, and is versioned in dynasties. Create = a new dynasty at version 1, upgrade = the next version of the same idea, fork = a different idea in a new dynasty, status = retire or restore a whole dynasty. A create or upgrade takes effect on the NEXT run that uses the script: no deploy. The outcome must be a features-service catalogue step key. A dynasty carrying recorded production cases is a PORT: every new version must replay 100 % of them before it is stored, else 422 `replay_failed` naming the failing case ids. A behaviour change to a port is therefore a fork (new dynasty), never an upgrade. Dry-run first with POST /v1/scripts/dynasty/{outcome}/{dynasty}/replay. Code contract: TypeScript text whose default export is `run(ctx)`; it may import TYPES only (no runtime imports, no env, no DB, no network). `ctx.get(\"<outcome>\")` (the outcome named by a string LITERAL) returns a material Unit `{id, outcome, subject, ageDays, content}` handed by the workflow; `ctx.vendor.call(name, args)` calls a metered vendor and returns `{ok, data}` (vendors: `llm.complete` with `{message, systemPrompt?, responseSchema?, provider?, model?, temperature?, maxTokens?}`; the LLM is the call's else the tactic `llm: {provider, model}`, never a default); `ctx.storage.get/set/delete/count(table, key)` are its Engine's notes for this org; `ctx.subject`, `ctx.tactics`, `ctx.day`, `ctx.request` are read-only inputs. Return `{content: {...}}` (one Unit made) or `null` (none). Shape: `export default async function run(ctx) { const m = ctx.get(\"<material outcome>\"); if (!m) return null; const r = await ctx.vendor.call(\"llm.complete\", { message: \"...\" }); return r.ok ? { content: { text: r.data } } : null; }` Answers `{ outcome, dynasty, cases, versions }`; `cases` > 0 means the dynasty is a port. Transparent proxy to workflow-service GET /scripts/dynasty/{outcome}/{dynasty}.",
+        "description": "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it too. Read only: every write keeps its own gate. A script is code stored as data in workflow-service: it makes ONE Unit of its outcome (or none) per run, and is versioned in dynasties. Create = a new dynasty at version 1, upgrade = the next version of the same idea, fork = a different idea in a new dynasty, status = retire or restore a whole dynasty. A create or upgrade takes effect on the NEXT run that uses the script: no deploy. The outcome must be a features-service catalogue step key. A dynasty carrying recorded production cases is a PORT: every new version must replay 100 % of them before it is stored, else 422 `replay_failed` naming the failing case ids. A behaviour change to a port is therefore a fork (new dynasty), never an upgrade. Dry-run first with POST /v1/scripts/dynasty/{outcome}/{dynasty}/replay. Code contract: TypeScript text whose default export is `run(ctx)`; it may import TYPES only (no runtime imports, no env, no DB, no network). `ctx.get(\"<outcome>\")` (the outcome named by a string LITERAL) returns a material Unit `{id, outcome, subject, ageDays, content}` handed by the workflow; `ctx.vendor.call(name, args)` calls a metered vendor and returns `{ok, data}` (vendors: `llm.complete` with `{message, systemPrompt?, responseSchema?, provider?, model?, temperature?, maxTokens?}`; the LLM is the call's else the tactic `llm: {provider, model}`, never a default); `ctx.storage.get/set/delete/count(table, key)` are its Engine's notes for this org; `ctx.subject`, `ctx.tactics`, `ctx.day`, `ctx.request` are read-only inputs. Return `{content: {...}}` (one Unit made) or `null` (none). Shape: `export default async function run(ctx) { const m = ctx.get(\"<material outcome>\"); if (!m) return null; const r = await ctx.vendor.call(\"llm.complete\", { message: \"...\" }); return r.ok ? { content: { text: r.data } } : null; }` Answers `{ outcome, dynasty, cases, versions }`; `cases` > 0 means the dynasty is a port. Transparent proxy to workflow-service GET /scripts/dynasty/{outcome}/{dynasty}.",
         "security": [
           {
             "bearerAuth": []

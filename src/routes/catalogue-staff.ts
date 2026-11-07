@@ -3,6 +3,7 @@ import { authenticatePlatform, authenticateUser, requireStaff, requireStaffActor
 import { requireStaffKeyOrPlatform } from "../middleware/staff-gate.js";
 import { pipeExternalService, externalServices } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
+import { isStaffEmail } from "../lib/staff.js";
 
 // Reads of features-service's agent catalogue (`/internal/catalogue/*`, features-service
 // PR #1482): steps, sales paths, channels, pipes, sales funnels, workflows, triggers, tactics, strategies and plays, each a small LIST
@@ -12,8 +13,8 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
 // a funnel, a play; and, owner 2026-10-16, a CUSTOMER's own key: steps, sales paths, channels, pipes, funnels
 // and triggers, lists forced to `runnable=true`). Fleet-wide, no org scoping: the producer takes no identity.
 // Gate: a staff member's own key (`requireStaffActor`, `STAFF_KEY_OPERATIONS`), a customer key on the customer
-// objects, or the platform key + a staff x-email (`authenticatePlatform + requireStaff`, the dashboard's path,
-// unchanged). Status + body piped
+// objects, the platform key + a staff x-email (`authenticatePlatform + requireStaff`), and, on the customer objects
+// only, the platform key + any signed-in user (the dashboard's Catalogue page, CATALOGUE-FOR-CLIENTS-1107). Status + body piped
 // byte-for-byte (#10), errors field-for-field (#7), query string verbatim (#11).
 const router = Router();
 
@@ -33,12 +34,27 @@ function customerKeyOrStaff(req: AuthenticatedRequest, res: Response, next: Next
   return requireStaffActor(req, res, next);
 }
 
-/** Reads a customer key may make: the Bearer path admits it, the platform path stays staff (the dashboard's). */
-function customerKeyOrStaffRead(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+/**
+ * The gate of every customer catalogue READ (CATALOGUE-FOR-CLIENTS-1107, owner 2026-11-07: the dashboard's Catalogue
+ * page is visible to EVERY signed-in client). Three doors, one outcome per caller:
+ * - a Bearer key: its user (`authenticateUser`), a customer key reads as a customer, a staff key as staff;
+ * - the platform key + a staff x-email: staff, no identity headers needed (`requireStaff`, unchanged);
+ * - the platform key + any other user (the dashboard's path for a client): the identity headers must resolve to a
+ *   signed-in user (`authenticateUser`: x-org-id/x-user-id or x-external-org-id/x-external-user-id), then it reads as
+ *   a customer (`req.catalogueCustomer = true`). The platform key alone with no identity is refused (400).
+ * Reads only: no write is ever mounted behind it.
+ */
+export function catalogueReader(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   if (req.headers.authorization && !req.headers["x-api-key"]) {
     return void authenticateUser(req, res, () => customerKeyOrStaff(req, res, next));
   }
-  return void authenticatePlatform(req, res, () => requireStaff(req, res, next));
+  return void authenticatePlatform(req, res, () => {
+    if (isStaffEmail(req.headers["x-email"] as string | undefined)) return requireStaff(req, res, next);
+    return void authenticateUser(req, res, () => {
+      req.catalogueCustomer = true;
+      next();
+    });
+  });
 }
 
 /**
@@ -49,11 +65,11 @@ function customerKeyOrStaffRead(req: AuthenticatedRequest, res: Response, next: 
 export const CATALOGUE_OBJECTS = ["steps", "sales-paths", "channels", "pipes", "sales-funnels", "workflows", "triggers", "tactics", "strategies", "plays"] as const;
 
 /**
- * What a CUSTOMER key reads (the Copilot's customer reads: steps, sales paths, channels, pipes, funnels, triggers).
- * Workflows, tactics, strategies and plays stay staff here (a customer reads plays and strategies at /v1/plays,
- * /v1/strategies).
+ * What a CUSTOMER reads, with their own key or through the dashboard (`catalogueReader`): steps (the outcomes), sales
+ * paths, channels, pipes, funnels, triggers, and tactics + strategies (already open to any user at /v1/tactics,
+ * /v1/strategies, same producer route; CATALOGUE-FOR-CLIENTS-1107). Workflows and plays stay staff here.
  */
-export const CUSTOMER_CATALOGUE_OBJECTS = new Set<string>(["steps", "sales-paths", "channels", "pipes", "sales-funnels", "triggers"]);
+export const CUSTOMER_CATALOGUE_OBJECTS = new Set<string>(["steps", "sales-paths", "channels", "pipes", "sales-funnels", "triggers", "tactics", "strategies"]);
 
 /**
  * Lists features-service filters with `runnable`. A customer's list carries `runnable=true` (the Copilot's customer
@@ -85,7 +101,7 @@ async function pipe(res: import("express").Response, path: string, fallback: str
 
 // One explicit route per downstream path (no catch-all): the list, then the object by id.
 for (const object of CATALOGUE_OBJECTS) {
-  const gate = CUSTOMER_CATALOGUE_OBJECTS.has(object) ? customerKeyOrStaffRead : staffKeyOrPlatform;
+  const gate = CUSTOMER_CATALOGUE_OBJECTS.has(object) ? catalogueReader : staffKeyOrPlatform;
   /** GET /v1/catalogue/<object> → features-service GET /internal/catalogue/<object> (one page of rows). */
   router.get(`/v1/catalogue/${object}`, gate, (req: AuthenticatedRequest, res) => {
     const raw = rawQueryString(req.originalUrl);

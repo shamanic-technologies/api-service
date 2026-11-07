@@ -21,7 +21,7 @@ const { FEATURES_BASE } = vi.hoisted(() => {
  * No auth mock: the real authenticatePlatform + requireStaff run, and every refusal
  * asserts ZERO outbound calls. Bodies are fixtures — features-service owns the shape.
  */
-import router, { CATALOGUE_OBJECTS } from "../../src/routes/catalogue-staff.js";
+import router, { CATALOGUE_OBJECTS, CUSTOMER_CATALOGUE_OBJECTS } from "../../src/routes/catalogue-staff.js";
 import featuresRouter from "../../src/routes/features.js";
 
 function buildApp() {
@@ -56,8 +56,8 @@ it("serves exactly the ten objects features-service serves", () => {
 });
 
 const ROUTES = CATALOGUE_OBJECTS.flatMap((o) => [
-  { path: `/v1/catalogue/${o}`, downstream: `${FEATURES_BASE}/internal/catalogue/${o}` },
-  { path: `/v1/catalogue/${o}/some-id`, downstream: `${FEATURES_BASE}/internal/catalogue/${o}/some-id` },
+  { object: o, path: `/v1/catalogue/${o}`, downstream: `${FEATURES_BASE}/internal/catalogue/${o}` },
+  { object: o, path: `/v1/catalogue/${o}/some-id`, downstream: `${FEATURES_BASE}/internal/catalogue/${o}/some-id` },
 ]);
 
 for (const r of ROUTES) {
@@ -86,10 +86,11 @@ for (const r of ROUTES) {
       }
     });
 
-    it("refuses the platform key without a staff email (403) and calls nothing", async () => {
+    it("refuses the platform key with a non-staff email and no identity (403 staff objects, 400 customer reads) and calls nothing", async () => {
       upstream(200, RAW);
       const res = await request(buildApp()).get(r.path).set("X-API-Key", "admin-test-key").set("x-email", "customer@example.com");
-      expect(res.status).toBe(403);
+      // Customer reads (CATALOGUE-FOR-CLIENTS-1107) admit any signed-in user, so with no identity headers they 400.
+      expect(res.status).toBe(CUSTOMER_CATALOGUE_OBJECTS.has(r.object) ? 400 : 403);
       expect(calls).toHaveLength(0);
     });
 

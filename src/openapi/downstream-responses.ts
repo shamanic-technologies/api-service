@@ -44,6 +44,7 @@ export const DOWNSTREAM_RESPONSE_SOURCES: Record<string, DownstreamResponseSourc
   "POST /v1/billing/accounts/prepaid_checkout": { service: "billing-service", method: "POST", path: "/v1/accounts/prepaid_checkout" },
   "GET /v1/billing/accounts/prepaid_status": { service: "billing-service", method: "GET", path: "/v1/accounts/prepaid_status" },
   "GET /v1/offers/{offerId}/sales-funnels": { service: "features-service", method: "GET", path: "/internal/catalogue/sales-funnels" },
+  "GET /v1/engines/{outcome}": { service: "workflow-service", method: "GET", path: "/internal/engines/{outcome}" },
   "PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps": { service: "billing-service", method: "PUT", path: "/v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps" },
   "POST /v1/sales-funnel-campaigns": { service: "campaign-service", method: "POST", path: "/sales-funnel-campaigns" },
   "GET /v1/sales-funnel-campaigns/{id}": { service: "campaign-service", method: "GET", path: "/sales-funnel-campaigns/{id}" },
