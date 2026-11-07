@@ -9662,6 +9662,8 @@ const PLAYS_MODEL =
   "A new tactic is judged on every workflow within minutes; a strategy no workflow follows yet runs nothing (its play shows `runnable: false`). " +
   "A new tactic reaches no older strategy by itself: a strategy that names nothing about it lets its workflows through either way, so exclude it (or require it) there. " +
   "Editing a strategy's tactics or description is staff only (`PATCH /v1/strategies/{id}`), because it changes what every client's campaigns on its plays run.";
+const CATALOGUE_READ_GATE =
+  "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it too. Read only: every write keeps its own gate. ";
 const playsCommon = (s: string) => `${s} ${PLAYS_MODEL} Byte passthrough to features-service; status and body (including 400/404/409 with a named \`reason\`) owned by it.`;
 const playsListQuery = z.object({ q: z.string().optional().openapi({ description: "Text to find by name or id" }), limit: z.string().optional().openapi({ description: "Rows per page, 1..25 (default 10)" }) }).passthrough();
 const playsErrors = {
@@ -9675,14 +9677,14 @@ const playsOk = (name: string) => ({ description: "Pass-through from features-se
 registry.registerPath({
   method: "get", path: "/v1/tactics", tags: ["Plays"], security: authed,
   summary: "List tactics",
-  description: playsCommon("One page of tactics (id, name, description, how many workflows were judged on it and how many follow it). Query string forwarded verbatim (documented today: q, limit; not a whitelist)."),
+  description: playsCommon(CATALOGUE_READ_GATE + "One page of tactics (id, name, description, how many workflows were judged on it and how many follow it). Query string forwarded verbatim (documented today: q, limit; not a whitelist)."),
   request: { query: playsListQuery },
   responses: { 200: playsOk("TacticsListResponse"), ...playsErrors },
 });
 registry.registerPath({
   method: "get", path: "/v1/tactics/{id}", tags: ["Plays"], security: authed,
   summary: "Read one tactic",
-  description: playsCommon("One tactic with every workflow version judged on it (follows yes/no, probability)."),
+  description: playsCommon(CATALOGUE_READ_GATE + "One tactic with every workflow version judged on it (follows yes/no, probability)."),
   request: { params: z.object({ id: z.string().openapi({ description: "A tactic id (its name slugged, e.g. `catch-all`)" }) }) },
   responses: { 200: playsOk("TacticDetailResponse"), 404: { description: "Unknown tactic (forwarded verbatim)", content: errorContent }, ...playsErrors },
 });
@@ -9713,14 +9715,14 @@ registry.registerPath({
 registry.registerPath({
   method: "get", path: "/v1/strategies", tags: ["Plays"], security: authed,
   summary: "List strategies",
-  description: playsCommon("One page of strategies (id, name, description, tactics required and excluded, pipes that already catalogue a play on it). Query string forwarded verbatim (documented today: q, limit; not a whitelist)."),
+  description: playsCommon(CATALOGUE_READ_GATE + "One page of strategies (id, name, description, tactics required and excluded, pipes that already catalogue a play on it). Query string forwarded verbatim (documented today: q, limit; not a whitelist)."),
   request: { query: playsListQuery },
   responses: { 200: playsOk("StrategiesListResponse"), ...playsErrors },
 });
 registry.registerPath({
   method: "get", path: "/v1/strategies/{id}", tags: ["Plays"], security: authed,
   summary: "Read one strategy",
-  description: playsCommon("One strategy: its tactics required and excluded and the pipes that catalogue a play on it."),
+  description: playsCommon(CATALOGUE_READ_GATE + "One strategy: its tactics required and excluded and the pipes that catalogue a play on it."),
   request: { params: z.object({ id: z.string().openapi({ description: "A strategy id, e.g. `valid-catch-all`" }) }) },
   responses: { 200: playsOk("StrategyDetailResponse"), 404: { description: "Unknown strategy (forwarded verbatim)", content: errorContent }, ...playsErrors },
 });
@@ -9790,7 +9792,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List catalogue steps",
   description:
-    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. Steps are the outcomes a lead moves through (Lead found, Positive reply, Meeting booked, Paid client...): the words every leg, pipe and funnel is built from. " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. Steps are the outcomes a lead moves through (Lead found, Positive reply, Meeting booked, Paid client...): the words every leg, pipe and funnel is built from. " +
     "Byte passthrough to features-service GET /internal/catalogue/steps: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: q, limit (1..25, default 10); not a whitelist); status and body owned by the downstream service.",
   security: authed,
   request: { query: z.object({ q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -9809,7 +9811,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue step",
   description:
-    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. Steps are the outcomes a lead moves through (Lead found, Positive reply, Meeting booked, Paid client...): the words every leg, pipe and funnel is built from. " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. Steps are the outcomes a lead moves through (Lead found, Positive reply, Meeting booked, Paid client...): the words every leg, pipe and funnel is built from. " +
     "Byte passthrough to features-service GET /internal/catalogue/steps/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: authed,
   request: { params: z.object({ id: z.string().openapi({ description: "a step key or label" }) }), query: z.object({  }).passthrough() },
@@ -9829,7 +9831,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List catalogue sales paths",
   description:
-    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A sales path is a chain of legs from Start (or a trigger) to Paid client, with no channel yet: pick one, then the pipes that work each leg (GET /v1/catalogue/pipes?paths=<id>). With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A sales path is a chain of legs from Start (or a trigger) to Paid client, with no channel yet: pick one, then the pipes that work each leg (GET /v1/catalogue/pipes?paths=<id>). With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). " +
     "Byte passthrough to features-service GET /internal/catalogue/sales-paths: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: containsSteps, q, limit; not a whitelist); status and body owned by the downstream service.",
   security: authed,
   request: { query: z.object({ containsSteps: z.string().optional().openapi({ description: "Comma list of step keys or labels: the paths containing at least one" }), q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -9848,7 +9850,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue sales path",
   description:
-    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A sales path is a chain of legs from Start (or a trigger) to Paid client, with no channel yet: pick one, then the pipes that work each leg (GET /v1/catalogue/pipes?paths=<id>). " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A sales path is a chain of legs from Start (or a trigger) to Paid client, with no channel yet: pick one, then the pipes that work each leg (GET /v1/catalogue/pipes?paths=<id>). " +
     "Byte passthrough to features-service GET /internal/catalogue/sales-paths/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: authed,
   request: { params: z.object({ id: z.string().openapi({ description: "a sales path id (leg keys joined by `+`, sent as `%2B`)" }) }), query: z.object({  }).passthrough() },
@@ -9868,7 +9870,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List catalogue channels",
   description:
-    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A channel is what works a leg (cold email, AI meeting booking, your own team...). With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A channel is what works a leg (cold email, AI meeting booking, your own team...). With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). " +
     "Byte passthrough to features-service GET /internal/catalogue/channels: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: forPaths, legKeys, q, limit; not a whitelist); status and body owned by the downstream service.",
   security: authed,
   request: { query: z.object({ forPaths: z.string().optional().openapi({ description: "Comma list of sales path ids" }), legKeys: z.string().optional(), q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -9887,7 +9889,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue channel",
   description:
-    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A channel is what works a leg (cold email, AI meeting booking, your own team...). " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A channel is what works a leg (cold email, AI meeting booking, your own team...). " +
     "Byte passthrough to features-service GET /internal/catalogue/channels/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: authed,
   request: { params: z.object({ id: z.string().openapi({ description: "a channel slug" }) }), query: z.object({  }).passthrough() },
@@ -9907,7 +9909,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List catalogue pipes",
   description:
-    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A pipe is one channel working one leg (id `<channel slug>|<leg key>`): a sales funnel names one pipe per leg (POST /v1/catalogue/sales-funnels). With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A pipe is one channel working one leg (id `<channel slug>|<leg key>`): a sales funnel names one pipe per leg (POST /v1/catalogue/sales-funnels). With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). " +
     "Byte passthrough to features-service GET /internal/catalogue/pipes: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: paths, channels, legKeys, q, limit; not a whitelist); status and body owned by the downstream service.",
   security: authed,
   request: { query: z.object({ paths: z.string().optional().openapi({ description: "Comma list of sales path ids" }), channels: z.string().optional().openapi({ description: "Comma list of channel slugs" }), legKeys: z.string().optional(), q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -9926,7 +9928,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue pipe",
   description:
-    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A pipe is one channel working one leg (id `<channel slug>|<leg key>`): a sales funnel names one pipe per leg (POST /v1/catalogue/sales-funnels). " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A pipe is one channel working one leg (id `<channel slug>|<leg key>`): a sales funnel names one pipe per leg (POST /v1/catalogue/sales-funnels). " +
     "Byte passthrough to features-service GET /internal/catalogue/pipes/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: authed,
   request: { params: z.object({ id: z.string().openapi({ description: "a pipe id `<channel slug>|<leg key>`" }) }), query: z.object({  }).passthrough() },
@@ -10386,7 +10388,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List catalogue sales funnels",
   description:
-    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A sales funnel is a sales path with one pipe per leg; its id is what POST /v1/sales-funnel-campaigns takes. With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A sales funnel is a sales path with one pipe per leg; its id is what POST /v1/sales-funnel-campaigns takes. With a customer key the list keeps only what we run today (`runnable=true` is forced; a staff key passes `runnable` as sent). " +
     "Byte passthrough to features-service GET /internal/catalogue/sales-funnels: one page of rows (id, name, icon, line, costUsd, roi, status, ...). Query string forwarded verbatim (documented today: paths, containsChannels, q, limit; not a whitelist); status and body owned by the downstream service.",
   security: authed,
   request: { query: z.object({ paths: z.string().optional().openapi({ description: "Comma list of sales path ids" }), containsChannels: z.string().optional().openapi({ description: "Comma list of channel slugs: funnels containing at least one" }), q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -10405,7 +10407,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue sales funnel",
   description:
-    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A sales funnel is a sales path with one pipe per leg; its id is what POST /v1/sales-funnel-campaigns takes. " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A sales funnel is a sales path with one pipe per leg; its id is what POST /v1/sales-funnel-campaigns takes. " +
     "Byte passthrough to features-service GET /internal/catalogue/sales-funnels/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: authed,
   request: { params: z.object({ id: z.string().openapi({ description: "a sales funnel id" }) }), query: z.object({  }).passthrough() },
@@ -10466,7 +10468,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "List catalogue triggers",
   description:
-    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A trigger is an entry door that starts a reactive funnel: an OUTCOME trigger (an outcome was just reached, the only kind callable from outside, through POST /v1/trigger-events) or a CONDITION trigger (computed by us: an outcome + a delay + still not another, or an integration state). New triggers are never created here: ask for one with a feature request. " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A trigger is an entry door that starts a reactive funnel: an OUTCOME trigger (an outcome was just reached, the only kind callable from outside, through POST /v1/trigger-events) or a CONDITION trigger (computed by us: an outcome + a delay + still not another, or an integration state). New triggers are never created here: ask for one with a feature request. " +
     "Byte passthrough to features-service GET /internal/catalogue/triggers: one page of triggers, what starts a reactive pipe (id, name, icon, eventIcon, line, fromStep, firedBy, coded, pipeCount, ...). Query string forwarded verbatim (documented today: q, limit; not a whitelist); status and body owned by the downstream service.",
   security: authed,
   request: { query: z.object({ q: z.string().optional(), limit: z.string().optional() }).passthrough() },
@@ -10485,7 +10487,7 @@ registry.registerPath({
   tags: ["Features"],
   summary: "Read one catalogue trigger",
   description:
-    "Any API key: a customer's own key reads it too (a staff key, or the platform key with a staff x-email, as before). Fleet-wide, no org scoping. A trigger is an entry door that starts a reactive funnel: an OUTCOME trigger (an outcome was just reached, the only kind callable from outside, through POST /v1/trigger-events) or a CONDITION trigger (computed by us: an outcome + a delay + still not another, or an integration state). New triggers are never created here: ask for one with a feature request. " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. A trigger is an entry door that starts a reactive funnel: an OUTCOME trigger (an outcome was just reached, the only kind callable from outside, through POST /v1/trigger-events) or a CONDITION trigger (computed by us: an outcome + a delay + still not another, or an integration state). New triggers are never created here: ask for one with a feature request. " +
     "Byte passthrough to features-service GET /internal/catalogue/triggers/{id}: the trigger and the reactive pipes it starts. Query string forwarded verbatim; status and body owned by the downstream service.",
   security: authed,
   request: { params: z.object({ id: z.string().openapi({ description: "a trigger id (e.g. positive_reply_received)" }) }), query: z.object({}).passthrough() },
@@ -10502,11 +10504,11 @@ registry.registerPath({
   method: "get",
   path: "/v1/catalogue/tactics",
   tags: ["Features"],
-  summary: "List catalogue tactics (staff only)",
+  summary: "List catalogue tactics",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/tactics: one page of tactics, the yes/no tags Jev puts on every workflow version (e.g. Catch-all). Query string forwarded verbatim (documented today: q, limit; not a whitelist); status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { query: z.object({ q: z.string().optional(), limit: z.string().optional() }).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueTacticsListResponse") } } },
@@ -10522,11 +10524,11 @@ registry.registerPath({
   method: "get",
   path: "/v1/catalogue/tactics/{id}",
   tags: ["Features"],
-  summary: "Read one catalogue tactic (staff only)",
+  summary: "Read one catalogue tactic",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/tactics/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { params: z.object({ id: z.string().openapi({ description: "a tactic id" }) }), query: z.object({}).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueTacticsDetailResponse") } } },
@@ -10542,11 +10544,11 @@ registry.registerPath({
   method: "get",
   path: "/v1/catalogue/strategies",
   tags: ["Features"],
-  summary: "List catalogue strategies (staff only)",
+  summary: "List catalogue strategies",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/strategies: one page of strategies, the tactics a workflow must / must not follow (e.g. Valid only, Valid + Catch-all). Query string forwarded verbatim (documented today: q, limit; not a whitelist); status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { query: z.object({ q: z.string().optional(), limit: z.string().optional() }).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueStrategiesListResponse") } } },
@@ -10562,11 +10564,11 @@ registry.registerPath({
   method: "get",
   path: "/v1/catalogue/strategies/{id}",
   tags: ["Features"],
-  summary: "Read one catalogue strategy (staff only)",
+  summary: "Read one catalogue strategy",
   description:
-    "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. Fleet-wide, no org scoping. " +
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. Read only: every catalogue write keeps its own gate. Fleet-wide, no org scoping. " +
     "Byte passthrough to features-service GET /internal/catalogue/strategies/{id}. Query string forwarded verbatim; status and body owned by the downstream service.",
-  security: platformAuth,
+  security: authed,
   request: { params: z.object({ id: z.string().openapi({ description: "a strategy id" }) }), query: z.object({}).passthrough() },
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CatalogueStrategiesDetailResponse") } } },
@@ -19715,11 +19717,34 @@ const scriptStaffErrors = {
 
 registry.registerPath({
   method: "get",
+  path: "/v1/engines/{outcome}",
+  tags: ["Scripts"],
+  summary: "Read one Engine (is it running campaigns?)",
+  description:
+    "Any signed-in client reads it (CATALOGUE-FOR-CLIENTS-1107): a customer's own key, or the platform key with the user's identity headers (the dashboard); staff read it with their own key or the platform key with a staff x-email. " +
+    "An Engine is the one thing per outcome that makes it; the scripts competing in it are GET /v1/scripts?outcome=<outcome>. The answer says whether the Engine runs campaigns (`live`), at which scope (`fleet` or `org`), the dynasty it was proven on and when it was switched on or rolled back. " +
+    "A client reads the fleet answer, the same one staff get without `orgId` (a client's `orgId` is dropped). Staff may pass `orgId` to ask about one org's campaigns. Every other query parameter is forwarded verbatim. " +
+    "Byte passthrough to workflow-service GET /internal/engines/{outcome}; status and body owned by the downstream service.",
+  security: authed,
+  request: {
+    params: z.object({ outcome: z.string().openapi({ description: "the outcome key (a catalogue step key, e.g. meeting_booked)" }) }),
+    query: z.object({ orgId: z.string().optional().describe("Staff only: one org's campaigns (dropped for a client, who reads the fleet answer)") }).passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from workflow-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("EngineStateResponse") } } },
+    400: { description: "Not an outcome key, or missing identity headers on the platform key (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream failure (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/scripts",
   tags: ["Scripts"],
   summary: "List scripts (no code)",
   description:
-    scriptGuide +
+    CATALOGUE_READ_GATE + scriptGuide +
     "`status=active` (default) = runnable (version AND dynasty active), `deprecated` = its complement, `all`. Each row " +
     "carries outcome, dynasty, version, scriptSlug, description, materials, vendors, tactics, status, dynastyStatus, " +
     "replay proof and `cases` (recorded cases: > 0 = a port). Read the code with GET /v1/scripts/{id}. Transparent proxy " +
@@ -19746,7 +19771,7 @@ registry.registerPath({
   path: "/v1/scripts/{id}",
   tags: ["Scripts"],
   summary: "One script version, with its code",
-  description: scriptGuide + "Transparent proxy to workflow-service GET /scripts/{id}.",
+  description: CATALOGUE_READ_GATE + scriptGuide + "Transparent proxy to workflow-service GET /scripts/{id}.",
   security: authed,
   request: { params: z.object({ id: z.string().uuid().describe("Script version id") }) },
   responses: {
@@ -19762,7 +19787,7 @@ registry.registerPath({
   tags: ["Scripts"],
   summary: "Every version of one script dynasty (newest first, no code)",
   description:
-    scriptGuide +
+    CATALOGUE_READ_GATE + scriptGuide +
     "Answers `{ outcome, dynasty, cases, versions }`; `cases` > 0 means the dynasty is a port. " +
     "Transparent proxy to workflow-service GET /scripts/dynasty/{outcome}/{dynasty}.",
   security: authed,
