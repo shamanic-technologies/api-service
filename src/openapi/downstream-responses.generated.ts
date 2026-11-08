@@ -31396,6 +31396,376 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "GET /v1/orgs/social/accounts": {
+    "service": "social-service",
+    "method": "GET",
+    "path": "/orgs/social/accounts",
+    "responses": {
+      "200": {
+        "description": "Accounts, oldest first",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "accounts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "network": {
+                    "type": "string",
+                    "enum": [
+                      "x",
+                      "linkedin"
+                    ],
+                    "description": "x | linkedin"
+                  },
+                  "brandId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "username": {
+                    "type": "string",
+                    "description": "X: the handle (no @). LinkedIn: the page's name."
+                  },
+                  "name": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "profileUrl": {
+                    "type": "string"
+                  },
+                  "pageKind": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "profile",
+                      "company",
+                      null
+                    ]
+                  },
+                  "accountType": {
+                    "type": "string",
+                    "description": "pro_ai | pro_human | personal_human"
+                  },
+                  "accountTypeLabel": {
+                    "type": "string"
+                  },
+                  "health": {
+                    "type": "string",
+                    "enum": [
+                      "connected",
+                      "needs_reconnect"
+                    ]
+                  },
+                  "healthReason": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "publishable": {
+                    "type": "boolean",
+                    "description": "Software may post on it now: Pro (AI), connected, and the login can post where the page is."
+                  },
+                  "notPublishableReason": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "`<code>: <why>` (account_not_pro_ai, needs_reconnect, linkedin_page_not_publishable); null when publishable."
+                  },
+                  "createdAt": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "network",
+                  "brandId",
+                  "username",
+                  "name",
+                  "profileUrl",
+                  "pageKind",
+                  "accountType",
+                  "accountTypeLabel",
+                  "health",
+                  "healthReason",
+                  "publishable",
+                  "notPublishableReason",
+                  "createdAt"
+                ]
+              }
+            }
+          },
+          "required": [
+            "accounts"
+          ]
+        }
+      }
+    }
+  },
+  "GET /v1/orgs/social/industry-news": {
+    "service": "social-service",
+    "method": "GET",
+    "path": "/orgs/social/industry-news",
+    "responses": {
+      "200": {
+        "description": "Items",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Our row: the subject of its « Industry news found » Unit"
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "url": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "hn",
+                      "news",
+                      "blog",
+                      "x",
+                      "linkedin",
+                      "reddit"
+                    ],
+                    "description": "Where it was published"
+                  },
+                  "sources": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Every place the scan saw it (X, LinkedIn, r/sales, GNews/<outlet>...)"
+                  },
+                  "author": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "publishedAt": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "whyItMatters": {
+                    "type": "string",
+                    "description": "One line: the watched companies it names, its topics, the reaction it drew"
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "Full text as the source served it (title first)"
+                  },
+                  "postId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "engagement": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "companies": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "topics": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "score": {
+                    "type": "number"
+                  },
+                  "foundAt": {
+                    "type": "string"
+                  },
+                  "outcomeKey": {
+                    "type": "string"
+                  },
+                  "runId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "The run holding its Unit and the scan's treg cost"
+                  },
+                  "scanId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "campaignId": {
+                    "type": "string",
+                    "nullable": true,
+                    "format": "uuid"
+                  },
+                  "unitDeclared": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "id",
+                  "title",
+                  "url",
+                  "source",
+                  "sources",
+                  "author",
+                  "publishedAt",
+                  "whyItMatters",
+                  "text",
+                  "postId",
+                  "engagement",
+                  "companies",
+                  "topics",
+                  "score",
+                  "foundAt",
+                  "outcomeKey",
+                  "runId",
+                  "scanId",
+                  "campaignId",
+                  "unitDeclared"
+                ]
+              }
+            }
+          },
+          "required": [
+            "items"
+          ]
+        }
+      }
+    }
+  },
+  "GET /v1/orgs/social/publications": {
+    "service": "social-service",
+    "method": "GET",
+    "path": "/orgs/social/publications",
+    "responses": {
+      "200": {
+        "description": "Published posts",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "publications": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Our row: the subject of its Unit"
+                  },
+                  "accountId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "network": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "post"
+                    ]
+                  },
+                  "status": {
+                    "type": "string"
+                  },
+                  "text": {
+                    "type": "string"
+                  },
+                  "postId": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "X tweet id / LinkedIn share urn"
+                  },
+                  "permalink": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "outcomeKey": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "campaignId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "runId": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "publishedAt": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "createdAt": {
+                    "type": "string"
+                  },
+                  "reply": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "text": {
+                        "type": "string"
+                      },
+                      "postId": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "permalink": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "error": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    },
+                    "required": [
+                      "text",
+                      "postId",
+                      "permalink",
+                      "error"
+                    ],
+                    "description": "X: the reply under the post; LinkedIn: its first comment. null when none was asked."
+                  }
+                },
+                "required": [
+                  "id",
+                  "accountId",
+                  "network",
+                  "kind",
+                  "status",
+                  "text",
+                  "postId",
+                  "permalink",
+                  "outcomeKey",
+                  "campaignId",
+                  "runId",
+                  "publishedAt",
+                  "createdAt",
+                  "reply"
+                ]
+              }
+            }
+          },
+          "required": [
+            "publications"
+          ]
+        }
+      }
+    }
+  },
   "GET /v1/orgs/stripe/connections": {
     "service": "crm-service",
     "method": "GET",
@@ -50276,6 +50646,129 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
           "required": [
             "connection",
             "identifiedPersons"
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/orgs/social/accounts/{id}/posts": {
+    "service": "social-service",
+    "method": "POST",
+    "path": "/orgs/social/accounts/{id}/posts",
+    "responses": {
+      "200": {
+        "description": "Published (created: false = the same key answered again)",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "publication": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Our row: the subject of its Unit"
+                },
+                "accountId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "network": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "post"
+                  ]
+                },
+                "status": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "postId": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "X tweet id / LinkedIn share urn"
+                },
+                "permalink": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "outcomeKey": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "campaignId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "runId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "publishedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "reply": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "postId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "permalink": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "text",
+                    "postId",
+                    "permalink",
+                    "error"
+                  ],
+                  "description": "X: the reply under the post; LinkedIn: its first comment. null when none was asked."
+                }
+              },
+              "required": [
+                "id",
+                "accountId",
+                "network",
+                "kind",
+                "status",
+                "text",
+                "postId",
+                "permalink",
+                "outcomeKey",
+                "campaignId",
+                "runId",
+                "publishedAt",
+                "createdAt",
+                "reply"
+              ]
+            },
+            "created": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "publication",
+            "created"
           ]
         }
       }

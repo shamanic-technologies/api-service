@@ -528,7 +528,7 @@ export function buildDocument(
       { name: "CRM Ops", description: "WhatsApp line health for dashboard v2 Monitoring (staff-only, crm-service proxy)" },
       { name: "Campaign Ops", description: "Prospects waiting on a blocked campaign answer, for dashboard v2 Monitoring (staff-only, campaign-service proxy)" },
       { name: "Scripts Ops", description: "The daily series of every outcome an Engines script makes, for dashboard v2 Monitoring (staff-only, workflow-service proxy)" },
-      { name: "Social", description: "Posting: a brand's own social pages and the signed-in user's own profile posts (staff-only, social-service proxy)" },
+      { name: "Social", description: "Posting: a brand's own X and LinkedIn accounts, what they published, its industry news, and staff reads of LinkedIn page and profile posts (social-service proxy)" },
       { name: "Internal", description: "Platform-level operations (API key auth, no identity headers)" },
       { name: "Platform", description: "Service discovery" },
       { name: "Google CRM", description: "Google CRM (Gmail + People bronze) ingestion" },
