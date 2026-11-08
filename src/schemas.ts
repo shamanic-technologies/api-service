@@ -17151,6 +17151,84 @@ for (const route of linkedinAccountsRoutes) {
   });
 }
 
+// ─── Brand social accounts + industry news (social-service /orgs/social/*, INDUSTRY-NEWS-ENGINE-1108) ─────
+// Transparent passthrough like the Threads publish: bodies and answers owned by social-service, documented from its
+// openapi via DOWNSTREAM_BODY_SOURCES / DOWNSTREAM_RESPONSE_SOURCES; query strings byte-copied.
+const SocialBrandPassthroughResponse = z.object({}).passthrough().openapi("SocialBrandPassthroughResponse");
+const SocialBrandPassthroughRequest = z.object({}).passthrough().openapi("SocialBrandPassthroughRequest");
+const socialBrandErrorResponses = {
+  400: { description: "Bad request (`type: \"validation\"` / `outcome_mismatch`, or the text does not fit the network), forwarded verbatim from social-service", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  402: { description: "The spend was refused (the campaign's max budget or the balance), forwarded verbatim", content: errorContent },
+  404: { description: "No such account in this org, forwarded verbatim", content: errorContent },
+  409: { description: "`type` = account_not_pro_ai | needs_reconnect | linkedin_page_not_publishable | account_not_of_brand | idempotency_conflict, forwarded verbatim", content: errorContent },
+  500: { description: "Internal error", content: errorContent },
+  502: { description: "X or LinkedIn refused or was unreachable (`type` names it), forwarded verbatim", content: errorContent },
+};
+const socialBrandRoutes: Array<{ method: "get" | "post"; path: string; summary: string; description: string; body?: boolean; params?: z.ZodObject; query?: z.ZodObject }> = [
+  {
+    method: "get",
+    path: "/v1/orgs/social/accounts",
+    summary: "List a brand's connected X or LinkedIn accounts, each saying whether software may post on it",
+    description: "Proxy to social-service GET /orgs/social/accounts. Response `{ accounts: [...] }` owned by social-service: `publishable` + `notPublishableReason` per account.",
+    query: z.object({ brandId: z.string().openapi({ description: "The brand (uuid)" }), network: z.enum(["x", "linkedin"]) }).passthrough(),
+  },
+  {
+    method: "get",
+    path: "/v1/orgs/social/publications",
+    summary: "What was published on a brand's X or LinkedIn accounts since a date, newest first",
+    description: "Proxy to social-service GET /orgs/social/publications. Response `{ publications: [...] }` owned by social-service.",
+    query: z
+      .object({
+        brandId: z.string().openapi({ description: "The brand (uuid)" }),
+        network: z.enum(["x", "linkedin"]),
+        since: z.string().openapi({ description: "ISO date-time" }),
+        limit: z.string().optional(),
+      })
+      .passthrough(),
+  },
+  {
+    method: "post",
+    path: "/v1/orgs/social/accounts/{id}/posts",
+    summary: "Publish one post on one of the brand's own X or LinkedIn accounts (with its X reply / LinkedIn first comment)",
+    description:
+      "Proxy to social-service POST /orgs/social/accounts/{id}/posts. Body `{ text, idempotencyKey, outcomeKey, reply? }` forwarded untransformed (`outcomeKey` = `x_post_published` / `linkedin_post_published`; `reply` = the X reply under the post / the LinkedIn first comment). Name the campaign with `?campaignId=` (or `x-campaign-id`): the post's Unit and its fee land on it. Text only. Returns `{ publication, created }`.",
+    body: true,
+    params: z.object({ id: z.string().openapi({ description: "Account id (uuid) from GET /v1/orgs/social/accounts" }) }),
+    query: z.object({ campaignId: z.string().optional(), brandId: z.string().optional() }).passthrough(),
+  },
+  {
+    method: "get",
+    path: "/v1/orgs/social/industry-news",
+    summary: "The industry news items kept for a brand (its Industry news found Units), newest first",
+    description:
+      "Proxy to social-service GET /orgs/social/industry-news. Response `{ items: [{ title, url, source, author, publishedAt, whyItMatters, ... }] }` owned by social-service. `since` defaults to the last 36 hours.",
+    query: z
+      .object({ brandId: z.string().openapi({ description: "The brand (uuid)" }), since: z.string().optional().openapi({ description: "ISO date-time" }), limit: z.string().optional() })
+      .passthrough(),
+  },
+];
+
+for (const route of socialBrandRoutes) {
+  registry.registerPath({
+    method: route.method,
+    path: route.path,
+    tags: ["Social"],
+    summary: route.summary,
+    description: route.description,
+    security: authed,
+    request: {
+      ...(route.params ? { params: route.params } : {}),
+      ...(route.query ? { query: route.query } : {}),
+      ...(route.body ? { body: { content: { "application/json": { schema: SocialBrandPassthroughRequest } } } } : {}),
+    },
+    responses: {
+      200: { description: "As returned by social-service", content: { "application/json": { schema: SocialBrandPassthroughResponse } } },
+      ...socialBrandErrorResponses,
+    },
+  });
+}
+
 const crmErrorResponses = {
   400: { description: "Bad request, forwarded verbatim from crm-service", content: errorContent },
   401: { description: "Unauthorized", content: errorContent },
