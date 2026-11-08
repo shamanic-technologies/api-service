@@ -11517,28 +11517,6 @@
           "nullable": true
         }
       },
-      "PipeDefaultPlayResponse": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": {
-          "nullable": true
-        }
-      },
-      "PipeDefaultPlayRequest": {
-        "type": "object",
-        "properties": {
-          "strategyId": {
-            "type": "string",
-            "description": "The strategy (GET /v1/strategies) the pipe runs by default"
-          }
-        },
-        "required": [
-          "strategyId"
-        ],
-        "additionalProperties": {
-          "nullable": true
-        }
-      },
       "ContentModelStatusList": {
         "type": "object",
         "properties": {},
@@ -16394,16 +16372,6 @@
       },
       "ErrorResponse409HumanServiceRefusedVerbatim": {
         "description": "`human_service_refused` (verbatim)",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "ErrorResponse409DefaultPlayRunsNothingForwardedVerbatim": {
-        "description": "`default_play_runs_nothing` (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {

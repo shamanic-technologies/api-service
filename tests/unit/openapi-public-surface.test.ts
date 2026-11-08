@@ -103,7 +103,6 @@ const PLATFORM_OPERATIONS = [
   "get /v1/orgs/{orgId}/membership-limit",
   "put /v1/orgs/{orgId}/membership-limit",
   "put /v1/billing/accounts/topup_minimums",
-  "put /v1/catalogue/pipes/{pipeId}/default-play",
   "post /v1/catalogue/pipes",
   "post /v1/catalogue/steps",
   "post /v1/scripts",
