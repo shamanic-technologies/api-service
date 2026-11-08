@@ -17190,7 +17190,7 @@ const socialBrandErrorResponses = {
   500: { description: "Internal error", content: errorContent },
   502: { description: "X or LinkedIn refused or was unreachable (`type` names it), forwarded verbatim", content: errorContent },
 };
-const socialBrandRoutes: Array<{ method: "get" | "post"; path: string; summary: string; description: string; body?: boolean; params?: z.ZodObject; query?: z.ZodObject }> = [
+const socialBrandRoutes: Array<{ method: "get" | "post" | "delete"; path: string; summary: string; description: string; body?: boolean; params?: z.ZodObject; query?: z.ZodObject }> = [
   {
     method: "get",
     path: "/v1/orgs/social/accounts",
@@ -17221,6 +17221,23 @@ const socialBrandRoutes: Array<{ method: "get" | "post"; path: string; summary: 
     body: true,
     params: z.object({ id: z.string().openapi({ description: "Account id (uuid) from GET /v1/orgs/social/accounts" }) }),
     query: z.object({ campaignId: z.string().optional(), brandId: z.string().optional() }).passthrough(),
+  },
+  {
+    method: "post",
+    path: "/v1/orgs/social/accounts/{id}/replies",
+    summary: "Reply (X) or comment (LinkedIn) on someone else's post from one of the brand's own accounts",
+    description:
+      "Proxy to social-service POST /orgs/social/accounts/{id}/replies. Body `{ target, text, idempotencyKey, outcomeKey }` forwarded untransformed (`target` = the post's URL or id/urn; `outcomeKey` = `x_reply_published` / `linkedin_comment_published`). Name the campaign with `?campaignId=`: the Unit and its spend land on it. Returns `{ publication, created }`.",
+    body: true,
+    params: z.object({ id: z.string().openapi({ description: "Account id (uuid) from GET /v1/orgs/social/accounts" }) }),
+    query: z.object({ campaignId: z.string().optional(), brandId: z.string().optional() }).passthrough(),
+  },
+  {
+    method: "delete",
+    path: "/v1/orgs/social/accounts/{id}/posts/{postId}",
+    summary: "Delete one of our publications on a brand account (a post with its X reply, or a reply / comment)",
+    description: "Proxy to social-service DELETE /orgs/social/accounts/{id}/posts/{postId}. `postId` = our publication id. Returns `{ publication }` with status deleted.",
+    params: z.object({ id: z.string(), postId: z.string().openapi({ description: "publication.id" }) }),
   },
   {
     method: "get",
