@@ -341,7 +341,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "consumedUnavailableReason",
                 "consumedUnavailableDetail"
               ],
-              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (post_published: one Threads thread or X/LinkedIn post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
             },
             "salesFunnelName": {
               "type": "string",
@@ -2186,6 +2186,44 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "revoked",
                 "already_revoked",
                 "kept_for_mailbox"
+              ]
+            }
+          },
+          "required": [
+            "disconnected",
+            "email",
+            "grant"
+          ],
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "DELETE /v1/orgs/google/search-console/accounts/{email}": {
+    "service": "google-service",
+    "method": "DELETE",
+    "path": "/orgs/google/search-console/accounts/{email}",
+    "responses": {
+      "200": {
+        "description": "Disconnected",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "disconnected": {
+              "type": "boolean",
+              "enum": [
+                true
+              ]
+            },
+            "email": {
+              "type": "string"
+            },
+            "grant": {
+              "type": "string",
+              "enum": [
+                "revoked",
+                "already_revoked",
+                "kept_for_other_connection"
               ]
             }
           },
@@ -4731,7 +4769,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "consumedUnavailableReason",
                 "consumedUnavailableDetail"
               ],
-              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (post_published: one Threads thread or X/LinkedIn post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
             },
             "salesFunnelName": {
               "type": "string",
@@ -14265,10 +14303,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "nullable": true,
                     "enum": [
                       "ledger",
-                      "campaign_people",
                       null
                     ],
-                    "description": "Where the Target's count comes from (its milestone card's `countSource`)."
+                    "description": "Where the Target's count comes from (its milestone card's `countSource`): always the ledger (LEDGER-ONLY-1107: `campaign_people` is gone)."
+                  },
+                  "ledgerOutcomeKeys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The outcome keys the Target counts in the ledger (its step + the finer outcomes its pipes' Engines make)."
                   },
                   "milestones": {
                     "type": "array",
@@ -14297,10 +14341,9 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "nullable": true,
                           "enum": [
                             "ledger",
-                            "campaign_people",
                             null
                           ],
-                          "description": "`ledger` = the Units the campaign's runs produced (runs-service ledger, any outcome, posts included); `campaign_people` = no run of the campaign declares this outcome (a reply judged by an org-day run, a signup the client's team makes): its own people count."
+                          "description": "`ledger` = the Units the campaign's runs produced (runs-service ledger, any outcome, posts included). LEDGER-ONLY-1107: no other basis; an outcome the ledger lacks is null with `countUnavailableReason` (`outcome_not_declared_in_ledger`, `no_producer_declares_outcome`, `ledger_unreadable`, `no_unit_makes_it`)."
                         },
                         "countUnavailableReason": {
                           "type": "string",
@@ -14457,11 +14500,519 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "pastUnavailableReason",
                   "projection",
                   "targetCountSource",
+                  "ledgerOutcomeKeys",
                   "milestones",
                   "milestonesUnavailableReason",
                   "ledgerDaysMissing"
                 ]
-              }
+              },
+              "description": "One row PER CAMPAIGN (the campaign page). Today reads `offerTargets`."
+            },
+            "offerTargets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "offerId": {
+                    "type": "string"
+                  },
+                  "target": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "key": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      },
+                      "lifecycleRung": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    },
+                    "required": [
+                      "key",
+                      "label",
+                      "lifecycleRung"
+                    ],
+                    "description": "null = the offer's campaigns that state no Target, merged into one entry."
+                  },
+                  "salesFunnelCampaignIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "The campaigns merged into this entry, oldest first (ids only: Today names no campaign)."
+                  },
+                  "outcomesToDate": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "LEDGER-ONLY-1107: the BRAND's total Units of the Target outcome in the general ledger (every source, every campaign, each Unit ONCE; LEDGER-OTHER-FACTORY-1107: another factory's Units included, `ledger.otherFactoryUnits`), never the sum of what the campaigns attributed. Null + outcomesUnavailableReason (`outcome_not_declared_in_ledger` + ledger.producerGap, `no_producer_declares_outcome`, `ledger_unreadable`)."
+                  },
+                  "outcomesUnavailableReason": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "spentUsd": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "What OUR Units cost to produce: ledger.ourUnits × costPerOutcomeUsd (ledger)."
+                  },
+                  "costPerOutcomeUsd": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "The ledger's every-path unit cost of the Target outcome (STANDARD cost; own production cost per Unit where the outcome is no pipe's output, ledger.costPerUnitBasis)."
+                  },
+                  "costPerOutcomeUnavailableReason": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "measuredReturn": {
+                    "type": "object",
+                    "properties": {
+                      "roiMultiple": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "valueUsd": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "spentUsd": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "unavailableReason": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    },
+                    "required": [
+                      "roiMultiple",
+                      "valueUsd",
+                      "spentUsd",
+                      "unavailableReason"
+                    ],
+                    "description": "ledger.ourUnits × the Target's value ÷ spentUsd (ledger; another factory's Units are no return of ours)."
+                  },
+                  "past": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "date": {
+                          "type": "string"
+                        },
+                        "outcomes": {
+                          "type": "number"
+                        },
+                        "cumulativeOutcomes": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "date",
+                        "outcomes",
+                        "cumulativeOutcomes"
+                      ]
+                    },
+                    "description": "The brand's ledger Units of the Target per UTC day, from the first to today; the last cumulative IS outcomesToDate."
+                  },
+                  "pastUnavailableReason": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "projection": {
+                    "type": "object",
+                    "properties": {
+                      "planComputedAt": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "The most recent plan computation among the campaigns."
+                      },
+                      "planFunnelId": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "The plan line's funnel when every campaign's is the same, else null."
+                      },
+                      "costPerTargetUsd": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "Σ spendPerDayUsd ÷ Σ outcomesPerDay of the projected campaigns."
+                      },
+                      "costPerTargetBasis": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "The campaigns' common basis, `mixed` when they differ."
+                      },
+                      "spendPerDayUsd": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "spendPerDaySource": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          "daily_budget",
+                          "spend_pace_7d",
+                          "mixed",
+                          null
+                        ]
+                      },
+                      "outcomesPerDay": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "Σ each projected campaign's own expected outcomes per day."
+                      },
+                      "daily": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "date": {
+                              "type": "string"
+                            },
+                            "expectedOutcomes": {
+                              "type": "number"
+                            },
+                            "cumulativeExpectedOutcomes": {
+                              "type": "number"
+                            }
+                          },
+                          "required": [
+                            "date",
+                            "expectedOutcomes",
+                            "cumulativeExpectedOutcomes"
+                          ]
+                        }
+                      },
+                      "nextExpectedAt": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "nextExpectedInHours": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "unavailableReason": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "null as soon as one campaign projects; else the oldest campaign's reason."
+                      },
+                      "unprojectedCampaignIds": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Campaigns of the entry with no projection of their own (they add no expected outcome)."
+                      }
+                    },
+                    "required": [
+                      "planComputedAt",
+                      "planFunnelId",
+                      "costPerTargetUsd",
+                      "costPerTargetBasis",
+                      "spendPerDayUsd",
+                      "spendPerDaySource",
+                      "outcomesPerDay",
+                      "daily",
+                      "nextExpectedAt",
+                      "nextExpectedInHours",
+                      "unavailableReason",
+                      "unprojectedCampaignIds"
+                    ]
+                  },
+                  "ledger": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "scope": {
+                        "type": "string",
+                        "enum": [
+                          "brand"
+                        ]
+                      },
+                      "outcomeKeys": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "costPerUnitBasis": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          "every_path",
+                          "own_production",
+                          null
+                        ]
+                      },
+                      "producerGap": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                          "declaredElsewhereBy": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            },
+                            "description": "The services that declare this outcome for other scopes (empty = no service declares it anywhere)."
+                          },
+                          "undeclaredConsumptions": {
+                            "type": "number",
+                            "description": "Occurrences the scope consumed that no run declared producing."
+                          }
+                        },
+                        "required": [
+                          "declaredElsewhereBy",
+                          "undeclaredConsumptions"
+                        ],
+                        "description": "Who must declare the outcome in the ledger (runs-service), when the ledger lacks it."
+                      },
+                      "ourUnits": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "LEDGER-OTHER-FACTORY-1107: OUR Units of the Target (spent, $ each, value and return divide these)."
+                      },
+                      "otherFactoryUnits": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                          "total": {
+                            "type": "integer"
+                          },
+                          "anotherFactory": {
+                            "type": "integer",
+                            "description": "Reached by the client's CRM, team or site, or before our first touch."
+                          },
+                          "noProof": {
+                            "type": "integer",
+                            "description": "No proof our outreach caused it."
+                          }
+                        },
+                        "required": [
+                          "total",
+                          "anotherFactory",
+                          "noProof"
+                        ],
+                        "description": "LEDGER-OTHER-FACTORY-1107 (owner 2026-11-07, « INDEPENDAMMENT DES SOURCES »): the Units of the outcome another factory produced (runs-service `producedElsewhere`). They are IN the count (total = ours + these) and in NO money figure: $ each, cost, value and return divide OUR Units only (IAS 2)."
+                      },
+                      "ledgerDaysMissing": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "scope",
+                      "outcomeKeys",
+                      "costPerUnitBasis",
+                      "producerGap",
+                      "ourUnits",
+                      "otherFactoryUnits",
+                      "ledgerDaysMissing"
+                    ],
+                    "description": "LEDGER-ONLY-1107: the entry's measured figures are the BRAND's ledger total of its Target outcome. Null = no Target, or the ledger was unreadable."
+                  }
+                },
+                "required": [
+                  "offerId",
+                  "target",
+                  "salesFunnelCampaignIds",
+                  "outcomesToDate",
+                  "outcomesUnavailableReason",
+                  "spentUsd",
+                  "costPerOutcomeUsd",
+                  "costPerOutcomeUnavailableReason",
+                  "measuredReturn",
+                  "past",
+                  "pastUnavailableReason",
+                  "projection",
+                  "ledger"
+                ]
+              },
+              "description": "TARGET-ROWS-UNIQUE-1107 (owner 2026-11-07, « Les rows target doivent etre unique »): ONE entry per (offer, Target), every campaign of `targets` sharing it merged, in order of each entry's oldest campaign. LEDGER-ONLY-1107: its count, $ each, spend, return and past are the BRAND's ledger total of the Target outcome (never the sum of the campaigns); the projection sums each campaign's expected outcomes per day."
+            },
+            "brandOutcomes": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "outcomeKey": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "lifecycleRung": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "outcomeKeys": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "units": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "Total Units of the outcome in the brand's ledger, every source (ours + otherFactoryUnits), every campaign, each once."
+                  },
+                  "ourUnits": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "LEDGER-OTHER-FACTORY-1107: OUR Units; costPerUnitUsd and productionCostUsd divide these."
+                  },
+                  "otherFactoryUnits": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "total": {
+                        "type": "integer"
+                      },
+                      "anotherFactory": {
+                        "type": "integer",
+                        "description": "Reached by the client's CRM, team or site, or before our first touch."
+                      },
+                      "noProof": {
+                        "type": "integer",
+                        "description": "No proof our outreach caused it."
+                      }
+                    },
+                    "required": [
+                      "total",
+                      "anotherFactory",
+                      "noProof"
+                    ],
+                    "description": "LEDGER-OTHER-FACTORY-1107 (owner 2026-11-07, « INDEPENDAMMENT DES SOURCES »): the Units of the outcome another factory produced (runs-service `producedElsewhere`). They are IN the count (total = ours + these) and in NO money figure: $ each, cost, value and return divide OUR Units only (IAS 2)."
+                  },
+                  "unitsUnavailableReason": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "outcome_not_declared_in_ledger",
+                      "no_producer_declares_outcome",
+                      null
+                    ]
+                  },
+                  "producerGap": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "declaredElsewhereBy": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "The services that declare this outcome for other scopes (empty = no service declares it anywhere)."
+                      },
+                      "undeclaredConsumptions": {
+                        "type": "number",
+                        "description": "Occurrences the scope consumed that no run declared producing."
+                      }
+                    },
+                    "required": [
+                      "declaredElsewhereBy",
+                      "undeclaredConsumptions"
+                    ],
+                    "description": "Who must declare the outcome in the ledger (runs-service), when the ledger lacks it."
+                  },
+                  "costPerUnitUsd": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "$ each over OUR Units: the ledger's every-path unit cost, else its own production cost per Unit (costPerUnitBasis). Null `no_unit_of_ours_yet` when only another factory made it."
+                  },
+                  "costPerUnitBasis": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "every_path",
+                      "own_production",
+                      null
+                    ]
+                  },
+                  "costPerUnitUnavailableReason": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "productionCostUsd": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "ourUnits × costPerUnitUsd."
+                  },
+                  "past": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "date": {
+                          "type": "string"
+                        },
+                        "units": {
+                          "type": "number"
+                        },
+                        "cumulativeUnits": {
+                          "type": "number"
+                        },
+                        "ourUnits": {
+                          "type": "number"
+                        },
+                        "cumulativeOurUnits": {
+                          "type": "number"
+                        },
+                        "otherFactoryUnits": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "date",
+                        "units",
+                        "cumulativeUnits",
+                        "ourUnits",
+                        "cumulativeOurUnits",
+                        "otherFactoryUnits"
+                      ]
+                    },
+                    "description": "One point per UTC day from the first Unit to today: units = total, ourUnits + otherFactoryUnits its two parts."
+                  },
+                  "ledgerDaysMissing": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "outcomeKey",
+                  "label",
+                  "lifecycleRung",
+                  "outcomeKeys",
+                  "units",
+                  "ourUnits",
+                  "otherFactoryUnits",
+                  "unitsUnavailableReason",
+                  "producerGap",
+                  "costPerUnitUsd",
+                  "costPerUnitBasis",
+                  "costPerUnitUnavailableReason",
+                  "productionCostUsd",
+                  "past",
+                  "ledgerDaysMissing"
+                ]
+              },
+              "description": "LEDGER-ONLY-1107 (owner 2026-11-07, « ON VEUT LE TOTAL ET LES STATS PAR OUTCOME »): ONE row per outcome the brand's ledger names (produced, or consumed with no declared producer), its total Units, $ each and count over time. Null = ledger unreadable."
+            },
+            "brandOutcomesUnavailableReason": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "ledger_unreadable",
+                null
+              ]
             }
           },
           "required": [
@@ -14469,7 +15020,10 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "pricing",
             "costBasis",
             "computedAt",
-            "targets"
+            "targets",
+            "offerTargets",
+            "brandOutcomes",
+            "brandOutcomesUnavailableReason"
           ]
         }
       }
@@ -14561,6 +15115,545 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "not_on_ledger_yet",
                       null
                     ]
+                  },
+                  "kind": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "The producer's kind (`post`, `quote`); a `repost` never lists (see `repostsExcluded`)."
+                  },
+                  "visitsUnavailableReason": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "no_visit_attribution_on_outcome",
+                      "not_on_ledger_yet",
+                      null
+                    ]
+                  },
+                  "engagementBreakdown": {
+                    "type": "object",
+                    "properties": {
+                      "likes": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "replies": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "Comments."
+                      },
+                      "reposts": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "quotes": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "shares": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "bookmarks": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "clicks": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "Link clicks the platform reports (none does today: null)."
+                      }
+                    },
+                    "required": [
+                      "likes",
+                      "replies",
+                      "reposts",
+                      "quotes",
+                      "shares",
+                      "bookmarks",
+                      "clicks"
+                    ],
+                    "description": "SOCIAL-OUTCOMES-1107: each engagement kind the platform reports (null = not reported); the kinds reported sum to `engagements`."
+                  },
+                  "viewsUnavailableReason": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "views_not_reported",
+                      null
+                    ],
+                    "description": "The platform gives no views: absent, or 0 beside an engagement (nobody engages unseen), then `views` is null."
+                  },
+                  "metricsWarning": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "engagements_exceed_views",
+                      null
+                    ],
+                    "description": "The platform reports more interactions than (non-zero) views: one of the two is not measured."
+                  },
+                  "valuePerUnitUsd": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "EXPECTED NET value of one Unit (OUTCOME-ACCOUNTING-1107): V(s) = max(0, y x V(next) - c) backward from Paid client on the offer's lifetime revenue."
+                  },
+                  "valueUsd": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "units x valuePerUnitUsd (expected)."
+                  },
+                  "value": {
+                    "type": "object",
+                    "properties": {
+                      "valuePerUnitUsd": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "step": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "offerId": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "The offer of the campaign that produced the Unit; null = none (valued on the fleet median lifetime revenue)."
+                      },
+                      "lifetimeRevenueSource": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          "offer_stated",
+                          "fleet_median",
+                          null
+                        ]
+                      },
+                      "unavailableReason": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    },
+                    "required": [
+                      "valuePerUnitUsd",
+                      "step",
+                      "offerId",
+                      "lifetimeRevenueSource",
+                      "unavailableReason"
+                    ]
+                  },
+                  "measuredReturn": {
+                    "type": "object",
+                    "properties": {
+                      "roiMultiple": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "valueUsd": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "spentUsd": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "learning": {
+                        "type": "boolean",
+                        "description": "Fewer Units than the maturity bar (10): show `expectedReturn` instead."
+                      },
+                      "unavailableReason": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "`no_unit_yet`, `unit_has_no_value`, `nothing_spent_yet`."
+                      }
+                    },
+                    "required": [
+                      "roiMultiple",
+                      "valueUsd",
+                      "spentUsd",
+                      "learning",
+                      "unavailableReason"
+                    ],
+                    "description": "A Unit row is no campaign Target: null with `return_only_at_campaign_target` (OUTCOME-ACCOUNTING-1107)."
+                  },
+                  "accounting": {
+                    "allOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "outcomeKey": {
+                            "type": "string"
+                          },
+                          "step": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "The Plan step the outcome is priced and valued on."
+                          },
+                          "performedBy": {
+                            "type": "string",
+                            "enum": [
+                              "ours"
+                            ],
+                            "description": "Only Units performed by Ours enter these figures; the client's team Units are counted apart (cost $0 to us)."
+                          },
+                          "costPerUnit": {
+                            "type": "object",
+                            "properties": {
+                              "actualUsd": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "ACTUAL: ledger cost of our runs that made the Units (own production + materials consumed at their standard cost) / our Units."
+                              },
+                              "actualUnits": {
+                                "type": "number"
+                              },
+                              "actualSpentUsd": {
+                                "type": "number"
+                              },
+                              "actualBasis": {
+                                "type": "string",
+                                "enum": [
+                                  "ledger_full_absorption"
+                                ]
+                              },
+                              "actualUnavailableReason": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "no_unit_of_ours_yet | no_unit_yet | units_declared_outside_these_campaigns (the brand's ledger holds Units of the outcome, but every one was declared on a run outside the campaigns making it, e.g. lead-service's own campaign-less recording run) | units_not_proven_ours (every Unit of the brand's ledger was made by another factory, the client's CRM / team / site, or carries no proof of ours) | not_on_ledger_yet | not_made_by_our_campaigns | spend_unreadable."
+                              },
+                              "expectedUsd": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "EXPECTED: the Plan's cost of one more Unit on the route it prices (c / y of the Engine making it); on a published outcome no route leg prices, the cost per Unit to date over the Units carrying a declared cost (own_spend)."
+                              },
+                              "expectedBasis": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "expectedSource": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "expectedUnavailableReason": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "leg_cost_unavailable | outcome_not_on_route | start_step_not_priced_on_route (the step the route leaves from, e.g. Lead found: no leg of the route makes it)."
+                              },
+                              "variance": {
+                                "type": "object",
+                                "properties": {
+                                  "usd": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "actual - expected (positive = adverse)."
+                                  },
+                                  "pct": {
+                                    "type": "number",
+                                    "nullable": true
+                                  },
+                                  "yieldUsd": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "Yield variance: c_std / y_measured - c_std / y_std, on the yield INTO the outcome."
+                                  },
+                                  "mixUsd": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "Mix variance: (c_actual - c_std) / y_measured; yieldUsd + mixUsd = usd."
+                                  },
+                                  "splitUnavailableReason": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "entry_leg_has_no_yield | attempts_not_on_ledger | previous_milestone_not_counted_for_offer | yield_into_outcome_zero_or_unknown | outcome_not_on_route."
+                                  },
+                                  "unavailableReason": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "usd",
+                                  "pct",
+                                  "yieldUsd",
+                                  "mixUsd",
+                                  "splitUnavailableReason",
+                                  "unavailableReason"
+                                ],
+                                "description": "Framework §12: actual against standard cost, split into mix and yield."
+                              }
+                            },
+                            "required": [
+                              "actualUsd",
+                              "actualUnits",
+                              "actualSpentUsd",
+                              "actualBasis",
+                              "actualUnavailableReason",
+                              "expectedUsd",
+                              "expectedBasis",
+                              "expectedSource",
+                              "expectedUnavailableReason",
+                              "variance"
+                            ]
+                          },
+                          "costFromStart": {
+                            "type": "object",
+                            "properties": {
+                              "actualUsd": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "ACTUAL: a lead outcome = the offer's whole spend / its outcomes (full absorption); a published outcome made from Start = its actual cost per Unit."
+                              },
+                              "actualUnavailableReason": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "expectedUsd": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "EXPECTED: C(to) = (C(from) + c) / y along the route (framework §10)."
+                              },
+                              "expectedUnavailableReason": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "rolledYieldPct": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "Product of the yields from rolledYieldFromStep to the outcome, in %."
+                              },
+                              "rolledYieldFromStep": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "route": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "The route's steps up to the outcome."
+                              }
+                            },
+                            "required": [
+                              "actualUsd",
+                              "actualUnavailableReason",
+                              "expectedUsd",
+                              "expectedUnavailableReason",
+                              "rolledYieldPct",
+                              "rolledYieldFromStep",
+                              "route"
+                            ]
+                          },
+                          "yieldToNext": {
+                            "type": "object",
+                            "properties": {
+                              "nextStep": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "measuredPct": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "MEASURED: next-milestone Units credited to our Units / effective trials (an open decision counts for the elapsed share of the next leg's maturity window)."
+                              },
+                              "measuredNextUnits": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "measuredTrials": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "measuredUnavailableReason": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "no_visit_attribution_on_outcome | next_milestone_not_tracked_for_outcome | next_milestone_not_counted_for_offer | no_unit_of_ours_yet | every_decision_still_open | final_milestone."
+                              },
+                              "expectedPct": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "EXPECTED (Supplier rating belief): (measured successes + prior x 200) / (measured trials + 200), prior = the route's rate."
+                              },
+                              "priorPct": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "priorBasis": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "expectedUnavailableReason": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "censoringWindowDays": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "nextStep",
+                              "measuredPct",
+                              "measuredNextUnits",
+                              "measuredTrials",
+                              "measuredUnavailableReason",
+                              "expectedPct",
+                              "priorPct",
+                              "priorBasis",
+                              "expectedUnavailableReason",
+                              "censoringWindowDays"
+                            ]
+                          },
+                          "value": {
+                            "type": "object",
+                            "properties": {
+                              "expectedNetPerUnitUsd": {
+                                "type": "number",
+                                "nullable": true,
+                                "description": "EXPECTED only, NET: V(paid client) = lifetime revenue, V(s) = max(0, y x V(next) - c). No measured value below a Target."
+                              },
+                              "basis": {
+                                "type": "string",
+                                "enum": [
+                                  "expected_net"
+                                ]
+                              },
+                              "lifetimeRevenueUsd": {
+                                "type": "number",
+                                "nullable": true
+                              },
+                              "lifetimeRevenueSource": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "unavailableReason": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "expectedNetPerUnitUsd",
+                              "basis",
+                              "lifetimeRevenueUsd",
+                              "lifetimeRevenueSource",
+                              "unavailableReason"
+                            ]
+                          },
+                          "returns": {
+                            "type": "object",
+                            "properties": {
+                              "isCampaignTarget": {
+                                "type": "boolean"
+                              },
+                              "targetCampaignIds": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "measured": {
+                                "type": "object",
+                                "properties": {
+                                  "roiMultiple": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "Target Units those campaigns made from their own inputs x the Target value / their spend."
+                                  },
+                                  "targetUnits": {
+                                    "type": "number",
+                                    "nullable": true
+                                  },
+                                  "valueUsd": {
+                                    "type": "number",
+                                    "nullable": true
+                                  },
+                                  "spentUsd": {
+                                    "type": "number",
+                                    "nullable": true
+                                  },
+                                  "learning": {
+                                    "type": "boolean"
+                                  },
+                                  "unavailableReason": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "roiMultiple",
+                                  "targetUnits",
+                                  "valueUsd",
+                                  "spentUsd",
+                                  "learning",
+                                  "unavailableReason"
+                                ]
+                              },
+                              "expected": {
+                                "type": "object",
+                                "properties": {
+                                  "roiMultiple": {
+                                    "type": "number",
+                                    "nullable": true,
+                                    "description": "Target value / expected cost from Start."
+                                  },
+                                  "valuePerUnitUsd": {
+                                    "type": "number",
+                                    "nullable": true
+                                  },
+                                  "costFromStartUsd": {
+                                    "type": "number",
+                                    "nullable": true
+                                  },
+                                  "unavailableReason": {
+                                    "type": "string",
+                                    "nullable": true
+                                  }
+                                },
+                                "required": [
+                                  "roiMultiple",
+                                  "valuePerUnitUsd",
+                                  "costFromStartUsd",
+                                  "unavailableReason"
+                                ]
+                              },
+                              "unavailableReason": {
+                                "type": "string",
+                                "nullable": true,
+                                "description": "outcome_is_no_campaign_target | return_only_at_campaign_target: a return exists only at a campaign's Target."
+                              }
+                            },
+                            "required": [
+                              "isCampaignTarget",
+                              "targetCampaignIds",
+                              "measured",
+                              "expected",
+                              "unavailableReason"
+                            ],
+                            "description": "Only at a campaign's Target (framework §12); otherwise every figure null with the reason."
+                          }
+                        },
+                        "required": [
+                          "outcomeKey",
+                          "step",
+                          "performedBy",
+                          "costPerUnit",
+                          "costFromStart",
+                          "yieldToNext",
+                          "value",
+                          "returns"
+                        ],
+                        "description": "OUTCOME-ACCOUNTING-1107: the GTM Factory cost-accounting report of one outcome (cost per Unit, cost from Start, yield to the next milestone, net value, return at a Target), actual beside expected."
+                      },
+                      {
+                        "nullable": true,
+                        "description": "OUTCOME-ACCOUNTING-1107: this Unit's report; null on a client-team row."
+                      }
+                    ]
+                  },
+                  "accountingUnavailableReason": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "performed_by_client_team",
+                      null
+                    ]
                   }
                 },
                 "required": [
@@ -14576,7 +15669,17 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "spentUsd",
                   "visits",
                   "signups",
-                  "ledgerUnavailableReason"
+                  "ledgerUnavailableReason",
+                  "visitsUnavailableReason",
+                  "engagementBreakdown",
+                  "viewsUnavailableReason",
+                  "metricsWarning",
+                  "valuePerUnitUsd",
+                  "valueUsd",
+                  "value",
+                  "measuredReturn",
+                  "accounting",
+                  "accountingUnavailableReason"
                 ]
               }
             },
@@ -14606,6 +15709,66 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     },
                     "spentUsd": {
                       "type": "number"
+                    },
+                    "viewsReportedRows": {
+                      "type": "number",
+                      "description": "Rows whose platform reports views; `views` sums those only."
+                    },
+                    "engagementBreakdown": {
+                      "type": "object",
+                      "properties": {
+                        "likes": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "replies": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Comments."
+                        },
+                        "reposts": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "quotes": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "shares": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "bookmarks": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "clicks": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Link clicks the platform reports (none does today: null)."
+                        }
+                      },
+                      "required": [
+                        "likes",
+                        "replies",
+                        "reposts",
+                        "quotes",
+                        "shares",
+                        "bookmarks",
+                        "clicks"
+                      ],
+                      "description": "SOCIAL-OUTCOMES-1107: each engagement kind the platform reports (null = not reported); the kinds reported sum to `engagements`."
+                    },
+                    "rowsEngagementsAboveViews": {
+                      "type": "number",
+                      "description": "Rows flagged `engagements_exceed_views`."
+                    },
+                    "valueUsd": {
+                      "type": "number",
+                      "description": "Σ rows' units x NET expected value per Unit (OUTCOME-ACCOUNTING-1107: expected, never a measured value); rows with no value counted in `unvaluedRows`."
+                    },
+                    "unvaluedRows": {
+                      "type": "number"
                     }
                   },
                   "required": [
@@ -14615,7 +15778,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "engagements",
                     "visits",
                     "signups",
-                    "spentUsd"
+                    "spentUsd",
+                    "viewsReportedRows",
+                    "engagementBreakdown",
+                    "rowsEngagementsAboveViews",
+                    "valueUsd",
+                    "unvaluedRows"
                   ]
                 },
                 "ours": {
@@ -14641,6 +15809,66 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     },
                     "spentUsd": {
                       "type": "number"
+                    },
+                    "viewsReportedRows": {
+                      "type": "number",
+                      "description": "Rows whose platform reports views; `views` sums those only."
+                    },
+                    "engagementBreakdown": {
+                      "type": "object",
+                      "properties": {
+                        "likes": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "replies": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Comments."
+                        },
+                        "reposts": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "quotes": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "shares": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "bookmarks": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "clicks": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Link clicks the platform reports (none does today: null)."
+                        }
+                      },
+                      "required": [
+                        "likes",
+                        "replies",
+                        "reposts",
+                        "quotes",
+                        "shares",
+                        "bookmarks",
+                        "clicks"
+                      ],
+                      "description": "SOCIAL-OUTCOMES-1107: each engagement kind the platform reports (null = not reported); the kinds reported sum to `engagements`."
+                    },
+                    "rowsEngagementsAboveViews": {
+                      "type": "number",
+                      "description": "Rows flagged `engagements_exceed_views`."
+                    },
+                    "valueUsd": {
+                      "type": "number",
+                      "description": "Σ rows' units x NET expected value per Unit (OUTCOME-ACCOUNTING-1107: expected, never a measured value); rows with no value counted in `unvaluedRows`."
+                    },
+                    "unvaluedRows": {
+                      "type": "number"
                     }
                   },
                   "required": [
@@ -14650,18 +15878,135 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "engagements",
                     "visits",
                     "signups",
-                    "spentUsd"
+                    "spentUsd",
+                    "viewsReportedRows",
+                    "engagementBreakdown",
+                    "rowsEngagementsAboveViews",
+                    "valueUsd",
+                    "unvaluedRows"
                   ]
+                },
+                "clientTeam": {
+                  "type": "object",
+                  "properties": {
+                    "rows": {
+                      "type": "number"
+                    },
+                    "units": {
+                      "type": "number"
+                    },
+                    "views": {
+                      "type": "number"
+                    },
+                    "engagements": {
+                      "type": "number"
+                    },
+                    "visits": {
+                      "type": "number"
+                    },
+                    "signups": {
+                      "type": "number"
+                    },
+                    "spentUsd": {
+                      "type": "number"
+                    },
+                    "viewsReportedRows": {
+                      "type": "number",
+                      "description": "Rows whose platform reports views; `views` sums those only."
+                    },
+                    "engagementBreakdown": {
+                      "type": "object",
+                      "properties": {
+                        "likes": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "replies": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Comments."
+                        },
+                        "reposts": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "quotes": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "shares": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "bookmarks": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "clicks": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Link clicks the platform reports (none does today: null)."
+                        }
+                      },
+                      "required": [
+                        "likes",
+                        "replies",
+                        "reposts",
+                        "quotes",
+                        "shares",
+                        "bookmarks",
+                        "clicks"
+                      ],
+                      "description": "SOCIAL-OUTCOMES-1107: each engagement kind the platform reports (null = not reported); the kinds reported sum to `engagements`."
+                    },
+                    "rowsEngagementsAboveViews": {
+                      "type": "number",
+                      "description": "Rows flagged `engagements_exceed_views`."
+                    },
+                    "valueUsd": {
+                      "type": "number",
+                      "description": "Σ rows' units x NET expected value per Unit (OUTCOME-ACCOUNTING-1107: expected, never a measured value); rows with no value counted in `unvaluedRows`."
+                    },
+                    "unvaluedRows": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "rows",
+                    "units",
+                    "views",
+                    "engagements",
+                    "visits",
+                    "signups",
+                    "spentUsd",
+                    "viewsReportedRows",
+                    "engagementBreakdown",
+                    "rowsEngagementsAboveViews",
+                    "valueUsd",
+                    "unvaluedRows"
+                  ],
+                  "description": "The client's own Units (hand posts imported): counted apart, in none of our figures."
                 }
               },
               "required": [
                 "all",
-                "ours"
+                "ours",
+                "clientTeam"
               ]
             },
             "costPerSignupUsd": {
               "type": "number",
               "nullable": true
+            },
+            "costPerSignupUnavailableReason": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "no_visit_attribution_on_outcome",
+                "no_signup_yet",
+                "nothing_spent_yet",
+                null
+              ]
             },
             "learning": {
               "type": "boolean"
@@ -14691,6 +16036,97 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   },
                   "spentUsd": {
                     "type": "number"
+                  },
+                  "engagements": {
+                    "type": "number"
+                  },
+                  "engagementBreakdown": {
+                    "type": "object",
+                    "properties": {
+                      "likes": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "replies": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "Comments."
+                      },
+                      "reposts": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "quotes": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "shares": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "bookmarks": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "clicks": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "Link clicks the platform reports (none does today: null)."
+                      }
+                    },
+                    "required": [
+                      "likes",
+                      "replies",
+                      "reposts",
+                      "quotes",
+                      "shares",
+                      "bookmarks",
+                      "clicks"
+                    ],
+                    "description": "SOCIAL-OUTCOMES-1107: each engagement kind the platform reports (null = not reported); the kinds reported sum to `engagements`."
+                  },
+                  "valueUsd": {
+                    "type": "number"
+                  },
+                  "oursSpentUsd": {
+                    "type": "number"
+                  },
+                  "oursValueUsd": {
+                    "type": "number"
+                  },
+                  "measuredReturn": {
+                    "type": "object",
+                    "properties": {
+                      "roiMultiple": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "valueUsd": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "spentUsd": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "learning": {
+                        "type": "boolean",
+                        "description": "Fewer Units than the maturity bar (10): show `expectedReturn` instead."
+                      },
+                      "unavailableReason": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "`no_unit_yet`, `unit_has_no_value`, `nothing_spent_yet`."
+                      }
+                    },
+                    "required": [
+                      "roiMultiple",
+                      "valueUsd",
+                      "spentUsd",
+                      "learning",
+                      "unavailableReason"
+                    ],
+                    "description": "MEASURED return (the campaign Target rule): Units x their value / money actually spent."
                   }
                 },
                 "required": [
@@ -14700,9 +16136,485 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "views",
                   "visits",
                   "signups",
-                  "spentUsd"
+                  "spentUsd",
+                  "engagements",
+                  "engagementBreakdown",
+                  "valueUsd",
+                  "oursSpentUsd",
+                  "oursValueUsd",
+                  "measuredReturn"
                 ]
               }
+            },
+            "repostsExcluded": {
+              "type": "object",
+              "properties": {
+                "rows": {
+                  "type": "number"
+                },
+                "engagements": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "rows",
+                "engagements"
+              ],
+              "description": "Reposts of someone else's post (X retweet, LinkedIn plain reshare: producer `kind: repost`), left out of every row and total; their engagements are the original post's."
+            },
+            "visitsMeasured": {
+              "type": "boolean",
+              "description": "False = the org's ledger never credited a website visit to a Unit of this outcome: visits/signups null, never 0."
+            },
+            "visitsUnavailableReason": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "no_visit_attribution_on_outcome",
+                null
+              ]
+            },
+            "measuredReturn": {
+              "type": "object",
+              "properties": {
+                "roiMultiple": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "valueUsd": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "spentUsd": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "learning": {
+                  "type": "boolean",
+                  "description": "Fewer Units than the maturity bar (10): show `expectedReturn` instead."
+                },
+                "unavailableReason": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "`no_unit_yet`, `unit_has_no_value`, `nothing_spent_yet`."
+                }
+              },
+              "required": [
+                "roiMultiple",
+                "valueUsd",
+                "spentUsd",
+                "learning",
+                "unavailableReason"
+              ],
+              "description": "RE-BASED (OUTCOME-ACCOUNTING-1107): `accounting.returns.measured` when the outcome is a campaign's Target, else null with `outcome_is_no_campaign_target`."
+            },
+            "expectedReturn": {
+              "type": "object",
+              "properties": {
+                "roiMultiple": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "valuePerUnitUsd": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "costPerUnitUsd": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "costSource": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "basis": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Weakest input: measured < stated < fleet < default."
+                },
+                "pipeId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "unavailableReason": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "roiMultiple",
+                "valuePerUnitUsd",
+                "costPerUnitUsd",
+                "costSource",
+                "basis",
+                "pipeId",
+                "unavailableReason"
+              ],
+              "description": "RE-BASED (OUTCOME-ACCOUNTING-1107): only at a campaign's Target, the Target value / the expected cost from Start (`costPerUnitUsd` holds that cost); else null with `outcome_is_no_campaign_target`."
+            },
+            "accounting": {
+              "type": "object",
+              "properties": {
+                "outcomeKey": {
+                  "type": "string"
+                },
+                "step": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "The Plan step the outcome is priced and valued on."
+                },
+                "performedBy": {
+                  "type": "string",
+                  "enum": [
+                    "ours"
+                  ],
+                  "description": "Only Units performed by Ours enter these figures; the client's team Units are counted apart (cost $0 to us)."
+                },
+                "costPerUnit": {
+                  "type": "object",
+                  "properties": {
+                    "actualUsd": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "ACTUAL: ledger cost of our runs that made the Units (own production + materials consumed at their standard cost) / our Units."
+                    },
+                    "actualUnits": {
+                      "type": "number"
+                    },
+                    "actualSpentUsd": {
+                      "type": "number"
+                    },
+                    "actualBasis": {
+                      "type": "string",
+                      "enum": [
+                        "ledger_full_absorption"
+                      ]
+                    },
+                    "actualUnavailableReason": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "no_unit_of_ours_yet | no_unit_yet | units_declared_outside_these_campaigns (the brand's ledger holds Units of the outcome, but every one was declared on a run outside the campaigns making it, e.g. lead-service's own campaign-less recording run) | units_not_proven_ours (every Unit of the brand's ledger was made by another factory, the client's CRM / team / site, or carries no proof of ours) | not_on_ledger_yet | not_made_by_our_campaigns | spend_unreadable."
+                    },
+                    "expectedUsd": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "EXPECTED: the Plan's cost of one more Unit on the route it prices (c / y of the Engine making it); on a published outcome no route leg prices, the cost per Unit to date over the Units carrying a declared cost (own_spend)."
+                    },
+                    "expectedBasis": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "expectedSource": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "expectedUnavailableReason": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "leg_cost_unavailable | outcome_not_on_route | start_step_not_priced_on_route (the step the route leaves from, e.g. Lead found: no leg of the route makes it)."
+                    },
+                    "variance": {
+                      "type": "object",
+                      "properties": {
+                        "usd": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "actual - expected (positive = adverse)."
+                        },
+                        "pct": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "yieldUsd": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Yield variance: c_std / y_measured - c_std / y_std, on the yield INTO the outcome."
+                        },
+                        "mixUsd": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Mix variance: (c_actual - c_std) / y_measured; yieldUsd + mixUsd = usd."
+                        },
+                        "splitUnavailableReason": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "entry_leg_has_no_yield | attempts_not_on_ledger | previous_milestone_not_counted_for_offer | yield_into_outcome_zero_or_unknown | outcome_not_on_route."
+                        },
+                        "unavailableReason": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "usd",
+                        "pct",
+                        "yieldUsd",
+                        "mixUsd",
+                        "splitUnavailableReason",
+                        "unavailableReason"
+                      ],
+                      "description": "Framework §12: actual against standard cost, split into mix and yield."
+                    }
+                  },
+                  "required": [
+                    "actualUsd",
+                    "actualUnits",
+                    "actualSpentUsd",
+                    "actualBasis",
+                    "actualUnavailableReason",
+                    "expectedUsd",
+                    "expectedBasis",
+                    "expectedSource",
+                    "expectedUnavailableReason",
+                    "variance"
+                  ]
+                },
+                "costFromStart": {
+                  "type": "object",
+                  "properties": {
+                    "actualUsd": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "ACTUAL: a lead outcome = the offer's whole spend / its outcomes (full absorption); a published outcome made from Start = its actual cost per Unit."
+                    },
+                    "actualUnavailableReason": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "expectedUsd": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "EXPECTED: C(to) = (C(from) + c) / y along the route (framework §10)."
+                    },
+                    "expectedUnavailableReason": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "rolledYieldPct": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "Product of the yields from rolledYieldFromStep to the outcome, in %."
+                    },
+                    "rolledYieldFromStep": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "route": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "The route's steps up to the outcome."
+                    }
+                  },
+                  "required": [
+                    "actualUsd",
+                    "actualUnavailableReason",
+                    "expectedUsd",
+                    "expectedUnavailableReason",
+                    "rolledYieldPct",
+                    "rolledYieldFromStep",
+                    "route"
+                  ]
+                },
+                "yieldToNext": {
+                  "type": "object",
+                  "properties": {
+                    "nextStep": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "measuredPct": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "MEASURED: next-milestone Units credited to our Units / effective trials (an open decision counts for the elapsed share of the next leg's maturity window)."
+                    },
+                    "measuredNextUnits": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "measuredTrials": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "measuredUnavailableReason": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "no_visit_attribution_on_outcome | next_milestone_not_tracked_for_outcome | next_milestone_not_counted_for_offer | no_unit_of_ours_yet | every_decision_still_open | final_milestone."
+                    },
+                    "expectedPct": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "EXPECTED (Supplier rating belief): (measured successes + prior x 200) / (measured trials + 200), prior = the route's rate."
+                    },
+                    "priorPct": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "priorBasis": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "expectedUnavailableReason": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "censoringWindowDays": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "nextStep",
+                    "measuredPct",
+                    "measuredNextUnits",
+                    "measuredTrials",
+                    "measuredUnavailableReason",
+                    "expectedPct",
+                    "priorPct",
+                    "priorBasis",
+                    "expectedUnavailableReason",
+                    "censoringWindowDays"
+                  ]
+                },
+                "value": {
+                  "type": "object",
+                  "properties": {
+                    "expectedNetPerUnitUsd": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "EXPECTED only, NET: V(paid client) = lifetime revenue, V(s) = max(0, y x V(next) - c). No measured value below a Target."
+                    },
+                    "basis": {
+                      "type": "string",
+                      "enum": [
+                        "expected_net"
+                      ]
+                    },
+                    "lifetimeRevenueUsd": {
+                      "type": "number",
+                      "nullable": true
+                    },
+                    "lifetimeRevenueSource": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "unavailableReason": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "expectedNetPerUnitUsd",
+                    "basis",
+                    "lifetimeRevenueUsd",
+                    "lifetimeRevenueSource",
+                    "unavailableReason"
+                  ]
+                },
+                "returns": {
+                  "type": "object",
+                  "properties": {
+                    "isCampaignTarget": {
+                      "type": "boolean"
+                    },
+                    "targetCampaignIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "measured": {
+                      "type": "object",
+                      "properties": {
+                        "roiMultiple": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Target Units those campaigns made from their own inputs x the Target value / their spend."
+                        },
+                        "targetUnits": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "valueUsd": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "spentUsd": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "learning": {
+                          "type": "boolean"
+                        },
+                        "unavailableReason": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "roiMultiple",
+                        "targetUnits",
+                        "valueUsd",
+                        "spentUsd",
+                        "learning",
+                        "unavailableReason"
+                      ]
+                    },
+                    "expected": {
+                      "type": "object",
+                      "properties": {
+                        "roiMultiple": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Target value / expected cost from Start."
+                        },
+                        "valuePerUnitUsd": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "costFromStartUsd": {
+                          "type": "number",
+                          "nullable": true
+                        },
+                        "unavailableReason": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "roiMultiple",
+                        "valuePerUnitUsd",
+                        "costFromStartUsd",
+                        "unavailableReason"
+                      ]
+                    },
+                    "unavailableReason": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "outcome_is_no_campaign_target | return_only_at_campaign_target: a return exists only at a campaign's Target."
+                    }
+                  },
+                  "required": [
+                    "isCampaignTarget",
+                    "targetCampaignIds",
+                    "measured",
+                    "expected",
+                    "unavailableReason"
+                  ],
+                  "description": "Only at a campaign's Target (framework §12); otherwise every figure null with the reason."
+                }
+              },
+              "required": [
+                "outcomeKey",
+                "step",
+                "performedBy",
+                "costPerUnit",
+                "costFromStart",
+                "yieldToNext",
+                "value",
+                "returns"
+              ],
+              "description": "OUTCOME-ACCOUNTING-1107: the GTM Factory cost-accounting report of one outcome (cost per Unit, cost from Start, yield to the next milestone, net value, return at a Target), actual beside expected."
             }
           },
           "required": [
@@ -14713,8 +16625,15 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "rows",
             "totals",
             "costPerSignupUsd",
+            "costPerSignupUnavailableReason",
             "learning",
-            "daily"
+            "daily",
+            "repostsExcluded",
+            "visitsMeasured",
+            "visitsUnavailableReason",
+            "measuredReturn",
+            "expectedReturn",
+            "accounting"
           ]
         }
       }
@@ -15393,7 +17312,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                               "spentUsd",
                               "roiMultiple"
                             ],
-                            "description": "THE REALIZED RETURN (ROI-CONSISTENCY-1103): revenue of the Paid clients our outreach caused over every dollar actually spent, whole history. A return exists only where a value lands; the pipeline-based roiMultiple / %CAC / $CAC and their maturity pair are deleted. NULL when it cannot be measured on this read: no source of closed deals could be read, or the grain never computes it (lens, per-workflow, cross-org reads). Never a fabricated 0."
+                            "description": "LEDGER-ONLY-1107 on /offers/{offerId}/revenue and /brands/{brandId}/revenue: closedWonCount = the brand's ledger Paid client Units, closedWonRevenueUsd = those Units × the offer's lifetime revenue (null + realizedReturnUnavailableReason when the ledger lacks Paid client Units; channel and per-offer rows read the same brand ledger; campaign groups and campaign / workflow reads null `per_group_not_in_ledger` / `per_campaign_not_in_ledger` / `per_workflow_not_in_ledger`). THE REALIZED RETURN (ROI-CONSISTENCY-1103): revenue of the Paid clients our outreach caused over every dollar actually spent, whole history. A return exists only where a value lands; the pipeline-based roiMultiple / %CAC / $CAC and their maturity pair are deleted. NULL when it cannot be measured on this read: no source of closed deals could be read, or the grain never computes it (lens, per-workflow, cross-org reads). Never a fabricated 0."
+                          },
+                          "realizedReturnUnavailableReason": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "LEDGER-ONLY-1107: why realizedReturn is null (outcome_not_declared_in_ledger, no_producer_declares_outcome, ledger_unreadable, lifetime_revenue_not_stated, per_group_not_in_ledger, per_campaign_not_in_ledger, per_workflow_not_in_ledger)."
                           }
                         },
                         "required": [
@@ -16001,7 +17925,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "basis": {
               "type": "string",
               "enum": [
-                "people_since_inception"
+                "people_since_inception",
+                "ledger_units_since_inception"
               ],
               "description": "Every count is PEOPLE since inception (no window)."
             },
@@ -16146,18 +18071,22 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "properties": {
                       "found": {
                         "type": "integer",
+                        "nullable": true,
                         "description": "Leads the pipe holds (lead-service `total`)."
                       },
                       "contacted": {
                         "type": "integer",
+                        "nullable": true,
                         "description": "lead-service's contacted bucket for this unit."
                       },
                       "sent": {
                         "type": "integer",
+                        "nullable": true,
                         "description": "People at least one email was actually sent to."
                       },
                       "delivered": {
                         "type": "integer",
+                        "nullable": true,
                         "description": "People an email reached (sent, no bounce)."
                       },
                       "reachedToStep": {
@@ -16181,10 +18110,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "properties": {
                       "handed": {
                         "type": "integer",
+                        "nullable": true,
                         "description": "Distinct people handed to the pipe since inception."
                       },
                       "actedOn": {
                         "type": "integer",
+                        "nullable": true,
                         "description": "Distinct people it acted on (answered; on a call pipe, called)."
                       },
                       "reached": {
@@ -16208,14 +18139,17 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                             },
                             "handed": {
                               "type": "integer",
+                              "nullable": true,
                               "description": "People first handed to the pipe that day (e.g. positive replies given to the AI Meeting Booking worker)."
                             },
                             "actedOn": {
                               "type": "integer",
+                              "nullable": true,
                               "description": "People the pipe first acted on that day (an answer sent; on AI Instant Call, the call placed)."
                             },
                             "reached": {
                               "type": "integer",
+                              "nullable": true,
                               "description": "People reaching the pipe's own `toStep` that day (meeting booked; on a call step, the call placed: the act is the outcome)."
                             }
                           },
@@ -16232,10 +18166,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "type": "object",
                         "properties": {
                           "handed": {
-                            "type": "integer"
+                            "type": "integer",
+                            "nullable": true
                           },
                           "actedOn": {
-                            "type": "integer"
+                            "type": "integer",
+                            "nullable": true
                           },
                           "reached": {
                             "type": "integer"
@@ -16277,26 +18213,31 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "properties": {
                           "requested": {
                             "type": "integer",
+                            "nullable": true,
                             "description": "Every call row recorded (twillio-service), whether or not Twilio accepted it."
                           },
                           "placed": {
                             "type": "integer",
+                            "nullable": true,
                             "description": "Calls Twilio accepted and dialled (a call SID issued). The calls PLACED."
                           },
                           "accepted": {
                             "type": "integer",
+                            "nullable": true,
                             "description": "Calls the rep ANSWERED and took (pressed 1). Subset of placed."
                           },
                           "connected": {
                             "type": "integer",
+                            "nullable": true,
                             "description": "Calls bridged to the prospect (the rep's second keypress): the BOOKING CALLS OBTAINED. Subset of accepted."
                           },
                           "outcomes": {
                             "type": "object",
+                            "nullable": true,
                             "additionalProperties": {
                               "type": "integer"
                             },
-                            "description": "Each call in exactly one bucket, adding up to `requested` (twillio-service's own: connected, acceptedNotConnected, answeredNotAccepted, noAnswer, busy, failed, canceled, inProgress)."
+                            "description": "LEDGER-ONLY-1107-P2: null (call buckets are no ledger outcome). Each call in exactly one bucket, adding up to `requested` (twillio-service's own: connected, acceptedNotConnected, answeredNotAccepted, noAnswer, busy, failed, canceled, inProgress)."
                           },
                           "billedMinutes": {
                             "type": "number",
@@ -16330,26 +18271,31 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "properties": {
                             "requested": {
                               "type": "integer",
+                              "nullable": true,
                               "description": "Every call row recorded (twillio-service), whether or not Twilio accepted it."
                             },
                             "placed": {
                               "type": "integer",
+                              "nullable": true,
                               "description": "Calls Twilio accepted and dialled (a call SID issued). The calls PLACED."
                             },
                             "accepted": {
                               "type": "integer",
+                              "nullable": true,
                               "description": "Calls the rep ANSWERED and took (pressed 1). Subset of placed."
                             },
                             "connected": {
                               "type": "integer",
+                              "nullable": true,
                               "description": "Calls bridged to the prospect (the rep's second keypress): the BOOKING CALLS OBTAINED. Subset of accepted."
                             },
                             "outcomes": {
                               "type": "object",
+                              "nullable": true,
                               "additionalProperties": {
                                 "type": "integer"
                               },
-                              "description": "Each call in exactly one bucket, adding up to `requested` (twillio-service's own: connected, acceptedNotConnected, answeredNotAccepted, noAnswer, busy, failed, canceled, inProgress)."
+                              "description": "LEDGER-ONLY-1107-P2: null (call buckets are no ledger outcome). Each call in exactly one bucket, adding up to `requested` (twillio-service's own: connected, acceptedNotConnected, answeredNotAccepted, noAnswer, busy, failed, canceled, inProgress)."
                             },
                             "billedMinutes": {
                               "type": "number",
@@ -18434,12 +20380,50 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "maturityDays",
                     "learningOutcomesRequired"
                   ],
-                  "description": "The leg every outcome and conversion here is read on: the pipe's own; for a campaign, its first pipe that does more than find people; for an offer, the leg most of its campaigns lead with. Null when none."
+                  "description": "A PIPE's chart: its own leg, every outcome and conversion read on it. Null on a campaign / offer / brand chart, which reads `target` (SPEND-CHART-TARGET-1108)."
+                },
+                "target": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "step": {
+                      "type": "string",
+                      "description": "The Target outcome counted (catalogue step key)."
+                    },
+                    "fromStep": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "The step % to Target counts from: the first milestone of the campaign's own units chain (Lead found on a proactive funnel, the trigger step of a reactive one). Null = nobody enters before the Target (no conversion)."
+                    },
+                    "source": {
+                      "type": "string",
+                      "enum": [
+                        "campaign_target",
+                        "funnel_last_step"
+                      ],
+                      "description": "campaign_target: the campaign states it (campaign-service `target`); funnel_last_step: not stated, the last step of the funnel it runs. An offer / brand chart: the Target most of its live campaigns state (ties: the most recent campaign's)."
+                    },
+                    "maturityDays": {
+                      "type": "integer"
+                    },
+                    "learningOutcomesRequired": {
+                      "type": "integer",
+                      "description": "The Learning bar: Units of the Target needed."
+                    }
+                  },
+                  "required": [
+                    "step",
+                    "fromStep",
+                    "source",
+                    "maturityDays",
+                    "learningOutcomesRequired"
+                  ],
+                  "description": "SPEND-CHART-TARGET-1108 (owner 2026-11-08): a campaign / offer / brand chart counts the Target the client asked for, never a pipe's step. Null on a pipe chart."
                 },
                 "outcomeStep": {
                   "type": "string",
                   "nullable": true,
-                  "description": "The step counted as the outcome (the leg's TO step)."
+                  "description": "The step counted as the outcome: the Target on a campaign / offer / brand chart, the leg's TO step on a pipe chart."
                 },
                 "outcomeUnavailableReason": {
                   "type": "string",
@@ -18667,7 +20651,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "costPerOutcomeUsd": {
                       "type": "number",
                       "nullable": true,
-                      "description": "What one outcome of this leg is expected to cost (the scope's expected return model: the best mature workflow's price, else the fleet's, else the seeded default): the dotted line the measured cost converges to."
+                      "description": "What one outcome is expected to cost: on a pipe chart the leg's price on the scope's expected return model (best mature workflow, else the fleet's, else the seeded default); on a campaign / offer / brand chart one Target from the start of the model's priced route (C(to) = C(from) / rate + leg cost, the client's team at $0): the dotted line the measured cost converges to."
                     },
                     "costPerOutcomeBasis": {
                       "type": "string",
@@ -18681,7 +20665,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "conversionRatePct": {
                       "type": "number",
                       "nullable": true,
-                      "description": "The leg's expected conversion: an entry leg on the fleet's measured conversion (else the seeded entry default), a later leg on the brand's effective rate."
+                      "description": "Expected conversion. Pipe chart: an entry leg on the fleet's measured conversion (else the seeded entry default), a later leg on the brand's effective rate. Campaign / offer / brand chart: the product of the model route's leg rates from `target.fromStep` to the Target (its first leg on the fleet's measured conversion, else the seeded entry default)."
                     },
                     "conversionBasis": {
                       "type": "string",
@@ -18709,6 +20693,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
               },
               "required": [
                 "leg",
+                "target",
                 "outcomeStep",
                 "outcomeUnavailableReason",
                 "conversionUnavailableReason",
@@ -18761,12 +20746,50 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "maturityDays",
                       "learningOutcomesRequired"
                     ],
-                    "description": "The leg every outcome and conversion here is read on: the pipe's own; for a campaign, its first pipe that does more than find people; for an offer, the leg most of its campaigns lead with. Null when none."
+                    "description": "A PIPE's chart: its own leg, every outcome and conversion read on it. Null on a campaign / offer / brand chart, which reads `target` (SPEND-CHART-TARGET-1108)."
+                  },
+                  "target": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "step": {
+                        "type": "string",
+                        "description": "The Target outcome counted (catalogue step key)."
+                      },
+                      "fromStep": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "The step % to Target counts from: the first milestone of the campaign's own units chain (Lead found on a proactive funnel, the trigger step of a reactive one). Null = nobody enters before the Target (no conversion)."
+                      },
+                      "source": {
+                        "type": "string",
+                        "enum": [
+                          "campaign_target",
+                          "funnel_last_step"
+                        ],
+                        "description": "campaign_target: the campaign states it (campaign-service `target`); funnel_last_step: not stated, the last step of the funnel it runs. An offer / brand chart: the Target most of its live campaigns state (ties: the most recent campaign's)."
+                      },
+                      "maturityDays": {
+                        "type": "integer"
+                      },
+                      "learningOutcomesRequired": {
+                        "type": "integer",
+                        "description": "The Learning bar: Units of the Target needed."
+                      }
+                    },
+                    "required": [
+                      "step",
+                      "fromStep",
+                      "source",
+                      "maturityDays",
+                      "learningOutcomesRequired"
+                    ],
+                    "description": "SPEND-CHART-TARGET-1108 (owner 2026-11-08): a campaign / offer / brand chart counts the Target the client asked for, never a pipe's step. Null on a pipe chart."
                   },
                   "outcomeStep": {
                     "type": "string",
                     "nullable": true,
-                    "description": "The step counted as the outcome (the leg's TO step)."
+                    "description": "The step counted as the outcome: the Target on a campaign / offer / brand chart, the leg's TO step on a pipe chart."
                   },
                   "outcomeUnavailableReason": {
                     "type": "string",
@@ -18994,7 +21017,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "costPerOutcomeUsd": {
                         "type": "number",
                         "nullable": true,
-                        "description": "What one outcome of this leg is expected to cost (the scope's expected return model: the best mature workflow's price, else the fleet's, else the seeded default): the dotted line the measured cost converges to."
+                        "description": "What one outcome is expected to cost: on a pipe chart the leg's price on the scope's expected return model (best mature workflow, else the fleet's, else the seeded default); on a campaign / offer / brand chart one Target from the start of the model's priced route (C(to) = C(from) / rate + leg cost, the client's team at $0): the dotted line the measured cost converges to."
                       },
                       "costPerOutcomeBasis": {
                         "type": "string",
@@ -19008,7 +21031,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "conversionRatePct": {
                         "type": "number",
                         "nullable": true,
-                        "description": "The leg's expected conversion: an entry leg on the fleet's measured conversion (else the seeded entry default), a later leg on the brand's effective rate."
+                        "description": "Expected conversion. Pipe chart: an entry leg on the fleet's measured conversion (else the seeded entry default), a later leg on the brand's effective rate. Campaign / offer / brand chart: the product of the model route's leg rates from `target.fromStep` to the Target (its first leg on the fleet's measured conversion, else the seeded entry default)."
                       },
                       "conversionBasis": {
                         "type": "string",
@@ -19052,6 +21075,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 },
                 "required": [
                   "leg",
+                  "target",
                   "outcomeStep",
                   "outcomeUnavailableReason",
                   "conversionUnavailableReason",
@@ -22243,6 +24267,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "format": "uuid",
                         "description": "The client PROFILE (WHO, a cold audience the client keeps or pauses on the Targeting page) this source list was built for: a buying-signal list (hiring now, new in role, recently funded) or a competitor-post engagement list finds THAT profile's people, screened against the profile's text. Pausing or archiving the profile pauses its lists; resuming it resumes them (unless the source itself is off). null on a profile itself, on a whole-ICP list built before profiles had their own (retired once they do), and on every other audience. Show profiles = rows with null here and channels[0].list = apollo_search; sources = channels[0].list."
                       },
+                      "role": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          "target",
+                          "search",
+                          null
+                        ],
+                        "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
+                      },
                       "canonicalAudienceId": {
                         "type": "string",
                         "nullable": true,
@@ -22430,6 +24464,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "status",
                       "source",
                       "profileAudienceId",
+                      "role",
                       "canonicalAudienceId",
                       "filters",
                       "avatarUrl",
@@ -22638,6 +24673,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "format": "uuid",
                   "description": "The client PROFILE (WHO, a cold audience the client keeps or pauses on the Targeting page) this source list was built for: a buying-signal list (hiring now, new in role, recently funded) or a competitor-post engagement list finds THAT profile's people, screened against the profile's text. Pausing or archiving the profile pauses its lists; resuming it resumes them (unless the source itself is off). null on a profile itself, on a whole-ICP list built before profiles had their own (retired once they do), and on every other audience. Show profiles = rows with null here and channels[0].list = apollo_search; sources = channels[0].list."
                 },
+                "role": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "target",
+                    "search",
+                    null
+                  ],
+                  "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -22825,6 +24870,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "status",
                 "source",
                 "profileAudienceId",
+                "role",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -24911,7 +26957,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
               "type": "string",
               "enum": [
                 "mailbox",
-                "calendar"
+                "calendar",
+                "search_console"
               ]
             },
             "googleAccountId": {
@@ -25531,6 +27578,171 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "GET /v1/orgs/google/search-console/accounts": {
+    "service": "google-service",
+    "method": "GET",
+    "path": "/orgs/google/search-console/accounts",
+    "responses": {
+      "200": {
+        "description": "Connected accounts",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "accounts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "sync_failing",
+                      "reconnect_required"
+                    ]
+                  },
+                  "connectedAt": {
+                    "type": "string"
+                  },
+                  "lastSyncedAt": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "lastSyncError": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "properties": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "siteUrl": {
+                          "type": "string"
+                        },
+                        "permissionLevel": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "brandId": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "counting",
+                            "no_brand",
+                            "brand_ambiguous",
+                            "covered",
+                            "unverified",
+                            "not_listed",
+                            "disconnected"
+                          ]
+                        },
+                        "lastSyncedAt": {
+                          "nullable": true,
+                          "type": "string"
+                        },
+                        "lastSyncError": {
+                          "nullable": true,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "siteUrl",
+                        "permissionLevel",
+                        "brandId",
+                        "status",
+                        "lastSyncedAt",
+                        "lastSyncError"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "email",
+                  "status",
+                  "connectedAt",
+                  "lastSyncedAt",
+                  "lastSyncError",
+                  "properties"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "accounts"
+          ],
+          "additionalProperties": false
+        }
+      }
+    }
+  },
+  "GET /v1/orgs/google/search-console/clicks": {
+    "service": "google-service",
+    "method": "GET",
+    "path": "/orgs/google/search-console/clicks",
+    "responses": {
+      "200": {
+        "description": "Counted clicks",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "outcomeKey": {
+              "type": "string",
+              "enum": [
+                "google_search_click"
+              ]
+            },
+            "days": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "siteUrl": {
+                    "type": "string"
+                  },
+                  "brandId": {
+                    "nullable": true,
+                    "type": "string"
+                  },
+                  "date": {
+                    "type": "string"
+                  },
+                  "clicks": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "siteUrl",
+                  "brandId",
+                  "date",
+                  "clicks"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "totalClicks": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "outcomeKey",
+            "days",
+            "totalClicks"
+          ],
+          "additionalProperties": false
+        }
+      }
+    }
+  },
   "GET /v1/orgs/google/sync/{jobId}": {
     "service": "google-service",
     "method": "GET",
@@ -25783,11 +27995,21 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   },
                   "memberSub": {
                     "type": "string",
-                    "description": "LinkedIn's id of the member who logged in (OpenID `sub`)"
+                    "description": "LinkedIn's id of the member who logged in (OpenID `sub` for a profile; for a company page, the admin's person id from the page's admin list)"
+                  },
+                  "displayName": {
+                    "type": "string",
+                    "description": "What the card names the account by: the PAGE it reads (\"Distribute.you\" for a company page, the person for a profile); the page address until its first read names it"
+                  },
+                  "pageName": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "The page's own name as LinkedIn prints it, read from its posts (null before the first read)"
                   },
                   "name": {
                     "type": "string",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "The member who logged in (never the account's label: see displayName)"
                   },
                   "pictureUrl": {
                     "type": "string",
@@ -25878,6 +28100,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "id",
                   "brandId",
                   "memberSub",
+                  "displayName",
+                  "pageName",
                   "name",
                   "pictureUrl",
                   "profileUrl",
@@ -29642,9 +31866,10 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "form_submission",
                       "meeting_booked",
                       "meeting_attended",
-                      "sale"
+                      "sale",
+                      "client_satisfied"
                     ],
-                    "description": "lead-service's bucket tokens. website_visit / signup / form_submission (crm fact form_submitted) / meeting_booked / meeting_attended / sale (a CRM deal won, or a Stripe payment that succeeded and was not wholly refunded)."
+                    "description": "lead-service's bucket tokens. website_visit / signup / form_submission (crm fact form_submitted) / meeting_booked / meeting_attended / sale (a CRM deal won, or a Stripe payment that succeeded and was not wholly refunded), plus crm-service's own client_satisfied (« Client Satisfied »: a paying client of the brand (a deal won, a payment that stands, or the CRM's client label) wrote it a message, any channel, since becoming one, that Jev judged positive (P >= 0.75); our staff never counts; no lead-service bucket, contactedByUs is 0)."
                   },
                   "people": {
                     "type": "integer",
@@ -29735,7 +31960,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "undated"
                 ]
               },
-              "description": "Always all six steps, in funnel order, zeros included."
+              "description": "Always every step, in funnel order (client_satisfied last), zeros included."
             }
           },
           "required": [
@@ -29769,13 +31994,21 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "form_submission",
                 "meeting_booked",
                 "meeting_attended",
-                "sale"
+                "sale",
+                "client_satisfied"
               ],
-              "description": "lead-service's bucket tokens. website_visit / signup / form_submission (crm fact form_submitted) / meeting_booked / meeting_attended / sale (a CRM deal won, or a Stripe payment that succeeded and was not wholly refunded)."
+              "description": "lead-service's bucket tokens. website_visit / signup / form_submission (crm fact form_submitted) / meeting_booked / meeting_attended / sale (a CRM deal won, or a Stripe payment that succeeded and was not wholly refunded), plus crm-service's own client_satisfied (« Client Satisfied »: a paying client of the brand (a deal won, a payment that stands, or the CRM's client label) wrote it a message, any channel, since becoming one, that Jev judged positive (P >= 0.75); our staff never counts; no lead-service bucket, contactedByUs is 0)."
+            },
+            "contactedByUs": {
+              "type": "boolean",
+              "enum": [
+                true
+              ],
+              "description": "Present only when the list was narrowed to the people contacted by us."
             },
             "total": {
               "type": "integer",
-              "description": "Equals that step's `people` in GET /orgs/people/outcomes."
+              "description": "Equals that step's `people` in GET /orgs/people/outcomes (its `contactedByUs` when `contactedByUs=true` was asked)."
             },
             "limit": {
               "type": "integer"
@@ -29852,6 +32085,53 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "stateSource": {
                     "type": "string",
                     "nullable": true
+                  },
+                  "satisfiedBy": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "at": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "When the client wrote it."
+                        },
+                        "source": {
+                          "type": "string",
+                          "description": "Where it was written: gmail, matrix (WhatsApp / LinkedIn / Telegram...)."
+                        },
+                        "channel": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "excerpt": {
+                          "type": "string",
+                          "description": "The message's first 500 characters, as Jev judged it."
+                        },
+                        "pPositive": {
+                          "type": "number",
+                          "description": "Jev's probability that the message is positive about the brand (>= 0.75 counts)."
+                        },
+                        "judgedAt": {
+                          "type": "string"
+                        },
+                        "factId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "The message fact on the people fact feed."
+                        }
+                      },
+                      "required": [
+                        "at",
+                        "source",
+                        "channel",
+                        "excerpt",
+                        "pPositive",
+                        "judgedAt",
+                        "factId"
+                      ]
+                    },
+                    "description": "step=client_satisfied only: the positive messages that made the reach, newest first, at most 5. Absent on other steps."
                   }
                 },
                 "required": [
@@ -31371,6 +33651,67 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   },
                   "createdAt": {
                     "type": "string"
+                  },
+                  "sync": {
+                    "type": "object",
+                    "properties": {
+                      "state": {
+                        "type": "string",
+                        "enum": [
+                          "up_to_date",
+                          "catching_up",
+                          "first_sync",
+                          "failed",
+                          "paused"
+                        ],
+                        "description": "What the client should read. `catching_up` = we are behind on purpose and reading again on our own (PostHog's hourly read limit for the project is used up, or older history is still being read); nothing is broken and nothing is needed from the client. `failed` = a real failure (bad key, wrong project): `lastError` says why."
+                      },
+                      "reason": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          "posthog_read_budget",
+                          "reading_history",
+                          null
+                        ],
+                        "description": "Why `catching_up`: PostHog asked us to wait (`posthog_read_budget`), or persons' older visits are still being read (`reading_history`)."
+                      },
+                      "retryAt": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "When PostHog said reads come back; the next read happens then (null = not waiting)."
+                      },
+                      "waitingSince": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "First refusal since the last complete pass."
+                      },
+                      "behindSince": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Activity is complete up to this instant (the last complete pass's start)."
+                      },
+                      "historyBacklog": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Persons whose older history is still to read (null on single-row answers)."
+                      },
+                      "message": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "PostHog's own words when it asked us to wait."
+                      }
+                    },
+                    "required": [
+                      "state",
+                      "reason",
+                      "retryAt",
+                      "waitingSince",
+                      "behindSince",
+                      "historyBacklog",
+                      "message"
+                    ],
+                    "description": "POSTHOG-429-1107: the connection's sync state in plain terms, distinct from a failure."
                   }
                 },
                 "required": [
@@ -31384,7 +33725,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "syncedThrough",
                   "lastError",
                   "lastRunId",
-                  "createdAt"
+                  "createdAt",
+                  "sync"
                 ]
               }
             }
@@ -34343,6 +36685,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "format": "uuid",
                   "description": "The client PROFILE (WHO, a cold audience the client keeps or pauses on the Targeting page) this source list was built for: a buying-signal list (hiring now, new in role, recently funded) or a competitor-post engagement list finds THAT profile's people, screened against the profile's text. Pausing or archiving the profile pauses its lists; resuming it resumes them (unless the source itself is off). null on a profile itself, on a whole-ICP list built before profiles had their own (retired once they do), and on every other audience. Show profiles = rows with null here and channels[0].list = apollo_search; sources = channels[0].list."
                 },
+                "role": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "target",
+                    "search",
+                    null
+                  ],
+                  "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -34530,6 +36882,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "status",
                 "source",
                 "profileAudienceId",
+                "role",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -34706,6 +37059,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "format": "uuid",
                   "description": "The client PROFILE (WHO, a cold audience the client keeps or pauses on the Targeting page) this source list was built for: a buying-signal list (hiring now, new in role, recently funded) or a competitor-post engagement list finds THAT profile's people, screened against the profile's text. Pausing or archiving the profile pauses its lists; resuming it resumes them (unless the source itself is off). null on a profile itself, on a whole-ICP list built before profiles had their own (retired once they do), and on every other audience. Show profiles = rows with null here and channels[0].list = apollo_search; sources = channels[0].list."
                 },
+                "role": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "target",
+                    "search",
+                    null
+                  ],
+                  "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -34893,6 +37256,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "status",
                 "source",
                 "profileAudienceId",
+                "role",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -35097,6 +37461,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "format": "uuid",
                   "description": "The client PROFILE (WHO, a cold audience the client keeps or pauses on the Targeting page) this source list was built for: a buying-signal list (hiring now, new in role, recently funded) or a competitor-post engagement list finds THAT profile's people, screened against the profile's text. Pausing or archiving the profile pauses its lists; resuming it resumes them (unless the source itself is off). null on a profile itself, on a whole-ICP list built before profiles had their own (retired once they do), and on every other audience. Show profiles = rows with null here and channels[0].list = apollo_search; sources = channels[0].list."
                 },
+                "role": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "target",
+                    "search",
+                    null
+                  ],
+                  "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -35284,6 +37658,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "status",
                 "source",
                 "profileAudienceId",
+                "role",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -35471,6 +37846,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "format": "uuid",
                   "description": "The client PROFILE (WHO, a cold audience the client keeps or pauses on the Targeting page) this source list was built for: a buying-signal list (hiring now, new in role, recently funded) or a competitor-post engagement list finds THAT profile's people, screened against the profile's text. Pausing or archiving the profile pauses its lists; resuming it resumes them (unless the source itself is off). null on a profile itself, on a whole-ICP list built before profiles had their own (retired once they do), and on every other audience. Show profiles = rows with null here and channels[0].list = apollo_search; sources = channels[0].list."
                 },
+                "role": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "target",
+                    "search",
+                    null
+                  ],
+                  "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -35658,6 +38043,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "status",
                 "source",
                 "profileAudienceId",
+                "role",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -35904,11 +38290,21 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 },
                 "memberSub": {
                   "type": "string",
-                  "description": "LinkedIn's id of the member who logged in (OpenID `sub`)"
+                  "description": "LinkedIn's id of the member who logged in (OpenID `sub` for a profile; for a company page, the admin's person id from the page's admin list)"
+                },
+                "displayName": {
+                  "type": "string",
+                  "description": "What the card names the account by: the PAGE it reads (\"Distribute.you\" for a company page, the person for a profile); the page address until its first read names it"
+                },
+                "pageName": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "The page's own name as LinkedIn prints it, read from its posts (null before the first read)"
                 },
                 "name": {
                   "type": "string",
-                  "nullable": true
+                  "nullable": true,
+                  "description": "The member who logged in (never the account's label: see displayName)"
                 },
                 "pictureUrl": {
                   "type": "string",
@@ -35999,6 +38395,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "id",
                 "brandId",
                 "memberSub",
+                "displayName",
+                "pageName",
                 "name",
                 "pictureUrl",
                 "profileUrl",
@@ -36745,6 +39143,67 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 },
                 "createdAt": {
                   "type": "string"
+                },
+                "sync": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "up_to_date",
+                        "catching_up",
+                        "first_sync",
+                        "failed",
+                        "paused"
+                      ],
+                      "description": "What the client should read. `catching_up` = we are behind on purpose and reading again on our own (PostHog's hourly read limit for the project is used up, or older history is still being read); nothing is broken and nothing is needed from the client. `failed` = a real failure (bad key, wrong project): `lastError` says why."
+                    },
+                    "reason": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "posthog_read_budget",
+                        "reading_history",
+                        null
+                      ],
+                      "description": "Why `catching_up`: PostHog asked us to wait (`posthog_read_budget`), or persons' older visits are still being read (`reading_history`)."
+                    },
+                    "retryAt": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "When PostHog said reads come back; the next read happens then (null = not waiting)."
+                    },
+                    "waitingSince": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "First refusal since the last complete pass."
+                    },
+                    "behindSince": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Activity is complete up to this instant (the last complete pass's start)."
+                    },
+                    "historyBacklog": {
+                      "type": "integer",
+                      "nullable": true,
+                      "description": "Persons whose older history is still to read (null on single-row answers)."
+                    },
+                    "message": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "PostHog's own words when it asked us to wait."
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "reason",
+                    "retryAt",
+                    "waitingSince",
+                    "behindSince",
+                    "historyBacklog",
+                    "message"
+                  ],
+                  "description": "POSTHOG-429-1107: the connection's sync state in plain terms, distinct from a failure."
                 }
               },
               "required": [
@@ -36758,7 +39217,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "syncedThrough",
                 "lastError",
                 "lastRunId",
-                "createdAt"
+                "createdAt",
+                "sync"
               ]
             }
           },
@@ -44386,6 +46846,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "format": "uuid",
                   "description": "The client PROFILE (WHO, a cold audience the client keeps or pauses on the Targeting page) this source list was built for: a buying-signal list (hiring now, new in role, recently funded) or a competitor-post engagement list finds THAT profile's people, screened against the profile's text. Pausing or archiving the profile pauses its lists; resuming it resumes them (unless the source itself is off). null on a profile itself, on a whole-ICP list built before profiles had their own (retired once they do), and on every other audience. Show profiles = rows with null here and channels[0].list = apollo_search; sources = channels[0].list."
                 },
+                "role": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "target",
+                    "search",
+                    null
+                  ],
+                  "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -44573,6 +47043,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "status",
                 "source",
                 "profileAudienceId",
+                "role",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -44749,6 +47220,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "format": "uuid",
                   "description": "The client PROFILE (WHO, a cold audience the client keeps or pauses on the Targeting page) this source list was built for: a buying-signal list (hiring now, new in role, recently funded) or a competitor-post engagement list finds THAT profile's people, screened against the profile's text. Pausing or archiving the profile pauses its lists; resuming it resumes them (unless the source itself is off). null on a profile itself, on a whole-ICP list built before profiles had their own (retired once they do), and on every other audience. Show profiles = rows with null here and channels[0].list = apollo_search; sources = channels[0].list."
                 },
+                "role": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "target",
+                    "search",
+                    null
+                  ],
+                  "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -44936,6 +47417,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "status",
                 "source",
                 "profileAudienceId",
+                "role",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -45351,6 +47833,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "format": "uuid",
                   "description": "The client PROFILE (WHO, a cold audience the client keeps or pauses on the Targeting page) this source list was built for: a buying-signal list (hiring now, new in role, recently funded) or a competitor-post engagement list finds THAT profile's people, screened against the profile's text. Pausing or archiving the profile pauses its lists; resuming it resumes them (unless the source itself is off). null on a profile itself, on a whole-ICP list built before profiles had their own (retired once they do), and on every other audience. Show profiles = rows with null here and channels[0].list = apollo_search; sources = channels[0].list."
                 },
+                "role": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "target",
+                    "search",
+                    null
+                  ],
+                  "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -45538,6 +48030,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "status",
                 "source",
                 "profileAudienceId",
+                "role",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -45714,6 +48207,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "format": "uuid",
                   "description": "The client PROFILE (WHO, a cold audience the client keeps or pauses on the Targeting page) this source list was built for: a buying-signal list (hiring now, new in role, recently funded) or a competitor-post engagement list finds THAT profile's people, screened against the profile's text. Pausing or archiving the profile pauses its lists; resuming it resumes them (unless the source itself is off). null on a profile itself, on a whole-ICP list built before profiles had their own (retired once they do), and on every other audience. Show profiles = rows with null here and channels[0].list = apollo_search; sources = channels[0].list."
                 },
+                "role": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "target",
+                    "search",
+                    null
+                  ],
+                  "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -45901,6 +48404,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "status",
                 "source",
                 "profileAudienceId",
+                "role",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -46121,6 +48625,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "format": "uuid",
                         "description": "The client PROFILE (WHO, a cold audience the client keeps or pauses on the Targeting page) this source list was built for: a buying-signal list (hiring now, new in role, recently funded) or a competitor-post engagement list finds THAT profile's people, screened against the profile's text. Pausing or archiving the profile pauses its lists; resuming it resumes them (unless the source itself is off). null on a profile itself, on a whole-ICP list built before profiles had their own (retired once they do), and on every other audience. Show profiles = rows with null here and channels[0].list = apollo_search; sources = channels[0].list."
                       },
+                      "role": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          "target",
+                          "search",
+                          null
+                        ],
+                        "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
+                      },
                       "canonicalAudienceId": {
                         "type": "string",
                         "nullable": true,
@@ -46308,6 +48822,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "status",
                       "source",
                       "profileAudienceId",
+                      "role",
                       "canonicalAudienceId",
                       "filters",
                       "avatarUrl",
@@ -46620,6 +49135,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "format": "uuid",
                   "description": "The client PROFILE (WHO, a cold audience the client keeps or pauses on the Targeting page) this source list was built for: a buying-signal list (hiring now, new in role, recently funded) or a competitor-post engagement list finds THAT profile's people, screened against the profile's text. Pausing or archiving the profile pauses its lists; resuming it resumes them (unless the source itself is off). null on a profile itself, on a whole-ICP list built before profiles had their own (retired once they do), and on every other audience. Show profiles = rows with null here and channels[0].list = apollo_search; sources = channels[0].list."
                 },
+                "role": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "target",
+                    "search",
+                    null
+                  ],
+                  "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -46807,6 +49332,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "status",
                 "source",
                 "profileAudienceId",
+                "role",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -46909,21 +49435,13 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "minimum": 0,
                     "maximum": 1,
                     "description": "The judge's own certainty about the icon (decorative: the icon is always set)."
-                  },
-                  "estimatedLeadCount": {
-                    "type": "integer",
-                    "nullable": true,
-                    "minimum": 0,
-                    "exclusiveMinimum": true,
-                    "description": "Approximate number of people (decision-makers matching the segment) it would reach in a large B2B contact database, estimated by the same generation that writes the segments: no search runs, so it is available instantly with the cards. Right order of magnitude only; the real people-search count is measured after confirm. null when no estimate could be made, never 0."
                   }
                 },
                 "required": [
                   "name",
                   "description",
                   "icon",
-                  "iconConfidence",
-                  "estimatedLeadCount"
+                  "iconConfidence"
                 ]
               },
               "minItems": 1,
@@ -47092,6 +49610,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "nullable": true,
                     "format": "uuid",
                     "description": "The client PROFILE (WHO, a cold audience the client keeps or pauses on the Targeting page) this source list was built for: a buying-signal list (hiring now, new in role, recently funded) or a competitor-post engagement list finds THAT profile's people, screened against the profile's text. Pausing or archiving the profile pauses its lists; resuming it resumes them (unless the source itself is off). null on a profile itself, on a whole-ICP list built before profiles had their own (retired once they do), and on every other audience. Show profiles = rows with null here and channels[0].list = apollo_search; sources = channels[0].list."
+                  },
+                  "role": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "target",
+                      "search",
+                      null
+                    ],
+                    "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
                   },
                   "canonicalAudienceId": {
                     "type": "string",
@@ -47280,6 +49808,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "status",
                   "source",
                   "profileAudienceId",
+                  "role",
                   "canonicalAudienceId",
                   "filters",
                   "avatarUrl",
@@ -48722,11 +51251,21 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 },
                 "memberSub": {
                   "type": "string",
-                  "description": "LinkedIn's id of the member who logged in (OpenID `sub`)"
+                  "description": "LinkedIn's id of the member who logged in (OpenID `sub` for a profile; for a company page, the admin's person id from the page's admin list)"
+                },
+                "displayName": {
+                  "type": "string",
+                  "description": "What the card names the account by: the PAGE it reads (\"Distribute.you\" for a company page, the person for a profile); the page address until its first read names it"
+                },
+                "pageName": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "The page's own name as LinkedIn prints it, read from its posts (null before the first read)"
                 },
                 "name": {
                   "type": "string",
-                  "nullable": true
+                  "nullable": true,
+                  "description": "The member who logged in (never the account's label: see displayName)"
                 },
                 "pictureUrl": {
                   "type": "string",
@@ -48817,6 +51356,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "id",
                 "brandId",
                 "memberSub",
+                "displayName",
+                "pageName",
                 "name",
                 "pictureUrl",
                 "profileUrl",
@@ -50622,6 +53163,67 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 },
                 "createdAt": {
                   "type": "string"
+                },
+                "sync": {
+                  "type": "object",
+                  "properties": {
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "up_to_date",
+                        "catching_up",
+                        "first_sync",
+                        "failed",
+                        "paused"
+                      ],
+                      "description": "What the client should read. `catching_up` = we are behind on purpose and reading again on our own (PostHog's hourly read limit for the project is used up, or older history is still being read); nothing is broken and nothing is needed from the client. `failed` = a real failure (bad key, wrong project): `lastError` says why."
+                    },
+                    "reason": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "posthog_read_budget",
+                        "reading_history",
+                        null
+                      ],
+                      "description": "Why `catching_up`: PostHog asked us to wait (`posthog_read_budget`), or persons' older visits are still being read (`reading_history`)."
+                    },
+                    "retryAt": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "When PostHog said reads come back; the next read happens then (null = not waiting)."
+                    },
+                    "waitingSince": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "First refusal since the last complete pass."
+                    },
+                    "behindSince": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "Activity is complete up to this instant (the last complete pass's start)."
+                    },
+                    "historyBacklog": {
+                      "type": "integer",
+                      "nullable": true,
+                      "description": "Persons whose older history is still to read (null on single-row answers)."
+                    },
+                    "message": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "PostHog's own words when it asked us to wait."
+                    }
+                  },
+                  "required": [
+                    "state",
+                    "reason",
+                    "retryAt",
+                    "waitingSince",
+                    "behindSince",
+                    "historyBacklog",
+                    "message"
+                  ],
+                  "description": "POSTHOG-429-1107: the connection's sync state in plain terms, distinct from a failure."
                 }
               },
               "required": [
@@ -50635,7 +53237,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "syncedThrough",
                 "lastError",
                 "lastRunId",
-                "createdAt"
+                "createdAt",
+                "sync"
               ]
             },
             "identifiedPersons": {
@@ -50918,7 +53521,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "post",
                 "reply"
               ],
-              "description": "`post` = a main post (one `post_published` outcome); `reply` = a reply under a post (part of its thread, no outcome)"
+              "description": "`post` = a main post (one `threads_post_published` outcome); `reply` = a reply under a post (part of its thread, no outcome)"
             },
             "threadRootPostId": {
               "type": "string",
@@ -50938,7 +53541,6 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "outcomeKey": {
                   "type": "string",
                   "enum": [
-                    "post_published",
                     "threads_post_published"
                   ]
                 },
@@ -50956,7 +53558,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "declared",
                 "error"
               ],
-              "description": "The outcome (`post_published` by default, `threads_post_published` when asked) declared on the caller's run (x-run-id), main posts only; null for a reply"
+              "description": "The outcome (`threads_post_published`) declared on the caller's run (x-run-id), main posts only; null for a reply"
             }
           },
           "required": [
@@ -51005,7 +53607,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "post",
                 "reply"
               ],
-              "description": "`post` = a main post (one `post_published` outcome); `reply` = a reply under a post (part of its thread, no outcome)"
+              "description": "`post` = a main post (one `threads_post_published` outcome); `reply` = a reply under a post (part of its thread, no outcome)"
             },
             "threadRootPostId": {
               "type": "string",
@@ -51025,7 +53627,6 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "outcomeKey": {
                   "type": "string",
                   "enum": [
-                    "post_published",
                     "threads_post_published"
                   ]
                 },
@@ -51043,7 +53644,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "declared",
                 "error"
               ],
-              "description": "The outcome (`post_published` by default, `threads_post_published` when asked) declared on the caller's run (x-run-id), main posts only; null for a reply"
+              "description": "The outcome (`threads_post_published`) declared on the caller's run (x-run-id), main posts only; null for a reply"
             }
           },
           "required": [
@@ -52589,7 +55190,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "consumedUnavailableReason",
                 "consumedUnavailableDetail"
               ],
-              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (post_published: one Threads thread or X/LinkedIn post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
             },
             "salesFunnelName": {
               "type": "string",

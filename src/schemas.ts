@@ -16736,9 +16736,9 @@ const googleRoutes: Array<{
   {
     method: "post",
     path: "/v1/orgs/google/auth/start",
-    summary: "Start connecting a Gmail mailbox (Google OAuth)",
+    summary: "Start connecting a Google account (Gmail, Calendar or Search Console)",
     description:
-      "Proxy to google-service POST /orgs/google/auth/start. Body `{ redirectUri? }` forwarded untransformed; returns `{ url, state }` where `url` is the Google consent screen. Requires x-user-id.",
+      "Proxy to google-service POST /orgs/google/auth/start. Body `{ redirectUri?, connection?: \"mailbox\" | \"calendar\" | \"search_console\" }` forwarded untransformed; returns `{ url, state }` where `url` is the Google consent screen. Requires x-user-id.",
     body: true,
   },
   {
@@ -16777,6 +16777,31 @@ const googleRoutes: Array<{
     description:
       "Proxy to google-service DELETE /orgs/google/calendar/accounts/{email}. Revokes the calendar grant; returns `{ disconnected, email, grant }`. The email is URL-encoded in the path. 404 `{ reason: \"calendar_not_found\" }` and 502 `{ reason: \"google_revoke_failed\" }` forwarded verbatim.",
     params: z.object({ email: z.string().openapi({ description: "Connected Google Calendar account email (URL-encoded)" }) }),
+  },
+  {
+    method: "get",
+    path: "/v1/orgs/google/search-console/accounts",
+    summary: "List the org's connected Google Search Console accounts and their properties",
+    description:
+      "Proxy to google-service GET /orgs/google/search-console/accounts. Each connected account with its status (`reconnect_required` = show a Reconnect button, same connect flow) and every property with the brand it counts clicks for. Response owned by google-service. Connect one with POST /v1/orgs/google/auth/start and body `{ connection: \"search_console\" }`.",
+  },
+  {
+    method: "get",
+    path: "/v1/orgs/google/search-console/clicks",
+    summary: "Google search clicks counted per property and Google day",
+    description:
+      "Proxy to google-service GET /orgs/google/search-console/clicks. The \"Google search click\" Units counted for the org, per property x Google day. Query string forwarded byte-identical (`brandId`, `since`, `until` YYYY-MM-DD inclusive are the ones documented today, not a whitelist). Response owned by google-service.",
+    query: z
+      .object({ brandId: z.string().optional(), since: z.string().optional(), until: z.string().optional() })
+      .passthrough(),
+  },
+  {
+    method: "delete",
+    path: "/v1/orgs/google/search-console/accounts/{email}",
+    summary: "Disconnect a Google Search Console account",
+    description:
+      "Proxy to google-service DELETE /orgs/google/search-console/accounts/{email}. Stops reading the account; clicks already counted stay counted. The email is URL-encoded in the path. 404 `{ reason: \"search_console_not_found\" }` and 502 `{ reason: \"google_revoke_failed\" }` forwarded verbatim.",
+    params: z.object({ email: z.string().openapi({ description: "Connected Google Search Console account email (URL-encoded)" }) }),
   },
   {
     method: "post",

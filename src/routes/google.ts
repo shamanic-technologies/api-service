@@ -9,7 +9,9 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
  * (`/orgs/google/*`): connecting a Gmail mailbox (OAuth start/callback), listing
  * and disconnecting connected mailboxes, the async sync job, and the mirror reads
  * (messages, contacts, conversation, correspondents, contact links), plus
- * listing and disconnecting a connected Google Calendar (`/orgs/google/calendar/accounts`).
+ * listing and disconnecting a connected Google Calendar (`/orgs/google/calendar/accounts`),
+ * and connecting Google Search Console (`/orgs/google/search-console/*`: accounts,
+ * counted clicks, disconnect).
  *
  * Removed in #808 while google-service ran nowhere; restored once it was deployed
  * to the box (2026-08-26). Connecting a mailbox is a self-serve feature for every
@@ -116,6 +118,41 @@ router.delete("/orgs/google/calendar/accounts/:email", ...orgUserChain, (req: Au
     `/orgs/google/calendar/accounts/${encodeURIComponent(req.params.email)}`,
     "DELETE",
     "Disconnect Google calendar",
+  ),
+);
+
+// GET /v1/orgs/google/search-console/accounts → google-service GET /orgs/google/search-console/accounts
+// Connected accounts + each property's brand and status (`reconnect_required` included).
+router.get("/orgs/google/search-console/accounts", ...orgUserChain, (req: AuthenticatedRequest, res) =>
+  forward(
+    req,
+    res,
+    `/orgs/google/search-console/accounts${rawQueryString(req.originalUrl)}`,
+    "GET",
+    "List Google Search Console accounts",
+  ),
+);
+
+// GET /v1/orgs/google/search-console/clicks?brandId&since&until → google-service GET /orgs/google/search-console/clicks
+router.get("/orgs/google/search-console/clicks", ...orgUserChain, (req: AuthenticatedRequest, res) =>
+  forward(
+    req,
+    res,
+    `/orgs/google/search-console/clicks${rawQueryString(req.originalUrl)}`,
+    "GET",
+    "Google Search Console clicks",
+  ),
+);
+
+// DELETE /v1/orgs/google/search-console/accounts/:email → google-service DELETE /orgs/google/search-console/accounts/:email
+// 404 `search_console_not_found` and 502 `google_revoke_failed` reach the caller with their body.
+router.delete("/orgs/google/search-console/accounts/:email", ...orgUserChain, (req: AuthenticatedRequest, res) =>
+  forward(
+    req,
+    res,
+    `/orgs/google/search-console/accounts/${encodeURIComponent(req.params.email)}`,
+    "DELETE",
+    "Disconnect Google Search Console account",
   ),
 );
 

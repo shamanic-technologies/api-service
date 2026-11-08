@@ -369,6 +369,7 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "POST /v1/orgs/google/auth/start": NO,
   "DELETE /v1/orgs/google/accounts/{email}": NO,
   "DELETE /v1/orgs/google/calendar/accounts/{email}": NO,
+  "DELETE /v1/orgs/google/search-console/accounts/{email}": NO,
   "POST /v1/orgs/google/sync": NO,
   "PUT /v1/orgs/google/contact-links": NO,
   "POST /v1/orgs/threads/auth/start": NO,
