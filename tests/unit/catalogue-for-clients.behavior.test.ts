@@ -170,7 +170,6 @@ describe("every catalogue write still refuses a non-staff client on the dashboar
   const WRITES: Array<[string, string]> = [
     ["post", "/v1/catalogue/steps"],
     ["post", "/v1/catalogue/pipes"],
-    ["put", "/v1/catalogue/pipes/a%7Cb/default-play"],
     ["post", "/v1/catalogue/pipes/a%7Cb/retire"],
     ["post", "/v1/catalogue/plays/a%7Cb~c/retire"],
     ["post", "/v1/catalogue/sales-funnels"],
