@@ -2984,6 +2984,45 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       ]
     }
   },
+  "POST /v1/orgs/social/accounts/{id}/posts": {
+    "service": "social-service",
+    "method": "POST",
+    "path": "/orgs/social/accounts/{id}/posts",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000,
+          "description": "As published. X: <= 280 weighted, no @mention. LinkedIn: <= 3000."
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 200,
+          "description": "One post per key, ever: same key + same post = the same answer; another post = 409."
+        },
+        "outcomeKey": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The Unit the caller's Engine makes (filled by workflow-service): must be `x_post_published` / `linkedin_post_published` for the account's network."
+        },
+        "reply": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 3000,
+          "description": "X: a reply posted under the post (where a link goes; <= 280 weighted, its own X fee). LinkedIn: the post's first comment, as the same author (<= 1250). Own links get the post's tracking. A refused reply never undoes the post: its error is served on `publication.reply.error`."
+        }
+      },
+      "required": [
+        "text",
+        "idempotencyKey",
+        "outcomeKey"
+      ],
+      "additionalProperties": false
+    }
+  },
   "POST /v1/orgs/stripe/connections": {
     "service": "crm-service",
     "method": "POST",
