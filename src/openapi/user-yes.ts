@@ -318,7 +318,6 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "POST /v1/catalogue/pipes/{pipeId}/retire": NO,
   "POST /v1/catalogue/plays/{playId}/retire": NO,
   "POST /v1/catalogue/sales-funnels": NO,
-  "PUT /v1/catalogue/pipes/{pipeId}/default-play": NO,
 
   // ── Expert quotes / visibility (retired products still routed) ─────────────
   "POST /v1/orgs/opportunities/next": NO,

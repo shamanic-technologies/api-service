@@ -10294,7 +10294,7 @@ registry.registerPath({
     "Staff only: a distribute.you staff member's own API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. " +
     "`retiredBy` is recorded as the authenticated staff email (a body value is replaced). Answers 200 `{changed, retiredPlayId, retiredAt, runsNow}` " +
     "(`runsNow` = the play those campaigns run from now on). Refusals forwarded verbatim: 400 `retiredBy_required` / `note_invalid`; " +
-    "404 `pipe_not_found` / `play_not_found`; 409 `default_play_not_retirable` (set another default first with PUT /v1/catalogue/pipes/{pipeId}/default-play). " +
+    "404 `pipe_not_found` / `play_not_found`; 409 `default_play_not_retirable`. " +
     "Byte passthrough to features-service POST /internal/catalogue/plays/{id}/retire.",
   security: platformAuth,
   request: {
@@ -19331,41 +19331,6 @@ registry.registerPath({
   responses: {
     200: { description: "The relationship block, as returned by lead-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("LeadRelationshipResponse") } } },
     ...relationshipErrors,
-  },
-});
-
-registry.registerPath({
-  method: "put",
-  path: "/v1/catalogue/pipes/{pipeId}/default-play",
-  tags: ["Features"],
-  summary: "Set the play a pipe runs by default (staff only)",
-  description:
-    "Fleet-wide: the strategy a pipe runs when a campaign names no play. Staff only: a distribute.you staff member's own " +
-    "API key, or the platform key with a staff x-email; any other key gets 403 `staff_only`. `decidedBy` is recorded as " +
-    "the authenticated staff email (a body value is ignored). A strategy whose play runs nothing is refused 409 " +
-    "`default_play_runs_nothing`. Byte passthrough to features-service PUT /internal/catalogue/pipes/{pipeId}/default-play.",
-  security: platformAuth,
-  request: {
-    params: z.object({ pipeId: z.string().openapi({ description: "a pipe id `<channel slug>|<leg key>` (GET /v1/catalogue/pipes)" }) }),
-    body: {
-      content: {
-        "application/json": {
-          schema: z
-            .object({ strategyId: z.string().openapi({ description: "The strategy (GET /v1/strategies) the pipe runs by default" }) })
-            .passthrough()
-            .openapi("PipeDefaultPlayRequest"),
-        },
-      },
-    },
-  },
-  responses: {
-    200: { description: "Pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PipeDefaultPlayResponse") } } },
-    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
-    401: { description: "Unauthorized", content: errorContent },
-    403: { description: "Not staff (`staff_only`)", content: errorContent },
-    404: { description: "Unknown pipe or strategy (forwarded verbatim)", content: errorContent },
-    409: { description: "`default_play_runs_nothing` (forwarded verbatim)", content: errorContent },
-    502: { description: "Upstream error", content: errorContent },
   },
 });
 
