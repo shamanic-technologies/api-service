@@ -90,6 +90,21 @@ describe("/v1/orgs/social/* → social-service", () => {
     }
   });
 
+  it("POST replies and DELETE a publication forward to their exact social-service paths", async () => {
+    const body = { target: "https://x.com/jdoe/status/1888000000000000001", text: "Same.", idempotencyKey: "reply:x:1", outcomeKey: "x_reply_published" };
+    const r = await request(app()).post(`/v1/orgs/social/accounts/${ACCOUNT}/replies?campaignId=${CAMPAIGN}`).send(body);
+    expect(r.status).toBe(200);
+    expect(calls[0].url).toBe(`${BASE}/orgs/social/accounts/${ACCOUNT}/replies?campaignId=${CAMPAIGN}`);
+    expect(JSON.parse(calls[0].options.body)).toEqual(body);
+    expect(calls[0].options.headers["x-campaign-id"]).toBe(CAMPAIGN);
+    calls = [];
+    const POST_ID = "11111111-2222-4333-8444-555555555555";
+    const d = await request(app()).delete(`/v1/orgs/social/accounts/${ACCOUNT}/posts/${POST_ID}`);
+    expect(d.status).toBe(200);
+    expect(calls[0].url).toBe(`${BASE}/orgs/social/accounts/${ACCOUNT}/posts/${POST_ID}`);
+    expect(calls[0].options.method).toBe("DELETE");
+  });
+
   it("does not expose the scan door nor /internal routes", async () => {
     expect((await request(app()).post("/v1/orgs/social/industry-news/scans").send({})).status).toBe(404);
     expect((await request(app()).post("/v1/internal/industry-news/scans").send({})).status).toBe(404);

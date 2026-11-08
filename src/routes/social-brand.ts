@@ -30,7 +30,7 @@ function rawQueryString(originalUrl: string): string {
   return index === -1 ? "" : originalUrl.slice(index);
 }
 
-async function forward(req: AuthenticatedRequest, res: Response, path: string, method: "GET" | "POST", label: string): Promise<void> {
+async function forward(req: AuthenticatedRequest, res: Response, path: string, method: "GET" | "POST" | "DELETE", label: string): Promise<void> {
   try {
     await pipeExternalService(externalServices.social, `${path}${rawQueryString(req.originalUrl)}`, {
       method,
@@ -61,6 +61,16 @@ router.get("/orgs/social/publications", ...orgUserChain, (req: AuthenticatedRequ
 // POST /v1/orgs/social/accounts/:id/posts → social-service POST /orgs/social/accounts/:id/posts
 router.post("/orgs/social/accounts/:id/posts", ...orgUserChain, (req: AuthenticatedRequest, res) =>
   forward(req, res, `/orgs/social/accounts/${encodeURIComponent(req.params.id)}/posts`, "POST", "Publish on a brand social account"),
+);
+
+// POST /v1/orgs/social/accounts/:id/replies → social-service POST /orgs/social/accounts/:id/replies (SOCIAL-GAPS-1108)
+router.post("/orgs/social/accounts/:id/replies", ...orgUserChain, (req: AuthenticatedRequest, res) =>
+  forward(req, res, `/orgs/social/accounts/${encodeURIComponent(req.params.id)}/replies`, "POST", "Reply from a brand social account"),
+);
+
+// DELETE /v1/orgs/social/accounts/:id/posts/:postId → social-service DELETE /orgs/social/accounts/:id/posts/:postId
+router.delete("/orgs/social/accounts/:id/posts/:postId", ...orgUserChain, (req: AuthenticatedRequest, res) =>
+  forward(req, res, `/orgs/social/accounts/${encodeURIComponent(req.params.id)}/posts/${encodeURIComponent(req.params.postId)}`, "DELETE", "Delete a brand social publication"),
 );
 
 // GET /v1/orgs/social/industry-news?brandId&since&limit → social-service GET /orgs/social/industry-news
