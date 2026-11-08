@@ -174,13 +174,12 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
             "pro_ai"
           ],
           "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI)"
-        },
-        "profileUrl": {
-          "type": "string",
-          "minLength": 1,
-          "description": "The public LinkedIn page whose posts are imported: the member's profile (https://www.linkedin.com/in/<slug>/) or a company page (https://www.linkedin.com/company/<slug>/). LinkedIn's login never names it, so the member states it."
         }
-      }
+      },
+      "required": [
+        "accountType"
+      ],
+      "description": "The page is the account: another page is another connect (POST /orgs/linkedin/auth/start)"
     }
   },
   "PATCH /v1/orgs/matrix/connections/{id}": {
@@ -2051,7 +2050,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           },
           "minItems": 1,
           "maxItems": 8,
-          "description": "The proposed segments as returned by /orgs/audiences/split (or /orgs/audiences/suggest): name + description each, 1 to 8. Extra fields (icon, estimatedLeadCount) are accepted and ignored."
+          "description": "The proposed segments as returned by /orgs/audiences/split (or /orgs/audiences/suggest): name + description each, 1 to 8. Extra fields (such as icon) are accepted and ignored."
         }
       },
       "required": [
@@ -2504,7 +2503,8 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "type": "string",
           "enum": [
             "mailbox",
-            "calendar"
+            "calendar",
+            "search_console"
           ]
         }
       },
@@ -2567,7 +2567,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "redirectUri": {
           "type": "string",
           "format": "uri",
-          "description": "Page LinkedIn sends the user back to with `code` and `state`. Must be registered, byte for byte, as an Authorized redirect URL of the LinkedIn app named by LINKEDIN_OAUTH_CONNECT_APP. Production: https://dashboard.distribute.you/connections/linkedin/callback"
+          "description": "Page LinkedIn sends the user back to with `code` and `state`. Must be registered, byte for byte, as an Authorized redirect URL of the LinkedIn app named by LINKEDIN_OAUTH_CONNECT_APP (profiles) AND the one named by LINKEDIN_OAUTH_PAGE_CONNECT_APP (company pages: their connect asks the page posting permission w_organization_social). Production: https://dashboard.distribute.you/connections/linkedin/callback"
         }
       },
       "required": [
@@ -3073,10 +3073,9 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "outcomeKey": {
           "type": "string",
           "enum": [
-            "post_published",
             "threads_post_published"
           ],
-          "description": "The outcome a MAIN post declares on the caller's run. Default `post_published` (what the live Threads script declares today). `threads_post_published` = the Threads-specific outcome (OUTCOME-FINEST-1106), the one every imported post declares: a script opts in by sending it. Kept on the publication; a replay answers the stored one."
+          "description": "The outcome a MAIN post declares on the caller's run: `threads_post_published` (OUTCOME-FINEST-1106), also the default when absent. The retired coarse `post_published` is refused 400 `outcome_retired` (DELETE-POST-PUBLISHED-1107). Kept on the publication; a replay answers the stored one."
         }
       },
       "required": [

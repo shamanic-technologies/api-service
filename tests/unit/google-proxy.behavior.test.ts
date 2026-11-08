@@ -159,6 +159,75 @@ describe("/v1/orgs/google/* → google-service", () => {
     expect(res.body).toEqual(body);
   });
 
+  it("POST auth/start forwards connection=search_console untouched (no gateway 400)", async () => {
+    next.body = { url: "https://accounts.google.com/o/oauth2/v2/auth?x", state: "s1" };
+    const res = await request(buildApp())
+      .post("/v1/orgs/google/auth/start")
+      .send({ connection: "search_console", redirectUri: "https://dashboard.distribute.you/cb" });
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(next.body);
+    expect(calls[0].url).toBe(`${GOOGLE_BASE}/orgs/google/auth/start`);
+    expect(JSON.parse(calls[0].options.body)).toEqual({
+      connection: "search_console",
+      redirectUri: "https://dashboard.distribute.you/cb",
+    });
+  });
+
+  it("GET search-console/accounts forwards path, method, identity; returns the upstream body", async () => {
+    next.body = { accounts: [{ email: "a@b.com", status: "reconnect_required", properties: [] }] };
+    const res = await request(buildApp()).get("/v1/orgs/google/search-console/accounts");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(next.body);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(`${GOOGLE_BASE}/orgs/google/search-console/accounts`);
+    expect(calls[0].options.method).toBe("GET");
+    expect(calls[0].options.body).toBeUndefined();
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("GET search-console/clicks byte-copies the query string and returns the upstream body", async () => {
+    next.body = { outcomeKey: "google_search_click", days: [{ day: "2026-11-01", clicks: 3 }], totalClicks: 3 };
+    const res = await request(buildApp()).get(
+      "/v1/orgs/google/search-console/clicks?brandId=b1&since=2026-11-01&until=2026-11-07&extra=a&extra=b",
+    );
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(next.body);
+    expect(calls[0].url).toBe(
+      `${GOOGLE_BASE}/orgs/google/search-console/clicks?brandId=b1&since=2026-11-01&until=2026-11-07&extra=a&extra=b`,
+    );
+    expect(calls[0].options.method).toBe("GET");
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+  });
+
+  it("GET search-console/clicks relays a 400 with its body", async () => {
+    next = { status: 400, body: { error: "since must be YYYY-MM-DD" } };
+    const res = await request(buildApp()).get("/v1/orgs/google/search-console/clicks?since=bad");
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: "since must be YYYY-MM-DD" });
+  });
+
+  it("DELETE search-console/accounts/:email forwards path, method, identity; email one encoded segment", async () => {
+    next.body = { disconnected: true, email: "kevin+x@distribute.you", grant: "revoked" };
+    const res = await request(buildApp()).delete("/v1/orgs/google/search-console/accounts/kevin%2Bx%40distribute.you");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(next.body);
+    expect(calls[0].url).toBe(`${GOOGLE_BASE}/orgs/google/search-console/accounts/kevin%2Bx%40distribute.you`);
+    expect(calls[0].options.method).toBe("DELETE");
+    expect(calls[0].options.body).toBeUndefined();
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it.each([
+    [404, { error: "No connected Google Search Console account", reason: "search_console_not_found" }],
+    [502, { error: "Google revoke failed", reason: "google_revoke_failed" }],
+  ])("DELETE search-console/accounts/:email relays %i with its body", async (status, body) => {
+    next = { status, body };
+    const res = await request(buildApp()).delete("/v1/orgs/google/search-console/accounts/nobody%40x.com");
+    expect(res.status).toBe(status);
+    expect(res.body).toEqual(body);
+  });
+
   it("POST sync relays the 202 status, not a normalised 200", async () => {
     next = { status: 202, body: { jobId: "j1", status: "running" } };
     const res = await request(buildApp()).post("/v1/orgs/google/sync").send({});
