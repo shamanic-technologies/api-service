@@ -87126,8 +87126,15 @@
                           "kind": {
                             "type": "string",
                             "enum": [
-                              "post"
+                              "post",
+                              "reply",
+                              "comment"
                             ]
+                          },
+                          "targetPostId": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "A reply / comment: the post it answers (X id, LinkedIn thread urn)"
                           },
                           "status": {
                             "type": "string"
@@ -87197,6 +87204,7 @@
                           "accountId",
                           "network",
                           "kind",
+                          "targetPostId",
                           "status",
                           "text",
                           "postId",
@@ -87305,7 +87313,7 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 3000,
-                    "description": "As published. X: <= 280 weighted, no @mention. LinkedIn: <= 3000."
+                    "description": "As published. X: <= 280 weighted; every @handle in it moves to the reply (X refuses mentions in a post from our app), the post keeps the name. LinkedIn: <= 3000, `@[Name](urn:li:organization:<id>)` mentions as written."
                   },
                   "idempotencyKey": {
                     "type": "string",
@@ -87317,6 +87325,42 @@
                     "type": "string",
                     "minLength": 1,
                     "description": "The Unit the caller's Engine makes (filled by workflow-service): must be `x_post_published` / `linkedin_post_published` for the account's network."
+                  },
+                  "media": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "url": {
+                          "type": "string",
+                          "format": "uri",
+                          "description": "https URL this service downloads (a platform upload, the blog hero)"
+                        },
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "image",
+                            "video"
+                          ]
+                        },
+                        "altText": {
+                          "type": "string",
+                          "maxLength": 300
+                        },
+                        "title": {
+                          "type": "string",
+                          "maxLength": 200,
+                          "description": "LinkedIn video title"
+                        }
+                      },
+                      "required": [
+                        "url",
+                        "type"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 4,
+                    "description": "Images or a video, uploaded through the account's own login. X: up to 4 images or 1 video; LinkedIn: 1 image or 1 video."
                   },
                   "reply": {
                     "type": "string",
@@ -87361,8 +87405,15 @@
                         "kind": {
                           "type": "string",
                           "enum": [
-                            "post"
+                            "post",
+                            "reply",
+                            "comment"
                           ]
+                        },
+                        "targetPostId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "A reply / comment: the post it answers (X id, LinkedIn thread urn)"
                         },
                         "status": {
                           "type": "string"
@@ -87432,6 +87483,7 @@
                         "accountId",
                         "network",
                         "kind",
+                        "targetPostId",
                         "status",
                         "text",
                         "postId",
@@ -87488,6 +87540,452 @@
           ],
           "why": "Publishes a post on X or LinkedIn, in public."
         }
+      }
+    },
+    "/v1/orgs/social/accounts/{id}/replies": {
+      "post": {
+        "tags": [
+          "Social"
+        ],
+        "summary": "Reply (X) or comment (LinkedIn) on someone else's post from one of the brand's own accounts",
+        "description": "Proxy to social-service POST /orgs/social/accounts/{id}/replies. Body `{ target, text, idempotencyKey, outcomeKey }` forwarded untransformed (`target` = the post's URL or id/urn; `outcomeKey` = `x_reply_published` / `linkedin_comment_published`). Name the campaign with `?campaignId=`: the Unit and its spend land on it. Returns `{ publication, created }`.\n\nRequest body: documented from social-service POST /orgs/social/accounts/{id}/replies, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from social-service POST /orgs/social/accounts/{id}/replies, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/social.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Account id (uuid) from GET /v1/orgs/social/accounts"
+            },
+            "required": true,
+            "description": "Account id (uuid) from GET /v1/orgs/social/accounts",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "campaignId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "target": {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 2000,
+                    "description": "The post answered: its URL (x.com/<handle>/status/<id>, a LinkedIn post URL) or its id / urn."
+                  },
+                  "text": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 1250,
+                    "description": "X: <= 280 weighted (mentions allowed). LinkedIn: <= 1250."
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 200
+                  },
+                  "outcomeKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "`x_reply_published` on X, `linkedin_comment_published` on LinkedIn."
+                  }
+                },
+                "required": [
+                  "target",
+                  "text",
+                  "idempotencyKey",
+                  "outcomeKey"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "As returned by social-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "publication": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "Our row: the subject of its Unit"
+                        },
+                        "accountId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "network": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "post",
+                            "reply",
+                            "comment"
+                          ]
+                        },
+                        "targetPostId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "A reply / comment: the post it answers (X id, LinkedIn thread urn)"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        },
+                        "postId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "X tweet id / LinkedIn share urn"
+                        },
+                        "permalink": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "outcomeKey": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "campaignId": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "runId": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "publishedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "reply": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "text": {
+                              "type": "string"
+                            },
+                            "postId": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "permalink": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "error": {
+                              "type": "string",
+                              "nullable": true
+                            }
+                          },
+                          "required": [
+                            "text",
+                            "postId",
+                            "permalink",
+                            "error"
+                          ],
+                          "description": "X: the reply under the post; LinkedIn: its first comment. null when none was asked."
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "accountId",
+                        "network",
+                        "kind",
+                        "targetPostId",
+                        "status",
+                        "text",
+                        "postId",
+                        "permalink",
+                        "outcomeKey",
+                        "campaignId",
+                        "runId",
+                        "publishedAt",
+                        "createdAt",
+                        "reply"
+                      ]
+                    },
+                    "created": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "publication",
+                    "created"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestTypeValidationOutcomeMismatchOrTheTextDoesNotFitTh"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequiredError402TheSpendWasRefusedTheCampaignSMaxBudgetOrTheBalanceForwarded"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404NoSuchAccountInThisOrgForwardedVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409TypeAccountNotProAiNeedsReconnectLinkedinPageNotPublishableA"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502XOrLinkedInRefusedOrWasUnreachableTypeNamesItForwardedVerbat"
+          }
+        },
+        "operationId": "postV1OrgsSocialAccountsByIdReplies",
+        "x-needs-user-yes": {
+          "because": [
+            "sends_to_person"
+          ],
+          "why": "Publishes a reply on someone's X or LinkedIn post, in public."
+        }
+      }
+    },
+    "/v1/orgs/social/accounts/{id}/posts/{postId}": {
+      "delete": {
+        "tags": [
+          "Social"
+        ],
+        "summary": "Delete one of our publications on a brand account (a post with its X reply, or a reply / comment)",
+        "description": "Proxy to social-service DELETE /orgs/social/accounts/{id}/posts/{postId}. `postId` = our publication id. Returns `{ publication }` with status deleted.\n\nResponse: documented from social-service DELETE /orgs/social/accounts/{id}/posts/{postId}, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/social.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "publication.id"
+            },
+            "required": true,
+            "description": "publication.id",
+            "name": "postId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "As returned by social-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "publication": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "Our row: the subject of its Unit"
+                        },
+                        "accountId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "network": {
+                          "type": "string"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "post",
+                            "reply",
+                            "comment"
+                          ]
+                        },
+                        "targetPostId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "A reply / comment: the post it answers (X id, LinkedIn thread urn)"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "text": {
+                          "type": "string"
+                        },
+                        "postId": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "X tweet id / LinkedIn share urn"
+                        },
+                        "permalink": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "outcomeKey": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "campaignId": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "runId": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "publishedAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "createdAt": {
+                          "type": "string"
+                        },
+                        "reply": {
+                          "type": "object",
+                          "nullable": true,
+                          "properties": {
+                            "text": {
+                              "type": "string"
+                            },
+                            "postId": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "permalink": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "error": {
+                              "type": "string",
+                              "nullable": true
+                            }
+                          },
+                          "required": [
+                            "text",
+                            "postId",
+                            "permalink",
+                            "error"
+                          ],
+                          "description": "X: the reply under the post; LinkedIn: its first comment. null when none was asked."
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "accountId",
+                        "network",
+                        "kind",
+                        "targetPostId",
+                        "status",
+                        "text",
+                        "postId",
+                        "permalink",
+                        "outcomeKey",
+                        "campaignId",
+                        "runId",
+                        "publishedAt",
+                        "createdAt",
+                        "reply"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "publication"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BadRequestTypeValidationOutcomeMismatchOrTheTextDoesNotFitTh"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequiredError402TheSpendWasRefusedTheCampaignSMaxBudgetOrTheBalanceForwarded"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404NoSuchAccountInThisOrgForwardedVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409TypeAccountNotProAiNeedsReconnectLinkedinPageNotPublishableA"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502XOrLinkedInRefusedOrWasUnreachableTypeNamesItForwardedVerbat"
+          }
+        },
+        "operationId": "deleteV1OrgsSocialAccountsByIdPostsByPostId"
       }
     },
     "/v1/orgs/social/industry-news": {

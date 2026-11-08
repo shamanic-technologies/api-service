@@ -266,6 +266,8 @@ export const DOWNSTREAM_RESPONSE_SOURCES: Record<string, DownstreamResponseSourc
   "GET /v1/orgs/social/accounts": { service: "social-service", method: "GET", path: "/orgs/social/accounts" },
   "GET /v1/orgs/social/publications": { service: "social-service", method: "GET", path: "/orgs/social/publications" },
   "POST /v1/orgs/social/accounts/{id}/posts": { service: "social-service", method: "POST", path: "/orgs/social/accounts/{id}/posts" },
+  "POST /v1/orgs/social/accounts/{id}/replies": { service: "social-service", method: "POST", path: "/orgs/social/accounts/{id}/replies" },
+  "DELETE /v1/orgs/social/accounts/{id}/posts/{postId}": { service: "social-service", method: "DELETE", path: "/orgs/social/accounts/{id}/posts/{postId}" },
   "GET /v1/orgs/social/industry-news": { service: "social-service", method: "GET", path: "/orgs/social/industry-news" },
   "POST /v1/orgs/contacts/upload": { service: "crm-service", method: "POST", path: "/orgs/contacts/upload" },
   "POST /v1/orgs/contacts": { service: "crm-service", method: "POST", path: "/orgs/contacts" },

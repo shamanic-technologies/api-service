@@ -386,6 +386,8 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "PATCH /v1/orgs/linkedin/accounts/{id}": NO,
   "DELETE /v1/orgs/linkedin/accounts/{id}": NO,
   "POST /v1/orgs/social/accounts/{id}/posts": yes(SEND, "Publishes a post on X or LinkedIn, in public."),
+  "POST /v1/orgs/social/accounts/{id}/replies": yes(SEND, "Publishes a reply on someone's X or LinkedIn post, in public."),
+  "DELETE /v1/orgs/social/accounts/{id}/posts/{postId}": NO,
   "POST /v1/orgs/contacts/upload": NO,
   "POST /v1/orgs/contacts": NO,
   "POST /v1/orgs/contacts/serve-next": yes(START, "Hands the next contacts to the brand's campaign, which writes to them."),

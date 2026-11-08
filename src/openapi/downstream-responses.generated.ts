@@ -2875,6 +2875,133 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "DELETE /v1/orgs/social/accounts/{id}/posts/{postId}": {
+    "service": "social-service",
+    "method": "DELETE",
+    "path": "/orgs/social/accounts/{id}/posts/{postId}",
+    "responses": {
+      "200": {
+        "description": "Deleted (status deleted)",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "publication": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Our row: the subject of its Unit"
+                },
+                "accountId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "network": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "post",
+                    "reply",
+                    "comment"
+                  ]
+                },
+                "targetPostId": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "A reply / comment: the post it answers (X id, LinkedIn thread urn)"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "postId": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "X tweet id / LinkedIn share urn"
+                },
+                "permalink": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "outcomeKey": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "campaignId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "runId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "publishedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "reply": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "postId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "permalink": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "text",
+                    "postId",
+                    "permalink",
+                    "error"
+                  ],
+                  "description": "X: the reply under the post; LinkedIn: its first comment. null when none was asked."
+                }
+              },
+              "required": [
+                "id",
+                "accountId",
+                "network",
+                "kind",
+                "targetPostId",
+                "status",
+                "text",
+                "postId",
+                "permalink",
+                "outcomeKey",
+                "campaignId",
+                "runId",
+                "publishedAt",
+                "createdAt",
+                "reply"
+              ]
+            }
+          },
+          "required": [
+            "publication"
+          ]
+        }
+      }
+    }
+  },
   "DELETE /v1/orgs/stripe/connections/{id}": {
     "service": "crm-service",
     "method": "DELETE",
@@ -34016,8 +34143,15 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "kind": {
                     "type": "string",
                     "enum": [
-                      "post"
+                      "post",
+                      "reply",
+                      "comment"
                     ]
+                  },
+                  "targetPostId": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "A reply / comment: the post it answers (X id, LinkedIn thread urn)"
                   },
                   "status": {
                     "type": "string"
@@ -34087,6 +34221,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "accountId",
                   "network",
                   "kind",
+                  "targetPostId",
                   "status",
                   "text",
                   "postId",
@@ -53282,8 +53417,15 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "kind": {
                   "type": "string",
                   "enum": [
-                    "post"
+                    "post",
+                    "reply",
+                    "comment"
                   ]
+                },
+                "targetPostId": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "A reply / comment: the post it answers (X id, LinkedIn thread urn)"
                 },
                 "status": {
                   "type": "string"
@@ -53353,6 +53495,138 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "accountId",
                 "network",
                 "kind",
+                "targetPostId",
+                "status",
+                "text",
+                "postId",
+                "permalink",
+                "outcomeKey",
+                "campaignId",
+                "runId",
+                "publishedAt",
+                "createdAt",
+                "reply"
+              ]
+            },
+            "created": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "publication",
+            "created"
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/orgs/social/accounts/{id}/replies": {
+    "service": "social-service",
+    "method": "POST",
+    "path": "/orgs/social/accounts/{id}/replies",
+    "responses": {
+      "200": {
+        "description": "Published (created: false = the same key answered again)",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "publication": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "Our row: the subject of its Unit"
+                },
+                "accountId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "network": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "post",
+                    "reply",
+                    "comment"
+                  ]
+                },
+                "targetPostId": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "A reply / comment: the post it answers (X id, LinkedIn thread urn)"
+                },
+                "status": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "postId": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "X tweet id / LinkedIn share urn"
+                },
+                "permalink": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "outcomeKey": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "campaignId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "runId": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "publishedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "reply": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "text": {
+                      "type": "string"
+                    },
+                    "postId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "permalink": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "error": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "text",
+                    "postId",
+                    "permalink",
+                    "error"
+                  ],
+                  "description": "X: the reply under the post; LinkedIn: its first comment. null when none was asked."
+                }
+              },
+              "required": [
+                "id",
+                "accountId",
+                "network",
+                "kind",
+                "targetPostId",
                 "status",
                 "text",
                 "postId",

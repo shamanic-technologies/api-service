@@ -2995,7 +2995,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "type": "string",
           "minLength": 1,
           "maxLength": 3000,
-          "description": "As published. X: <= 280 weighted, no @mention. LinkedIn: <= 3000."
+          "description": "As published. X: <= 280 weighted; every @handle in it moves to the reply (X refuses mentions in a post from our app), the post keeps the name. LinkedIn: <= 3000, `@[Name](urn:li:organization:<id>)` mentions as written."
         },
         "idempotencyKey": {
           "type": "string",
@@ -3008,6 +3008,42 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "minLength": 1,
           "description": "The Unit the caller's Engine makes (filled by workflow-service): must be `x_post_published` / `linkedin_post_published` for the account's network."
         },
+        "media": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "https URL this service downloads (a platform upload, the blog hero)"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "image",
+                  "video"
+                ]
+              },
+              "altText": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "title": {
+                "type": "string",
+                "maxLength": 200,
+                "description": "LinkedIn video title"
+              }
+            },
+            "required": [
+              "url",
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 4,
+          "description": "Images or a video, uploaded through the account's own login. X: up to 4 images or 1 video; LinkedIn: 1 image or 1 video."
+        },
         "reply": {
           "type": "string",
           "minLength": 1,
@@ -3016,6 +3052,45 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         }
       },
       "required": [
+        "text",
+        "idempotencyKey",
+        "outcomeKey"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /v1/orgs/social/accounts/{id}/replies": {
+    "service": "social-service",
+    "method": "POST",
+    "path": "/orgs/social/accounts/{id}/replies",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 2000,
+          "description": "The post answered: its URL (x.com/<handle>/status/<id>, a LinkedIn post URL) or its id / urn."
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1250,
+          "description": "X: <= 280 weighted (mentions allowed). LinkedIn: <= 1250."
+        },
+        "idempotencyKey": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 200
+        },
+        "outcomeKey": {
+          "type": "string",
+          "minLength": 1,
+          "description": "`x_reply_published` on X, `linkedin_comment_published` on LinkedIn."
+        }
+      },
+      "required": [
+        "target",
         "text",
         "idempotencyKey",
         "outcomeKey"

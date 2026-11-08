@@ -94,6 +94,7 @@ export const DOWNSTREAM_BODY_SOURCES: Record<string, DownstreamBodySource> = {
   "POST /v1/orgs/x/auth/callback": { service: "social-service", method: "POST", path: "/orgs/x/auth/callback" },
   "PATCH /v1/orgs/x/accounts/{id}": { service: "social-service", method: "PATCH", path: "/orgs/x/accounts/{id}" },
   "POST /v1/orgs/social/accounts/{id}/posts": { service: "social-service", method: "POST", path: "/orgs/social/accounts/{id}/posts" },
+  "POST /v1/orgs/social/accounts/{id}/replies": { service: "social-service", method: "POST", path: "/orgs/social/accounts/{id}/replies" },
   "POST /v1/orgs/linkedin/auth/start": { service: "social-service", method: "POST", path: "/orgs/linkedin/auth/start" },
   "POST /v1/orgs/linkedin/auth/callback": { service: "social-service", method: "POST", path: "/orgs/linkedin/auth/callback" },
   "PATCH /v1/orgs/linkedin/accounts/{id}": { service: "social-service", method: "PATCH", path: "/orgs/linkedin/accounts/{id}" },
