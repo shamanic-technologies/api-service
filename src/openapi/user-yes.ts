@@ -150,6 +150,12 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "PUT /v1/brands/{brandId}/relationships/{humanId}/tags/{tag}": NO,
   "DELETE /v1/brands/{brandId}/relationships/{humanId}/tags/{tag}": NO,
   "PUT /v1/brands/{brandId}/relationships/{humanId}/company": NO,
+  // BRAND-MCP-1109: plugging a brand's MCP server is a setting. It spends nothing
+  // (chat-service's connect check bills no cost), starts nothing and sends nothing:
+  // the AI only uses the tools inside turns that already run for the brand.
+  "POST /v1/brands/{brandId}/mcp-servers": NO,
+  "POST /v1/brands/{brandId}/mcp-servers/{serverId}/check": NO,
+  "DELETE /v1/brands/{brandId}/mcp-servers/{serverId}": NO,
 
   // ── Brand / offers ─────────────────────────────────────────────────────────
   "POST /v1/scraping/scrape": NO,
