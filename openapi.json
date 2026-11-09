@@ -11436,6 +11436,61 @@
           "nullable": true
         }
       },
+      "BrandMcpServerListResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "BrandMcpServerCreateResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "BrandMcpServerCreateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Display name, 1-80 characters (also the prefix of its tools for the AI)",
+            "example": "Distribute"
+          },
+          "url": {
+            "type": "string",
+            "description": "The server's Streamable HTTP endpoint, public https",
+            "example": "https://mcp.distribute.you/mcp"
+          },
+          "authorization": {
+            "type": "string",
+            "description": "The exact Authorization header value the server expects, e.g. `Bearer <key>`. Write-only: never returned by any read.",
+            "example": "Bearer <key>"
+          }
+        },
+        "required": [
+          "name",
+          "url"
+        ],
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "BrandMcpServerCheckResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "BrandMcpServerDeleteResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "RelationshipReviewResponse": {
         "type": "object",
         "properties": {},
@@ -16400,6 +16455,46 @@
       },
       "ErrorResponse502BotUnavailableTelegramCouldNotBeReachedForwardedVerbatim": {
         "description": "`bot_unavailable`: Telegram could not be reached (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400InvalidRequestBrandIdServerIdNotAUUIDBadNameOrURLPublicHttps": {
+        "description": "Invalid request: brandId/serverId not a UUID, bad name or URL (public https only), or the brand's limit of servers reached (chat-service's answer, verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404NoSuchServerForThisBrandVerbatim": {
+        "description": "No such server for this brand (verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502ChatServiceCouldNotReachAServiceItNeedsVerbatim": {
+        "description": "chat-service could not reach a service it needs (verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409ThisURLIsAlreadyPluggedForTheBrandVerbatim": {
+        "description": "This URL is already plugged for the brand (verbatim)",
         "content": {
           "application/json": {
             "schema": {
@@ -108131,6 +108226,306 @@
           }
         },
         "operationId": "deleteV1OrgsByOrgIdOwnerTelegram"
+      }
+    },
+    "/v1/brands/{brandId}/mcp-servers": {
+      "get": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "The MCP servers this brand gives to our conversation AI",
+        "description": "Every MCP server the brand plugged, with its last connect check and the tools it offers. Our AI uses these tools (read and write) when it writes to the brand's leads and clients. Each server: `{id, brandId, name, url, hasAuthorization, status, error, toolCount, toolNames, checkedAt, createdAt}`. `status` is the last connect check (`connected` or `error`, with `error` in plain words). The Authorization value is never returned (`hasAuthorization: true` says one is stored). Pass-through to chat-service GET /orgs/brands/{brandId}/mcp-servers.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The brand (from GET /v1/me or GET /v1/brands)"
+            },
+            "required": true,
+            "description": "The brand (from GET /v1/me or GET /v1/brands)",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`{servers: [...]}`, as returned by chat-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandMcpServerListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidRequestBrandIdServerIdNotAUUIDBadNameOrURLPublicHttps"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404NoSuchServerForThisBrandVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ChatServiceCouldNotReachAServiceItNeedsVerbatim"
+          }
+        },
+        "operationId": "getV1BrandsByBrandIdMcpServers"
+      },
+      "post": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "Plug an MCP server for this brand (connects and lists its tools)",
+        "description": "Stores the server, connects over Streamable HTTP and lists its tools. Answers 201 with the stored check: a server that cannot connect is still plugged with `status: \"error\"` and the reason in `error` (fix it, then POST .../check). From then on our AI may use its tools when it writes to the brand's leads and clients. `authorization` is the exact `Authorization` header value the server expects (e.g. `Bearer <key>`): stored in key-service, never returned, never logged. Each server: `{id, brandId, name, url, hasAuthorization, status, error, toolCount, toolNames, checkedAt, createdAt}`. `status` is the last connect check (`connected` or `error`, with `error` in plain words). The Authorization value is never returned (`hasAuthorization: true` says one is stored). Pass-through to chat-service POST /orgs/brands/{brandId}/mcp-servers.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The brand (from GET /v1/me or GET /v1/brands)"
+            },
+            "required": true,
+            "description": "The brand (from GET /v1/me or GET /v1/brands)",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrandMcpServerCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "`{server}` as plugged, with its first check, as returned by chat-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandMcpServerCreateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidRequestBrandIdServerIdNotAUUIDBadNameOrURLPublicHttps"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404NoSuchServerForThisBrandVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409ThisURLIsAlreadyPluggedForTheBrandVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ChatServiceCouldNotReachAServiceItNeedsVerbatim"
+          }
+        },
+        "operationId": "postV1BrandsByBrandIdMcpServers"
+      }
+    },
+    "/v1/brands/{brandId}/mcp-servers/{serverId}/check": {
+      "post": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "Connect to a brand's MCP server again and refresh its tools",
+        "description": "Re-runs the connect check and stores it. Each server: `{id, brandId, name, url, hasAuthorization, status, error, toolCount, toolNames, checkedAt, createdAt}`. `status` is the last connect check (`connected` or `error`, with `error` in plain words). The Authorization value is never returned (`hasAuthorization: true` says one is stored). Pass-through to chat-service POST /orgs/brands/{brandId}/mcp-servers/{serverId}/check.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The brand (from GET /v1/me or GET /v1/brands)"
+            },
+            "required": true,
+            "description": "The brand (from GET /v1/me or GET /v1/brands)",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "`servers[].id` from GET /v1/brands/{brandId}/mcp-servers"
+            },
+            "required": true,
+            "description": "`servers[].id` from GET /v1/brands/{brandId}/mcp-servers",
+            "name": "serverId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`{server}` with the new check, as returned by chat-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandMcpServerCheckResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidRequestBrandIdServerIdNotAUUIDBadNameOrURLPublicHttps"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404NoSuchServerForThisBrandVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ChatServiceCouldNotReachAServiceItNeedsVerbatim"
+          }
+        },
+        "operationId": "postV1BrandsByBrandIdMcpServersByServerIdCheck"
+      }
+    },
+    "/v1/brands/{brandId}/mcp-servers/{serverId}": {
+      "delete": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "Unplug a brand's MCP server (its Authorization value is deleted)",
+        "description": "Our AI no longer gets this server's tools. Pass-through to chat-service DELETE /orgs/brands/{brandId}/mcp-servers/{serverId}.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The brand (from GET /v1/me or GET /v1/brands)"
+            },
+            "required": true,
+            "description": "The brand (from GET /v1/me or GET /v1/brands)",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "`servers[].id` from GET /v1/brands/{brandId}/mcp-servers"
+            },
+            "required": true,
+            "description": "`servers[].id` from GET /v1/brands/{brandId}/mcp-servers",
+            "name": "serverId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`{deleted: true, id}`, as returned by chat-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandMcpServerDeleteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidRequestBrandIdServerIdNotAUUIDBadNameOrURLPublicHttps"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404NoSuchServerForThisBrandVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ChatServiceCouldNotReachAServiceItNeedsVerbatim"
+          }
+        },
+        "operationId": "deleteV1BrandsByBrandIdMcpServersByServerId"
       }
     },
     "/v1/brands/{brandId}/relationships/review": {

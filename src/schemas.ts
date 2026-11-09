@@ -19271,6 +19271,111 @@ registry.registerPath({
   },
 });
 
+// ── Brand MCP servers (BRAND-MCP-1109) ─────────────────────────────────────────
+// The MCP servers a brand gives to our conversation AI (the one writing to the
+// brand's leads and clients). Pass-through to chat-service
+// /orgs/brands/{brandId}/mcp-servers/* (same suffix). chat-service owns the shapes,
+// the status vocabulary and every refusal; responses are passthrough (rule #8).
+const BrandMcpBrandParam = z.string().uuid().openapi({ description: "The brand (from GET /v1/me or GET /v1/brands)" });
+const BrandMcpServerParam = z.string().uuid().openapi({ description: "`servers[].id` from GET /v1/brands/{brandId}/mcp-servers" });
+const BRAND_MCP_SERVER_DOC =
+  "Each server: `{id, brandId, name, url, hasAuthorization, status, error, toolCount, toolNames, checkedAt, createdAt}`. " +
+  "`status` is the last connect check (`connected` or `error`, with `error` in plain words). " +
+  "The Authorization value is never returned (`hasAuthorization: true` says one is stored).";
+
+const brandMcpErrors = {
+  400: { description: "Invalid request: brandId/serverId not a UUID, bad name or URL (public https only), or the brand's limit of servers reached (chat-service's answer, verbatim)", content: errorContent },
+  401: { description: "Unauthorized", content: errorContent },
+  404: { description: "No such server for this brand (verbatim)", content: errorContent },
+  500: { description: "Internal error", content: errorContent },
+  502: { description: "chat-service could not reach a service it needs (verbatim)", content: errorContent },
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/mcp-servers",
+  tags: ["Brand"],
+  summary: "The MCP servers this brand gives to our conversation AI",
+  description:
+    "Every MCP server the brand plugged, with its last connect check and the tools it offers. Our AI uses these tools " +
+    "(read and write) when it writes to the brand's leads and clients. " + BRAND_MCP_SERVER_DOC +
+    " Pass-through to chat-service GET /orgs/brands/{brandId}/mcp-servers.",
+  security: authed,
+  request: { params: z.object({ brandId: BrandMcpBrandParam }) },
+  responses: {
+    200: { description: "`{servers: [...]}`, as returned by chat-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandMcpServerListResponse") } } },
+    ...brandMcpErrors,
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{brandId}/mcp-servers",
+  tags: ["Brand"],
+  summary: "Plug an MCP server for this brand (connects and lists its tools)",
+  description:
+    "Stores the server, connects over Streamable HTTP and lists its tools. Answers 201 with the stored check: a server " +
+    "that cannot connect is still plugged with `status: \"error\"` and the reason in `error` (fix it, then POST .../check). " +
+    "From then on our AI may use its tools when it writes to the brand's leads and clients. `authorization` is the exact " +
+    "`Authorization` header value the server expects (e.g. `Bearer <key>`): stored in key-service, never returned, never logged. " +
+    BRAND_MCP_SERVER_DOC + " Pass-through to chat-service POST /orgs/brands/{brandId}/mcp-servers.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: BrandMcpBrandParam }),
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              name: z.string().openapi({ description: "Display name, 1-80 characters (also the prefix of its tools for the AI)", example: "Distribute" }),
+              url: z.string().openapi({ description: "The server's Streamable HTTP endpoint, public https", example: "https://mcp.distribute.you/mcp" }),
+              authorization: z.string().optional().openapi({ description: "The exact Authorization header value the server expects, e.g. `Bearer <key>`. Write-only: never returned by any read.", example: "Bearer <key>" }),
+            })
+            .passthrough()
+            .openapi("BrandMcpServerCreateRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    201: { description: "`{server}` as plugged, with its first check, as returned by chat-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandMcpServerCreateResponse") } } },
+    ...brandMcpErrors,
+    409: { description: "This URL is already plugged for the brand (verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/brands/{brandId}/mcp-servers/{serverId}/check",
+  tags: ["Brand"],
+  summary: "Connect to a brand's MCP server again and refresh its tools",
+  description:
+    "Re-runs the connect check and stores it. " + BRAND_MCP_SERVER_DOC +
+    " Pass-through to chat-service POST /orgs/brands/{brandId}/mcp-servers/{serverId}/check.",
+  security: authed,
+  request: { params: z.object({ brandId: BrandMcpBrandParam, serverId: BrandMcpServerParam }) },
+  responses: {
+    200: { description: "`{server}` with the new check, as returned by chat-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandMcpServerCheckResponse") } } },
+    ...brandMcpErrors,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/brands/{brandId}/mcp-servers/{serverId}",
+  tags: ["Brand"],
+  summary: "Unplug a brand's MCP server (its Authorization value is deleted)",
+  description:
+    "Our AI no longer gets this server's tools. " +
+    "Pass-through to chat-service DELETE /orgs/brands/{brandId}/mcp-servers/{serverId}.",
+  security: authed,
+  request: { params: z.object({ brandId: BrandMcpBrandParam, serverId: BrandMcpServerParam }) },
+  responses: {
+    200: { description: "`{deleted: true, id}`, as returned by chat-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandMcpServerDeleteResponse") } } },
+    ...brandMcpErrors,
+  },
+});
+
 // ── Relationships (RELATIONSHIP-TAGS-1014) ─────────────────────────────────────
 // Who each person is to a brand: relationship tags, suggested merges, company.
 // Pass-through to lead-service /orgs/brands/{brandId}/relationships/* (same suffix)

@@ -33,6 +33,7 @@ import googleRoutes from "./routes/google.js";
 import threadsRoutes from "./routes/threads.js";
 import xAccountsRoutes from "./routes/x-accounts.js";
 import socialBrandRoutes from "./routes/social-brand.js";
+import brandMcpServersRoutes from "./routes/brand-mcp-servers.js";
 import linkedinAccountsRoutes from "./routes/linkedin-accounts.js";
 import scrapingRoutes from "./routes/scraping.js";
 import leadsRoutes from "./routes/leads.js";
@@ -332,6 +333,7 @@ app.use("/v1", brandSpendableBudgetRoutes);
 app.use("/v1", rewardTasksRoutes);
 app.use("/v1", brandAudienceRoutes);
 app.use("/v1", relationshipsRoutes); // lead-service /orgs/brands/:brandId/relationships/* (RELATIONSHIP-TAGS-1014)
+app.use("/v1", brandMcpServersRoutes); // chat-service /orgs/brands/:brandId/mcp-servers/* (BRAND-MCP-1109)
 app.use("/v1", brandRoutes);
 app.use("/v1", crmRoutes);
 app.use("/v1", crmOpsRoutes);
