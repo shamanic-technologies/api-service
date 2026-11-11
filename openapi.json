@@ -8092,6 +8092,13 @@
           "nullable": true
         }
       },
+      "TransactionalEmailOpsMonitoringAlertsResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "CampaignOpsStuckOccurrencesResponse": {
         "type": "object",
         "properties": {},

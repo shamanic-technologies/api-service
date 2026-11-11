@@ -28,6 +28,7 @@ import rewardTasksRoutes from "./routes/reward-tasks.js";
 import brandAudienceRoutes from "./routes/brand-audience.js";
 import crmRoutes from "./routes/crm.js";
 import crmOpsRoutes from "./routes/crm-ops.js";
+import transactionalEmailOpsRoutes from "./routes/transactional-email-ops.js";
 import campaignOpsRoutes from "./routes/campaign-ops.js";
 import googleRoutes from "./routes/google.js";
 import threadsRoutes from "./routes/threads.js";
@@ -337,6 +338,7 @@ app.use("/v1", brandMcpServersRoutes); // chat-service /orgs/brands/:brandId/mcp
 app.use("/v1", brandRoutes);
 app.use("/v1", crmRoutes);
 app.use("/v1", crmOpsRoutes);
+app.use("/v1", transactionalEmailOpsRoutes); // transactional-email-service /internal/monitoring-alerts (staff, SIGNUP-EMAILS-1111)
 app.use("/v1", googleRoutes);
 app.use("/v1", threadsRoutes);
 app.use("/v1", xAccountsRoutes);

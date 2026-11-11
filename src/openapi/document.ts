@@ -525,6 +525,7 @@ export function buildDocument(
       { name: "Billing", description: "Billing, credits, and checkout" },
       { name: "Conversations", description: "The messages exchanged with a lead on a campaign (instantly-service proxy)" },
       { name: "Instantly", description: "Instantly sending-infrastructure audit (staff-only, instantly-service proxy)" },
+      { name: "Transactional Email Ops", description: "Staff monitoring alerts for dashboard v2 Monitoring (staff-only, transactional-email-service proxy)" },
       { name: "CRM Ops", description: "WhatsApp line health for dashboard v2 Monitoring (staff-only, crm-service proxy)" },
       { name: "Campaign Ops", description: "Prospects waiting on a blocked campaign answer, for dashboard v2 Monitoring (staff-only, campaign-service proxy)" },
       { name: "Scripts Ops", description: "The daily series of every outcome an Engines script makes, for dashboard v2 Monitoring (staff-only, workflow-service proxy)" },
