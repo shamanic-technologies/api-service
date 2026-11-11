@@ -2,7 +2,7 @@
   "openapi": "3.0.0",
   "info": {
     "title": "distribute.you API",
-    "description": "API Gateway for distribute.you.\n\n## Quick Start\n\nThis document is large (every operation your key may call). Read it in pieces instead:\n\n- `?view=onboarding`: open a first client, the same steps in the same order as the dashboard's sign-up flow, each with\n  the route to call, what to send and what to keep (about 6k tokens).\n- `?view=index`: every operation on one line, grouped by topic (about 13k tokens).\n- `?tag=<topic>` (`&page=<n>` when the index says the topic has pages): the full detail of one topic.\n- `?operation=<operationId>` (comma-separate several): the full detail of those operations only.\n\nEach works on `GET /v1/me/openapi.json` (your key's document) and `GET /openapi.json` (no key needed).\n\n**Get a key.** Already have one (from the distribute.you dashboard, or `POST /v1/api-keys`)? Use it. An AI agent with no\naccount: `POST /v1/agent-signups/start` with `{email, phone}`, read the 6-digit code in that inbox, then\n`POST /v1/agent-signups/complete` with `{email, code}`: the answer carries `apiKey`. No human needed.\nSend the key as `Authorization: Bearer distrib.usr_...` on every call, nothing else.\n\n**How to decide each step** (what to ask your user, what a good offer or audience looks like): read the skills our own\nCopilot follows, `GET /v1/skills` then `GET /v1/skills/{slug}`.\n\nAccounts opened through `/v1/agent-signups` have no free credit: free calls work at once; a call that spends money\nanswers `402 payment_required` until the prepay is paid (minimum $10, plus a required auto top-up: at least $15\nwhenever the balance falls below at least $5).\n\n**`GET /v1/me`** says which user the key acts as and lists every organization\nthe key can act in (by name), each with its brands. A key belongs to its USER, not to one\norganization: membership is checked on every request, so leaving an organization removes it\nfrom the key. A key never carries staff, admin or beta powers. The dashboard is at\nhttps://dashboard.distribute.you.\n\n**Each request acts in ONE organization.** Name a brand (`?brandId=<id>`, the `x-brand-id`\nheader, or `brandId` in a JSON body; brand routes like `/v1/brands/{id}` name it in the path),\nwhich selects the organization holding it, or name the organization (`?orgId=<id>` or the\n`x-org-id` header). If you belong to exactly one organization you need to name nothing. If you\nbelong to several and name nothing, the request is refused with `400 org_target_required` and\nthe list of your organizations; no organization is ever picked by default.\n\n## Ask your user before you spend, start or send\n\nSome operations spend the account's money, start work that will spend (a campaign, a workflow run) or send something\nto a person (an email, a reply, a post, an invitation). Each of them carries `x-needs-user-yes` in this\ndocument (and `[ASK YOUR USER FIRST]` in `?view=index`). **Before calling one, tell your user what it will do and\nget their explicit yes.** The marker holds:\n\n- `because`: one or more of `spends_money`, `starts_work`, `sends_to_person`.\n- `why`: one line saying what the call does, to put in your question.\n- `notNeededWhen` (sometimes): request-body values that make this call harmless (a campaign created\n  `status: \"stopped\"`), each entry matched when every key equals the body's top-level field. Such a call needs no yes.\n\nAn operation without the marker needs no yes: reads, settings, and anything created stopped, off or paused.\nThe API does not check the yes for you: asking is your job.\n\n## Storing provider keys (BYOK)\n\nTo store your own provider API keys (e.g. OpenAI, Anthropic) for use in workflows:\n\n```\nPOST /v1/keys\nAuthorization: Bearer distrib.usr_abc123...\n\n{ \"provider\": \"openai\", \"apiKey\": \"sk-...\" }\n```\n\n## Error codes\n\n| Code | Meaning |\n|------|---------|\n| 401 | Missing or invalid Bearer token. The body's `code` says which: `missing_credentials`, `wrong_header` (key sent in a header other than `Authorization`), `invalid_admin_key`, `malformed_key`, `key_not_recognized` (mistyped OR revoked: revoked keys are erased, so the two cannot be told apart); `fix` says what to do |\n| 503 | `key_validation_unavailable`: the key could not be checked right now; retry, do not replace the key |\n| 400 | `org_target_required`: you belong to several organizations and the request named none (`organizations` lists them); `brand_in_several_orgs`: the brand is held by several of your organizations, add `orgId`; `brands_span_orgs`: the named brands are not in one organization |\n| 403 | `org_not_member`: the named organization is not one of yours; `no_organization`: the key's user belongs to no organization |\n| 404 | `brand_not_found`: none of your organizations holds that brand |\n| 503 | `membership_unavailable`: your organizations could not be checked right now; retry |\n| 402 | `payment_required` (accounts opened through `/v1/agent-signups`): the call costs money and the balance cannot cover it. `prepay` gives the route, minimums and an example body; `upstream` is the refusing service's own answer |\n| 429 | Rate limit exceeded — see below |\n| 502 | Identity resolution failed (internal service unreachable) |\n\n## Rate limits\n\nEvery response carries your current rate-limit state, so you never have to guess\nhow fast you may go:\n\n```\nRateLimit: limit=600, remaining=597, reset=42\nRateLimit-Policy: \"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60\nRateLimit-Limit: 600\nRateLimit-Remaining: 597\nRateLimit-Reset: 42\n```\n\n`reset` is **seconds until the current window rolls over**, not a timestamp.\n\n| Policy | Applies to | Budget |\n|--------|-----------|--------|\n| `authenticated` | One API key (`Authorization: Bearer distrib.*`) | 600 requests / 60s |\n| `anonymous` | One client IP, for endpoints that need no key | 120 requests / 60s |\n\nExceeding a budget returns **429** with a `Retry-After` header in seconds. Wait\nthat long and retry — the window is fixed, so a single wait clears it. Requests\nmade while throttled still count, so back off rather than polling the 429.\n\n## Deprecation policy\n\nNothing in this document is deprecated today. To set what a campaign may\nspend, use its sales funnel caps:\n`PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps`\n(the old per-campaign daily-budget operations are gone).\n\nWhen something is deprecated, you learn it mechanically, from the API itself,\nand with at least\n**180 days** of notice:\n\n- The operation is marked `deprecated: true` in this document.\n- Every response it returns carries `Deprecation: @<unix-seconds>` (RFC 9745)\n  and `Sunset: <HTTP-date>` (RFC 8594). `Sunset` is the earliest date the\n  operation may stop working — never sooner than 180 days\n  after `Deprecation`.\n- A `Link: <url>; rel=\"deprecation\"` header points at the replacement\n  operation or the changelog entry.\n- A deprecated operation keeps working until its sunset date. Deprecation is an\n  announcement, not a removal.\n- Removal happens only behind a new URL version prefix. `/v1` never changes\n  meaning underneath a caller: a breaking change ships as `/v2`.\n\nThe same policy is machine-readable at the root of this document under\n`x-deprecation-policy`.\n",
+    "description": "API Gateway for distribute.you.\n\n## Quick Start\n\nThis document is large (every operation your key may call). Read it in pieces instead:\n\n- `?view=onboarding`: open a first client, the same steps in the same order as the dashboard's sign-up flow, each with\n  the route to call, what to send and what to keep (about 6k tokens).\n- `?view=index`: every operation on one line, grouped by topic (about 13k tokens).\n- `?tag=<topic>` (`&page=<n>` when the index says the topic has pages): the full detail of one topic.\n- `?operation=<operationId>` (comma-separate several): the full detail of those operations only.\n\nEach works on `GET /v1/me/openapi.json` (your key's document) and `GET /openapi.json` (no key needed).\n\n**Get a key.** Already have one (from the distribute.you dashboard, or `POST /v1/api-keys`)? Use it. An AI agent with no\naccount: `POST /v1/agent-signups/start` with `{email, phone}`, read the 6-digit code in that inbox, then\n`POST /v1/agent-signups/complete` with `{email, code}`: the answer carries `apiKey`. No human needed.\nSend the key as `Authorization: Bearer distrib.usr_...` on every call, nothing else.\n\n**How to decide each step** (what to ask your user, what a good offer or audience looks like): read the skills our own\nCopilot follows, `GET /v1/skills` then `GET /v1/skills/{slug}`.\n\nAccounts opened through `/v1/agent-signups` have no free credit: free calls work at once; a call that spends money\nanswers `402 payment_required` until the prepay is paid (minimum $10, plus a required auto top-up: at least $15\nwhenever the balance falls below at least $5).\n\n**`GET /v1/me`** says which user the key acts as and lists every organization\nthe key can act in (by name), each with its brands. A key belongs to its USER, not to one\norganization: membership is checked on every request, so leaving an organization removes it\nfrom the key. A key never carries staff, admin or beta powers. The dashboard is at\nhttps://dashboard.distribute.you.\n\n**Each request acts in ONE organization.** Name a brand (`?brandId=<id>`, the `x-brand-id`\nheader, or `brandId` in a JSON body; brand routes like `/v1/brands/{id}` name it in the path),\nwhich selects the organization holding it, or name the organization (`?orgId=<id>` or the\n`x-org-id` header). If you belong to exactly one organization you need to name nothing. If you\nbelong to several and name nothing, the request is refused with `400 org_target_required` and\nthe list of your organizations; no organization is ever picked by default.\n\n## Ask your user before you spend, start or send\n\nSome operations spend the account's money, start work that will spend (a campaign, a workflow run) or send something\nto a person (an email, a reply, a post, an invitation). Each of them carries `x-needs-user-yes` in this\ndocument (and `[ASK YOUR USER FIRST]` in `?view=index`). **Before calling one, tell your user what it will do and\nget their explicit yes.** The marker holds:\n\n- `because`: one or more of `spends_money`, `starts_work`, `sends_to_person`.\n- `why`: one line saying what the call does, to put in your question.\n- `notNeededWhen` (sometimes): request-body values that make this call harmless (a campaign created\n  `status: \"stopped\"`), each entry matched when every key equals the body's top-level field. Such a call needs no yes.\n- `neededWhen` (sometimes, on an edit): the only request-body values that can start, spend or send (a campaign\n  edited with `status: \"activate\"`), matched the same way. A body matching none of them needs no yes (saving a brief\n  or a target on a stopped campaign starts nothing), and `why` describes only the matching calls.\n\nAn operation without the marker needs no yes: reads, settings, and anything created stopped, off or paused.\nThe API does not check the yes for you: asking is your job.\n\n## Storing provider keys (BYOK)\n\nTo store your own provider API keys (e.g. OpenAI, Anthropic) for use in workflows:\n\n```\nPOST /v1/keys\nAuthorization: Bearer distrib.usr_abc123...\n\n{ \"provider\": \"openai\", \"apiKey\": \"sk-...\" }\n```\n\n## Error codes\n\n| Code | Meaning |\n|------|---------|\n| 401 | Missing or invalid Bearer token. The body's `code` says which: `missing_credentials`, `wrong_header` (key sent in a header other than `Authorization`), `invalid_admin_key`, `malformed_key`, `key_not_recognized` (mistyped OR revoked: revoked keys are erased, so the two cannot be told apart); `fix` says what to do |\n| 503 | `key_validation_unavailable`: the key could not be checked right now; retry, do not replace the key |\n| 400 | `org_target_required`: you belong to several organizations and the request named none (`organizations` lists them); `brand_in_several_orgs`: the brand is held by several of your organizations, add `orgId`; `brands_span_orgs`: the named brands are not in one organization |\n| 403 | `org_not_member`: the named organization is not one of yours; `no_organization`: the key's user belongs to no organization |\n| 404 | `brand_not_found`: none of your organizations holds that brand |\n| 503 | `membership_unavailable`: your organizations could not be checked right now; retry |\n| 402 | `payment_required` (accounts opened through `/v1/agent-signups`): the call costs money and the balance cannot cover it. `prepay` gives the route, minimums and an example body; `upstream` is the refusing service's own answer |\n| 429 | Rate limit exceeded — see below |\n| 502 | Identity resolution failed (internal service unreachable) |\n\n## Rate limits\n\nEvery response carries your current rate-limit state, so you never have to guess\nhow fast you may go:\n\n```\nRateLimit: limit=600, remaining=597, reset=42\nRateLimit-Policy: \"authenticated\";q=600;w=60, \"anonymous\";q=120;w=60\nRateLimit-Limit: 600\nRateLimit-Remaining: 597\nRateLimit-Reset: 42\n```\n\n`reset` is **seconds until the current window rolls over**, not a timestamp.\n\n| Policy | Applies to | Budget |\n|--------|-----------|--------|\n| `authenticated` | One API key (`Authorization: Bearer distrib.*`) | 600 requests / 60s |\n| `anonymous` | One client IP, for endpoints that need no key | 120 requests / 60s |\n\nExceeding a budget returns **429** with a `Retry-After` header in seconds. Wait\nthat long and retry — the window is fixed, so a single wait clears it. Requests\nmade while throttled still count, so back off rather than polling the 429.\n\n## Deprecation policy\n\nNothing in this document is deprecated today. To set what a campaign may\nspend, use its sales funnel caps:\n`PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps`\n(the old per-campaign daily-budget operations are gone).\n\nWhen something is deprecated, you learn it mechanically, from the API itself,\nand with at least\n**180 days** of notice:\n\n- The operation is marked `deprecated: true` in this document.\n- Every response it returns carries `Deprecation: @<unix-seconds>` (RFC 9745)\n  and `Sunset: <HTTP-date>` (RFC 8594). `Sunset` is the earliest date the\n  operation may stop working — never sooner than 180 days\n  after `Deprecation`.\n- A `Link: <url>; rel=\"deprecation\"` header points at the replacement\n  operation or the changelog entry.\n- A deprecated operation keeps working until its sunset date. Deprecation is an\n  announcement, not a removal.\n- Removal happens only behind a new URL version prefix. `/v1` never changes\n  meaning underneath a caller: a breaking change ships as `/v2`.\n\nThe same policy is machine-readable at the root of this document under\n`x-deprecation-policy`.\n",
     "version": "1.0.0"
   },
   "servers": [
@@ -28187,6 +28187,11 @@
             {
               "status": "stop"
             }
+          ],
+          "neededWhen": [
+            {
+              "status": "activate"
+            }
           ]
         }
       },
@@ -28618,10 +28623,10 @@
             "starts_work",
             "spends_money"
           ],
-          "why": "Edits a campaign; resuming it starts finding and contacting people again.",
+          "why": "Edits a campaign: resuming it starts finding and contacting people again, and a budget change sets how much it may spend.",
           "notNeededWhen": [
             {
-              "status": "stopped"
+              "status": "stop"
             }
           ]
         }
@@ -80847,6 +80852,14 @@
             },
             {
               "status": "archived"
+            },
+            {
+              "status": "suggested"
+            }
+          ],
+          "neededWhen": [
+            {
+              "status": "active"
             }
           ]
         }
@@ -94041,6 +94054,20 @@
             {
               "automationAllowed": false
             }
+          ],
+          "neededWhen": [
+            {
+              "automationAllowed": true
+            },
+            {
+              "outreachDefault": true
+            },
+            {
+              "accountType": "pro_ai"
+            },
+            {
+              "lineRole": "assistant"
+            }
           ]
         }
       }
@@ -105032,6 +105059,11 @@
             {
               "enabled": false
             }
+          ],
+          "neededWhen": [
+            {
+              "enabled": true
+            }
           ]
         }
       },
@@ -111178,6 +111210,7 @@
       "starts_work": "Sets running something that will spend or contact people on its own.",
       "sends_to_person": "Sends, or lets us send, a message to a human."
     },
-    "notNeededWhen": "Optional on a marker: a list of request-body matches (every key equal to the body's top-level field); a call matching one needs no yes."
+    "notNeededWhen": "Optional on a marker: a list of request-body matches (every key equal to the body's top-level field); a call matching one needs no yes.",
+    "neededWhen": "Optional on a marker of an edit operation: the only request-body matches (same rule) that can start, spend or send; a call matching none needs no yes, and `why` describes only the matching calls."
   }
 }

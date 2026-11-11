@@ -15,6 +15,12 @@
  *   document, with the reasons and one line the agent can turn into its ask.
  *   `notNeededWhen` lists request-body values that make THIS call harmless
  *   (a campaign created `status: "stopped"`, a brand set `paused: true`).
+ *   `neededWhen` lists the ONLY request-body values that can start, spend or
+ *   send on an EDIT operation (`status: "activate"`): a body matching none of
+ *   them needs no yes, so saving a brief on a stopped campaign is not told
+ *   "this sets it running" (SOPHIE-NO-FALSE-READY-1111). Matching rule, both
+ *   lists: an entry matches when every key JSON-equals the body's top-level
+ *   field. `needsUserYes` below is the reference reading.
  * - `NO`: decided, no yes needed (a read, a setting, a creation that starts
  *   stopped / off / paused, a proposal or preview that is part of setting up).
  *
@@ -43,6 +49,11 @@ export interface UserYesMarker {
   why: string;
   /** Request-body values (each entry: every key equal) under which this call needs no yes. */
   notNeededWhen?: Record<string, unknown>[];
+  /**
+   * Request-body values (each entry: every key equal) under which this call CAN start, spend or send.
+   * Present = a body matching none of them needs no yes; `why` describes only the matching calls.
+   */
+  neededWhen?: Record<string, unknown>[];
 }
 
 export const USER_YES_EXTENSION = "x-needs-user-yes";
@@ -53,8 +64,29 @@ type Decision = UserYesMarker | null;
 const yes = (
   because: UserYesReason[],
   why: string,
-  notNeededWhen?: Record<string, unknown>[],
-): UserYesMarker => (notNeededWhen ? { because, why, notNeededWhen } : { because, why });
+  when: { notNeededWhen?: Record<string, unknown>[]; neededWhen?: Record<string, unknown>[] } = {},
+): UserYesMarker => ({
+  because,
+  why,
+  ...(when.notNeededWhen ? { notNeededWhen: when.notNeededWhen } : {}),
+  ...(when.neededWhen ? { neededWhen: when.neededWhen } : {}),
+});
+
+const matches = (entry: Record<string, unknown>, body: Record<string, unknown>): boolean =>
+  Object.entries(entry).every(([k, v]) => JSON.stringify(body[k]) === JSON.stringify(v));
+
+/**
+ * The reference reading of a marker for one request body (consumers: chat-service
+ * `needsYes`, the MCP, outside agents): a yes is needed unless a `notNeededWhen`
+ * entry matches, or `neededWhen` is present and none of its entries matches.
+ */
+export function needsUserYes(marker: UserYesMarker | null | undefined, body: unknown): boolean {
+  if (!marker) return false;
+  const b = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  if ((marker.notNeededWhen ?? []).some((entry) => matches(entry, b))) return false;
+  if (marker.neededWhen && !marker.neededWhen.some((entry) => matches(entry, b))) return false;
+  return true;
+}
 
 const SPEND: UserYesReason[] = ["spends_money"];
 const START: UserYesReason[] = ["starts_work", "spends_money"];
@@ -71,26 +103,32 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "POST /v1/sales-funnel-campaigns": yes(
     START,
     "Launches a sales funnel campaign running: it finds and contacts people and spends up to the funnel's max budget.",
-    [{ status: "stopped" }],
+    { notNeededWhen: [{ status: "stopped" }] },
   ),
   "PATCH /v1/sales-funnel-campaigns/{id}": yes(
     START,
     "Sets the whole sales funnel campaign running: it finds and contacts people and spends up to the funnel's max budget.",
-    [{ status: "stop" }],
+    // Only `status: "activate"` starts it (campaign-service: brief, target and followsPlan alone are written
+    // with the status untouched). `notNeededWhen` stays for consumers that read only it.
+    { notNeededWhen: [{ status: "stop" }], neededWhen: [{ status: "activate" }] },
   ),
   "DELETE /v1/sales-funnel-campaigns/{id}": NO,
   "POST /v1/sales-funnel-campaigns/{id}/entries": yes(
     ["sends_to_person", "starts_work", "spends_money"],
     "The campaign starts answering its own leads' events (form fills, replies, callbacks): it writes to them and may call them.",
   ),
-  "PATCH /v1/campaigns/{id}": yes(START, "Edits a campaign; resuming it starts finding and contacting people again.", [
-    { status: "stopped" },
-  ]),
+  // Not `neededWhen`: besides `status: "activate"`, any budget field (maxBudget*Usd, dailyBudgetCents) changes what
+  // it may spend, and a match cannot say "key present". So every edit asks, with a why true for each of them.
+  "PATCH /v1/campaigns/{id}": yes(
+    START,
+    "Edits a campaign: resuming it starts finding and contacting people again, and a budget change sets how much it may spend.",
+    { notNeededWhen: [{ status: "stop" }] },
+  ),
   "POST /v1/campaigns/{id}/stop": NO,
   "PATCH /v1/brands/{brandId}/pause": yes(
     START,
     "Unpausing a brand lets every campaign of it run again: contacting people and spending.",
-    [{ paused: true }],
+    { notNeededWhen: [{ paused: true }] },
   ),
 
   // ── Keys / auth ────────────────────────────────────────────────────────────
@@ -134,7 +172,8 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "PATCH /v1/brands/{id}/offers/{offerId}/qualification/criteria/{criterionId}": yes(
     SPEND,
     "Turning a qualification check on runs it, billed, on every new lead of the offer.",
-    [{ enabled: false }],
+    // lead-service writes the other fields (name, prompt, mode) with no run: only `enabled: true` turns billing on.
+    { notNeededWhen: [{ enabled: false }], neededWhen: [{ enabled: true }] },
   ),
   "DELETE /v1/brands/{id}/offers/{offerId}/qualification/criteria/{criterionId}": NO,
   "POST /v1/brands/{id}/offers/{offerId}/qualification/criteria/{criterionId}/sample": yes(
@@ -365,7 +404,7 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "PATCH /v1/orgs/audiences/{id}/status": yes(
     START,
     "An active audience feeds the brand's running campaigns: they find and contact its people.",
-    [{ status: "paused" }, { status: "archived" }],
+    { notNeededWhen: [{ status: "paused" }, { status: "archived" }, { status: "suggested" }], neededWhen: [{ status: "active" }] },
   ),
   "PATCH /v1/orgs/audiences/{id}/serve-source": NO,
   "POST /v1/orgs/audiences/{id}/sources": NO,
@@ -404,7 +443,11 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "PATCH /v1/orgs/matrix/links/{linkId}": yes(
     SEND,
     "Can let our AI write to people from this WhatsApp / Telegram / Discord account.",
-    [{ automationAllowed: false }],
+    // A persona or brand-only edit sends nothing; these four can put the AI (or outreach) on the account.
+    {
+      notNeededWhen: [{ automationAllowed: false }],
+      neededWhen: [{ automationAllowed: true }, { outreachDefault: true }, { accountType: "pro_ai" }, { lineRole: "assistant" }],
+    },
   ),
   "POST /v1/orgs/gohighlevel/connections": NO,
   "PATCH /v1/orgs/gohighlevel/connections/{id}": NO,
