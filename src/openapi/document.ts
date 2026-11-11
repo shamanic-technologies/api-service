@@ -288,6 +288,9 @@ get their explicit yes.** The marker holds:
 - \`why\`: one line saying what the call does, to put in your question.
 - \`notNeededWhen\` (sometimes): request-body values that make this call harmless (a campaign created
   \`status: "stopped"\`), each entry matched when every key equals the body's top-level field. Such a call needs no yes.
+- \`neededWhen\` (sometimes, on an edit): the only request-body values that can start, spend or send (a campaign
+  edited with \`status: "activate"\`), matched the same way. A body matching none of them needs no yes (saving a brief
+  or a target on a stopped campaign starts nothing), and \`why\` describes only the matching calls.
 
 An operation without the marker needs no yes: reads, settings, and anything created stopped, off or paused.
 The API does not check the yes for you: asking is your job.
@@ -382,6 +385,9 @@ const USER_YES_POLICY = {
   notNeededWhen:
     "Optional on a marker: a list of request-body matches (every key equal to the body's top-level field); " +
     "a call matching one needs no yes.",
+  neededWhen:
+    "Optional on a marker of an edit operation: the only request-body matches (same rule) that can start, spend " +
+    "or send; a call matching none needs no yes, and `why` describes only the matching calls.",
 };
 
 /**
