@@ -193,6 +193,7 @@ const PLATFORM_OPERATIONS = [
   "post /v1/crm/ops/whatsapp-lines/check",
   "get /v1/crm/ops/trigger-reports",
   "get /v1/crm/ops/connector-intake",
+    "get /v1/transactional-email/ops/monitoring-alerts",
   "get /v1/campaigns/ops/stuck-occurrences",
   "get /v1/campaigns/ops/trigger-health",
   "get /v1/campaigns/ops/plan-following",

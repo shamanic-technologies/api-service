@@ -12159,6 +12159,33 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/transactional-email/ops/monitoring-alerts",
+  tags: ["Transactional Email Ops"],
+  summary: "Get the staff monitoring alerts transactional-email-service recorded instead of emailing them (staff only)",
+  description:
+    "Powers the alerts section of dashboard v2 Monitoring: the staff alerts transactional-email-service records "
+    + "instead of emailing (provider out of credits, campaign failing, trigger silent, domain blocklisted, newsletter "
+    + "halted...). Staff-only (platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to transactional-email-service GET /internal/monitoring-alerts. The query string "
+    + "is forwarded verbatim; a bad `days` answers the producer's own 400. Response owned by the downstream service "
+    + "(its `MonitoringAlertsResponse`).",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Window in days; transactional-email-service owns the default and bounds"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Monitoring alerts — pass-through from transactional-email-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("TransactionalEmailOpsMonitoringAlertsResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/campaigns/ops/stuck-occurrences",
   tags: ["Campaign Ops"],
   summary: "Get the prospects waiting on a blocked campaign answer, now and per day (staff only)",
