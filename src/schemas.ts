@@ -14663,6 +14663,66 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/brands/{brandId}/companies",
+  tags: ["Features"],
+  summary: "The brand's companies, one page at a time",
+  description:
+    "Every company the brand's outreach reached (the rows of GET /v1/brands/{brandId}/revenue `organizations[]`, minus the logo URL), " +
+    "each with its lifecycle rung, sorted, searched and paged so a page reads only the rows it draws. " +
+    "`total` counts the rows matching the filter, `organizationCount` every company, `rungs` the company count per lifecycle rung. " +
+    "Response shape: features-service GET /brands/{brandId}/companies. " +
+    "Proxied to features-service GET /brands/{brandId}/companies, which owns every row and refusal. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID") }),
+    query: z.object({
+      pricing: z.string().optional().openapi({ example: "net" }).describe("gross | net — validated by features-service"),
+      sort: z.string().optional().openapi({ example: "value" }).describe("value (DEFAULT, highest expected value first) | touch (latest first) | name (A to Z)"),
+      q: z.string().optional().describe("Search: every word must appear in the company's name or domain"),
+      rung: z.string().optional().describe("A lifecycle rung key: only the companies on it"),
+      offset: z.string().optional().openapi({ example: "0" }).describe("Rows to skip (DEFAULT 0)"),
+      limit: z.string().optional().openapi({ example: "60" }).describe("Rows to return, 1 to 5000 (DEFAULT 60)"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "One page of the brand's companies (passthrough of features-service's body)", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandCompaniesResponse") } } },
+    400: { description: "Invalid pricing, sort, offset, limit, q or rung, forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "Brand not found, forwarded verbatim", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/brands/{brandId}/companies/{companyKey}",
+  tags: ["Features"],
+  summary: "One company of the brand",
+  description:
+    "The company row GET /v1/brands/{brandId}/companies serves, addressed by its `companyKey` (domain, else org id), " +
+    "with its 1-based `position` in the value order out of `organizationCount` and the `previousKey` / `nextKey` of its neighbours. " +
+    "Proxied to features-service GET /brands/{brandId}/companies/{companyKey}; query forwarded verbatim.",
+  security: authed,
+  request: {
+    params: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID"),
+      companyKey: z.string().openapi({ example: "acme.com" }).describe("The company's domain, else its org id"),
+    }),
+    query: z.object({
+      pricing: z.string().optional().openapi({ example: "net" }).describe("gross | net — validated by features-service"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "The company (passthrough of features-service's body)", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandCompanyResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No company of the brand has this key (company_not_found) or brand not found, forwarded verbatim", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/brands/{brandId}/outcome-cost-series",
   tags: ["Features"],
   summary: "Cost per outcome of one brand, per month and since inception, across all its offers",

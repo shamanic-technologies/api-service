@@ -12,7 +12,7 @@ const { FEATURES_BASE } = vi.hoisted(() => {
 });
 
 /**
- * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths,spend-charts,outcome-cost-series,campaign-revenue} — BEHAVIOURAL cover.
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths,spend-charts,outcome-cost-series,campaign-revenue,companies} — BEHAVIOURAL cover.
  *
  * The offer-grain sibling's reasoning applies verbatim (see
  * offer-grain-proxy.behavior.test.ts): a source-substring test cannot see a template
@@ -167,6 +167,20 @@ const OUTCOME_COST_SERIES_BODY = {
 };
 
 // One body per channel, each the per-channel grouped-by-campaign read (CAMPAIGN-MONEY-ONE-READ-1108).
+// A stand-in page of features-service's brand company list (MON-PAGE-SPEED-2-1112).
+const COMPANIES_BODY = {
+  brandId: BRAND_ID,
+  sort: "value",
+  q: "acme",
+  rung: "engaged",
+  offset: 60,
+  limit: 60,
+  total: 61,
+  organizationCount: 11345,
+  rungs: [{ key: "engaged", rank: 2, label: "Engaged", organizationCount: 400 }],
+  companies: [{ organizationKey: "org:1", companyKey: "acme.com", orgName: "Acme", expectedRevenueUsd: 12.5, lifecycle: { key: "engaged", rank: 2, label: "Engaged" } }],
+};
+
 const CAMPAIGN_REVENUE_BODY = {
   brandId: BRAND_ID,
   pricing: "net",
@@ -187,6 +201,7 @@ const READS = [
   { suffix: "spend-charts", body: SPEND_CHARTS_BODY, query: "pricing=net" },
   { suffix: "outcome-cost-series", body: OUTCOME_COST_SERIES_BODY, query: "pricing=net" },
   { suffix: "campaign-revenue", body: CAMPAIGN_REVENUE_BODY, query: "pricing=net" },
+  { suffix: "companies", body: COMPANIES_BODY, query: "pricing=net&sort=value&offset=60&q=acme&rung=engaged" },
 ] as const;
 
 describe("GET /v1/brands/:brandId/* — over the wire", () => {
@@ -302,6 +317,32 @@ describe("GET /v1/brands/:brandId/* — over the wire", () => {
 
     expect(calls[0].url).toBe(`${FEATURES_BASE}/brands/${BRAND_ID}/deals-value`);
     expect(res.status).toBe(409);
+    expect(res.body).toEqual(refusal);
+  });
+
+  it("/companies/:companyKey reaches features-service's one-company path, key encoded, query verbatim", async () => {
+    const body = { brandId: BRAND_ID, company: { companyKey: "acme.com" }, position: 3, previousKey: "b.io", nextKey: null, organizationCount: 11345, rungs: [] };
+    stubUpstream(body);
+
+    const res = await request(buildApp()).get(`/v1/brands/${BRAND_ID}/companies/acme.com?pricing=net`).set("x-org-id", "someone-elses-org");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(body);
+    expect(calls[0].url).toBe(`${FEATURES_BASE}/brands/${BRAND_ID}/companies/acme.com?pricing=net`);
+    expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
+    expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("/companies/:companyKey forwards a named 404 intact", async () => {
+    const refusal = { error: "no company", reason: "company_not_found" };
+    global.fetch = vi.fn().mockImplementation(async (url: string, options: any) => {
+      calls.push({ url, options });
+      return { ok: false, status: 404, text: () => Promise.resolve(JSON.stringify(refusal)), json: () => Promise.resolve(refusal) };
+    });
+
+    const res = await request(buildApp()).get(`/v1/brands/${BRAND_ID}/companies/nope.com`);
+
+    expect(res.status).toBe(404);
     expect(res.body).toEqual(refusal);
   });
 });
