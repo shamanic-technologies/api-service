@@ -9404,6 +9404,20 @@
           "nullable": true
         }
       },
+      "BrandCompaniesResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "BrandCompanyResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "BrandOutcomeCostSeriesResponse": {
         "type": "object",
         "properties": {},
@@ -15202,6 +15216,26 @@
       },
       "ErrorResponse502TheBrandSCampaignRowsCouldNotBeReadForwardedVerbatim": {
         "description": "The brand's campaign rows could not be read, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400InvalidPricingSortOffsetLimitQOrRungForwardedVerbatim": {
+        "description": "Invalid pricing, sort, offset, limit, q or rung, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404NoCompanyOfTheBrandHasThisKeyCompanyNotFoundOrBrandNotFoundF": {
+        "description": "No company of the brand has this key (company_not_found) or brand not found, forwarded verbatim",
         "content": {
           "application/json": {
             "schema": {
@@ -69210,6 +69244,224 @@
           }
         },
         "operationId": "getV1BrandsByBrandIdCampaignRevenue"
+      }
+    },
+    "/v1/brands/{brandId}/companies": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "The brand's companies, one page at a time",
+        "description": "Every company the brand's outreach reached (the rows of GET /v1/brands/{brandId}/revenue `organizations[]`, minus the logo URL), each with its lifecycle rung, sorted, searched and paged so a page reads only the rows it draws. `total` counts the rows matching the filter, `organizationCount` every company, `rungs` the company count per lifecycle rung. Response shape: features-service GET /brands/{brandId}/companies. Proxied to features-service GET /brands/{brandId}/companies, which owns every row and refusal. The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "brand-uuid-123",
+              "description": "Brand UUID"
+            },
+            "required": true,
+            "description": "Brand UUID",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "net",
+              "description": "gross | net — validated by features-service"
+            },
+            "required": false,
+            "description": "gross | net — validated by features-service",
+            "name": "pricing",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "value",
+              "description": "value (DEFAULT, highest expected value first) | touch (latest first) | name (A to Z)"
+            },
+            "required": false,
+            "description": "value (DEFAULT, highest expected value first) | touch (latest first) | name (A to Z)",
+            "name": "sort",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Search: every word must appear in the company's name or domain"
+            },
+            "required": false,
+            "description": "Search: every word must appear in the company's name or domain",
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "A lifecycle rung key: only the companies on it"
+            },
+            "required": false,
+            "description": "A lifecycle rung key: only the companies on it",
+            "name": "rung",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "0",
+              "description": "Rows to skip (DEFAULT 0)"
+            },
+            "required": false,
+            "description": "Rows to skip (DEFAULT 0)",
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "60",
+              "description": "Rows to return, 1 to 5000 (DEFAULT 60)"
+            },
+            "required": false,
+            "description": "Rows to return, 1 to 5000 (DEFAULT 60)",
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of the brand's companies (passthrough of features-service's body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandCompaniesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidPricingSortOffsetLimitQOrRungForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "description": "Brand not found, forwarded verbatim",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamError"
+          }
+        },
+        "operationId": "getV1BrandsByBrandIdCompanies"
+      }
+    },
+    "/v1/brands/{brandId}/companies/{companyKey}": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "One company of the brand",
+        "description": "The company row GET /v1/brands/{brandId}/companies serves, addressed by its `companyKey` (domain, else org id), with its 1-based `position` in the value order out of `organizationCount` and the `previousKey` / `nextKey` of its neighbours. Proxied to features-service GET /brands/{brandId}/companies/{companyKey}; query forwarded verbatim.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "brand-uuid-123",
+              "description": "Brand UUID"
+            },
+            "required": true,
+            "description": "Brand UUID",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "acme.com",
+              "description": "The company's domain, else its org id"
+            },
+            "required": true,
+            "description": "The company's domain, else its org id",
+            "name": "companyKey",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "net",
+              "description": "gross | net — validated by features-service"
+            },
+            "required": false,
+            "description": "gross | net — validated by features-service",
+            "name": "pricing",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The company (passthrough of features-service's body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandCompanyResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404NoCompanyOfTheBrandHasThisKeyCompanyNotFoundOrBrandNotFoundF"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamError"
+          }
+        },
+        "operationId": "getV1BrandsByBrandIdCompaniesByCompanyKey"
       }
     },
     "/v1/brands/{brandId}/outcome-cost-series": {

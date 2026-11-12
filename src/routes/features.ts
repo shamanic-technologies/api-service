@@ -1308,7 +1308,7 @@ const OFFER_ROUTES = [
 // ── Brand grain ──────────────────────────────────────────────────────────────
 
 /**
- * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths,spend-charts,outcome-cost-series,campaign-revenue}
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths,spend-charts,outcome-cost-series,campaign-revenue,companies}
  *
  * The offer grain above, one level further up. A brand holds several offers and
  * each of those runs several channels, so a brand screen built on a per-feature
@@ -1365,6 +1365,10 @@ const GRAIN_SUFFIXES = [
   // channel's `/features/:slug/revenue?groupBy=campaignId`, so the dashboard's campaign list costs
   // one call instead of one per channel. `pricing` rides the raw query.
   { suffix: "campaign-revenue", what: "campaign revenue" },
+  // The brand's companies, PAGED and slim (MON-PAGE-SPEED-2-1112): the rows of the revenue body's
+  // `organizations[]` (7.1 MB on our own brand) with each company's lifecycle rung, sorted, searched and
+  // paged by features-service. `sort`/`q`/`rung`/`offset`/`limit`/`pricing` ride the raw query.
+  { suffix: "companies", what: "companies" },
 ] as const;
 
 for (const { suffix, what } of OFFER_ROUTES) {
@@ -1441,6 +1445,27 @@ for (const { suffix, what } of GRAIN_SUFFIXES) {
     },
   );
 }
+
+/**
+ * GET /v1/brands/:brandId/companies/:companyKey → features-service GET /brands/:brandId/companies/:companyKey
+ *
+ * ONE company of the brand (addressed by its domain, else its org id), its place in the value order and its
+ * neighbours' keys: a Company page reads this row instead of the whole company list (MON-PAGE-SPEED-2-1112).
+ * Piped like the brand-grain reads above; `pricing` rides the raw query; features-service owns every refusal
+ * (404 company_not_found / brand_not_found).
+ */
+router.get("/brands/:brandId/companies/:companyKey", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.features,
+      `/brands/${encodeURIComponent(req.params.brandId)}/companies/${encodeURIComponent(req.params.companyKey)}${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req), expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("Failed to get brand company:", error.message);
+    respondUpstreamError(res, error, "Failed to get brand company");
+  }
+});
 
 /**
  * GET /v1/features/orgs/usage — where the caller's org's money went, by activity
