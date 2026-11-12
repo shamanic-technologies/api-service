@@ -598,7 +598,7 @@ registry.registerPath({
   },
 });
 
-const researchDocs: Array<{ path: string; downstream: string; summary: string; schema: string; query?: boolean }> = [
+const researchDocs: Array<{ path: string; downstream: string; summary: string; schema: string; query?: true | "outcome" }> = [
   { path: "/v1/features/research", downstream: "/internal/research", summary: "Live Research file (staff only)", schema: "ResearchFileResponse", query: true },
   { path: "/v1/features/research/conclusions", downstream: "/internal/research/conclusions", summary: "Live Research conclusion studies (staff only)", schema: "ResearchConclusionsResponse" },
   { path: "/v1/features/research/studies", downstream: "/internal/research/studies", summary: "Live Research measured studies (staff only)", schema: "ResearchStudiesResponse" },
@@ -606,6 +606,7 @@ const researchDocs: Array<{ path: string; downstream: string; summary: string; s
   { path: "/v1/features/research/templates", downstream: "/internal/research/templates", summary: "Live Research template texts by template id (staff only)", schema: "ResearchTemplatesResponse" },
   { path: "/v1/features/research/performance", downstream: "/internal/research/performance", summary: "Live Research performance: every workflow x template x LLM combination per pipe, pipe totals and since-inception series (staff only)", schema: "ResearchPerformanceResponse", query: true },
   { path: "/v1/features/research/engine-places", downstream: "/internal/research/engine-places", summary: "Live Research engine places: the Engines' places, favourites, clear winners, callers and replay value lost, fleet-wide (staff only)", schema: "ResearchEnginePlacesResponse", query: true },
+  { path: "/v1/features/research/engine-llms", downstream: "/internal/research/engine-llms", summary: "Live Research engine LLMs: per Engine, its allowed LLMs ranked with usage stats and today's favourite, fleet-wide (staff only)", schema: "ResearchEngineLlmsResponse", query: "outcome" },
 ];
 
 for (const doc of researchDocs) {
@@ -620,7 +621,9 @@ for (const doc of researchDocs) {
       `Transparent proxy to features-service GET ${doc.downstream}; query forwarded verbatim; status and body owned by features-service ` +
       "(503 research_not_computed_yet before its first build).",
     security: platformAuth,
-    ...(doc.query
+    ...(doc.query === "outcome"
+      ? { request: { query: z.object({ outcome: z.string().optional().openapi({ description: "One Engine's outcome key; absent = every Engine. Documented today, not a whitelist." }) }).passthrough() } }
+      : doc.query
       ? { request: { query: z.object({ basis: z.string().optional().openapi({ description: "user (billed) or actual (vendor cost). Documented today, not a whitelist." }) }).passthrough() } }
       : {}),
     responses: {
