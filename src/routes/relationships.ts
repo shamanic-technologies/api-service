@@ -1,6 +1,6 @@
 import { Router, Response } from "express";
 import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
-import { callExternalServiceWithStatus, externalServices } from "../lib/service-client.js";
+import { callExternalServiceWithStatus, externalServices, pipeExternalService } from "../lib/service-client.js";
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 
@@ -66,7 +66,19 @@ router.get(
   authenticate,
   requireOrg,
   requireUser,
-  (req: AuthenticatedRequest, res) => forward(req, res, "GET", "review", "Failed to read relationship review"),
+  // STREAMED (rule #10, MON-PAGE-SPEED-1111): the review body is ~2.4 MB on our own brand, and parsing it
+  // here added ~0.6-0.8 s to a 0.3 s read. A refusal still comes back with lead-service's status and body.
+  async (req: AuthenticatedRequest, res) => {
+    try {
+      await pipeExternalService(
+        externalServices.lead,
+        `/orgs/brands/${enc(req.params.brandId)}/relationships/review${rawQueryString(req.originalUrl)}`,
+        { headers: buildInternalHeaders(req), expressRes: res },
+      );
+    } catch (error: unknown) {
+      respondUpstreamError(res, error, "Failed to read relationship review");
+    }
+  },
 );
 
 router.post(
