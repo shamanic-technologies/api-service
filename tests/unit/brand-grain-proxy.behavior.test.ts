@@ -195,7 +195,8 @@ describe("GET /v1/brands/:brandId/* — over the wire", () => {
   function stubUpstream(body: unknown) {
     global.fetch = vi.fn().mockImplementation(async (url: string, options: any) => {
       calls.push({ url, options });
-      return { ok: true, status: 200, json: () => Promise.resolve(body) };
+      // A real Response: these reads are STREAMED to the caller (MON-PAGE-SPEED-1111), never parsed here.
+      return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
     });
   }
 

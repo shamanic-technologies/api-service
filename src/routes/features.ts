@@ -1426,12 +1426,14 @@ for (const { suffix, what } of GRAIN_SUFFIXES) {
     requireUser,
     async (req: AuthenticatedRequest, res) => {
       try {
-        const result = await callExternalService(
+        // STREAMED, never parsed and re-serialized (rule #10, MON-PAGE-SPEED-1111): the brand revenue
+        // body is ~5 MB and deals-value ~1.7 MB on our own brand; parsing them here cost 0.3-0.5 s per
+        // read on every dashboard page. Refusals still come back with their own status and body.
+        await pipeExternalService(
           externalServices.features,
           `/brands/${encodeURIComponent(req.params.brandId)}/${suffix}${rawQueryString(req.originalUrl)}`,
-          { headers: buildInternalHeaders(req) },
+          { headers: buildInternalHeaders(req), expressRes: res },
         );
-        res.json(result);
       } catch (error: any) {
         console.error(`Failed to get brand ${what}:`, error.message);
         respondUpstreamError(res, error, `Failed to get brand ${what}`);
