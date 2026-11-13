@@ -1505,6 +1505,13 @@
           "nullable": true
         }
       },
+      "CampaignEngineScriptsResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "CampaignSpendChartsResponse": {
         "type": "object",
         "properties": {},
@@ -22903,6 +22910,79 @@
           }
         },
         "operationId": "getV1FeaturesBrandsByBrandIdSalesFunnelCampaignsBySalesFunnelCampaignIdPeopleJourneys"
+      }
+    },
+    "/v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/engine-scripts": {
+      "get": {
+        "tags": [
+          "Campaigns"
+        ],
+        "summary": "The Engines of one funnel campaign, in scripts",
+        "description": "Proxy to features-service GET /brands/{brandId}/sales-funnel-campaigns/{id}/engine-scripts. Per Engine the campaign needs, the scripts that make its outcome (a pick is always a script), as features-service serves it. The org is the authenticated one; another org's campaign answers 404. Any query is forwarded verbatim. Status and body relayed verbatim.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "salesFunnelCampaignId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Pass-through from features-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CampaignEngineScriptsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query, forwarded verbatim",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404BrandNotFoundOrSalesFunnelCampaignNotFoundForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ADownstreamReadFailedForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1FeaturesBrandsByBrandIdSalesFunnelCampaignsBySalesFunnelCampaignIdEngineScripts"
       }
     },
     "/v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/spend-charts": {
