@@ -65,6 +65,8 @@ const ROUTES: Array<[string, string]> = [
   ["/v1/features/research/engine-places", "/internal/research/engine-places"],
   ["/v1/features/research/engine-llms?outcome=message_written", "/internal/research/engine-llms?outcome=message_written"],
   ["/v1/features/research/engine-llms", "/internal/research/engine-llms"],
+  ["/v1/features/research/script-engines?outcome=message_written", "/internal/research/script-engines?outcome=message_written"],
+  ["/v1/features/research/script-engines", "/internal/research/script-engines"],
 ];
 
 describe.each(ROUTES)("GET %s — staff", (path, downstream) => {
@@ -110,5 +112,17 @@ describe.each(ROUTES)("GET %s — staff", (path, downstream) => {
     const res = await request(buildApp()).get(path);
     expect(res.status).toBe(401);
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe("GET /v1/features/research/script-engines — producer refusals byte-for-byte", () => {
+  it.each([
+    [503, { error: "Script engines not built yet", code: "script_engines_not_built_yet" }],
+    [502, { error: "Script engines unreadable", code: "script_engines_unreadable" }],
+  ])("passes the %i through, status and body", async (status, err) => {
+    stub(status, JSON.stringify(err));
+    const res = await request(buildApp()).get("/v1/features/research/script-engines").set(STAFF);
+    expect(res.status).toBe(status);
+    expect(res.body).toEqual(err);
   });
 });
