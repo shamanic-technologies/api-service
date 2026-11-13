@@ -9460,6 +9460,13 @@
           "nullable": true
         }
       },
+      "BrandRateSourcesResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "BrandConversionRatesResponse": {
         "type": "object",
         "properties": {},
@@ -15324,6 +15331,26 @@
       },
       "ErrorResponse502ASourceCouldNotBeReadLivedSalesPathsUnavailable": {
         "description": "A source could not be read (lived_sales_paths_unavailable)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404TheCallerSOrgDoesNotHoldThisBrandBrandNotFound": {
+        "description": "The caller's org does not hold this brand (brand_not_found)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502ASourceCouldNotBeReadRateSourcesUnreadable": {
+        "description": "A source could not be read (rate_sources_unreadable)",
         "content": {
           "application/json": {
             "schema": {
@@ -69999,6 +70026,70 @@
           }
         },
         "operationId": "getV1BrandsByBrandIdLivedSalesPaths"
+      }
+    },
+    "/v1/brands/{brandId}/rate-sources": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Brand rate sources: which conversion rates are measured and which are asked",
+        "description": "For every leg rate of the brand's sales funnels, whether our ledger measures it on the brand's own leads or the client is asked to state it. The dashboard asks the client only the rates that cannot be measured. Proxied to features-service GET /brands/{brandId}/rate-sources; body passed through unchanged. The gateway forwards EVERY query param verbatim.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "brand-uuid-123",
+              "description": "Brand UUID"
+            },
+            "required": true,
+            "description": "Brand UUID",
+            "name": "brandId",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Brand rate sources (features-service)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BrandRateSourcesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404TheCallerSOrgDoesNotHoldThisBrandBrandNotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse500InternalError"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502ASourceCouldNotBeReadRateSourcesUnreadable"
+          }
+        },
+        "operationId": "getV1BrandsByBrandIdRateSources"
       }
     },
     "/v1/brands/{brandId}/conversion-rates": {
