@@ -1041,7 +1041,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "type": "string",
           "minLength": 1,
           "maxLength": 100,
-          "description": "Write the example the way a campaign running this play of the cold-email pipe would: a features-service strategy id on `sales-cold-email-outreach|lead_found_to_conversation` (`offer-emails-only` = leads with something given for free, `named-emails-only` = names the brand and pitches it, `blind-emails-only` = never names the brand, asks about the problem first; any other play of the pipe works too). The email is written with the template + model of the workflow that play's campaign would run (its measured best, else the first workflow it allows in the leg ranking). Absent = the best mature cold-email workflow, as before. A strategy with no play on the pipe = 400 `code: UNKNOWN_STRATEGY`."
+          "description": "Write the example the way a campaign under this strategy would: a features-service strategy id (e.g. `offer-emails-only`, `named-emails-only`, `blind-emails-only`). The email is written by the email Engine's script that strategy keeps, with the template + LLM the GTM Factory Rating picks under it. Absent = no condition: every runnable script of the Engine, and the template + LLM the Rating picks for the Engine. An unknown strategy = 400 `code: UNKNOWN_STRATEGY`; a strategy that keeps no script = 422 `code: NO_SCRIPT_KEPT` (never another strategy's script)."
         }
       },
       "required": [
@@ -3345,7 +3345,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "body_html": {
           "type": "string",
           "minLength": 1,
-          "description": "The answer, HTML. Signed by this service with the sending account's persona — do NOT include a signature."
+          "description": "The answer, HTML. Signed by this service with the sending account's persona — do NOT include a signature. Refused 400 `empty_email_body` when it holds no readable text (no letter or digit once HTML tags and entities are removed): an empty email is never sent. SENDER PLACEHOLDERS: the mailbox that sends an email is chosen AFTER it is written (mailboxes rotate, each with its own persona name in the From line). Write `{first_name}`, `{last_name}`, `{full_name}` or `{sender_email}` (single braces) to name the sender, e.g. `<p>My name is {first_name} and I help clinics fill their calendar.</p>`: each is filled per email from the sending mailbox, so the body always matches the From name and the signature (follow-ups and replies on the thread keep the same mailbox, so the same name). Never type a persona name yourself. A value the mailbox lacks renders empty, never blocks the email; no placeholder is ever left in a sent email. Only these four exact tokens are filled; every other text, `{{...}}` included, is sent as written. A body without them is sent exactly as before."
         },
         "sent_by": {
           "type": "string",
@@ -3372,6 +3372,45 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           },
           "maxItems": 5,
           "description": "Offer documents to attach to the reply as real files (a case study, a one-pager). This service reads each one from brand-service, bytes included, as this org, and attaches it under brand-service's filename and type. Up to 5, 10 MB together. FAIL LOUD, nothing sent: unknown or another org's document = 404 `attachment_not_found`; over the limits = 422 `attachment_too_large`; brand-service unreadable = 502 `attachment_unavailable`; a thread on the Instantly pipe (no attachment support) = 422 `attachments_unsupported_on_transport`. Absent or empty = the reply exactly as before. Replies only: cold sequence steps never carry a file."
+        },
+        "to": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "email"
+          },
+          "minItems": 1,
+          "maxItems": 20,
+          "description": "WHO it goes to (EVERY-PERSON-ON-THE-THREAD-1109): the To header, exactly these addresses. Omitted = the thread's lead (`email`), as before. Our own sender only: on a thread carried by Instantly = 422 `recipients_unsupported_on_transport`."
+        },
+        "cc": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "email"
+          },
+          "maxItems": 20,
+          "description": "The Cc header, exactly these addresses (empty array = no Cc). Omitted = today's default (agency inbox + the brand's rep)."
+        },
+        "bcc": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "email"
+          },
+          "maxItems": 20,
+          "description": "The Bcc header, exactly these addresses. Omitted = none (except a hand-over)."
+        },
+        "in_reply_to": {
+          "type": "string",
+          "minLength": 3,
+          "description": "The RFC Message-ID (`<...>`, served as `messageId` by GET /orgs/conversations and on GET /internal/mailbox-messages) of the message to answer: any message of a thread this org holds, whoever wrote it (a colleague who answered in our lead's thread included). The answer leaves from the mailbox that holds it, In-Reply-To = it, References = the thread up to it. The thread is found from the message: `campaign_id` is ignored and `email` is only the default To. Unknown message = 404 `thread_message_not_found`."
+        },
+        "new_thread_subject": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500,
+          "description": "Open a NEW email thread (no In-Reply-To, no quote) with this subject, from the mailbox of the thread `campaign_id`/`email` resolve to. Exclusive with `in_reply_to`."
         }
       },
       "required": [
@@ -3469,7 +3508,6 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       "required": [
         "brandId",
         "offerId",
-        "salesFunnelId",
         "status"
       ],
       "additionalProperties": false
