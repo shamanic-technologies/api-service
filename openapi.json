@@ -9181,6 +9181,13 @@
           "nullable": true
         }
       },
+      "UnitReportListResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "UnitReportResponse": {
         "type": "object",
         "properties": {},
@@ -15107,6 +15114,16 @@
       },
       "ErrorResponse400VariableIntegrityErrorForwardedVerbatim": {
         "description": "Variable-integrity error (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400MissingOrInvalidQueryFeaturesServiceStatesTheReason": {
+        "description": "Missing or invalid query (features-service states the reason)",
         "content": {
           "application/json": {
             "schema": {
@@ -66331,6 +66348,151 @@
       }
     },
     "/v1/features/unit-reports": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Your own reports of one thing we made (newest first)",
+        "description": "Pass-through to features-service GET /orgs/unit-reports. Lists what your organization already said about one subject through POST /v1/features/unit-reports (edited or reported), newest first, so a page can show it as reported. Only your organization's reports are returned. The query is forwarded verbatim: the parameters below are the ones documented today, not a closed list; features-service owns the answer and its refusals.\n\nResponse: documented from features-service GET /orgs/unit-reports, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The service holding the subject, as the ledger names it."
+            },
+            "required": true,
+            "description": "The service holding the subject, as the ledger names it.",
+            "name": "subjectService",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "The subject's id in that service."
+            },
+            "required": true,
+            "description": "The subject's id in that service.",
+            "name": "subjectId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Narrow to one outcome (e.g. `message_written`)."
+            },
+            "required": false,
+            "description": "Narrow to one outcome (e.g. `message_written`).",
+            "name": "outcomeKey",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Your organization's reports of that subject, newest first, as features-service serves them.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "reports": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "outcomeKey": {
+                            "type": "string",
+                            "description": "The outcome of the Unit, as the ledger names it (e.g. `message_written`)."
+                          },
+                          "subjectService": {
+                            "type": "string",
+                            "description": "The service holding the Unit's subject, as the ledger names it."
+                          },
+                          "subjectId": {
+                            "type": "string",
+                            "description": "The subject's id in that service."
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "edited",
+                              "reported"
+                            ],
+                            "description": "`edited` = the client changed what we wrote; `reported` = the client said it is not good (a Unit it cannot edit, e.g. a sent message)."
+                          },
+                          "source": {
+                            "type": "string",
+                            "description": "Where it was said (the dashboard, the API, the MCP, Sophie): free text."
+                          },
+                          "note": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "unitAt": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "orgId": {
+                            "type": "string"
+                          },
+                          "userId": {
+                            "type": "string"
+                          },
+                          "reportedAt": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "outcomeKey",
+                          "subjectService",
+                          "subjectId",
+                          "kind",
+                          "source",
+                          "note",
+                          "unitAt",
+                          "id",
+                          "orgId",
+                          "userId",
+                          "reportedAt"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "reports"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400MissingOrInvalidQueryFeaturesServiceStatesTheReason"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "operationId": "getV1FeaturesUnitReports"
+      },
       "post": {
         "tags": [
           "Features"
@@ -66376,6 +66538,11 @@
                     "type": "string",
                     "nullable": true,
                     "description": "What the client said, when it said something."
+                  },
+                  "unitAt": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "When the thing the client points at was made (ISO), e.g. a message's send time. One subject holds several Units over time (a lead holds every message written for them): the Unit standing THEN is the one reported. Absent = the Unit standing when the report is made."
                   }
                 },
                 "required": [
@@ -66425,6 +66592,10 @@
                       "type": "string",
                       "nullable": true
                     },
+                    "unitAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
                     "id": {
                       "type": "string"
                     },
@@ -66445,6 +66616,7 @@
                     "kind",
                     "source",
                     "note",
+                    "unitAt",
                     "id",
                     "orgId",
                     "userId",

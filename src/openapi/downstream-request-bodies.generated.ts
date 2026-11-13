@@ -1387,6 +1387,11 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "type": "string",
           "nullable": true,
           "description": "What the client said, when it said something."
+        },
+        "unitAt": {
+          "type": "string",
+          "nullable": true,
+          "description": "When the thing the client points at was made (ISO), e.g. a message's send time. One subject holds several Units over time (a lead holds every message written for them): the Unit standing THEN is the one reported. Absent = the Unit standing when the report is made."
         }
       },
       "required": [

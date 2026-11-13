@@ -39,4 +39,10 @@ describe("POST /v1/features/unit-reports — auth gate", () => {
     expect(res.status).toBe(401);
     expect(global.fetch).not.toHaveBeenCalled();
   });
+
+  it("refuses a read with no credentials", async () => {
+    const res = await request(buildApp()).get("/v1/features/unit-reports?subjectService=s&subjectId=i");
+    expect(res.status).toBe(401);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
 });
