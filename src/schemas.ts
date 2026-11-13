@@ -2012,6 +2012,12 @@ for (const { suffix, name, summary, detail } of [
     summary: "What one funnel campaign's people went through",
     detail: "What the people of one funnel campaign went through, as features-service serves it.",
   },
+  {
+    suffix: "engine-scripts",
+    name: "CampaignEngineScriptsResponse",
+    summary: "The Engines of one funnel campaign, in scripts",
+    detail: "Per Engine the campaign needs, the scripts that make its outcome (a pick is always a script), as features-service serves it.",
+  },
 ]) {
   registry.registerPath({
     method: "get",

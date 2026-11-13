@@ -1725,8 +1725,8 @@ router.get(
 );
 
 /**
- * GET /v1/features/brands/:brandId/sales-funnel-campaigns/:salesFunnelCampaignId/{milestones,people-journeys}
- *   → features-service GET /brands/{brandId}/sales-funnel-campaigns/{id}/{milestones,people-journeys}
+ * GET /v1/features/brands/:brandId/sales-funnel-campaigns/:salesFunnelCampaignId/{milestones,people-journeys,engine-scripts}
+ *   → features-service GET /brands/{brandId}/sales-funnel-campaigns/{id}/{milestones,people-journeys,engine-scripts}
  *
  * GTM Factory customer dashboard (owner 2026-11-02, FACTORY-USER-DASHBOARD-1102): one funnel campaign's milestones table,
  * and what its people went through. Same auth and identity forwarding as factory-shadow above (the org is the
@@ -1735,6 +1735,8 @@ router.get(
 const CAMPAIGN_FACTORY_READS = [
   { suffix: "milestones", what: "campaign milestones" },
   { suffix: "people-journeys", what: "campaign people journeys" },
+  // CAMPAIGN-SCRIPTS-1113 (owner 2026-11-13 « un pick = toujours un script »): the campaign's Engines in scripts.
+  { suffix: "engine-scripts", what: "campaign engine scripts" },
 ] as const;
 
 for (const { suffix, what } of CAMPAIGN_FACTORY_READS) {
