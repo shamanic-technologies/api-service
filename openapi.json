@@ -9181,6 +9181,20 @@
           "nullable": true
         }
       },
+      "UnitReportResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "UnitReportRequest": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "PrefillFeatureResponse": {
         "type": "object",
         "properties": {
@@ -15093,6 +15107,26 @@
       },
       "ErrorResponse400VariableIntegrityErrorForwardedVerbatim": {
         "description": "Variable-integrity error (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400MalformedReportFeaturesServiceStatesTheReason": {
+        "description": "Malformed report (features-service states the reason)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502TheReportCouldNotBeStored": {
+        "description": "The report could not be stored",
         "content": {
           "application/json": {
             "schema": {
@@ -66294,6 +66328,157 @@
           }
         },
         "operationId": "getV1FeaturesStats"
+      }
+    },
+    "/v1/features/unit-reports": {
+      "post": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Say that something we made for you is not good (you edited it, or you report it)",
+        "description": "Pass-through to features-service POST /orgs/unit-reports. Call it when the client changed something we wrote for them (`kind: edited`), or says something we made is wrong when it cannot be edited any more, such as a message already sent (`kind: reported`). Name the Unit as the ledger names it: its outcome, the service holding its subject, and the subject's id; say where it was said (`source`: dashboard, API, MCP, Sophie) and, optionally, what the client said (`note`). The report only lowers the value of the script that made the Unit when we pick which script runs next: nothing is blocked, re-sent or rewritten. There is no positive vote: silence means nothing. Append-only. The caller's org and user are recorded. features-service owns the body and its refusals (400 `unit_report_unrecognised`), forwarded with their status and body.\n\nRequest body: documented from features-service POST /orgs/unit-reports, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from features-service POST /orgs/unit-reports, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/features.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "outcomeKey": {
+                    "type": "string",
+                    "description": "The outcome of the Unit, as the ledger names it (e.g. `message_written`)."
+                  },
+                  "subjectService": {
+                    "type": "string",
+                    "description": "The service holding the Unit's subject, as the ledger names it."
+                  },
+                  "subjectId": {
+                    "type": "string",
+                    "description": "The subject's id in that service."
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "edited",
+                      "reported"
+                    ],
+                    "description": "`edited` = the client changed what we wrote; `reported` = the client said it is not good (a Unit it cannot edit, e.g. a sent message)."
+                  },
+                  "source": {
+                    "type": "string",
+                    "description": "Where it was said (the dashboard, the API, the MCP, Sophie): free text."
+                  },
+                  "note": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "What the client said, when it said something."
+                  }
+                },
+                "required": [
+                  "outcomeKey",
+                  "subjectService",
+                  "subjectId",
+                  "kind",
+                  "source"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The stored report, as features-service recorded it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "outcomeKey": {
+                      "type": "string",
+                      "description": "The outcome of the Unit, as the ledger names it (e.g. `message_written`)."
+                    },
+                    "subjectService": {
+                      "type": "string",
+                      "description": "The service holding the Unit's subject, as the ledger names it."
+                    },
+                    "subjectId": {
+                      "type": "string",
+                      "description": "The subject's id in that service."
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "edited",
+                        "reported"
+                      ],
+                      "description": "`edited` = the client changed what we wrote; `reported` = the client said it is not good (a Unit it cannot edit, e.g. a sent message)."
+                    },
+                    "source": {
+                      "type": "string",
+                      "description": "Where it was said (the dashboard, the API, the MCP, Sophie): free text."
+                    },
+                    "note": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "orgId": {
+                      "type": "string"
+                    },
+                    "userId": {
+                      "type": "string"
+                    },
+                    "reportedAt": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "outcomeKey",
+                    "subjectService",
+                    "subjectId",
+                    "kind",
+                    "source",
+                    "note",
+                    "id",
+                    "orgId",
+                    "userId",
+                    "reportedAt"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400MalformedReportFeaturesServiceStatesTheReason"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502TheReportCouldNotBeStored"
+          }
+        },
+        "operationId": "postV1FeaturesUnitReports",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ]
       }
     },
     "/v1/features/{featureSlug}/prefill": {
