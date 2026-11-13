@@ -1007,7 +1007,7 @@ router.delete("/features/stated-monthly-amounts/:id", authenticatePlatform, requ
 });
 
 /**
- * GET /v1/features/research[/conclusions|/studies|/catalog|/templates|/performance|/script-engines] — STAFF ONLY.
+ * GET /v1/features/research[/conclusions|/studies|/catalog|/templates|/performance|/script-engines|/engines[/catalog|/performance|/live-scripts]] — STAFF ONLY.
  * features-service's live Research file (the staff Research page of dashboard v2): the whole
  * file (`?basis=user|actual`; `actual` reveals our margin), the conclusion studies and the
  * measured studies, the catalogue (workflow, template and model pages, `?basis=`), the
@@ -1016,10 +1016,10 @@ router.delete("/features/stated-monthly-amounts/:id", authenticatePlatform, requ
  * authenticatePlatform + requireStaff are network-free, so a non-staff caller is refused
  * before any downstream call. Only the verified staff email is forwarded, for attribution.
  *
- * Byte passthroughs to features-service GET /internal/research[/conclusions|/studies|/catalog|/templates|/performance|/script-engines]: query
+ * Byte passthroughs to features-service GET /internal/research[/conclusions|/studies|/catalog|/templates|/performance|/script-engines|/engines[/catalog|/performance|/live-scripts]]: query
  * verbatim (#11), status + body piped (#10) — including the 503 `research_not_computed_yet`
  * before the first build — errors field-for-field (#7). Declared BEFORE `/features/:slug/*`
- * so `research` is never bound as a slug.
+ * so `research` (and `research/engines`) is never bound as a slug.
  */
 const RESEARCH_ROUTES: Array<[string, string, string]> = [
   ["/features/research", "/internal/research", "Failed to get the research file"],
@@ -1029,6 +1029,11 @@ const RESEARCH_ROUTES: Array<[string, string, string]> = [
   ["/features/research/templates", "/internal/research/templates", "Failed to get the research template texts"],
   ["/features/research/performance", "/internal/research/performance", "Failed to get the research performance"],
   ["/features/research/script-engines", "/internal/research/script-engines", "Failed to get the research script engines"],
+  // Research keyed by Engine and script, no pipe (RESEARCH-BY-ENGINE-1113).
+  ["/features/research/engines", "/internal/research/engines", "Failed to get the research file by Engine"],
+  ["/features/research/engines/catalog", "/internal/research/engines/catalog", "Failed to get the research catalogue by Engine"],
+  ["/features/research/engines/performance", "/internal/research/engines/performance", "Failed to get the research performance by Engine"],
+  ["/features/research/engines/live-scripts", "/internal/research/engines/live-scripts", "Failed to get the research live scripts by Engine"],
 ];
 
 for (const [path, downstream, fallback] of RESEARCH_ROUTES) {
