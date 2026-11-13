@@ -12,7 +12,7 @@ const { FEATURES_BASE } = vi.hoisted(() => {
 });
 
 /**
- * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths,spend-charts,outcome-cost-series,campaign-revenue,companies} — BEHAVIOURAL cover.
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,rate-sources,contacted-value,deals-value,lived-sales-paths,spend-charts,outcome-cost-series,campaign-revenue,companies} — BEHAVIOURAL cover.
  *
  * The offer-grain sibling's reasoning applies verbatim (see
  * offer-grain-proxy.behavior.test.ts): a source-substring test cannot see a template
@@ -107,6 +107,15 @@ const PIPELINE_ACTIVITY_BODY = {
 };
 
 // Brand-grain conversion rates carry no channel breakdown: one rate per (brand, funnel, arrow).
+// A stand-in of features-service's rate sources: per leg, measured by the ledger or asked of the client.
+const RATE_SOURCES_BODY = {
+  brandId: BRAND_ID,
+  legs: [
+    { from: "contacted", to: "visited", source: "measured" },
+    { from: "signed_up", to: "paid", source: "asked" },
+  ],
+};
+
 const CONVERSION_RATES_BODY = {
   brandId: BRAND_ID,
   minMeasuredFromReached: 10,
@@ -195,6 +204,7 @@ const READS = [
   { suffix: "audience-stats", body: AUDIENCE_STATS_BODY, query: "pricing=net" },
   { suffix: "pipeline-activity", body: PIPELINE_ACTIVITY_BODY, query: "days=7&timezone=America%2FNew_York" },
   { suffix: "conversion-rates", body: CONVERSION_RATES_BODY, query: "funnel=self-serve" },
+  { suffix: "rate-sources", body: RATE_SOURCES_BODY, query: "funnel=self-serve" },
   { suffix: "contacted-value", body: CONTACTED_VALUE_BODY, query: "cursor=lead-0" },
   { suffix: "deals-value", body: DEALS_VALUE_BODY, query: "refresh=1" },
   { suffix: "lived-sales-paths", body: LIVED_SALES_PATHS_BODY, query: "offerId=offer-1&pricing=net" },
@@ -331,6 +341,20 @@ describe("GET /v1/brands/:brandId/* — over the wire", () => {
     expect(calls[0].url).toBe(`${FEATURES_BASE}/brands/${BRAND_ID}/companies/acme.com?pricing=net`);
     expect(calls[0].options.headers["x-org-id"]).toBe("org_test456");
     expect(calls[0].options.headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("/rate-sources forwards a foreign brand's 404 intact", async () => {
+    const refusal = { error: "Brand not found", reason: "brand_not_found" };
+    global.fetch = vi.fn().mockImplementation(async (url: string, options: any) => {
+      calls.push({ url, options });
+      return { ok: false, status: 404, text: () => Promise.resolve(JSON.stringify(refusal)), json: () => Promise.resolve(refusal) };
+    });
+
+    const res = await request(buildApp()).get(`/v1/brands/${BRAND_ID}/rate-sources`);
+
+    expect(calls[0].url).toBe(`${FEATURES_BASE}/brands/${BRAND_ID}/rate-sources`);
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual(refusal);
   });
 
   it("/companies/:companyKey forwards a named 404 intact", async () => {

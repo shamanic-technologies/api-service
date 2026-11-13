@@ -14822,6 +14822,30 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/brands/{brandId}/rate-sources",
+  tags: ["Features"],
+  summary: "Brand rate sources: which conversion rates are measured and which are asked",
+  description:
+    "For every leg rate of the brand's sales funnels, whether our ledger measures it on the brand's own leads " +
+    "or the client is asked to state it. The dashboard asks the client only the rates that cannot be measured. " +
+    "Proxied to features-service GET /brands/{brandId}/rate-sources; body passed through unchanged. " +
+    "The gateway forwards EVERY query param verbatim.",
+  security: authed,
+  request: {
+    params: z.object({ brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID") }),
+    query: z.object({}).passthrough(),
+  },
+  responses: {
+    200: { description: "Brand rate sources (features-service)", content: { "application/json": { schema: z.object({}).passthrough().openapi("BrandRateSourcesResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "The caller's org does not hold this brand (brand_not_found)", content: errorContent },
+    500: { description: "Internal error", content: errorContent },
+    502: { description: "A source could not be read (rate_sources_unreadable)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/brands/{brandId}/conversion-rates",
   tags: ["Features"],
   summary: "Brand conversion rates",

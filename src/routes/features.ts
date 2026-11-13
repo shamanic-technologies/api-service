@@ -1333,7 +1333,7 @@ const OFFER_ROUTES = [
 // ── Brand grain ──────────────────────────────────────────────────────────────
 
 /**
- * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,contacted-value,deals-value,lived-sales-paths,spend-charts,outcome-cost-series,campaign-revenue,companies}
+ * GET /v1/brands/:brandId/{revenue,audience-stats,pipeline-activity,conversion-rates,rate-sources,contacted-value,deals-value,lived-sales-paths,spend-charts,outcome-cost-series,campaign-revenue,companies}
  *
  * The offer grain above, one level further up. A brand holds several offers and
  * each of those runs several channels, so a brand screen built on a per-feature
@@ -1367,6 +1367,11 @@ const GRAIN_SUFFIXES = [
   // brand-grain since 2026-09-25; features-service resolves them, nothing is picked
   // or defaulted here. `?funnel=` narrows to one funnel and rides the raw query.
   { suffix: "conversion-rates", what: "conversion rates" },
+  // Which leg rates of the brand's funnels our ledger MEASURES and which the client is ASKED
+  // (SCRIPT-VALUE-RATING-1113, owner 2026-11-13: the Brand page and onboarding ask only the rates
+  // the ledger cannot measure). features-service decides measured vs asked; 404 brand_not_found
+  // for a brand the org does not hold, 502 rate_sources_unreadable when a producer is down.
+  { suffix: "rate-sources", what: "rate sources" },
   // What the brand's contacted-but-not-yet-engaged leads are worth in expectation
   // (LTR × P(paid | contacted)), per lead and as a company-level total. A separate
   // figure, added to no pipeline. Paging (`limit`/`cursor`/`leadIds`) rides the raw query.
