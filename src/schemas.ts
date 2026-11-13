@@ -13901,6 +13901,38 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/v1/features/unit-reports",
+  tags: ["Features"],
+  summary: "Your own reports of one thing we made (newest first)",
+  description:
+    "Pass-through to features-service GET /orgs/unit-reports. Lists what your organization already said about one " +
+    "subject through POST /v1/features/unit-reports (edited or reported), newest first, so a page can show it as " +
+    "reported. Only your organization's reports are returned. The query is forwarded verbatim: the parameters below " +
+    "are the ones documented today, not a closed list; features-service owns the answer and its refusals.",
+  security: authed,
+  request: {
+    query: z.object({
+      subjectService: z.string().describe("The service holding the subject, as the ledger names it."),
+      subjectId: z.string().describe("The subject's id in that service."),
+      outcomeKey: z.string().optional().describe("Narrow to one outcome (e.g. `message_written`)."),
+    }).passthrough(),
+  },
+  responses: {
+    200: {
+      description: "Your organization's reports of that subject, newest first, as features-service serves them.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("UnitReportListResponse"),
+        },
+      },
+    },
+    400: { description: "Missing or invalid query (features-service states the reason)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/v1/features/unit-reports",
   tags: ["Features"],

@@ -630,6 +630,27 @@ router.post("/features/unit-reports", authenticate, requireOrg, requireUser, asy
 });
 
 /**
+ * GET /v1/features/unit-reports — pass-through to features-service GET /orgs/unit-reports:
+ * the caller's org's own reports of one subject (`subjectService`, `subjectId`, optional
+ * `outcomeKey`), newest first — a page's "reported" mark. Query forwarded verbatim (rule #11),
+ * the org boundary is the authenticated `x-org-id`. Declared before `/features/:slug`, whose
+ * GET would otherwise read `unit-reports` as a feature slug.
+ */
+router.get("/features/unit-reports", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.features,
+      `/orgs/unit-reports${rawQueryString(req.originalUrl)}`,
+      { headers: buildInternalHeaders(req), expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Unit reports read error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to read unit reports");
+  }
+});
+
+/**
  * POST /v1/features/:slug/prefill
  * Prefill feature form using brand data. Called by dashboard for "New Campaign".
  */
