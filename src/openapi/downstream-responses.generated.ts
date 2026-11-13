@@ -21233,6 +21233,89 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "GET /v1/features/unit-reports": {
+    "service": "features-service",
+    "method": "GET",
+    "path": "/orgs/unit-reports",
+    "responses": {
+      "200": {
+        "description": "Newest first",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "reports": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "outcomeKey": {
+                    "type": "string",
+                    "description": "The outcome of the Unit, as the ledger names it (e.g. `message_written`)."
+                  },
+                  "subjectService": {
+                    "type": "string",
+                    "description": "The service holding the Unit's subject, as the ledger names it."
+                  },
+                  "subjectId": {
+                    "type": "string",
+                    "description": "The subject's id in that service."
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "edited",
+                      "reported"
+                    ],
+                    "description": "`edited` = the client changed what we wrote; `reported` = the client said it is not good (a Unit it cannot edit, e.g. a sent message)."
+                  },
+                  "source": {
+                    "type": "string",
+                    "description": "Where it was said (the dashboard, the API, the MCP, Sophie): free text."
+                  },
+                  "note": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "unitAt": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "orgId": {
+                    "type": "string"
+                  },
+                  "userId": {
+                    "type": "string"
+                  },
+                  "reportedAt": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "outcomeKey",
+                  "subjectService",
+                  "subjectId",
+                  "kind",
+                  "source",
+                  "note",
+                  "unitAt",
+                  "id",
+                  "orgId",
+                  "userId",
+                  "reportedAt"
+                ]
+              }
+            }
+          },
+          "required": [
+            "reports"
+          ]
+        }
+      }
+    }
+  },
   "GET /v1/followup-cuts": {
     "service": "instantly-service",
     "method": "GET",
@@ -46008,6 +46091,10 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
               "type": "string",
               "nullable": true
             },
+            "unitAt": {
+              "type": "string",
+              "nullable": true
+            },
             "id": {
               "type": "string"
             },
@@ -46028,6 +46115,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "kind",
             "source",
             "note",
+            "unitAt",
             "id",
             "orgId",
             "userId",

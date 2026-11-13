@@ -40,6 +40,7 @@ const REPORT = {
   kind: "reported",
   source: "mcp",
   note: "wrong first name",
+  unitAt: "2026-11-10T09:30:00.000Z",
   aFieldThisGatewayHasNeverHeardOf: 7,
 };
 
@@ -89,6 +90,37 @@ describe("POST /v1/features/unit-reports", () => {
     const refusal = { error: "kind must be edited or reported", code: "unit_report_unrecognised" };
     stubFetch(JSON.stringify(refusal), 400);
     const res = await request(buildApp()).post("/v1/features/unit-reports").send({ kind: "loved" });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual(refusal);
+  });
+});
+
+describe("GET /v1/features/unit-reports", () => {
+  const LIST = JSON.stringify({ reports: [{ id: "r2", kind: "edited" }, { id: "r1", kind: "reported" }], aFieldThisGatewayHasNeverHeardOf: 7 });
+
+  it("forwards to features-service GET /orgs/unit-reports with the query verbatim, not as a feature slug", async () => {
+    const calls = stubFetch(LIST, 200);
+    const res = await request(buildApp()).get("/v1/features/unit-reports?subjectService=content-generation&subjectId=gen-1&outcomeKey=message_written&later=x");
+    expect(res.status).toBe(200);
+    expect(calls).toHaveLength(1);
+    const url = new URL(calls[0].url);
+    expect(url.pathname).toBe("/orgs/unit-reports");
+    expect(url.search).toBe("?subjectService=content-generation&subjectId=gen-1&outcomeKey=message_written&later=x");
+    expect(res.body).toEqual(JSON.parse(LIST));
+  });
+
+  it("reads under the AUTHENTICATED org, never a caller-supplied one", async () => {
+    const calls = stubFetch(LIST, 200);
+    await request(buildApp()).get("/v1/features/unit-reports?subjectService=s&subjectId=i").set("x-org-id", "org_spoofed");
+    const headers = calls[0].init.headers as Record<string, string>;
+    expect(headers["x-org-id"]).toBe("org_authenticated");
+    expect(headers["x-user-id"]).toBe("user_test123");
+  });
+
+  it("forwards the producer's refusal with its status and body", async () => {
+    const refusal = { error: "subjectService and subjectId are required", reason: "unit_report_query_unrecognised" };
+    stubFetch(JSON.stringify(refusal), 400);
+    const res = await request(buildApp()).get("/v1/features/unit-reports");
     expect(res.status).toBe(400);
     expect(res.body).toEqual(refusal);
   });
