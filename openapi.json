@@ -371,6 +371,13 @@
           "nullable": true
         }
       },
+      "ResearchScriptEnginesResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "PublicCostPerOutcomeLifetimeResponse": {
         "type": "object",
         "properties": {},
