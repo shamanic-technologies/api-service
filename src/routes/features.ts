@@ -606,6 +606,30 @@ router.get("/features/stats", authenticate, requireOrg, requireUser, async (req:
 });
 
 /**
+ * POST /v1/features/unit-reports — pass-through to features-service POST /orgs/unit-reports
+ * (SCRIPT-VALUE-RATING-1113). A client says a Unit we made for them is not good: `edited`
+ * (they changed what we wrote) or `reported` (they cannot edit it, e.g. a sent message).
+ * The Rating reads it as worth nothing for the script that made it; nothing is blocked,
+ * validated or rewritten on a report. Any client reaches it with his own key (no staff gate).
+ * Body forwarded verbatim (features-service owns the contract and its refusals); org AND
+ * user identity forwarded, the store records both; status + body piped byte-identical (201).
+ * Registered before any `/features/:slug` sibling so the literal is never read as a slug.
+ */
+router.post("/features/unit-reports", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.features,
+      `/orgs/unit-reports${rawQueryString(req.originalUrl)}`,
+      { method: "POST", body: req.body, headers: buildInternalHeaders(req), expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Unit report error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to record unit report");
+  }
+});
+
+/**
  * POST /v1/features/:slug/prefill
  * Prefill feature form using brand data. Called by dashboard for "New Campaign".
  */

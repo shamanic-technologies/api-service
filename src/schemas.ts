@@ -13902,6 +13902,45 @@ registry.registerPath({
 
 registry.registerPath({
   method: "post",
+  path: "/v1/features/unit-reports",
+  tags: ["Features"],
+  summary: "Say that something we made for you is not good (you edited it, or you report it)",
+  description:
+    "Pass-through to features-service POST /orgs/unit-reports. Call it when the client changed something we wrote " +
+    "for them (`kind: edited`), or says something we made is wrong when it cannot be edited any more, such as a " +
+    "message already sent (`kind: reported`). Name the Unit as the ledger names it: its outcome, the service holding " +
+    "its subject, and the subject's id; say where it was said (`source`: dashboard, API, MCP, Sophie) and, optionally, " +
+    "what the client said (`note`). The report only lowers the value of the script that made the Unit when we pick " +
+    "which script runs next: nothing is blocked, re-sent or rewritten. There is no positive vote: silence means " +
+    "nothing. Append-only. The caller's org and user are recorded. features-service owns the body and its refusals " +
+    "(400 `unit_report_unrecognised`), forwarded with their status and body.",
+  security: authed,
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("UnitReportRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    201: {
+      description: "The stored report, as features-service recorded it.",
+      content: {
+        "application/json": {
+          schema: z.object({}).passthrough().openapi("UnitReportResponse"),
+        },
+      },
+    },
+    400: { description: "Malformed report (features-service states the reason)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "The report could not be stored", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
   path: "/v1/features/{featureSlug}/prefill",
   tags: ["Features"],
   summary: "Prefill feature inputs from brand data",
