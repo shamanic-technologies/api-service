@@ -364,6 +364,34 @@
           "nullable": true
         }
       },
+      "ResearchEnginesFileResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "ResearchEnginesCatalogResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "ResearchEnginesPerformanceResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "ResearchEnginesLiveScriptsResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "PublicCostPerOutcomeLifetimeResponse": {
         "type": "object",
         "properties": {},
