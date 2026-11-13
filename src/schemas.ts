@@ -598,7 +598,7 @@ registry.registerPath({
   },
 });
 
-const researchDocs: Array<{ path: string; downstream: string; summary: string; schema: string; query?: true | "outcome"; notBuilt?: string }> = [
+const researchDocs: Array<{ path: string; downstream: string; summary: string; schema: string; query?: true | "outcome" | "view" | "measure"; notBuilt?: string }> = [
   { path: "/v1/features/research", downstream: "/internal/research", summary: "Live Research file (staff only)", schema: "ResearchFileResponse", query: true },
   { path: "/v1/features/research/conclusions", downstream: "/internal/research/conclusions", summary: "Live Research conclusion studies (staff only)", schema: "ResearchConclusionsResponse" },
   { path: "/v1/features/research/studies", downstream: "/internal/research/studies", summary: "Live Research measured studies (staff only)", schema: "ResearchStudiesResponse" },
@@ -606,6 +606,10 @@ const researchDocs: Array<{ path: string; downstream: string; summary: string; s
   { path: "/v1/features/research/templates", downstream: "/internal/research/templates", summary: "Live Research template texts by template id (staff only)", schema: "ResearchTemplatesResponse" },
   { path: "/v1/features/research/performance", downstream: "/internal/research/performance", summary: "Live Research performance: every workflow x template x LLM combination per pipe, pipe totals and since-inception series (staff only)", schema: "ResearchPerformanceResponse", query: true },
   { path: "/v1/features/research/script-engines", downstream: "/internal/research/script-engines", summary: "Live Research script engines: per Engine, the scripts that compete and the one the Rating favours today, fleet-wide (staff only)", schema: "ResearchScriptEnginesResponse", query: "outcome", notBuilt: "503 script_engines_not_built_yet before its first build, 502 script_engines_unreadable" },
+  { path: "/v1/features/research/engines", downstream: "/internal/research/engines", summary: "Live Research file keyed by Engine and script, no pipe (staff only)", schema: "ResearchEnginesFileResponse", query: "view" },
+  { path: "/v1/features/research/engines/catalog", downstream: "/internal/research/engines/catalog", summary: "Live Research catalogue keyed by Engine and script (staff only)", schema: "ResearchEnginesCatalogResponse", query: "view" },
+  { path: "/v1/features/research/engines/performance", downstream: "/internal/research/engines/performance", summary: "Live Research performance keyed by Engine and script (staff only)", schema: "ResearchEnginesPerformanceResponse", query: "view" },
+  { path: "/v1/features/research/engines/live-scripts", downstream: "/internal/research/engines/live-scripts", summary: "Live Research: the scripts running today per Engine on one measure (staff only)", schema: "ResearchEnginesLiveScriptsResponse", query: "measure", notBuilt: "503 research_not_computed_yet before its first build, 404 measure_not_found, 502 when unreadable" },
 ];
 
 for (const doc of researchDocs) {
@@ -620,7 +624,17 @@ for (const doc of researchDocs) {
       `Transparent proxy to features-service GET ${doc.downstream}; query forwarded verbatim; status and body owned by features-service ` +
       `(${doc.notBuilt ?? "503 research_not_computed_yet before its first build"}).`,
     security: platformAuth,
-    ...(doc.query === "outcome"
+    ...(doc.query === "view"
+      ? { request: { query: z.object({
+          basis: z.string().optional().openapi({ description: "user (billed) or actual (vendor cost). Documented today, not a whitelist." }),
+          view: z.string().optional().openapi({ description: "mature (default) or flash. Documented today, not a whitelist." }),
+        }).passthrough() } }
+      : doc.query === "measure"
+      ? { request: { query: z.object({
+          measure: z.string().optional().openapi({ description: "The measure the scripts are read on (404 measure_not_found when unknown). Documented today, not a whitelist." }),
+          pricing: z.string().optional().openapi({ description: "Pricing basis. Documented today, not a whitelist." }),
+        }).passthrough() } }
+      : doc.query === "outcome"
       ? { request: { query: z.object({ outcome: z.string().optional().openapi({ description: "One Engine's outcome key; absent = every Engine. Documented today, not a whitelist." }) }).passthrough() } }
       : doc.query
       ? { request: { query: z.object({ basis: z.string().optional().openapi({ description: "user (billed) or actual (vendor cost). Documented today, not a whitelist." }) }).passthrough() } }
