@@ -67,6 +67,7 @@ export const DOWNSTREAM_BODY_SOURCES: Record<string, DownstreamBodySource> = {
   "POST /v1/orgs/opportunities/discover": { service: "journalists-quotes-service", method: "POST", path: "/orgs/opportunities/discover" },
   "POST /v1/orgs/opportunities/{id}/reply": { service: "journalists-quotes-service", method: "POST", path: "/orgs/opportunities/{id}/reply" },
   "POST /v1/invites/validate": { service: "client-service", method: "POST", path: "/public/invites/validate" },
+  "POST /v1/features/unit-reports": { service: "features-service", method: "POST", path: "/orgs/unit-reports" },
   "POST /v1/waitlist/request-access": { service: "client-service", method: "POST", path: "/public/waitlist/request-access" },
   "POST /v1/orgs/{orgId}/invites/claim": { service: "client-service", method: "POST", path: "/internal/invites/claim" },
   "POST /v1/orgs/audiences/suggest": { service: "human-service", method: "POST", path: "/orgs/audiences/suggest" },

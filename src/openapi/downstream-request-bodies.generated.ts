@@ -1352,6 +1352,52 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       }
     }
   },
+  "POST /v1/features/unit-reports": {
+    "service": "features-service",
+    "method": "POST",
+    "path": "/orgs/unit-reports",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "outcomeKey": {
+          "type": "string",
+          "description": "The outcome of the Unit, as the ledger names it (e.g. `message_written`)."
+        },
+        "subjectService": {
+          "type": "string",
+          "description": "The service holding the Unit's subject, as the ledger names it."
+        },
+        "subjectId": {
+          "type": "string",
+          "description": "The subject's id in that service."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "edited",
+            "reported"
+          ],
+          "description": "`edited` = the client changed what we wrote; `reported` = the client said it is not good (a Unit it cannot edit, e.g. a sent message)."
+        },
+        "source": {
+          "type": "string",
+          "description": "Where it was said (the dashboard, the API, the MCP, Sophie): free text."
+        },
+        "note": {
+          "type": "string",
+          "nullable": true,
+          "description": "What the client said, when it said something."
+        }
+      },
+      "required": [
+        "outcomeKey",
+        "subjectService",
+        "subjectId",
+        "kind",
+        "source"
+      ]
+    }
+  },
   "POST /v1/followup-cuts": {
     "service": "instantly-service",
     "method": "POST",

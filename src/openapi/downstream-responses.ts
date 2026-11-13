@@ -75,6 +75,7 @@ export const DOWNSTREAM_RESPONSE_SOURCES: Record<string, DownstreamResponseSourc
   // Left out: the sourcing-investment reads, whose customer answer drops `vendorUsd` (src/routes/brand-audience.ts),
   // and the two lead-detail reads, whose producer answer alone (~85 KB) passes the per-page token budget of views.ts.
   "GET /v1/offers/{offerId}/trigger-events/summary": { service: "campaign-service", method: "GET", path: "/internal/offers/{offerId}/trigger-events/summary" },
+  "POST /v1/features/unit-reports": { service: "features-service", method: "POST", path: "/orgs/unit-reports" },
   "GET /v1/features/brands/{brandId}/campaign-targets": { service: "features-service", method: "GET", path: "/brands/{brandId}/campaign-targets" },
   "GET /v1/features/brands/{brandId}/published-units/{outcomeKey}": { service: "features-service", method: "GET", path: "/brands/{brandId}/published-units/{outcomeKey}" },
   "GET /v1/features/brands/{brandId}/sales-funnel-campaigns": { service: "features-service", method: "GET", path: "/brands/{brandId}/sales-funnel-campaigns" },

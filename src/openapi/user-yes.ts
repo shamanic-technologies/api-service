@@ -233,6 +233,7 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "PUT /v1/brands/{id}/offers/{offerId}/user-fields": NO,
   "POST /v1/brands/{id}/transfer": NO,
   "POST /v1/features/{featureSlug}/prefill": NO,
+  "POST /v1/features/unit-reports": NO,
   "POST /public/conversions": NO,
 
   // ── Workflows / scripts / content (authoring) ──────────────────────────────
