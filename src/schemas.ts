@@ -598,7 +598,7 @@ registry.registerPath({
   },
 });
 
-const researchDocs: Array<{ path: string; downstream: string; summary: string; schema: string; query?: true | "outcome" }> = [
+const researchDocs: Array<{ path: string; downstream: string; summary: string; schema: string; query?: true | "outcome"; notBuilt?: string }> = [
   { path: "/v1/features/research", downstream: "/internal/research", summary: "Live Research file (staff only)", schema: "ResearchFileResponse", query: true },
   { path: "/v1/features/research/conclusions", downstream: "/internal/research/conclusions", summary: "Live Research conclusion studies (staff only)", schema: "ResearchConclusionsResponse" },
   { path: "/v1/features/research/studies", downstream: "/internal/research/studies", summary: "Live Research measured studies (staff only)", schema: "ResearchStudiesResponse" },
@@ -607,6 +607,7 @@ const researchDocs: Array<{ path: string; downstream: string; summary: string; s
   { path: "/v1/features/research/performance", downstream: "/internal/research/performance", summary: "Live Research performance: every workflow x template x LLM combination per pipe, pipe totals and since-inception series (staff only)", schema: "ResearchPerformanceResponse", query: true },
   { path: "/v1/features/research/engine-places", downstream: "/internal/research/engine-places", summary: "Live Research engine places: the Engines' places, favourites, clear winners, callers and replay value lost, fleet-wide (staff only)", schema: "ResearchEnginePlacesResponse", query: true },
   { path: "/v1/features/research/engine-llms", downstream: "/internal/research/engine-llms", summary: "Live Research engine LLMs: per Engine, its allowed LLMs ranked with usage stats and today's favourite, fleet-wide (staff only)", schema: "ResearchEngineLlmsResponse", query: "outcome" },
+  { path: "/v1/features/research/script-engines", downstream: "/internal/research/script-engines", summary: "Live Research script engines: per Engine, the scripts that compete and the one the Rating favours today, fleet-wide (staff only)", schema: "ResearchScriptEnginesResponse", query: "outcome", notBuilt: "503 script_engines_not_built_yet before its first build, 502 script_engines_unreadable" },
 ];
 
 for (const doc of researchDocs) {
@@ -619,7 +620,7 @@ for (const doc of researchDocs) {
       "features-service's live, fleet-wide Research studies for the staff Research page. The actual basis reveals margin, so staff-only: " +
       "platform API key + a STAFF_EMAILS x-email, refused with 403 before any downstream call. No org context. " +
       `Transparent proxy to features-service GET ${doc.downstream}; query forwarded verbatim; status and body owned by features-service ` +
-      "(503 research_not_computed_yet before its first build).",
+      `(${doc.notBuilt ?? "503 research_not_computed_yet before its first build"}).`,
     security: platformAuth,
     ...(doc.query === "outcome"
       ? { request: { query: z.object({ outcome: z.string().optional().openapi({ description: "One Engine's outcome key; absent = every Engine. Documented today, not a whitelist." }) }).passthrough() } }

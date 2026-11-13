@@ -1007,7 +1007,7 @@ router.delete("/features/stated-monthly-amounts/:id", authenticatePlatform, requ
 });
 
 /**
- * GET /v1/features/research[/conclusions|/studies|/catalog|/templates|/performance|/engine-places|/engine-llms] — STAFF ONLY.
+ * GET /v1/features/research[/conclusions|/studies|/catalog|/templates|/performance|/engine-places|/engine-llms|/script-engines] — STAFF ONLY.
  * features-service's live Research file (the staff Research page of dashboard v2): the whole
  * file (`?basis=user|actual`; `actual` reveals our margin), the conclusion studies and the
  * measured studies, the catalogue (workflow, template and model pages, `?basis=`), the
@@ -1016,7 +1016,7 @@ router.delete("/features/stated-monthly-amounts/:id", authenticatePlatform, requ
  * authenticatePlatform + requireStaff are network-free, so a non-staff caller is refused
  * before any downstream call. Only the verified staff email is forwarded, for attribution.
  *
- * Byte passthroughs to features-service GET /internal/research[/conclusions|/studies|/catalog|/templates|/performance|/engine-places|/engine-llms]: query
+ * Byte passthroughs to features-service GET /internal/research[/conclusions|/studies|/catalog|/templates|/performance|/engine-places|/engine-llms|/script-engines]: query
  * verbatim (#11), status + body piped (#10) — including the 503 `research_not_computed_yet`
  * before the first build — errors field-for-field (#7). Declared BEFORE `/features/:slug/*`
  * so `research` is never bound as a slug.
@@ -1030,6 +1030,7 @@ const RESEARCH_ROUTES: Array<[string, string, string]> = [
   ["/features/research/performance", "/internal/research/performance", "Failed to get the research performance"],
   ["/features/research/engine-places", "/internal/research/engine-places", "Failed to get the research engine places"],
   ["/features/research/engine-llms", "/internal/research/engine-llms", "Failed to get the research engine LLMs"],
+  ["/features/research/script-engines", "/internal/research/script-engines", "Failed to get the research script engines"],
 ];
 
 for (const [path, downstream, fallback] of RESEARCH_ROUTES) {
