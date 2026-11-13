@@ -606,7 +606,6 @@ const researchDocs: Array<{ path: string; downstream: string; summary: string; s
   { path: "/v1/features/research/templates", downstream: "/internal/research/templates", summary: "Live Research template texts by template id (staff only)", schema: "ResearchTemplatesResponse" },
   { path: "/v1/features/research/performance", downstream: "/internal/research/performance", summary: "Live Research performance: every workflow x template x LLM combination per pipe, pipe totals and since-inception series (staff only)", schema: "ResearchPerformanceResponse", query: true },
   { path: "/v1/features/research/engine-places", downstream: "/internal/research/engine-places", summary: "Live Research engine places: the Engines' places, favourites, clear winners, callers and replay value lost, fleet-wide (staff only)", schema: "ResearchEnginePlacesResponse", query: true },
-  { path: "/v1/features/research/engine-llms", downstream: "/internal/research/engine-llms", summary: "Live Research engine LLMs: per Engine, its allowed LLMs ranked with usage stats and today's favourite, fleet-wide (staff only)", schema: "ResearchEngineLlmsResponse", query: "outcome" },
   { path: "/v1/features/research/script-engines", downstream: "/internal/research/script-engines", summary: "Live Research script engines: per Engine, the scripts that compete and the one the Rating favours today, fleet-wide (staff only)", schema: "ResearchScriptEnginesResponse", query: "outcome", notBuilt: "503 script_engines_not_built_yet before its first build, 502 script_engines_unreadable" },
 ];
 
