@@ -364,13 +364,6 @@
           "nullable": true
         }
       },
-      "ResearchEngineLlmsResponse": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": {
-          "nullable": true
-        }
-      },
       "ResearchScriptEnginesResponse": {
         "type": "object",
         "properties": {},
