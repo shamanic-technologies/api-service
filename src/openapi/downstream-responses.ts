@@ -85,6 +85,7 @@ export const DOWNSTREAM_RESPONSE_SOURCES: Record<string, DownstreamResponseSourc
   "GET /v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/factory-shadow": { service: "features-service", method: "GET", path: "/brands/{brandId}/sales-funnel-campaigns/{id}/factory-shadow" },
   "GET /v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/milestones": { service: "features-service", method: "GET", path: "/brands/{brandId}/sales-funnel-campaigns/{id}/milestones" },
   "GET /v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/people-journeys": { service: "features-service", method: "GET", path: "/brands/{brandId}/sales-funnel-campaigns/{id}/people-journeys" },
+  "GET /v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/engine-scripts": { service: "features-service", method: "GET", path: "/brands/{brandId}/sales-funnel-campaigns/{id}/engine-scripts" },
   "GET /v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/spend-charts": { service: "features-service", method: "GET", path: "/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/spend-charts" },
   "GET /v1/sales-funnel-campaigns": { service: "campaign-service", method: "GET", path: "/sales-funnel-campaigns" },
   "DELETE /v1/sales-funnel-campaigns/{id}": { service: "campaign-service", method: "DELETE", path: "/sales-funnel-campaigns/{id}" },

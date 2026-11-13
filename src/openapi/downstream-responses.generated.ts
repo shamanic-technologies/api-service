@@ -667,12 +667,17 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     },
                     "pure_prospect": {
                       "type": "boolean",
-                      "description": "Is this person a PURE PROSPECT of the brand (no tag but prospect, yes or unsure)? A person some source of the org knows (`subject`) only once judged and with no open \"same person?\" question; a person no source knows outside our own outreach is one unless a tag says otherwise. Read by the prospect follow-up verdict."
+                      "description": "Is this person a PURE PROSPECT of the brand (no tag but prospect, yes or unsure)? A person some source of the org knows (`subject`) only once judged and with no open \"same person?\" question; a person no source knows outside our own outreach is one unless a tag says otherwise. Read by the contacted pure prospects serve."
+                    },
+                    "prospect_followup": {
+                      "type": "boolean",
+                      "description": "May the brand follow this person up? `pure_prospect` with a funnel-stage tag (`customer`) allowed: only a true relationship (personal, investor, team, advisor, supplier, partner, other_professional, journalist) holds them back (FOLLOWUP-FUNNEL-STAGE-1109). Read by the prospect follow-up verdict."
                     }
                   },
                   "required": [
                     "business_only",
-                    "pure_prospect"
+                    "pure_prospect",
+                    "prospect_followup"
                   ]
                 },
                 "subject": {
@@ -7647,11 +7652,55 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "confirmed",
                       "suggested"
                     ]
+                  },
+                  "stillOurDraft": {
+                    "type": "boolean",
+                    "description": "The value is what we drafted, unchanged by the client. Always true for a non-empty `suggested` prefill. For a `confirmed` value: true while the client saved our draft as is (saving it again unchanged keeps it true), false once a save changed it. Decided at every write; a value confirmed before 2026-11-13 reads false (not recorded). `draftUnit` beside it is the Unit that draft made in the runs ledger: what an edit of this value reports (features-service `POST /orgs/unit-reports`, kind `edited`); null when `stillOurDraft` is false, or when no Unit was declared for the draft."
+                  },
+                  "draftUnit": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "outcomeKey": {
+                        "type": "string",
+                        "description": "`offer_fields_drafted` (a draft asked for one offer) or `brand_fields_drafted` (a draft asked for the brand, naming no offer).",
+                        "example": "brand_fields_drafted"
+                      },
+                      "subjectService": {
+                        "type": "string",
+                        "description": "Always `brand-service`.",
+                        "example": "brand-service"
+                      },
+                      "subjectId": {
+                        "type": "string",
+                        "description": "The offer id for `offer_fields_drafted`, the brand id for `brand_fields_drafted`.",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                      },
+                      "unitAt": {
+                        "type": "string",
+                        "description": "ISO time taken once the ledger held the Unit. One subject holds one Unit per re-draft: send it as the report's `unitAt` so the ledger resolves THIS draft.",
+                        "example": "2026-11-13T10:00:00.000Z"
+                      },
+                      "runId": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "The brand-service run that declared the Unit."
+                      }
+                    },
+                    "required": [
+                      "outcomeKey",
+                      "subjectService",
+                      "subjectId",
+                      "unitAt",
+                      "runId"
+                    ]
                   }
                 },
                 "required": [
                   "value",
-                  "provenance"
+                  "provenance",
+                  "stillOurDraft",
+                  "draftUnit"
                 ]
               },
               "description": "Map keyed by user-facing field key (services, dreamOutcome, perceivedLikelihood, socialProof, riskReversal, urgency, scarcity, targetAudience, giveForFree, neverGive). Each value carries the resolved value and its provenance (`confirmed` = user-validated; `suggested` = auto-extract prefill)."
@@ -7834,11 +7883,55 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "confirmed",
                       "suggested"
                     ]
+                  },
+                  "stillOurDraft": {
+                    "type": "boolean",
+                    "description": "The value is what we drafted, unchanged by the client. Always true for a non-empty `suggested` prefill. For a `confirmed` value: true while the client saved our draft as is (saving it again unchanged keeps it true), false once a save changed it. Decided at every write; a value confirmed before 2026-11-13 reads false (not recorded). `draftUnit` beside it is the Unit that draft made in the runs ledger: what an edit of this value reports (features-service `POST /orgs/unit-reports`, kind `edited`); null when `stillOurDraft` is false, or when no Unit was declared for the draft."
+                  },
+                  "draftUnit": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "outcomeKey": {
+                        "type": "string",
+                        "description": "`offer_fields_drafted` (a draft asked for one offer) or `brand_fields_drafted` (a draft asked for the brand, naming no offer).",
+                        "example": "brand_fields_drafted"
+                      },
+                      "subjectService": {
+                        "type": "string",
+                        "description": "Always `brand-service`.",
+                        "example": "brand-service"
+                      },
+                      "subjectId": {
+                        "type": "string",
+                        "description": "The offer id for `offer_fields_drafted`, the brand id for `brand_fields_drafted`.",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                      },
+                      "unitAt": {
+                        "type": "string",
+                        "description": "ISO time taken once the ledger held the Unit. One subject holds one Unit per re-draft: send it as the report's `unitAt` so the ledger resolves THIS draft.",
+                        "example": "2026-11-13T10:00:00.000Z"
+                      },
+                      "runId": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "The brand-service run that declared the Unit."
+                      }
+                    },
+                    "required": [
+                      "outcomeKey",
+                      "subjectService",
+                      "subjectId",
+                      "unitAt",
+                      "runId"
+                    ]
                   }
                 },
                 "required": [
                   "value",
-                  "provenance"
+                  "provenance",
+                  "stillOurDraft",
+                  "draftUnit"
                 ]
               },
               "description": "Map keyed by user-facing field key (services, dreamOutcome, perceivedLikelihood, socialProof, riskReversal, urgency, scarcity, targetAudience, giveForFree, neverGive). Each value carries the resolved value and its provenance (`confirmed` = user-validated; `suggested` = auto-extract prefill)."
@@ -11574,6 +11667,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "default",
                           "benchmark",
                           "flash",
+                          "pipe_history",
                           "same_leg_fleet",
                           "same_step_fleet",
                           "own_spend",
@@ -13491,6 +13585,36 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           ]
                         },
                         "description": "Offer documents this answer of ours carried as files (POST /orgs/replies `attachments`). Absent when none."
+                      },
+                      "messageId": {
+                        "type": "string",
+                        "description": "Its RFC Message-ID: pass it as POST /orgs/replies `in_reply_to` to answer THIS message. Absent when the store holds none."
+                      },
+                      "participants": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "email": {
+                              "type": "string",
+                              "description": "Lowercased bare address"
+                            },
+                            "role": {
+                              "type": "string",
+                              "enum": [
+                                "from",
+                                "to",
+                                "cc",
+                                "bcc"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "email",
+                            "role"
+                          ]
+                        },
+                        "description": "EVERY address on the message with its role, read from what it carried (EVERY-PERSON-ON-THE-THREAD-1109). A colleague of the lead who answered in this thread is named here as `from` even though the message is filed on the lead's thread. Absent when the store holds no envelope."
                       }
                     },
                     "required": [
@@ -13994,6 +14118,36 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           ]
                         },
                         "description": "Offer documents this answer of ours carried as files (POST /orgs/replies `attachments`). Absent when none."
+                      },
+                      "messageId": {
+                        "type": "string",
+                        "description": "Its RFC Message-ID: pass it as POST /orgs/replies `in_reply_to` to answer THIS message. Absent when the store holds none."
+                      },
+                      "participants": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "email": {
+                              "type": "string",
+                              "description": "Lowercased bare address"
+                            },
+                            "role": {
+                              "type": "string",
+                              "enum": [
+                                "from",
+                                "to",
+                                "cc",
+                                "bcc"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "email",
+                            "role"
+                          ]
+                        },
+                        "description": "EVERY address on the message with its role, read from what it carried (EVERY-PERSON-ON-THE-THREAD-1109). A colleague of the lead who answered in this thread is named here as `from` even though the message is filed on the lead's thread. Absent when the store holds no envelope."
                       }
                     },
                     "required": [
@@ -17032,7 +17186,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "shortDescription": {
                         "type": "string",
                         "nullable": true,
-                        "description": "ONE short customer sentence of what we do in this campaign (owner 2026-10-14: the Campaigns table shows it under the name in place of `path`), e.g. \"We email new buyers until they reply with interest.\" or \"Our AI books meetings with buyers who reply with interest.\" At most 12 words, English, no dash, never a channel's display name; composed from the funnel's legs (the client's own team steps left out), never stored. Null only with `shortDescriptionUnavailableReason`."
+                        "description": "Short customer sentences of what we do in this campaign (owner 2026-10-14: the Campaigns table shows it under the name in place of `path`), e.g. \"We email new buyers until they reply with interest.\" or \"Our AI books meetings with buyers who reply with interest.\" The funnel's sentence (at most 12 words, English, no dash, never a channel's display name; composed from the funnel's legs, the client's own team steps left out), then the sentence of each of `otherParts` (CAMPAIGN-PATH-SHOWS-AI-ANSWER-1109: every part it runs is said), each once; never stored. Null only with `shortDescriptionUnavailableReason`."
                       },
                       "shortDescriptionUnavailableReason": {
                         "type": "string",
@@ -17044,6 +17198,146 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         ],
                         "description": "Why `shortDescription` is null: `sales_funnel_not_in_catalogue` (the funnel id is not in this service's catalogue, as `copyUnavailableReason`), `no_step_run_by_us` (the client's own team works every step of the funnel: nothing of ours to describe). Null when it is served."
                       },
+                      "otherParts": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "campaignId": {
+                              "type": "string",
+                              "description": "The unit campaign running this part."
+                            },
+                            "pipeId": {
+                              "type": "string",
+                              "description": "The catalogue pipe it works (a play's base pipe)."
+                            },
+                            "trigger": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "slug": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "slug",
+                                "name"
+                              ],
+                              "description": "What starts it: the trigger the unit runs on (\"Lead event\"); null = it runs on its own, from Start or its from step."
+                            },
+                            "items": {
+                              "type": "array",
+                              "nullable": true,
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "trigger"
+                                        ]
+                                      },
+                                      "slug": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "slug",
+                                      "name"
+                                    ]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "step"
+                                        ]
+                                      },
+                                      "key": {
+                                        "type": "string"
+                                      },
+                                      "label": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "key",
+                                      "label"
+                                    ]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "channel"
+                                        ]
+                                      },
+                                      "slug": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "runByUs": {
+                                        "type": "boolean"
+                                      },
+                                      "pipeId": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "slug",
+                                      "name",
+                                      "runByUs",
+                                      "pipeId"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "description": "The part in reading order, same items as `path`: its trigger (or Start / its from step), the channel working it, the outcome its Engine makes (\"⚡ Lead event -> AI Follow-up Email -> Paid client\"). Null only with `unavailableReason`."
+                            },
+                            "shortDescription": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "The part's own short sentence (\"Our AI emails leads the moment they act until they buy.\"), also joined into the row's `shortDescription`. Null when the client's team works it or with `unavailableReason`."
+                            },
+                            "unavailableReason": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "pipe_not_in_catalogue",
+                                "trigger_not_in_catalogue",
+                                null
+                              ],
+                              "description": "Why the part is not described (logged). Null when described."
+                            }
+                          },
+                          "required": [
+                            "campaignId",
+                            "pipeId",
+                            "trigger",
+                            "items",
+                            "shortDescription",
+                            "unavailableReason"
+                          ]
+                        },
+                        "description": "EVERY part the campaign runs OFF its `path` (owner 2026-11-09, CAMPAIGN-PATH-SHOWS-AI-ANSWER-1109): each ongoing unit whose pipe is not on the path, e.g. our AI answering every Lead event beside a cold email path closed by the client's team. Empty when every unit is on the path. Render each as its own line beside `path`; its sentence is already in `shortDescription`."
+                      },
                       "copyUnavailableReason": {
                         "type": "string",
                         "nullable": true,
@@ -17052,6 +17346,11 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           null
                         ],
                         "description": "Why `type`, `triggerLabel`, `typeLabel` and `path` are null: the funnel id is not in this service's catalogue (logged). Null when they are served."
+                      },
+                      "target": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "The outcome the campaign is launched to make (campaign-service `target`, a catalogue step key such as `backlink_earned`); null while not stated. A campaign launched on its Target alone (BACKLINK-ENGINE-1109) has no path: this is what it makes."
                       },
                       "units": {
                         "type": "array",
@@ -17062,13 +17361,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                               "type": "string"
                             },
                             "pipeId": {
-                              "type": "string"
+                              "type": "string",
+                              "nullable": true
                             },
                             "featureSlug": {
-                              "type": "string"
+                              "type": "string",
+                              "nullable": true
                             },
                             "legKey": {
-                              "type": "string"
+                              "type": "string",
+                              "nullable": true
                             },
                             "status": {
                               "type": "string"
@@ -17082,7 +17384,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                             "status"
                           ]
                         },
-                        "description": "The unit campaigns (one per pipe) the money is computed over, as campaign-service serves them."
+                        "description": "The unit campaigns the money is computed over, as campaign-service serves them. A unit an Engine runs with no pipe (a campaign launched on its Target alone, BACKLINK-ENGINE-1109) states null `pipeId`, `featureSlug` and `legKey`; its spend joins `investedUsd`."
                       },
                       "investedUsd": {
                         "type": "number",
@@ -17150,7 +17452,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                                     },
                                     "source": {
                                       "type": "string",
-                                      "description": "The producer's own word: crm_measured | measured_on_our_leads | customer_stated | fleet_median | industry_default (rate); workflow | fleet_measured | default | benchmark (cost); on a figure read off the catalogue funnel: offer_measured | offer_stated | offer_team_measured | measured_pipe | default | default_entry (rate), workflow | default | benchmark | flash | same_leg_fleet | same_step_fleet | own_spend (cost); offer_stated | fleet_median (lifetime_revenue); not_running (sales_path: the offer runs no funnel campaign, so the figure is the best path we would sell it)."
+                                      "description": "The producer's own word: crm_measured | measured_on_our_leads | customer_stated | fleet_median | industry_default (rate); workflow | fleet_measured | default | benchmark (cost); on a figure read off the catalogue funnel: offer_measured | offer_stated | offer_team_measured | measured_pipe | default | default_entry (rate), workflow | default | benchmark | flash | pipe_history | same_leg_fleet | same_step_fleet | own_spend (cost); offer_stated | fleet_median (lifetime_revenue); not_running (sales_path: the offer runs no funnel campaign, so the figure is the best path we would sell it)."
                                     }
                                   },
                                   "required": [
@@ -17657,7 +17959,9 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "path",
                       "shortDescription",
                       "shortDescriptionUnavailableReason",
+                      "otherParts",
                       "copyUnavailableReason",
+                      "target",
                       "units",
                       "investedUsd",
                       "moneyUnavailableReason",
@@ -17764,7 +18068,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "shortDescription": {
                         "type": "string",
                         "nullable": true,
-                        "description": "ONE short customer sentence of what we do in this campaign (owner 2026-10-14: the Campaigns table shows it under the name in place of `path`), e.g. \"We email new buyers until they reply with interest.\" or \"Our AI books meetings with buyers who reply with interest.\" At most 12 words, English, no dash, never a channel's display name; composed from the funnel's legs (the client's own team steps left out), never stored. Null only with `shortDescriptionUnavailableReason`."
+                        "description": "Short customer sentences of what we do in this campaign (owner 2026-10-14: the Campaigns table shows it under the name in place of `path`), e.g. \"We email new buyers until they reply with interest.\" or \"Our AI books meetings with buyers who reply with interest.\" The funnel's sentence (at most 12 words, English, no dash, never a channel's display name; composed from the funnel's legs, the client's own team steps left out), then the sentence of each of `otherParts` (CAMPAIGN-PATH-SHOWS-AI-ANSWER-1109: every part it runs is said), each once; never stored. Null only with `shortDescriptionUnavailableReason`."
                       },
                       "shortDescriptionUnavailableReason": {
                         "type": "string",
@@ -17953,6 +18257,146 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         ],
                         "description": "Why `type`, `triggerLabel`, `typeLabel` and `path` are null: the funnel id is not in this service's catalogue (logged). Null when they are served."
                       },
+                      "otherParts": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "campaignId": {
+                              "type": "string",
+                              "description": "The unit campaign running this part."
+                            },
+                            "pipeId": {
+                              "type": "string",
+                              "description": "The catalogue pipe it works (a play's base pipe)."
+                            },
+                            "trigger": {
+                              "type": "object",
+                              "nullable": true,
+                              "properties": {
+                                "slug": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "slug",
+                                "name"
+                              ],
+                              "description": "What starts it: the trigger the unit runs on (\"Lead event\"); null = it runs on its own, from Start or its from step."
+                            },
+                            "items": {
+                              "type": "array",
+                              "nullable": true,
+                              "items": {
+                                "anyOf": [
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "trigger"
+                                        ]
+                                      },
+                                      "slug": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "slug",
+                                      "name"
+                                    ]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "step"
+                                        ]
+                                      },
+                                      "key": {
+                                        "type": "string"
+                                      },
+                                      "label": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "key",
+                                      "label"
+                                    ]
+                                  },
+                                  {
+                                    "type": "object",
+                                    "properties": {
+                                      "kind": {
+                                        "type": "string",
+                                        "enum": [
+                                          "channel"
+                                        ]
+                                      },
+                                      "slug": {
+                                        "type": "string"
+                                      },
+                                      "name": {
+                                        "type": "string"
+                                      },
+                                      "runByUs": {
+                                        "type": "boolean"
+                                      },
+                                      "pipeId": {
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "kind",
+                                      "slug",
+                                      "name",
+                                      "runByUs",
+                                      "pipeId"
+                                    ]
+                                  }
+                                ]
+                              },
+                              "description": "The part in reading order, same items as `path`: its trigger (or Start / its from step), the channel working it, the outcome its Engine makes (\"⚡ Lead event -> AI Follow-up Email -> Paid client\"). Null only with `unavailableReason`."
+                            },
+                            "shortDescription": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "The part's own short sentence (\"Our AI emails leads the moment they act until they buy.\"), also joined into the row's `shortDescription`. Null when the client's team works it or with `unavailableReason`."
+                            },
+                            "unavailableReason": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "pipe_not_in_catalogue",
+                                "trigger_not_in_catalogue",
+                                null
+                              ],
+                              "description": "Why the part is not described (logged). Null when described."
+                            }
+                          },
+                          "required": [
+                            "campaignId",
+                            "pipeId",
+                            "trigger",
+                            "items",
+                            "shortDescription",
+                            "unavailableReason"
+                          ]
+                        },
+                        "description": "EVERY part the campaign runs OFF its `path` (owner 2026-11-09, CAMPAIGN-PATH-SHOWS-AI-ANSWER-1109): each ongoing unit whose pipe is not on the path, e.g. our AI answering every Lead event beside a cold email path closed by the client's team. Empty when every unit is on the path. Render each as its own line beside `path`; its sentence is already in `shortDescription`."
+                      },
                       "units": {
                         "type": "array",
                         "items": {
@@ -17962,13 +18406,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                               "type": "string"
                             },
                             "pipeId": {
-                              "type": "string"
+                              "type": "string",
+                              "nullable": true
                             },
                             "featureSlug": {
-                              "type": "string"
+                              "type": "string",
+                              "nullable": true
                             },
                             "legKey": {
-                              "type": "string"
+                              "type": "string",
+                              "nullable": true
                             },
                             "status": {
                               "type": "string"
@@ -17982,7 +18429,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                             "status"
                           ]
                         },
-                        "description": "The unit campaigns (one per pipe) the money is computed over, as campaign-service serves them."
+                        "description": "The unit campaigns the money is computed over, as campaign-service serves them. A unit an Engine runs with no pipe (a campaign launched on its Target alone, BACKLINK-ENGINE-1109) states null `pipeId`, `featureSlug` and `legKey`; its spend joins `investedUsd`."
                       }
                     },
                     "required": [
@@ -18003,6 +18450,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "shortDescriptionUnavailableReason",
                       "path",
                       "copyUnavailableReason",
+                      "otherParts",
                       "units"
                     ]
                   },
@@ -18541,6 +18989,651 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "funnel",
             "funnelUnavailableReason",
             "pipes"
+          ]
+        }
+      }
+    }
+  },
+  "GET /v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/engine-scripts": {
+    "service": "features-service",
+    "method": "GET",
+    "path": "/brands/{brandId}/sales-funnel-campaigns/{id}/engine-scripts",
+    "responses": {
+      "200": {
+        "description": "The campaign's Engines",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "salesFunnelCampaignId": {
+              "type": "string"
+            },
+            "brandId": {
+              "type": "string"
+            },
+            "target": {
+              "type": "object",
+              "nullable": true,
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "key",
+                "label"
+              ]
+            },
+            "ratingComputedAt": {
+              "type": "string",
+              "description": "When the Rating the draws read was built."
+            },
+            "runsBuiltAt": {
+              "type": "string",
+              "nullable": true,
+              "description": "When runs-service built the script runs read (null = the campaign has none yet)."
+            },
+            "draws": {
+              "type": "number"
+            },
+            "engines": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "outcome": {
+                    "type": "string",
+                    "description": "The Engine: the outcome its scripts make."
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "isTarget": {
+                    "type": "boolean",
+                    "description": "The Engine of the campaign's Target."
+                  },
+                  "strategyState": {
+                    "type": "string",
+                    "enum": [
+                      "kept",
+                      "no_condition",
+                      "not_judged_yet"
+                    ],
+                    "description": "`kept` = the campaign's brief keeps a strategy on this Engine; `no_condition` = every runnable script competes; `not_judged_yet` = the Engine runner judges the brief on its first run here (until then every runnable script is listed)."
+                  },
+                  "strategy": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "name",
+                      "description"
+                    ]
+                  },
+                  "rules": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "requires",
+                            "excludes"
+                          ]
+                        },
+                        "tacticId": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "clientLine": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "tacticId",
+                        "name",
+                        "clientLine"
+                      ]
+                    },
+                    "description": "What the strategy requires and excludes of a script, in words."
+                  },
+                  "drawRule": {
+                    "type": "string",
+                    "enum": [
+                      "what_runs_led_to_per_cost",
+                      "what_runs_led_to",
+                      "cheapest_per_run",
+                      "no_script"
+                    ],
+                    "description": "How today's draws choose: on what each script's runs led to per cost, on what they led to (no cost known), the cheapest per run (nothing valued yet), or nothing can run."
+                  },
+                  "runsNow": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "The script the draws pick most now; null = none can run."
+                  },
+                  "scripts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "script": {
+                          "type": "string",
+                          "description": "`<outcome>/<dynasty>`: the Script dynasty (every version pooled)."
+                        },
+                        "dynasty": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "The runnable version today; null = no longer runnable."
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "shareOfDrawsPct": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Share of today's draws among the scripts this campaign's strategy keeps, 0..100 (they add to ~100); null = not competing (ruled out or no longer runnable)."
+                        },
+                        "drawnMost": {
+                          "type": "boolean",
+                          "description": "The script the draws pick most often today for this campaign."
+                        },
+                        "ruledOutReason": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Why the campaign's strategy rules it out, in words; null when kept."
+                        },
+                        "llms": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "place": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "provider": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "model": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "place",
+                              "provider",
+                              "model"
+                            ]
+                          },
+                          "description": "The LLM tactics the script states (`place` null = every call)."
+                        },
+                        "templates": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "place": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "templateDynastySlug": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "place",
+                              "templateDynastySlug"
+                            ]
+                          },
+                          "description": "The template tactics the script states."
+                        },
+                        "campaign": {
+                          "type": "object",
+                          "properties": {
+                            "runs": {
+                              "type": "number",
+                              "description": "This campaign's runs of the script (its unit campaigns' script decisions), whole history."
+                            },
+                            "reached": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "outcome": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "label": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "runs": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "outcome",
+                                  "label",
+                                  "runs"
+                                ]
+                              },
+                              "description": "This campaign's runs by the strongest outcome each reached beyond its own Unit (`outcome` null = nothing beyond it), most runs first."
+                            },
+                            "spentUsd": {
+                              "type": "number",
+                              "nullable": true,
+                              "description": "What those runs cost (billed, the decision and everything under it); null = runs-service does not serve it."
+                            },
+                            "costPerRunUsd": {
+                              "type": "number",
+                              "nullable": true
+                            },
+                            "lastRunDay": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "UTC day of this campaign's last run of the script; null = never ran here."
+                            }
+                          },
+                          "required": [
+                            "runs",
+                            "reached",
+                            "spentUsd",
+                            "costPerRunUsd",
+                            "lastRunDay"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "script",
+                        "dynasty",
+                        "version",
+                        "description",
+                        "shareOfDrawsPct",
+                        "drawnMost",
+                        "ruledOutReason",
+                        "llms",
+                        "templates",
+                        "campaign"
+                      ]
+                    },
+                    "description": "The scripts competing for this campaign, most drawn first."
+                  },
+                  "ruledOut": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "script": {
+                          "type": "string",
+                          "description": "`<outcome>/<dynasty>`: the Script dynasty (every version pooled)."
+                        },
+                        "dynasty": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "The runnable version today; null = no longer runnable."
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "shareOfDrawsPct": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Share of today's draws among the scripts this campaign's strategy keeps, 0..100 (they add to ~100); null = not competing (ruled out or no longer runnable)."
+                        },
+                        "drawnMost": {
+                          "type": "boolean",
+                          "description": "The script the draws pick most often today for this campaign."
+                        },
+                        "ruledOutReason": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Why the campaign's strategy rules it out, in words; null when kept."
+                        },
+                        "llms": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "place": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "provider": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "model": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "place",
+                              "provider",
+                              "model"
+                            ]
+                          },
+                          "description": "The LLM tactics the script states (`place` null = every call)."
+                        },
+                        "templates": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "place": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "templateDynastySlug": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "place",
+                              "templateDynastySlug"
+                            ]
+                          },
+                          "description": "The template tactics the script states."
+                        },
+                        "campaign": {
+                          "type": "object",
+                          "properties": {
+                            "runs": {
+                              "type": "number",
+                              "description": "This campaign's runs of the script (its unit campaigns' script decisions), whole history."
+                            },
+                            "reached": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "outcome": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "label": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "runs": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "outcome",
+                                  "label",
+                                  "runs"
+                                ]
+                              },
+                              "description": "This campaign's runs by the strongest outcome each reached beyond its own Unit (`outcome` null = nothing beyond it), most runs first."
+                            },
+                            "spentUsd": {
+                              "type": "number",
+                              "nullable": true,
+                              "description": "What those runs cost (billed, the decision and everything under it); null = runs-service does not serve it."
+                            },
+                            "costPerRunUsd": {
+                              "type": "number",
+                              "nullable": true
+                            },
+                            "lastRunDay": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "UTC day of this campaign's last run of the script; null = never ran here."
+                            }
+                          },
+                          "required": [
+                            "runs",
+                            "reached",
+                            "spentUsd",
+                            "costPerRunUsd",
+                            "lastRunDay"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "script",
+                        "dynasty",
+                        "version",
+                        "description",
+                        "shareOfDrawsPct",
+                        "drawnMost",
+                        "ruledOutReason",
+                        "llms",
+                        "templates",
+                        "campaign"
+                      ]
+                    },
+                    "description": "Runnable scripts the strategy rules out, each with its reason (and this campaign's runs of it before)."
+                  },
+                  "past": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "script": {
+                          "type": "string",
+                          "description": "`<outcome>/<dynasty>`: the Script dynasty (every version pooled)."
+                        },
+                        "dynasty": {
+                          "type": "string"
+                        },
+                        "version": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "The runnable version today; null = no longer runnable."
+                        },
+                        "description": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "shareOfDrawsPct": {
+                          "type": "number",
+                          "nullable": true,
+                          "description": "Share of today's draws among the scripts this campaign's strategy keeps, 0..100 (they add to ~100); null = not competing (ruled out or no longer runnable)."
+                        },
+                        "drawnMost": {
+                          "type": "boolean",
+                          "description": "The script the draws pick most often today for this campaign."
+                        },
+                        "ruledOutReason": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "Why the campaign's strategy rules it out, in words; null when kept."
+                        },
+                        "llms": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "place": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "provider": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "model": {
+                                "type": "string",
+                                "nullable": true
+                              }
+                            },
+                            "required": [
+                              "place",
+                              "provider",
+                              "model"
+                            ]
+                          },
+                          "description": "The LLM tactics the script states (`place` null = every call)."
+                        },
+                        "templates": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "place": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "templateDynastySlug": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "place",
+                              "templateDynastySlug"
+                            ]
+                          },
+                          "description": "The template tactics the script states."
+                        },
+                        "campaign": {
+                          "type": "object",
+                          "properties": {
+                            "runs": {
+                              "type": "number",
+                              "description": "This campaign's runs of the script (its unit campaigns' script decisions), whole history."
+                            },
+                            "reached": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "outcome": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "label": {
+                                    "type": "string",
+                                    "nullable": true
+                                  },
+                                  "runs": {
+                                    "type": "number"
+                                  }
+                                },
+                                "required": [
+                                  "outcome",
+                                  "label",
+                                  "runs"
+                                ]
+                              },
+                              "description": "This campaign's runs by the strongest outcome each reached beyond its own Unit (`outcome` null = nothing beyond it), most runs first."
+                            },
+                            "spentUsd": {
+                              "type": "number",
+                              "nullable": true,
+                              "description": "What those runs cost (billed, the decision and everything under it); null = runs-service does not serve it."
+                            },
+                            "costPerRunUsd": {
+                              "type": "number",
+                              "nullable": true
+                            },
+                            "lastRunDay": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "UTC day of this campaign's last run of the script; null = never ran here."
+                            }
+                          },
+                          "required": [
+                            "runs",
+                            "reached",
+                            "spentUsd",
+                            "costPerRunUsd",
+                            "lastRunDay"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "script",
+                        "dynasty",
+                        "version",
+                        "description",
+                        "shareOfDrawsPct",
+                        "drawnMost",
+                        "ruledOutReason",
+                        "llms",
+                        "templates",
+                        "campaign"
+                      ]
+                    },
+                    "description": "Scripts this campaign ran on the Engine that are no longer runnable."
+                  },
+                  "campaign": {
+                    "type": "object",
+                    "properties": {
+                      "runs": {
+                        "type": "number"
+                      },
+                      "spentUsd": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "costPerRunUsd": {
+                        "type": "number",
+                        "nullable": true
+                      }
+                    },
+                    "required": [
+                      "runs",
+                      "spentUsd",
+                      "costPerRunUsd"
+                    ],
+                    "description": "This campaign's script runs on the Engine, every script."
+                  }
+                },
+                "required": [
+                  "outcome",
+                  "label",
+                  "isTarget",
+                  "strategyState",
+                  "strategy",
+                  "rules",
+                  "drawRule",
+                  "runsNow",
+                  "scripts",
+                  "ruledOut",
+                  "past",
+                  "campaign"
+                ]
+              }
+            }
+          },
+          "required": [
+            "salesFunnelCampaignId",
+            "brandId",
+            "target",
+            "ratingComputedAt",
+            "runsBuiltAt",
+            "draws",
+            "engines"
           ]
         }
       }
@@ -19182,9 +20275,10 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "enum": [
                     "ranked",
                     "only_line",
+                    "learning",
                     null
                   ],
-                  "description": "`ranked` = the best priced line; `only_line` = the ONE runnable line of ours reaching the Target, a pipe on it unpriced (in `unpricedPipes`): nothing to rank, it is the plan, figures null until that pipe spends. Null with no shadow line; absent on a plan stored before 2026-10-29."
+                  "description": "`ranked` = the best priced line; `only_line` = the ONE runnable line of ours reaching the Target, a pipe on it unpriced (in `unpricedPipes`): nothing to rank, it is the plan, figures null until that pipe spends; `learning` = several lines, none priced, each waiting only on pipes with no price yet: the running line when it is one of them, else the one with the fewest unpriced pipes. Null with no shadow line; absent on a plan stored before 2026-10-29."
                 },
                 "unpricedPipes": {
                   "type": "array",
@@ -20115,17 +21209,105 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "enum": [
                     "follow_up_schedule_unreadable",
                     "sender_unreadable",
+                    "engine_answers_unreadable",
+                    "waiting_leads_unreadable",
                     null
                   ]
+                },
+                "heldBy": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "outcome": {
+                      "type": "string",
+                      "description": "The Engine: the outcome its runs make (message_written, email_sent...)."
+                    },
+                    "pipeCampaignId": {
+                      "type": "string",
+                      "description": "The pipe (unit campaign) of this campaign the Engine runner asked for."
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "The refusal it got, as served (campaign_states_no_brief, no_runnable_script_kept, script_strategy_unreadable, campaign_states_no_campaign...)."
+                    },
+                    "heldSince": {
+                      "type": "string",
+                      "description": "Since when (ISO) it has been refused with no good answer in between."
+                    },
+                    "lastAnsweredAt": {
+                      "type": "string",
+                      "description": "The latest refusal (ISO)."
+                    }
+                  },
+                  "required": [
+                    "outcome",
+                    "pipeCampaignId",
+                    "reason",
+                    "heldSince",
+                    "lastAnsweredAt"
+                  ],
+                  "description": "THE reason nothing (more) goes out, when there is one: the Engine of this campaign that cannot run, held longest (the Engine runner's latest answer in the last hour was a refusal). State it before any other explanation (never guess a budget, cap or timing). Null when every Engine asked in the last hour could run."
+                },
+                "leadsWaitingOnHeldEngine": {
+                  "type": "integer",
+                  "nullable": true,
+                  "description": "Leads served to this campaign with nothing of ours sent yet and nothing queued in the sender: they wait at the held Engine, and are counted in leadsQueued. Null when no Engine is held, or unreadable (unavailableReason waiting_leads_unreadable)."
                 }
               },
               "required": [
                 "leadsQueued",
                 "dueNow",
                 "nextSendAt",
-                "unavailableReason"
+                "unavailableReason",
+                "heldBy",
+                "leadsWaitingOnHeldEngine"
               ],
-              "description": "What waits to go out and when, every channel composed: read this to say how many leads are queued and when the next sends happen."
+              "description": "What waits to go out and when, every channel composed: read this to say how many leads are queued, when the next sends happen, and (heldBy) why nothing goes out."
+            },
+            "heldEngines": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "outcome": {
+                    "type": "string",
+                    "description": "The Engine: the outcome its runs make (message_written, email_sent...)."
+                  },
+                  "pipeCampaignId": {
+                    "type": "string",
+                    "description": "The pipe (unit campaign) of this campaign the Engine runner asked for."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "description": "The refusal it got, as served (campaign_states_no_brief, no_runnable_script_kept, script_strategy_unreadable, campaign_states_no_campaign...)."
+                  },
+                  "heldSince": {
+                    "type": "string",
+                    "description": "Since when (ISO) it has been refused with no good answer in between."
+                  },
+                  "lastAnsweredAt": {
+                    "type": "string",
+                    "description": "The latest refusal (ISO)."
+                  }
+                },
+                "required": [
+                  "outcome",
+                  "pipeCampaignId",
+                  "reason",
+                  "heldSince",
+                  "lastAnsweredAt"
+                ]
+              },
+              "description": "Every Engine of this campaign that cannot run now (any Engine, any reason, as answered to the Engine runner within the last hour). Empty = none held. Null with heldEnginesUnavailableReason."
+            },
+            "heldEnginesUnavailableReason": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "engine_answers_unreadable",
+                null
+              ]
             },
             "timeToFirstPositiveReply": {
               "type": "object",
@@ -20307,6 +21489,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "scheduledFollowups",
             "scheduledFollowupsUnavailableReason",
             "nextSends",
+            "heldEngines",
+            "heldEnginesUnavailableReason",
             "timeToFirstPositiveReply",
             "pipes"
           ]
@@ -22577,12 +23761,17 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     },
                     "pure_prospect": {
                       "type": "boolean",
-                      "description": "Is this person a PURE PROSPECT of the brand (no tag but prospect, yes or unsure)? A person some source of the org knows (`subject`) only once judged and with no open \"same person?\" question; a person no source knows outside our own outreach is one unless a tag says otherwise. Read by the prospect follow-up verdict."
+                      "description": "Is this person a PURE PROSPECT of the brand (no tag but prospect, yes or unsure)? A person some source of the org knows (`subject`) only once judged and with no open \"same person?\" question; a person no source knows outside our own outreach is one unless a tag says otherwise. Read by the contacted pure prospects serve."
+                    },
+                    "prospect_followup": {
+                      "type": "boolean",
+                      "description": "May the brand follow this person up? `pure_prospect` with a funnel-stage tag (`customer`) allowed: only a true relationship (personal, investor, team, advisor, supplier, partner, other_professional, journalist) holds them back (FOLLOWUP-FUNNEL-STAGE-1109). Read by the prospect follow-up verdict."
                     }
                   },
                   "required": [
                     "business_only",
-                    "pure_prospect"
+                    "pure_prospect",
+                    "prospect_followup"
                   ]
                 },
                 "subject": {
@@ -27488,6 +28677,13 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                             "type": "string"
                           }
                         },
+                        "cc": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Cc recipients (lower-cased, empty when none)."
+                        },
                         "subject": {
                           "nullable": true,
                           "type": "string"
@@ -27545,6 +28741,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "fromEmail",
                         "fromName",
                         "to",
+                        "cc",
                         "subject",
                         "snippet",
                         "sentAt",
@@ -29886,7 +31083,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "transactional",
                       "onboarding",
                       "csv",
-                      "activity"
+                      "activity",
+                      "sending_mailbox"
                     ]
                   },
                   "status": {
@@ -30338,7 +31536,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                             "transactional",
                             "onboarding",
                             "csv",
-                            "activity"
+                            "activity",
+                            "sending_mailbox"
                           ]
                         }
                       },
@@ -30628,7 +31827,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                                 "transactional",
                                 "onboarding",
                                 "csv",
-                                "activity"
+                                "activity",
+                                "sending_mailbox"
                               ]
                             },
                             "sourceRef": {
@@ -32457,7 +33657,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "transactional",
                       "onboarding",
                       "csv",
-                      "activity"
+                      "activity",
+                      "sending_mailbox"
                     ]
                   }
                 },
@@ -32747,7 +33948,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "transactional",
                           "onboarding",
                           "csv",
-                          "activity"
+                          "activity",
+                          "sending_mailbox"
                         ]
                       },
                       "sourceRef": {
@@ -33427,7 +34629,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "transactional",
                       "onboarding",
                       "csv",
-                      "activity"
+                      "activity",
+                      "sending_mailbox"
                     ]
                   },
                   "status": {
@@ -33611,7 +34814,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "transactional",
                       "onboarding",
                       "csv",
-                      "activity"
+                      "activity",
+                      "sending_mailbox"
                     ],
                     "description": "A people source. `csv` = the `added_to_crm` event of a contact imported from an uploaded file (channel `file`) or added by hand (channel `manual`); a contact added by hand is a person (source `csv`), a file row is merge evidence only."
                   },
@@ -33654,6 +34858,13 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "cc": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Gmail: Cc of the mail as google-service serves it. Absent when none."
                   },
                   "ref": {
                     "type": "object",
@@ -35321,13 +36532,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "type": "string"
                         },
                         "pipeId": {
-                          "type": "string"
+                          "type": "string",
+                          "nullable": true
                         },
                         "featureSlug": {
-                          "type": "string"
+                          "type": "string",
+                          "nullable": true
                         },
                         "legKey": {
-                          "type": "string"
+                          "type": "string",
+                          "nullable": true
                         },
                         "status": {
                           "type": "string"
@@ -35349,6 +36563,10 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                             "draining",
                             null
                           ]
+                        },
+                        "runsOnTriggerId": {
+                          "type": "string",
+                          "nullable": true
                         }
                       },
                       "required": [
@@ -35360,7 +36578,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "workflowSlug",
                         "name",
                         "salesFunnelId",
-                        "planRole"
+                        "planRole",
+                        "runsOnTriggerId"
                       ]
                     }
                   }
@@ -35607,13 +36826,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "type": "string"
                       },
                       "pipeId": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                       },
                       "featureSlug": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                       },
                       "legKey": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                       },
                       "status": {
                         "type": "string"
@@ -35635,6 +36857,10 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "draining",
                           null
                         ]
+                      },
+                      "runsOnTriggerId": {
+                        "type": "string",
+                        "nullable": true
                       }
                     },
                     "required": [
@@ -35646,7 +36872,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "workflowSlug",
                       "name",
                       "salesFunnelId",
-                      "planRole"
+                      "planRole",
+                      "runsOnTriggerId"
                     ]
                   }
                 }
@@ -39970,13 +41197,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "type": "string"
                       },
                       "pipeId": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                       },
                       "featureSlug": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                       },
                       "legKey": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                       },
                       "status": {
                         "type": "string"
@@ -39998,6 +41228,10 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "draining",
                           null
                         ]
+                      },
+                      "runsOnTriggerId": {
+                        "type": "string",
+                        "nullable": true
                       }
                     },
                     "required": [
@@ -40009,7 +41243,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "workflowSlug",
                       "name",
                       "salesFunnelId",
-                      "planRole"
+                      "planRole",
+                      "runsOnTriggerId"
                     ]
                   }
                 }
@@ -44511,12 +45746,69 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 ]
               },
               "description": "Per requested field key → provenance tag (sibling to `fields`, additive). `confirmed` = a user-facing field with a user-validated value (overlaid into `fields`/`byBrand`); `suggested` = a user-facing field not yet confirmed (value = auto-extract prefill); `extracted` = a pure backend field."
+            },
+            "drafts": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "stillOurDraft": {
+                    "type": "boolean",
+                    "description": "The served value is what we drafted, unchanged by the client. A save that changes nothing keeps it true; a save that changes the value makes it false (the client's own words). False on an empty value."
+                  },
+                  "draftUnit": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "outcomeKey": {
+                        "type": "string",
+                        "description": "`offer_fields_drafted` (a draft asked for one offer) or `brand_fields_drafted` (a draft asked for the brand, naming no offer).",
+                        "example": "brand_fields_drafted"
+                      },
+                      "subjectService": {
+                        "type": "string",
+                        "description": "Always `brand-service`.",
+                        "example": "brand-service"
+                      },
+                      "subjectId": {
+                        "type": "string",
+                        "description": "The offer id for `offer_fields_drafted`, the brand id for `brand_fields_drafted`.",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                      },
+                      "unitAt": {
+                        "type": "string",
+                        "description": "ISO time taken once the ledger held the Unit. One subject holds one Unit per re-draft: send it as the report's `unitAt` so the ledger resolves THIS draft.",
+                        "example": "2026-11-13T10:00:00.000Z"
+                      },
+                      "runId": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "The brand-service run that declared the Unit."
+                      }
+                    },
+                    "required": [
+                      "outcomeKey",
+                      "subjectService",
+                      "subjectId",
+                      "unitAt",
+                      "runId"
+                    ]
+                  }
+                },
+                "required": [
+                  "stillOurDraft",
+                  "draftUnit"
+                ],
+                "description": "Whether a served value is still what we drafted, and the Unit that draft made (`draftUnit`: null when the value is the client's own, or when no Unit was declared for the draft: an `extract` read, a merge of several brands, a draft stored before Units were recorded per field)."
+              },
+              "description": "Per requested field key → whether `fields[key].value` is still what we drafted and which Unit drafted it (sibling to `fields`, additive). A `suggest` draft is one Unit: `offer_fields_drafted` / the offer when `offerId` is sent, `brand_fields_drafted` / the brand when it is not. When the client changes a value whose `draftUnit` is set, the surface reports that Unit as `edited`."
             }
           },
           "required": [
             "brands",
             "fields",
-            "provenance"
+            "provenance",
+            "drafts"
           ]
         }
       }
@@ -44941,6 +46233,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "default",
                           "benchmark",
                           "flash",
+                          "pipe_history",
                           "same_leg_fleet",
                           "same_step_fleet",
                           "own_spend",
@@ -45468,6 +46761,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "default",
                           "benchmark",
                           "flash",
+                          "pipe_history",
                           "same_leg_fleet",
                           "same_step_fleet",
                           "own_spend",
@@ -45923,17 +47217,27 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             },
             "promptType": {
               "type": "string",
-              "description": "The prompt template that wrote the email: the best mature cold-email workflow's, when it was written."
+              "description": "The prompt template that wrote the email: the head of the template dynasty features-service picked, when it was written."
             },
             "modelAlias": {
               "type": "string",
               "nullable": true,
-              "description": "The model alias the workflow states (e.g. glm-pro). null on a preview stored before the preview followed the best mature workflow."
+              "description": "The model name asked (the LLM features-service picked, e.g. flash-lite). null on a preview stored before the preview recorded it."
+            },
+            "scriptSlug": {
+              "type": "string",
+              "nullable": true,
+              "description": "The email Engine's script that wrote it (`message_written/<dynasty>/v<n>`). null on a preview stored before 2026-11-11 (written then by a workflow's template + model)."
+            },
+            "templateDynastySlug": {
+              "type": "string",
+              "nullable": true,
+              "description": "The template dynasty features-service picked. null on a preview stored before 2026-11-11."
             },
             "workflowSlug": {
               "type": "string",
               "nullable": true,
-              "description": "The workflow whose template + model wrote the email (the best mature cold-email workflow at the time). null on a preview stored before the preview followed it."
+              "description": "Only on a preview stored before 2026-11-11: the workflow whose template + model wrote it. null since the email Engine's script writes it."
             },
             "highlights": {
               "type": "array",
@@ -46012,6 +47316,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "model",
             "promptType",
             "modelAlias",
+            "scriptSlug",
+            "templateDynastySlug",
             "workflowSlug",
             "highlights",
             "cached",
@@ -54430,13 +55736,22 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "type": "string",
                   "description": "The agency inbox this reply was CC'd to — VISIBLE to the prospect, so a reply-all reaches a human. Never a BCC."
                 },
+                "bcc": {
+                  "type": "string",
+                  "description": "The Bcc header, when one was set"
+                },
+                "to": {
+                  "type": "string",
+                  "description": "The To header, present only when the caller chose `to`"
+                },
                 "messageId": {
                   "type": "string",
                   "description": "Instantly's email id, or the RFC 5322 Message-Id we sent"
                 },
                 "inReplyTo": {
                   "type": "string",
-                  "description": "The prospect message this reply threads onto"
+                  "nullable": true,
+                  "description": "The message this reply threads onto; null only on a `new_thread_subject` send"
                 },
                 "attachments": {
                   "type": "array",
@@ -54700,13 +56015,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "type": "string"
                       },
                       "pipeId": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                       },
                       "featureSlug": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                       },
                       "legKey": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                       },
                       "status": {
                         "type": "string"
@@ -54728,6 +56046,10 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "draining",
                           null
                         ]
+                      },
+                      "runsOnTriggerId": {
+                        "type": "string",
+                        "nullable": true
                       }
                     },
                     "required": [
@@ -54739,7 +56061,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "workflowSlug",
                       "name",
                       "salesFunnelId",
-                      "planRole"
+                      "planRole",
+                      "runsOnTriggerId"
                     ]
                   }
                 }
@@ -55013,13 +56336,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "type": "string"
                       },
                       "pipeId": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                       },
                       "featureSlug": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                       },
                       "legKey": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                       },
                       "status": {
                         "type": "string"
@@ -55041,6 +56367,10 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "draining",
                           null
                         ]
+                      },
+                      "runsOnTriggerId": {
+                        "type": "string",
+                        "nullable": true
                       }
                     },
                     "required": [
@@ -55052,7 +56382,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "workflowSlug",
                       "name",
                       "salesFunnelId",
-                      "planRole"
+                      "planRole",
+                      "runsOnTriggerId"
                     ]
                   }
                 }
@@ -55982,12 +57313,17 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     },
                     "pure_prospect": {
                       "type": "boolean",
-                      "description": "Is this person a PURE PROSPECT of the brand (no tag but prospect, yes or unsure)? A person some source of the org knows (`subject`) only once judged and with no open \"same person?\" question; a person no source knows outside our own outreach is one unless a tag says otherwise. Read by the prospect follow-up verdict."
+                      "description": "Is this person a PURE PROSPECT of the brand (no tag but prospect, yes or unsure)? A person some source of the org knows (`subject`) only once judged and with no open \"same person?\" question; a person no source knows outside our own outreach is one unless a tag says otherwise. Read by the contacted pure prospects serve."
+                    },
+                    "prospect_followup": {
+                      "type": "boolean",
+                      "description": "May the brand follow this person up? `pure_prospect` with a funnel-stage tag (`customer`) allowed: only a true relationship (personal, investor, team, advisor, supplier, partner, other_professional, journalist) holds them back (FOLLOWUP-FUNNEL-STAGE-1109). Read by the prospect follow-up verdict."
                     }
                   },
                   "required": [
                     "business_only",
-                    "pure_prospect"
+                    "pure_prospect",
+                    "prospect_followup"
                   ]
                 },
                 "subject": {
@@ -56675,11 +58011,55 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "confirmed",
                       "suggested"
                     ]
+                  },
+                  "stillOurDraft": {
+                    "type": "boolean",
+                    "description": "The value is what we drafted, unchanged by the client. Always true for a non-empty `suggested` prefill. For a `confirmed` value: true while the client saved our draft as is (saving it again unchanged keeps it true), false once a save changed it. Decided at every write; a value confirmed before 2026-11-13 reads false (not recorded). `draftUnit` beside it is the Unit that draft made in the runs ledger: what an edit of this value reports (features-service `POST /orgs/unit-reports`, kind `edited`); null when `stillOurDraft` is false, or when no Unit was declared for the draft."
+                  },
+                  "draftUnit": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "outcomeKey": {
+                        "type": "string",
+                        "description": "`offer_fields_drafted` (a draft asked for one offer) or `brand_fields_drafted` (a draft asked for the brand, naming no offer).",
+                        "example": "brand_fields_drafted"
+                      },
+                      "subjectService": {
+                        "type": "string",
+                        "description": "Always `brand-service`.",
+                        "example": "brand-service"
+                      },
+                      "subjectId": {
+                        "type": "string",
+                        "description": "The offer id for `offer_fields_drafted`, the brand id for `brand_fields_drafted`.",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                      },
+                      "unitAt": {
+                        "type": "string",
+                        "description": "ISO time taken once the ledger held the Unit. One subject holds one Unit per re-draft: send it as the report's `unitAt` so the ledger resolves THIS draft.",
+                        "example": "2026-11-13T10:00:00.000Z"
+                      },
+                      "runId": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "The brand-service run that declared the Unit."
+                      }
+                    },
+                    "required": [
+                      "outcomeKey",
+                      "subjectService",
+                      "subjectId",
+                      "unitAt",
+                      "runId"
+                    ]
                   }
                 },
                 "required": [
                   "value",
-                  "provenance"
+                  "provenance",
+                  "stillOurDraft",
+                  "draftUnit"
                 ]
               },
               "description": "Map keyed by user-facing field key (services, dreamOutcome, perceivedLikelihood, socialProof, riskReversal, urgency, scarcity, targetAudience, giveForFree, neverGive). Each value carries the resolved value and its provenance (`confirmed` = user-validated; `suggested` = auto-extract prefill)."
@@ -56826,11 +58206,55 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "confirmed",
                       "suggested"
                     ]
+                  },
+                  "stillOurDraft": {
+                    "type": "boolean",
+                    "description": "The value is what we drafted, unchanged by the client. Always true for a non-empty `suggested` prefill. For a `confirmed` value: true while the client saved our draft as is (saving it again unchanged keeps it true), false once a save changed it. Decided at every write; a value confirmed before 2026-11-13 reads false (not recorded). `draftUnit` beside it is the Unit that draft made in the runs ledger: what an edit of this value reports (features-service `POST /orgs/unit-reports`, kind `edited`); null when `stillOurDraft` is false, or when no Unit was declared for the draft."
+                  },
+                  "draftUnit": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "outcomeKey": {
+                        "type": "string",
+                        "description": "`offer_fields_drafted` (a draft asked for one offer) or `brand_fields_drafted` (a draft asked for the brand, naming no offer).",
+                        "example": "brand_fields_drafted"
+                      },
+                      "subjectService": {
+                        "type": "string",
+                        "description": "Always `brand-service`.",
+                        "example": "brand-service"
+                      },
+                      "subjectId": {
+                        "type": "string",
+                        "description": "The offer id for `offer_fields_drafted`, the brand id for `brand_fields_drafted`.",
+                        "example": "550e8400-e29b-41d4-a716-446655440000"
+                      },
+                      "unitAt": {
+                        "type": "string",
+                        "description": "ISO time taken once the ledger held the Unit. One subject holds one Unit per re-draft: send it as the report's `unitAt` so the ledger resolves THIS draft.",
+                        "example": "2026-11-13T10:00:00.000Z"
+                      },
+                      "runId": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "The brand-service run that declared the Unit."
+                      }
+                    },
+                    "required": [
+                      "outcomeKey",
+                      "subjectService",
+                      "subjectId",
+                      "unitAt",
+                      "runId"
+                    ]
                   }
                 },
                 "required": [
                   "value",
-                  "provenance"
+                  "provenance",
+                  "stillOurDraft",
+                  "draftUnit"
                 ]
               },
               "description": "Map keyed by user-facing field key (services, dreamOutcome, perceivedLikelihood, socialProof, riskReversal, urgency, scarcity, targetAudience, giveForFree, neverGive). Each value carries the resolved value and its provenance (`confirmed` = user-validated; `suggested` = auto-extract prefill)."
