@@ -103,4 +103,14 @@ router.get("/v1/chat/ops/vendor-credit", authenticatePlatform, requireStaff, (re
   pipe(req, res, `/internal/vendor-credit${rawQueryString(req.originalUrl)}`, "Failed to read AI vendor credit"),
 );
 
+/**
+ * GET /v1/chat/ops/schema-conformance → chat-service GET /internal/schema-conformance (`days` forwarded verbatim;
+ * chat-service owns the default 30 and bounds). Per AI model: how many of its answers did not follow the
+ * responseSchema the calling script sent, with a verdict and a daily series (SCHEMA-HONOURED-1115). Verdicts are
+ * chat-service's, never recomputed here.
+ */
+router.get("/v1/chat/ops/schema-conformance", authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) =>
+  pipe(req, res, `/internal/schema-conformance${rawQueryString(req.originalUrl)}`, "Failed to read AI schema conformance"),
+);
+
 export default router;
