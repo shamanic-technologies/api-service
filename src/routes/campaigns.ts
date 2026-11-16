@@ -6,7 +6,7 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
 import { ensureBrandInOrg } from "../lib/brand-ownership.js";
 import { fetchDeliveryStats, EMPTY_DELIVERY_STATS } from "../lib/delivery-stats.js";
 import { buildHeadline, buildFailureDetails } from "../lib/stats-headline.js";
-import { netSpendCents, netCostLine, type RunsNetCostGroup } from "../lib/net-spend.js";
+import { spendCents, costLine, type RunsNetCostGroup } from "../lib/net-spend.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { isStaffCaller, toCustomerEmail } from "../lib/customer-email-view.js";
 import {
@@ -579,7 +579,9 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
       const campaignId = g.dimensions.campaignId;
       if (!campaignId) continue;
       const s = ensure(campaignId);
-      s.totalCostInUsdCents = netSpendCents(g);
+      const spent = spendCents(g);
+      s.totalCostInUsdCents = spent.paid;
+      s.totalCostBeforeDiscountInUsdCents = spent.beforeDiscount;
       s.runCount = g.runCount;
     }
 
@@ -589,7 +591,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
       emailsGenerated: 0,
       recipientStats: EMPTY_DELIVERY_STATS.recipientStats,
       emailStats: EMPTY_DELIVERY_STATS.emailStats,
-      totalCostInUsdCents: null, runCount: 0,
+      totalCostInUsdCents: null, totalCostBeforeDiscountInUsdCents: null, runCount: 0,
     };
     for (const stats of merged.values()) {
       for (const [k, v] of Object.entries(defaults)) {
@@ -603,7 +605,11 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
     const campaigns = Array.from(merged.values()).map((stats) => {
       const recipient = deliveryGroups ? (stats.recipientStats as Parameters<typeof buildHeadline>[0]) : null;
       return {
-        headline: buildHeadline(recipient, (stats.totalCostInUsdCents as string | null) ?? null),
+        headline: buildHeadline(
+          recipient,
+          (stats.totalCostInUsdCents as string | null) ?? null,
+          (stats.totalCostBeforeDiscountInUsdCents as string | null) ?? null,
+        ),
         ...stats,
         failureDetails: buildFailureDetails(recipient),
       };
@@ -810,7 +816,9 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
     // Campaign spend (NET) from runs-service; null = nothing spent yet or the read failed.
     const spendGroup = spend?.groups?.find((g) => g.dimensions.campaignId === id);
     if (spendGroup) {
-      stats.totalCostInUsdCents = netSpendCents(spendGroup);
+      const spent = spendCents(spendGroup);
+      stats.totalCostInUsdCents = spent.paid;
+      stats.totalCostBeforeDiscountInUsdCents = spent.beforeDiscount;
     }
 
     // Cost breakdown by cost name from runs-service, every amount NET
@@ -819,14 +827,18 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
         .filter((g) => g.dimensions.costName != null)
         .map((g) => ({
           costName: g.dimensions.costName!,
-          ...netCostLine(g),
+          ...costLine(g),
           totalQuantity: g.totalQuantity,
         }));
     }
 
     // Success-first framing: headline FIRST, failure counts LAST (src/lib/stats-headline.ts).
     res.json({
-      headline: buildHeadline(delivery?.recipientStats ?? null, stats.totalCostInUsdCents ?? null),
+      headline: buildHeadline(
+        delivery?.recipientStats ?? null,
+        stats.totalCostInUsdCents ?? null,
+        stats.totalCostBeforeDiscountInUsdCents ?? null,
+      ),
       ...stats,
       failureDetails: buildFailureDetails(delivery?.recipientStats ?? null),
     });
