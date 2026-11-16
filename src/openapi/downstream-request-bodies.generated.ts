@@ -1634,6 +1634,113 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       ]
     }
   },
+  "POST /v1/local-llm/work/{id}/result": {
+    "service": "chat-service",
+    "method": "POST",
+    "path": "/orgs/local-llm/work/{id}/result",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "leaseId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "model": {
+          "type": "string",
+          "description": "The model the CLI says ran: the `model` of its `system`/`init` line. Required when ok."
+        },
+        "text": {
+          "type": "string",
+          "description": "The CLI's `result`, for an item with no jsonSchema."
+        },
+        "structured": {
+          "nullable": true,
+          "description": "The CLI's `structured_output`, for an item with a jsonSchema."
+        },
+        "error": {
+          "type": "string",
+          "maxLength": 4000,
+          "description": "When ok is false: what went wrong, in plain words."
+        },
+        "usage": {
+          "type": "object",
+          "properties": {
+            "inputTokens": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "outputTokens": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cacheReadTokens": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cacheWriteTokens": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "description": "From the CLI's `result` line `usage` (input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens)."
+        },
+        "notionalCostUsd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "The CLI's `total_cost_usd` (what it would cost at API prices; never charged)."
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "leaseId",
+        "ok"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "POST /v1/local-llm/work/claim": {
+    "service": "chat-service",
+    "method": "POST",
+    "path": "/orgs/local-llm/work/claim",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "waitMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 25000,
+          "description": "Hold the request open up to this long waiting for work (default 20000, max 25000)."
+        },
+        "max": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Most items to take at once (default 1, max 10)."
+        },
+        "runner": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "maxLength": 100
+            },
+            "version": {
+              "type": "string",
+              "maxLength": 100
+            }
+          },
+          "description": "Shown in the org's state (e.g. the Mac app and its version)."
+        }
+      },
+      "additionalProperties": false
+    }
+  },
   "POST /v1/orgs": {
     "service": "client-service",
     "method": "POST",
@@ -3881,6 +3988,25 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "example": "Our own AI reply test."
         }
       }
+    }
+  },
+  "PUT /v1/local-llm": {
+    "service": "chat-service",
+    "method": "PUT",
+    "path": "/orgs/local-llm",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "true = every LLM call chat-service makes for this org runs on the user's own Claude Code, on their machine, through a runner (the org pays $0 for those calls). false = back to the platform.",
+          "example": true
+        }
+      },
+      "required": [
+        "enabled"
+      ],
+      "additionalProperties": false
     }
   },
   "PUT /v1/orgs/google/contact-links": {

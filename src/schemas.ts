@@ -9693,6 +9693,67 @@ registry.registerPath({
   },
 });
 
+// The org's LLM on the user's own Claude Code subscription (src/routes/local-llm.ts → chat-service /orgs/local-llm*, LOCAL-CLAUDE-1116)
+const LOCAL_LLM_MODEL =
+  "Run your org's AI calls on your OWN Claude Code subscription, on your machine, so they cost you nothing on distribute.you. " +
+  "You declare it once (PUT /v1/local-llm {enabled: true}); from then on the calls that can run locally wait in a queue, and a runner on your machine " +
+  "(the distribute.you Mac app) picks them up with POST /v1/local-llm/work/claim, runs them with Claude Code and sends each answer to " +
+  "POST /v1/local-llm/work/{id}/result. Calls no runner can take, or that wait too long, stay on our platform as before.";
+const localLlmPassthrough = (name: string) => z.object({}).passthrough().openapi(name);
+registry.registerPath({
+  method: "get", path: "/v1/local-llm", tags: ["Local LLM"], security: authed,
+  summary: "Read whether your org's AI calls run on your own Claude Code",
+  description: `${LOCAL_LLM_MODEL} Answers the org's state: declared or not, whether a runner is connected and when it was last seen, the calls waiting, the usage measured, and which kinds of calls run locally or still on our platform. Byte passthrough to chat-service GET /orgs/local-llm.`,
+  responses: {
+    200: { description: "The org's state", content: { "application/json": { schema: localLlmPassthrough("LocalLlmStateResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+registry.registerPath({
+  method: "put", path: "/v1/local-llm", tags: ["Local LLM"], security: authed,
+  summary: "Run your org's AI calls on your own Claude Code, or stop",
+  description: `${LOCAL_LLM_MODEL} {enabled: true} declares it, {enabled: false} sends every call back to our platform. Answers the state after the change. Byte passthrough to chat-service PUT /orgs/local-llm.`,
+  request: { body: { content: { "application/json": { schema: localLlmPassthrough("LocalLlmDeclareBody") } } } },
+  responses: {
+    200: { description: "The state after the change", content: { "application/json": { schema: localLlmPassthrough("LocalLlmDeclareResponse") } } },
+    400: { description: "Refused with its reason (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+registry.registerPath({
+  method: "post", path: "/v1/local-llm/work/claim", tags: ["Local LLM"], security: authed,
+  summary: "Runner: take the next AI calls to run on this machine (long poll)",
+  description: `${LOCAL_LLM_MODEL} For the runner. Waits up to waitMs (max 25000) for work and answers {items: [...]}, empty when nothing came. Each item goes to ONE claim only and carries a leaseId to send back with its result. Keep your HTTP timeout above 30 s. 409 local_llm_not_declared until the org declared it. Byte passthrough to chat-service POST /orgs/local-llm/work/claim.`,
+  request: { body: { content: { "application/json": { schema: localLlmPassthrough("LocalLlmClaimBody") } } } },
+  responses: {
+    200: { description: "Work to run ({items}, maybe empty)", content: { "application/json": { schema: localLlmPassthrough("LocalLlmClaimResponse") } } },
+    400: { description: "Refused with its reason (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    409: { description: "The org has not declared its LLM local (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+registry.registerPath({
+  method: "post", path: "/v1/local-llm/work/{id}/result", tags: ["Local LLM"], security: authed,
+  summary: "Runner: send the answer of one AI call",
+  description: `${LOCAL_LLM_MODEL} For the runner: the answer (text or structured) of the claimed call {id}, with its leaseId, or ok: false with the error. 404 unknown call, 409 already answered / not claimed / another claim's leaseId, 410 the caller stopped waiting (drop it). Byte passthrough to chat-service POST /orgs/local-llm/work/{id}/result.`,
+  request: {
+    params: z.object({ id: z.string().openapi({ description: "The work item id from the claim" }) }),
+    body: { content: { "application/json": { schema: localLlmPassthrough("LocalLlmResultBody") } } },
+  },
+  responses: {
+    200: { description: "Stored", content: { "application/json": { schema: localLlmPassthrough("LocalLlmResultResponse") } } },
+    400: { description: "Refused with its reason (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "No such work item for this org (forwarded verbatim)", content: errorContent },
+    409: { description: "Already answered, not claimed, or another claim's leaseId (forwarded verbatim)", content: errorContent },
+    410: { description: "The caller stopped waiting: drop it (forwarded verbatim)", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
 // Tactics, strategies and plays — shared catalogue, any authenticated caller (src/routes/plays.ts)
 const PLAYS_MODEL =
   "A TACTIC is a yes/no tag our judge puts on every workflow version, judged on the tactic's description (for example \"Catch-all\": sends to addresses whose mail server accepts every address). " +

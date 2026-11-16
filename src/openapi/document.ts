@@ -527,6 +527,7 @@ export function buildDocument(
       { name: "Scraping", description: "URL scraping via scraping-service" },
       { name: "Activity", description: "User activity tracking" },
       { name: "Chat", description: "AI chat with SSE streaming" },
+      { name: "Local LLM", description: "Run your org's AI calls on your own Claude Code subscription, on your machine: the declaration and the runner's work queue" },
       { name: "Skills", description: "The agent skill tree, read-only: the method our Copilot follows to organize a client request, for your own agent to follow too" },
       { name: "Billing", description: "Billing, credits, and checkout" },
       { name: "Conversations", description: "The messages exchanged with a lead on a campaign (instantly-service proxy)" },
