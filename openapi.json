@@ -30548,7 +30548,7 @@
           "Campaigns"
         ],
         "summary": "Get campaign stats",
-        "description": "Get campaign statistics. `headline` comes first and leads with success (meetings booked, positive replies, delivered/sent, cost); figures no service serves yet are null and listed in `headline.notServed`. Failure counts (bounces, unsubscribes, negative replies) are repeated last under `failureDetails`. All earlier fields are unchanged (leads served/buffered/skipped, emails generated, recipientStats, emailStats, cost breakdown). Every amount in cents (`totalCostInUsdCents`, `headline.costInUsdCents`, each `costBreakdown` line) is what the org PAYS: net of its usage discount, read from runs-service's ledger (equal to the list price for an org with no discount).",
+        "description": "Get campaign statistics. `headline` comes first and leads with success (meetings booked, positive replies, delivered/sent, cost); figures no service serves yet are null and listed in `headline.notServed`. Failure counts (bounces, unsubscribes, negative replies) are repeated last under `failureDetails`. All earlier fields are unchanged (leads served/buffered/skipped, emails generated, recipientStats, emailStats, cost breakdown). Every amount in cents (`totalCostInUsdCents`, `headline.costInUsdCents`, each `costBreakdown` line) is what the org PAYS: net of its usage discount, read from runs-service's ledger. Beside each sits the price BEFORE the discount, named `...BeforeDiscount...` (`totalCostBeforeDiscountInUsdCents`, `headline.costBeforeDiscountInUsdCents`, each line's `totalCostBeforeDiscountInUsdCents`), so an agent can explain the discount; both are equal for an org with none.",
         "security": [
           {
             "bearerAuth": []
@@ -30605,7 +30605,7 @@
           "Campaigns"
         ],
         "summary": "Get stats for all campaigns (grouped)",
-        "description": "Aggregates stats from email-gateway, lead-service, content-generation, and runs-service using groupBy=campaignId. Returns one entry per campaign, each starting with a success-first `headline` and ending with `failureDetails` (see GET /v1/campaigns/{id}/stats). Supports filtering by brandId, workflowSlug, featureSlug, workflowDynastySlug, or featureDynastySlug. Each campaign's `totalCostInUsdCents` (and `headline.costInUsdCents`) is what the org PAYS, net of its usage discount. Replaces the old POST /v1/campaigns/stats/batch endpoint.",
+        "description": "Aggregates stats from email-gateway, lead-service, content-generation, and runs-service using groupBy=campaignId. Returns one entry per campaign, each starting with a success-first `headline` and ending with `failureDetails` (see GET /v1/campaigns/{id}/stats). Supports filtering by brandId, workflowSlug, featureSlug, workflowDynastySlug, or featureDynastySlug. Each campaign's `totalCostInUsdCents` (and `headline.costInUsdCents`) is what the org PAYS, net of its usage discount; `totalCostBeforeDiscountInUsdCents` (and `headline.costBeforeDiscountInUsdCents`) is the price before the discount. Replaces the old POST /v1/campaigns/stats/batch endpoint.",
         "security": [
           {
             "bearerAuth": []

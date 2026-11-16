@@ -35,6 +35,7 @@ export const NOT_SERVED = [
 export function buildHeadline(
   recipient: RecipientLike | null,
   costInUsdCents: string | null,
+  costBeforeDiscountInUsdCents: string | null,
 ) {
   const unavailable = recipient ? [] : ["email-gateway"];
   const detail = (recipient?.repliesDetail ?? {}) as { meetingBooked?: number };
@@ -48,7 +49,10 @@ export function buildHeadline(
     deliveryRate: recipient ? recipient.deliveryRate ?? null : null,
     delivered: recipient ? recipient.delivered : null,
     sent: recipient ? recipient.sent : null,
+    // What the org PAYS (net of its usage discount) leads; the price before the discount
+    // sits beside it so an agent can explain the discount. Equal when the org has none.
     costInUsdCents,
+    costBeforeDiscountInUsdCents,
     notServed: NOT_SERVED,
     unavailable,
   };

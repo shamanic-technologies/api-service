@@ -22,7 +22,7 @@ describe("Campaign stats endpoints include totalCostInUsdCents", () => {
 
   it("should set totalCostInUsdCents on the single stats response from the net spend", () => {
     expect(content).toContain("groupBy=campaignId");
-    expect(content).toContain("stats.totalCostInUsdCents = netSpendCents(spendGroup)");
+    expect(content).toContain("stats.totalCostInUsdCents = spent.paid");
   });
 
   it("should NOT have a batch stats endpoint (removed in PR #116)", () => {
