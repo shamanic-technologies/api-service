@@ -17298,7 +17298,7 @@ const xAccountsRoutes: Array<{
     path: "/v1/orgs/x/auth/start",
     summary: "Start connecting an X account to a brand (X login)",
     description:
-      "Proxy to social-service POST /orgs/x/auth/start. Body `{ brandId, accountType, redirectUri }` forwarded untransformed; returns `{ authorizationUrl, state, expiresAt }`: send the user to `authorizationUrl`. X redirects to `redirectUri` with `code` and `state`; hand them to POST /v1/orgs/x/auth/callback.",
+      "Proxy to social-service POST /orgs/x/auth/start. Body `{ brandId, accountType }` forwarded untransformed; returns `{ authorizationUrl, state, expiresAt, xApp, redirectUri }`. Give `authorizationUrl` to the X account's owner: his click is the whole human step. After he authorizes on X he lands on GET /v1/public/x/auth/return, the account is connected with nothing to copy, and GET /v1/orgs/x/accounts lists it. The link works once, for 24 hours. The returned `redirectUri` (https://api.distribute.you/v1/public/x/auth/return) must be a callback URL of the X app the login goes through (`xApp: own` = the org's own app). Only a page of your own that relays `code` + `state` to POST /v1/orgs/x/auth/callback passes its own `redirectUri` (15 minutes).",
     body: true,
   },
   {
@@ -17306,7 +17306,7 @@ const xAccountsRoutes: Array<{
     path: "/v1/orgs/x/auth/callback",
     summary: "Finish connecting an X account (exchange code, store the account)",
     description:
-      "Proxy to social-service POST /orgs/x/auth/callback. Body `{ code, state }` from X's redirect; returns `{ account, created }` (`created: false` = already connected, refreshed).",
+      "Proxy to social-service POST /orgs/x/auth/callback. Body `{ code, state }` from X's redirect; returns `{ account, created }` (`created: false` = already connected, refreshed). Only for a login started with a `redirectUri` of your own; a login started without one finishes by itself on GET /v1/public/x/auth/return.",
     body: true,
   },
   {
@@ -17358,6 +17358,29 @@ for (const route of xAccountsRoutes) {
     },
   });
 }
+
+// X-ONE-CLICK-1116: the address X redirects the account owner's browser to. Public: no security.
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/x/auth/return",
+  tags: ["X"],
+  summary: "Where X sends the account's owner back: finishes the connection and shows a page",
+  description:
+    "Not called by an agent: it is the callback URL of a link started with POST /v1/orgs/x/auth/start (no `redirectUri`), opened by X in the account owner's browser after he authorizes. No key, no org, no user: the `state` alone names the pending connection (unguessable, single use, 24 hours), and the account is stored under the org and brand of whoever started it. Proxy to social-service GET /public/x/auth/return, query forwarded verbatim. Always answers an HTML page for a person: 200 = connected, you can close this tab; otherwise the page says why (link used or expired, declined on X, refused by X). The agent then reads GET /v1/orgs/x/accounts.",
+  request: {
+    query: z
+      .object({
+        state: z.string().openapi({ description: "`state` from X's redirect" }),
+        code: z.string().optional().openapi({ description: "`code` from X's redirect" }),
+        error: z.string().optional().openapi({ description: "Set by X instead of `code` when the owner declined" }),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "The page: connected, you can close this tab (text/html)", content: { "text/html": { schema: z.string() } } },
+    400: { description: "The page: not connected, and why in plain words (text/html)", content: { "text/html": { schema: z.string() } } },
+  },
+});
 
 // LinkedIn accounts (LINKEDIN-ACCOUNTS-1106): the X accounts model, same passthrough.
 const LinkedinAccountsPassthroughResponse = z.object({}).passthrough().openapi("LinkedinAccountsPassthroughResponse");
