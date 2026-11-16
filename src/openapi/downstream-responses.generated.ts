@@ -24848,6 +24848,130 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "GET /v1/local-llm": {
+    "service": "chat-service",
+    "method": "GET",
+    "path": "/orgs/local-llm",
+    "responses": {
+      "200": {
+        "description": "The state",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "declared": {
+              "type": "boolean"
+            },
+            "declaredAt": {
+              "type": "string",
+              "nullable": true
+            },
+            "declaredByUserId": {
+              "type": "string",
+              "nullable": true
+            },
+            "runner": {
+              "type": "object",
+              "properties": {
+                "connected": {
+                  "type": "boolean",
+                  "description": "A runner asked for work in the last 60 s."
+                },
+                "lastSeenAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "name": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "version": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "connected",
+                "lastSeenAt",
+                "name",
+                "version"
+              ]
+            },
+            "pendingCalls": {
+              "type": "integer",
+              "description": "Calls waiting for the runner right now."
+            },
+            "usageLast30Days": {
+              "type": "object",
+              "properties": {
+                "calls": {
+                  "type": "integer"
+                },
+                "inputTokens": {
+                  "type": "number"
+                },
+                "outputTokens": {
+                  "type": "number"
+                },
+                "notionalCostUsd": {
+                  "type": "number",
+                  "description": "What Claude Code says these calls would cost at API prices. Measured, never charged."
+                },
+                "chargedUsd": {
+                  "type": "number",
+                  "enum": [
+                    0
+                  ]
+                }
+              },
+              "required": [
+                "calls",
+                "inputTokens",
+                "outputTokens",
+                "notionalCostUsd",
+                "chargedUsd"
+              ]
+            },
+            "runsLocally": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Call families that run on the runner for a declaring org."
+            },
+            "stillOnPlatform": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "family": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "family",
+                  "reason"
+                ]
+              },
+              "description": "Call families that still run on a platform key for a declaring org, and why."
+            }
+          },
+          "required": [
+            "declared",
+            "declaredAt",
+            "declaredByUserId",
+            "runner",
+            "pendingCalls",
+            "usageLast30Days",
+            "runsLocally",
+            "stillOnPlatform"
+          ]
+        }
+      }
+    }
+  },
   "GET /v1/offers/{offerId}/sales-funnels": {
     "service": "features-service",
     "method": "GET",
@@ -48000,6 +48124,133 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "POST /v1/local-llm/work/{id}/result": {
+    "service": "chat-service",
+    "method": "POST",
+    "path": "/orgs/local-llm/work/{id}/result",
+    "responses": {
+      "200": {
+        "description": "Stored; the caller gets it now",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "stored": {
+              "type": "boolean",
+              "enum": [
+                true
+              ]
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "done",
+                "failed"
+              ]
+            }
+          },
+          "required": [
+            "stored",
+            "status"
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/local-llm/work/claim": {
+    "service": "chat-service",
+    "method": "POST",
+    "path": "/orgs/local-llm/work/claim",
+    "responses": {
+      "200": {
+        "description": "Work to run",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "leaseId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Send it back with the answer: only this claim may answer."
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "complete",
+                      "judgment",
+                      "chat_round"
+                    ]
+                  },
+                  "answerBy": {
+                    "type": "string",
+                    "description": "After this instant the caller has stopped waiting (an answer then gets 410)."
+                  },
+                  "claude": {
+                    "type": "object",
+                    "properties": {
+                      "systemPrompt": {
+                        "type": "string",
+                        "description": "→ `--system-prompt`, verbatim."
+                      },
+                      "prompt": {
+                        "type": "string",
+                        "description": "→ the prompt of `claude -p`, verbatim."
+                      },
+                      "jsonSchema": {
+                        "type": "object",
+                        "nullable": true,
+                        "additionalProperties": {
+                          "nullable": true
+                        },
+                        "description": "→ `--json-schema` (JSON-encoded) when not null; answer with the CLI's `structured_output`."
+                      },
+                      "model": {
+                        "type": "string",
+                        "description": "→ `--model`.",
+                        "example": "claude-sonnet-5-5"
+                      },
+                      "tools": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Claude Code built-in tools this call may use → `--tools` + `--allowedTools`; [] = `--tools \"\"`.",
+                        "example": []
+                      }
+                    },
+                    "required": [
+                      "systemPrompt",
+                      "prompt",
+                      "jsonSchema",
+                      "model",
+                      "tools"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "leaseId",
+                  "kind",
+                  "answerBy",
+                  "claude"
+                ]
+              }
+            }
+          },
+          "required": [
+            "items"
+          ]
+        }
+      }
+    }
+  },
   "POST /v1/orgs/{orgId}/invites/claim": {
     "service": "client-service",
     "method": "POST",
@@ -58662,6 +58913,130 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "alreadyMarked",
             "conversionsSetAside",
             "marks"
+          ]
+        }
+      }
+    }
+  },
+  "PUT /v1/local-llm": {
+    "service": "chat-service",
+    "method": "PUT",
+    "path": "/orgs/local-llm",
+    "responses": {
+      "200": {
+        "description": "The state after the change",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "declared": {
+              "type": "boolean"
+            },
+            "declaredAt": {
+              "type": "string",
+              "nullable": true
+            },
+            "declaredByUserId": {
+              "type": "string",
+              "nullable": true
+            },
+            "runner": {
+              "type": "object",
+              "properties": {
+                "connected": {
+                  "type": "boolean",
+                  "description": "A runner asked for work in the last 60 s."
+                },
+                "lastSeenAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "name": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "version": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "connected",
+                "lastSeenAt",
+                "name",
+                "version"
+              ]
+            },
+            "pendingCalls": {
+              "type": "integer",
+              "description": "Calls waiting for the runner right now."
+            },
+            "usageLast30Days": {
+              "type": "object",
+              "properties": {
+                "calls": {
+                  "type": "integer"
+                },
+                "inputTokens": {
+                  "type": "number"
+                },
+                "outputTokens": {
+                  "type": "number"
+                },
+                "notionalCostUsd": {
+                  "type": "number",
+                  "description": "What Claude Code says these calls would cost at API prices. Measured, never charged."
+                },
+                "chargedUsd": {
+                  "type": "number",
+                  "enum": [
+                    0
+                  ]
+                }
+              },
+              "required": [
+                "calls",
+                "inputTokens",
+                "outputTokens",
+                "notionalCostUsd",
+                "chargedUsd"
+              ]
+            },
+            "runsLocally": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Call families that run on the runner for a declaring org."
+            },
+            "stillOnPlatform": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "family": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "family",
+                  "reason"
+                ]
+              },
+              "description": "Call families that still run on a platform key for a declaring org, and why."
+            }
+          },
+          "required": [
+            "declared",
+            "declaredAt",
+            "declaredByUserId",
+            "runner",
+            "pendingCalls",
+            "usageLast30Days",
+            "runsLocally",
+            "stillOnPlatform"
           ]
         }
       }

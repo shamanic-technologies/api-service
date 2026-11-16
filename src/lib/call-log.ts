@@ -15,6 +15,9 @@
  *
  * Never recorded either: reads of the API's own description (the openapi
  * catalogue, GET or HEAD, see HOUSEKEEPING_PATHS): machine housekeeping.
+ * Nor the local LLM runner's work traffic (`/v1/local-llm/work/*`, see
+ * isLocalLlmWorkCall): a machine polling every few seconds, whose claims and
+ * results carry the org's prompts and answers (customer content).
  *
  * Never recorded: the Authorization / x-api-key / cookie headers (only an
  * allow-list of harmless headers is kept), the key itself (the record carries a
@@ -232,6 +235,18 @@ export const HOUSEKEEPING_PATHS: ReadonlySet<string> = new Set([
   "/v1/me/openapi.json",
 ]);
 
+/**
+ * The local LLM runner's work routes (LOCAL-CLAUDE-1116): the distribute.you
+ * Mac app long-polls `POST /v1/local-llm/work/claim` and posts each answer to
+ * `POST /v1/local-llm/work/{id}/result`. A machine loop, not the person asking
+ * us something, and both bodies carry customer content (prompts, answers):
+ * never recorded, any method. The declaration (`/v1/local-llm`) stays recorded.
+ */
+export function isLocalLlmWorkCall(url: string): boolean {
+  const [path] = url.split("?");
+  return path.startsWith("/v1/local-llm/work/");
+}
+
 /** A GET/HEAD of a catalogue document (query string and a trailing slash ignored). */
 export function isHousekeepingCall(method: string, url: string): boolean {
   if (method !== "GET" && method !== "HEAD") return false;
@@ -252,6 +267,7 @@ export function recordCustomerCalls(req: Request, res: Response, next: NextFunct
   const authorization = req.headers.authorization;
   if (typeof authorization !== "string" || !authorization.startsWith("Bearer ")) return next();
   if (isHousekeepingCall(req.method, req.originalUrl)) return next();
+  if (isLocalLlmWorkCall(req.originalUrl)) return next();
 
   const startedAt = Date.now();
   const chunks: Buffer[] = [];
