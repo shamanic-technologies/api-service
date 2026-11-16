@@ -3422,13 +3422,12 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "redirectUri": {
           "type": "string",
           "format": "uri",
-          "description": "Page X sends the user back to with `code` and `state`. Must be registered, byte for byte, as a callback URL of the X app named by X_OAUTH_CONNECT_APP. Production: https://dashboard.distribute.you/connections/x/callback"
+          "description": "Where X sends the account's owner back with `code` and `state`. LEAVE IT OUT when the link is handed to the owner (an AI or MCP caller): X then returns to our public page https://api.distribute.you/v1/public/x/auth/return, which finishes the connection by itself (nothing to copy) and tells the owner to close the tab; the link lives 24 hours. The dashboard passes its own page https://dashboard.distribute.you/connections/x/callback, which relays `code` + `state` to POST /orgs/x/auth/callback within 15 minutes. Either way the URL must be registered, byte for byte, as a callback URL of the X app the login goes through: the org's own app when it stored one (key-service provider `x-oauth-app`), else ours (X_OAUTH_CONNECT_APP). The answer's `redirectUri` names the one used."
         }
       },
       "required": [
         "brandId",
-        "accountType",
-        "redirectUri"
+        "accountType"
       ]
     }
   },
