@@ -6,6 +6,7 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
 import { ensureBrandInOrg } from "../lib/brand-ownership.js";
 import { fetchDeliveryStats, EMPTY_DELIVERY_STATS } from "../lib/delivery-stats.js";
 import { buildHeadline, buildFailureDetails } from "../lib/stats-headline.js";
+import { netSpendCents, netCostLine, type RunsNetCostGroup } from "../lib/net-spend.js";
 import { getRunsBatch, type RunWithCosts } from "@distribute/runs-client";
 import { isStaffCaller, toCustomerEmail } from "../lib/customer-email-view.js";
 import {
@@ -530,7 +531,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
         console.error("[campaigns/stats] content-generation groupBy failed:", (err as Error).message);
         return null;
       }),
-      callExternalService<{ groups: Array<{ dimensions: Record<string, string | null>; totalCostInUsdCents: string; runCount: number }> }>(
+      callExternalService<{ groups: Array<RunsNetCostGroup & { runCount: number }> }>(
         externalServices.runs,
         `/v1/stats/costs?${runsParams}`,
         { headers: internalHeaders },
@@ -578,7 +579,7 @@ router.get("/campaigns/stats", authenticate, requireOrg, requireUser, async (req
       const campaignId = g.dimensions.campaignId;
       if (!campaignId) continue;
       const s = ensure(campaignId);
-      s.totalCostInUsdCents = g.totalCostInUsdCents;
+      s.totalCostInUsdCents = netSpendCents(g);
       s.runCount = g.runCount;
     }
 
@@ -730,7 +731,7 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
     const internalHeaders = buildInternalHeaders(req);
 
     // Fetch stats from all services in parallel using campaignId filter
-    const [leadStats, emailgenStats, delivery, budgetUsage, costBreakdown] = await Promise.all([
+    const [leadStats, emailgenStats, delivery, spend, costBreakdown] = await Promise.all([
       callExternalService(
         externalServices.lead,
         `/orgs/stats?campaignId=${id}`,
@@ -748,16 +749,18 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
         return null;
       }),
       fetchDeliveryStats({ campaignId: id }, req),
-      callExternalService<{ results: Record<string, { totalCostInUsdCents: string | null }> }>(
-        externalServices.campaign,
-        "/stats/batch-budget",
-        { method: "POST", body: { campaignIds: [id] }, headers: internalHeaders }
+      // Campaign spend from runs-service (the ledger), read NET: what the org pays
+      // (src/lib/net-spend.ts). Same source and basis as GET /v1/campaigns/stats.
+      callExternalService<{ groups: RunsNetCostGroup[] }>(
+        externalServices.runs,
+        `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&campaignId=${encodeURIComponent(id)}&groupBy=campaignId`,
+        { headers: internalHeaders }
       ).catch((err) => {
-        console.warn("[campaigns] Budget usage failed:", (err as Error).message);
+        console.warn("[campaigns] Campaign spend failed:", (err as Error).message);
         return null;
       }),
-      // Full cost breakdown by cost name from runs-service (single source of truth)
-      callExternalService<{ groups: Array<{ dimensions: Record<string, string | null>; totalCostInUsdCents: string; actualCostInUsdCents: string; provisionedCostInUsdCents: string; totalQuantity: string }> }>(
+      // Full cost breakdown by cost name from runs-service (single source of truth), read NET
+      callExternalService<{ groups: Array<RunsNetCostGroup & { totalQuantity: string }> }>(
         externalServices.runs,
         `/v1/stats/costs?orgId=${encodeURIComponent(orgId)}&campaignId=${encodeURIComponent(id)}&groupBy=costName`,
         { headers: internalHeaders }
@@ -791,7 +794,6 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
     if (emailgenStats) {
       const eg = (emailgenStats as any).stats || emailgenStats;
       stats.emailsGenerated = eg.emailsGenerated || 0;
-      if (eg.totalCostUsd) stats.totalCostUsd = eg.totalCostUsd;
     } else {
       stats.emailsGenerated = 0;
     }
@@ -805,20 +807,19 @@ router.get("/campaigns/:id/stats", authenticate, requireOrg, requireUser, async 
       stats.emailStats = EMPTY_DELIVERY_STATS.emailStats;
     }
 
-    // Budget usage from campaign-service
-    if (budgetUsage?.results?.[id]) {
-      stats.totalCostInUsdCents = budgetUsage.results[id].totalCostInUsdCents;
+    // Campaign spend (NET) from runs-service; null = nothing spent yet or the read failed.
+    const spendGroup = spend?.groups?.find((g) => g.dimensions.campaignId === id);
+    if (spendGroup) {
+      stats.totalCostInUsdCents = netSpendCents(spendGroup);
     }
 
-    // Cost breakdown by cost name from runs-service
+    // Cost breakdown by cost name from runs-service, every amount NET
     if (costBreakdown?.groups) {
       stats.costBreakdown = costBreakdown.groups
         .filter((g) => g.dimensions.costName != null)
         .map((g) => ({
           costName: g.dimensions.costName!,
-          totalCostInUsdCents: g.totalCostInUsdCents,
-          actualCostInUsdCents: g.actualCostInUsdCents,
-          provisionedCostInUsdCents: g.provisionedCostInUsdCents,
+          ...netCostLine(g),
           totalQuantity: g.totalQuantity,
         }));
     }

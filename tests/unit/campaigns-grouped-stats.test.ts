@@ -133,8 +133,8 @@ describe("GET /v1/campaigns/stats", () => {
       if (service.url === "http://mock-runs") {
         return Promise.resolve({
           groups: [
-            { dimensions: { campaignId: "c1" }, totalCostInUsdCents: "500", runCount: 15 },
-            { dimensions: { campaignId: "c2" }, totalCostInUsdCents: "1200", runCount: 30 },
+            { dimensions: { campaignId: "c1" }, totalCostInUsdCents: "500", netTotalCostInUsdCents: "500", runCount: 15 },
+            { dimensions: { campaignId: "c2" }, totalCostInUsdCents: "1200", netTotalCostInUsdCents: "1200", runCount: 30 },
           ],
         });
       }
@@ -187,7 +187,7 @@ describe("GET /v1/campaigns/stats", () => {
         });
       }
       if (service.url === "http://mock-runs") {
-        return Promise.resolve({ groups: [{ dimensions: { campaignId: "c1" }, totalCostInUsdCents: "900", runCount: 3 }] });
+        return Promise.resolve({ groups: [{ dimensions: { campaignId: "c1" }, totalCostInUsdCents: "900", netTotalCostInUsdCents: "900", runCount: 3 }] });
       }
       return Promise.resolve({ groups: [] });
     });
