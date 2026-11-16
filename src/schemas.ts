@@ -9683,6 +9683,21 @@ registry.registerPath({
   },
 });
 registry.registerPath({
+  method: "get", path: "/v1/local-llm/orgs", tags: ["Local LLM"], security: authed,
+  summary: "Runner: which of your organizations run their AI calls on your own Claude Code",
+  description: `${LOCAL_LLM_MODEL} For the runner, in ONE call and with no organization named: every organization you are a member of that declared it, oldest declaration first, ` +
+    "as {orgs: [{orgId, declaredAt, declaredByUserId, runner: {connected, lastSeenAt, name, version}, pendingCalls}]} (empty when none). " +
+    "Refresh it (every 30 s is fine) to pick up a declaration made anywhere: the dashboard, the MCP, an agent. " +
+    "Only organizations you are a MEMBER of are listed, staff included: a staff key that can act in every organization still lists only its own memberships, so a runner never takes another customer's calls on your subscription. " +
+    "Byte passthrough to chat-service GET /internal/local-llm/orgs, scoped by the gateway to your memberships.",
+  responses: {
+    200: { description: "Your declared organizations", content: { "application/json": { schema: localLlmPassthrough("LocalLlmOrgsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+    503: { description: "Your memberships could not be read right now (membership_unavailable)", content: errorContent },
+  },
+});
+registry.registerPath({
   method: "put", path: "/v1/local-llm", tags: ["Local LLM"], security: authed,
   summary: "Run your org's AI calls on your own Claude Code, or stop",
   description: `${LOCAL_LLM_MODEL} {enabled: true} declares it, {enabled: false} sends every call back to our platform. Answers the state after the change. Byte passthrough to chat-service PUT /orgs/local-llm.`,
