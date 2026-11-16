@@ -68,6 +68,10 @@
       "description": "AI chat with SSE streaming"
     },
     {
+      "name": "Local LLM",
+      "description": "Run your org's AI calls on your own Claude Code subscription, on your machine: the declaration and the runner's work queue"
+    },
+    {
       "name": "Skills",
       "description": "The agent skill tree, read-only: the method our Copilot follows to organize a client request, for your own agent to follow too"
     },
@@ -6902,6 +6906,55 @@
         ]
       },
       "AgentStaffRequestList": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "LocalLlmStateResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "LocalLlmDeclareResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "LocalLlmDeclareBody": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "LocalLlmClaimResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "LocalLlmClaimBody": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "LocalLlmResultResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "LocalLlmResultBody": {
         "type": "object",
         "properties": {},
         "additionalProperties": {
@@ -14246,6 +14299,46 @@
       },
       "ErrorResponse404UnknownSkillSlugForwardedVerbatim": {
         "description": "Unknown skillSlug (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409TheOrgHasNotDeclaredItsLLMLocalForwardedVerbatim": {
+        "description": "The org has not declared its LLM local (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404NoSuchWorkItemForThisOrgForwardedVerbatim": {
+        "description": "No such work item for this org (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409AlreadyAnsweredNotClaimedOrAnotherClaimSLeaseIdForwardedVerb": {
+        "description": "Already answered, not claimed, or another claim's leaseId (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse410TheCallerStoppedWaitingDropItForwardedVerbatim": {
+        "description": "The caller stopped waiting: drop it (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {
@@ -52493,6 +52586,675 @@
             "$ref": "#/components/parameters/XBrandId"
           }
         ]
+      }
+    },
+    "/v1/local-llm": {
+      "get": {
+        "tags": [
+          "Local LLM"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Read whether your org's AI calls run on your own Claude Code",
+        "description": "Run your org's AI calls on your OWN Claude Code subscription, on your machine, so they cost you nothing on distribute.you. You declare it once (PUT /v1/local-llm {enabled: true}); from then on the calls that can run locally wait in a queue, and a runner on your machine (the distribute.you Mac app) picks them up with POST /v1/local-llm/work/claim, runs them with Claude Code and sends each answer to POST /v1/local-llm/work/{id}/result. Calls no runner can take, or that wait too long, stay on our platform as before. Answers the org's state: declared or not, whether a runner is connected and when it was last seen, the calls waiting, the usage measured, and which kinds of calls run locally or still on our platform. Byte passthrough to chat-service GET /orgs/local-llm.\n\nResponse: documented from chat-service GET /orgs/local-llm, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/chat.",
+        "responses": {
+          "200": {
+            "description": "The org's state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "declared": {
+                      "type": "boolean"
+                    },
+                    "declaredAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "declaredByUserId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "runner": {
+                      "type": "object",
+                      "properties": {
+                        "connected": {
+                          "type": "boolean",
+                          "description": "A runner asked for work in the last 60 s."
+                        },
+                        "lastSeenAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "name": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "version": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "connected",
+                        "lastSeenAt",
+                        "name",
+                        "version"
+                      ]
+                    },
+                    "pendingCalls": {
+                      "type": "integer",
+                      "description": "Calls waiting for the runner right now."
+                    },
+                    "usageLast30Days": {
+                      "type": "object",
+                      "properties": {
+                        "calls": {
+                          "type": "integer"
+                        },
+                        "inputTokens": {
+                          "type": "number"
+                        },
+                        "outputTokens": {
+                          "type": "number"
+                        },
+                        "notionalCostUsd": {
+                          "type": "number",
+                          "description": "What Claude Code says these calls would cost at API prices. Measured, never charged."
+                        },
+                        "chargedUsd": {
+                          "type": "number",
+                          "enum": [
+                            0
+                          ]
+                        }
+                      },
+                      "required": [
+                        "calls",
+                        "inputTokens",
+                        "outputTokens",
+                        "notionalCostUsd",
+                        "chargedUsd"
+                      ]
+                    },
+                    "runsLocally": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Call families that run on the runner for a declaring org."
+                    },
+                    "stillOnPlatform": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "family": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "family",
+                          "reason"
+                        ]
+                      },
+                      "description": "Call families that still run on a platform key for a declaring org, and why."
+                    }
+                  },
+                  "required": [
+                    "declared",
+                    "declaredAt",
+                    "declaredByUserId",
+                    "runner",
+                    "pendingCalls",
+                    "usageLast30Days",
+                    "runsLocally",
+                    "stillOnPlatform"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamError"
+          }
+        },
+        "operationId": "getV1LocalLlm",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Local LLM"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Run your org's AI calls on your own Claude Code, or stop",
+        "description": "Run your org's AI calls on your OWN Claude Code subscription, on your machine, so they cost you nothing on distribute.you. You declare it once (PUT /v1/local-llm {enabled: true}); from then on the calls that can run locally wait in a queue, and a runner on your machine (the distribute.you Mac app) picks them up with POST /v1/local-llm/work/claim, runs them with Claude Code and sends each answer to POST /v1/local-llm/work/{id}/result. Calls no runner can take, or that wait too long, stay on our platform as before. {enabled: true} declares it, {enabled: false} sends every call back to our platform. Answers the state after the change. Byte passthrough to chat-service PUT /orgs/local-llm.\n\nRequest body: documented from chat-service PUT /orgs/local-llm, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from chat-service PUT /orgs/local-llm, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/chat.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "true = every LLM call chat-service makes for this org runs on the user's own Claude Code, on their machine, through a runner (the org pays $0 for those calls). false = back to the platform.",
+                    "example": true
+                  }
+                },
+                "required": [
+                  "enabled"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The state after the change",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "declared": {
+                      "type": "boolean"
+                    },
+                    "declaredAt": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "declaredByUserId": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "runner": {
+                      "type": "object",
+                      "properties": {
+                        "connected": {
+                          "type": "boolean",
+                          "description": "A runner asked for work in the last 60 s."
+                        },
+                        "lastSeenAt": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "name": {
+                          "type": "string",
+                          "nullable": true
+                        },
+                        "version": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      },
+                      "required": [
+                        "connected",
+                        "lastSeenAt",
+                        "name",
+                        "version"
+                      ]
+                    },
+                    "pendingCalls": {
+                      "type": "integer",
+                      "description": "Calls waiting for the runner right now."
+                    },
+                    "usageLast30Days": {
+                      "type": "object",
+                      "properties": {
+                        "calls": {
+                          "type": "integer"
+                        },
+                        "inputTokens": {
+                          "type": "number"
+                        },
+                        "outputTokens": {
+                          "type": "number"
+                        },
+                        "notionalCostUsd": {
+                          "type": "number",
+                          "description": "What Claude Code says these calls would cost at API prices. Measured, never charged."
+                        },
+                        "chargedUsd": {
+                          "type": "number",
+                          "enum": [
+                            0
+                          ]
+                        }
+                      },
+                      "required": [
+                        "calls",
+                        "inputTokens",
+                        "outputTokens",
+                        "notionalCostUsd",
+                        "chargedUsd"
+                      ]
+                    },
+                    "runsLocally": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Call families that run on the runner for a declaring org."
+                    },
+                    "stillOnPlatform": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "family": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "family",
+                          "reason"
+                        ]
+                      },
+                      "description": "Call families that still run on a platform key for a declaring org, and why."
+                    }
+                  },
+                  "required": [
+                    "declared",
+                    "declaredAt",
+                    "declaredByUserId",
+                    "runner",
+                    "pendingCalls",
+                    "usageLast30Days",
+                    "runsLocally",
+                    "stillOnPlatform"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400RefusedWithItsReasonForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamError"
+          }
+        },
+        "operationId": "putV1LocalLlm",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ]
+      }
+    },
+    "/v1/local-llm/work/claim": {
+      "post": {
+        "tags": [
+          "Local LLM"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Runner: take the next AI calls to run on this machine (long poll)",
+        "description": "Run your org's AI calls on your OWN Claude Code subscription, on your machine, so they cost you nothing on distribute.you. You declare it once (PUT /v1/local-llm {enabled: true}); from then on the calls that can run locally wait in a queue, and a runner on your machine (the distribute.you Mac app) picks them up with POST /v1/local-llm/work/claim, runs them with Claude Code and sends each answer to POST /v1/local-llm/work/{id}/result. Calls no runner can take, or that wait too long, stay on our platform as before. For the runner. Waits up to waitMs (max 25000) for work and answers {items: [...]}, empty when nothing came. Each item goes to ONE claim only and carries a leaseId to send back with its result. Keep your HTTP timeout above 30 s. 409 local_llm_not_declared until the org declared it. Byte passthrough to chat-service POST /orgs/local-llm/work/claim.\n\nRequest body: documented from chat-service POST /orgs/local-llm/work/claim, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from chat-service POST /orgs/local-llm/work/claim, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/chat.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "waitMs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 25000,
+                    "description": "Hold the request open up to this long waiting for work (default 20000, max 25000)."
+                  },
+                  "max": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10,
+                    "description": "Most items to take at once (default 1, max 10)."
+                  },
+                  "runner": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "version": {
+                        "type": "string",
+                        "maxLength": 100
+                      }
+                    },
+                    "description": "Shown in the org's state (e.g. the Mac app and its version)."
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Work to run ({items}, maybe empty)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "leaseId": {
+                            "type": "string",
+                            "format": "uuid",
+                            "description": "Send it back with the answer: only this claim may answer."
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "complete",
+                              "judgment",
+                              "chat_round"
+                            ]
+                          },
+                          "answerBy": {
+                            "type": "string",
+                            "description": "After this instant the caller has stopped waiting (an answer then gets 410)."
+                          },
+                          "claude": {
+                            "type": "object",
+                            "properties": {
+                              "systemPrompt": {
+                                "type": "string",
+                                "description": "→ `--system-prompt`, verbatim."
+                              },
+                              "prompt": {
+                                "type": "string",
+                                "description": "→ the prompt of `claude -p`, verbatim."
+                              },
+                              "jsonSchema": {
+                                "type": "object",
+                                "nullable": true,
+                                "additionalProperties": {
+                                  "nullable": true
+                                },
+                                "description": "→ `--json-schema` (JSON-encoded) when not null; answer with the CLI's `structured_output`."
+                              },
+                              "model": {
+                                "type": "string",
+                                "description": "→ `--model`.",
+                                "example": "claude-sonnet-5-5"
+                              },
+                              "tools": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Claude Code built-in tools this call may use → `--tools` + `--allowedTools`; [] = `--tools \"\"`.",
+                                "example": []
+                              }
+                            },
+                            "required": [
+                              "systemPrompt",
+                              "prompt",
+                              "jsonSchema",
+                              "model",
+                              "tools"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "leaseId",
+                          "kind",
+                          "answerBy",
+                          "claude"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "items"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400RefusedWithItsReasonForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409TheOrgHasNotDeclaredItsLLMLocalForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamError"
+          }
+        },
+        "operationId": "postV1LocalLlmWorkClaim",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ]
+      }
+    },
+    "/v1/local-llm/work/{id}/result": {
+      "post": {
+        "tags": [
+          "Local LLM"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Runner: send the answer of one AI call",
+        "description": "Run your org's AI calls on your OWN Claude Code subscription, on your machine, so they cost you nothing on distribute.you. You declare it once (PUT /v1/local-llm {enabled: true}); from then on the calls that can run locally wait in a queue, and a runner on your machine (the distribute.you Mac app) picks them up with POST /v1/local-llm/work/claim, runs them with Claude Code and sends each answer to POST /v1/local-llm/work/{id}/result. Calls no runner can take, or that wait too long, stay on our platform as before. For the runner: the answer (text or structured) of the claimed call {id}, with its leaseId, or ok: false with the error. 404 unknown call, 409 already answered / not claimed / another claim's leaseId, 410 the caller stopped waiting (drop it). Byte passthrough to chat-service POST /orgs/local-llm/work/{id}/result.\n\nRequest body: documented from chat-service POST /orgs/local-llm/work/{id}/result, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from chat-service POST /orgs/local-llm/work/{id}/result, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/chat.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "The work item id from the claim"
+            },
+            "required": true,
+            "description": "The work item id from the claim",
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "leaseId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "ok": {
+                    "type": "boolean"
+                  },
+                  "model": {
+                    "type": "string",
+                    "description": "The model the CLI says ran: the `model` of its `system`/`init` line. Required when ok."
+                  },
+                  "text": {
+                    "type": "string",
+                    "description": "The CLI's `result`, for an item with no jsonSchema."
+                  },
+                  "structured": {
+                    "nullable": true,
+                    "description": "The CLI's `structured_output`, for an item with a jsonSchema."
+                  },
+                  "error": {
+                    "type": "string",
+                    "maxLength": 4000,
+                    "description": "When ok is false: what went wrong, in plain words."
+                  },
+                  "usage": {
+                    "type": "object",
+                    "properties": {
+                      "inputTokens": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "outputTokens": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "cacheReadTokens": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "cacheWriteTokens": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "description": "From the CLI's `result` line `usage` (input_tokens, output_tokens, cache_read_input_tokens, cache_creation_input_tokens)."
+                  },
+                  "notionalCostUsd": {
+                    "type": "number",
+                    "minimum": 0,
+                    "description": "The CLI's `total_cost_usd` (what it would cost at API prices; never charged)."
+                  },
+                  "durationMs": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "leaseId",
+                  "ok"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "stored": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "done",
+                        "failed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "stored",
+                    "status"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400RefusedWithItsReasonForwardedVerbatim"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404NoSuchWorkItemForThisOrgForwardedVerbatim"
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse409AlreadyAnsweredNotClaimedOrAnotherClaimSLeaseIdForwardedVerb"
+          },
+          "410": {
+            "$ref": "#/components/responses/ErrorResponse410TheCallerStoppedWaitingDropItForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamError"
+          }
+        },
+        "operationId": "postV1LocalLlmWorkByIdResult"
       }
     },
     "/v1/tactics": {

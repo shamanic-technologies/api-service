@@ -50,6 +50,7 @@ import chatRoutes from "./routes/chat.js";
 import chatSkillsStaffRoutes from "./routes/chat-skills-staff.js";
 import agentSkillsRoutes from "./routes/agent-skills.js";
 import agentRequestsRoutes from "./routes/agent-requests.js";
+import localLlmRoutes from "./routes/local-llm.js";
 import catalogueStaffRoutes from "./routes/catalogue-staff.js";
 import enginesRoutes from "./routes/engines.js";
 import playsRoutes from "./routes/plays.js";
@@ -307,6 +308,7 @@ app.use(costsStaffRoutes); // staff-only costs reads (authenticatePlatform + req
 app.use(socialRoutes); // staff-only social-service reads (authenticatePlatform + requireStaff), full /v1 paths
 app.use(agentSkillsRoutes); // read-only agent skill tree for any authenticated caller (authenticateUser), full /v1 paths
 app.use(agentRequestsRoutes); // requests to the team (bug, feature incl. a new outcome/trigger, skill upgrade, human) for any agent, full /v1 paths
+app.use(localLlmRoutes); // the org's LLM on the user's own Claude Code (chat-service /orgs/local-llm*)
 app.use(chatSkillsStaffRoutes); // staff-only Copilot skills + staff requests (authenticatePlatform + requireStaff), full /v1 paths
 app.use(catalogueStaffRoutes); // agent catalogue: customer reads for any signed-in client (catalogueReader), staff objects + writes staff-only, full /v1 paths
 app.use(enginesRoutes); // GET /v1/engines/:outcome, catalogue read for any signed-in client (catalogueReader)

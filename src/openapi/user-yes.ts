@@ -278,6 +278,10 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "PUT /platform-prompts": NO,
   "PUT /platform-chat/config": NO,
   "POST /v1/staff-requests": NO,
+  // LOCAL-CLAUDE-1116: moves calls onto the user's own subscription (spends nothing of the account), and a runner must claim/answer with no token.
+  "PUT /v1/local-llm": NO,
+  "POST /v1/local-llm/work/claim": NO,
+  "POST /v1/local-llm/work/{id}/result": NO,
   "POST /v1/platform-uploads": NO,
   "POST /v1/orgs/uploads": NO,
 

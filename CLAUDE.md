@@ -121,6 +121,10 @@ Owner decision 2026-10-01: a `distrib.usr_*` key is NOT bound to the org active 
 
 `POST|GET /v1/staff-requests` (`authenticate + requireOrg + requireUser`) are byte pipes to chat-service `/orgs/staff-requests`: the Copilot's request_staff / request_skill_upgrade / contact_human for an outside agent, same record, same GitHub issue, same Telegram ping. A new outcome or trigger is only ever this (kind feature + `newStepOrTrigger`); never add a create route for one.
 
+### The org's LLM on the user's own Claude Code (`src/routes/local-llm.ts`, LOCAL-CLAUDE-1116, owner 2026-11-16)
+
+`GET|PUT /v1/local-llm`, `POST /v1/local-llm/work/claim`, `POST /v1/local-llm/work/{id}/result` (`authenticate + requireOrg + requireUser`) are byte pipes to chat-service `/orgs/local-llm*`, same suffix. The claim is a long poll (up to 25 s at chat-service): default undici timeouts (300 s) cover it, never add a shorter per-route timeout. No yes gate (a runner claims and answers with no token). The work routes are skipped by the call log (`isLocalLlmWorkCall`): a machine loop whose bodies carry customer prompts and answers; never log their bodies. Pinned by `tests/unit/local-llm-proxy.behavior.test.ts`.
+
 ### Identity-enrichment headers forwarded on `/internal/resolve`
 
 On the admin path, `authenticate` resolves `x-external-org-id` / `x-external-user-id` to internal UUIDs via client-service `POST /internal/resolve`, and forwards five OPTIONAL enrichment headers into that body when present: `x-email` → `email`, `x-first-name` → `firstName`, `x-last-name` → `lastName`, `x-org-slug` → `orgSlug`, `x-org-name` → `orgName`. The dashboard/admin proxy reads them off the caller's session (Next.js `auth()` — `sessionClaims` for the profile fields, `orgSlug` for the slug) and sends them on every `/v1/*` request. `orgName` is what lets `GET /v1/me` name the organization a user key acts in: on 2026-10-01, 189 of 192 orgs had a NULL `orgs.name` because no caller had ever sent it.
