@@ -2429,7 +2429,9 @@ registry.registerPath({
     "Get campaign statistics. `headline` comes first and leads with success (meetings booked, positive replies, " +
     "delivered/sent, cost); figures no service serves yet are null and listed in `headline.notServed`. Failure counts " +
     "(bounces, unsubscribes, negative replies) are repeated last under `failureDetails`. All earlier fields are unchanged " +
-    "(leads served/buffered/skipped, emails generated, recipientStats, emailStats, cost breakdown).",
+    "(leads served/buffered/skipped, emails generated, recipientStats, emailStats, cost breakdown). Every amount in cents " +
+    "(`totalCostInUsdCents`, `headline.costInUsdCents`, each `costBreakdown` line) is what the org PAYS: net of its " +
+    "usage discount, read from runs-service's ledger (equal to the list price for an org with no discount).",
   security: authed,
   request: { params: CampaignIdParam },
   responses: {
@@ -2484,6 +2486,7 @@ registry.registerPath({
     "using groupBy=campaignId. Returns one entry per campaign, each starting with a success-first `headline` " +
     "and ending with `failureDetails` (see GET /v1/campaigns/{id}/stats). " +
     "Supports filtering by brandId, workflowSlug, featureSlug, workflowDynastySlug, or featureDynastySlug. " +
+    "Each campaign's `totalCostInUsdCents` (and `headline.costInUsdCents`) is what the org PAYS, net of its usage discount. " +
     "Replaces the old POST /v1/campaigns/stats/batch endpoint.",
   security: authed,
   request: {

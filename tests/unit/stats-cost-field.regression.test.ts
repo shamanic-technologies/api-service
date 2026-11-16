@@ -1,10 +1,11 @@
 /**
  * Regression test: the stats endpoints must include totalCostInUsdCents
- * from campaign-service batch-budget-usage, not just emailgen/delivery stats.
+ * from runs-service (the ledger), read NET (STATS-NET-1116), not just emailgen/delivery stats.
  *
  * After PR #116/#117:
  * - The batch stats endpoint (POST /v1/campaigns/stats/batch) was removed
- * - Single campaign stats still includes totalCostInUsdCents from campaign-service /stats/batch-budget
+ * - Single campaign stats reads totalCostInUsdCents from runs-service /v1/stats/costs?groupBy=campaignId
+ *   (net); campaign-service /stats/batch-budget is no longer read (it served gross)
  * - Cost breakdown uses runs-service /v1/stats/costs?groupBy=costName with { groups: [{ dimensions: { costName }, ... }] } format
  */
 import { describe, it, expect } from "vitest";
@@ -15,14 +16,13 @@ describe("Campaign stats endpoints include totalCostInUsdCents", () => {
   const routePath = path.join(__dirname, "../../src/routes/campaigns.ts");
   const content = fs.readFileSync(routePath, "utf-8");
 
-  it("should call campaign-service /stats/batch-budget for budget usage", () => {
-    expect(content).toContain("/stats/batch-budget");
-    expect(content).toContain("externalServices.campaign");
+  it("should NOT read campaign-service /stats/batch-budget (gross spend)", () => {
+    expect(content).not.toContain("/stats/batch-budget");
   });
 
-  it("should set totalCostInUsdCents on the single stats response", () => {
-    // The single endpoint assigns totalCostInUsdCents from budgetUsage
-    expect(content).toContain("stats.totalCostInUsdCents = budgetUsage.results[id].totalCostInUsdCents");
+  it("should set totalCostInUsdCents on the single stats response from the net spend", () => {
+    expect(content).toContain("groupBy=campaignId");
+    expect(content).toContain("stats.totalCostInUsdCents = netSpendCents(spendGroup)");
   });
 
   it("should NOT have a batch stats endpoint (removed in PR #116)", () => {
