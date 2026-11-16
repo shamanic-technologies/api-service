@@ -984,12 +984,13 @@ router.delete("/features/stated-monthly-amounts/:id", authenticatePlatform, requ
 });
 
 /**
- * GET /v1/features/research/(conclusions|studies|templates|script-engines|engines[/catalog|/performance|/live-scripts]) — STAFF ONLY.
+ * GET /v1/features/research/(conclusions|studies|templates|script-engines|engines[/catalog|/performance]) — STAFF ONLY.
  * features-service's live Research (the staff Research page of dashboard v2), keyed by Engine
  * and script (`?basis=user|actual`; `actual` reveals our margin): the conclusion and measured
  * studies, the template texts, the script engines and the Engine file / catalogue /
- * performance / live scripts. The pipe-keyed whole file, catalogue and performance reads and
- * the public leg workflow ranking were retired (RESEARCH-BY-ENGINE-1113-RETIRE). Fleet-wide, so no org identity and requireOrg is deliberately absent;
+ * performance. The pipe-keyed whole file, catalogue and performance reads, the public leg
+ * workflow ranking (RESEARCH-BY-ENGINE-1113-RETIRE) and the live-scripts workflow ranking
+ * (RESEARCH-NATIVE-ENGINE-1116, superseded by script-engines) were retired. Fleet-wide, so no org identity and requireOrg is deliberately absent;
  * authenticatePlatform + requireStaff are network-free, so a non-staff caller is refused
  * before any downstream call. Only the verified staff email is forwarded, for attribution.
  *
@@ -1007,7 +1008,6 @@ const RESEARCH_ROUTES: Array<[string, string, string]> = [
   ["/features/research/engines", "/internal/research/engines", "Failed to get the research file by Engine"],
   ["/features/research/engines/catalog", "/internal/research/engines/catalog", "Failed to get the research catalogue by Engine"],
   ["/features/research/engines/performance", "/internal/research/engines/performance", "Failed to get the research performance by Engine"],
-  ["/features/research/engines/live-scripts", "/internal/research/engines/live-scripts", "Failed to get the research live scripts by Engine"],
 ];
 
 for (const [path, downstream, fallback] of RESEARCH_ROUTES) {
