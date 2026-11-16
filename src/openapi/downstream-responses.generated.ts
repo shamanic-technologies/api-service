@@ -55920,13 +55920,28 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             },
             "expiresAt": {
               "type": "string",
-              "description": "The login must finish before this time (15 minutes)"
+              "description": "The login must finish before this time: 24 hours when X returns to our public page (no `redirectUri` passed), 15 minutes for a caller's own page"
+            },
+            "xApp": {
+              "type": "string",
+              "enum": [
+                "own",
+                "platform"
+              ],
+              "description": "Whose X developer app the login goes through. `own` = the org's own app (its OAuth 2.0 client id + secret stored in the key store under provider `x-oauth-app`, for the brand or org-wide): X bills that app's owner, we declare no X fee for its calls and count them. `platform` = ours."
+            },
+            "redirectUri": {
+              "type": "string",
+              "format": "uri",
+              "description": "The callback URL the link was built with: it must be registered on the X app (`xApp` says whose)"
             }
           },
           "required": [
             "authorizationUrl",
             "state",
-            "expiresAt"
+            "expiresAt",
+            "xApp",
+            "redirectUri"
           ]
         }
       }

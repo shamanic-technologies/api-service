@@ -26,6 +26,9 @@ import { respondUpstreamError } from "../lib/upstream-error.js";
  *
  * NOT proxied: social-service's `/internal/x-accounts*` (access-token handout,
  * import, refresh cron).
+ *
+ * One PUBLIC route (X-ONE-CLICK-1116): `GET /v1/public/x/auth/return`, the
+ * address X redirects the account owner's browser to. See its handler.
  */
 const router = Router();
 
@@ -61,6 +64,51 @@ async function forward(
     respondUpstreamError(res, error, `${label} error`);
   }
 }
+
+/** social-service answers a person: a page under every status, not a JSON envelope. */
+function isHtmlPage(body: unknown): body is string {
+  return typeof body === "string" && /^\s*<!doctype html/i.test(body);
+}
+
+// GET /v1/public/x/auth/return?code=&state= → social-service GET /public/x/auth/return
+//
+// Public tier (CLAUDE.md rule #3): NO middleware and NO identity header. The
+// caller is the X account owner's browser, sent here by X after he authorized a
+// link an AI started with POST /v1/orgs/x/auth/start (no `redirectUri`). He has
+// no key and maybe no account. social-service names the pending login from the
+// `state` ALONE (256 random bits, single use, expiring) and reads no org, brand
+// or user from this request, so nothing here may add one. A request that is not
+// X's redirect of a live link costs one primary-key miss downstream, under the
+// anonymous per-IP budget of the global limiter.
+//
+// The answer is social-service's HTML page, piped as-is under its status: 200
+// connected, 4xx/5xx a page saying why. `pipeExternalService` throws a non-2xx
+// with the body as the message; a page is re-emitted as the page it is (a JSON
+// envelope around HTML would be shown raw to a person). Any other failure
+// (social-service unreachable, a JSON refusal) keeps the gateway's usual answer.
+router.get("/public/x/auth/return", async (req, res) => {
+  // The address carries X's one-time code: never cached, never sent on as a referrer.
+  res.setHeader("Cache-Control", "no-store");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  try {
+    await pipeExternalService(externalServices.social, `/public/x/auth/return${rawQueryString(req.originalUrl)}`, {
+      method: "GET",
+      expressRes: res,
+    });
+  } catch (error) {
+    if (res.headersSent) {
+      res.end();
+      return;
+    }
+    const upstream = error as { statusCode?: unknown; message?: unknown } | null;
+    if (typeof upstream?.statusCode === "number" && isHtmlPage(upstream.message)) {
+      res.status(upstream.statusCode).type("html").send(upstream.message);
+      return;
+    }
+    console.error("[api-service] X auth public return error:", error);
+    respondUpstreamError(res, error, "X auth return error");
+  }
+});
 
 const accountPath = (id: string) => `/orgs/x/accounts/${encodeURIComponent(id)}`;
 
