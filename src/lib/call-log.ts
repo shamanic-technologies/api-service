@@ -15,7 +15,7 @@
  *
  * Never recorded either: reads of the API's own description (the openapi
  * catalogue, GET or HEAD, see HOUSEKEEPING_PATHS): machine housekeeping.
- * Nor the local LLM runner's work traffic (`/v1/local-llm/work/*`, see
+ * Nor the local LLM runner's traffic (`/v1/local-llm/work/*` + `/orgs`, see
  * isLocalLlmWorkCall): a machine polling every few seconds, whose claims and
  * results carry the org's prompts and answers (customer content).
  *
@@ -240,11 +240,13 @@ export const HOUSEKEEPING_PATHS: ReadonlySet<string> = new Set([
  * Mac app long-polls `POST /v1/local-llm/work/claim` and posts each answer to
  * `POST /v1/local-llm/work/{id}/result`. A machine loop, not the person asking
  * us something, and both bodies carry customer content (prompts, answers):
- * never recorded, any method. The declaration (`/v1/local-llm`) stays recorded.
+ * never recorded, any method. Same for its 30 s refresh of which orgs to serve
+ * (`GET /v1/local-llm/orgs`, LOCAL-CLAUDE-ORGS-1116). The declaration
+ * (`/v1/local-llm`) stays recorded.
  */
 export function isLocalLlmWorkCall(url: string): boolean {
   const [path] = url.split("?");
-  return path.startsWith("/v1/local-llm/work/");
+  return path.startsWith("/v1/local-llm/work/") || path === "/v1/local-llm/orgs";
 }
 
 /** A GET/HEAD of a catalogue document (query string and a trailing slash ignored). */

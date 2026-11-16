@@ -6891,6 +6891,13 @@
           "nullable": true
         }
       },
+      "LocalLlmOrgsResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "LocalLlmDeclareResponse": {
         "type": "object",
         "properties": {},
@@ -14275,6 +14282,16 @@
       },
       "ErrorResponse404UnknownSkillSlugForwardedVerbatim": {
         "description": "Unknown skillSlug (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse503YourMembershipsCouldNotBeReadRightNowMembershipUnavailable": {
+        "description": "Your memberships could not be read right now (membership_unavailable)",
         "content": {
           "application/json": {
             "schema": {
@@ -52869,6 +52886,56 @@
           }
         },
         "operationId": "putV1LocalLlm",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ]
+      }
+    },
+    "/v1/local-llm/orgs": {
+      "get": {
+        "tags": [
+          "Local LLM"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "summary": "Runner: which of your organizations run their AI calls on your own Claude Code",
+        "description": "Run your org's AI calls on your OWN Claude Code subscription, on your machine, so they cost you nothing on distribute.you. You declare it once (PUT /v1/local-llm {enabled: true}); from then on the calls that can run locally wait in a queue, and a runner on your machine (the distribute.you Mac app) picks them up with POST /v1/local-llm/work/claim, runs them with Claude Code and sends each answer to POST /v1/local-llm/work/{id}/result. Calls no runner can take, or that wait too long, stay on our platform as before. For the runner, in ONE call and with no organization named: every organization you are a member of that declared it, oldest declaration first, as {orgs: [{orgId, declaredAt, declaredByUserId, runner: {connected, lastSeenAt, name, version}, pendingCalls}]} (empty when none). Refresh it (every 30 s is fine) to pick up a declaration made anywhere: the dashboard, the MCP, an agent. Only organizations you are a MEMBER of are listed, staff included: a staff key that can act in every organization still lists only its own memberships, so a runner never takes another customer's calls on your subscription. Byte passthrough to chat-service GET /internal/local-llm/orgs, scoped by the gateway to your memberships.",
+        "responses": {
+          "200": {
+            "description": "Your declared organizations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalLlmOrgsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamError"
+          },
+          "503": {
+            "$ref": "#/components/responses/ErrorResponse503YourMembershipsCouldNotBeReadRightNowMembershipUnavailable"
+          }
+        },
+        "operationId": "getV1LocalLlmOrgs",
         "parameters": [
           {
             "$ref": "#/components/parameters/XRequestId"
