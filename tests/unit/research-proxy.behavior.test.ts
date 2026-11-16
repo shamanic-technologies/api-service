@@ -61,7 +61,6 @@ const ROUTES: Array<[string, string]> = [
   ["/v1/features/research/engines", "/internal/research/engines"],
   ["/v1/features/research/engines/catalog?basis=user&view=mature", "/internal/research/engines/catalog?basis=user&view=mature"],
   ["/v1/features/research/engines/performance?view=flash", "/internal/research/engines/performance?view=flash"],
-  ["/v1/features/research/engines/live-scripts?measure=cost&pricing=actual", "/internal/research/engines/live-scripts?measure=cost&pricing=actual"],
 ];
 
 describe.each(ROUTES)("GET %s — staff", (path, downstream) => {
@@ -125,7 +124,6 @@ describe("GET /v1/features/research/script-engines — producer refusals byte-fo
 describe("GET /v1/features/research/engines/* — producer refusals byte-for-byte", () => {
   it.each([
     ["/v1/features/research/engines?view=nope", 400, { error: "View unrecognised", code: "view_unrecognised" }],
-    ["/v1/features/research/engines/live-scripts?measure=x", 404, { error: "Measure not found", code: "measure_not_found" }],
     ["/v1/features/research/engines/catalog", 502, { error: "Upstream unreadable" }],
     ["/v1/features/research/engines/performance", 503, { error: "Research not computed yet", code: "research_not_computed_yet" }],
   ])("%s passes the %i through, status and body", async (path, status, err) => {
@@ -133,5 +131,16 @@ describe("GET /v1/features/research/engines/* — producer refusals byte-for-byt
     const res = await request(buildApp()).get(path as string).set(STAFF);
     expect(res.status).toBe(status);
     expect(res.body).toEqual(err);
+  });
+});
+
+// RESEARCH-NATIVE-ENGINE-1116: the live-scripts workflow ranking was deleted (superseded by
+// script-engines). The gateway neither serves nor forwards it.
+describe("GET /v1/features/research/engines/live-scripts — deleted", () => {
+  it("404s and never reaches features-service", async () => {
+    stub(200, JSON.stringify(BODY));
+    const res = await request(buildApp()).get("/v1/features/research/engines/live-scripts?measure=cost").set(STAFF);
+    expect(res.status).toBe(404);
+    expect(calls).toHaveLength(0);
   });
 });
