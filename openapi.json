@@ -312,20 +312,6 @@
           "nullable": true
         }
       },
-      "PublicLegWorkflowRankingResponse": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": {
-          "nullable": true
-        }
-      },
-      "ResearchFileResponse": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": {
-          "nullable": true
-        }
-      },
       "ResearchConclusionsResponse": {
         "type": "object",
         "properties": {},
@@ -340,21 +326,7 @@
           "nullable": true
         }
       },
-      "ResearchCatalogResponse": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": {
-          "nullable": true
-        }
-      },
       "ResearchTemplatesResponse": {
-        "type": "object",
-        "properties": {},
-        "additionalProperties": {
-          "nullable": true
-        }
-      },
-      "ResearchPerformanceResponse": {
         "type": "object",
         "properties": {},
         "additionalProperties": {
@@ -12247,16 +12219,6 @@
           }
         }
       },
-      "ErrorResponse400MissingOrUnknownParameters": {
-        "description": "Missing or unknown parameters",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
       "ErrorResponse400InvalidParameters": {
         "description": "Invalid parameters",
         "content": {
@@ -17638,65 +17600,6 @@
           }
         },
         "operationId": "getV1PublicFeaturesWorkflowCostPerOutcome"
-      }
-    },
-    "/v1/public/features/leg-workflow-ranking": {
-      "get": {
-        "tags": [
-          "Features"
-        ],
-        "summary": "Public fleet ranking of every workflow on one leg",
-        "description": "Every workflow on one leg across every client org: cost per outcome, maturity, conversion, outcomes, spend and return, in the owner's order (the best mature workflow holds the money, learning ones cheaper than it above it). Proxied to features-service GET /public/stats/leg-workflow-ranking; query forwarded verbatim (featureSlug and leg are the ones documented today, not a whitelist). Response is producer-owned. No authentication required.",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "description": "Feature slug (required)."
-            },
-            "required": true,
-            "description": "Feature slug (required).",
-            "name": "featureSlug",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "description": "Funnel leg key, e.g. start_to_conversation (required)."
-            },
-            "required": true,
-            "description": "Funnel leg key, e.g. start_to_conversation (required).",
-            "name": "leg",
-            "in": "query"
-          },
-          {
-            "$ref": "#/components/parameters/XRequestId"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Leg workflow ranking — pass-through from features-service",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PublicLegWorkflowRankingResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "$ref": "#/components/responses/ErrorResponse400MissingOrUnknownParameters"
-          },
-          "404": {
-            "$ref": "#/components/responses/ErrorResponse404FeatureNotFound"
-          },
-          "429": {
-            "$ref": "#/components/responses/RateLimited"
-          },
-          "502": {
-            "$ref": "#/components/responses/ErrorResponse502UpstreamServiceError"
-          }
-        },
-        "operationId": "getV1PublicFeaturesLegWorkflowRanking"
       }
     },
     "/v1/public/features/cost-per-outcome-lifetime": {
