@@ -20126,6 +20126,73 @@ registry.registerPath({
   },
 });
 
+// RESEARCH-BY-ENGINE-1113-CG: writer LLMs read and set per Engine (the outcome they produce).
+const engineParam = z.string().describe("Engine key = the outcome it produces (e.g. `email_sent`)");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/content/engines/{engine}/models",
+  tags: ["Content"],
+  summary: "Every writer LLM with its staff status on one Engine (staff only)",
+  description:
+    `${catalogueStatusNote} Proxies content-generation-service GET /internal/engines/{engine}/models. ` +
+    "Answers `{ engine, models: [{ model, provider, dynasty, status, statusReason, statusChangedBy, statusChangedAt }] }`.",
+  security: platformAuth,
+  request: { params: z.object({ engine: engineParam }) },
+  responses: {
+    200: { description: "`{ engine, models }`", content: { "application/json": { schema: z.object({}).passthrough().openapi("EngineModelStatusList") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "UNKNOWN_ENGINE (forwarded verbatim)", content: errorContent },
+    502: { description: "ENGINE_CATALOGUE_UNAVAILABLE / MODEL_CATALOGUE_UNAVAILABLE (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/content/engines/{engine}/models/{model}/status",
+  tags: ["Content"],
+  summary: "Set a writer LLM's status on one Engine, active or deprecated (staff only)",
+  description:
+    `${catalogueStatusNote} Proxies content-generation-service PUT /internal/engines/{engine}/models/{model}/status. ` +
+    "Who deprecated is the verified staff email, never a body value. Answers `{ engine, model, provider, dynasty, status, statusReason, statusChangedBy, statusChangedAt }`.",
+  security: platformAuth,
+  request: {
+    params: z.object({ engine: engineParam, model: z.string().describe("Model name, e.g. `gemini-pro`") }),
+    body: { content: { "application/json": { schema: CatalogueStatusRequestSchema } } },
+  },
+  responses: {
+    ...catalogueStatusResponses("Status set"),
+    404: { description: "UNKNOWN_ENGINE or unknown model (forwarded verbatim)", content: errorContent },
+    502: { description: "ENGINE_CATALOGUE_UNAVAILABLE / MODEL_CATALOGUE_UNAVAILABLE (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/content/engines/{engine}/model-dynasties/{slug}/outputs",
+  tags: ["Content"],
+  summary: "The last messages one LLM dynasty (every version) wrote for one Engine, newest first (staff only)",
+  description:
+    "Every org; `{ engine, slug, name, modelIds, outputs }`, per output the generation id, when, medium (`email`, `whatsapp`, `threads`), " +
+    "template version (`promptType`) and its template dynasty (`{ slug, name, position }`), the exact model, tokens, subject and each email's text + delay " +
+    "(never org/lead ids or the raw prompt). `limit` 1..20, default 5 at the producer. " +
+    "Proxies content-generation-service GET /internal/engines/{engine}/model-dynasties/{slug}/outputs, query string verbatim.",
+  security: platformAuth,
+  request: {
+    params: z.object({ engine: engineParam, slug: z.string().describe("LLM dynasty slug (e.g. gemini-pro)") }),
+    query: z.object({ limit: z.string().optional().describe("How many outputs (producer default 5, producer bounds)") }).passthrough(),
+  },
+  responses: {
+    200: { description: "`{ engine, slug, name, modelIds, outputs }`", content: { "application/json": { schema: z.object({}).passthrough().openapi("EngineModelDynastyOutputs") } } },
+    400: { description: "Bad limit (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "UNKNOWN_ENGINE / MODEL_DYNASTY_NOT_FOUND (forwarded verbatim)", content: errorContent },
+    502: { description: "ENGINE_CATALOGUE_UNAVAILABLE / MODEL_CATALOGUE_UNAVAILABLE (forwarded verbatim)", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/v1/content/template-dynasties/{slug}/versions",

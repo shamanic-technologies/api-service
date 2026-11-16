@@ -11802,6 +11802,20 @@
           "nullable": true
         }
       },
+      "EngineModelStatusList": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "EngineModelDynastyOutputs": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "AddTemplateDynastyVersionRequest": {
         "type": "object",
         "properties": {},
@@ -16871,6 +16885,46 @@
       },
       "ErrorResponse502MODELCATALOGUEUNAVAILABLEForwardedVerbatim": {
         "description": "MODEL_CATALOGUE_UNAVAILABLE (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404UNKNOWNENGINEForwardedVerbatim": {
+        "description": "UNKNOWN_ENGINE (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502ENGINECATALOGUEUNAVAILABLEMODELCATALOGUEUNAVAILABLEForwarded": {
+        "description": "ENGINE_CATALOGUE_UNAVAILABLE / MODEL_CATALOGUE_UNAVAILABLE (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404UNKNOWNENGINEOrUnknownModelForwardedVerbatim": {
+        "description": "UNKNOWN_ENGINE or unknown model (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404UNKNOWNENGINEMODELDYNASTYNOTFOUNDForwardedVerbatim": {
+        "description": "UNKNOWN_ENGINE / MODEL_DYNASTY_NOT_FOUND (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {
