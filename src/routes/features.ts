@@ -187,29 +187,6 @@ router.get("/public/features/workflow-cost-per-outcome", async (req: Request, re
 });
 
 /**
- * GET /v1/public/features/leg-workflow-ranking
- * Every workflow on one leg, ranked at the fleet grain (every org's campaigns on the leg),
- * for the dashboard's Research pages, which name no org, brand, offer, campaign or audience.
- * Proxied to features-service GET /public/stats/leg-workflow-ranking.
- *
- * No identity of any kind (the producer route is public). The query string is forwarded
- * verbatim (featureSlug and leg are the documented parameters, not a whitelist), a
- * downstream error field-for-field, and the body is producer-owned.
- */
-router.get("/public/features/leg-workflow-ranking", async (req: Request, res: Response) => {
-  try {
-    const result = await callExternalService(
-      externalServices.features,
-      `/public/stats/leg-workflow-ranking${rawQueryString(req.originalUrl)}`,
-    );
-    res.json(result);
-  } catch (error: any) {
-    console.error("[api-service] Public leg workflow ranking error:", error.message);
-    respondUpstreamError(res, error, "Failed to get the public leg workflow ranking");
-  }
-});
-
-/**
  * GET /v1/public/features/cost-per-outcome-lifetime
  * Public lifetime (all-history) cross-org average cost-per-outcome across all objectives for a feature.
  * Proxied to features-service GET /public/stats/cost-per-outcome-lifetime.
@@ -1007,27 +984,24 @@ router.delete("/features/stated-monthly-amounts/:id", authenticatePlatform, requ
 });
 
 /**
- * GET /v1/features/research[/conclusions|/studies|/catalog|/templates|/performance|/script-engines|/engines[/catalog|/performance|/live-scripts]] — STAFF ONLY.
- * features-service's live Research file (the staff Research page of dashboard v2): the whole
- * file (`?basis=user|actual`; `actual` reveals our margin), the conclusion studies and the
- * measured studies, the catalogue (workflow, template and model pages, `?basis=`), the
- * template texts and the performance tab (every workflow x template x LLM combination per pipe,
- * `?basis=`). Fleet-wide, so no org identity and requireOrg is deliberately absent;
+ * GET /v1/features/research/(conclusions|studies|templates|script-engines|engines[/catalog|/performance|/live-scripts]) — STAFF ONLY.
+ * features-service's live Research (the staff Research page of dashboard v2), keyed by Engine
+ * and script (`?basis=user|actual`; `actual` reveals our margin): the conclusion and measured
+ * studies, the template texts, the script engines and the Engine file / catalogue /
+ * performance / live scripts. The pipe-keyed whole file, catalogue and performance reads and
+ * the public leg workflow ranking were retired (RESEARCH-BY-ENGINE-1113-RETIRE). Fleet-wide, so no org identity and requireOrg is deliberately absent;
  * authenticatePlatform + requireStaff are network-free, so a non-staff caller is refused
  * before any downstream call. Only the verified staff email is forwarded, for attribution.
  *
- * Byte passthroughs to features-service GET /internal/research[/conclusions|/studies|/catalog|/templates|/performance|/script-engines|/engines[/catalog|/performance|/live-scripts]]: query
+ * Byte passthroughs to features-service GET /internal/research/<same path>: query
  * verbatim (#11), status + body piped (#10) — including the 503 `research_not_computed_yet`
  * before the first build — errors field-for-field (#7). Declared BEFORE `/features/:slug/*`
  * so `research` (and `research/engines`) is never bound as a slug.
  */
 const RESEARCH_ROUTES: Array<[string, string, string]> = [
-  ["/features/research", "/internal/research", "Failed to get the research file"],
   ["/features/research/conclusions", "/internal/research/conclusions", "Failed to get the research conclusions"],
   ["/features/research/studies", "/internal/research/studies", "Failed to get the research studies"],
-  ["/features/research/catalog", "/internal/research/catalog", "Failed to get the research catalogue"],
   ["/features/research/templates", "/internal/research/templates", "Failed to get the research template texts"],
-  ["/features/research/performance", "/internal/research/performance", "Failed to get the research performance"],
   ["/features/research/script-engines", "/internal/research/script-engines", "Failed to get the research script engines"],
   // Research keyed by Engine and script, no pipe (RESEARCH-BY-ENGINE-1113).
   ["/features/research/engines", "/internal/research/engines", "Failed to get the research file by Engine"],

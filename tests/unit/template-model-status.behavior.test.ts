@@ -283,6 +283,9 @@ describe("template dynasties + new template text (staff, TPL-DYNASTY-1021-CG)", 
     ["get", "/v1/content/template-dynasties/a-b/outputs?limit=4", "/internal/template-dynasties/a-b/outputs?limit=4"],
     ["get", "/v1/content/workflow-dynasties/a-b/outputs?limit=30", "/internal/workflow-dynasties/a-b/outputs?limit=30"],
     ["get", "/v1/content/model-dynasties/gemini-pro/outputs?featureSlug=sales-cold-email-outreach&legKey=lead_found_to_conversation&limit=5", "/internal/model-dynasties/gemini-pro/outputs?featureSlug=sales-cold-email-outreach&legKey=lead_found_to_conversation&limit=5"],
+    ["get", "/v1/content/engines/email_sent/models", "/internal/engines/email_sent/models"],
+    ["get", "/v1/content/engines/email_sent/model-dynasties/gemini-pro/outputs?limit=5", "/internal/engines/email_sent/model-dynasties/gemini-pro/outputs?limit=5"],
+    ["get", "/v1/content/engines/email_sent/model-dynasties/gemini-pro/outputs", "/internal/engines/email_sent/model-dynasties/gemini-pro/outputs"],
     ["post", "/v1/content/template-dynasties/a-b/versions", "/internal/template-dynasties/a-b/versions"],
     ["post", "/v1/content/template-dynasties/a-b/merge", "/internal/template-dynasties/a-b/merge"],
   ] as const)("%s %s hits %s", async (method, path, downstream) => {
@@ -309,6 +312,19 @@ describe("template dynasties + new template text (staff, TPL-DYNASTY-1021-CG)", 
     expect(calls[0].options.headers["x-staff-email"]).toBe(STAFF);
   });
 
+  it("PUT /v1/content/engines/:engine/models/:model/status pipes the body, the verified staff email, and the producer's refusal back", async () => {
+    stubUpstream(400, { error: "reason required", code: "DEPRECATION_REASON_REQUIRED" });
+    const res = await staffPlatform(request(buildApp()).put("/v1/content/engines/email_sent/models/gemini-pro/status"))
+      .set("x-staff-email", "forged@evil.com")
+      .send({ status: "deprecated", reason: "writes too long" });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: "reason required", code: "DEPRECATION_REASON_REQUIRED" });
+    expect(calls[0].url).toBe(`${EMAILGEN_BASE}/internal/engines/email_sent/models/gemini-pro/status`);
+    expect(calls[0].options.method).toBe("PUT");
+    expect(JSON.parse(calls[0].options.body)).toEqual({ status: "deprecated", reason: "writes too long" });
+    expect(calls[0].options.headers["x-staff-email"]).toBe(STAFF);
+  });
+
   it("a staff key's version add carries the key user's email as x-staff-email", async () => {
     stubUpstream(201, {});
     await request(buildApp())
@@ -330,6 +346,9 @@ describe("template dynasties + new template text (staff, TPL-DYNASTY-1021-CG)", 
     ["get", "/v1/content/template-dynasties/a-b/outputs"],
     ["get", "/v1/content/workflow-dynasties/a-b/outputs"],
     ["get", "/v1/content/model-dynasties/a-b/outputs"],
+    ["get", "/v1/content/engines/email_sent/models"],
+    ["put", "/v1/content/engines/email_sent/models/gemini-pro/status"],
+    ["get", "/v1/content/engines/email_sent/model-dynasties/gemini-pro/outputs"],
     ["post", "/v1/content/template-dynasties/a-b/versions"],
     ["post", "/v1/content/template-dynasties/a-b/merge"],
     ["post", "/v1/content/platform-prompts"],

@@ -575,36 +575,10 @@ registry.registerPath({
   },
 });
 
-registry.registerPath({
-  method: "get",
-  path: "/v1/public/features/leg-workflow-ranking",
-  tags: ["Features"],
-  summary: "Public fleet ranking of every workflow on one leg",
-  description:
-    "Every workflow on one leg across every client org: cost per outcome, maturity, conversion, outcomes, spend and return, in the owner's order (the best mature workflow holds the money, learning ones cheaper than it above it). " +
-    "Proxied to features-service GET /public/stats/leg-workflow-ranking; query forwarded verbatim (featureSlug and leg are the ones documented today, not a whitelist). " +
-    "Response is producer-owned. No authentication required.",
-  request: {
-    query: z.object({
-      featureSlug: z.string().openapi({ description: "Feature slug (required)." }),
-      leg: z.string().openapi({ description: "Funnel leg key, e.g. start_to_conversation (required)." }),
-    }),
-  },
-  responses: {
-    200: { description: "Leg workflow ranking — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicLegWorkflowRankingResponse") } } },
-    400: { description: "Missing or unknown parameters", content: errorContent },
-    404: { description: "Feature not found", content: errorContent },
-    502: { description: "Upstream service error", content: errorContent },
-  },
-});
-
-const researchDocs: Array<{ path: string; downstream: string; summary: string; schema: string; query?: true | "outcome" | "view" | "measure"; notBuilt?: string }> = [
-  { path: "/v1/features/research", downstream: "/internal/research", summary: "Live Research file (staff only)", schema: "ResearchFileResponse", query: true },
+const researchDocs: Array<{ path: string; downstream: string; summary: string; schema: string; query?: "outcome" | "view" | "measure"; notBuilt?: string }> = [
   { path: "/v1/features/research/conclusions", downstream: "/internal/research/conclusions", summary: "Live Research conclusion studies (staff only)", schema: "ResearchConclusionsResponse" },
   { path: "/v1/features/research/studies", downstream: "/internal/research/studies", summary: "Live Research measured studies (staff only)", schema: "ResearchStudiesResponse" },
-  { path: "/v1/features/research/catalog", downstream: "/internal/research/catalog", summary: "Live Research catalogue: workflow, template and model pages per pipe (staff only)", schema: "ResearchCatalogResponse", query: true },
   { path: "/v1/features/research/templates", downstream: "/internal/research/templates", summary: "Live Research template texts by template id (staff only)", schema: "ResearchTemplatesResponse" },
-  { path: "/v1/features/research/performance", downstream: "/internal/research/performance", summary: "Live Research performance: every workflow x template x LLM combination per pipe, pipe totals and since-inception series (staff only)", schema: "ResearchPerformanceResponse", query: true },
   { path: "/v1/features/research/script-engines", downstream: "/internal/research/script-engines", summary: "Live Research script engines: per Engine, the scripts that compete and the one the Rating favours today, fleet-wide (staff only)", schema: "ResearchScriptEnginesResponse", query: "outcome", notBuilt: "503 script_engines_not_built_yet before its first build, 502 script_engines_unreadable" },
   { path: "/v1/features/research/engines", downstream: "/internal/research/engines", summary: "Live Research file keyed by Engine and script, no pipe (staff only)", schema: "ResearchEnginesFileResponse", query: "view" },
   { path: "/v1/features/research/engines/catalog", downstream: "/internal/research/engines/catalog", summary: "Live Research catalogue keyed by Engine and script (staff only)", schema: "ResearchEnginesCatalogResponse", query: "view" },
@@ -636,8 +610,6 @@ for (const doc of researchDocs) {
         }).passthrough() } }
       : doc.query === "outcome"
       ? { request: { query: z.object({ outcome: z.string().optional().openapi({ description: "One Engine's outcome key; absent = every Engine. Documented today, not a whitelist." }) }).passthrough() } }
-      : doc.query
-      ? { request: { query: z.object({ basis: z.string().optional().openapi({ description: "user (billed) or actual (vendor cost). Documented today, not a whitelist." }) }).passthrough() } }
       : {}),
     responses: {
       200: { description: "Research — pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi(doc.schema) } } },
@@ -20151,6 +20123,73 @@ registry.registerPath({
     403: { description: "Not staff", content: errorContent },
     404: { description: "MODEL_DYNASTY_NOT_FOUND (forwarded verbatim)", content: errorContent },
     502: { description: "MODEL_CATALOGUE_UNAVAILABLE (forwarded verbatim)", content: errorContent },
+  },
+});
+
+// RESEARCH-BY-ENGINE-1113-CG: writer LLMs read and set per Engine (the outcome they produce).
+const engineParam = z.string().describe("Engine key = the outcome it produces (e.g. `email_sent`)");
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/content/engines/{engine}/models",
+  tags: ["Content"],
+  summary: "Every writer LLM with its staff status on one Engine (staff only)",
+  description:
+    `${catalogueStatusNote} Proxies content-generation-service GET /internal/engines/{engine}/models. ` +
+    "Answers `{ engine, models: [{ model, provider, dynasty, status, statusReason, statusChangedBy, statusChangedAt }] }`.",
+  security: platformAuth,
+  request: { params: z.object({ engine: engineParam }) },
+  responses: {
+    200: { description: "`{ engine, models }`", content: { "application/json": { schema: z.object({}).passthrough().openapi("EngineModelStatusList") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "UNKNOWN_ENGINE (forwarded verbatim)", content: errorContent },
+    502: { description: "ENGINE_CATALOGUE_UNAVAILABLE / MODEL_CATALOGUE_UNAVAILABLE (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/content/engines/{engine}/models/{model}/status",
+  tags: ["Content"],
+  summary: "Set a writer LLM's status on one Engine, active or deprecated (staff only)",
+  description:
+    `${catalogueStatusNote} Proxies content-generation-service PUT /internal/engines/{engine}/models/{model}/status. ` +
+    "Who deprecated is the verified staff email, never a body value. Answers `{ engine, model, provider, dynasty, status, statusReason, statusChangedBy, statusChangedAt }`.",
+  security: platformAuth,
+  request: {
+    params: z.object({ engine: engineParam, model: z.string().describe("Model name, e.g. `gemini-pro`") }),
+    body: { content: { "application/json": { schema: CatalogueStatusRequestSchema } } },
+  },
+  responses: {
+    ...catalogueStatusResponses("Status set"),
+    404: { description: "UNKNOWN_ENGINE or unknown model (forwarded verbatim)", content: errorContent },
+    502: { description: "ENGINE_CATALOGUE_UNAVAILABLE / MODEL_CATALOGUE_UNAVAILABLE (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/content/engines/{engine}/model-dynasties/{slug}/outputs",
+  tags: ["Content"],
+  summary: "The last messages one LLM dynasty (every version) wrote for one Engine, newest first (staff only)",
+  description:
+    "Every org; `{ engine, slug, name, modelIds, outputs }`, per output the generation id, when, medium (`email`, `whatsapp`, `threads`), " +
+    "template version (`promptType`) and its template dynasty (`{ slug, name, position }`), the exact model, tokens, subject and each email's text + delay " +
+    "(never org/lead ids or the raw prompt). `limit` 1..20, default 5 at the producer. " +
+    "Proxies content-generation-service GET /internal/engines/{engine}/model-dynasties/{slug}/outputs, query string verbatim.",
+  security: platformAuth,
+  request: {
+    params: z.object({ engine: engineParam, slug: z.string().describe("LLM dynasty slug (e.g. gemini-pro)") }),
+    query: z.object({ limit: z.string().optional().describe("How many outputs (producer default 5, producer bounds)") }).passthrough(),
+  },
+  responses: {
+    200: { description: "`{ engine, slug, name, modelIds, outputs }`", content: { "application/json": { schema: z.object({}).passthrough().openapi("EngineModelDynastyOutputs") } } },
+    400: { description: "Bad limit (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    404: { description: "UNKNOWN_ENGINE / MODEL_DYNASTY_NOT_FOUND (forwarded verbatim)", content: errorContent },
+    502: { description: "ENGINE_CATALOGUE_UNAVAILABLE / MODEL_CATALOGUE_UNAVAILABLE (forwarded verbatim)", content: errorContent },
   },
 });
 

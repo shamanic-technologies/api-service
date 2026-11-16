@@ -264,6 +264,7 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "POST /v1/content/platform-prompts": NO,
   "PUT /v1/content/prompt-assignments": NO,
   "PUT /v1/content/models/{model}/status": NO,
+  "PUT /v1/content/engines/{engine}/models/{model}/status": NO,
   "PUT /v1/content/templates/{type}/status": NO,
   "POST /v1/content/template-dynasties": NO,
   "POST /v1/content/template-dynasties/{slug}/versions": NO,

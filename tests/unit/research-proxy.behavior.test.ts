@@ -52,15 +52,9 @@ beforeEach(() => {
 });
 
 const ROUTES: Array<[string, string]> = [
-  ["/v1/features/research?basis=actual", "/internal/research?basis=actual"],
-  ["/v1/features/research?basis=user&x=1&x=2", "/internal/research?basis=user&x=1&x=2"],
   ["/v1/features/research/conclusions", "/internal/research/conclusions"],
   ["/v1/features/research/studies", "/internal/research/studies"],
-  ["/v1/features/research/catalog?basis=actual", "/internal/research/catalog?basis=actual"],
-  ["/v1/features/research/catalog", "/internal/research/catalog"],
   ["/v1/features/research/templates", "/internal/research/templates"],
-  ["/v1/features/research/performance?basis=actual", "/internal/research/performance?basis=actual"],
-  ["/v1/features/research/performance", "/internal/research/performance"],
   ["/v1/features/research/script-engines?outcome=message_written", "/internal/research/script-engines?outcome=message_written"],
   ["/v1/features/research/script-engines", "/internal/research/script-engines"],
   ["/v1/features/research/engines?basis=actual&view=flash", "/internal/research/engines?basis=actual&view=flash"],
