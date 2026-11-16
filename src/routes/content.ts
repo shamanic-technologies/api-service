@@ -308,7 +308,36 @@ router.get("/content/model-dynasties/:slug/outputs", requireStaffKeyOrPlatform, 
     "Failed to read model dynasty outputs",
   ));
 
-/** POST /v1/content/template-dynasties/:slug/versions → POST /internal/template-dynasties/{slug}/versions (201, the new head). */
+// ---------------------------------------------------------------------------
+// Writer LLMs by Engine (RESEARCH-BY-ENGINE-1113-CG): an LLM's status on one Engine and the
+// last outputs one LLM dynasty wrote for it. Same staff gate, pipe and x-staff-email rule as
+// the status routes above. The pair-keyed `/content/models*` + `/content/model-dynasties/...`
+// routes stay (features-service still reads the producer's older routes).
+// ---------------------------------------------------------------------------
+
+/** GET /v1/content/engines/:engine/models → GET /internal/engines/{engine}/models (each writer LLM + its status on that Engine). */
+router.get("/content/engines/:engine/models", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(req, res, `/internal/engines/${encodeURIComponent(req.params.engine)}/models`, "Failed to list engine models"));
+
+/** PUT /v1/content/engines/:engine/models/:model/status → PUT /internal/engines/{engine}/models/{model}/status `{status, reason?}`. */
+router.put("/content/engines/:engine/models/:model/status", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(
+    req,
+    res,
+    `/internal/engines/${encodeURIComponent(req.params.engine)}/models/${encodeURIComponent(req.params.model)}/status`,
+    "Failed to set engine model status",
+  ));
+
+/** GET /v1/content/engines/:engine/model-dynasties/:slug/outputs?limit= → GET /internal/engines/{engine}/model-dynasties/{slug}/outputs (newest first). */
+router.get("/content/engines/:engine/model-dynasties/:slug/outputs", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
+  pipeContentStaff(
+    req,
+    res,
+    `/internal/engines/${encodeURIComponent(req.params.engine)}/model-dynasties/${encodeURIComponent(req.params.slug)}/outputs${rawQueryString(req.originalUrl)}`,
+    "Failed to read engine model dynasty outputs",
+  ));
+
+/** POST /v1/content/template-dynasties/:slug/versions →POST /internal/template-dynasties/{slug}/versions (201, the new head). */
 router.post("/content/template-dynasties/:slug/versions", requireStaffKeyOrPlatform, (req: AuthenticatedRequest, res) =>
   pipeContentStaff(req, res, `/internal/template-dynasties/${encodeURIComponent(req.params.slug)}/versions`, "Failed to add template dynasty version"));
 
