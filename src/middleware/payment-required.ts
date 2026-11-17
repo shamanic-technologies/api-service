@@ -108,7 +108,7 @@ async function answerForAgentOrg(
 function messageFor(status: PrepaidStatus): string {
   const how =
     `Prepay with POST ${PREPAID_CHECKOUT_PATH} (topup_amount_cents >= 1000 = $10, ` +
-    "auto_topup_amount_cents >= 1500 = $15, auto_topup_threshold_cents >= 500 = $5). " +
+    "auto_topup_amount_cents >= 1000 = $10, auto_topup_threshold_cents >= 500 = $5). " +
     "It returns a payment `url`: open it, or give it to your human to pay by card. Then retry this call.";
   switch (status.state) {
     case "card_not_reloadable":
