@@ -1998,6 +1998,12 @@ for (const { suffix, name, summary, detail } of [
     summary: "The Engines of one funnel campaign, in scripts",
     detail: "Per Engine the campaign needs, the scripts that make its outcome (a pick is always a script), as features-service serves it.",
   },
+  {
+    suffix: "outcome-forecast",
+    name: "CampaignOutcomeForecastResponse",
+    summary: "The outcome forecast of one funnel campaign",
+    detail: "The outcomes one funnel campaign is expected to make, as features-service forecasts them (`pricing=net` reads what the org pays).",
+  },
 ]) {
   registry.registerPath({
     method: "get",
