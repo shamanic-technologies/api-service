@@ -15,7 +15,7 @@ import {
  * `POST /v1/accounts/prepaid_checkout` and `GET /v1/accounts/prepaid_status`.
  *
  * Two owner-approved additions on the request, nothing on the response:
- *  - the minimums ($10 prepay, $15 reload, $5 threshold) are refused HERE with a
+ *  - the minimums ($10 prepay, $10 reload, $5 threshold) are refused HERE with a
  *    named error (owner: minimums are front validation; this gateway is the
  *    agent's front; billing binds the figures unclamped), see lib/agent-prepay;
  *  - `success_url` / `cancel_url` default to a distribute.you page when the

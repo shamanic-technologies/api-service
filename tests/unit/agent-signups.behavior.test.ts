@@ -138,7 +138,7 @@ describe("POST /v1/agent-signups/complete", () => {
     expect(res.body.prepay).toMatchObject({
       method: "POST",
       path: "/v1/billing/accounts/prepaid_checkout",
-      minimums_cents: { topup_amount_cents: 1000, auto_topup_amount_cents: 1500, auto_topup_threshold_cents: 500 },
+      minimums_cents: { topup_amount_cents: 1000, auto_topup_amount_cents: 1000, auto_topup_threshold_cents: 500 },
     });
   });
 
