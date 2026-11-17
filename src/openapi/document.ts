@@ -261,7 +261,7 @@ Send the key as \`Authorization: Bearer distrib.usr_...\` on every call, nothing
 Copilot follows, \`GET /v1/skills\` then \`GET /v1/skills/{slug}\`.
 
 Accounts opened through \`/v1/agent-signups\` have no free credit: free calls work at once; a call that spends money
-answers \`402 payment_required\` until the prepay is paid (minimum $10, plus a required auto top-up: at least $15
+answers \`402 payment_required\` until the prepay is paid (minimum $10, plus a required auto top-up: at least $10
 whenever the balance falls below at least $5).
 
 **\`GET /v1/me\`** says which user the key acts as and lists every organization

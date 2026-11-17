@@ -125,7 +125,7 @@ describe("agentPaymentRequired", () => {
       prepay: {
         method: "POST",
         path: "/v1/billing/accounts/prepaid_checkout",
-        minimums_cents: { topup_amount_cents: 1000, auto_topup_amount_cents: 1500, auto_topup_threshold_cents: 500 },
+        minimums_cents: { topup_amount_cents: 1000, auto_topup_amount_cents: 1000, auto_topup_threshold_cents: 500 },
         status_path: "/v1/billing/accounts/prepaid_status",
       },
       upstream: DOWNSTREAM_402,

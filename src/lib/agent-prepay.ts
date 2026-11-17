@@ -2,16 +2,19 @@
  * Prepay rules for organizations opened through the API (AI agents).
  *
  * Owner 2026-10-12: "By API the checkout amount (prepaid) can be set by them,
- * minimum $10. For the autotopup, minimum $15, when passing below $5 or more."
- * These minimums are the API's FRONT validation (owner: minimums are front
- * validation; billing-service binds the figures unclamped). Example: prepay
- * $10 → balance $10, auto top-up $15 whenever the balance would fall below $5.
+ * minimum $10 ... when passing below $5 or more." Owner 2026-11-11 replaced the
+ * old $15 reload minimum: « +10 dès qu'on arrive sous $5 … c'était exactement ma
+ * règle » (each reload ADDS at least $10, whatever the threshold; same rule as
+ * the dashboard checkout). These minimums are the API's FRONT validation
+ * (owner: minimums are front validation; billing-service binds the figures
+ * unclamped). Example: prepay $10, campaigns spend down to $4.90, the card is
+ * charged $10, balance $14.90.
  * No free credit, no trial, no subscription on this path.
  */
 
 export const PREPAY_MINIMUMS_CENTS = {
   topup_amount_cents: 1000,
-  auto_topup_amount_cents: 1500,
+  auto_topup_amount_cents: 1000,
   auto_topup_threshold_cents: 500,
 } as const;
 

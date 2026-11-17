@@ -18883,7 +18883,7 @@ registry.registerPath({
 // ---------------------------------------------------------------------------
 // AGENT SIGNUP + PREPAY — an AI agent opens an account, gets a key, prepays.
 // Owner 2026-10-12: no free credit, no trial, no subscription on this path;
-// prepaid with MANDATORY auto top-up; minimums $10 prepay / $15 reload / $5
+// prepaid with MANDATORY auto top-up; minimums $10 prepay / $10 reload / $5
 // threshold (front validation, src/lib/agent-prepay.ts).
 // ---------------------------------------------------------------------------
 
@@ -18939,7 +18939,7 @@ const PrepayInstructionsSchema = z
     path: z.string().openapi({ example: "/v1/billing/accounts/prepaid_checkout" }),
     minimums_cents: z.object({
       topup_amount_cents: z.number().int().openapi({ example: 1000 }),
-      auto_topup_amount_cents: z.number().int().openapi({ example: 1500 }),
+      auto_topup_amount_cents: z.number().int().openapi({ example: 1000 }),
       auto_topup_threshold_cents: z.number().int().openapi({ example: 500 }),
     }),
     example_body: z.object({}).passthrough(),
@@ -19029,7 +19029,7 @@ registry.registerPath({
 export const PrepaidCheckoutRequestSchema = z
   .object({
     topup_amount_cents: z.number().int().min(1000).describe("Charged now and credited exactly, in cents. Minimum 1000 ($10). You choose the amount").openapi({ example: 1000 }),
-    auto_topup_amount_cents: z.number().int().min(1500).describe("What each automatic reload charges the saved card, in cents. Minimum 1500 ($15)").openapi({ example: 1500 }),
+    auto_topup_amount_cents: z.number().int().min(1000).describe("What each automatic reload charges the saved card, in cents. Minimum 1000 ($10), whatever the threshold").openapi({ example: 1000 }),
     auto_topup_threshold_cents: z.number().int().min(500).describe("Reload when the balance would fall below this, in cents. Minimum 500 ($5)").openapi({ example: 500 }),
     success_url: z.string().url().optional().describe("Where the payer lands after paying (default: a distribute.you page)"),
     cancel_url: z.string().url().optional().describe("Where the payer lands if they cancel (default: a distribute.you page)"),
@@ -19047,11 +19047,11 @@ registry.registerPath({
     "hosted card payment page charging `topup_amount_cents`. Paying it credits the balance with exactly that amount " +
     "(no free credit is ever added), saves the card, and arms the MANDATORY automatic top-up: whenever the balance " +
     "would fall below `auto_topup_threshold_cents`, the card is charged `auto_topup_amount_cents`. Minimums: $10 " +
-    "prepay, $15 reload, $5 threshold; below a minimum the answer is 400 `amount_below_minimum` naming the `field` and " +
+    "prepay, $10 reload, $5 threshold; below a minimum the answer is 400 `amount_below_minimum` naming the `field` and " +
     "its `minimum_cents` (a missing or non-integer amount is 400 `invalid_amount`). No subscription on this path. " +
     "You cannot pay the page yourself unless you hold a card: give `url` to your human. Then poll " +
     "GET /v1/billing/accounts/prepaid_status until `state` is `active`. Example: prepay $10 → balance $10; it drops " +
-    "under $5 → the card is charged $15. Answer from billing-service, verbatim: `{url, session_id, org_id, " +
+    "to $4.90 → the card is charged $10, balance $14.90. Answer from billing-service, verbatim: `{url, session_id, org_id, " +
     "payment_mode: \"prepaid\", free_credit_offer, topup_amount_cents, auto_topup: {amount_cents, threshold_cents}}`.",
   security: authed,
   request: { body: { content: { "application/json": { schema: PrepaidCheckoutRequestSchema } } } },
