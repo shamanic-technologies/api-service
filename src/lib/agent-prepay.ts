@@ -1,13 +1,16 @@
 /**
  * Prepay instructions for organizations opened through the API (AI agents).
  *
- * Owner 2026-11-11: « +10 dès qu'on arrive sous $5 »: a prepaid org's automatic
- * reload ADDS the owner's minimum below at least the owner's threshold. Those
+ * Owner 2026-11-18: « enlever definitivement le seuil de $5. On mets $0 pour tout
+ * le monde. On ne permet pas de changer cette valeur nulle part »: the reload
+ * threshold is billing's ($0, not changeable), so these instructions never name
+ * nor send one. The reload AMOUNT minimum/default and the first top-up minimum
+ * are read from billing too. Those
  * figures have ONE home, billing-service (RELOAD-RULE-ONE-HOME-1118): a stale
  * local copy here ($15) gave a real client a $15 reload. So this file holds NO
  * amount: the instructions quote billing's `reload-rules` for the org, and the
  * prepaid checkout forwards the body to billing, which applies its default when
- * the auto top-up figures are absent and refuses anything under the org's rule
+ * the reload amount is absent and refuses anything under the org's rule
  * (400 `code` + `minimum_cents` + `error`, relayed verbatim).
  * No free credit, no trial, no subscription on this path.
  */
@@ -25,9 +28,7 @@ export const RELOAD_RULES_PATH = "/v1/billing/accounts/reload_rules";
 export interface ReloadRules {
   first_topup_minimum_cents: number;
   reload_amount_minimum_cents: number;
-  reload_threshold_minimum_cents: number;
   default_reload_amount_cents: number;
-  default_reload_threshold_cents: number;
 }
 
 export function usd(cents: number): string {
@@ -40,9 +41,7 @@ function isReloadRules(value: unknown): value is ReloadRules {
   return [
     "first_topup_minimum_cents",
     "reload_amount_minimum_cents",
-    "reload_threshold_minimum_cents",
     "default_reload_amount_cents",
-    "default_reload_threshold_cents",
   ].every((k) => typeof v[k] === "number");
 }
 
@@ -76,19 +75,17 @@ export function prepayInstructions(rules: ReloadRules | null) {
       ? {
           topup_amount_cents: rules.first_topup_minimum_cents,
           auto_topup_amount_cents: rules.reload_amount_minimum_cents,
-          auto_topup_threshold_cents: rules.reload_threshold_minimum_cents,
         }
       : null,
     defaults_cents: rules
       ? {
           auto_topup_amount_cents: rules.default_reload_amount_cents,
-          auto_topup_threshold_cents: rules.default_reload_threshold_cents,
         }
       : null,
     example_body: rules ? { topup_amount_cents: rules.first_topup_minimum_cents } : {},
     auto_topup:
-      "Omit `auto_topup_amount_cents` / `auto_topup_threshold_cents` to get the default automatic top-up, or send larger figures. " +
-      "An amount under the minimum answers 400 with `code` and `minimum_cents`.",
+      "The automatic top-up reloads the card when the balance runs out. Omit `auto_topup_amount_cents` to get the default " +
+      "reload amount, or send a larger one. An amount under the minimum answers 400 with `code` and `minimum_cents`.",
     returns:
       "`url`: a hosted card payment page. A human may need to open it and pay; nothing is charged until someone pays it.",
     then: `Poll GET ${PREPAID_STATUS_PATH} until \`state\` is \`active\`, then retry the call.`,
@@ -100,7 +97,7 @@ export function prepayInstructions(rules: ReloadRules | null) {
 export function prepayHowTo(rules: ReloadRules | null): string {
   const figures = rules
     ? `topup_amount_cents >= ${rules.first_topup_minimum_cents} (${usd(rules.first_topup_minimum_cents)}); the automatic top-up ` +
-      `adds ${usd(rules.default_reload_amount_cents)} below ${usd(rules.default_reload_threshold_cents)} unless you send larger figures`
+      `adds ${usd(rules.default_reload_amount_cents)} when the balance runs out, unless you send a larger auto_topup_amount_cents`
     : `minimums and defaults at GET ${RELOAD_RULES_PATH}`;
   return `Prepay with POST ${PREPAID_CHECKOUT_PATH} (${figures}).`;
 }
