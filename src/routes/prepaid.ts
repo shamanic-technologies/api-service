@@ -3,23 +3,19 @@ import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../
 import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { pipeExternalService, externalServices } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
-import {
-  checkPrepayAmounts,
-  DEFAULT_PREPAY_CANCEL_URL,
-  DEFAULT_PREPAY_SUCCESS_URL,
-} from "../lib/agent-prepay.js";
+import { DEFAULT_PREPAY_CANCEL_URL, DEFAULT_PREPAY_SUCCESS_URL } from "../lib/agent-prepay.js";
 
 /**
  * Prepaid checkout with MANDATORY auto top-up — the way an org opened through the
  * API (an AI agent) pays. Pass-through to billing-service
  * `POST /v1/accounts/prepaid_checkout` and `GET /v1/accounts/prepaid_status`.
  *
- * Two owner-approved additions on the request, nothing on the response:
- *  - the minimums ($10 prepay, $10 reload, $5 threshold) are refused HERE with a
- *    named error (owner: minimums are front validation; this gateway is the
- *    agent's front; billing binds the figures unclamped), see lib/agent-prepay;
- *  - `success_url` / `cancel_url` default to a distribute.you page when the
- *    caller sends none (an agent has no page of its own to come back to).
+ * One owner-approved addition on the request, nothing on the response:
+ * `success_url` / `cancel_url` default to a distribute.you page when the caller
+ * sends none (an agent has no page of its own to come back to).
+ * NO amount is checked here (RELOAD-RULE-ONE-HOME-1118): billing-service owns the
+ * prepay and reload minimums and defaults (absent auto top-up figures = its
+ * default), and its 400 (`error`, `code`, `minimum_cents`) is relayed verbatim.
  * Every other field is forwarded verbatim, and billing's status + body come back
  * byte-identical (pipe), refusals included (409 subscription_mode, owed money).
  */
@@ -31,9 +27,6 @@ router.post(
   requireOrg,
   requireUser,
   async (req: AuthenticatedRequest, res) => {
-    const refusal = checkPrepayAmounts(req.body);
-    if (refusal) return res.status(400).json(refusal);
-
     try {
       await pipeExternalService(externalServices.billing, "/v1/accounts/prepaid_checkout", {
         expressRes: res,

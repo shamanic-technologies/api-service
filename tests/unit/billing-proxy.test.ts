@@ -64,10 +64,10 @@ describe("Billing proxy routes", () => {
     // sales funnel caps routes (the per-campaign budget routes were removed 2026-10-14),
     // and the runway read, and the 3 monthly charge limit verbs, and the
     // top-up minimums read (its staff PUT is multi-line),
-    // and the postpaid pay_balance charge.
+    // and the postpaid pay_balance charge, and the reload rules read.
     const authMatches = content.match(/authenticate, requireOrg/g);
     expect(authMatches).not.toBeNull();
-    expect(authMatches!.length).toBe(41);
+    expect(authMatches!.length).toBe(42);
   });
 
   it("should use buildInternalHeaders for all authenticated endpoints (no x-key-source)", () => {
@@ -79,8 +79,8 @@ describe("Billing proxy routes", () => {
     // + the 4 per-plan handlers (cancel/resume share one) + the 2 pause/unpause loops
     // + the shared salesFunnelCapsProxy helper (2 branches) + the brand sales-funnel-caps list
     // + the runway read + the shared monthlyChargeLimitProxy helper (2 branches)
-    // + the top-up minimums GET and staff PUT + the postpaid pay_balance charge.
-    expect(headerMatches!.length).toBe(38);
+    // + the top-up minimums GET and staff PUT + the postpaid pay_balance charge + the reload rules read.
+    expect(headerMatches!.length).toBe(39);
   });
 
   it("should have GET /billing/payments endpoint sourced from stripe-service", () => {

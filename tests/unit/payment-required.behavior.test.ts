@@ -101,6 +101,20 @@ function stubFetch(offer: string | "billing_down") {
         { status: 200 },
       );
     }
+    if (url === `${BILLING_BASE}/internal/accounts/by-org/org-1/reload-rules`) {
+      if (offer === "billing_down") return new Response("boom", { status: 502 });
+      return new Response(
+        JSON.stringify({
+          org_id: "org-1",
+          first_topup_minimum_cents: 1000,
+          reload_amount_minimum_cents: 1000,
+          reload_threshold_minimum_cents: 500,
+          default_reload_amount_cents: 1000,
+          default_reload_threshold_cents: 500,
+        }),
+        { status: 200 },
+      );
+    }
     throw new Error(`unexpected fetch ${url}`);
   }) as any;
 }
@@ -131,6 +145,7 @@ describe("agentPaymentRequired", () => {
       upstream: DOWNSTREAM_402,
     });
     expect(res.body.message).toContain("POST /v1/billing/accounts/prepaid_checkout");
+    expect(res.body.message).toContain("adds $10.00 below $5.00");
   });
 
   it("recovers the 402 a route masked as a 500, for an agent org", async () => {
