@@ -104,9 +104,7 @@ describe("POST /v1/agent-signups/complete", () => {
         org_id: ACCOUNT.orgId,
         first_topup_minimum_cents: 1000,
         reload_amount_minimum_cents: 1000,
-        reload_threshold_minimum_cents: 500,
         default_reload_amount_cents: 1000,
-        default_reload_threshold_cents: 500,
       }),
     [`${KEY_BASE}/api-keys`]: (call: Call) => {
       keyCounter += 1;
@@ -152,7 +150,7 @@ describe("POST /v1/agent-signups/complete", () => {
       method: "POST",
       path: "/v1/billing/accounts/prepaid_checkout",
       rules_path: "/v1/billing/accounts/reload_rules",
-      minimums_cents: { topup_amount_cents: 1000, auto_topup_amount_cents: 1000, auto_topup_threshold_cents: 500 },
+      minimums_cents: { topup_amount_cents: 1000, auto_topup_amount_cents: 1000 },
     });
   });
 

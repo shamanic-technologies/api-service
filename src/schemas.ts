@@ -18905,7 +18905,7 @@ registry.registerPath({
 // ---------------------------------------------------------------------------
 // AGENT SIGNUP + PREPAY — an AI agent opens an account, gets a key, prepays.
 // Owner 2026-10-12: no free credit, no trial, no subscription on this path;
-// prepaid with MANDATORY auto top-up; the minimums and defaults are billing's
+// prepaid with MANDATORY auto top-up (threshold $0, billing's); the minimums and default are billing's
 // (GET /v1/billing/accounts/reload_rules), quoted by src/lib/agent-prepay.ts.
 // ---------------------------------------------------------------------------
 
@@ -18964,17 +18964,15 @@ const PrepayInstructionsSchema = z
       .object({
         topup_amount_cents: z.number().int(),
         auto_topup_amount_cents: z.number().int(),
-        auto_topup_threshold_cents: z.number().int(),
       })
       .nullable()
       .describe("The org's minimums, read from billing. null when billing could not be read: read `rules_path`"),
     defaults_cents: z
       .object({
         auto_topup_amount_cents: z.number().int(),
-        auto_topup_threshold_cents: z.number().int(),
       })
       .nullable()
-      .describe("The automatic top-up billing applies when the checkout omits it. null when billing could not be read"),
+      .describe("The reload amount billing applies when the checkout omits it. null when billing could not be read"),
     example_body: z.object({}).passthrough(),
     auto_topup: z.string(),
     returns: z.string(),
@@ -19064,7 +19062,7 @@ export const PrepaidCheckoutRequestSchema = z
   .object({
     topup_amount_cents: z.number().int().describe("Charged now and credited exactly, in cents. You choose the amount, at least the org's `first_topup_minimum_cents` (GET /v1/billing/accounts/reload_rules)"),
     auto_topup_amount_cents: z.number().int().optional().describe("What each automatic reload charges the saved card, in cents. Optional: absent = billing's default reload amount (see reload_rules); at least the org's reload amount minimum, whatever the threshold"),
-    auto_topup_threshold_cents: z.number().int().optional().describe("Reload when the balance would fall below this, in cents. Optional: absent = billing's default threshold (see reload_rules); at least the org's threshold minimum"),
+    auto_topup_threshold_cents: z.number().int().optional().describe("Deprecated: do not send. The reload threshold is billing's ($0 for everyone, owner 2026-11-18) and billing ignores a sent one"),
     success_url: z.string().url().optional().describe("Where the payer lands after paying (default: a distribute.you page)"),
     cancel_url: z.string().url().optional().describe("Where the payer lands if they cancel (default: a distribute.you page)"),
   })
@@ -19079,11 +19077,10 @@ registry.registerPath({
   description:
     "Call this when a call answered 402 `payment_required`, or before anything that spends money. Returns `url`, a " +
     "hosted card payment page charging `topup_amount_cents`. Paying it credits the balance with exactly that amount " +
-    "(no free credit is ever added), saves the card, and arms the MANDATORY automatic top-up: whenever the balance " +
-    "would fall below `auto_topup_threshold_cents`, the card is charged `auto_topup_amount_cents`. Omit both to get " +
-    "billing's default automatic top-up. The org's minimums and defaults are billing's: read them at " +
-    "GET /v1/billing/accounts/reload_rules. Below a minimum, billing answers 400 with `error`, `code` " +
-    "(`topup_below_minimum` | `reload_below_minimum` | `topup_threshold_below_minimum`) and `minimum_cents`, relayed " +
+    "(no free credit is ever added), saves the card, and arms the MANDATORY automatic top-up: when the balance runs " +
+    "out, the card is charged `auto_topup_amount_cents`. Omit it to get billing's default reload amount. The org's " +
+    "minimums and default are billing's: read them at GET /v1/billing/accounts/reload_rules. Below a minimum, billing " +
+    "answers 400 with `error`, `code` (`topup_below_minimum` | `reload_below_minimum`) and `minimum_cents`, relayed " +
     "verbatim. No subscription on this path. " +
     "You cannot pay the page yourself unless you hold a card: give `url` to your human. Then poll " +
     "GET /v1/billing/accounts/prepaid_status until `state` is `active`. Answer from billing-service, verbatim: `{url, session_id, org_id, " +
