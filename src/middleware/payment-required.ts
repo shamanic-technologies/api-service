@@ -2,7 +2,7 @@ import type { Response, NextFunction } from "express";
 import type { AuthenticatedRequest } from "./auth.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { runWithUpstreamPaymentState, upstreamPaymentRequiredBody } from "../lib/upstream-payment.js";
-import { PREPAID_CHECKOUT_PATH, prepayInstructions } from "../lib/agent-prepay.js";
+import { fetchReloadRules, PREPAID_CHECKOUT_PATH, prepayHowTo, prepayInstructions, type ReloadRules } from "../lib/agent-prepay.js";
 import { asSalesFunnelCapRefusal, namedSalesFunnelCapBody } from "../lib/sales-funnel-cap.js";
 
 /** billing-service's mark on an org opened through the API: no free credit, prepaid only. */
@@ -23,7 +23,7 @@ interface PrepaidStatus {
  * already refuse a call the org cannot pay for (402), but each in its own shape,
  * and many route catches here re-emit it as a 500. For a key-authenticated call
  * on an org billing marks `agent_api`, this turns that refusal into one legible
- * 402: what happened, the balance, and the exact prepay route with its minimums.
+ * 402: what happened, the balance, and the exact prepay route with the org's minimums (read from billing).
  * The downstream's own body stays under `upstream`.
  *
  * Fires only when the response is an error AND (it is a 402, or a downstream
@@ -92,23 +92,23 @@ async function answerForAgentOrg(
     return;
   }
 
+  const rules = await fetchReloadRules(req.orgId!);
   res.status(402);
   res.setHeader("Link", `<${PREPAID_CHECKOUT_PATH}>; rel="payment"`);
   send({
     error: "payment_required",
     code: "payment_required",
-    message: messageFor(status),
+    message: messageFor(status, rules),
     balance_cents: status.balance_cents ?? null,
     prepaid_state: status.state ?? null,
-    prepay: prepayInstructions(),
+    prepay: prepayInstructions(rules),
     upstream: upstream !== undefined ? parseOrRaw(upstream) : body,
   });
 }
 
-function messageFor(status: PrepaidStatus): string {
+function messageFor(status: PrepaidStatus, rules: ReloadRules | null): string {
   const how =
-    `Prepay with POST ${PREPAID_CHECKOUT_PATH} (topup_amount_cents >= 1000 = $10, ` +
-    "auto_topup_amount_cents >= 1000 = $10, auto_topup_threshold_cents >= 500 = $5). " +
+    `${prepayHowTo(rules)} ` +
     "It returns a payment `url`: open it, or give it to your human to pay by card. Then retry this call.";
   switch (status.state) {
     case "card_not_reloadable":

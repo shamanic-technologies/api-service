@@ -52,74 +52,61 @@ beforeEach(() => {
   calls = [];
 });
 
-const AT_MINIMUMS = { topup_amount_cents: 1000, auto_topup_amount_cents: 1000, auto_topup_threshold_cents: 500 };
+const BODY = { topup_amount_cents: 1000, auto_topup_amount_cents: 1000, auto_topup_threshold_cents: 500 };
+const RULES = {
+  org_id: "org-1",
+  first_topup_minimum_cents: 1000,
+  reload_amount_minimum_cents: 1000,
+  reload_threshold_minimum_cents: 500,
+  default_reload_amount_cents: 1000,
+  default_reload_threshold_cents: 500,
+};
 
 describe("POST /v1/billing/accounts/prepaid_checkout", () => {
-  it.each([
-    ["topup_amount_cents", { ...AT_MINIMUMS, topup_amount_cents: 999 }, 1000],
-    ["auto_topup_amount_cents", { ...AT_MINIMUMS, auto_topup_amount_cents: 999 }, 1000],
-    ["auto_topup_threshold_cents", { ...AT_MINIMUMS, auto_topup_threshold_cents: 499 }, 500],
-  ])("refuses %s below its minimum with a named error, calling nothing", async (field, body, minimum) => {
-    stubFetch(200, {});
-    const res = await request(buildApp()).post("/v1/billing/accounts/prepaid_checkout").send(body);
-
-    expect(res.status).toBe(400);
-    expect(res.body).toMatchObject({ error: "amount_below_minimum", code: "amount_below_minimum", field, minimum_cents: minimum });
-    expect(res.body.message).toContain(field);
-    expect(calls).toHaveLength(0);
-  });
-
-  // AGENT-RELOAD-10-1117, owner 2026-11-11: « +10 dès qu'on arrive sous $5 ».
-  // Prod 2026-11-17 a lead's link with topup 1000 / threshold 500 / reload 1000 was
-  // refused "must be at least 1500 ($15.00)". A $10 reload is accepted, $9.99 is not.
-  it("accepts a $10 reload (topup 1000, threshold 500, reload 1000) and returns the payment url", async () => {
-    stubFetch(200, { url: "https://checkout.stripe.com/c/pay/cs_10" });
+  // RELOAD-RULE-ONE-HOME-1118: billing owns every minimum; the gateway checks none.
+  it("forwards an amount under the minimum to billing and relays its 400 verbatim", async () => {
+    const refusal = { error: "auto_topup_amount_cents must be at least 1000", code: "reload_below_minimum", minimum_cents: 1000 };
+    stubFetch(400, refusal);
     const res = await request(buildApp())
       .post("/v1/billing/accounts/prepaid_checkout")
-      .send({ topup_amount_cents: 1000, auto_topup_threshold_cents: 500, auto_topup_amount_cents: 1000 });
-    expect(res.status).toBe(200);
-    expect(res.body.url).toBe("https://checkout.stripe.com/c/pay/cs_10");
+      .send({ ...BODY, auto_topup_amount_cents: 999 });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual(refusal);
     expect(calls).toHaveLength(1);
-    expect(calls[0].body.auto_topup_amount_cents).toBe(1000);
+    expect(calls[0].body.auto_topup_amount_cents).toBe(999);
   });
 
-  it("refuses a 999-cent reload naming the $10 minimum", async () => {
-    stubFetch(200, {});
-    const res = await request(buildApp())
-      .post("/v1/billing/accounts/prepaid_checkout")
-      .send({ topup_amount_cents: 1000, auto_topup_threshold_cents: 500, auto_topup_amount_cents: 999 });
-    expect(res.status).toBe(400);
-    expect(res.body).toMatchObject({ code: "amount_below_minimum", field: "auto_topup_amount_cents", minimum_cents: 1000 });
-    expect(res.body.message).toContain("$10.00");
-    expect(calls).toHaveLength(0);
+  it("sends no auto top-up figure when the caller sends none (billing applies its default)", async () => {
+    stubFetch(200, { url: "u" });
+    const res = await request(buildApp()).post("/v1/billing/accounts/prepaid_checkout").send({ topup_amount_cents: 1000 });
+    expect(res.status).toBe(200);
+    expect(calls[0].body).not.toHaveProperty("auto_topup_amount_cents");
+    expect(calls[0].body).not.toHaveProperty("auto_topup_threshold_cents");
   });
 
-  it("the prepay instructions an agent reads default the reload to 1000 cents ($10)", () => {
-    const how = prepayInstructions();
-    expect(how.minimums_cents.auto_topup_amount_cents).toBe(1000);
-    expect(how.example_body.auto_topup_amount_cents).toBe(1000);
+  it("passes a larger reload the person chose ($50) through untouched", async () => {
+    stubFetch(200, { url: "u" });
+    await request(buildApp()).post("/v1/billing/accounts/prepaid_checkout").send({ ...BODY, auto_topup_amount_cents: 5000 });
+    expect(calls[0].body.auto_topup_amount_cents).toBe(5000);
   });
 
-  it("refuses a missing or fractional amount as invalid_amount", async () => {
-    stubFetch(200, {});
-    const missing = await request(buildApp())
-      .post("/v1/billing/accounts/prepaid_checkout")
-      .send({ topup_amount_cents: 1000, auto_topup_amount_cents: 1000 });
-    expect(missing.status).toBe(400);
-    expect(missing.body).toMatchObject({ code: "invalid_amount", field: "auto_topup_threshold_cents", minimum_cents: 500 });
-
-    const fractional = await request(buildApp())
-      .post("/v1/billing/accounts/prepaid_checkout")
-      .send({ ...AT_MINIMUMS, topup_amount_cents: 1000.5 });
-    expect(fractional.body).toMatchObject({ code: "invalid_amount", field: "topup_amount_cents" });
-    expect(calls).toHaveLength(0);
+  it("the prepay instructions quote billing's rules, and hold no figure when billing could not be read", () => {
+    const how = prepayInstructions(RULES);
+    expect(how.minimums_cents).toEqual({ topup_amount_cents: 1000, auto_topup_amount_cents: 1000, auto_topup_threshold_cents: 500 });
+    expect(how.defaults_cents).toEqual({ auto_topup_amount_cents: 1000, auto_topup_threshold_cents: 500 });
+    expect(how.example_body).toEqual({ topup_amount_cents: 1000 });
+    const blind = prepayInstructions(null);
+    expect(blind.minimums_cents).toBeNull();
+    expect(blind.defaults_cents).toBeNull();
+    expect(blind.example_body).toEqual({});
+    expect(blind.rules_path).toBe("/v1/billing/accounts/reload_rules");
   });
 
-  it("at the minimums forwards to billing with the org identity and default return pages, answer verbatim", async () => {
+  it("forwards to billing with the org identity and default return pages, answer verbatim", async () => {
     const upstream = { url: "https://checkout.stripe.com/c/pay/cs_test", session_id: "cs_test", org_id: "org-1", payment_mode: "prepaid" };
     stubFetch(200, upstream);
 
-    const res = await request(buildApp()).post("/v1/billing/accounts/prepaid_checkout").send(AT_MINIMUMS);
+    const res = await request(buildApp()).post("/v1/billing/accounts/prepaid_checkout").send(BODY);
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual(upstream);
@@ -130,7 +117,7 @@ describe("POST /v1/billing/accounts/prepaid_checkout", () => {
     expect(calls[0].headers["x-user-id"]).toBe("user-1");
     expect(calls[0].headers["x-run-id"]).toBe("run-1");
     expect(calls[0].body).toEqual({
-      ...AT_MINIMUMS,
+      ...BODY,
       success_url: "https://distribute.you/?prepaid=paid",
       cancel_url: "https://distribute.you/?prepaid=cancelled",
     });
@@ -140,10 +127,10 @@ describe("POST /v1/billing/accounts/prepaid_checkout", () => {
     stubFetch(200, { url: "u" });
     await request(buildApp())
       .post("/v1/billing/accounts/prepaid_checkout")
-      .send({ ...AT_MINIMUMS, topup_amount_cents: 5000, success_url: "https://a.example/ok", cancel_url: "https://a.example/no", consent: { x: 1 } });
+      .send({ ...BODY, topup_amount_cents: 5000, success_url: "https://a.example/ok", cancel_url: "https://a.example/no", consent: { x: 1 } });
 
     expect(calls[0].body).toEqual({
-      ...AT_MINIMUMS,
+      ...BODY,
       topup_amount_cents: 5000,
       success_url: "https://a.example/ok",
       cancel_url: "https://a.example/no",
@@ -154,7 +141,7 @@ describe("POST /v1/billing/accounts/prepaid_checkout", () => {
   it("forwards billing's 409 status and body", async () => {
     const refusal = { error: "This organization pays by subscription; prepaid checkout is not available.", code: "subscription_mode" };
     stubFetch(409, refusal);
-    const res = await request(buildApp()).post("/v1/billing/accounts/prepaid_checkout").send(AT_MINIMUMS);
+    const res = await request(buildApp()).post("/v1/billing/accounts/prepaid_checkout").send(BODY);
     expect(res.status).toBe(409);
     expect(res.body).toEqual(refusal);
   });

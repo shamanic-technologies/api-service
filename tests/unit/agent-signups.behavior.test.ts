@@ -2,14 +2,17 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import request from "supertest";
 import express from "express";
 
-const { CLIENT_BASE, KEY_BASE } = vi.hoisted(() => {
+const { CLIENT_BASE, KEY_BASE, BILLING_BASE } = vi.hoisted(() => {
   const CLIENT_BASE = "http://client.test.local";
   const KEY_BASE = "http://key.test.local";
+  const BILLING_BASE = "http://billing.test.local";
+  process.env.BILLING_SERVICE_URL = BILLING_BASE;
+  process.env.BILLING_SERVICE_API_KEY = "billing-test-key";
   process.env.CLIENT_SERVICE_URL = CLIENT_BASE;
   process.env.CLIENT_SERVICE_API_KEY = "client-test-key";
   process.env.KEY_SERVICE_URL = KEY_BASE;
   process.env.KEY_SERVICE_API_KEY = "key-test-key";
-  return { CLIENT_BASE, KEY_BASE };
+  return { CLIENT_BASE, KEY_BASE, BILLING_BASE };
 });
 
 /**
@@ -96,6 +99,15 @@ describe("POST /v1/agent-signups/start", () => {
 describe("POST /v1/agent-signups/complete", () => {
   const handlers = {
     [`${CLIENT_BASE}/internal/agent-signups/complete`]: () => jsonResponse(200, ACCOUNT),
+    [`${BILLING_BASE}/internal/accounts/by-org/${ACCOUNT.orgId}/reload-rules`]: () =>
+      jsonResponse(200, {
+        org_id: ACCOUNT.orgId,
+        first_topup_minimum_cents: 1000,
+        reload_amount_minimum_cents: 1000,
+        reload_threshold_minimum_cents: 500,
+        default_reload_amount_cents: 1000,
+        default_reload_threshold_cents: 500,
+      }),
     [`${KEY_BASE}/api-keys`]: (call: Call) => {
       keyCounter += 1;
       return jsonResponse(200, {
@@ -118,13 +130,14 @@ describe("POST /v1/agent-signups/complete", () => {
     expect(res.status).toBe(200);
     expect(calls.map((c) => c.url)).toEqual([
       `${CLIENT_BASE}/internal/agent-signups/complete`,
+      `${BILLING_BASE}/internal/accounts/by-org/${ACCOUNT.orgId}/reload-rules`,
       `${KEY_BASE}/api-keys`,
     ]);
     expect(calls[0].body).toEqual({ email: "agent@example.com", code: "123456" });
-    expect(calls[1].method).toBe("POST");
-    expect(calls[1].headers["x-org-id"]).toBe(ACCOUNT.orgId);
-    expect(calls[1].headers["x-user-id"]).toBe(ACCOUNT.userId);
-    expect(calls[1].body).toEqual({ userId: ACCOUNT.userId, createdBy: ACCOUNT.userId, name: "my agent" });
+    expect(calls[2].method).toBe("POST");
+    expect(calls[2].headers["x-org-id"]).toBe(ACCOUNT.orgId);
+    expect(calls[2].headers["x-user-id"]).toBe(ACCOUNT.userId);
+    expect(calls[2].body).toEqual({ userId: ACCOUNT.userId, createdBy: ACCOUNT.userId, name: "my agent" });
     expect(res.body).toMatchObject({
       apiKey: "distrib.usr_secret1",
       apiKeyId: "key-id-1",
@@ -138,6 +151,7 @@ describe("POST /v1/agent-signups/complete", () => {
     expect(res.body.prepay).toMatchObject({
       method: "POST",
       path: "/v1/billing/accounts/prepaid_checkout",
+      rules_path: "/v1/billing/accounts/reload_rules",
       minimums_cents: { topup_amount_cents: 1000, auto_topup_amount_cents: 1000, auto_topup_threshold_cents: 500 },
     });
   });

@@ -8233,6 +8233,28 @@ registry.registerPath({
   },
 });
 
+// Reload rules — the org's prepaid reload rules, owned by billing-service
+// (RELOAD-RULE-ONE-HOME-1118). Pass-through to billing GET /v1/accounts/reload_rules.
+registry.registerPath({
+  method: "get",
+  path: "/v1/billing/accounts/reload_rules",
+  tags: ["Billing"],
+  summary: "Get the org's prepaid reload rules",
+  description:
+    "The smallest first top-up, the smallest automatic reload amount and threshold, and the default automatic " +
+    "top-up billing applies when a prepaid checkout sends no auto top-up figures. billing-service is the one home of " +
+    "these figures: read them here, never hold a copy. Answer from billing-service, verbatim: `{org_id, " +
+    "first_topup_minimum_cents, reload_amount_minimum_cents, reload_threshold_minimum_cents, " +
+    "and the two `default_reload_*_cents` figures}` (the defaults = the automatic top-up amount and threshold applied " +
+    "when a checkout omits them). Works for an org with no billing account yet.",
+  security: authed,
+  responses: {
+    200: { description: "Reload rules in force: pass-through from billing-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("ReloadRulesResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    502: { description: "billing-service unavailable", content: errorContent },
+  },
+});
+
 // Top-up minimums — the smallest top-up and auto-reload threshold this org may set.
 // Pass-through to billing-service /v1/accounts/topup_minimums. GET: any org member.
 // PUT: staff only (requireStaffActor), listed in STAFF_KEY_OPERATIONS.
@@ -18883,8 +18905,8 @@ registry.registerPath({
 // ---------------------------------------------------------------------------
 // AGENT SIGNUP + PREPAY — an AI agent opens an account, gets a key, prepays.
 // Owner 2026-10-12: no free credit, no trial, no subscription on this path;
-// prepaid with MANDATORY auto top-up; minimums $10 prepay / $10 reload / $5
-// threshold (front validation, src/lib/agent-prepay.ts).
+// prepaid with MANDATORY auto top-up; the minimums and defaults are billing's
+// (GET /v1/billing/accounts/reload_rules), quoted by src/lib/agent-prepay.ts.
 // ---------------------------------------------------------------------------
 
 const AGENT_FLOW =
@@ -18937,12 +18959,24 @@ const PrepayInstructionsSchema = z
   .object({
     method: z.literal("POST"),
     path: z.string().openapi({ example: "/v1/billing/accounts/prepaid_checkout" }),
-    minimums_cents: z.object({
-      topup_amount_cents: z.number().int().openapi({ example: 1000 }),
-      auto_topup_amount_cents: z.number().int().openapi({ example: 1000 }),
-      auto_topup_threshold_cents: z.number().int().openapi({ example: 500 }),
-    }),
+    rules_path: z.string().describe("Where the org's minimums and defaults are read (billing-service owns them)").openapi({ example: "/v1/billing/accounts/reload_rules" }),
+    minimums_cents: z
+      .object({
+        topup_amount_cents: z.number().int(),
+        auto_topup_amount_cents: z.number().int(),
+        auto_topup_threshold_cents: z.number().int(),
+      })
+      .nullable()
+      .describe("The org's minimums, read from billing. null when billing could not be read: read `rules_path`"),
+    defaults_cents: z
+      .object({
+        auto_topup_amount_cents: z.number().int(),
+        auto_topup_threshold_cents: z.number().int(),
+      })
+      .nullable()
+      .describe("The automatic top-up billing applies when the checkout omits it. null when billing could not be read"),
     example_body: z.object({}).passthrough(),
+    auto_topup: z.string(),
     returns: z.string(),
     then: z.string(),
     status_path: z.string().openapi({ example: "/v1/billing/accounts/prepaid_status" }),
@@ -19028,9 +19062,9 @@ registry.registerPath({
 
 export const PrepaidCheckoutRequestSchema = z
   .object({
-    topup_amount_cents: z.number().int().min(1000).describe("Charged now and credited exactly, in cents. Minimum 1000 ($10). You choose the amount").openapi({ example: 1000 }),
-    auto_topup_amount_cents: z.number().int().min(1000).describe("What each automatic reload charges the saved card, in cents. Minimum 1000 ($10), whatever the threshold").openapi({ example: 1000 }),
-    auto_topup_threshold_cents: z.number().int().min(500).describe("Reload when the balance would fall below this, in cents. Minimum 500 ($5)").openapi({ example: 500 }),
+    topup_amount_cents: z.number().int().describe("Charged now and credited exactly, in cents. You choose the amount, at least the org's `first_topup_minimum_cents` (GET /v1/billing/accounts/reload_rules)"),
+    auto_topup_amount_cents: z.number().int().optional().describe("What each automatic reload charges the saved card, in cents. Optional: absent = billing's default reload amount (see reload_rules); at least the org's reload amount minimum, whatever the threshold"),
+    auto_topup_threshold_cents: z.number().int().optional().describe("Reload when the balance would fall below this, in cents. Optional: absent = billing's default threshold (see reload_rules); at least the org's threshold minimum"),
     success_url: z.string().url().optional().describe("Where the payer lands after paying (default: a distribute.you page)"),
     cancel_url: z.string().url().optional().describe("Where the payer lands if they cancel (default: a distribute.you page)"),
   })
@@ -19046,18 +19080,19 @@ registry.registerPath({
     "Call this when a call answered 402 `payment_required`, or before anything that spends money. Returns `url`, a " +
     "hosted card payment page charging `topup_amount_cents`. Paying it credits the balance with exactly that amount " +
     "(no free credit is ever added), saves the card, and arms the MANDATORY automatic top-up: whenever the balance " +
-    "would fall below `auto_topup_threshold_cents`, the card is charged `auto_topup_amount_cents`. Minimums: $10 " +
-    "prepay, $10 reload, $5 threshold; below a minimum the answer is 400 `amount_below_minimum` naming the `field` and " +
-    "its `minimum_cents` (a missing or non-integer amount is 400 `invalid_amount`). No subscription on this path. " +
+    "would fall below `auto_topup_threshold_cents`, the card is charged `auto_topup_amount_cents`. Omit both to get " +
+    "billing's default automatic top-up. The org's minimums and defaults are billing's: read them at " +
+    "GET /v1/billing/accounts/reload_rules. Below a minimum, billing answers 400 with `error`, `code` " +
+    "(`topup_below_minimum` | `reload_below_minimum` | `topup_threshold_below_minimum`) and `minimum_cents`, relayed " +
+    "verbatim. No subscription on this path. " +
     "You cannot pay the page yourself unless you hold a card: give `url` to your human. Then poll " +
-    "GET /v1/billing/accounts/prepaid_status until `state` is `active`. Example: prepay $10 → balance $10; it drops " +
-    "to $4.90 → the card is charged $10, balance $14.90. Answer from billing-service, verbatim: `{url, session_id, org_id, " +
+    "GET /v1/billing/accounts/prepaid_status until `state` is `active`. Answer from billing-service, verbatim: `{url, session_id, org_id, " +
     "payment_mode: \"prepaid\", free_credit_offer, topup_amount_cents, auto_topup: {amount_cents, threshold_cents}}`.",
   security: authed,
   request: { body: { content: { "application/json": { schema: PrepaidCheckoutRequestSchema } } } },
   responses: {
     200: { description: "Payment page ready", content: { "application/json": { schema: z.object({}).passthrough().openapi("PrepaidCheckoutResponse") } } },
-    400: { description: "`amount_below_minimum` / `invalid_amount` (`field`, `minimum_cents`, `message`), or billing's own refusal of the body", content: errorContent },
+    400: { description: "billing-service's refusal of the body, verbatim: an amount under the org's minimum (`error`, `code`, `minimum_cents`) or a malformed body", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     409: { description: "`subscription_mode` (this org pays by subscription), or money still owed (`code`, `owed_cents`)", content: errorContent },
     502: { description: "Payment provider unavailable; retry", content: errorContent },
