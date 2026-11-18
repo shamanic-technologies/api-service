@@ -190,6 +190,23 @@ router.put(
   }
 );
 
+// GET /v1/billing/accounts/reload_rules — the org's prepaid reload rules (first
+// top-up minimum, reload amount/threshold minimums and defaults). billing-service
+// is their ONE home (RELOAD-RULE-ONE-HOME-1118): a page or an agent reads them
+// here instead of holding its own copy. Body and status forwarded verbatim.
+router.get("/billing/accounts/reload_rules", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+  try {
+    const result = await callExternalService(
+      externalServices.billing,
+      "/v1/accounts/reload_rules",
+      { method: "GET", headers: buildInternalHeaders(req) }
+    );
+    res.json(result);
+  } catch (error: any) {
+    respondUpstreamError(res, error, "Failed to read reload rules");
+  }
+});
+
 // PATCH /v1/billing/accounts/auto_topup — configure auto-topup
 router.patch("/billing/accounts/auto_topup", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {

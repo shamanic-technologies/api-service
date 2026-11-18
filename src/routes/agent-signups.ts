@@ -1,7 +1,7 @@
 import express, { Router } from "express";
 import { callExternalService, externalServices, pipeExternalService } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
-import { prepayInstructions } from "../lib/agent-prepay.js";
+import { fetchReloadRules, prepayInstructions } from "../lib/agent-prepay.js";
 
 /**
  * Public signup for AI agents: email + phone → 6-digit code by email → API key.
@@ -116,6 +116,9 @@ router.post("/agent-signups/complete", async (req, res) => {
     return respondUpstreamError(res, error, "Failed to verify the signup code");
   }
 
+  // Read before minting: the key is shown ONCE, so nothing slow runs after it exists.
+  const reloadRules = await fetchReloadRules(account.orgId);
+
   let minted: MintedKey;
   try {
     minted = await callExternalService<MintedKey>(externalServices.key, "/api-keys", {
@@ -148,7 +151,7 @@ router.post("/agent-signups/complete", async (req, res) => {
     contactPhone: account.contactPhone,
     created: account.created,
     usage: "Send it as `Authorization: Bearer <apiKey>` on every call. First call: GET /v1/me. To open a first client (brand, offer, audience, email preview, prepay, campaign), follow GET /v1/me/openapi.json?view=onboarding in order; GET /v1/skills says how to decide each step.",
-    prepay: prepayInstructions(),
+    prepay: prepayInstructions(reloadRules),
   });
 });
 
