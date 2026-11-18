@@ -207,10 +207,13 @@ router.get("/billing/accounts/reload_rules", authenticate, requireOrg, async (re
   }
 });
 
-// PATCH /v1/billing/accounts/auto_topup — configure auto-topup
+// PATCH /v1/billing/accounts/auto_topup — configure auto-topup. Only the reload amount
+// is required: the threshold is billing's (owner 2026-11-18: « On mets $0 pour tout le
+// monde. On ne permet pas de changer cette valeur nulle part »), so a caller sends none
+// and billing applies its own. A sent one is still forwarded as-is (billing decides).
 router.patch("/billing/accounts/auto_topup", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
-    if (!requireBodyFields(res, req.body, ["topup_amount_cents", "topup_threshold_cents"])) return;
+    if (!requireBodyFields(res, req.body, ["topup_amount_cents"])) return;
     const result = await callExternalService(
       externalServices.billing,
       "/v1/accounts/auto_topup",

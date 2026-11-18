@@ -137,16 +137,21 @@ describe("billing proxy — passthrough contract", () => {
     expect(opts?.body).toEqual(reqBody);
   });
 
-  it("PATCH /billing/accounts/auto_topup rejects missing threshold before downstream", async () => {
+  it("PATCH /billing/accounts/auto_topup forwards a body with no threshold (billing's own, owner 2026-11-18)", async () => {
+    mockCallExternalService.mockResolvedValueOnce({ org_id: "org-test", has_auto_topup: true });
     const res = await request(createApp())
       .patch("/billing/accounts/auto_topup")
       .send({ topup_amount_cents: 1000 });
 
+    expect(res.status).toBe(200);
+    expect(mockCallExternalService).toHaveBeenCalledTimes(1);
+    const [, , opts] = mockCallExternalService.mock.calls[0];
+    expect(opts?.body).toEqual({ topup_amount_cents: 1000 });
+  });
+
+  it("PATCH /billing/accounts/auto_topup rejects a missing reload amount before downstream", async () => {
+    const res = await request(createApp()).patch("/billing/accounts/auto_topup").send({});
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({
-      error: "Missing required fields: topup_threshold_cents",
-      missingFields: ["topup_threshold_cents"],
-    });
     expect(mockCallExternalService).not.toHaveBeenCalled();
   });
 

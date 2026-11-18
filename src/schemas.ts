@@ -8017,8 +8017,8 @@ export const ConfigureAutoTopupRequestSchema = z
     topup_amount_cents: inboundCents.describe(
       "Auto-topup amount in cents (integer or decimal string)",
     ),
-    topup_threshold_cents: inboundCents.describe(
-      "Balance threshold in cents that triggers auto-topup (integer or decimal string)",
+    topup_threshold_cents: inboundCents.optional().describe(
+      "Optional, deprecated: the reload threshold is billing's (owner 2026-11-18: $0 for everyone, not changeable). Omit it; billing applies its own",
     ),
   })
   .openapi("ConfigureAutoTopupRequest");

@@ -6296,12 +6296,11 @@
                 "pattern": "^\\d+(\\.\\d+)?$"
               }
             ],
-            "description": "Balance threshold in cents that triggers auto-topup (integer or decimal string)"
+            "description": "Optional, deprecated: the reload threshold is billing's (owner 2026-11-18: $0 for everyone, not changeable). Omit it; billing applies its own"
           }
         },
         "required": [
-          "topup_amount_cents",
-          "topup_threshold_cents"
+          "topup_amount_cents"
         ]
       },
       "DisableAutoTopupResponse": {
