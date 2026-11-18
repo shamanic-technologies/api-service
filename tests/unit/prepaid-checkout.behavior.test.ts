@@ -52,14 +52,12 @@ beforeEach(() => {
   calls = [];
 });
 
-const BODY = { topup_amount_cents: 1000, auto_topup_amount_cents: 1000, auto_topup_threshold_cents: 500 };
+const BODY = { topup_amount_cents: 1000, auto_topup_amount_cents: 1000 };
 const RULES = {
   org_id: "org-1",
   first_topup_minimum_cents: 1000,
   reload_amount_minimum_cents: 1000,
-  reload_threshold_minimum_cents: 500,
   default_reload_amount_cents: 1000,
-  default_reload_threshold_cents: 500,
 };
 
 describe("POST /v1/billing/accounts/prepaid_checkout", () => {
@@ -76,7 +74,7 @@ describe("POST /v1/billing/accounts/prepaid_checkout", () => {
     expect(calls[0].body.auto_topup_amount_cents).toBe(999);
   });
 
-  it("sends no auto top-up figure when the caller sends none (billing applies its default)", async () => {
+  it("sends no reload figure and no threshold when the caller sends none (billing applies its own)", async () => {
     stubFetch(200, { url: "u" });
     const res = await request(buildApp()).post("/v1/billing/accounts/prepaid_checkout").send({ topup_amount_cents: 1000 });
     expect(res.status).toBe(200);
@@ -92,14 +90,20 @@ describe("POST /v1/billing/accounts/prepaid_checkout", () => {
 
   it("the prepay instructions quote billing's rules, and hold no figure when billing could not be read", () => {
     const how = prepayInstructions(RULES);
-    expect(how.minimums_cents).toEqual({ topup_amount_cents: 1000, auto_topup_amount_cents: 1000, auto_topup_threshold_cents: 500 });
-    expect(how.defaults_cents).toEqual({ auto_topup_amount_cents: 1000, auto_topup_threshold_cents: 500 });
+    expect(how.minimums_cents).toEqual({ topup_amount_cents: 1000, auto_topup_amount_cents: 1000 });
+    expect(how.defaults_cents).toEqual({ auto_topup_amount_cents: 1000 });
     expect(how.example_body).toEqual({ topup_amount_cents: 1000 });
     const blind = prepayInstructions(null);
     expect(blind.minimums_cents).toBeNull();
     expect(blind.defaults_cents).toBeNull();
     expect(blind.example_body).toEqual({});
     expect(blind.rules_path).toBe("/v1/billing/accounts/reload_rules");
+  });
+
+  // Owner 2026-11-18: the threshold is $0 for everyone, changeable nowhere.
+  it("the prepay instructions never name a threshold, even when billing still serves one", () => {
+    const how = prepayInstructions({ ...RULES, reload_threshold_minimum_cents: 0, default_reload_threshold_cents: 0 } as any);
+    expect(JSON.stringify(how)).not.toMatch(/threshold/i);
   });
 
   it("forwards to billing with the org identity and default return pages, answer verbatim", async () => {

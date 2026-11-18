@@ -108,9 +108,7 @@ function stubFetch(offer: string | "billing_down") {
           org_id: "org-1",
           first_topup_minimum_cents: 1000,
           reload_amount_minimum_cents: 1000,
-          reload_threshold_minimum_cents: 500,
           default_reload_amount_cents: 1000,
-          default_reload_threshold_cents: 500,
         }),
         { status: 200 },
       );
@@ -139,13 +137,13 @@ describe("agentPaymentRequired", () => {
       prepay: {
         method: "POST",
         path: "/v1/billing/accounts/prepaid_checkout",
-        minimums_cents: { topup_amount_cents: 1000, auto_topup_amount_cents: 1000, auto_topup_threshold_cents: 500 },
+        minimums_cents: { topup_amount_cents: 1000, auto_topup_amount_cents: 1000 },
         status_path: "/v1/billing/accounts/prepaid_status",
       },
       upstream: DOWNSTREAM_402,
     });
     expect(res.body.message).toContain("POST /v1/billing/accounts/prepaid_checkout");
-    expect(res.body.message).toContain("adds $10.00 below $5.00");
+    expect(res.body.message).toContain("adds $10.00 when the balance runs out");
   });
 
   it("recovers the 402 a route masked as a 500, for an agent org", async () => {
