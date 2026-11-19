@@ -113,4 +113,14 @@ router.get("/v1/chat/ops/schema-conformance", authenticatePlatform, requireStaff
   pipe(req, res, `/internal/schema-conformance${rawQueryString(req.originalUrl)}`, "Failed to read AI schema conformance"),
 );
 
+/**
+ * GET /v1/chat/ops/distry-spend/daily → chat-service GET /internal/copilot/distry-spend/daily (`days` forwarded
+ * verbatim; chat-service owns the default and bounds). Per UTC day, Distry's (our AI chat) spend on non-clients
+ * against the daily cap, visitors cut, turns refused and whether the alert fired: dashboard v2 Monitoring chart
+ * (DISTRY-SPEND-CHART-1119).
+ */
+router.get("/v1/chat/ops/distry-spend/daily", authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) =>
+  pipe(req, res, `/internal/copilot/distry-spend/daily${rawQueryString(req.originalUrl)}`, "Failed to read Distry non-client spend"),
+);
+
 export default router;
