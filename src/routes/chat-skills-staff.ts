@@ -22,7 +22,7 @@ async function pipe(
   res: import("express").Response,
   path: string,
   fallback: string,
-  options: { method?: "PUT"; body?: unknown } = {},
+  options: { method?: "PUT" | "POST"; body?: unknown } = {},
 ) {
   try {
     await pipeExternalService(externalServices.chat, path, { ...options, expressRes: res });
@@ -122,5 +122,62 @@ router.get("/v1/chat/ops/schema-conformance", authenticatePlatform, requireStaff
 router.get("/v1/chat/ops/distry-spend/daily", authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) =>
   pipe(req, res, `/internal/copilot/distry-spend/daily${rawQueryString(req.originalUrl)}`, "Failed to read Distry non-client spend"),
 );
+
+// --- Distry's definition, versioned (DISTRY-PRINCIPAL-1119) -----------------
+// Dashboard v2 Monitoring > Distry: read/edit Distry (our AI) — prompt, tools, skills,
+// model — see every version, restore one. chat-service /internal/distry/config*.
+
+/** Reject a non-object JSON body before forwarding (the writes below stamp `editedBy` into it). */
+function objectBody(req: AuthenticatedRequest, res: import("express").Response): Record<string, unknown> | null {
+  const body = req.body ?? {};
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    res.status(400).json({ error: "Request body must be a JSON object" });
+    return null;
+  }
+  return body;
+}
+
+/** GET /v1/chat/distry/config → chat-service GET /internal/distry/config (current version, code's, pickable tools/skills/models). */
+router.get("/v1/chat/distry/config", authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) =>
+  pipe(req, res, "/internal/distry/config", "Failed to read Distry's definition"),
+);
+
+/**
+ * PUT /v1/chat/distry/config → chat-service PUT /internal/distry/config — save a new version.
+ * Body forwarded as sent EXCEPT `editedBy`, set to the signed-in staff email (same owner-approved
+ * exception as PUT /v1/chat/skills/:slug: the author is the authenticated staff member, never a
+ * browser value; it also makes chat-service's reserved `seed` unforwardable).
+ */
+router.put("/v1/chat/distry/config", authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) => {
+  const body = objectBody(req, res);
+  if (!body) return;
+  return pipe(req, res, "/internal/distry/config", "Failed to save Distry's definition", {
+    method: "PUT",
+    body: { ...body, editedBy: req.staffEmail },
+  });
+});
+
+/** GET /v1/chat/distry/config/versions → chat-service GET /internal/distry/config/versions (newest first). */
+router.get("/v1/chat/distry/config/versions", authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) =>
+  pipe(req, res, "/internal/distry/config/versions", "Failed to list Distry's versions"),
+);
+
+/** GET /v1/chat/distry/config/versions/:version → chat-service GET /internal/distry/config/versions/:version. */
+router.get("/v1/chat/distry/config/versions/:version", authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) =>
+  pipe(req, res, `/internal/distry/config/versions/${encodeURIComponent(req.params.version)}`, "Failed to read Distry's version"),
+);
+
+/**
+ * POST /v1/chat/distry/config/versions/:version/restore → chat-service POST .../restore — restore an old
+ * version (saved as a new one). `editedBy` stamped from the staff session, like the PUT.
+ */
+router.post("/v1/chat/distry/config/versions/:version/restore", authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) => {
+  const body = objectBody(req, res);
+  if (!body) return;
+  return pipe(req, res, `/internal/distry/config/versions/${encodeURIComponent(req.params.version)}/restore`, "Failed to restore Distry's version", {
+    method: "POST",
+    body: { ...body, editedBy: req.staffEmail },
+  });
+});
 
 export default router;

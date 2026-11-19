@@ -7807,6 +7807,60 @@
           "nullable": true
         }
       },
+      "DistryConfigResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "DistrySaveResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "DistrySaveRequest": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string",
+            "description": "Why this change (shown in the history)."
+          }
+        },
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "DistryVersionListResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "DistryVersionResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "DistryRestoreResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "EngineListResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "BrandLinkedinPostsResponse": {
         "type": "object",
         "properties": {},
@@ -14810,6 +14864,36 @@
       },
       "ErrorResponse400DownstreamRejectedDaysForwardedVerbatim": {
         "description": "Downstream rejected `days` (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse503NotSeededYetBootInProgressForwardedVerbatim": {
+        "description": "Not seeded yet, boot in progress (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409AnotherSaveLandedFirstForwardedVerbatim": {
+        "description": "Another save landed first (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404NoSuchVersionForwardedVerbatim": {
+        "description": "No such version (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {

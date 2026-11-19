@@ -1,5 +1,5 @@
 import { Router } from "express";
-import type { AuthenticatedRequest } from "../middleware/auth.js";
+import { authenticatePlatform, requireStaff, type AuthenticatedRequest } from "../middleware/auth.js";
 import { catalogueReader } from "./catalogue-staff.js";
 import { pipeExternalService, externalServices } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
@@ -41,6 +41,22 @@ router.get("/v1/engines/:outcome", catalogueReader, async (req: AuthenticatedReq
     console.error("[api-service] Failed to read engine:", error.message);
     if (res.headersSent) { res.end(); return; }
     respondUpstreamError(res, error, "Failed to read engine");
+  }
+});
+
+/**
+ * GET /v1/engines → workflow-service GET /internal/engines (DISTRY-PRINCIPAL-1119). STAFF ONLY
+ * (authenticatePlatform + requireStaff): dashboard v2 Monitoring > Distry lists every Engine of the live
+ * catalogue, callable now or why not. Read only, nothing spent. The Engine CALL route
+ * (`POST /internal/engines/{outcome}/calls`) is deliberately not proxied: Distry calls it server-side.
+ */
+router.get("/v1/engines", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(externalServices.workflow, `/internal/engines${rawQueryString(req.originalUrl)}`, { expressRes: res });
+  } catch (error: any) {
+    console.error("[api-service] Failed to list engines:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to list engines");
   }
 });
 
