@@ -7800,6 +7800,13 @@
           "nullable": true
         }
       },
+      "ChatDistrySpendDailyResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "BrandLinkedinPostsResponse": {
         "type": "object",
         "properties": {},

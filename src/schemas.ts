@@ -11029,6 +11029,31 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/chat/ops/distry-spend/daily",
+  tags: ["Chat"],
+  summary: "Per UTC day, Distry's spend on non-clients against its daily cap (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. Powers the Distry (our AI chat) non-client spend chart of dashboard v2 Monitoring (DISTRY-SPEND-CHART-1119). " +
+    "Byte passthrough to chat-service GET /internal/copilot/distry-spend/daily: `{ days: [{ day, nonClientSpendUsd, thresholdUsd, visitorsCut, turnsRefusedByDayCap, alertFired, alertFiredAt, measuredAt }] }`. Query string forwarded verbatim (the parameters below are the ones documented today, not a whitelist); a bad `days` answers chat-service's own 400. Status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    query: z
+      .object({
+        days: z.string().optional().openapi({ description: "Series window in days; chat-service owns the default (30) and bounds" }),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("ChatDistrySpendDailyResponse") } } },
+    400: { description: "Downstream rejected `days` (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/social/brands/{brandId}/linkedin-posts",
   tags: ["Social"],
   summary: "A brand's own LinkedIn company page posts, LinkedIn-card shaped (staff only)",
