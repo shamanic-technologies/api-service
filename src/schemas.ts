@@ -12456,6 +12456,32 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/apollo/ops/email-sources/daily",
+  tags: ["Apollo Ops"],
+  summary: "Get the emails found per day by path: our stock, format guess, treg, Apollo (staff only)",
+  description:
+    "Powers dashboard v2 Monitoring > Email sources: per UTC day, how many served emails came from our own stock, "
+    + "an email-format guess, treg and a paid Apollo reveal, the free people found, and Apollo's share "
+    + "(APOLLO-ZERO-COST-1119). Staff-only (platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to apollo-service GET /internal/stats/email-sources/daily. The query string "
+    + "is forwarded verbatim; a bad `days` answers the producer's own 400. Response owned by apollo-service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Window in days; apollo-service owns the default and bounds"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Daily email sources, pass-through from apollo-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("ApolloOpsEmailSourcesDailyResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/campaigns/ops/stuck-occurrences",
   tags: ["Campaign Ops"],
   summary: "Get the prospects waiting on a blocked campaign answer, now and per day (staff only)",

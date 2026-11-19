@@ -224,6 +224,19 @@ export const externalServices = {
     url: process.env.TRANSACTIONAL_EMAIL_SERVICE_URL || "http://localhost:3008",
     apiKey: process.env.TRANSACTIONAL_EMAIL_SERVICE_API_KEY || "",
   },
+  // Lazy reads: a missing APOLLO_SERVICE_* var 502s the staff apollo ops route only, never boot.
+  apollo: {
+    get url(): string {
+      const v = process.env.APOLLO_SERVICE_URL;
+      if (!v) throw new Error("APOLLO_SERVICE_URL env var is required");
+      return v;
+    },
+    get apiKey(): string {
+      const v = process.env.APOLLO_SERVICE_API_KEY;
+      if (!v) throw new Error("APOLLO_SERVICE_API_KEY env var is required");
+      return v;
+    },
+  },
   brand: {
     url: process.env.BRAND_SERVICE_URL || "https://brand.distribute.you",
     apiKey: process.env.BRAND_SERVICE_API_KEY || "",
