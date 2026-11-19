@@ -52,7 +52,7 @@ beforeEach(() => {
   calls = [];
 });
 
-const ROUTES: Array<{ method: "get" | "put"; path: string; downstream: string; body?: object }> = [
+const ROUTES: Array<{ method: "get" | "put" | "post"; path: string; downstream: string; body?: object }> = [
   { method: "get", path: "/v1/chat/skills", downstream: `${CHAT_BASE}/internal/skills` },
   { method: "get", path: "/v1/chat/skills/campaigns", downstream: `${CHAT_BASE}/internal/skills/campaigns` },
   { method: "put", path: "/v1/chat/skills/campaigns", downstream: `${CHAT_BASE}/internal/skills/campaigns`, body: { content: "# x" } },
@@ -63,6 +63,11 @@ const ROUTES: Array<{ method: "get" | "put"; path: string; downstream: string; b
   { method: "get", path: "/v1/chat/ops/vendor-credit", downstream: `${CHAT_BASE}/internal/vendor-credit` },
   { method: "get", path: "/v1/chat/ops/schema-conformance", downstream: `${CHAT_BASE}/internal/schema-conformance` },
   { method: "get", path: "/v1/chat/ops/distry-spend/daily", downstream: `${CHAT_BASE}/internal/copilot/distry-spend/daily` },
+  { method: "get", path: "/v1/chat/distry/config", downstream: `${CHAT_BASE}/internal/distry/config` },
+  { method: "put", path: "/v1/chat/distry/config", downstream: `${CHAT_BASE}/internal/distry/config`, body: { prompt: "x" } },
+  { method: "get", path: "/v1/chat/distry/config/versions", downstream: `${CHAT_BASE}/internal/distry/config/versions` },
+  { method: "get", path: "/v1/chat/distry/config/versions/4", downstream: `${CHAT_BASE}/internal/distry/config/versions/4` },
+  { method: "post", path: "/v1/chat/distry/config/versions/4/restore", downstream: `${CHAT_BASE}/internal/distry/config/versions/4/restore`, body: {} },
 ];
 
 for (const r of ROUTES) {
@@ -133,6 +138,42 @@ describe("staff — PUT /v1/chat/skills/:slug sets editedBy from auth", () => {
   it("refuses a non-object body (400) and calls nothing", async () => {
     upstream(200, "{}");
     const res = await request(buildApp()).put("/v1/chat/skills/campaigns").set(STAFF).send([{ content: "x" }]);
+    expect(res.status).toBe(400);
+    expect(calls).toHaveLength(0);
+  });
+});
+
+describe("staff — Distry writes set editedBy from auth (DISTRY-PRINCIPAL-1119)", () => {
+  it("PUT config forwards the body with editedBy = the signed-in staff email, replacing the browser's value", async () => {
+    upstream(200, "{}");
+    const sent = { prompt: "You are Distry", tools: ["a"], skills: ["index"], model: { provider: "anthropic" }, note: "why", futureField: 1, editedBy: "seed" };
+    await request(buildApp()).put("/v1/chat/distry/config").set(STAFF).send(sent);
+    expect(JSON.parse(calls[0].options.body)).toEqual({ ...sent, editedBy: "kevin@distribute.you" });
+  });
+
+  it("restore with NO body forwards { editedBy: staff email }", async () => {
+    upstream(200, "{}");
+    await request(buildApp()).post("/v1/chat/distry/config/versions/2/restore").set(STAFF);
+    expect(calls[0].options.method).toBe("POST");
+    expect(JSON.parse(calls[0].options.body)).toEqual({ editedBy: "kevin@distribute.you" });
+  });
+
+  it("restore replaces a browser editedBy", async () => {
+    upstream(200, "{}");
+    await request(buildApp()).post("/v1/chat/distry/config/versions/2/restore").set(STAFF).send({ editedBy: "someone@else.com" });
+    expect(JSON.parse(calls[0].options.body)).toEqual({ editedBy: "kevin@distribute.you" });
+  });
+
+  it("passes a 409 (another save landed first) through with its body", async () => {
+    upstream(409, '{"error":"Another save landed first"}');
+    const res = await request(buildApp()).put("/v1/chat/distry/config").set(STAFF).send({ prompt: "x" });
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual({ error: "Another save landed first" });
+  });
+
+  it("refuses a non-object PUT body (400) and calls nothing", async () => {
+    upstream(200, "{}");
+    const res = await request(buildApp()).put("/v1/chat/distry/config").set(STAFF).send([1]);
     expect(res.status).toBe(400);
     expect(calls).toHaveLength(0);
   });
