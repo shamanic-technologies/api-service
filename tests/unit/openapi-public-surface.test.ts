@@ -202,6 +202,7 @@ const PLATFORM_OPERATIONS = [
   "get /v1/campaigns/ops/trigger-health",
   "get /v1/campaigns/ops/plan-following",
   "get /v1/campaigns/ops/unsent-answers",
+  "get /v1/leads/ops/awaiting-answers",
   "get /v1/scripts/ops/monitoring",
   "put /internal/emails/templates",
   "get /v1/admin/brands",

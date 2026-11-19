@@ -8200,6 +8200,13 @@
           "nullable": true
         }
       },
+      "LeadsOpsAwaitingAnswersResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "CampaignOpsUnsentAnswersResponse": {
         "type": "object",
         "properties": {},
