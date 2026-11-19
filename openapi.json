@@ -8247,6 +8247,13 @@
           "nullable": true
         }
       },
+      "ApolloOpsEmailSourcesDailyResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "CampaignOpsStuckOccurrencesResponse": {
         "type": "object",
         "properties": {},
