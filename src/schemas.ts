@@ -12391,6 +12391,33 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/leads/ops/awaiting-answers",
+  tags: ["Campaign Ops"],
+  summary: "Get the people waiting on our answer for more than an hour, now and per day (staff only)",
+  description:
+    "Powers the waiting-on-our-answer section of dashboard v2 Monitoring (REPLY-NO-BALANCE-1118): every person who "
+    + "wrote to a brand and whose wait on our answer began more than an hour ago (and less than 30 days ago), at "
+    + "lead-service's latest watch sweep (every 15 min). Status ok|red (red: anyone waits, or the sweep is silent 2 h), "
+    + "the list, and a daily series (waitingOverHour, maxWaitingOverHour). "
+    + "Staff-only (platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to lead-service GET /internal/ops/awaiting-answers; query forwarded verbatim.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Series window in days (1-90, default 14); lead-service owns the bounds"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Awaiting answers — pass-through from lead-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("LeadsOpsAwaitingAnswersResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/campaigns/ops/unsent-answers",
   tags: ["Campaign Ops"],
   summary: "Get the answers owed to a person who acted that never left, now and per day (staff only)",
