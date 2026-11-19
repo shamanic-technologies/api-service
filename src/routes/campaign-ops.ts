@@ -74,4 +74,25 @@ registerCampaignOps("plan-following", "read the plan following");
 // ONE-AI-REFUSED-ANSWERS-1029).
 registerCampaignOps("unsent-answers", "read the unsent answers");
 
+// GET /v1/leads/ops/awaiting-answers?days=14 — people waiting on our answer for more than an hour, fleet-wide, at
+// lead-service's latest watch sweep: status ok|red, the list, daily waitingOverHour series (staff only,
+// REPLY-NO-BALANCE-1118). Same gate and byte passthrough as the campaign ops reads, to lead-service. Mounted before
+// the leads router so `/leads/ops/...` never reaches a `/leads/:id` handler.
+router.get("/leads/ops/awaiting-answers", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.lead,
+      `/internal/ops/awaiting-answers${rawQueryString(req.originalUrl)}`,
+      { method: "GET", headers: staffHeaders(req), expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Staff leads ops awaiting-answers error:", error.message);
+    if (res.headersSent) {
+      res.end();
+      return;
+    }
+    respondUpstreamError(res, error, "Failed to read the people waiting on our answer");
+  }
+});
+
 export default router;
