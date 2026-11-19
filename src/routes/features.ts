@@ -1704,8 +1704,8 @@ router.get(
 );
 
 /**
- * GET /v1/features/brands/:brandId/sales-funnel-campaigns/:salesFunnelCampaignId/{milestones,people-journeys,engine-scripts,outcome-forecast}
- *   → features-service GET /brands/{brandId}/sales-funnel-campaigns/{id}/{milestones,people-journeys,engine-scripts,outcome-forecast}
+ * GET /v1/features/brands/:brandId/sales-funnel-campaigns/:salesFunnelCampaignId/{milestones,people-journeys,engine-scripts,outcome-forecast,changes}
+ *   → features-service GET /brands/{brandId}/sales-funnel-campaigns/{id}/{milestones,people-journeys,engine-scripts,outcome-forecast,changes}
  *
  * GTM Factory customer dashboard (owner 2026-11-02, FACTORY-USER-DASHBOARD-1102): one funnel campaign's milestones table,
  * and what its people went through. Same auth and identity forwarding as factory-shadow above (the org is the
@@ -1718,6 +1718,8 @@ const CAMPAIGN_FACTORY_READS = [
   { suffix: "engine-scripts", what: "campaign engine scripts" },
   // OUTCOME-FORECAST-1117 (owner 2026-11-17): the campaign's expected outcomes, as features-service forecasts them (`pricing` rides the query).
   { suffix: "outcome-forecast", what: "campaign outcome forecast" },
+  // CAMPAIGN-CHANGE-LOG-1119 (owner 2026-11-18): the campaign's dated changes, each measured with a verdict (`limit`/`cursor` ride the query).
+  { suffix: "changes", what: "campaign changes" },
 ] as const;
 
 for (const { suffix, what } of CAMPAIGN_FACTORY_READS) {
