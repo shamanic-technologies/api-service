@@ -11052,6 +11052,122 @@ registry.registerPath({
   },
 });
 
+// Distry's definition, versioned (staff) — chat-service /internal/distry/config*; Engines list — workflow-service /internal/engines
+const DistryVersionParams = z.object({ version: z.string().openapi({ description: "Version number (1 = first)." }) });
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/chat/distry/config",
+  tags: ["Chat"],
+  summary: "Distry's current definition, the code's, and what can be picked (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. Powers dashboard v2 Monitoring > Distry (DISTRY-PRINCIPAL-1119). " +
+    "Byte passthrough to chat-service GET /internal/distry/config: the current version (prompt, tools, skills, model), the code's definition beside it, every tool and skill that can be turned on, the models per provider. Status and body owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("DistryConfigResponse") } } },
+    503: { description: "Not seeded yet, boot in progress (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/v1/chat/distry/config",
+  tags: ["Chat"],
+  summary: "Save Distry's definition as a new version (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. Powers dashboard v2 Monitoring > Distry (DISTRY-PRINCIPAL-1119). " +
+    "Passthrough to chat-service PUT /internal/distry/config. The body is forwarded as sent EXCEPT `editedBy`, which the gateway always sets to the signed-in staff email (any value the caller sends is replaced). Every save is a new version, live from Distry's next turn. Status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { body: { content: { "application/json": { schema: z.object({ note: z.string().optional().openapi({ description: "Why this change (shown in the history)." }) }).passthrough().openapi("DistrySaveRequest") } } } },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("DistrySaveResponse") } } },
+    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+    409: { description: "Another save landed first (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/chat/distry/config/versions",
+  tags: ["Chat"],
+  summary: "Every version of Distry's definition, newest first (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. Powers dashboard v2 Monitoring > Distry (DISTRY-PRINCIPAL-1119). " +
+    "Byte passthrough to chat-service GET /internal/distry/config/versions. Status and body owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("DistryVersionListResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/chat/distry/config/versions/{version}",
+  tags: ["Chat"],
+  summary: "One version of Distry's definition (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. Powers dashboard v2 Monitoring > Distry (DISTRY-PRINCIPAL-1119). " +
+    "Byte passthrough to chat-service GET /internal/distry/config/versions/{version}. Status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { params: DistryVersionParams },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("DistryVersionResponse") } } },
+    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+    404: { description: "No such version (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/chat/distry/config/versions/{version}/restore",
+  tags: ["Chat"],
+  summary: "Restore an old version of Distry, saved as a new version (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. Powers dashboard v2 Monitoring > Distry (DISTRY-PRINCIPAL-1119). " +
+    "Passthrough to chat-service POST /internal/distry/config/versions/{version}/restore. No body needed: `editedBy` is always set by the gateway to the signed-in staff email. Status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { params: DistryVersionParams },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("DistryRestoreResponse") } } },
+    400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
+    404: { description: "No such version (forwarded verbatim)", content: errorContent },
+    409: { description: "Another save landed first (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/engines",
+  tags: ["Engines"],
+  summary: "Every Engine of the live catalogue: callable now or why not (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. Powers dashboard v2 Monitoring > Distry (DISTRY-PRINCIPAL-1119). " +
+    "Byte passthrough to workflow-service GET /internal/engines: `{ engines: [{ outcome, callable, reason, inputs, scripts, counts, ... }], callable, total }`. Read only, nothing spent. Calling an Engine is not exposed here. Status and body owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("EngineListResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/social/brands/{brandId}/linkedin-posts",

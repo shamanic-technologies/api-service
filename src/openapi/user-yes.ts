@@ -275,6 +275,8 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "PUT /v1/chat/config": NO,
   "POST /v1/chat": NO,
   "PUT /v1/chat/skills/{slug}": NO,
+  "PUT /v1/chat/distry/config": NO,
+  "POST /v1/chat/distry/config/versions/{version}/restore": NO,
   "POST /platform-keys": NO,
   "PUT /platform-prompts": NO,
   "PUT /platform-chat/config": NO,
