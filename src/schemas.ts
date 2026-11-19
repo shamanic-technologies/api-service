@@ -2004,6 +2004,12 @@ for (const { suffix, name, summary, detail } of [
     summary: "The outcome forecast of one funnel campaign",
     detail: "The outcomes one funnel campaign is expected to make, as features-service forecasts them (`pricing=net` reads what the org pays).",
   },
+  {
+    suffix: "changes",
+    name: "CampaignChangesResponse",
+    summary: "What changed on one funnel campaign, dated, each change measured with a verdict",
+    detail: "The campaign's changes newest first (scripts per Engine, budget, pauses, plan, brief, Target, strategy), each with its measured result and verdict, as features-service serves them (`limit` 1..200, `cursor` = the previous page's `nextCursor`).",
+  },
 ]) {
   registry.registerPath({
     method: "get",

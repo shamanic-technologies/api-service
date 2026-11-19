@@ -11010,7 +11010,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "basis",
                       "unavailableReason"
                     ],
-                    "description": "EXPECTED economics (owner 2026-10-11: a ROI is never blank, an assumption if need be): the funnel formula where every missing input takes an assumption. Pipe cost: mature workflow > seeded default > market benchmark > its early flash figure > another channel's mature price on the same leg (the highest); the customer's team costs 0. Leg rate: the path's (brand measured / stated > default) > entry default. On a measured/estimated funnel it equals `costUsd`/`roi`."
+                    "description": "EXPECTED economics (owner 2026-10-11: a ROI is never blank, an assumption if need be): the funnel formula where every missing input takes an assumption. Pipe cost: every measured rung before a default (MEASURED-BEFORE-DEFAULT-1117): mature workflow > its early flash figure > its own history > another channel's price on the same leg (the highest) > the fleet's price of the same outcome > seeded default > market benchmark > its own spend; the customer's team costs 0. Leg rate: the brand's own (measured / stated) > a measured pipe's > the fleet's measured conversion of the leg on its channel > default > entry default (EXPECTED-FLEET-RATE-1116). On a measured/estimated funnel it equals `costUsd`/`roi`."
                   },
                   "runnable": {
                     "type": "boolean",
@@ -11628,12 +11628,14 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "fleet_median",
                           "default",
                           "measured_pipe",
+                          "fleet_measured",
                           "offer_measured",
                           "offer_stated",
                           "offer_team_measured",
                           "default_entry",
                           null
-                        ]
+                        ],
+                        "description": "In order: offer_measured / offer_team_measured / offer_stated (the brand's own) > measured_pipe (basis fleet) > fleet_measured (the fleet's measured conversion of the leg on this pipe's channel, EXPECTED-FLEET-RATE-1116) > default / default_entry."
                       },
                       "rateBasis": {
                         "type": "string",
@@ -11713,7 +11715,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "lifetimeRevenueBasis",
                 "legs"
               ],
-              "description": "EXPECTED economics (owner 2026-10-11: a ROI is never blank, an assumption if need be): the funnel formula where every missing input takes an assumption. Pipe cost: mature workflow > seeded default > market benchmark > its early flash figure > another channel's mature price on the same leg (the highest); the customer's team costs 0. Leg rate: the path's (brand measured / stated > default) > entry default. On a measured/estimated funnel it equals `costUsd`/`roi`."
+              "description": "EXPECTED economics (owner 2026-10-11: a ROI is never blank, an assumption if need be): the funnel formula where every missing input takes an assumption. Pipe cost: every measured rung before a default (MEASURED-BEFORE-DEFAULT-1117): mature workflow > its early flash figure > its own history > another channel's price on the same leg (the highest) > the fleet's price of the same outcome > seeded default > market benchmark > its own spend; the customer's team costs 0. Leg rate: the brand's own (measured / stated) > a measured pipe's > the fleet's measured conversion of the leg on its channel > default > entry default (EXPECTED-FLEET-RATE-1116). On a measured/estimated funnel it equals `costUsd`/`roi`."
             },
             "costUnit": {
               "type": "string",
@@ -14528,7 +14530,23 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       },
                       "outcomesPerDay": {
                         "type": "number",
-                        "nullable": true
+                        "nullable": true,
+                        "description": "The pace WHILE the campaign spends (a paused campaign keeps it; `daily` carries the pause)."
+                      },
+                      "pausedReason": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          "budget_cap_reached",
+                          "volume_cap_reached",
+                          null
+                        ],
+                        "description": "PROJECTION-CAP-1117: the campaign spends nothing NOW: its max budget (`budget_cap_reached`) or max volume (`volume_cap_reached`) is reached for the current window; `daily` expects 0 until `resumesAt` (the window's reset), then the normal pace, and `nextExpectedAt` counts from there. null = spending."
+                      },
+                      "resumesAt": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "When the campaign spends again (the cap's next window, UTC midnight); null when not paused."
                       },
                       "daily": {
                         "type": "array",
@@ -14573,6 +14591,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "spendPerDayUsd",
                       "spendPerDaySource",
                       "outcomesPerDay",
+                      "pausedReason",
+                      "resumesAt",
                       "daily",
                       "nextExpectedAt",
                       "nextExpectedInHours",
@@ -14612,6 +14632,10 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         },
                         "isTarget": {
                           "type": "boolean"
+                        },
+                        "producedOnTheWay": {
+                          "type": "boolean",
+                          "description": "MILESTONES-CONTACTED-1117: true = an outcome the units landing on the NEXT milestone produced on the way (ledger Units > 0, its Lifecycle rung strictly between the two milestones' rungs, e.g. Message sent between Lead found and Positive reply). Its $ each = those units' spend ÷ its count; its projection = the milestone before it × the yield the ledger measured from it."
                         },
                         "count": {
                           "type": "number",
@@ -14689,6 +14713,21 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                               "type": "number",
                               "nullable": true
                             },
+                            "pausedReason": {
+                              "type": "string",
+                              "nullable": true,
+                              "enum": [
+                                "budget_cap_reached",
+                                "volume_cap_reached",
+                                null
+                              ],
+                              "description": "PROJECTION-CAP-1117: the campaign spends nothing NOW: its max budget (`budget_cap_reached`) or max volume (`volume_cap_reached`) is reached for the current window; `daily` expects 0 until `resumesAt` (the window's reset), then the normal pace, and `nextExpectedAt` counts from there. null = spending."
+                            },
+                            "resumesAt": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "When the campaign spends again (the cap's next window, UTC midnight); null when not paused."
+                            },
                             "daily": {
                               "type": "array",
                               "items": {
@@ -14726,6 +14765,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           },
                           "required": [
                             "outcomesPerDay",
+                            "pausedReason",
+                            "resumesAt",
                             "daily",
                             "nextExpectedAt",
                             "nextExpectedInHours",
@@ -14738,6 +14779,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "label",
                         "lifecycleRung",
                         "isTarget",
+                        "producedOnTheWay",
                         "count",
                         "countSource",
                         "countUnavailableReason",
@@ -14764,6 +14806,153 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "type": "string"
                     },
                     "description": "Ledger days runs-service has not computed yet: their counts may still move."
+                  },
+                  "expectedReturn": {
+                    "allOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "roiMultiple": {
+                            "type": "number",
+                            "nullable": true,
+                            "description": "The EXPECTED return, never null unless unavailableReason. = the scope's own MATURE return when it has one (basis measured), else its sales path's ROI exactly as GET /offers/{offerId}/sales-paths prices it: lifetime revenue / cost per paying client, each leg's rate brand measured > stated > the fleet's measured conversion > industry default (EXPECTED-FLEET-RATE-1116), each leg's cost best mature workflow > fleet measured (outcome prices, else the catalogue's measured cost of the leg) > seeded default, the offer's stated lifetime revenue else the fleet median. The pipeline-based costEconomics.roiMultiple and its flash / mature pair are deleted (ROI-CONSISTENCY-1103)."
+                          },
+                          "basis": {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                              "measured",
+                              "stated",
+                              "fleet",
+                              "default",
+                              null
+                            ],
+                            "description": "What an expected figure rests on, the WEAKEST of its inputs: measured (the scope's own mature evidence / a measured rate / our own workflow's mature cost) < stated (the customer stated it: a leg rate, the offer's lifetime revenue) < fleet (the fleet's measured conversion of a leg / its measured cost / the fleet median lifetime revenue) < default (a seeded industry benchmark or cost). A tooltip says it in words."
+                          },
+                          "assumptions": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "input": {
+                                  "type": "string",
+                                  "enum": [
+                                    "lifetime_revenue",
+                                    "rate",
+                                    "cost",
+                                    "sales_path"
+                                  ]
+                                },
+                                "legKey": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "description": "The leg a rate or a cost is about. Null otherwise."
+                                },
+                                "basis": {
+                                  "type": "string",
+                                  "enum": [
+                                    "measured",
+                                    "stated",
+                                    "fleet",
+                                    "default"
+                                  ],
+                                  "description": "What an expected figure rests on, the WEAKEST of its inputs: measured (the scope's own mature evidence / a measured rate / our own workflow's mature cost) < stated (the customer stated it: a leg rate, the offer's lifetime revenue) < fleet (the fleet's measured conversion of a leg / its measured cost / the fleet median lifetime revenue) < default (a seeded industry benchmark or cost). A tooltip says it in words."
+                                },
+                                "source": {
+                                  "type": "string",
+                                  "description": "The producer's own word: crm_measured | measured_on_our_leads | customer_stated | fleet_measured | industry_default (rate, in that order: brand measured > stated > the fleet's measured conversion > default, EXPECTED-FLEET-RATE-1116); workflow | fleet_measured | default | benchmark (cost); on a figure read off the catalogue funnel: offer_measured | offer_stated | offer_team_measured | measured_pipe | fleet_measured | default | default_entry (rate), workflow | default | benchmark | flash | pipe_history | same_leg_fleet | same_step_fleet | own_spend (cost); offer_stated | fleet_median (lifetime_revenue); not_running (sales_path: the offer runs no funnel campaign, so the figure is the best path we would sell it)."
+                                }
+                              },
+                              "required": [
+                                "input",
+                                "legKey",
+                                "basis",
+                                "source"
+                              ]
+                            },
+                            "description": "Every input the model figure rests on, with its own source. Empty on a measured figure."
+                          },
+                          "combinationKey": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "The sales path (combination key, stored spelling) the figure is read off. A funnel campaign reads its OWN (its sourcing legs dropped: a path counts from Lead found; the listed path, else its own legs priced on the same rates and costs; a reactive funnel on the value it adds over what its people were already worth at the trigger step), never the offer's; a funnel the offer's sales paths do not list and its own legs cannot price there (a play ~<strategy>, a trigger head, a declared leg, a pipe the offer's ladder does not price) reads the catalogue funnel's own expected figure priced on this offer (its lifetime revenue and the brand's measured / stated leg rates; whole cost from Start, sourcing included; combinationKey = the funnel id), EXPECTED-ROI-WIDE-EMAIL-1102; unpriceable there too = null + own_sales_path_unpriced; a campaign the best selected path running it; an offer its best selected path (proactive first); a brand its best offer. Null on a measured figure."
+                          },
+                          "costPerOutcome": {
+                            "type": "object",
+                            "nullable": true,
+                            "properties": {
+                              "costPerOutcomeUsd": {
+                                "type": "number"
+                              },
+                              "legKey": {
+                                "type": "string"
+                              },
+                              "stepKey": {
+                                "type": "string",
+                                "description": "The outcome the cost buys (the leg's TO step), e.g. conversation (a positive reply) or website_visit."
+                              },
+                              "basis": {
+                                "type": "string",
+                                "enum": [
+                                  "measured",
+                                  "stated",
+                                  "fleet",
+                                  "default"
+                                ],
+                                "description": "What an expected figure rests on, the WEAKEST of its inputs: measured (the scope's own mature evidence / a measured rate / our own workflow's mature cost) < stated (the customer stated it: a leg rate, the offer's lifetime revenue) < fleet (the fleet's measured conversion of a leg / its measured cost / the fleet median lifetime revenue) < default (a seeded industry benchmark or cost). A tooltip says it in words."
+                              },
+                              "source": {
+                                "type": "string",
+                                "enum": [
+                                  "workflow",
+                                  "fleet_measured",
+                                  "default",
+                                  "benchmark"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "costPerOutcomeUsd",
+                              "legKey",
+                              "stepKey",
+                              "basis",
+                              "source"
+                            ],
+                            "description": "The EXPECTED cost per outcome of the scope's leg on that path (a campaign's own leg; an offer's, funnel's or brand's first platform leg). Always the model's figure, also beside a measured return. Null on a path whose legs carry no platform cost."
+                          },
+                          "unavailableReason": {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                              "expected_model_unavailable",
+                              "expected_model_computing",
+                              "no_priced_sales_path",
+                              "own_sales_path_unpriced",
+                              null
+                            ],
+                            "description": "Why roiMultiple is null: the model could not be read (logged), is computing for the first time since a deploy (served on the next read), no path could be priced, or a funnel campaign's OWN path cannot be priced by the offer's sales paths NOR by the catalogue (a step after Paid client that has no value, a leg with no rate, a pipe nothing prices: never another funnel's figure)."
+                          }
+                        },
+                        "required": [
+                          "roiMultiple",
+                          "basis",
+                          "assumptions",
+                          "combinationKey",
+                          "costPerOutcome",
+                          "unavailableReason"
+                        ],
+                        "description": "THE EXPECTED RETURN (owner 2026-10-11: every ROI surface always reads a value, even expected, on a stated hypothesis). See roiMultiple."
+                      },
+                      {
+                        "nullable": true,
+                        "description": "MILESTONES-CONTACTED-1117: the campaign's EXPECTED return, the very object `/brands/{brandId}/sales-funnel-campaigns` serves as `expectedReturn` on this campaign's row (same cell: same figure, basis and assumptions; never recomputed here). Print it beside `measuredReturn`. Null + `expectedReturnUnavailableReason` only when that table cannot be read."
+                      }
+                    ]
+                  },
+                  "expectedReturnUnavailableReason": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "`campaigns_table_unreadable`, `campaign_not_in_campaigns_table`; null when `expectedReturn` is served."
                   }
                 },
                 "required": [
@@ -14784,7 +14973,9 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "ledgerOutcomeKeys",
                   "milestones",
                   "milestonesUnavailableReason",
-                  "ledgerDaysMissing"
+                  "ledgerDaysMissing",
+                  "expectedReturn",
+                  "expectedReturnUnavailableReason"
                 ]
               },
               "description": "One row PER CAMPAIGN (the campaign page). Today reads `offerTargets`."
@@ -14946,6 +15137,21 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "nullable": true,
                         "description": "Σ each projected campaign's own expected outcomes per day."
                       },
+                      "pausedReason": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          "budget_cap_reached",
+                          "volume_cap_reached",
+                          null
+                        ],
+                        "description": "PROJECTION-CAP-1117: the campaign spends nothing NOW: its max budget (`budget_cap_reached`) or max volume (`volume_cap_reached`) is reached for the current window; `daily` expects 0 until `resumesAt` (the window's reset), then the normal pace, and `nextExpectedAt` counts from there. null = spending."
+                      },
+                      "resumesAt": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "When the campaign spends again (the cap's next window, UTC midnight); null when not paused."
+                      },
                       "daily": {
                         "type": "array",
                         "items": {
@@ -14997,6 +15203,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "spendPerDayUsd",
                       "spendPerDaySource",
                       "outcomesPerDay",
+                      "pausedReason",
+                      "resumesAt",
                       "daily",
                       "nextExpectedAt",
                       "nextExpectedInHours",
@@ -17407,7 +17615,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                               "roiMultiple": {
                                 "type": "number",
                                 "nullable": true,
-                                "description": "The EXPECTED return, never null unless unavailableReason. = the scope's own MATURE return when it has one (basis measured), else its sales path's ROI exactly as GET /offers/{offerId}/sales-paths prices it: lifetime revenue / cost per paying client, each leg's rate measured > stated > fleet median > industry default, each leg's cost best mature workflow > fleet measured > seeded default, the offer's stated lifetime revenue else the fleet median. The pipeline-based costEconomics.roiMultiple and its flash / mature pair are deleted (ROI-CONSISTENCY-1103)."
+                                "description": "The EXPECTED return, never null unless unavailableReason. = the scope's own MATURE return when it has one (basis measured), else its sales path's ROI exactly as GET /offers/{offerId}/sales-paths prices it: lifetime revenue / cost per paying client, each leg's rate brand measured > stated > the fleet's measured conversion > industry default (EXPECTED-FLEET-RATE-1116), each leg's cost best mature workflow > fleet measured (outcome prices, else the catalogue's measured cost of the leg) > seeded default, the offer's stated lifetime revenue else the fleet median. The pipeline-based costEconomics.roiMultiple and its flash / mature pair are deleted (ROI-CONSISTENCY-1103)."
                               },
                               "basis": {
                                 "type": "string",
@@ -17419,7 +17627,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                                   "default",
                                   null
                                 ],
-                                "description": "What an expected figure rests on, the WEAKEST of its inputs: measured (the scope's own mature evidence / a measured rate / our own workflow's mature cost) < stated (the customer stated it: a leg rate, the offer's lifetime revenue) < fleet (the fleet median / the fleet's measured cost) < default (a seeded industry benchmark or cost). A tooltip says it in words."
+                                "description": "What an expected figure rests on, the WEAKEST of its inputs: measured (the scope's own mature evidence / a measured rate / our own workflow's mature cost) < stated (the customer stated it: a leg rate, the offer's lifetime revenue) < fleet (the fleet's measured conversion of a leg / its measured cost / the fleet median lifetime revenue) < default (a seeded industry benchmark or cost). A tooltip says it in words."
                               },
                               "assumptions": {
                                 "type": "array",
@@ -17448,11 +17656,11 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                                         "fleet",
                                         "default"
                                       ],
-                                      "description": "What an expected figure rests on, the WEAKEST of its inputs: measured (the scope's own mature evidence / a measured rate / our own workflow's mature cost) < stated (the customer stated it: a leg rate, the offer's lifetime revenue) < fleet (the fleet median / the fleet's measured cost) < default (a seeded industry benchmark or cost). A tooltip says it in words."
+                                      "description": "What an expected figure rests on, the WEAKEST of its inputs: measured (the scope's own mature evidence / a measured rate / our own workflow's mature cost) < stated (the customer stated it: a leg rate, the offer's lifetime revenue) < fleet (the fleet's measured conversion of a leg / its measured cost / the fleet median lifetime revenue) < default (a seeded industry benchmark or cost). A tooltip says it in words."
                                     },
                                     "source": {
                                       "type": "string",
-                                      "description": "The producer's own word: crm_measured | measured_on_our_leads | customer_stated | fleet_median | industry_default (rate); workflow | fleet_measured | default | benchmark (cost); on a figure read off the catalogue funnel: offer_measured | offer_stated | offer_team_measured | measured_pipe | default | default_entry (rate), workflow | default | benchmark | flash | pipe_history | same_leg_fleet | same_step_fleet | own_spend (cost); offer_stated | fleet_median (lifetime_revenue); not_running (sales_path: the offer runs no funnel campaign, so the figure is the best path we would sell it)."
+                                      "description": "The producer's own word: crm_measured | measured_on_our_leads | customer_stated | fleet_measured | industry_default (rate, in that order: brand measured > stated > the fleet's measured conversion > default, EXPECTED-FLEET-RATE-1116); workflow | fleet_measured | default | benchmark (cost); on a figure read off the catalogue funnel: offer_measured | offer_stated | offer_team_measured | measured_pipe | fleet_measured | default | default_entry (rate), workflow | default | benchmark | flash | pipe_history | same_leg_fleet | same_step_fleet | own_spend (cost); offer_stated | fleet_median (lifetime_revenue); not_running (sales_path: the offer runs no funnel campaign, so the figure is the best path we would sell it)."
                                     }
                                   },
                                   "required": [
@@ -17491,7 +17699,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                                       "fleet",
                                       "default"
                                     ],
-                                    "description": "What an expected figure rests on, the WEAKEST of its inputs: measured (the scope's own mature evidence / a measured rate / our own workflow's mature cost) < stated (the customer stated it: a leg rate, the offer's lifetime revenue) < fleet (the fleet median / the fleet's measured cost) < default (a seeded industry benchmark or cost). A tooltip says it in words."
+                                    "description": "What an expected figure rests on, the WEAKEST of its inputs: measured (the scope's own mature evidence / a measured rate / our own workflow's mature cost) < stated (the customer stated it: a leg rate, the offer's lifetime revenue) < fleet (the fleet's measured conversion of a leg / its measured cost / the fleet median lifetime revenue) < default (a seeded industry benchmark or cost). A tooltip says it in words."
                                   },
                                   "source": {
                                     "type": "string",
@@ -18994,6 +19202,551 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "GET /v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/changes": {
+    "service": "features-service",
+    "method": "GET",
+    "path": "/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/changes",
+    "responses": {
+      "200": {
+        "description": "The changes, newest first",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "brandId": {
+              "type": "string"
+            },
+            "salesFunnelCampaignId": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "computedAt": {
+              "type": "string"
+            },
+            "decisionsBuiltAt": {
+              "type": "string",
+              "nullable": true,
+              "description": "When runs-service last built the script decisions read; null = the campaign has no unit campaign."
+            },
+            "silverComputedAt": {
+              "type": "string",
+              "nullable": true,
+              "description": "The Silver sweep the steps and delays come from; null = none on today's rule (every change: no_downstream_step_measured)."
+            },
+            "settingsRecordedSince": {
+              "type": "string",
+              "description": "Brief, Target, follows-its-plan and strategy changes are recorded from this UTC day only: before it, none is invented."
+            },
+            "rules": {
+              "type": "object",
+              "properties": {
+                "minEngineDayDecisions": {
+                  "type": "number"
+                },
+                "servingEnterShare": {
+                  "type": "number"
+                },
+                "servingLeaveShare": {
+                  "type": "number"
+                },
+                "triedShare": {
+                  "type": "number"
+                },
+                "triedMinScripts": {
+                  "type": "number"
+                },
+                "minStepPairs": {
+                  "type": "number"
+                },
+                "windowMaturityMultiple": {
+                  "type": "number"
+                },
+                "minWindowDays": {
+                  "type": "number"
+                },
+                "maxWindowDays": {
+                  "type": "number"
+                },
+                "campaignEngineSpanDays": {
+                  "type": "number"
+                },
+                "blendPseudoCases": {
+                  "type": "number"
+                },
+                "thinCases": {
+                  "type": "number"
+                },
+                "thinDecisions": {
+                  "type": "number"
+                },
+                "verdictThresholds": {
+                  "type": "object",
+                  "properties": {
+                    "worked": {
+                      "type": "number"
+                    },
+                    "partial": {
+                      "type": "number"
+                    },
+                    "didNotWork": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "worked",
+                    "partial",
+                    "didNotWork"
+                  ]
+                }
+              },
+              "required": [
+                "minEngineDayDecisions",
+                "servingEnterShare",
+                "servingLeaveShare",
+                "triedShare",
+                "triedMinScripts",
+                "minStepPairs",
+                "windowMaturityMultiple",
+                "minWindowDays",
+                "maxWindowDays",
+                "campaignEngineSpanDays",
+                "blendPseudoCases",
+                "thinCases",
+                "thinDecisions",
+                "verdictThresholds"
+              ],
+              "description": "The numbers the list was built on: word them from here, never restate one."
+            },
+            "kindsServed": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "The kinds of change this build reads."
+            },
+            "total": {
+              "type": "number",
+              "description": "Lines in the whole list."
+            },
+            "changes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "at": {
+                    "type": "string",
+                    "description": "When it happened (ISO); a script change: its UTC day at midnight."
+                  },
+                  "date": {
+                    "type": "string",
+                    "description": "UTC day of the change."
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "script_started",
+                      "script_stopped",
+                      "script_upgraded",
+                      "scripts_tried",
+                      "budget_changed",
+                      "campaign_stopped",
+                      "campaign_resumed",
+                      "plan_changed",
+                      "brief_changed",
+                      "target_changed",
+                      "follows_plan_changed",
+                      "strategy_changed"
+                    ]
+                  },
+                  "engine": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "outcomeKey": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "outcomeKey",
+                      "label"
+                    ],
+                    "description": "The Engine the change is on (the outcome it makes); null = the whole campaign."
+                  },
+                  "from": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "scriptDynasty": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "A script: `<outcome>/<dynasty>`, every version of it; null on a campaign change."
+                      },
+                      "version": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "A script: the version leading that day (`v12`)."
+                      },
+                      "value": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "A campaign change: the value as its owner recorded it (strategy id, Target step key, brief text, `yes`/`no`, funnel id, cap words)."
+                      },
+                      "label": {
+                        "type": "string",
+                        "description": "The side in words a client reads: a script by its dynasty's name (its slug in words when unnamed), a strategy by its name, a Target by its outcome label, a cap as `$10.00 a day`."
+                      }
+                    },
+                    "required": [
+                      "scriptDynasty",
+                      "version",
+                      "value",
+                      "label"
+                    ]
+                  },
+                  "to": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "scriptDynasty": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "A script: `<outcome>/<dynasty>`, every version of it; null on a campaign change."
+                      },
+                      "version": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "A script: the version leading that day (`v12`)."
+                      },
+                      "value": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "A campaign change: the value as its owner recorded it (strategy id, Target step key, brief text, `yes`/`no`, funnel id, cap words)."
+                      },
+                      "label": {
+                        "type": "string",
+                        "description": "The side in words a client reads: a script by its dynasty's name (its slug in words when unnamed), a strategy by its name, a Target by its outcome label, a cap as `$10.00 a day`."
+                      }
+                    },
+                    "required": [
+                      "scriptDynasty",
+                      "version",
+                      "value",
+                      "label"
+                    ]
+                  },
+                  "summary": {
+                    "type": "string",
+                    "description": "The change in words a client reads."
+                  },
+                  "who": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "our_ai",
+                      "a_person",
+                      "our_system",
+                      null
+                    ],
+                    "description": "Who made it, from positive evidence only; null = the record does not say."
+                  },
+                  "whoEvidence": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "The evidence `who` rests on (the_rating_picks_the_script, changed_by_a_signed_in_person, started_or_stopped_by_hand, billing_could_not_charge, the_plan_follower_applied_its_plan, written_by_our_ai_from_the_offer, read_off_its_funnel, our_judge_keeps_it_from_the_brief, carried_from_the_campaign_play)."
+                  },
+                  "reason": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "What the owner recorded about why: a stop reason (manual, payment_declined, no_payment_method, ...), a plan change reason."
+                  },
+                  "shareOfEngineDay": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "Script changes: share of the Engine's decisions that day carried by what the line is about."
+                  },
+                  "tried": {
+                    "type": "object",
+                    "nullable": true,
+                    "properties": {
+                      "scripts": {
+                        "type": "number"
+                      },
+                      "decisions": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "scripts",
+                      "decisions"
+                    ],
+                    "description": "`scripts_tried`: how many dynasties, and their decisions that day."
+                  },
+                  "parts": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "moved": {
+                            "type": "number"
+                          },
+                          "total": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "moved",
+                          "total"
+                        ]
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "added": {
+                            "type": "number"
+                          },
+                          "retired": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "added",
+                          "retired"
+                        ]
+                      },
+                      {
+                        "nullable": true
+                      }
+                    ],
+                    "description": "Pause / resume: units moved of the units it had; plan change: units added and retired."
+                  },
+                  "result": {
+                    "type": "object",
+                    "properties": {
+                      "measuredEngine": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                          "outcomeKey": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "outcomeKey",
+                          "label"
+                        ],
+                        "description": "The Engine whose decisions were measured."
+                      },
+                      "step": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                          "outcomeKey": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "outcomeKey",
+                          "label"
+                        ],
+                        "description": "The step measured; null = none measured downstream of the Engine."
+                      },
+                      "maturityDays": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "A decision day counts once it is this many days old (the step's fleet p90 delay)."
+                      },
+                      "windowDays": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "Days on each side of the change, before cuts at the same track's previous / next change."
+                      },
+                      "before": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                          "fromDay": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "First UTC day counted (matured days only); null = none."
+                          },
+                          "toDay": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "decisions": {
+                            "type": "number",
+                            "description": "Script decisions of the measured Engine counted in the window."
+                          },
+                          "cases": {
+                            "type": "number",
+                            "description": "Of them, those whose chain reached the step."
+                          },
+                          "rate": {
+                            "type": "number",
+                            "nullable": true,
+                            "description": "cases / decisions; null without a decision."
+                          }
+                        },
+                        "required": [
+                          "fromDay",
+                          "toDay",
+                          "decisions",
+                          "cases",
+                          "rate"
+                        ]
+                      },
+                      "after": {
+                        "type": "object",
+                        "nullable": true,
+                        "properties": {
+                          "fromDay": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "First UTC day counted (matured days only); null = none."
+                          },
+                          "toDay": {
+                            "type": "string",
+                            "nullable": true
+                          },
+                          "decisions": {
+                            "type": "number",
+                            "description": "Script decisions of the measured Engine counted in the window."
+                          },
+                          "cases": {
+                            "type": "number",
+                            "description": "Of them, those whose chain reached the step."
+                          },
+                          "rate": {
+                            "type": "number",
+                            "nullable": true,
+                            "description": "cases / decisions; null without a decision."
+                          }
+                        },
+                        "required": [
+                          "fromDay",
+                          "toDay",
+                          "decisions",
+                          "cases",
+                          "rate"
+                        ]
+                      },
+                      "changePct": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "(rate after - rate before) / rate before, in %; null when either is missing or the rate before is 0."
+                      },
+                      "probabilityBetter": {
+                        "type": "number",
+                        "nullable": true,
+                        "description": "P(the rate after is higher than before); null = not tested."
+                      },
+                      "verdict": {
+                        "type": "string",
+                        "enum": [
+                          "worked",
+                          "partial",
+                          "did_not_work",
+                          "inconclusive",
+                          "too_early",
+                          "confounded"
+                        ]
+                      },
+                      "verdictReason": {
+                        "type": "string",
+                        "enum": [
+                          "no_downstream_step_measured",
+                          "no_decisions_after",
+                          "nothing_before_to_compare",
+                          "thin_evidence",
+                          "after_window_not_matured",
+                          "another_change_in_the_window",
+                          "tested"
+                        ]
+                      },
+                      "measuredOn": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "`too_early`: the first UTC day a rate after the change can be read."
+                      },
+                      "confoundedWith": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "`confounded`: ids of the other changes inside its windows."
+                      }
+                    },
+                    "required": [
+                      "measuredEngine",
+                      "step",
+                      "maturityDays",
+                      "windowDays",
+                      "before",
+                      "after",
+                      "changePct",
+                      "probabilityBetter",
+                      "verdict",
+                      "verdictReason",
+                      "measuredOn",
+                      "confoundedWith"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "at",
+                  "date",
+                  "kind",
+                  "engine",
+                  "from",
+                  "to",
+                  "summary",
+                  "who",
+                  "whoEvidence",
+                  "reason",
+                  "shareOfEngineDay",
+                  "tried",
+                  "parts",
+                  "result"
+                ]
+              }
+            },
+            "nextCursor": {
+              "type": "string",
+              "nullable": true
+            }
+          },
+          "required": [
+            "brandId",
+            "salesFunnelCampaignId",
+            "name",
+            "computedAt",
+            "decisionsBuiltAt",
+            "silverComputedAt",
+            "settingsRecordedSince",
+            "rules",
+            "kindsServed",
+            "total",
+            "changes",
+            "nextCursor"
+          ]
+        }
+      }
+    }
+  },
   "GET /v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/engine-scripts": {
     "service": "features-service",
     "method": "GET",
@@ -19142,6 +19895,11 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "dynasty": {
                           "type": "string"
                         },
+                        "name": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "The script's short client-readable name (workflow-service, unique within its Engine); null = not named yet, or no longer runnable. Show it as the row label."
+                        },
                         "version": {
                           "type": "number",
                           "nullable": true,
@@ -19270,6 +20028,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "required": [
                         "script",
                         "dynasty",
+                        "name",
                         "version",
                         "description",
                         "shareOfDrawsPct",
@@ -19294,6 +20053,11 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "dynasty": {
                           "type": "string"
                         },
+                        "name": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "The script's short client-readable name (workflow-service, unique within its Engine); null = not named yet, or no longer runnable. Show it as the row label."
+                        },
                         "version": {
                           "type": "number",
                           "nullable": true,
@@ -19422,6 +20186,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "required": [
                         "script",
                         "dynasty",
+                        "name",
                         "version",
                         "description",
                         "shareOfDrawsPct",
@@ -19446,6 +20211,11 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "dynasty": {
                           "type": "string"
                         },
+                        "name": {
+                          "type": "string",
+                          "nullable": true,
+                          "description": "The script's short client-readable name (workflow-service, unique within its Engine); null = not named yet, or no longer runnable. Show it as the row label."
+                        },
                         "version": {
                           "type": "number",
                           "nullable": true,
@@ -19574,6 +20344,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "required": [
                         "script",
                         "dynasty",
+                        "name",
                         "version",
                         "description",
                         "shareOfDrawsPct",
@@ -21232,11 +22003,15 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     },
                     "heldSince": {
                       "type": "string",
-                      "description": "Since when (ISO) it has been refused with no good answer in between."
+                      "description": "Since when (ISO) it has been refused with no good answer in between (a pass the same run got seconds before its refusal does not count)."
                     },
                     "lastAnsweredAt": {
                       "type": "string",
                       "description": "The latest refusal (ISO)."
+                    },
+                    "expected": {
+                      "type": "boolean",
+                      "description": "true = the service holding it calls it a normal business state (the client is out of credit, a budget or limit the client set is spent): the client's to act on, never a fault of ours."
                     }
                   },
                   "required": [
@@ -21244,7 +22019,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "pipeCampaignId",
                     "reason",
                     "heldSince",
-                    "lastAnsweredAt"
+                    "lastAnsweredAt",
+                    "expected"
                   ],
                   "description": "THE reason nothing (more) goes out, when there is one: the Engine of this campaign that cannot run, held longest (the Engine runner's latest answer in the last hour was a refusal). State it before any other explanation (never guess a budget, cap or timing). Null when every Engine asked in the last hour could run."
                 },
@@ -21284,11 +22060,15 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   },
                   "heldSince": {
                     "type": "string",
-                    "description": "Since when (ISO) it has been refused with no good answer in between."
+                    "description": "Since when (ISO) it has been refused with no good answer in between (a pass the same run got seconds before its refusal does not count)."
                   },
                   "lastAnsweredAt": {
                     "type": "string",
                     "description": "The latest refusal (ISO)."
+                  },
+                  "expected": {
+                    "type": "boolean",
+                    "description": "true = the service holding it calls it a normal business state (the client is out of credit, a budget or limit the client set is spent): the client's to act on, never a fault of ours."
                   }
                 },
                 "required": [
@@ -21296,7 +22076,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "pipeCampaignId",
                   "reason",
                   "heldSince",
-                  "lastAnsweredAt"
+                  "lastAnsweredAt",
+                  "expected"
                 ]
               },
               "description": "Every Engine of this campaign that cannot run now (any Engine, any reason, as answered to the Engine runner within the last hour). Empty = none held. Null with heldEnginesUnavailableReason."
@@ -21589,7 +22370,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "unavailableReason": {
               "type": "string",
               "nullable": true,
-              "description": "Why there is no forecast: `campaign_states_no_target`, `target_not_counted_in_ledger`, `no_unit_reaches_a_step`, `yield_unmeasured:<from>-><to>`, `cost_unmeasured_and_plan_prices_no_target`; null = served."
+              "description": "Why there is no forecast (the CLOSED list): `campaign_states_no_target` (the campaign names no Target); `target_ledger_unreadable` (the ledger could not be read now, it clears by itself); `target_outcome_not_declared_in_ledger` (the brand's runs consumed the Target outcome and no run declared producing it); `target_no_producer_declares_outcome` (no run of the fleet ever declared the Target outcome); `target_not_counted_in_ledger` (the Target's card states another reason); `no_unit_reaches_a_step` (no milestone can be counted); `yield_unmeasured:<fromStep>-><toStep>` (a transition nothing measured and the plan line states no rate for); `cost_unmeasured_and_plan_prices_no_target` (under 30 Units of the first milestone and the plan line prices no Target). null = served. A Target the ledger has simply not SEEN yet (`no_unit_makes_it` on its card) is NOT a refusal: it holds zero Units and is projected (FORECAST-NO-TARGET-YET-1118)."
             },
             "uncountedMilestones": {
               "type": "array",
@@ -21717,13 +22498,99 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "type": "string",
                       "enum": [
                         "campaign",
+                        "brand",
+                        "fleet",
                         "plan"
                       ],
-                      "description": "`campaign` = everything it spent ÷ its Units of the first milestone (at least 30); `plan` = the plan line's cost per Target walked back through the yields."
+                      "description": "The level weighing most in the cost used. `campaign` = everything it spent ÷ its Units of the first milestone, from its first Unit; `brand` / `fleet` = the ledger's measured cost of one Unit of that outcome there; `plan` = the plan line's own cost per Unit (its cost per Target ÷ its own Units needed per Target)."
                     },
                     "usdPerUnit": {
                       "type": "number",
-                      "nullable": true
+                      "nullable": true,
+                      "description": "THE COST USED per Unit of the first milestone: the campaign's own, blended with its fallback by its Units (weight = Units / (Units + 10), on the log scale)."
+                    },
+                    "measuredUsdPerUnit": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "The campaign's own measured cost; null = it made no Unit of the first milestone yet."
+                    },
+                    "fallbackUsdPerUnit": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "What it falls back on: the all-in cost of ONE such Unit over the brand's other campaigns, else the fleet's, else the plan line's own; never a cost per Target multiplied by yields measured elsewhere, never the ledger cost of the Unit alone."
+                    },
+                    "fallbackSource": {
+                      "type": "string",
+                      "nullable": true,
+                      "enum": [
+                        "brand",
+                        "fleet",
+                        "plan",
+                        null
+                      ]
+                    },
+                    "weight": {
+                      "type": "number",
+                      "nullable": true,
+                      "description": "Share of the campaign's own measurement in the cost used."
+                    },
+                    "levels": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "level": {
+                            "type": "string",
+                            "enum": [
+                              "campaign",
+                              "brand",
+                              "fleet",
+                              "plan"
+                            ]
+                          },
+                          "basis": {
+                            "type": "string",
+                            "enum": [
+                              "all_in_spend_per_first_milestone_unit",
+                              "plan_cost_per_target_over_units_needed"
+                            ],
+                            "description": "`all_in_spend_per_first_milestone_unit` = everything spent / Units of the first milestone (the campaign's own; the brand's or the fleet's OTHER sales funnel campaigns with this first milestone, pooled). `plan_cost_per_target_over_units_needed` = the plan line's own."
+                          },
+                          "usdPerUnit": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "units": {
+                            "type": "number",
+                            "nullable": true,
+                            "description": "Units of the first milestone it is measured on (null on the plan line)."
+                          },
+                          "campaigns": {
+                            "type": "number",
+                            "nullable": true
+                          },
+                          "weight": {
+                            "type": "number",
+                            "nullable": true,
+                            "description": "Its share in the cost used (the campaign's Units / (Units + 10); the rest to the finest level below that could be measured)."
+                          },
+                          "skippedReason": {
+                            "type": "string",
+                            "nullable": true,
+                            "description": "Why it weighs nothing: `no_unit_of_the_first_milestone_yet`, `no_sales_funnel_campaign_with_this_first_milestone`, `no_other_sales_funnel_campaign_with_this_first_milestone`, `under_30_units_of_other_campaigns`, `no_spend_measured_on_other_campaigns`, `plan_prices_no_target`, `plan_states_no_units_needed_per_target`, or `finer_level_used`."
+                          }
+                        },
+                        "required": [
+                          "level",
+                          "basis",
+                          "usdPerUnit",
+                          "units",
+                          "campaigns",
+                          "weight",
+                          "skippedReason"
+                        ]
+                      },
+                      "description": "FORECAST-ENTRY-COST-BASIS-1118. The ladder the cost rests on, every measured level on the SAME all-in basis: campaign, brand, fleet, plan line. A level that cannot be measured all in is skipped with its reason, never replaced by the ledger cost of the Unit alone."
                     },
                     "p10": {
                       "type": "number",
@@ -21751,6 +22618,11 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "label",
                     "source",
                     "usdPerUnit",
+                    "measuredUsdPerUnit",
+                    "fallbackUsdPerUnit",
+                    "fallbackSource",
+                    "weight",
+                    "levels",
                     "p10",
                     "p90",
                     "spentUsd",
@@ -21794,7 +22666,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "unitsPerUnit": {
                             "type": "number",
                             "nullable": true,
-                            "description": "Units of `toStep` per Unit of `fromStep` (mean of the estimate; × 100 = % Conversion)."
+                            "description": "THE RATE USED by the projection: Units of `toStep` per Unit of `fromStep` (× 100 = % Conversion). A BLENDED rate (THIN-SAMPLE-BLEND-1118): the plan line's, then what the fleet, the brand and the campaign measured, each blended into the level below by its own cases. Print this one as the rate; `blend` says what it rests on. Never print a level's raw `measuredRate` as the rate used."
                           },
                           "median": {
                             "type": "number",
@@ -21817,7 +22689,102 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                                 "brand"
                               ]
                             },
-                            "description": "Finer scopes that hold a sample too thin to stand alone (it only nudges the estimate): say it."
+                            "description": "Finer scopes that hold evidence but weigh less than `source` in the rate used."
+                          },
+                          "pseudoCases": {
+                            "type": "number",
+                            "description": "The fixed strength of a fallback, in cases (10): a level's own measurement weighs cases-it-could-expect / (those + 10) against the level below. 3 cases barely move it, 10 weigh half, 100 weigh 91%."
+                          },
+                          "campaignEvidence": {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                              "silver",
+                              "live_counts",
+                              "own_counts",
+                              null
+                            ],
+                            "description": "Where the campaign level's cases come from: `silver` = the stored daily sweep; `live_counts` = the campaign page's own counts now, censored as the sweep does on the campaign's own pairs read live off the links when it holds at least 10 (Silver holds no row for this campaign on this transition yet: a campaign counts from day one, FORECAST-FRESH-EVIDENCE-1118); `own_counts` = the same counts uncensored (nothing measured anywhere); null = the campaign holds no evidence."
+                          },
+                          "effectiveCases": {
+                            "type": "number",
+                            "nullable": true,
+                            "description": "The cases the rate used is known by: what each draw of the simulation samples its rate with (Gamma, mean = `unitsPerUnit`). Few = a wide tunnel, thousands = a tight one. Apart from `pseudoCases`, which only weighs the MEAN."
+                          },
+                          "planLineSpreadCases": {
+                            "type": "number",
+                            "description": "What a plan line is worth for the SPREAD: half a case (a human's stated rate, not a measurement; the weakest proper prior on a rate). It weighs 10 cases in the mean and half a case in how sure the rate is."
+                          },
+                          "blend": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "level": {
+                                  "type": "string",
+                                  "enum": [
+                                    "campaign",
+                                    "brand",
+                                    "fleet",
+                                    "plan",
+                                    "default"
+                                  ],
+                                  "description": "Where the figure comes from, by the owner's order: the campaign's own measure, else its brand's, else the fleet's, else the campaign's plan line (stated and default rates), else a named default."
+                                },
+                                "cases": {
+                                  "type": "number",
+                                  "nullable": true,
+                                  "description": "Units of `toStep` this level adds that the finer levels do not hold (the fleet without the brand, the brand without the campaign); null on the plan line."
+                                },
+                                "exposure": {
+                                  "type": "number",
+                                  "nullable": true,
+                                  "description": "The `fromStep` Units those cases were counted over (censored by age); null on the plan line."
+                                },
+                                "measuredRate": {
+                                  "type": "number",
+                                  "nullable": true,
+                                  "description": "The level's own RAW rate (cases / exposure; the plan line's stated rate). Not the rate used."
+                                },
+                                "fallbackRate": {
+                                  "type": "number",
+                                  "nullable": true,
+                                  "description": "The blended rate of the level below: what this level falls back on; null = nothing below."
+                                },
+                                "weight": {
+                                  "type": "number",
+                                  "nullable": true,
+                                  "description": "Share of this level's own measurement in ITS blended rate (0 = the fallback alone, 1 = itself alone)."
+                                },
+                                "blendedRate": {
+                                  "type": "number",
+                                  "nullable": true,
+                                  "description": "The rate after blending at this level; the last level's equals `unitsPerUnit`."
+                                },
+                                "share": {
+                                  "type": "number",
+                                  "nullable": true,
+                                  "description": "Share of this level's measurement in the rate finally used; the shares sum to 1. `source` = the largest."
+                                },
+                                "spreadCases": {
+                                  "type": "number",
+                                  "nullable": true,
+                                  "description": "The cases the rate is KNOWN by after this level (FORECAST-TUNNEL-1118): the fallback's own (at most 10) plus this level's cases. The plan line starts at `planLineSpreadCases`."
+                                }
+                              },
+                              "required": [
+                                "level",
+                                "cases",
+                                "exposure",
+                                "measuredRate",
+                                "fallbackRate",
+                                "weight",
+                                "blendedRate",
+                                "share",
+                                "spreadCases"
+                              ]
+                            },
+                            "description": "The ladder the rate rests on, fallback first (plan line, fleet, brand, campaign): per level its raw measured rate with its cases, the fallback, the weight and the blended rate."
                           },
                           "evidence": {
                             "type": "array",
@@ -21836,7 +22803,17 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                                   "type": "number"
                                 },
                                 "toUnits": {
-                                  "type": "number"
+                                  "type": "number",
+                                  "description": "Units of the next milestone COUNTED in the scope: the yield's count, whether or not a stored link ties them."
+                                },
+                                "linkedToUnits": {
+                                  "type": "number",
+                                  "description": "Of toUnits, those a stored link of the ledger ties to a Unit of this milestone."
+                                },
+                                "linkCoverage": {
+                                  "type": "number",
+                                  "nullable": true,
+                                  "description": "linkedToUnits / toUnits; null without a `to` Unit. A thin coverage means the delay rests on few of the Units; the yield does not depend on it."
                                 },
                                 "exposure": {
                                   "type": "number"
@@ -21849,11 +22826,13 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                                 "scope",
                                 "fromUnits",
                                 "toUnits",
+                                "linkedToUnits",
+                                "linkCoverage",
                                 "exposure",
                                 "delayPairs"
                               ]
                             },
-                            "description": "What each scope measured on this transition (sample sizes)."
+                            "description": "What each scope measured on this transition (sample sizes, and how much of it the ledger's links tie)."
                           }
                         },
                         "required": [
@@ -21863,6 +22842,11 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "p10",
                           "p90",
                           "thinnerScopes",
+                          "pseudoCases",
+                          "campaignEvidence",
+                          "effectiveCases",
+                          "planLineSpreadCases",
+                          "blend",
                           "evidence"
                         ]
                       },
@@ -21886,11 +22870,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           },
                           "thinSample": {
                             "type": "boolean",
-                            "description": "Under 10 pairs: the largest sample measured, kept over the default."
+                            "description": "`source` holds under 10 pairs."
                           },
                           "medianHours": {
                             "type": "number",
-                            "nullable": true
+                            "nullable": true,
+                            "description": "Of the BLENDED curve the projection uses (the default curve, then each measured curve mixed in with the weight pairs / (pairs + 10))."
                           },
                           "p10Hours": {
                             "type": "number",
@@ -21899,6 +22884,51 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "p90Hours": {
                             "type": "number",
                             "nullable": true
+                          },
+                          "blend": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "level": {
+                                  "type": "string",
+                                  "enum": [
+                                    "campaign",
+                                    "brand",
+                                    "fleet",
+                                    "plan",
+                                    "default"
+                                  ],
+                                  "description": "Where the figure comes from, by the owner's order: the campaign's own measure, else its brand's, else the fleet's, else the campaign's plan line (stated and default rates), else a named default."
+                                },
+                                "pairs": {
+                                  "type": "number",
+                                  "description": "Pairs this level adds that the finer levels do not hold (0 on the default)."
+                                },
+                                "medianHours": {
+                                  "type": "number",
+                                  "nullable": true,
+                                  "description": "The level's own median (the default's assumed 21 days)."
+                                },
+                                "weight": {
+                                  "type": "number",
+                                  "nullable": true
+                                },
+                                "share": {
+                                  "type": "number",
+                                  "nullable": true,
+                                  "description": "Share of this level's curve in the curve used; `source` = the largest."
+                                }
+                              },
+                              "required": [
+                                "level",
+                                "pairs",
+                                "medianHours",
+                                "weight",
+                                "share"
+                              ]
+                            },
+                            "description": "The ladder the delay curve rests on, default first."
                           }
                         },
                         "required": [
@@ -21907,7 +22937,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "thinSample",
                           "medianHours",
                           "p10Hours",
-                          "p90Hours"
+                          "p90Hours",
+                          "blend"
                         ]
                       }
                     },
@@ -25994,7 +27025,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "basis",
                       "unavailableReason"
                     ],
-                    "description": "EXPECTED economics (owner 2026-10-11: a ROI is never blank, an assumption if need be): the funnel formula where every missing input takes an assumption. Pipe cost: mature workflow > seeded default > market benchmark > its early flash figure > another channel's mature price on the same leg (the highest); the customer's team costs 0. Leg rate: the path's (brand measured / stated > default) > entry default. On a measured/estimated funnel it equals `costUsd`/`roi`."
+                    "description": "EXPECTED economics (owner 2026-10-11: a ROI is never blank, an assumption if need be): the funnel formula where every missing input takes an assumption. Pipe cost: every measured rung before a default (MEASURED-BEFORE-DEFAULT-1117): mature workflow > its early flash figure > its own history > another channel's price on the same leg (the highest) > the fleet's price of the same outcome > seeded default > market benchmark > its own spend; the customer's team costs 0. Leg rate: the brand's own (measured / stated) > a measured pipe's > the fleet's measured conversion of the leg on its channel > default > entry default (EXPECTED-FLEET-RATE-1116). On a measured/estimated funnel it equals `costUsd`/`roi`."
                   },
                   "runnable": {
                     "type": "boolean",
@@ -36289,11 +37320,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "items": {
                       "type": "string"
                     },
-                    "description": "Every place the scan saw it (X, LinkedIn, r/sales, GNews/<outlet>...)"
+                    "description": "Every place the scan saw it (X, X/@<watched handle>, LinkedIn, r/sales, GNews/<outlet>...)"
                   },
                   "author": {
                     "type": "string",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "X: the author's handle (no @)"
                   },
                   "publishedAt": {
                     "type": "string",
@@ -36309,11 +37341,13 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   },
                   "postId": {
                     "type": "string",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "X: the post id (the url is https://x.com/<author>/status/<postId>)"
                   },
                   "engagement": {
                     "type": "string",
-                    "nullable": true
+                    "nullable": true,
+                    "description": "X: `<likes>♥ <reposts>rt <replies>c`"
                   },
                   "companies": {
                     "type": "array",
@@ -36737,7 +37771,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
     "path": "/orgs/x/accounts",
     "responses": {
       "200": {
-        "description": "Accounts, oldest first",
+        "description": "Accounts, oldest first, and the org's own X app",
         "schema": {
           "type": "object",
           "properties": {
@@ -36798,6 +37832,14 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "nullable": true,
                     "description": "Plain-language reason when health is needs_reconnect"
                   },
+                  "xApp": {
+                    "type": "string",
+                    "enum": [
+                      "own",
+                      "platform"
+                    ],
+                    "description": "Whose X developer app the login goes through. `own` = the org's own app (its OAuth 2.0 client id + secret stored in the key store under provider `x-oauth-app`, for the brand or org-wide): X bills that app's owner, we declare no X fee for its calls and count them. `platform` = ours."
+                  },
                   "connectedByUserId": {
                     "type": "string",
                     "nullable": true,
@@ -36827,16 +37869,81 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "accountTypeLabel",
                   "health",
                   "healthReason",
+                  "xApp",
                   "connectedByUserId",
                   "tokenRefreshedAt",
                   "createdAt",
                   "updatedAt"
                 ]
               }
+            },
+            "ownApp": {
+              "type": "object",
+              "nullable": true,
+              "properties": {
+                "scope": {
+                  "type": "string",
+                  "enum": [
+                    "brand",
+                    "org"
+                  ],
+                  "description": "`brand` = the key stored for this brand (POST /v1/keys/brands/{brandId}); `org` = the org-wide key (POST /v1/keys + key source `org`)"
+                },
+                "provider": {
+                  "type": "string",
+                  "enum": [
+                    "x-oauth-app"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "connected"
+                  ]
+                },
+                "calls": {
+                  "type": "object",
+                  "properties": {
+                    "total": {
+                      "type": "integer"
+                    },
+                    "byOperation": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "integer"
+                      }
+                    },
+                    "lastCallAt": {
+                      "type": "string",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "total",
+                    "byOperation",
+                    "lastCallAt"
+                  ],
+                  "description": "X API calls we made through the org's app (billed by X to its owner, $0 charged by us)"
+                }
+              },
+              "required": [
+                "scope",
+                "provider",
+                "status",
+                "calls"
+              ],
+              "description": "The org's own X app for this brand (or org-wide), null when it brings none"
+            },
+            "ownAppError": {
+              "type": "string",
+              "nullable": true,
+              "description": "Why the own app could not be read (key store unreachable, or the stored key is not an X app); null otherwise"
             }
           },
           "required": [
-            "accounts"
+            "accounts",
+            "ownApp",
+            "ownAppError"
           ]
         }
       }
@@ -37009,7 +38116,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "basis",
                       "unavailableReason"
                     ],
-                    "description": "EXPECTED economics (owner 2026-10-11: a ROI is never blank, an assumption if need be): the funnel formula where every missing input takes an assumption. Pipe cost: mature workflow > seeded default > market benchmark > its early flash figure > another channel's mature price on the same leg (the highest); the customer's team costs 0. Leg rate: the path's (brand measured / stated > default) > entry default. On a measured/estimated funnel it equals `costUsd`/`roi`."
+                    "description": "EXPECTED economics (owner 2026-10-11: a ROI is never blank, an assumption if need be): the funnel formula where every missing input takes an assumption. Pipe cost: every measured rung before a default (MEASURED-BEFORE-DEFAULT-1117): mature workflow > its early flash figure > its own history > another channel's price on the same leg (the highest) > the fleet's price of the same outcome > seeded default > market benchmark > its own spend; the customer's team costs 0. Leg rate: the brand's own (measured / stated) > a measured pipe's > the fleet's measured conversion of the leg on its channel > default > entry default (EXPECTED-FLEET-RATE-1116). On a measured/estimated funnel it equals `costUsd`/`roi`."
                   },
                   "runnable": {
                     "type": "boolean",
@@ -41927,6 +43034,14 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "nullable": true,
                   "description": "Plain-language reason when health is needs_reconnect"
                 },
+                "xApp": {
+                  "type": "string",
+                  "enum": [
+                    "own",
+                    "platform"
+                  ],
+                  "description": "Whose X developer app the login goes through. `own` = the org's own app (its OAuth 2.0 client id + secret stored in the key store under provider `x-oauth-app`, for the brand or org-wide): X bills that app's owner, we declare no X fee for its calls and count them. `platform` = ours."
+                },
                 "connectedByUserId": {
                   "type": "string",
                   "nullable": true,
@@ -41956,6 +43071,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "accountTypeLabel",
                 "health",
                 "healthReason",
+                "xApp",
                 "connectedByUserId",
                 "tokenRefreshedAt",
                 "createdAt",
@@ -42403,7 +43519,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "agent_api",
                     "prepaid_at_cost"
                   ],
-                  "description": "The free-credit offer this org was created under. `prepaid_at_cost` = every account created since 2026-10-29: a $5 advance at creation (repaid by the first payment, never a gift), NO other free credit (no match, no referral reward), PREPAID only with an OPTIONAL auto top-up (on by default, the org may switch it off and on), and every cost it causes is billed to it (spend with no campaign: onboarding, Copilot chat, card fees). `match_100` = 'We match your first $100' (a $30 advance at creation, repaid by the first payment, and +$100 free once $100 is paid). `agent_api` = opened by an AI agent through the API: NO free credit of any kind, prepaid with mandatory auto top-up. `legacy` = every older org, unchanged."
+                  "description": "The free-credit offer this org was created under. `prepaid_at_cost` = every account created since 2026-10-29: a $5 advance at creation (repaid by the first payment, never a gift), NO other free credit (no match, no referral reward), PREPAID only with an OPTIONAL auto top-up (on by default, the org may switch it off and on), and every cost it causes is billed to it (spend with no campaign: onboarding, Copilot chat, card fees). `match_100` = 'We match your first $100' (a $30 advance at creation, repaid by the first payment, and +$100 free once $100 is paid). `agent_api` = opened by an AI agent through the API: NO free credit of any kind, prepaid with auto top-up armed at checkout (the org may switch it off, owner 2026-11-18). `legacy` = every older org, unchanged."
                 },
                 "free_credit_entitlement_cents": {
                   "type": "integer",
@@ -42480,6 +43596,36 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "type": "string",
                   "nullable": true
                 },
+                "card_brand": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Saved card network (display-only, e.g. \"visa\"); null when the chargeable method is not a card or there is none."
+                },
+                "card_last4": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Saved card last 4 digits (display-only, never the full PAN); null when not a card or none."
+                },
+                "card_exp_month": {
+                  "type": "integer",
+                  "nullable": true,
+                  "description": "Saved card expiry month; null when not a card or none."
+                },
+                "card_exp_year": {
+                  "type": "integer",
+                  "nullable": true,
+                  "description": "Saved card expiry year; null when not a card or none."
+                },
+                "payment_method_type": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Stripe type of the saved method a charge would take (\"card\", \"link\", ...), picked like the charge: first card, else first Link wallet. null when the org holds no chargeable method."
+                },
+                "link_email": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Email of the Link wallet a charge would take (the wallet's own address, never the billing-details email), when payment_method_type is \"link\"; null otherwise."
+                },
                 "created_at": {
                   "type": "string"
                 },
@@ -42522,6 +43668,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "auto_reload_supported",
                 "auto_reload_unsupported_reason",
                 "card_country",
+                "card_brand",
+                "card_last4",
+                "card_exp_month",
+                "card_exp_year",
+                "payment_method_type",
+                "link_email",
                 "created_at",
                 "updated_at"
               ]
@@ -47173,12 +48325,14 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "fleet_median",
                           "default",
                           "measured_pipe",
+                          "fleet_measured",
                           "offer_measured",
                           "offer_stated",
                           "offer_team_measured",
                           "default_entry",
                           null
-                        ]
+                        ],
+                        "description": "In order: offer_measured / offer_team_measured / offer_stated (the brand's own) > measured_pipe (basis fleet) > fleet_measured (the fleet's measured conversion of the leg on this pipe's channel, EXPECTED-FLEET-RATE-1116) > default / default_entry."
                       },
                       "rateBasis": {
                         "type": "string",
@@ -47258,7 +48412,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "lifetimeRevenueBasis",
                 "legs"
               ],
-              "description": "EXPECTED economics (owner 2026-10-11: a ROI is never blank, an assumption if need be): the funnel formula where every missing input takes an assumption. Pipe cost: mature workflow > seeded default > market benchmark > its early flash figure > another channel's mature price on the same leg (the highest); the customer's team costs 0. Leg rate: the path's (brand measured / stated > default) > entry default. On a measured/estimated funnel it equals `costUsd`/`roi`."
+              "description": "EXPECTED economics (owner 2026-10-11: a ROI is never blank, an assumption if need be): the funnel formula where every missing input takes an assumption. Pipe cost: every measured rung before a default (MEASURED-BEFORE-DEFAULT-1117): mature workflow > its early flash figure > its own history > another channel's price on the same leg (the highest) > the fleet's price of the same outcome > seeded default > market benchmark > its own spend; the customer's team costs 0. Leg rate: the brand's own (measured / stated) > a measured pipe's > the fleet's measured conversion of the leg on its channel > default > entry default (EXPECTED-FLEET-RATE-1116). On a measured/estimated funnel it equals `costUsd`/`roi`."
             },
             "costUnit": {
               "type": "string",
@@ -47701,12 +48855,14 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "fleet_median",
                           "default",
                           "measured_pipe",
+                          "fleet_measured",
                           "offer_measured",
                           "offer_stated",
                           "offer_team_measured",
                           "default_entry",
                           null
-                        ]
+                        ],
+                        "description": "In order: offer_measured / offer_team_measured / offer_stated (the brand's own) > measured_pipe (basis fleet) > fleet_measured (the fleet's measured conversion of the leg on this pipe's channel, EXPECTED-FLEET-RATE-1116) > default / default_entry."
                       },
                       "rateBasis": {
                         "type": "string",
@@ -47786,7 +48942,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "lifetimeRevenueBasis",
                 "legs"
               ],
-              "description": "EXPECTED economics (owner 2026-10-11: a ROI is never blank, an assumption if need be): the funnel formula where every missing input takes an assumption. Pipe cost: mature workflow > seeded default > market benchmark > its early flash figure > another channel's mature price on the same leg (the highest); the customer's team costs 0. Leg rate: the path's (brand measured / stated > default) > entry default. On a measured/estimated funnel it equals `costUsd`/`roi`."
+              "description": "EXPECTED economics (owner 2026-10-11: a ROI is never blank, an assumption if need be): the funnel formula where every missing input takes an assumption. Pipe cost: every measured rung before a default (MEASURED-BEFORE-DEFAULT-1117): mature workflow > its early flash figure > its own history > another channel's price on the same leg (the highest) > the fleet's price of the same outcome > seeded default > market benchmark > its own spend; the customer's team costs 0. Leg rate: the brand's own (measured / stated) > a measured pipe's > the fleet's measured conversion of the leg on its channel > default > entry default (EXPECTED-FLEET-RATE-1116). On a measured/estimated funnel it equals `costUsd`/`roi`."
             },
             "costUnit": {
               "type": "string",
@@ -56708,6 +57864,14 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "nullable": true,
                   "description": "Plain-language reason when health is needs_reconnect"
                 },
+                "xApp": {
+                  "type": "string",
+                  "enum": [
+                    "own",
+                    "platform"
+                  ],
+                  "description": "Whose X developer app the login goes through. `own` = the org's own app (its OAuth 2.0 client id + secret stored in the key store under provider `x-oauth-app`, for the brand or org-wide): X bills that app's owner, we declare no X fee for its calls and count them. `platform` = ours."
+                },
                 "connectedByUserId": {
                   "type": "string",
                   "nullable": true,
@@ -56737,6 +57901,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "accountTypeLabel",
                 "health",
                 "healthReason",
+                "xApp",
                 "connectedByUserId",
                 "tokenRefreshedAt",
                 "createdAt",
@@ -56855,7 +58020,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 },
                 "cc": {
                   "type": "string",
-                  "description": "The agency inbox this reply was CC'd to — VISIBLE to the prospect, so a reply-all reaches a human. Never a BCC."
+                  "description": "The Cc header as sent: exactly the addresses the caller named (empty when it named none)."
                 },
                 "bcc": {
                   "type": "string",
