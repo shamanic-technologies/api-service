@@ -18918,6 +18918,7 @@ const AGENT_FLOW =
 
 // Documented from client-service (DOWNSTREAM_BODY_SOURCES): what the signup accepts (phone required or
 // not, its checks) is client-service's call, and the doc follows it at each sync (CLIENT-FRICTION-API-1103).
+// Only AGENT_SIGNUP_START_FIELDS are forwarded and documented (`only` on the mapping, DISTRY-ONE-AI-1118).
 export const AgentSignupStartRequestSchema = z.object({}).passthrough().openapi("AgentSignupStartRequest");
 
 registry.registerPath({
@@ -18939,6 +18940,8 @@ registry.registerPath({
   },
 });
 
+// Typed, never `.passthrough()`: the route forwards AGENT_SIGNUP_COMPLETE_FIELDS only (rule #4 exception,
+// src/lib/agent-signup-fields.ts). A field added here that is not in that list is documented but dropped.
 export const AgentSignupCompleteRequestSchema = z
   .object({
     email: z.string().describe("The email the code was sent to").openapi({ example: "agent@example.com" }),
@@ -19011,6 +19014,7 @@ registry.registerPath({
     "free endpoints work at once, and anything that spends money answers 402 `payment_required` until you prepay " +
     "(see `prepay` in the answer). A 429 with `error: \"too_many_attempts\"` means this code is burned after too " +
     "many wrong tries: request a new one with POST /v1/agent-signups/start (any other 429 is the rate limit). " +
+    "Send `email` with `code` or `pollToken`, plus `keyName` if you want to label the key: any other field is ignored. " +
     AGENT_FLOW,
   request: { body: { content: { "application/json": { schema: AgentSignupCompleteRequestSchema } } } },
   responses: {

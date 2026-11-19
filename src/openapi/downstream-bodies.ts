@@ -23,6 +23,7 @@
  * cannot ship with an empty body again.
  */
 import { DOWNSTREAM_REQUEST_BODIES as snapshot } from "./downstream-request-bodies.generated.js";
+import { AGENT_SIGNUP_START_FIELDS } from "../lib/agent-signup-fields.js";
 
 export interface DownstreamBodySource {
   service: string;
@@ -30,6 +31,13 @@ export interface DownstreamBodySource {
   path: string;
   /** Body fields the GATEWAY supplies from the authenticated identity: left out of the documented body. */
   omit?: string[];
+  /**
+   * The ONLY body fields the gateway forwards on this route (a keyless route whose producer also
+   * serves trusted callers, rule #4 exception): the documented body keeps these and nothing else,
+   * whatever the producer documents. Applied when the document is built, so a snapshot synced after
+   * the producer grew an internal-only field still cannot publish it. Same list as the route's.
+   */
+  only?: string[];
 }
 
 /** `"<METHOD> <gateway path template>"` → the producer route the body is forwarded to. */
@@ -38,7 +46,7 @@ export const DOWNSTREAM_BODY_SOURCES: Record<string, DownstreamBodySource> = {
   "POST /v1/local-llm/work/claim": { service: "chat-service", method: "POST", path: "/orgs/local-llm/work/claim" },
   "POST /v1/local-llm/work/{id}/result": { service: "chat-service", method: "POST", path: "/orgs/local-llm/work/{id}/result" },
   "POST /v1/sales-funnel-campaigns": { service: "campaign-service", method: "POST", path: "/sales-funnel-campaigns" },
-  "POST /v1/agent-signups/start": { service: "client-service", method: "POST", path: "/internal/agent-signups/start" },
+  "POST /v1/agent-signups/start": { service: "client-service", method: "POST", path: "/internal/agent-signups/start", only: [...AGENT_SIGNUP_START_FIELDS] },
   "PATCH /v1/sales-funnel-campaigns/{id}": { service: "campaign-service", method: "PATCH", path: "/sales-funnel-campaigns/{id}" },
   "POST /v1/keys/brands/{brandId}": { service: "key-service", method: "POST", path: "/keys/brands/{brandId}" },
   "POST /v1/leads/crm-pairings/rulings": { service: "lead-service", method: "POST", path: "/orgs/leads/crm-pairings/rulings" },
@@ -170,6 +178,28 @@ export function isEmptyBodySchema(document: Json, schema: Json | undefined): boo
 }
 
 /**
+ * A copy of a producer body schema keeping only the `only` properties (and their
+ * `required` entries), in every branch of a union too (`anyOf` / `oneOf` /
+ * `allOf`): a body the producer later turns into a union must not publish its
+ * branches unfiltered. The snapshot itself is never edited: it is shared by
+ * every document build of the process.
+ */
+export function keepOnlyFields(schema: Json, only: readonly string[]): Json {
+  const keep = new Set(only);
+  const out: Json = { ...schema };
+  const props = schema.properties as Json | undefined;
+  if (props) out.properties = Object.fromEntries(Object.entries(props).filter(([name]) => keep.has(name)));
+  if (Array.isArray(schema.required)) out.required = (schema.required as string[]).filter((name) => keep.has(name));
+  for (const union of ["anyOf", "oneOf", "allOf"]) {
+    const branches = schema[union];
+    if (Array.isArray(branches)) {
+      out[union] = branches.map((branch) => (branch && typeof branch === "object" ? keepOnlyFields(branch as Json, only) : branch));
+    }
+  }
+  return out;
+}
+
+/**
  * Put each snapshot body on its operation when the gateway's own body schema is
  * empty. A gateway schema that declares fields always wins: it is the one the
  * gateway validates against.
@@ -186,8 +216,13 @@ export function attachDownstreamBodies(document: Json, snap: Record<string, Down
       const content = ((requestBody.content ??= {}) as Json);
       const json = ((content["application/json"] ??= {}) as Json);
       if (!isEmptyBodySchema(document, json.schema as Json | undefined)) continue;
-      json.schema = entry.schema;
-      op.description = `${op.description ?? ""}\n\nRequest body: documented from ${entry.service} ${entry.method} ${entry.path}, which owns and validates it; the gateway forwards it unchanged.`.trim();
+      // The live mapping decides, not the snapshot: an allowlist added after the last sync applies at once.
+      const only = entry.only ?? DOWNSTREAM_BODY_SOURCES[`${method.toUpperCase()} ${path}`]?.only;
+      json.schema = only ? keepOnlyFields(entry.schema, only) : entry.schema;
+      const forwards = only
+        ? `the gateway forwards only ${only.map((name) => `\`${name}\``).join(", ")}; any other field is ignored`
+        : "the gateway forwards it unchanged";
+      op.description = `${op.description ?? ""}\n\nRequest body: documented from ${entry.service} ${entry.method} ${entry.path}, which owns and validates it; ${forwards}.`.trim();
     }
   }
 }

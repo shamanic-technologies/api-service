@@ -2,6 +2,7 @@ import express, { Router } from "express";
 import { callExternalService, externalServices, pipeExternalService } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 import { fetchReloadRules, prepayInstructions } from "../lib/agent-prepay.js";
+import { AGENT_SIGNUP_COMPLETE_FIELDS, AGENT_SIGNUP_START_FIELDS, pickPublicSignupFields } from "../lib/agent-signup-fields.js";
 
 /**
  * Public signup for AI agents: email + phone → 6-digit code by email → API key.
@@ -18,6 +19,11 @@ import { fetchReloadRules, prepayInstructions } from "../lib/agent-prepay.js";
  * `POST /v1/agent-signups/complete` is the one response this gateway builds
  * itself (account from client-service + key from key-service), so its schema is
  * typed, not passthrough (rule #8 exception: construction site is this file).
+ *
+ * Both POSTs forward an ALLOW-list, never the caller's body (rule #4 exception,
+ * `src/lib/agent-signup-fields.ts`): client-service's completion also takes
+ * fields only a trusted channel may set (`whatsappPhone`, `claimOrgId`), and
+ * this route has no key to tell a stranger from one.
  */
 const router = Router();
 
@@ -44,7 +50,7 @@ router.post("/agent-signups/start", async (req, res) => {
   try {
     const result = await callExternalService(externalServices.client, "/internal/agent-signups/start", {
       method: "POST",
-      body: req.body,
+      body: pickPublicSignupFields("start", req.body, AGENT_SIGNUP_START_FIELDS),
     });
     res.json(result);
   } catch (error) {
@@ -108,8 +114,8 @@ router.post("/agent-signups/complete", async (req, res) => {
     account = await callExternalService<AgentSignupAccount>(
       externalServices.client,
       "/internal/agent-signups/complete",
-      // Everything but the gateway's own `keyName` (code OR pollToken, client-service decides).
-      { method: "POST", body: Object.fromEntries(Object.entries(body).filter(([k]) => k !== "keyName")) },
+      // The email and its proof only (code OR pollToken, client-service decides); `keyName` is the gateway's own.
+      { method: "POST", body: pickPublicSignupFields("complete", body, AGENT_SIGNUP_COMPLETE_FIELDS, ["keyName"]) },
     );
   } catch (error) {
     console.error("[agent-signups] complete error:", (error as Error).message);

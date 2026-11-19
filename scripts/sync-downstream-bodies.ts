@@ -19,7 +19,7 @@
 import * as fs from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
-import { DOWNSTREAM_BODY_SOURCES, type DownstreamBodySnapshot } from "../src/openapi/downstream-bodies.js";
+import { DOWNSTREAM_BODY_SOURCES, keepOnlyFields, type DownstreamBodySnapshot } from "../src/openapi/downstream-bodies.js";
 import { DOWNSTREAM_RESPONSE_SOURCES, type DownstreamResponseSnapshot } from "../src/openapi/downstream-responses.js";
 
 type Json = Record<string, unknown>;
@@ -96,7 +96,14 @@ async function main() {
       delete (inlined.properties as Json)[field];
       if (Array.isArray(inlined.required)) inlined.required = (inlined.required as string[]).filter((f) => f !== field);
     }
-    out[key] = { ...src, schema: inlined };
+    // An allowlisted route keeps only what the gateway forwards: a field the producer renamed or
+    // withdrew fails the run (the route would forward a name the producer no longer reads).
+    for (const field of src.only ?? []) {
+      if (!inlined?.properties || !(field in (inlined.properties as Json))) {
+        problems.push(`${key}: only names "${field}", which ${src.service} does not document`);
+      }
+    }
+    out[key] = { ...src, schema: inlined && src.only ? keepOnlyFields(inlined, src.only) : inlined };
   }
   const responsesOut: Record<string, DownstreamResponseSnapshot> = {};
   for (const [key, src] of Object.entries(DOWNSTREAM_RESPONSE_SOURCES).sort(([a], [b]) => a.localeCompare(b))) {
