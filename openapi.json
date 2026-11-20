@@ -15316,6 +15316,16 @@
           }
         }
       },
+      "ErrorResponse403IdentityNotProvenTheBodyNamesAnIdentityTheCallerHasNotProven": {
+        "description": "identity_not_proven: the body names an identity the caller has not proven",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
       "ErrorResponse404ServiceNotFound": {
         "description": "Service not found",
         "content": {
@@ -69373,7 +69383,7 @@
           "Users"
         ],
         "summary": "Resolve external user identity",
-        "description": "Map external org/user IDs to internal UUIDs via client-service (idempotent upsert). For anonymous users, generate a UUID as externalUserId — each call with a new ID creates a new user. Calling again with the same IDs updates optional contact fields (email, firstName, etc.).",
+        "description": "Map external org/user IDs to internal UUIDs via client-service (idempotent upsert). For anonymous users, generate a UUID as externalUserId — each call with a new ID creates a new user. Calling again with the same IDs updates optional contact fields (email, firstName, etc.). Only the signed-in session's OWN identity (SEC-STAFF-EMAIL-1120): an API key is refused 403 identity_not_proven, and the platform key is admitted only when externalOrgId/externalUserId equal x-external-org-id/x-external-user-id and email equals x-email.",
         "security": [
           {
             "bearerAuth": []
@@ -69411,6 +69421,9 @@
           },
           "401": {
             "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/ErrorResponse403IdentityNotProvenTheBodyNamesAnIdentityTheCallerHasNotProven"
           },
           "429": {
             "$ref": "#/components/responses/RateLimited"

@@ -20,3 +20,32 @@ export function isStaffEmail(email: string | null | undefined): boolean {
   const normalized = email?.trim().toLowerCase();
   return !!normalized && staffEmailAllowlist().has(normalized);
 }
+
+/**
+ * The client-service user rows that ARE the staff, pinned by internal user id
+ * (SEC-STAFF-EMAIL-1120, security hotfix 2026-11-20).
+ *
+ * A user's stored email is NOT proof of who they are: any customer could create
+ * a user carrying a staff address through `POST /v1/users/resolve` (incident
+ * 2026-11-20: org 3afacd9a… minted user a4651533… as kevin.lourd@gmail.com), and
+ * an internal probe left one more such row (`system-probe-crm-merged`). So a
+ * USER KEY counts as staff only when its user is one of these rows, each created
+ * by a Clerk sign-in whose primary email Clerk verified, AND its stored email is
+ * still on the allowlist. A new staff account = sign in once on the dashboard,
+ * then add its internal id here (client_service `users.id`, `external_id` must
+ * be a Clerk `user_…` id).
+ *
+ * The platform-key path (`requireStaff`) is unchanged: there the email is the
+ * `x-email` our own dashboard/admin proxies stamp from the verified Clerk
+ * session, never a value a customer stores.
+ */
+export const STAFF_USER_IDS: Readonly<Record<string, (typeof STAFF_EMAILS)[number]>> = {
+  "cfe148ed-e3d8-40a2-8920-f8c040a81934": "kevin.lourd@gmail.com", // Clerk user_3AI7TH7LLPltlSpF2UCTD5U1lLa
+  "7b417d70-29b5-471b-a8e1-20e75225c0af": "kevin@distribute.you", // Clerk user_2yaCEpxeoOEIfXTdxTMY8pM8jXW
+};
+
+/** A user key's user is staff: a pinned staff user id whose stored email is that staff address. */
+export function isStaffUser(userId: string | null | undefined, storedEmail: string | null | undefined): boolean {
+  if (!userId || !Object.prototype.hasOwnProperty.call(STAFF_USER_IDS, userId)) return false;
+  return storedEmail?.trim().toLowerCase() === STAFF_USER_IDS[userId];
+}

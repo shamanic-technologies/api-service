@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { callExternalService, externalServices } from "./service-client.js";
-import { isStaffEmail } from "./staff.js";
+import { isStaffUser } from "./staff.js";
 
 /**
  * Which organization a USER-KEY request acts in.
@@ -9,7 +9,8 @@ import { isStaffEmail } from "./staff.js";
  * (owner decision 2026-10-01). It reaches every organization the user is a
  * member of RIGHT NOW, read from client-service on every request, so a user
  * removed from an organization loses that organization through their key.
- * Staff users count as members of every organization. A key never carries staff
+ * Staff users (pinned user ids, `STAFF_USER_IDS`, never a stored email alone)
+ * count as members of every organization. A key never carries staff
  * powers: staff/platform routes gate on the platform key (`requireStaff`,
  * `authenticatePlatform`), which a Bearer key never passes; staff status here
  * only widens WHICH organizations the key can name.
@@ -90,7 +91,9 @@ export async function loadUserKeyScope(userId: string): Promise<UserKeyScope | T
       fetchUserOrganizations(userId),
     ]);
     const displayName = [user.user.firstName, user.user.lastName].filter((p) => p && p.trim()).join(" ").trim() || null;
-    return { isStaff: isStaffEmail(user.user.email), memberships, email: user.user.email ?? null, displayName };
+    // Staff = a pinned staff user id, never an email alone: a stored email can be
+    // customer-supplied (SEC-STAFF-EMAIL-1120, `lib/staff.ts`).
+    return { isStaff: isStaffUser(userId, user.user.email), memberships, email: user.user.email ?? null, displayName };
   } catch (err) {
     if ((err as { statusCode?: number }).statusCode === 404) {
       // The key outlived its user (client-service no longer knows them).

@@ -7,7 +7,7 @@ vi.mock("../../src/middleware/auth.js", () => ({
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
-    req.authType = "user_key";
+    req.authType = req.headers["x-test-auth-type"] ?? "admin";
     next();
   },
   requireOrg: (req: any, res: any, next: any) => {
@@ -31,6 +31,15 @@ interface FetchCall {
 let fetchCalls: FetchCall[] = [];
 
 import usersRoutes from "../../src/routes/users.js";
+
+/** The identity headers the dashboard proxy stamps from the signed-in Clerk session. */
+function session(body: { externalOrgId?: string; externalUserId?: string; email?: string }) {
+  const h: Record<string, string> = {};
+  if (body.externalOrgId) h["x-external-org-id"] = body.externalOrgId;
+  if (body.externalUserId) h["x-external-user-id"] = body.externalUserId;
+  if (body.email) h["x-email"] = body.email;
+  return h;
+}
 
 function createApp() {
   const app = express();
@@ -69,6 +78,12 @@ describe("POST /v1/users/resolve", () => {
   it("should proxy to client-service /resolve without appId", async () => {
     const res = await request(app)
       .post("/v1/users/resolve")
+      .set(session({
+        externalOrgId: "clerk_org_abc",
+        externalUserId: "anon_user_123",
+        email: "user@polarity.com",
+        firstName: "Kevin",
+      }))
       .send({
         externalOrgId: "clerk_org_abc",
         externalUserId: "anon_user_123",
@@ -95,6 +110,14 @@ describe("POST /v1/users/resolve", () => {
   it("should pass through optional contact fields", async () => {
     const res = await request(app)
       .post("/v1/users/resolve")
+      .set(session({
+        externalOrgId: "clerk_org_abc",
+        externalUserId: "anon_user_456",
+        email: "jane@example.com",
+        firstName: "Jane",
+        lastName: "Doe",
+        imageUrl: "https://example.com/avatar.png",
+      }))
       .send({
         externalOrgId: "clerk_org_abc",
         externalUserId: "anon_user_456",
@@ -121,6 +144,10 @@ describe("POST /v1/users/resolve", () => {
   it("should work with only required fields (no contact info)", async () => {
     const res = await request(app)
       .post("/v1/users/resolve")
+      .set(session({
+        externalOrgId: "clerk_org_abc",
+        externalUserId: "anon_user_789",
+      }))
       .send({
         externalOrgId: "clerk_org_abc",
         externalUserId: "anon_user_789",
@@ -163,6 +190,11 @@ describe("POST /v1/users/resolve", () => {
   it("should return 400 when email is invalid", async () => {
     const res = await request(app)
       .post("/v1/users/resolve")
+      .set(session({
+        externalOrgId: "clerk_org_abc",
+        externalUserId: "anon_user_123",
+        email: "not-an-email",
+      }))
       .send({
         externalOrgId: "clerk_org_abc",
         externalUserId: "anon_user_123",
@@ -182,6 +214,10 @@ describe("POST /v1/users/resolve", () => {
 
     const res = await request(app)
       .post("/v1/users/resolve")
+      .set(session({
+        externalOrgId: "clerk_org_abc",
+        externalUserId: "anon_user_123",
+      }))
       .send({
         externalOrgId: "clerk_org_abc",
         externalUserId: "anon_user_123",
