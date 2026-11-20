@@ -157,6 +157,14 @@ router.put("/v1/chat/distry/config", authenticatePlatform, requireStaff, (req: A
   });
 });
 
+/**
+ * GET /v1/chat/distry/models → chat-service GET /internal/distry/models (DISTRY-MODELS-1119): every model
+ * Distry can run, its price, Artificial Analysis Intelligence Index score/rank and intelligence per dollar.
+ */
+router.get("/v1/chat/distry/models", authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) =>
+  pipe(req, res, "/internal/distry/models", "Failed to read Distry's models"),
+);
+
 /** GET /v1/chat/distry/config/versions → chat-service GET /internal/distry/config/versions (newest first). */
 router.get("/v1/chat/distry/config/versions", authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) =>
   pipe(req, res, "/internal/distry/config/versions", "Failed to list Distry's versions"),

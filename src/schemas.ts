@@ -11095,6 +11095,23 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/chat/distry/models",
+  tags: ["Chat"],
+  summary: "Every model Distry can run, with price and intelligence per dollar (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. Powers dashboard v2 Monitoring > Distry's model panel (DISTRY-MODELS-1119). " +
+    "Byte passthrough to chat-service GET /internal/distry/models: each model's price, Artificial Analysis Intelligence Index score and rank, and intelligence per dollar. Status and body owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("DistryModelsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/chat/distry/config/versions",
   tags: ["Chat"],
   summary: "Every version of Distry's definition, newest first (staff only)",
@@ -12456,6 +12473,32 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/apollo/ops/email-sources/daily",
+  tags: ["Apollo Ops"],
+  summary: "Get the emails found per day by path: our stock, format guess, treg, Apollo (staff only)",
+  description:
+    "Powers dashboard v2 Monitoring > Email sources: per UTC day, how many served emails came from our own stock, "
+    + "an email-format guess, treg and a paid Apollo reveal, the free people found, and Apollo's share "
+    + "(APOLLO-ZERO-COST-1119). Staff-only (platform API key + STAFF_EMAILS x-email); no org context. "
+    + "Transparent byte passthrough to apollo-service GET /internal/stats/email-sources/daily. The query string "
+    + "is forwarded verbatim; a bad `days` answers the producer's own 400. Response owned by apollo-service.",
+  security: platformAuth,
+  request: {
+    query: z.object({
+      days: z.string().optional().describe("Window in days; apollo-service owns the default and bounds"),
+    }).passthrough(),
+  },
+  responses: {
+    200: { description: "Daily email sources, pass-through from apollo-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("ApolloOpsEmailSourcesDailyResponse") } } },
+    400: { description: "Downstream rejected `days`", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    500: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/campaigns/ops/stuck-occurrences",
   tags: ["Campaign Ops"],
   summary: "Get the prospects waiting on a blocked campaign answer, now and per day (staff only)",
@@ -13255,8 +13298,10 @@ registry.registerPath({
   summary: "Send a transactional email",
   description:
     "Send a templated transactional email. Uses the org context for template lookup and dedup. " +
-    "Dedup strategy depends on eventType (once-only, daily, product-scoped, or none).",
-  security: authed,
+    "Dedup strategy depends on eventType (once-only, daily, product-scoped, or none). " +
+    "Platform senders only (SEC-TEMPLATES-1120): a user key is refused 403 `platform_only`, a " +
+    "customer browser session 403 `browser_session_refused`.",
+  security: platformAuth,
   request: {
     body: {
       content: { "application/json": { schema: SendEmailRequestSchema } },
@@ -13277,6 +13322,7 @@ registry.registerPath({
     },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Customer key (platform_only) or customer browser session (browser_session_refused)", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
@@ -13550,8 +13596,10 @@ registry.registerPath({
   summary: "Deploy email templates",
   description:
     "Idempotent upsert of email templates. Safe to call on every cold start. " +
-    "Templates support {{variable}} interpolation from metadata passed at send time.",
-  security: authed,
+    "Templates support {{variable}} interpolation from metadata passed at send time. " +
+    "The template store is platform-wide: server-to-server only (platform key, no forwarded " +
+    "identity, else 403 `server_to_server_only`; SEC-TEMPLATES-1120).",
+  security: platformAuth,
   request: {
     body: {
       content: { "application/json": { schema: DeployEmailTemplatesRequestSchema } },
@@ -13571,6 +13619,7 @@ registry.registerPath({
     },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Customer key, customer browser session or forwarded identity (server_to_server_only)", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
