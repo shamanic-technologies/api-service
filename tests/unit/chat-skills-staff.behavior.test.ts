@@ -65,7 +65,8 @@ const ROUTES: Array<{ method: "get" | "put" | "post"; path: string; downstream: 
   { method: "get", path: "/v1/chat/ops/distry-spend/daily", downstream: `${CHAT_BASE}/internal/copilot/distry-spend/daily` },
   { method: "get", path: "/v1/chat/distry/config", downstream: `${CHAT_BASE}/internal/distry/config` },
   { method: "put", path: "/v1/chat/distry/config", downstream: `${CHAT_BASE}/internal/distry/config`, body: { prompt: "x" } },
-  { method: "get", path: "/v1/chat/distry/config/versions", downstream: `${CHAT_BASE}/internal/distry/config/versions` },
+  { method: "get", path: "/v1/chat/distry/models", downstream: `${CHAT_BASE}/internal/distry/models` },
+  { method: "get", path: "/v1/chat/distry/config/versions",downstream: `${CHAT_BASE}/internal/distry/config/versions` },
   { method: "get", path: "/v1/chat/distry/config/versions/4", downstream: `${CHAT_BASE}/internal/distry/config/versions/4` },
   { method: "post", path: "/v1/chat/distry/config/versions/4/restore", downstream: `${CHAT_BASE}/internal/distry/config/versions/4/restore`, body: {} },
 ];
