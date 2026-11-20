@@ -13,6 +13,8 @@ import request from "supertest";
  */
 
 vi.mock("../../src/middleware/auth.js", () => ({
+  // emails.ts also mounts authenticatePlatform (SEC-TEMPLATES-1120); unused here.
+  authenticatePlatform: (_req: any, res: any) => res.status(401).json({ error: "platform key required" }),
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";

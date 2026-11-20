@@ -13298,8 +13298,10 @@ registry.registerPath({
   summary: "Send a transactional email",
   description:
     "Send a templated transactional email. Uses the org context for template lookup and dedup. " +
-    "Dedup strategy depends on eventType (once-only, daily, product-scoped, or none).",
-  security: authed,
+    "Dedup strategy depends on eventType (once-only, daily, product-scoped, or none). " +
+    "Platform senders only (SEC-TEMPLATES-1120): a user key is refused 403 `platform_only`, a " +
+    "customer browser session 403 `browser_session_refused`.",
+  security: platformAuth,
   request: {
     body: {
       content: { "application/json": { schema: SendEmailRequestSchema } },
@@ -13320,6 +13322,7 @@ registry.registerPath({
     },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Customer key (platform_only) or customer browser session (browser_session_refused)", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });
@@ -13593,8 +13596,10 @@ registry.registerPath({
   summary: "Deploy email templates",
   description:
     "Idempotent upsert of email templates. Safe to call on every cold start. " +
-    "Templates support {{variable}} interpolation from metadata passed at send time.",
-  security: authed,
+    "Templates support {{variable}} interpolation from metadata passed at send time. " +
+    "The template store is platform-wide: server-to-server only (platform key, no forwarded " +
+    "identity, else 403 `server_to_server_only`; SEC-TEMPLATES-1120).",
+  security: platformAuth,
   request: {
     body: {
       content: { "application/json": { schema: DeployEmailTemplatesRequestSchema } },
@@ -13614,6 +13619,7 @@ registry.registerPath({
     },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Customer key, customer browser session or forwarded identity (server_to_server_only)", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });

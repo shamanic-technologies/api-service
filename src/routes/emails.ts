@@ -1,5 +1,8 @@
 import { Router } from "express";
-import { authenticate, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
+import { Response, NextFunction } from "express";
+import { authenticate, authenticatePlatform, requireOrg, requireUser, AuthenticatedRequest } from "../middleware/auth.js";
+import { refuseForwardedIdentity } from "../middleware/server-to-server.js";
+import { isStaffEmail } from "../lib/staff.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
 import { SendEmailRequestSchema, DeployEmailTemplatesRequestSchema } from "../schemas.js";
@@ -143,10 +146,43 @@ router.get(
 );
 
 /**
- * POST /v1/emails/send
- * Send a transactional email via the transactional-email service
+ * SEC-TEMPLATES-1120: who may send one of OUR transactional templates.
+ *
+ * `POST /v1/emails/send` picks a platform template by `eventType`, a recipient by
+ * `recipientEmail`/`bccEmails` and fills `{{variables}}` from `metadata`, then sends it from
+ * our domains. That is not a customer feature: on 2026-11-20 an API-signup org scanned the
+ * gateway with its user key and sent 12 times. Its only legitimate callers are our own
+ * servers (dashboard outcome digest, staff digest, team-joined email: platform key +
+ * external identity, never `x-email`) and the staff admin app (platform key + staff `x-email`).
+ *
+ *  - a user key (Bearer, any org) → 403 `platform_only`;
+ *  - the platform key carrying a NON-staff `x-email` → 403 `browser_session_refused`: that is
+ *    the customer dashboard's `/api/v1/*` browser proxy relaying a signed-in customer (it
+ *    stamps the session's email; our server callers never send one).
  */
-router.post("/emails/send", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+export function requirePlatformSender(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  if (req.authType !== "admin") {
+    return res.status(403).json({
+      error: "Transactional emails are sent by distribute.you itself, not through a customer key.",
+      code: "platform_only",
+    });
+  }
+  const email = req.headers["x-email"];
+  if (email !== undefined && !isStaffEmail(String(email))) {
+    return res.status(403).json({
+      error: "Transactional emails cannot be sent from a customer browser session.",
+      code: "browser_session_refused",
+    });
+  }
+  return next();
+}
+
+/**
+ * POST /v1/emails/send
+ * Send a transactional email via the transactional-email service. Platform senders only
+ * (`requirePlatformSender`, SEC-TEMPLATES-1120).
+ */
+router.post("/emails/send", authenticate, requirePlatformSender, requireOrg, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = SendEmailRequestSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -409,9 +445,14 @@ router.post(
 
 /**
  * PUT /v1/emails/templates
- * Deploy (upsert) email templates — idempotent, safe to call on every cold start
+ * Deploy (upsert) PLATFORM email templates. transactional-email-service's template store is
+ * global (no org column, `name` unique, last writer wins), so a write here changes what every
+ * signup and client receives from our domains. SEC-TEMPLATES-1120: server-to-server only,
+ * exactly like `PUT /internal/emails/templates` — platform key, and no forwarded identity
+ * (the dashboard's browser proxy always stamps one), so neither a customer key (401) nor a
+ * signed-in customer through `/api/v1/*` (403 `server_to_server_only`) can reach it.
  */
-router.put("/emails/templates", authenticate, requireOrg, async (req: AuthenticatedRequest, res) => {
+router.put("/emails/templates", authenticatePlatform, refuseForwardedIdentity, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = DeployEmailTemplatesRequestSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -420,19 +461,16 @@ router.put("/emails/templates", authenticate, requireOrg, async (req: Authentica
 
     const result = await callExternalService(
       externalServices.transactionalEmail,
-      "/templates",
+      "/platform-templates",
       {
         method: "PUT",
-        headers: buildInternalHeaders(req),
-        body: {
-          ...parsed.data,
-        },
+        body: parsed.data,
       }
     );
     res.json(result);
   } catch (error: any) {
     console.error("Deploy templates error:", error);
-    res.status(500).json({ error: error.message || "Failed to deploy templates" });
+    respondUpstreamError(res, error, "Failed to deploy templates");
   }
 });
 

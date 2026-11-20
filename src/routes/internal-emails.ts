@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticatePlatform, AuthenticatedRequest } from "../middleware/auth.js";
+import { refuseForwardedIdentity } from "../middleware/server-to-server.js";
 import { callExternalService, externalServices } from "../lib/service-client.js";
 import { DeployEmailTemplatesRequestSchema } from "../schemas.js";
 
@@ -10,8 +11,9 @@ const router = Router();
  * Platform-level template deployment — no identity headers required.
  * Authenticated by X-API-Key (ADMIN_DISTRIBUTE_API_KEY) only.
  * Used by the dashboard at cold start when no Clerk session exists.
+ * Server-to-server only (SEC-TEMPLATES-1120): a forwarded identity = a browser proxy, 403.
  */
-router.put("/emails/templates", authenticatePlatform, async (req: AuthenticatedRequest, res) => {
+router.put("/emails/templates", authenticatePlatform, refuseForwardedIdentity, async (req: AuthenticatedRequest, res) => {
   try {
     const parsed = DeployEmailTemplatesRequestSchema.safeParse(req.body);
     if (!parsed.success) {

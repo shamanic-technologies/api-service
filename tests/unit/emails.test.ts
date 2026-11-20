@@ -2,24 +2,32 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import express from "express";
 import request from "supertest";
 
-// Mock auth middleware
-vi.mock("../../src/middleware/auth.js", () => ({
-  authenticate: (req: any, _res: any, next: any) => {
-    req.userId = "user_test123";
-    req.orgId = "org_test456";
-    req.authType = "user_key";
-    next();
-  },
-  requireOrg: (req: any, res: any, next: any) => {
-    if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
-    next();
-  },
-  requireUser: (req: any, res: any, next: any) => {
-    if (!req.userId) return res.status(401).json({ error: "User identity required" });
-    next();
-  },
-  AuthenticatedRequest: {},
-}));
+// Mock `authenticate` only; `authenticatePlatform` stays REAL (the template write is
+// server-to-server, SEC-TEMPLATES-1120). The send route admits platform senders only, so the
+// stub authenticates as the platform key by default (our dashboard servers).
+vi.mock("../../src/middleware/auth.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/middleware/auth.js")>();
+  return {
+    ...actual,
+    authenticate: (req: any, _res: any, next: any) => {
+      req.userId = "user_test123";
+      req.orgId = "org_test456";
+      req.authType = "admin";
+      next();
+    },
+    requireOrg: (req: any, res: any, next: any) => {
+      if (!req.orgId) return res.status(400).json({ error: "Organization context required" });
+      next();
+    },
+    requireUser: (req: any, res: any, next: any) => {
+      if (!req.userId) return res.status(401).json({ error: "User identity required" });
+      next();
+    },
+  };
+});
+
+const PLATFORM_KEY = "test-platform-key-sec";
+process.env.ADMIN_DISTRIBUTE_API_KEY = PLATFORM_KEY;
 
 interface FetchCall {
   url: string;
@@ -287,6 +295,7 @@ describe("PUT /v1/emails/templates", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     fetchCalls = [];
+    process.env.ADMIN_DISTRIBUTE_API_KEY = PLATFORM_KEY;
     global.fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
       const body = init?.body ? JSON.parse(init.body as string) : undefined;
       const headers = init?.headers ? Object.fromEntries(Object.entries(init.headers)) : undefined;
@@ -299,9 +308,10 @@ describe("PUT /v1/emails/templates", () => {
     app = createApp();
   });
 
-  it("should forward template deployment with identity in headers", async () => {
+  it("forwards a server-to-server deployment to /platform-templates with no identity", async () => {
     const res = await request(app)
       .put("/v1/emails/templates")
+      .set("X-API-Key", PLATFORM_KEY)
       .send({
         templates: [
           {
@@ -315,10 +325,11 @@ describe("PUT /v1/emails/templates", () => {
     expect(res.status).toBe(200);
     expect(res.body.templates).toHaveLength(1);
 
-    const deployCall = fetchCalls.find((c) => c.url.includes("/templates"));
-    expect(deployCall).toBeDefined();
-    expect(deployCall!.method).toBe("PUT");
-    expect(deployCall!.body).toMatchObject({
+    expect(fetchCalls).toHaveLength(1);
+    const deployCall = fetchCalls[0];
+    expect(new URL(deployCall.url).pathname).toBe("/platform-templates");
+    expect(deployCall.method).toBe("PUT");
+    expect(deployCall.body).toEqual({
       templates: [
         {
           name: "webinar_welcome",
@@ -327,16 +338,14 @@ describe("PUT /v1/emails/templates", () => {
         },
       ],
     });
-    expect(deployCall!.body.appId).toBeUndefined();
-    expect(deployCall!.body.orgId).toBeUndefined();
-    expect(deployCall!.body.userId).toBeUndefined();
-    expect(deployCall!.headers!["x-org-id"]).toBe("org_test456");
-    expect(deployCall!.headers!["x-user-id"]).toBe("user_test123");
+    expect(deployCall.headers!["x-org-id"]).toBeUndefined();
+    expect(deployCall.headers!["x-user-id"]).toBeUndefined();
   });
 
   it("should return 400 when templates array is empty", async () => {
     const res = await request(app)
       .put("/v1/emails/templates")
+      .set("X-API-Key", PLATFORM_KEY)
       .send({ templates: [] });
 
     expect(res.status).toBe(400);
@@ -346,6 +355,7 @@ describe("PUT /v1/emails/templates", () => {
   it("should return 400 when templates is missing", async () => {
     const res = await request(app)
       .put("/v1/emails/templates")
+      .set("X-API-Key", PLATFORM_KEY)
       .send({});
 
     expect(res.status).toBe(400);

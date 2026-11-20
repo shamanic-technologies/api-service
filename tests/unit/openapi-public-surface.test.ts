@@ -214,6 +214,8 @@ const PLATFORM_OPERATIONS = [
   "get /v1/leads/ops/awaiting-answers",
   "get /v1/scripts/ops/monitoring",
   "put /internal/emails/templates",
+  "post /v1/emails/send",
+  "put /v1/emails/templates",
   "get /v1/admin/brands",
   "get /v1/admin/brands/{brandId}/audience-snapshot",
   "get /v1/admin/brands/{brandId}/audience-snapshot/people",
