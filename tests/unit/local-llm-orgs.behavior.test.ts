@@ -34,7 +34,8 @@ import { isLocalLlmWorkCall } from "../../src/lib/call-log.js";
 
 const ORG_A = "11111111-1111-4111-8111-111111111111";
 const ORG_B = "22222222-2222-4222-8222-222222222222";
-const USER = "33333333-3333-4333-8333-333333333333";
+// The pinned staff user row of kevin@distribute.you (SEC-STAFF-EMAIL-1120): staff = this id AND a staff email.
+const USER = "7b417d70-29b5-471b-a8e1-20e75225c0af";
 const CHAT_BODY = `{"orgs":[{"orgId":"${ORG_A}","declaredAt":"2026-11-16T10:00:00.000Z","declaredByUserId":"${USER}","runner":{"connected":true,"lastSeenAt":"2026-11-16T10:01:00.000Z","name":"mac","version":"1.0"},"pendingCalls":0}]}`;
 
 function buildApp() {
