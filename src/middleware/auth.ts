@@ -398,8 +398,9 @@ export function staffKeyEmail(req: AuthenticatedRequest): string | null {
  * `src/openapi/document.ts`) must accept a staff user's key.
  *
  * - `user_key`: admitted only when the key's USER is staff, as client-service
- *   records them (`userKeyScope.isStaff`, from the user's stored email against
- *   `STAFF_EMAILS`). Nothing the caller sends is read: a client key cannot claim
+ *   records them (`userKeyScope.isStaff`: a pinned staff USER ID, `STAFF_USER_IDS`,
+ *   whose stored email is on `STAFF_EMAILS`; a stored email alone is never
+ *   enough, a customer can store any email, SEC-STAFF-EMAIL-1120). Nothing the caller sends is read: a client key cannot claim
  *   staff with a header. `req.staffEmail` = the user's stored email.
  * - platform key: exactly `requireStaff` (forwarded `x-email` in the allowlist).
  *

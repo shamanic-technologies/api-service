@@ -43,11 +43,12 @@ const BRANDS = [
 
 let membershipFails = false;
 
-function stub(opts: { orgs: Array<{ id: string; name: string | null }>; email?: string }) {
+function stub(opts: { orgs: Array<{ id: string; name: string | null }>; email?: string; userId?: string }) {
+  const userId = opts.userId ?? "user-1";
   mockCall.mockImplementation(async (_svc: unknown, path: string, init?: any) => {
-    if (path.startsWith("/validate")) return { valid: true, orgId: LIVING_VITAL.id, userId: "user-1" };
-    if (path === "/internal/users/user-1") return { user: { id: "user-1", email: opts.email ?? "someone@acme.com" } };
-    if (path === "/internal/users/user-1/orgs") {
+    if (path.startsWith("/validate")) return { valid: true, orgId: LIVING_VITAL.id, userId };
+    if (path === `/internal/users/${userId}`) return { user: { id: userId, email: opts.email ?? "someone@acme.com" } };
+    if (path === `/internal/users/${userId}/orgs`) {
       if (membershipFails) throw Object.assign(new Error("identity provider unreachable"), { statusCode: 502 });
       return { organizations: opts.orgs.map((o) => ({ orgId: o.id, name: o.name })) };
     }
@@ -218,7 +219,8 @@ describe("user key — multi-org user", () => {
 });
 
 describe("user key — staff user", () => {
-  const staff = { orgs: [LIVING_VITAL], email: "Kevin.Lourd@gmail.com" };
+  // A pinned staff user row (SEC-STAFF-EMAIL-1120): a staff email alone is not staff.
+  const staff = { orgs: [LIVING_VITAL], email: "Kevin.Lourd@gmail.com", userId: "cfe148ed-e3d8-40a2-8920-f8c040a81934" };
 
   it("counts as a member of every organization: a brand of any org selects it", async () => {
     stub(staff);

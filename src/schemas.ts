@@ -13691,7 +13691,9 @@ registry.registerPath({
   description:
     "Map external org/user IDs to internal UUIDs via client-service (idempotent upsert). " +
     "For anonymous users, generate a UUID as externalUserId — each call with a new ID creates a new user. " +
-    "Calling again with the same IDs updates optional contact fields (email, firstName, etc.).",
+    "Calling again with the same IDs updates optional contact fields (email, firstName, etc.). " +
+    "Only the signed-in session's OWN identity (SEC-STAFF-EMAIL-1120): an API key is refused 403 identity_not_proven, and the " +
+    "platform key is admitted only when externalOrgId/externalUserId equal x-external-org-id/x-external-user-id and email equals x-email.",
   security: authed,
   request: {
     body: {
@@ -13705,6 +13707,7 @@ registry.registerPath({
     },
     400: { description: "Validation error", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
+    403: { description: "identity_not_proven: the body names an identity the caller has not proven", content: errorContent },
     500: { description: "Internal error", content: errorContent },
   },
 });

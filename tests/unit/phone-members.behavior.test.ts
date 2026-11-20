@@ -36,11 +36,14 @@ const ACME = "11111111-1111-1111-1111-111111111111";
 const OTHER = "22222222-2222-2222-2222-222222222222";
 const KEY = "Bearer distrib.usr_test";
 
+const USER = "cfe148ed-e3d8-40a2-8920-f8c040a81934";
+
 function stub(opts: { orgs: string[]; email: string }) {
   mockCall.mockImplementation(async (_svc: unknown, path: string, init?: any) => {
-    if (path.startsWith("/validate")) return { valid: true, orgId: ACME, userId: "user-1" };
-    if (path === "/internal/users/user-1") return { user: { id: "user-1", email: opts.email } };
-    if (path === "/internal/users/user-1/orgs") return { organizations: opts.orgs.map((id) => ({ orgId: id, name: id })) };
+    // USER = the pinned staff row of kevin.lourd@gmail.com (SEC-STAFF-EMAIL-1120); a non-staff email on it is not staff.
+    if (path.startsWith("/validate")) return { valid: true, orgId: ACME, userId: USER };
+    if (path === `/internal/users/${USER}`) return { user: { id: USER, email: opts.email } };
+    if (path === `/internal/users/${USER}/orgs`) return { organizations: opts.orgs.map((id) => ({ orgId: id, name: id })) };
     if (path === "/internal/orgs/names") {
       const all = [ACME, OTHER];
       const found = all.filter((id) => init.body.orgIds.includes(id));
