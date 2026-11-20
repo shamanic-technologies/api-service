@@ -4,6 +4,8 @@ import request from "supertest";
 
 // Mock auth middleware — full identity present by default.
 vi.mock("../../src/middleware/auth.js", () => ({
+  // emails.ts also mounts authenticatePlatform (SEC-TEMPLATES-1120); unused here.
+  authenticatePlatform: (_req: any, res: any) => res.status(401).json({ error: "platform key required" }),
   authenticate: (req: any, _res: any, next: any) => {
     req.userId = "user_test123";
     req.orgId = "org_test456";
@@ -168,6 +170,7 @@ describe("POST /v1/emails/manual-qualifications", () => {
   it("returns 401 when userId is missing (requireUser)", async () => {
     // Re-mount with a stripped auth that does NOT set userId.
     vi.doMock("../../src/middleware/auth.js", () => ({
+      authenticatePlatform: (_req: any, res: any) => res.status(401).json({ error: "platform key required" }),
       authenticate: (req: any, _res: any, next: any) => {
         req.orgId = "org_test456";
         next();

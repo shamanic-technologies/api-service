@@ -1,4 +1,4 @@
-import { Router, Request, Response, NextFunction } from "express";
+import { Router, Request, Response } from "express";
 import { authenticatePlatform } from "../middleware/auth.js";
 import { pipeExternalService, externalServices } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
@@ -35,29 +35,8 @@ const router = Router();
 // downstream: the producer takes the service key only.
 // ---------------------------------------------------------------------------
 
-/** Headers a browser-facing proxy stamps; a server-to-server caller sends none. */
-export const FORWARDED_IDENTITY_HEADERS = [
-  "x-external-org-id",
-  "x-external-user-id",
-  "x-org-id",
-  "x-user-id",
-  "x-email",
-  "authorization",
-] as const;
-
-export function refuseForwardedIdentity(req: Request, res: Response, next: NextFunction) {
-  const carried = FORWARDED_IDENTITY_HEADERS.filter((h) => req.headers[h] !== undefined);
-  if (carried.length > 0) {
-    return res.status(403).json({
-      error:
-        "Subscriber links resolve server-to-server only: this request carries a user or org identity, " +
-        "so it came through a browser-facing proxy.",
-      code: "server_to_server_only",
-      headers: carried,
-    });
-  }
-  return next();
-}
+export { FORWARDED_IDENTITY_HEADERS, refuseForwardedIdentity } from "../middleware/server-to-server.js";
+import { refuseForwardedIdentity } from "../middleware/server-to-server.js";
 
 router.get(
   "/subscriber-links/:linkId",

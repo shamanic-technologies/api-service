@@ -103,6 +103,8 @@ The gateway's public surface is consumed by LLM function-calling layers and codi
 
 Do NOT invent a new staff-role flag. Do NOT gate a staff-only route with `authenticatePlatform` alone — a customer's dashboard session carries the same admin key, so it would leak. Use `requireStaff` for the staff signal.
 
+**Platform-wide stores and our own sends are never customer-reachable (SEC-TEMPLATES-1120, security hotfix 2026-11-20).** An API-signup org wrote phishing templates into transactional-email-service's GLOBAL template store (no org column, name unique, last writer wins) with its user key through `PUT /v1/emails/templates`, then hit `POST /v1/emails/send`. Now: both template writes (`/v1` and `/internal`) are `authenticatePlatform + refuseForwardedIdentity` (`src/middleware/server-to-server.ts`) → `/platform-templates`, no identity forwarded; `POST /v1/emails/send` runs `requirePlatformSender` (user key → 403 `platform_only`; platform key with a NON-staff `x-email`, i.e. the dashboard browser proxy relaying a customer → 403 `browser_session_refused`; our servers send no `x-email`, staff admin sends a staff one). Both are off the customer document. A new route writing a store with no org column (templates, prompts, catalogue) gets the same gate. Pinned by `tests/unit/sec-templates.behavior.test.ts`.
+
 ### A user API key belongs to the USER, across their organizations (`src/lib/org-scope.ts`)
 
 Owner decision 2026-10-01: a `distrib.usr_*` key is NOT bound to the org active when it was created. `authenticate` ignores key-service's stored `orgId` and picks the request's org among the user's CURRENT organizations (client-service membership read, every request; staff emails in `src/lib/staff.ts` count as members of every org):

@@ -15256,6 +15256,16 @@
           }
         }
       },
+      "ErrorResponse403CustomerKeyPlatformOnlyOrCustomerBrowserSessionBrowserSessio": {
+        "description": "Customer key (platform_only) or customer browser session (browser_session_refused)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
       "ErrorResponse400ValidationErrorFromUpstream": {
         "description": "Validation error from upstream",
         "content": {
@@ -15288,6 +15298,16 @@
       },
       "ErrorResponse404NothingToWithdrawForThisPersonInTheCallerSOrg": {
         "description": "Nothing to withdraw for this person in the caller's org",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse403CustomerKeyCustomerBrowserSessionOrForwardedIdentityServerTo": {
+        "description": "Customer key, customer browser session or forwarded identity (server_to_server_only)",
         "content": {
           "application/json": {
             "schema": {
@@ -68785,78 +68805,6 @@
         "operationId": "getV1WorkflowExamples"
       }
     },
-    "/v1/emails/send": {
-      "post": {
-        "tags": [
-          "Emails"
-        ],
-        "summary": "Send a transactional email",
-        "description": "Send a templated transactional email. Uses the org context for template lookup and dedup. Dedup strategy depends on eventType (once-only, daily, product-scoped, or none).",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/SendEmailRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Email send results",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/SendEmailResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
-          },
-          "429": {
-            "$ref": "#/components/responses/RateLimited"
-          },
-          "500": {
-            "$ref": "#/components/responses/ErrorResponse500InternalError"
-          }
-        },
-        "operationId": "postV1EmailsSend",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/XRequestId"
-          },
-          {
-            "$ref": "#/components/parameters/XOrgId"
-          },
-          {
-            "$ref": "#/components/parameters/XBrandId"
-          }
-        ],
-        "x-needs-user-yes": {
-          "because": [
-            "sends_to_person"
-          ],
-          "why": "Sends an email."
-        }
-      }
-    },
     "/v1/emails/stats": {
       "get": {
         "tags": [
@@ -69406,72 +69354,6 @@
           }
         },
         "operationId": "postV1EmailsOptOutsWithdrawals",
-        "parameters": [
-          {
-            "$ref": "#/components/parameters/XRequestId"
-          },
-          {
-            "$ref": "#/components/parameters/XOrgId"
-          },
-          {
-            "$ref": "#/components/parameters/XBrandId"
-          }
-        ]
-      }
-    },
-    "/v1/emails/templates": {
-      "put": {
-        "tags": [
-          "Emails"
-        ],
-        "summary": "Deploy email templates",
-        "description": "Idempotent upsert of email templates. Safe to call on every cold start. Templates support {{variable}} interpolation from metadata passed at send time.",
-        "security": [
-          {
-            "bearerAuth": []
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DeployEmailTemplatesRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Templates deployed",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DeployTemplatesResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
-          },
-          "429": {
-            "$ref": "#/components/responses/RateLimited"
-          },
-          "500": {
-            "$ref": "#/components/responses/ErrorResponse500InternalError"
-          }
-        },
-        "operationId": "putV1EmailsTemplates",
         "parameters": [
           {
             "$ref": "#/components/parameters/XRequestId"
