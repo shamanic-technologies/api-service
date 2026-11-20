@@ -7833,6 +7833,13 @@
           "nullable": true
         }
       },
+      "DistryModelsResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "DistryVersionListResponse": {
         "type": "object",
         "properties": {},

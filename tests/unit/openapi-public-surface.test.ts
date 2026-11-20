@@ -147,6 +147,7 @@ const PLATFORM_OPERATIONS = [
   "get /v1/chat/ops/distry-spend/daily",
   "get /v1/chat/distry/config",
   "put /v1/chat/distry/config",
+  "get /v1/chat/distry/models",
   "get /v1/chat/distry/config/versions",
   "get /v1/chat/distry/config/versions/{version}",
   "post /v1/chat/distry/config/versions/{version}/restore",

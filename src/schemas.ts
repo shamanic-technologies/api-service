@@ -11095,6 +11095,23 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/chat/distry/models",
+  tags: ["Chat"],
+  summary: "Every model Distry can run, with price and intelligence per dollar (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. Powers dashboard v2 Monitoring > Distry's model panel (DISTRY-MODELS-1119). " +
+    "Byte passthrough to chat-service GET /internal/distry/models: each model's price, Artificial Analysis Intelligence Index score and rank, and intelligence per dollar. Status and body owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("DistryModelsResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/chat/distry/config/versions",
   tags: ["Chat"],
   summary: "Every version of Distry's definition, newest first (staff only)",
