@@ -9531,6 +9531,13 @@
           "nullable": true
         }
       },
+      "OfferTargetVolumeEstimateResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "OfferOutcomeCostSeriesResponse": {
         "type": "object",
         "properties": {},
@@ -15607,6 +15614,26 @@
       },
       "ErrorResponse502BriefUnwritableForwardedVerbatim": {
         "description": "brief_unwritable, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400BrandIdRequiredTargetRequiredSalesFunnelIdsRequiredVolumeUnr": {
+        "description": "brand_id_required, target_required, sales_funnel_ids_required, volume_unrecognised, period_unrecognised, sales_funnel_unknown or target_unknown, forwarded verbatim",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502EstimateUnreadableForwardedVerbatim": {
+        "description": "estimate_unreadable, forwarded verbatim",
         "content": {
           "application/json": {
             "schema": {
@@ -76681,11 +76708,22 @@
           {
             "schema": {
               "type": "string",
-              "description": "Sales funnel the campaign will run (required)"
+              "description": "Sales funnel the campaign will run (one of salesFunnelId / salesFunnelIds)"
             },
-            "required": true,
-            "description": "Sales funnel the campaign will run (required)",
+            "required": false,
+            "description": "Sales funnel the campaign will run (one of salesFunnelId / salesFunnelIds)",
             "name": "salesFunnelId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "sf-uuid-1,sf-uuid-2",
+              "description": "Comma-separated sales funnels the campaign will run: one brief for several funnels"
+            },
+            "required": false,
+            "description": "Comma-separated sales funnels the campaign will run: one brief for several funnels",
+            "name": "salesFunnelIds",
             "in": "query"
           },
           {
@@ -76736,6 +76774,122 @@
           }
         },
         "operationId": "getV1OffersByOfferIdCampaignBrief"
+      }
+    },
+    "/v1/offers/{offerId}/target-volume-estimate": {
+      "get": {
+        "tags": [
+          "Features"
+        ],
+        "summary": "Estimated volume of one target step the offer's sales funnels can deliver",
+        "description": "How many of one target step (e.g. meetings booked) the chosen sales funnels can deliver for this offer, per day, week or month, read by the campaign step of signup. Proxied to features-service GET /offers/{offerId}/target-volume-estimate, which computes the estimate and owns every refusal. The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "example": "offer-uuid-123",
+              "description": "Offer UUID"
+            },
+            "required": true,
+            "description": "Offer UUID",
+            "name": "offerId",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "brand-uuid-123",
+              "description": "Brand UUID (required) — an offer belongs to a brand"
+            },
+            "required": true,
+            "description": "Brand UUID (required) — an offer belongs to a brand",
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "example": "sf-uuid-1,sf-uuid-2",
+              "description": "Comma-separated sales funnels the campaign will run (required)"
+            },
+            "required": true,
+            "description": "Comma-separated sales funnels the campaign will run (required)",
+            "name": "salesFunnelIds",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Step key the campaign aims at (required)"
+            },
+            "required": true,
+            "description": "Step key the campaign aims at (required)",
+            "name": "target",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Wanted volume of the target step (optional)"
+            },
+            "required": false,
+            "description": "Wanted volume of the target step (optional)",
+            "name": "volume",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "day | week | month (optional)"
+            },
+            "required": false,
+            "description": "day | week | month (optional)",
+            "name": "period",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          },
+          {
+            "$ref": "#/components/parameters/XOrgId"
+          },
+          {
+            "$ref": "#/components/parameters/XBrandId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The estimate (passthrough of features-service's body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfferTargetVolumeEstimateResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400BrandIdRequiredTargetRequiredSalesFunnelIdsRequiredVolumeUnr"
+          },
+          "401": {
+            "$ref": "#/components/responses/ErrorResponse401Unauthorized"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404BrandNotFoundOrOfferNotFoundForwardedVerbatim"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502EstimateUnreadableForwardedVerbatim"
+          }
+        },
+        "operationId": "getV1OffersByOfferIdTargetVolumeEstimate"
       }
     },
     "/v1/offers/{offerId}/outcome-cost-series": {

@@ -14792,7 +14792,8 @@ registry.registerPath({
     params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
     query: z.object({
       brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
-      salesFunnelId: z.string().describe("Sales funnel the campaign will run (required)"),
+      salesFunnelId: z.string().optional().describe("Sales funnel the campaign will run (one of salesFunnelId / salesFunnelIds)"),
+      salesFunnelIds: z.string().optional().openapi({ example: "sf-uuid-1,sf-uuid-2" }).describe("Comma-separated sales funnels the campaign will run: one brief for several funnels"),
       target: z.string().optional().describe("Step key the campaign aims at (optional)"),
     }).passthrough(),
   },
@@ -14816,6 +14817,38 @@ registry.registerPath({
     401: { description: "Unauthorized", content: errorContent },
     404: { description: "brand_not_found or offer_not_found, forwarded verbatim", content: errorContent },
     502: { description: "brief_unwritable, forwarded verbatim", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/v1/offers/{offerId}/target-volume-estimate",
+  tags: ["Features"],
+  summary: "Estimated volume of one target step the offer's sales funnels can deliver",
+  description:
+    "How many of one target step (e.g. meetings booked) the chosen sales funnels can deliver for this offer, per day, week or month, read by the campaign step of signup. " +
+    "Proxied to features-service GET /offers/{offerId}/target-volume-estimate, which computes the estimate and owns every refusal. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+      salesFunnelIds: z.string().openapi({ example: "sf-uuid-1,sf-uuid-2" }).describe("Comma-separated sales funnels the campaign will run (required)"),
+      target: z.string().describe("Step key the campaign aims at (required)"),
+      volume: z.string().optional().describe("Wanted volume of the target step (optional)"),
+      period: z.string().optional().describe("day | week | month (optional)"),
+    }).passthrough(),
+  },
+  responses: {
+    200: {
+      description: "The estimate (passthrough of features-service's body)",
+      content: { "application/json": { schema: z.object({}).passthrough().openapi("OfferTargetVolumeEstimateResponse") } },
+    },
+    400: { description: "brand_id_required, target_required, sales_funnel_ids_required, volume_unrecognised, period_unrecognised, sales_funnel_unknown or target_unknown, forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "brand_not_found or offer_not_found, forwarded verbatim", content: errorContent },
+    502: { description: "estimate_unreadable, forwarded verbatim", content: errorContent },
   },
 });
 
