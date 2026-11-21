@@ -13142,6 +13142,55 @@ registry.registerPath({
   responses: salesFunnelCapsResponses,
 });
 
+// One campaign's OWN caps (DISTRY-CALL-IS-CAMPAIGN-1121): several campaigns may share one funnel on a brand,
+// so each reads and sets its own. Served with and without an offer, like the funnel-wide route.
+const SalesFunnelCampaignIdParam = { salesFunnelCampaignId: z.string().describe("Sales funnel campaign ID") };
+for (const [path, params, who] of [
+  [
+    "/v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps",
+    SalesFunnelCapsParams.extend(SalesFunnelCampaignIdParam),
+    "a sales funnel campaign",
+  ],
+  [
+    "/v1/brands/{brandId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps",
+    OfferlessSalesFunnelCapsParams.extend(SalesFunnelCampaignIdParam),
+    "a sales funnel campaign naming no offer",
+  ],
+] as const) {
+  registry.registerPath({
+    method: "get",
+    path,
+    tags: ["Billing"],
+    summary: `Read the max budget + max volume of ${who} and what it consumed this period`,
+    description: "Proxy to billing-service GET " + path + ", forwarded untouched.",
+    security: authed,
+    request: { params },
+    responses: salesFunnelCapsResponses,
+  });
+  registry.registerPath({
+    method: "put",
+    path,
+    tags: ["Billing"],
+    summary: `State the MAX BUDGET and MAX VOLUME of ${who}`,
+    description:
+      "Proxy to billing-service PUT " + path + ". Same body as the funnel route " +
+      "({ maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }), forwarded untouched. Charges nothing.",
+    security: authed,
+    request: { params, body: { content: { "application/json": { schema: SalesFunnelCapsRequestSchema } } } },
+    responses: salesFunnelCapsResponses,
+  });
+  registry.registerPath({
+    method: "delete",
+    path,
+    tags: ["Billing"],
+    summary: `Clear both caps of ${who}`,
+    description: "Proxy to billing-service DELETE " + path + " (idempotent).",
+    security: authed,
+    request: { params },
+    responses: salesFunnelCapsResponses,
+  });
+}
+
 registry.registerPath({
   method: "get",
   path: "/v1/brands/{brandId}/sales-funnel-caps",

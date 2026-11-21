@@ -101,4 +101,29 @@ describe("offer-less sales funnel caps → billing's offer-less path", () => {
     expect(res.status).toBe(200);
     expect(calls[0].url).toBe(`${BILLING_BASE}/v1/brands/brand-1/offers/offer-9/sales-funnels/${ENC}/caps`);
   });
+
+  for (const method of ["get", "put", "delete"] as const) {
+    it(`${method.toUpperCase()} one campaign's own caps, no offer: billing's offer-less per-campaign path`, async () => {
+      stubUpstream(200, CAPS);
+      const body = { maxBudget: { amountCents: 5000, period: "monthly" }, maxVolume: null };
+      const req = request(buildApp())[method](`/v1/brands/brand-1/sales-funnels/${ENC}/campaigns/camp-7/caps`);
+      const res = method === "put" ? await req.send(body) : await req;
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(CAPS);
+      expect(calls).toHaveLength(1);
+      expect(calls[0].url).toBe(`${BILLING_BASE}/v1/brands/brand-1/sales-funnels/${ENC}/campaigns/camp-7/caps`);
+      expect(calls[0].options.method ?? "GET").toBe(method.toUpperCase());
+      expect(header(calls[0].options, "x-org-id")).toBe("org_test456");
+      expect(header(calls[0].options, "x-user-id")).toBe("user_test123");
+      if (method === "put") expect(JSON.parse(calls[0].options.body)).toEqual(body);
+    });
+  }
+
+  it("one campaign's own caps with an offer: billing's /offers/{offerId} per-campaign path", async () => {
+    stubUpstream(200, { ...CAPS, offerId: "offer-9" });
+    const res = await request(buildApp()).get(`/v1/brands/brand-1/offers/offer-9/sales-funnels/${ENC}/campaigns/camp-7/caps`);
+    expect(res.status).toBe(200);
+    expect(calls[0].url).toBe(`${BILLING_BASE}/v1/brands/brand-1/offers/offer-9/sales-funnels/${ENC}/campaigns/camp-7/caps`);
+  });
 });

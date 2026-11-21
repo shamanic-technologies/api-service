@@ -68,6 +68,8 @@ export const DOWNSTREAM_BODY_SOURCES: Record<string, DownstreamBodySource> = {
   "PUT /v1/brands/{brandId}/sales-budget": { service: "billing-service", method: "PUT", path: "/v1/brands/{brandId}/sales-budget" },
   "PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps": { service: "billing-service", method: "PUT", path: "/v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps" },
   "PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps": { service: "billing-service", method: "PUT", path: "/v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps" },
+  "PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps": { service: "billing-service", method: "PUT", path: "/v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps" },
+  "PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps": { service: "billing-service", method: "PUT", path: "/v1/brands/{brandId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps" },
   "POST /v1/emails/manual-qualifications/withdrawals": { service: "email-gateway-service", method: "POST", path: "/orgs/manual-qualifications/withdrawals" },
   "POST /v1/emails/opt-outs": { service: "email-gateway-service", method: "POST", path: "/orgs/opt-outs" },
   "POST /v1/emails/opt-outs/withdrawals": { service: "email-gateway-service", method: "POST", path: "/orgs/opt-outs/withdrawals" },
