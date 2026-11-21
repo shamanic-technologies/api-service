@@ -13103,6 +13103,45 @@ registry.registerPath({
   responses: salesFunnelCapsResponses,
 });
 
+// Offer-less mirrors (DISTRY-CALL-IS-CAMPAIGN-1121): a sales funnel campaign naming NO offer; billing answers offerId: null.
+const OfferlessSalesFunnelCapsParams = SalesFunnelCapsParams.omit({ offerId: true });
+const offerlessSalesFunnelCapsPath = "/v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps";
+
+registry.registerPath({
+  method: "get",
+  path: offerlessSalesFunnelCapsPath,
+  tags: ["Billing"],
+  summary: "Read the max budget + max volume of a sales funnel campaign naming no offer",
+  description: "Proxy to billing-service GET " + offerlessSalesFunnelCapsPath + ". Same answer as the offer route, offerId null.",
+  security: authed,
+  request: { params: OfferlessSalesFunnelCapsParams },
+  responses: salesFunnelCapsResponses,
+});
+
+registry.registerPath({
+  method: "put",
+  path: offerlessSalesFunnelCapsPath,
+  tags: ["Billing"],
+  summary: "State the MAX BUDGET and MAX VOLUME of a sales funnel campaign naming no offer",
+  description:
+    "Proxy to billing-service PUT " + offerlessSalesFunnelCapsPath + ". Same body as the offer route " +
+    "({ maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }), forwarded untouched. Charges nothing.",
+  security: authed,
+  request: { params: OfferlessSalesFunnelCapsParams, body: { content: { "application/json": { schema: SalesFunnelCapsRequestSchema } } } },
+  responses: salesFunnelCapsResponses,
+});
+
+registry.registerPath({
+  method: "delete",
+  path: offerlessSalesFunnelCapsPath,
+  tags: ["Billing"],
+  summary: "Clear both caps of a sales funnel campaign naming no offer",
+  description: "Proxy to billing-service DELETE " + offerlessSalesFunnelCapsPath + " (idempotent).",
+  security: authed,
+  request: { params: OfferlessSalesFunnelCapsParams },
+  responses: salesFunnelCapsResponses,
+});
+
 registry.registerPath({
   method: "get",
   path: "/v1/brands/{brandId}/sales-funnel-caps",

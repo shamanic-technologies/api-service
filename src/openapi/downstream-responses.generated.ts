@@ -142,7 +142,9 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             },
             "offerId": {
               "type": "string",
-              "format": "uuid"
+              "nullable": true,
+              "format": "uuid",
+              "description": "null = a campaign naming no offer (the offer-less route)."
             },
             "salesFunnelId": {
               "type": "string"
@@ -958,6 +960,377 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "campaignsDailyBudgetCents"
               ]
             }
+          ]
+        }
+      }
+    }
+  },
+  "DELETE /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps": {
+    "service": "billing-service",
+    "method": "DELETE",
+    "path": "/v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps",
+    "responses": {
+      "200": {
+        "description": "Cleared",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "orgId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "brandId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "offerId": {
+              "type": "string",
+              "nullable": true,
+              "format": "uuid",
+              "description": "null = a campaign naming no offer (the offer-less route)."
+            },
+            "salesFunnelId": {
+              "type": "string"
+            },
+            "stated": {
+              "type": "boolean"
+            },
+            "funded": {
+              "type": "boolean",
+              "description": "May the funnel's campaign spend at all: true when a max budget AND/OR a max volume is stated, each above 0 (owner rule 2026-10-11). A volume-only funnel is funded: it spends from the org's balance until its max volume is reached. Nothing stated = false. Read it, never re-derive it."
+            },
+            "fundedBy": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "max_budget",
+                "max_volume",
+                "both",
+                null
+              ],
+              "description": "Which stated cap funds the funnel; null when not funded."
+            },
+            "updatedAt": {
+              "type": "string",
+              "nullable": true
+            },
+            "maxBudget": {
+              "type": "object",
+              "nullable": true,
+              "properties": {
+                "amountCents": {
+                  "type": "string"
+                },
+                "period": {
+                  "type": "string",
+                  "enum": [
+                    "one_off",
+                    "daily",
+                    "weekly",
+                    "monthly"
+                  ],
+                  "description": "UTC. daily = the calendar day; weekly = Monday 00:00 to the next Monday; monthly = the calendar month; one_off = once, counted from when the cap was first stated in this period (never resets)."
+                },
+                "dailyBudgetCents": {
+                  "type": "string"
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "consumedCents": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "remainingCents": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "reached": {
+                  "type": "boolean",
+                  "nullable": true
+                },
+                "refusedSpend": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "at": {
+                      "type": "string"
+                    },
+                    "requiredCents": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "at",
+                    "requiredCents"
+                  ],
+                  "description": "The spend POST /v1/customer_balance/authorize refused in this window because it would have taken the cap past amountCents (reason sales_funnel_max_budget_reached). While set, reached is true: the next run's spends would be refused too. Freed by a new period or a changed amount."
+                },
+                "consumedUnavailableReason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "sales_funnel_not_found",
+                    "sales_funnel_catalogue_unavailable",
+                    "campaign_service_unconfigured",
+                    "campaign_service_unavailable",
+                    "runs_service_unavailable",
+                    "no_proactive_pipe",
+                    "volume_not_measured_on_channel",
+                    "sourcing_catalogue_unavailable",
+                    "sales_funnel_campaign_not_found",
+                    null
+                  ]
+                },
+                "consumedUnavailableDetail": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "amountCents",
+                "period",
+                "dailyBudgetCents",
+                "periodStart",
+                "periodEnd",
+                "consumedCents",
+                "remainingCents",
+                "reached",
+                "refusedSpend",
+                "consumedUnavailableReason",
+                "consumedUnavailableDetail"
+              ],
+              "description": "consumedCents = committed NET spend (actual + provisioned, what the org pays) of every campaign on the funnel's pipes for this brand x offer PLUS every lead SOURCE campaign (Start -> Lead found) feeding those pipes (sources[]): ALL-INCLUSIVE, sourcing + sending + LLM. Runs started in [periodStart, periodEnd). reached = consumedCents >= amountCents. null + a reason when it cannot be measured, never 0."
+            },
+            "maxVolume": {
+              "type": "object",
+              "nullable": true,
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "period": {
+                  "type": "string",
+                  "enum": [
+                    "one_off",
+                    "daily",
+                    "weekly",
+                    "monthly"
+                  ],
+                  "description": "UTC. daily = the calendar day; weekly = Monday 00:00 to the next Monday; monthly = the calendar month; one_off = once, counted from when the cap was first stated in this period (never resets)."
+                },
+                "unit": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "first_contacts",
+                    "prospects_handled",
+                    "outcomes_produced",
+                    null
+                  ],
+                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "consumed": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "remaining": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "reached": {
+                  "type": "boolean",
+                  "nullable": true
+                },
+                "consumedUnavailableReason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "sales_funnel_not_found",
+                    "sales_funnel_catalogue_unavailable",
+                    "campaign_service_unconfigured",
+                    "campaign_service_unavailable",
+                    "runs_service_unavailable",
+                    "no_proactive_pipe",
+                    "volume_not_measured_on_channel",
+                    "sourcing_catalogue_unavailable",
+                    "sales_funnel_campaign_not_found",
+                    null
+                  ]
+                },
+                "consumedUnavailableDetail": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "count",
+                "period",
+                "unit",
+                "periodStart",
+                "periodEnd",
+                "consumed",
+                "remaining",
+                "reached",
+                "consumedUnavailableReason",
+                "consumedUnavailableDetail"
+              ],
+              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+            },
+            "salesFunnelName": {
+              "type": "string",
+              "nullable": true
+            },
+            "salesFunnelType": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "proactive",
+                "reactive",
+                null
+              ],
+              "description": "features-service's served funnel type, RELAYED (never derived here): proactive when at least one pipe is proactive, else reactive. Labels the caps: proactive = Max budget / Max volume, reactive = Up to $X / Up to N."
+            },
+            "salesFunnelTypeUnavailableReason": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "type_not_served_by_features_service",
+                "sales_funnel_not_found",
+                "sales_funnel_catalogue_unavailable",
+                null
+              ]
+            },
+            "volumeUnit": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "first_contacts",
+                "prospects_handled",
+                "outcomes_produced",
+                null
+              ],
+              "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+            },
+            "pipes": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "pipeId": {
+                    "type": "string",
+                    "description": "features-service's pipe id; a non-default play's id `<channel>|<leg>~<strategy>`."
+                  },
+                  "channelSlug": {
+                    "type": "string"
+                  },
+                  "legKey": {
+                    "type": "string",
+                    "description": "The bare leg (no play suffix): what the funnel's campaign units are stored on."
+                  },
+                  "strategyId": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "The play's strategy when the funnel names a non-default play; null = default play."
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "proactive",
+                      "reactive"
+                    ]
+                  },
+                  "toStep": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "The step this pipe's leg produces (features-service legs[].toStep); null when not served."
+                  },
+                  "runByUs": {
+                    "type": "boolean",
+                    "description": "features-service legs[].channels[].runByUs for this channel; false = the customer's own team, never counted in a max volume. Absent when not served."
+                  },
+                  "campaignIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "pipeId",
+                  "channelSlug",
+                  "legKey",
+                  "strategyId",
+                  "mode",
+                  "toStep",
+                  "campaignIds"
+                ]
+              }
+            },
+            "sources": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "channelSlug": {
+                    "type": "string"
+                  },
+                  "legKey": {
+                    "type": "string"
+                  },
+                  "feedsPipeIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "campaignIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "channelSlug",
+                  "legKey",
+                  "feedsPipeIds",
+                  "campaignIds"
+                ],
+                "description": "A lead source (features-service sourcing origin) feeding the funnel's pipes; its spend counts in the budget."
+              }
+            }
+          },
+          "required": [
+            "orgId",
+            "brandId",
+            "offerId",
+            "salesFunnelId",
+            "stated",
+            "funded",
+            "fundedBy",
+            "updatedAt",
+            "maxBudget",
+            "maxVolume",
+            "salesFunnelName",
+            "salesFunnelType",
+            "salesFunnelTypeUnavailableReason",
+            "volumeUnit",
+            "pipes",
+            "sources"
           ]
         }
       }
@@ -4702,7 +5075,9 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             },
             "offerId": {
               "type": "string",
-              "format": "uuid"
+              "nullable": true,
+              "format": "uuid",
+              "description": "null = a campaign naming no offer (the offer-less route)."
             },
             "salesFunnelId": {
               "type": "string"
@@ -5887,7 +6262,9 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "properties": {
                   "offerId": {
                     "type": "string",
-                    "format": "uuid"
+                    "nullable": true,
+                    "format": "uuid",
+                    "description": "null = a campaign naming no offer."
                   },
                   "salesFunnelId": {
                     "type": "string"
@@ -6015,6 +6392,377 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "orgId",
             "brandId",
             "caps"
+          ]
+        }
+      }
+    }
+  },
+  "GET /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps": {
+    "service": "billing-service",
+    "method": "GET",
+    "path": "/v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps",
+    "responses": {
+      "200": {
+        "description": "Caps",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "orgId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "brandId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "offerId": {
+              "type": "string",
+              "nullable": true,
+              "format": "uuid",
+              "description": "null = a campaign naming no offer (the offer-less route)."
+            },
+            "salesFunnelId": {
+              "type": "string"
+            },
+            "stated": {
+              "type": "boolean"
+            },
+            "funded": {
+              "type": "boolean",
+              "description": "May the funnel's campaign spend at all: true when a max budget AND/OR a max volume is stated, each above 0 (owner rule 2026-10-11). A volume-only funnel is funded: it spends from the org's balance until its max volume is reached. Nothing stated = false. Read it, never re-derive it."
+            },
+            "fundedBy": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "max_budget",
+                "max_volume",
+                "both",
+                null
+              ],
+              "description": "Which stated cap funds the funnel; null when not funded."
+            },
+            "updatedAt": {
+              "type": "string",
+              "nullable": true
+            },
+            "maxBudget": {
+              "type": "object",
+              "nullable": true,
+              "properties": {
+                "amountCents": {
+                  "type": "string"
+                },
+                "period": {
+                  "type": "string",
+                  "enum": [
+                    "one_off",
+                    "daily",
+                    "weekly",
+                    "monthly"
+                  ],
+                  "description": "UTC. daily = the calendar day; weekly = Monday 00:00 to the next Monday; monthly = the calendar month; one_off = once, counted from when the cap was first stated in this period (never resets)."
+                },
+                "dailyBudgetCents": {
+                  "type": "string"
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "consumedCents": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "remainingCents": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "reached": {
+                  "type": "boolean",
+                  "nullable": true
+                },
+                "refusedSpend": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "at": {
+                      "type": "string"
+                    },
+                    "requiredCents": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "at",
+                    "requiredCents"
+                  ],
+                  "description": "The spend POST /v1/customer_balance/authorize refused in this window because it would have taken the cap past amountCents (reason sales_funnel_max_budget_reached). While set, reached is true: the next run's spends would be refused too. Freed by a new period or a changed amount."
+                },
+                "consumedUnavailableReason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "sales_funnel_not_found",
+                    "sales_funnel_catalogue_unavailable",
+                    "campaign_service_unconfigured",
+                    "campaign_service_unavailable",
+                    "runs_service_unavailable",
+                    "no_proactive_pipe",
+                    "volume_not_measured_on_channel",
+                    "sourcing_catalogue_unavailable",
+                    "sales_funnel_campaign_not_found",
+                    null
+                  ]
+                },
+                "consumedUnavailableDetail": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "amountCents",
+                "period",
+                "dailyBudgetCents",
+                "periodStart",
+                "periodEnd",
+                "consumedCents",
+                "remainingCents",
+                "reached",
+                "refusedSpend",
+                "consumedUnavailableReason",
+                "consumedUnavailableDetail"
+              ],
+              "description": "consumedCents = committed NET spend (actual + provisioned, what the org pays) of every campaign on the funnel's pipes for this brand x offer PLUS every lead SOURCE campaign (Start -> Lead found) feeding those pipes (sources[]): ALL-INCLUSIVE, sourcing + sending + LLM. Runs started in [periodStart, periodEnd). reached = consumedCents >= amountCents. null + a reason when it cannot be measured, never 0."
+            },
+            "maxVolume": {
+              "type": "object",
+              "nullable": true,
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "period": {
+                  "type": "string",
+                  "enum": [
+                    "one_off",
+                    "daily",
+                    "weekly",
+                    "monthly"
+                  ],
+                  "description": "UTC. daily = the calendar day; weekly = Monday 00:00 to the next Monday; monthly = the calendar month; one_off = once, counted from when the cap was first stated in this period (never resets)."
+                },
+                "unit": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "first_contacts",
+                    "prospects_handled",
+                    "outcomes_produced",
+                    null
+                  ],
+                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "consumed": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "remaining": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "reached": {
+                  "type": "boolean",
+                  "nullable": true
+                },
+                "consumedUnavailableReason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "sales_funnel_not_found",
+                    "sales_funnel_catalogue_unavailable",
+                    "campaign_service_unconfigured",
+                    "campaign_service_unavailable",
+                    "runs_service_unavailable",
+                    "no_proactive_pipe",
+                    "volume_not_measured_on_channel",
+                    "sourcing_catalogue_unavailable",
+                    "sales_funnel_campaign_not_found",
+                    null
+                  ]
+                },
+                "consumedUnavailableDetail": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "count",
+                "period",
+                "unit",
+                "periodStart",
+                "periodEnd",
+                "consumed",
+                "remaining",
+                "reached",
+                "consumedUnavailableReason",
+                "consumedUnavailableDetail"
+              ],
+              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+            },
+            "salesFunnelName": {
+              "type": "string",
+              "nullable": true
+            },
+            "salesFunnelType": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "proactive",
+                "reactive",
+                null
+              ],
+              "description": "features-service's served funnel type, RELAYED (never derived here): proactive when at least one pipe is proactive, else reactive. Labels the caps: proactive = Max budget / Max volume, reactive = Up to $X / Up to N."
+            },
+            "salesFunnelTypeUnavailableReason": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "type_not_served_by_features_service",
+                "sales_funnel_not_found",
+                "sales_funnel_catalogue_unavailable",
+                null
+              ]
+            },
+            "volumeUnit": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "first_contacts",
+                "prospects_handled",
+                "outcomes_produced",
+                null
+              ],
+              "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+            },
+            "pipes": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "pipeId": {
+                    "type": "string",
+                    "description": "features-service's pipe id; a non-default play's id `<channel>|<leg>~<strategy>`."
+                  },
+                  "channelSlug": {
+                    "type": "string"
+                  },
+                  "legKey": {
+                    "type": "string",
+                    "description": "The bare leg (no play suffix): what the funnel's campaign units are stored on."
+                  },
+                  "strategyId": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "The play's strategy when the funnel names a non-default play; null = default play."
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "proactive",
+                      "reactive"
+                    ]
+                  },
+                  "toStep": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "The step this pipe's leg produces (features-service legs[].toStep); null when not served."
+                  },
+                  "runByUs": {
+                    "type": "boolean",
+                    "description": "features-service legs[].channels[].runByUs for this channel; false = the customer's own team, never counted in a max volume. Absent when not served."
+                  },
+                  "campaignIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "pipeId",
+                  "channelSlug",
+                  "legKey",
+                  "strategyId",
+                  "mode",
+                  "toStep",
+                  "campaignIds"
+                ]
+              }
+            },
+            "sources": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "channelSlug": {
+                    "type": "string"
+                  },
+                  "legKey": {
+                    "type": "string"
+                  },
+                  "feedsPipeIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "campaignIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "channelSlug",
+                  "legKey",
+                  "feedsPipeIds",
+                  "campaignIds"
+                ],
+                "description": "A lead source (features-service sourcing origin) feeding the funnel's pipes; its spend counts in the budget."
+              }
+            }
+          },
+          "required": [
+            "orgId",
+            "brandId",
+            "offerId",
+            "salesFunnelId",
+            "stated",
+            "funded",
+            "fundedBy",
+            "updatedAt",
+            "maxBudget",
+            "maxVolume",
+            "salesFunnelName",
+            "salesFunnelType",
+            "salesFunnelTypeUnavailableReason",
+            "volumeUnit",
+            "pipes",
+            "sources"
           ]
         }
       }
@@ -19268,9 +20016,6 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "maxWindowDays": {
                   "type": "number"
                 },
-                "campaignEngineSpanDays": {
-                  "type": "number"
-                },
                 "blendPseudoCases": {
                   "type": "number"
                 },
@@ -19310,7 +20055,6 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "windowMaturityMultiple",
                 "minWindowDays",
                 "maxWindowDays",
-                "campaignEngineSpanDays",
                 "blendPseudoCases",
                 "thinCases",
                 "thinDecisions",
@@ -19668,6 +20412,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "type": "string",
                         "enum": [
                           "no_downstream_step_measured",
+                          "step_slower_than_window",
+                          "no_step_readable_within_window",
                           "no_decisions_after",
                           "nothing_before_to_compare",
                           "thin_evidence",
@@ -59037,7 +59783,9 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             },
             "offerId": {
               "type": "string",
-              "format": "uuid"
+              "nullable": true,
+              "format": "uuid",
+              "description": "null = a campaign naming no offer (the offer-less route)."
             },
             "salesFunnelId": {
               "type": "string"
@@ -59880,6 +60628,377 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "previousDailyBudgetCents"
               ]
             }
+          ]
+        }
+      }
+    }
+  },
+  "PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps": {
+    "service": "billing-service",
+    "method": "PUT",
+    "path": "/v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps",
+    "responses": {
+      "200": {
+        "description": "Stated",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "orgId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "brandId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "offerId": {
+              "type": "string",
+              "nullable": true,
+              "format": "uuid",
+              "description": "null = a campaign naming no offer (the offer-less route)."
+            },
+            "salesFunnelId": {
+              "type": "string"
+            },
+            "stated": {
+              "type": "boolean"
+            },
+            "funded": {
+              "type": "boolean",
+              "description": "May the funnel's campaign spend at all: true when a max budget AND/OR a max volume is stated, each above 0 (owner rule 2026-10-11). A volume-only funnel is funded: it spends from the org's balance until its max volume is reached. Nothing stated = false. Read it, never re-derive it."
+            },
+            "fundedBy": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "max_budget",
+                "max_volume",
+                "both",
+                null
+              ],
+              "description": "Which stated cap funds the funnel; null when not funded."
+            },
+            "updatedAt": {
+              "type": "string",
+              "nullable": true
+            },
+            "maxBudget": {
+              "type": "object",
+              "nullable": true,
+              "properties": {
+                "amountCents": {
+                  "type": "string"
+                },
+                "period": {
+                  "type": "string",
+                  "enum": [
+                    "one_off",
+                    "daily",
+                    "weekly",
+                    "monthly"
+                  ],
+                  "description": "UTC. daily = the calendar day; weekly = Monday 00:00 to the next Monday; monthly = the calendar month; one_off = once, counted from when the cap was first stated in this period (never resets)."
+                },
+                "dailyBudgetCents": {
+                  "type": "string"
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "consumedCents": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "remainingCents": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "reached": {
+                  "type": "boolean",
+                  "nullable": true
+                },
+                "refusedSpend": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "at": {
+                      "type": "string"
+                    },
+                    "requiredCents": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "at",
+                    "requiredCents"
+                  ],
+                  "description": "The spend POST /v1/customer_balance/authorize refused in this window because it would have taken the cap past amountCents (reason sales_funnel_max_budget_reached). While set, reached is true: the next run's spends would be refused too. Freed by a new period or a changed amount."
+                },
+                "consumedUnavailableReason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "sales_funnel_not_found",
+                    "sales_funnel_catalogue_unavailable",
+                    "campaign_service_unconfigured",
+                    "campaign_service_unavailable",
+                    "runs_service_unavailable",
+                    "no_proactive_pipe",
+                    "volume_not_measured_on_channel",
+                    "sourcing_catalogue_unavailable",
+                    "sales_funnel_campaign_not_found",
+                    null
+                  ]
+                },
+                "consumedUnavailableDetail": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "amountCents",
+                "period",
+                "dailyBudgetCents",
+                "periodStart",
+                "periodEnd",
+                "consumedCents",
+                "remainingCents",
+                "reached",
+                "refusedSpend",
+                "consumedUnavailableReason",
+                "consumedUnavailableDetail"
+              ],
+              "description": "consumedCents = committed NET spend (actual + provisioned, what the org pays) of every campaign on the funnel's pipes for this brand x offer PLUS every lead SOURCE campaign (Start -> Lead found) feeding those pipes (sources[]): ALL-INCLUSIVE, sourcing + sending + LLM. Runs started in [periodStart, periodEnd). reached = consumedCents >= amountCents. null + a reason when it cannot be measured, never 0."
+            },
+            "maxVolume": {
+              "type": "object",
+              "nullable": true,
+              "properties": {
+                "count": {
+                  "type": "integer"
+                },
+                "period": {
+                  "type": "string",
+                  "enum": [
+                    "one_off",
+                    "daily",
+                    "weekly",
+                    "monthly"
+                  ],
+                  "description": "UTC. daily = the calendar day; weekly = Monday 00:00 to the next Monday; monthly = the calendar month; one_off = once, counted from when the cap was first stated in this period (never resets)."
+                },
+                "unit": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "first_contacts",
+                    "prospects_handled",
+                    "outcomes_produced",
+                    null
+                  ],
+                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                },
+                "periodStart": {
+                  "type": "string"
+                },
+                "periodEnd": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "consumed": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "remaining": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "reached": {
+                  "type": "boolean",
+                  "nullable": true
+                },
+                "consumedUnavailableReason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "sales_funnel_not_found",
+                    "sales_funnel_catalogue_unavailable",
+                    "campaign_service_unconfigured",
+                    "campaign_service_unavailable",
+                    "runs_service_unavailable",
+                    "no_proactive_pipe",
+                    "volume_not_measured_on_channel",
+                    "sourcing_catalogue_unavailable",
+                    "sales_funnel_campaign_not_found",
+                    null
+                  ]
+                },
+                "consumedUnavailableDetail": {
+                  "type": "string",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "count",
+                "period",
+                "unit",
+                "periodStart",
+                "periodEnd",
+                "consumed",
+                "remaining",
+                "reached",
+                "consumedUnavailableReason",
+                "consumedUnavailableDetail"
+              ],
+              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+            },
+            "salesFunnelName": {
+              "type": "string",
+              "nullable": true
+            },
+            "salesFunnelType": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "proactive",
+                "reactive",
+                null
+              ],
+              "description": "features-service's served funnel type, RELAYED (never derived here): proactive when at least one pipe is proactive, else reactive. Labels the caps: proactive = Max budget / Max volume, reactive = Up to $X / Up to N."
+            },
+            "salesFunnelTypeUnavailableReason": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "type_not_served_by_features_service",
+                "sales_funnel_not_found",
+                "sales_funnel_catalogue_unavailable",
+                null
+              ]
+            },
+            "volumeUnit": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "first_contacts",
+                "prospects_handled",
+                "outcomes_produced",
+                null
+              ],
+              "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+            },
+            "pipes": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "pipeId": {
+                    "type": "string",
+                    "description": "features-service's pipe id; a non-default play's id `<channel>|<leg>~<strategy>`."
+                  },
+                  "channelSlug": {
+                    "type": "string"
+                  },
+                  "legKey": {
+                    "type": "string",
+                    "description": "The bare leg (no play suffix): what the funnel's campaign units are stored on."
+                  },
+                  "strategyId": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "The play's strategy when the funnel names a non-default play; null = default play."
+                  },
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "proactive",
+                      "reactive"
+                    ]
+                  },
+                  "toStep": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "The step this pipe's leg produces (features-service legs[].toStep); null when not served."
+                  },
+                  "runByUs": {
+                    "type": "boolean",
+                    "description": "features-service legs[].channels[].runByUs for this channel; false = the customer's own team, never counted in a max volume. Absent when not served."
+                  },
+                  "campaignIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "pipeId",
+                  "channelSlug",
+                  "legKey",
+                  "strategyId",
+                  "mode",
+                  "toStep",
+                  "campaignIds"
+                ]
+              }
+            },
+            "sources": {
+              "type": "array",
+              "nullable": true,
+              "items": {
+                "type": "object",
+                "properties": {
+                  "channelSlug": {
+                    "type": "string"
+                  },
+                  "legKey": {
+                    "type": "string"
+                  },
+                  "feedsPipeIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "campaignIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "channelSlug",
+                  "legKey",
+                  "feedsPipeIds",
+                  "campaignIds"
+                ],
+                "description": "A lead source (features-service sourcing origin) feeding the funnel's pipes; its spend counts in the budget."
+              }
+            }
+          },
+          "required": [
+            "orgId",
+            "brandId",
+            "offerId",
+            "salesFunnelId",
+            "stated",
+            "funded",
+            "fundedBy",
+            "updatedAt",
+            "maxBudget",
+            "maxVolume",
+            "salesFunnelName",
+            "salesFunnelType",
+            "salesFunnelTypeUnavailableReason",
+            "volumeUnit",
+            "pipes",
+            "sources"
           ]
         }
       }

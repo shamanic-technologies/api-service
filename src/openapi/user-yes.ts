@@ -330,6 +330,14 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
     SPEND,
     "Clears the sales funnel's max budget and max volume.",
   ),
+  "PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps": yes(
+    SPEND,
+    "Changes the sales funnel's max budget and max volume: what its campaign may spend.",
+  ),
+  "DELETE /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps": yes(
+    SPEND,
+    "Clears the sales funnel's max budget and max volume.",
+  ),
   "PUT /v1/billing/usage-discount": NO,
   "DELETE /v1/billing/usage-discount": NO,
 
