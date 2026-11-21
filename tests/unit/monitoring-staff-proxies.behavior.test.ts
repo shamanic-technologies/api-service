@@ -36,6 +36,7 @@ const { RUNS_BASE, COSTS_BASE, INSTANTLY_BASE, FEATURES_BASE } = vi.hoisted(() =
  *   GET /v1/features/audit/security-advisories → features-service GET /internal/security-advisories
  *   GET /v1/features/audit/box-health          → features-service GET /internal/box-health
  *   GET /v1/features/audit/box-checks          → features-service GET /internal/box-checks
+ *   GET /v1/features/audit/saas-cash           → features-service GET /internal/stats/saas-cash
  *
  * No auth mock: the real authenticatePlatform + requireStaff run, and every refusal
  * asserts ZERO outbound calls. Bodies are fixtures — the producers own the shape.
@@ -194,6 +195,12 @@ const ROUTES = [
     downstream: `${FEATURES_BASE}/internal/box-checks`,
     key: "features-test-key",
   },
+  {
+    path: "/v1/features/audit/saas-cash",
+    query: "?x=1",
+    downstream: `${FEATURES_BASE}/internal/stats/saas-cash`,
+    key: "features-test-key",
+  },
 ];
 
 for (const r of ROUTES) {
@@ -326,5 +333,22 @@ describe("staff — real-costs / price-lists / price-comparison downstream statu
     const res = await request(buildApp()).post("/v1/costs/real-costs/refresh").set(STAFF);
     expect(res.status).toBe(404);
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe("staff — GET /v1/features/audit/saas-cash before the first build", () => {
+  it("passes features-service's 503 through with its body", async () => {
+    const raw = '{"error":"SaaS cash not computed yet","code":"saas_cash_not_computed_yet"}';
+    upstream(503, raw);
+    const res = await request(buildApp()).get("/v1/features/audit/saas-cash").set(STAFF);
+    expect(res.status).toBe(503);
+    expect(res.body).toEqual(JSON.parse(raw));
+  });
+
+  it("passes the 404 through while the producer route is not deployed yet", async () => {
+    upstream(404, '{"error":"Not found"}');
+    const res = await request(buildApp()).get("/v1/features/audit/saas-cash").set(STAFF);
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: "Not found" });
   });
 });
