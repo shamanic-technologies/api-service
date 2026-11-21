@@ -1354,6 +1354,11 @@ const OFFER_ROUTES = [
   // the new campaign's brief. `brandId`/`salesFunnelId`/`target` ride the raw query; features-service
   // writes the text and owns every refusal (400, 404, 502 brief_unwritable).
   { suffix: "campaign-brief", what: "offer campaign brief" },
+  // How much of one target step the offer's chosen sales funnels can deliver per day/week/month
+  // (owner 2026-11-22, ONE-CAMPAIGN-VOLUME-1122): the signup campaign step reads it, signed in or
+  // as the anonymous org. `brandId`/`salesFunnelIds=a,b`/`target`/`volume`/`period` ride the raw
+  // query; features-service owns the estimate and every refusal (400, 404, 502 estimate_unreadable).
+  { suffix: "target-volume-estimate", what: "offer target volume estimate" },
 ] as const;
 
 // ── Brand grain ──────────────────────────────────────────────────────────────
