@@ -1349,6 +1349,11 @@ const OFFER_ROUTES = [
   // 2026-11-02, FACTORY-USER-DASHBOARD-1102). `brandId` rides the raw query; features-service owns
   // the picks and every refusal.
   { suffix: "engine-picks", what: "offer engine picks" },
+  // A short plain-language brief prefilled for a campaign ABOUT to be launched (owner 2026-11-21,
+  // HUMAN-BRIEF-1121: no campaign without a brief); the onboarding shows it editable and sends it as
+  // the new campaign's brief. `brandId`/`salesFunnelId`/`target` ride the raw query; features-service
+  // writes the text and owns every refusal (400, 404, 502 brief_unwritable).
+  { suffix: "campaign-brief", what: "offer campaign brief" },
 ] as const;
 
 // ── Brand grain ──────────────────────────────────────────────────────────────
