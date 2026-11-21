@@ -877,6 +877,28 @@ router.get("/features/audit/box-checks", authenticatePlatform, requireStaff, asy
 });
 
 /**
+ * GET /v1/features/audit/saas-cash → features-service GET /internal/stats/saas-cash — STAFF ONLY (SAAS-CASH-1121).
+ * Cash the distribute.you SaaS (self-serve, agency excluded) collected: weekly bars + daily cumulative since inception,
+ * read by dashboard v2 Monitoring > Revenue and the morning Telegram job. Cross-org staff figure, no org context:
+ * authenticatePlatform + requireStaff like the other fleet audits. Byte passthrough (status + body piped), so the
+ * producer's 503 `saas_cash_not_computed_yet` / 502 reach the caller verbatim; query string forwarded verbatim.
+ * Declared before `/features/:slug/*`.
+ */
+router.get("/features/audit/saas-cash", authenticatePlatform, requireStaff, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.features,
+      `/internal/stats/saas-cash${rawQueryString(req.originalUrl)}`,
+      { headers: staffHeaders(req), expressRes: res },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Staff SaaS cash read error:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to read SaaS cash");
+  }
+});
+
+/**
  * GTM Factory step 1, SHADOW ONLY (FACTORY-P1-BRIEF-JUDGE-SHADOW-PLAN) — STAFF ONLY, fleet-wide, no org context:
  *   GET /v1/features/audit/factory-shadow/monitoring → features-service GET /internal/factory-shadow/monitoring
  *     per client org and day, the funnel campaigns whose shadow plan or Jev pick differs from what runs (dashboard v2 Monitoring)

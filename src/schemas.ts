@@ -967,6 +967,25 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/features/audit/saas-cash",
+  tags: ["Features"],
+  summary: "Cash collected by the distribute.you SaaS: weekly + daily cumulative since inception (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), cross-org, no org context. " +
+    "Byte passthrough to features-service GET /internal/stats/saas-cash: the cash the self-serve SaaS collected (agency excluded), " +
+    "weekly buckets and a daily cumulative series since inception. Status and body owned by the downstream service.",
+  security: platformAuth,
+  responses: {
+    200: { description: "Pass-through from features-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("StaffSaasCashResponse") } } },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream service error, or billing unreadable (forwarded verbatim)", content: errorContent },
+    503: { description: "Not computed yet: `saas_cash_not_computed_yet` (forwarded verbatim)", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/features/audit/factory-shadow/monitoring",
   tags: ["Features"],
   summary: "GTM Factory shadow Monitoring: per client org and day, funnel campaigns whose shadow plan or Jev pick differs from what runs (staff only)",

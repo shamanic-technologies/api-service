@@ -494,6 +494,13 @@
           "nullable": true
         }
       },
+      "StaffSaasCashResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "StaffFactoryShadowMonitoringResponse": {
         "type": "object",
         "properties": {},
@@ -12408,6 +12415,26 @@
       },
       "ErrorResponse400InvalidQueryForwardedVerbatim": {
         "description": "Invalid query (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse502UpstreamServiceErrorOrBillingUnreadableForwardedVerbatim": {
+        "description": "Upstream service error, or billing unreadable (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse503NotComputedYetSaasCashNotComputedYetForwardedVerbatim": {
+        "description": "Not computed yet: `saas_cash_not_computed_yet` (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {
