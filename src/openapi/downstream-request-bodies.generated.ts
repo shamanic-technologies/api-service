@@ -3652,6 +3652,78 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       ]
     }
   },
+  "PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps": {
+    "service": "billing-service",
+    "method": "PUT",
+    "path": "/v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "maxBudget": {
+          "type": "object",
+          "nullable": true,
+          "properties": {
+            "amountCents": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "period": {
+              "type": "string",
+              "enum": [
+                "one_off",
+                "daily",
+                "weekly",
+                "monthly"
+              ],
+              "description": "UTC. daily = the calendar day; weekly = Monday 00:00 to the next Monday; monthly = the calendar month; one_off = once, counted from when the cap was first stated in this period (never resets)."
+            }
+          },
+          "required": [
+            "amountCents",
+            "period"
+          ],
+          "additionalProperties": false
+        },
+        "maxVolume": {
+          "type": "object",
+          "nullable": true,
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "period": {
+              "type": "string",
+              "enum": [
+                "one_off",
+                "daily",
+                "weekly",
+                "monthly"
+              ],
+              "description": "UTC. daily = the calendar day; weekly = Monday 00:00 to the next Monday; monthly = the calendar month; one_off = once, counted from when the cap was first stated in this period (never resets)."
+            }
+          },
+          "required": [
+            "count",
+            "period"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "maxBudget",
+        "maxVolume"
+      ],
+      "additionalProperties": false,
+      "description": "Both keys are REQUIRED: an object states the cap, null clears it; both null clears the funnel. A cap restated in the same period keeps its window start (a one_off cap keeps counting)."
+    }
+  },
   "PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps": {
     "service": "billing-service",
     "method": "PUT",
@@ -3745,6 +3817,150 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       "required": [
         "dailyBudgetCents"
       ]
+    }
+  },
+  "PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps": {
+    "service": "billing-service",
+    "method": "PUT",
+    "path": "/v1/brands/{brandId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "maxBudget": {
+          "type": "object",
+          "nullable": true,
+          "properties": {
+            "amountCents": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "period": {
+              "type": "string",
+              "enum": [
+                "one_off",
+                "daily",
+                "weekly",
+                "monthly"
+              ],
+              "description": "UTC. daily = the calendar day; weekly = Monday 00:00 to the next Monday; monthly = the calendar month; one_off = once, counted from when the cap was first stated in this period (never resets)."
+            }
+          },
+          "required": [
+            "amountCents",
+            "period"
+          ],
+          "additionalProperties": false
+        },
+        "maxVolume": {
+          "type": "object",
+          "nullable": true,
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "period": {
+              "type": "string",
+              "enum": [
+                "one_off",
+                "daily",
+                "weekly",
+                "monthly"
+              ],
+              "description": "UTC. daily = the calendar day; weekly = Monday 00:00 to the next Monday; monthly = the calendar month; one_off = once, counted from when the cap was first stated in this period (never resets)."
+            }
+          },
+          "required": [
+            "count",
+            "period"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "maxBudget",
+        "maxVolume"
+      ],
+      "additionalProperties": false,
+      "description": "Both keys are REQUIRED: an object states the cap, null clears it; both null clears the funnel. A cap restated in the same period keeps its window start (a one_off cap keeps counting)."
+    }
+  },
+  "PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps": {
+    "service": "billing-service",
+    "method": "PUT",
+    "path": "/v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "maxBudget": {
+          "type": "object",
+          "nullable": true,
+          "properties": {
+            "amountCents": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                }
+              ]
+            },
+            "period": {
+              "type": "string",
+              "enum": [
+                "one_off",
+                "daily",
+                "weekly",
+                "monthly"
+              ],
+              "description": "UTC. daily = the calendar day; weekly = Monday 00:00 to the next Monday; monthly = the calendar month; one_off = once, counted from when the cap was first stated in this period (never resets)."
+            }
+          },
+          "required": [
+            "amountCents",
+            "period"
+          ],
+          "additionalProperties": false
+        },
+        "maxVolume": {
+          "type": "object",
+          "nullable": true,
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "period": {
+              "type": "string",
+              "enum": [
+                "one_off",
+                "daily",
+                "weekly",
+                "monthly"
+              ],
+              "description": "UTC. daily = the calendar day; weekly = Monday 00:00 to the next Monday; monthly = the calendar month; one_off = once, counted from when the cap was first stated in this period (never resets)."
+            }
+          },
+          "required": [
+            "count",
+            "period"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "maxBudget",
+        "maxVolume"
+      ],
+      "additionalProperties": false,
+      "description": "Both keys are REQUIRED: an object states the cap, null clears it; both null clears the funnel. A cap restated in the same period keeps its window start (a one_off cap keeps counting)."
     }
   },
   "PUT /v1/brands/{id}/leg-rates": {

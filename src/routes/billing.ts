@@ -964,6 +964,8 @@ router.get("/brands/:brandId/sales-budget/history", authenticate, requireOrg, sa
  * MAX BUDGET + MAX VOLUME of a sales funnel campaign (owner 2026-10-10) — billing-service, same paths:
  *
  *   GET|PUT|DELETE /v1/brands/:brandId/offers/:offerId/sales-funnels/:salesFunnelId/caps
+ *   GET|PUT|DELETE /v1/brands/:brandId/sales-funnels/:salesFunnelId/caps   (a campaign naming NO offer, DISTRY-CALL-IS-CAMPAIGN-1121)
+ *   GET|PUT|DELETE ...same two.../sales-funnels/:salesFunnelId/campaigns/:salesFunnelCampaignId/caps   (one campaign's own caps)
  *   GET            /v1/brands/:brandId/sales-funnel-caps[?offerId=]   (query verbatim)
  *
  * `salesFunnelId` is features-service's combinationKey (`@`, `+` inside): Express decodes the param, so it is
@@ -973,9 +975,15 @@ router.get("/brands/:brandId/sales-budget/history", authenticate, requireOrg, sa
 function salesFunnelCapsProxy(method: "GET" | "PUT" | "DELETE", failure: string) {
   return async (req: AuthenticatedRequest, res: any) => {
     try {
+      // Offer-less mirror (no :offerId param) → billing's offer-less path: never an `/offers/undefined|null` segment.
+      const offer = req.params.offerId === undefined ? "" : `/offers/${encodeURIComponent(req.params.offerId)}`;
       const path =
-        `/v1/brands/${encodeURIComponent(req.params.brandId)}/offers/${encodeURIComponent(req.params.offerId)}` +
-        `/sales-funnels/${encodeURIComponent(req.params.salesFunnelId)}/caps`;
+        `/v1/brands/${encodeURIComponent(req.params.brandId)}${offer}` +
+        `/sales-funnels/${encodeURIComponent(req.params.salesFunnelId)}` +
+        (req.params.salesFunnelCampaignId === undefined
+          ? ""
+          : `/campaigns/${encodeURIComponent(req.params.salesFunnelCampaignId)}`) +
+        "/caps";
       const { status, data } = await callExternalServiceWithStatus(
         externalServices.billing,
         path,
@@ -990,7 +998,12 @@ function salesFunnelCapsProxy(method: "GET" | "PUT" | "DELETE", failure: string)
   };
 }
 
-const SALES_FUNNEL_CAPS = "/brands/:brandId/offers/:offerId/sales-funnels/:salesFunnelId/caps";
+const SALES_FUNNEL_CAPS = [
+  "/brands/:brandId/offers/:offerId/sales-funnels/:salesFunnelId/caps",
+  "/brands/:brandId/sales-funnels/:salesFunnelId/caps",
+  "/brands/:brandId/offers/:offerId/sales-funnels/:salesFunnelId/campaigns/:salesFunnelCampaignId/caps",
+  "/brands/:brandId/sales-funnels/:salesFunnelId/campaigns/:salesFunnelCampaignId/caps",
+];
 router.get(SALES_FUNNEL_CAPS, authenticate, requireOrg, requireUser, salesFunnelCapsProxy("GET", "Failed to read the sales funnel caps"));
 router.put(SALES_FUNNEL_CAPS, authenticate, requireOrg, requireUser, salesFunnelCapsProxy("PUT", "Failed to set the sales funnel caps"));
 router.delete(SALES_FUNNEL_CAPS, authenticate, requireOrg, requireUser, salesFunnelCapsProxy("DELETE", "Failed to clear the sales funnel caps"));
