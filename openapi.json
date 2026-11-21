@@ -410,6 +410,13 @@
           "nullable": true
         }
       },
+      "PublicBrandProofResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "PublicSourcingOriginCatalogueResponse": {
         "type": "object",
         "properties": {},
@@ -12403,6 +12410,26 @@
           }
         }
       },
+      "ErrorResponse400InvalidQuery": {
+        "description": "Invalid query",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404BrandNotFound": {
+        "description": "Brand not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
       "ErrorResponse404UnknownChannelSlug": {
         "description": "Unknown channel slug",
         "content": {
@@ -13325,16 +13352,6 @@
       },
       "ErrorResponse400MissingXBrandIdHeaderOrAnthropicAPIKeyNotConfigured": {
         "description": "Missing x-brand-id header or Anthropic API key not configured",
-        "content": {
-          "application/json": {
-            "schema": {
-              "$ref": "#/components/schemas/ErrorResponse"
-            }
-          }
-        }
-      },
-      "ErrorResponse404BrandNotFound": {
-        "description": "Brand not found",
         "content": {
           "application/json": {
             "schema": {
@@ -18177,6 +18194,85 @@
           }
         },
         "operationId": "getV1PublicIndexesBySlug"
+      }
+    },
+    "/v1/public/brand-proof": {
+      "get": {
+        "tags": [
+          "Brand"
+        ],
+        "summary": "A brand's proof logos, ranked by notoriety",
+        "description": "The companies where a brand's paying clients worked and the outlets that published an article quoting it, each with its logo and notoriety score (0-100: would a B2B founder recognise this logo in one second?), best first. Send `domain` (e.g. distribute.you) or `brandId`; optional `minScore` (default 80), `limit` (default 24), `minMonthlyTraffic` (default 10000). Proxied to brand-service GET /public/brand-proof. Status and body are piped as is (producer-owned). No authentication required.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "domain",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "brandId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "minScore",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "minMonthlyTraffic",
+            "in": "query"
+          },
+          {
+            "$ref": "#/components/parameters/XRequestId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ranked proof logos — pass-through from brand-service",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicBrandProofResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse400InvalidQuery"
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse404BrandNotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "502": {
+            "$ref": "#/components/responses/ErrorResponse502UpstreamServiceError"
+          }
+        },
+        "operationId": "getV1PublicBrandProof"
       }
     },
     "/v1/public/sourcing-origins": {

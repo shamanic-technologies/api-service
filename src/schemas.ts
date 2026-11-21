@@ -727,6 +727,32 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/public/brand-proof",
+  tags: ["Brand"],
+  summary: "A brand's proof logos, ranked by notoriety",
+  description:
+    "The companies where a brand's paying clients worked and the outlets that published an article quoting it, each with its logo and notoriety score (0-100: would a B2B founder recognise this logo in one second?), best first. " +
+    "Send `domain` (e.g. distribute.you) or `brandId`; optional `minScore` (default 80), `limit` (default 24), `minMonthlyTraffic` (default 10000). " +
+    "Proxied to brand-service GET /public/brand-proof. Status and body are piped as is (producer-owned). No authentication required.",
+  request: {
+    query: z.object({
+      domain: z.string().optional(),
+      brandId: z.string().optional(),
+      minScore: z.string().optional(),
+      limit: z.string().optional(),
+      minMonthlyTraffic: z.string().optional(),
+    }),
+  },
+  responses: {
+    200: { description: "Ranked proof logos — pass-through from brand-service", content: { "application/json": { schema: z.object({}).passthrough().openapi("PublicBrandProofResponse") } } },
+    400: { description: "Invalid query", content: errorContent },
+    404: { description: "Brand not found", content: errorContent },
+    502: { description: "Upstream service error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/public/sourcing-origins",
   tags: ["Features"],
   summary: "Public sourcing-origin catalogue",
