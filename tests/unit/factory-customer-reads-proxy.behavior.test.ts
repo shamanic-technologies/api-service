@@ -71,6 +71,28 @@ describe("GTM Factory customer reads", () => {
     expect(calls[0].init.headers["x-user-id"]).toBe("user_test123");
   });
 
+  it("offer campaign-brief (HUMAN-BRIEF-1121): exact features-service path, query verbatim, authenticated identity, body byte-equal", async () => {
+    const q = `?brandId=${BRAND}&salesFunnelId=sf-1&target=meeting_booked`;
+    const res = await request(app()).get(`/v1/offers/${OFFER}/campaign-brief${q}`).set("x-org-id", "org_other");
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(BODY);
+    expect(calls).toHaveLength(1);
+    const u = new URL(calls[0].url);
+    expect(u.pathname + u.search).toBe(`/offers/${OFFER}/campaign-brief${q}`);
+    expect(calls[0].init.headers["x-org-id"]).toBe("org_authenticated");
+    expect(calls[0].init.headers["x-user-id"]).toBe("user_test123");
+    expect(calls[0].init.headers["x-run-id"]).toBe("run_test789");
+  });
+
+  it("offer campaign-brief relays the producer's 404 (not live yet) and 502 verbatim", async () => {
+    for (const [status, reason] of [[404, "offer_not_found"], [502, "brief_unwritable"]] as const) {
+      global.fetch = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ error: "x", reason }), { status, headers: { "content-type": "application/json" } }));
+      const r = await request(app()).get(`/v1/offers/${OFFER}/campaign-brief?brandId=${BRAND}&salesFunnelId=sf-1`);
+      expect(r.status).toBe(status);
+      expect(r.body).toEqual({ error: "x", reason });
+    }
+  });
+
   it("relays refusals field-for-field with their status", async () => {
     global.fetch = vi.fn().mockImplementation(async () => new Response('{"error":"no","reason":"sales_funnel_campaign_not_found"}', { status: 404, headers: { "content-type": "application/json" } }));
     for (const suffix of ["milestones", "people-journeys"]) {
@@ -89,5 +111,6 @@ describe("GTM Factory customer reads", () => {
     expect(doc.paths["/v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/milestones"]?.get).toBeDefined();
     expect(doc.paths["/v1/features/brands/{brandId}/sales-funnel-campaigns/{salesFunnelCampaignId}/people-journeys"]?.get).toBeDefined();
     expect(doc.paths["/v1/offers/{offerId}/engine-picks"]?.get).toBeDefined();
+    expect(doc.paths["/v1/offers/{offerId}/campaign-brief"]?.get).toBeDefined();
   });
 });
