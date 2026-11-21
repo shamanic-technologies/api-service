@@ -71,6 +71,7 @@ import emailGatewayRoutes from "./routes/email-gateway.js";
 import runsRoutes from "./routes/runs.js";
 import contentRoutes from "./routes/content.js";
 import featuresRoutes from "./routes/features.js";
+import publicBrandProofRoutes from "./routes/public-brand-proof.js";
 import quotesRoutes from "./routes/quotes.js";
 import visibilityRoutes from "./routes/visibility.js";
 import audiencesRoutes from "./routes/audiences.js";
@@ -373,6 +374,7 @@ app.use("/v1", emailGatewayRoutes);
 app.use("/v1", runsRoutes);
 app.use("/v1", contentRoutes);
 app.use("/v1", featuresRoutes);
+app.use("/v1", publicBrandProofRoutes); // public brand proof logos (no auth)
 app.use("/v1", adminBrandsRoutes);
 app.use("/v1", quotesRoutes);
 app.use("/v1", visibilityRoutes);
