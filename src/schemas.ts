@@ -14780,6 +14780,47 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/v1/offers/{offerId}/campaign-brief",
+  tags: ["Features"],
+  summary: "Prefilled plain-language brief for a campaign about to be launched on one offer",
+  description:
+    "A short plain-language brief written for a campaign the org is about to launch on this offer, shown editable and sent as the new campaign's brief. " +
+    "Proxied to features-service GET /offers/{offerId}/campaign-brief, which writes the brief and owns every refusal. " +
+    "The gateway forwards EVERY query param verbatim — the params below are documentation, not a closed list.",
+  security: authed,
+  request: {
+    params: z.object({ offerId: z.string().openapi({ example: "offer-uuid-123" }).describe("Offer UUID") }),
+    query: z.object({
+      brandId: z.string().openapi({ example: "brand-uuid-123" }).describe("Brand UUID (required) — an offer belongs to a brand"),
+      salesFunnelId: z.string().describe("Sales funnel the campaign will run (required)"),
+      target: z.string().optional().describe("Step key the campaign aims at (optional)"),
+    }).passthrough(),
+  },
+  responses: {
+    200: {
+      description: "The prefilled brief (passthrough of features-service's body)",
+      content: {
+        "application/json": {
+          schema: z.object({
+            offerId: z.string(),
+            brandId: z.string(),
+            salesFunnelId: z.string(),
+            target: z.string().nullable(),
+            brief: z.string(),
+            model: z.string(),
+          }).passthrough().openapi("OfferCampaignBriefResponse"),
+        },
+      },
+    },
+    400: { description: "brand_id_required, sales_funnel_unknown or target_unknown, forwarded verbatim", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    404: { description: "brand_not_found or offer_not_found, forwarded verbatim", content: errorContent },
+    502: { description: "brief_unwritable, forwarded verbatim", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/v1/offers/{offerId}/outcome-cost-series",
   tags: ["Features"],
   summary: "Cost per outcome of one offer, per month and since inception",
