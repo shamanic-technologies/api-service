@@ -22,7 +22,7 @@ async function pipe(
   res: import("express").Response,
   path: string,
   fallback: string,
-  options: { method?: "PUT" | "POST"; body?: unknown } = {},
+  options: { method?: "PUT" | "POST" | "DELETE"; body?: unknown } = {},
 ) {
   try {
     await pipeExternalService(externalServices.chat, path, { ...options, expressRes: res });
@@ -31,6 +31,16 @@ async function pipe(
     if (res.headersSent) { res.end(); return; }
     respondUpstreamError(res, error, fallback);
   }
+}
+
+/** Reject a non-object JSON body before forwarding (the writes below stamp `editedBy` into it). */
+function objectBody(req: AuthenticatedRequest, res: import("express").Response): Record<string, unknown> | null {
+  const body = req.body ?? {};
+  if (body === null || typeof body !== "object" || Array.isArray(body)) {
+    res.status(400).json({ error: "Request body must be a JSON object" });
+    return null;
+  }
+  return body;
 }
 
 /** GET /v1/chat/skills → chat-service GET /internal/skills — the whole skill tree (no content). */
@@ -76,6 +86,35 @@ router.put("/v1/chat/skills/:slug", authenticatePlatform, requireStaff, (req: Au
   }
   return pipe(req, res, `/internal/skills/${encodeURIComponent(req.params.slug)}`, "Failed to save Copilot skill", {
     method: "PUT",
+    body: { ...body, editedBy: req.staffEmail },
+  });
+});
+
+/**
+ * POST /v1/chat/skills/:slug/move → chat-service POST /internal/skills/:slug/move — drag and drop
+ * (`parentSlug`, `position`; SKILL-TREE-EDIT-1122). Body forwarded as sent EXCEPT `editedBy`, stamped
+ * from the staff session like the PUT. Cycle / root / deleted-parent rules are chat-service's (400/404/409
+ * piped verbatim), never checked here.
+ */
+router.post("/v1/chat/skills/:slug/move", authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) => {
+  const body = objectBody(req, res);
+  if (!body) return;
+  return pipe(req, res, `/internal/skills/${encodeURIComponent(req.params.slug)}/move`, "Failed to move Copilot skill", {
+    method: "POST",
+    body: { ...body, editedBy: req.staffEmail },
+  });
+});
+
+/**
+ * DELETE /v1/chat/skills/:slug → chat-service DELETE /internal/skills/:slug — soft delete, versions kept
+ * (SKILL-TREE-EDIT-1122). JSON body `{ editedBy }` stamped from the staff session (any browser value
+ * replaced). Child / protected-skill refusals are chat-service's 409, piped verbatim.
+ */
+router.delete("/v1/chat/skills/:slug", authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) => {
+  const body = objectBody(req, res);
+  if (!body) return;
+  return pipe(req, res, `/internal/skills/${encodeURIComponent(req.params.slug)}`, "Failed to delete Copilot skill", {
+    method: "DELETE",
     body: { ...body, editedBy: req.staffEmail },
   });
 });
@@ -127,15 +166,6 @@ router.get("/v1/chat/ops/distry-spend/daily", authenticatePlatform, requireStaff
 // Dashboard v2 Monitoring > Distry: read/edit Distry (our AI) — prompt, tools, skills,
 // model — see every version, restore one. chat-service /internal/distry/config*.
 
-/** Reject a non-object JSON body before forwarding (the writes below stamp `editedBy` into it). */
-function objectBody(req: AuthenticatedRequest, res: import("express").Response): Record<string, unknown> | null {
-  const body = req.body ?? {};
-  if (body === null || typeof body !== "object" || Array.isArray(body)) {
-    res.status(400).json({ error: "Request body must be a JSON object" });
-    return null;
-  }
-  return body;
-}
 
 /** GET /v1/chat/distry/config → chat-service GET /internal/distry/config (current version, code's, pickable tools/skills/models). */
 router.get("/v1/chat/distry/config", authenticatePlatform, requireStaff, (req: AuthenticatedRequest, res) =>
