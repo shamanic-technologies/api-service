@@ -7772,6 +7772,40 @@
           "nullable": true
         }
       },
+      "CopilotSkillMoveResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "CopilotSkillMoveRequest": {
+        "type": "object",
+        "properties": {
+          "parentSlug": {
+            "type": "string",
+            "description": "Slug of the new parent skill."
+          },
+          "position": {
+            "type": "integer",
+            "description": "Position among the new parent's children."
+          }
+        },
+        "required": [
+          "parentSlug",
+          "position"
+        ],
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
+      "CopilotSkillDeleteResponse": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": {
+          "nullable": true
+        }
+      },
       "CopilotSkillVersionListResponse": {
         "type": "object",
         "properties": {},
@@ -14954,6 +14988,46 @@
       },
       "ErrorResponse404UnknownSkillOrVersionForwardedVerbatim": {
         "description": "Unknown skill or version (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse404UnknownOrAlreadyDeletedSkillForwardedVerbatim": {
+        "description": "Unknown or already deleted skill (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409HasSubSkillsOrIsProtectedForwardedVerbatim": {
+        "description": "Has sub-skills or is protected (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse400CycleInvalidOrDeletedParentForwardedVerbatim": {
+        "description": "Cycle, invalid or deleted parent (forwarded verbatim)",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "ErrorResponse409TheRootCannotMoveForwardedVerbatim": {
+        "description": "The root cannot move (forwarded verbatim)",
         "content": {
           "application/json": {
             "schema": {

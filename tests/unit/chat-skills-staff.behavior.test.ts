@@ -52,10 +52,12 @@ beforeEach(() => {
   calls = [];
 });
 
-const ROUTES: Array<{ method: "get" | "put" | "post"; path: string; downstream: string; body?: object }> = [
+const ROUTES: Array<{ method: "get" | "put" | "post" | "delete"; path: string; downstream: string; body?: object }> = [
   { method: "get", path: "/v1/chat/skills", downstream: `${CHAT_BASE}/internal/skills` },
   { method: "get", path: "/v1/chat/skills/campaigns", downstream: `${CHAT_BASE}/internal/skills/campaigns` },
   { method: "put", path: "/v1/chat/skills/campaigns", downstream: `${CHAT_BASE}/internal/skills/campaigns`, body: { content: "# x" } },
+  { method: "post", path: "/v1/chat/skills/campaigns/move", downstream: `${CHAT_BASE}/internal/skills/campaigns/move`, body: { parentSlug: "index", position: 1 } },
+  { method: "delete", path: "/v1/chat/skills/campaigns", downstream: `${CHAT_BASE}/internal/skills/campaigns` },
   { method: "get", path: "/v1/chat/skills/campaigns/versions", downstream: `${CHAT_BASE}/internal/skills/campaigns/versions` },
   { method: "get", path: "/v1/chat/skills/campaigns/versions/3", downstream: `${CHAT_BASE}/internal/skills/campaigns/versions/3` },
   { method: "get", path: "/v1/chat/staff-requests", downstream: `${CHAT_BASE}/internal/staff-requests` },
@@ -317,5 +319,70 @@ describe("staff — GET /v1/chat/ops/distry-spend/daily", () => {
     const res = await request(buildApp()).get("/v1/chat/ops/distry-spend/daily").set("Authorization", "Bearer distrib.usr_x");
     expect(res.status).toBe(401);
     expect(calls).toHaveLength(0);
+  });
+});
+
+describe("staff — skill move + delete stamp editedBy from auth (SKILL-TREE-EDIT-1122)", () => {
+  it("move forwards the body with editedBy = the signed-in staff email, replacing the browser's value", async () => {
+    upstream(200, '{"skill":{"slug":"campaigns"},"siblings":[{"slug":"campaigns","position":1}]}');
+    const sent = { parentSlug: "index", position: 1, futureField: true, editedBy: "seed" };
+    const res = await request(buildApp()).post("/v1/chat/skills/campaigns/move").set(STAFF).send(sent);
+    expect(res.status).toBe(200);
+    expect(calls[0].options.method).toBe("POST");
+    expect(JSON.parse(calls[0].options.body)).toEqual({ ...sent, editedBy: "kevin@distribute.you" });
+  });
+
+  it("move passes chat-service's 400 (cycle) through with its body", async () => {
+    const raw = '{"error":"Moving \\"index\\" under \\"campaigns\\" would create a cycle.","code":"cycle"}';
+    upstream(400, raw);
+    const res = await request(buildApp()).post("/v1/chat/skills/campaigns/move").set(STAFF).send({ parentSlug: "campaigns", position: 0 });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual(JSON.parse(raw));
+  });
+
+  it("move passes chat-service's 409 (root) through with its body", async () => {
+    upstream(409, '{"error":"The root skill cannot move."}');
+    const res = await request(buildApp()).post("/v1/chat/skills/index/move").set(STAFF).send({ parentSlug: "x", position: 0 });
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual({ error: "The root skill cannot move." });
+  });
+
+  it("move refuses a non-object body (400) and calls nothing", async () => {
+    upstream(200, "{}");
+    const res = await request(buildApp()).post("/v1/chat/skills/campaigns/move").set(STAFF).send([1]);
+    expect(res.status).toBe(400);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("delete with NO body forwards { editedBy: staff email } as a JSON body", async () => {
+    upstream(200, '{"skill":{"slug":"campaigns","deletedAt":"2026-11-22T10:00:00.000Z"},"versionsKept":4}');
+    const res = await request(buildApp()).delete("/v1/chat/skills/campaigns").set(STAFF);
+    expect(res.status).toBe(200);
+    expect(res.text).toBe('{"skill":{"slug":"campaigns","deletedAt":"2026-11-22T10:00:00.000Z"},"versionsKept":4}');
+    expect(calls[0].options.method).toBe("DELETE");
+    expect(calls[0].options.headers["Content-Type"]).toBe("application/json");
+    expect(JSON.parse(calls[0].options.body)).toEqual({ editedBy: "kevin@distribute.you" });
+  });
+
+  it("delete replaces a browser editedBy", async () => {
+    upstream(200, "{}");
+    await request(buildApp()).delete("/v1/chat/skills/campaigns").set(STAFF).send({ editedBy: "someone@else.com" });
+    expect(JSON.parse(calls[0].options.body)).toEqual({ editedBy: "kevin@distribute.you" });
+  });
+
+  it("delete passes chat-service's 409 (has sub-skills) through with its body", async () => {
+    const raw = '{"error":"Skill \\"campaigns\\" has sub-skills: budgets, launch."}';
+    upstream(409, raw);
+    const res = await request(buildApp()).delete("/v1/chat/skills/campaigns").set(STAFF);
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual(JSON.parse(raw));
+  });
+});
+
+describe("staff — GET /v1/chat/skills?state=deleted", () => {
+  it("forwards the query string verbatim", async () => {
+    upstream(200, RAW);
+    await request(buildApp()).get("/v1/chat/skills?state=deleted").set(STAFF);
+    expect(calls[0].url).toBe(`${CHAT_BASE}/internal/skills?state=deleted`);
   });
 });

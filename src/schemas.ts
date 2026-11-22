@@ -10858,7 +10858,7 @@ registry.registerPath({
   summary: "List the Copilot skill tree (staff only)",
   description:
     "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. " +
-    "Byte passthrough to chat-service GET /internal/skills: every skill of the dashboard Copilot (slug, parent, title, description, position, version, updatedBy, updatedAt), no content. Status and body owned by the downstream service.",
+    "Byte passthrough to chat-service GET /internal/skills: every skill of the dashboard Copilot (slug, parent, title, description, position, version, updatedBy, updatedAt, deletedAt, deletedBy), no content. Query forwarded verbatim (`state=deleted` lists deleted skills). Status and body owned by the downstream service.",
   security: platformAuth,
   responses: {
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CopilotSkillListResponse") } } },
@@ -10920,6 +10920,62 @@ registry.registerPath({
     200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CopilotSkillWriteResponse") } } },
     400: { description: "Invalid request (forwarded verbatim)", content: errorContent },
     404: { description: "Unknown skill or version (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/v1/chat/skills/{slug}/move",
+  tags: ["Chat"],
+  summary: "Move a Copilot skill under a parent at a position (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping. Powers drag and drop on dashboard v2 Monitoring > Chat > Distry > Skills (SKILL-TREE-EDIT-1122). " +
+    "Passthrough to chat-service POST /internal/skills/{slug}/move. The body is forwarded as sent EXCEPT `editedBy`, which the gateway always sets to the signed-in staff email. Answers the moved skill and its new siblings' positions. Cycle, root and deleted-parent refusals are chat-service's. Status and body owned by the downstream service.",
+  security: platformAuth,
+  request: {
+    params: CopilotSkillSlugParams,
+    body: {
+      content: {
+        "application/json": {
+          schema: z
+            .object({
+              parentSlug: z.string().openapi({ description: "Slug of the new parent skill." }),
+              position: z.number().int().openapi({ description: "Position among the new parent's children." }),
+            })
+            .passthrough()
+            .openapi("CopilotSkillMoveRequest"),
+        },
+      },
+    },
+  },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CopilotSkillMoveResponse") } } },
+    400: { description: "Cycle, invalid or deleted parent (forwarded verbatim)", content: errorContent },
+    404: { description: "Unknown skill (forwarded verbatim)", content: errorContent },
+    409: { description: "The root cannot move (forwarded verbatim)", content: errorContent },
+    401: { description: "Unauthorized", content: errorContent },
+    403: { description: "Not staff", content: errorContent },
+    502: { description: "Upstream error", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/v1/chat/skills/{slug}",
+  tags: ["Chat"],
+  summary: "Delete a Copilot skill, its versions kept (staff only)",
+  description:
+    "Staff-only (platform API key + STAFF_EMAILS x-email), fleet-wide, no org scoping (SKILL-TREE-EDIT-1122). " +
+    "Passthrough to chat-service DELETE /internal/skills/{slug}. No body needed: `editedBy` is always set by the gateway to the signed-in staff email. Deleted skills are listed with GET /v1/chat/skills?state=deleted. A skill with sub-skills, and the protected skills, are refused by chat-service (409 naming them). Status and body owned by the downstream service.",
+  security: platformAuth,
+  request: { params: CopilotSkillSlugParams },
+  responses: {
+    200: { description: "Pass-through from the downstream service", content: { "application/json": { schema: z.object({}).passthrough().openapi("CopilotSkillDeleteResponse") } } },
+    404: { description: "Unknown or already deleted skill (forwarded verbatim)", content: errorContent },
+    409: { description: "Has sub-skills or is protected (forwarded verbatim)", content: errorContent },
     401: { description: "Unauthorized", content: errorContent },
     403: { description: "Not staff", content: errorContent },
     502: { description: "Upstream error", content: errorContent },
