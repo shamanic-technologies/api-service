@@ -92,6 +92,7 @@ import agentSignupsRoutes from "./routes/agent-signups.js";
 import prepaidRoutes from "./routes/prepaid.js";
 import repliesRoutes from "./routes/replies.js";
 import orgsRoutes from "./routes/orgs.js";
+import { clientErrorHandler } from "./middleware/client-error.js";
 import { rateLimit } from "./middleware/rate-limit.js";
 import { authenticatePlatform } from "./middleware/auth.js";
 import { buildDocument } from "./openapi/document.js";
@@ -390,6 +391,11 @@ app.use("/v1", uploadsRoutes);
 app.use((req, res) => {
   res.status(404).json({ error: "Not found" });
 });
+
+// A client error raised before any route (malformed JSON body, body too
+// large, any error carrying a 4xx) is answered with that 4xx and what was
+// wrong with the request, never a 500 (GATEWAY-PARSE-400-1122).
+app.use(clientErrorHandler);
 
 // Sentry error handler must be before any other error middleware
 Sentry.setupExpressErrorHandler(app);
