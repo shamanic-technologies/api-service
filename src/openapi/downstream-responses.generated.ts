@@ -291,7 +291,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "outcomes_produced",
                         null
                       ],
-                      "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                      "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
+                    },
+                    "outcome": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "With unit outcomes_produced on a funnel campaign's own cap counting its TARGET: that outcome (`meeting_booked`), so the page prints « 3 of 10 meetings booked this week ». null otherwise."
                     },
                     "periodStart": {
                       "type": "string"
@@ -337,6 +342,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "count",
                     "period",
                     "unit",
+                    "outcome",
                     "periodStart",
                     "periodEnd",
                     "consumed",
@@ -345,7 +351,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "consumedUnavailableReason",
                     "consumedUnavailableDetail"
                   ],
-                  "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+                  "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A funnel campaign's own cap counting its TARGET (`outcome`, reached after the first contact): consumed = Units of that target declared in the window on runs of its units OR on a person one of its units reached before (a meeting is declared by its own producer weeks after the first email); 0 until the first lands, so a delay never holds the campaign (its max budget still binds). A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
                 },
                 "salesFunnelName": {
                   "type": "string",
@@ -380,7 +386,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "outcomes_produced",
                     null
                   ],
-                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
                 },
                 "pipes": {
                   "type": "array",
@@ -685,7 +691,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "outcomes_produced",
                     null
                   ],
-                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
+                },
+                "outcome": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "With unit outcomes_produced on a funnel campaign's own cap counting its TARGET: that outcome (`meeting_booked`), so the page prints « 3 of 10 meetings booked this week ». null otherwise."
                 },
                 "periodStart": {
                   "type": "string"
@@ -731,6 +742,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "count",
                 "period",
                 "unit",
+                "outcome",
                 "periodStart",
                 "periodEnd",
                 "consumed",
@@ -739,7 +751,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "consumedUnavailableReason",
                 "consumedUnavailableDetail"
               ],
-              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A funnel campaign's own cap counting its TARGET (`outcome`, reached after the first contact): consumed = Units of that target declared in the window on runs of its units OR on a person one of its units reached before (a meeting is declared by its own producer weeks after the first email); 0 until the first lands, so a delay never holds the campaign (its max budget still binds). A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
             },
             "salesFunnelName": {
               "type": "string",
@@ -774,7 +786,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "outcomes_produced",
                 null
               ],
-              "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+              "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
             },
             "pipes": {
               "type": "array",
@@ -1530,7 +1542,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "outcomes_produced",
                         null
                       ],
-                      "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                      "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
+                    },
+                    "outcome": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "With unit outcomes_produced on a funnel campaign's own cap counting its TARGET: that outcome (`meeting_booked`), so the page prints « 3 of 10 meetings booked this week ». null otherwise."
                     },
                     "periodStart": {
                       "type": "string"
@@ -1576,6 +1593,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "count",
                     "period",
                     "unit",
+                    "outcome",
                     "periodStart",
                     "periodEnd",
                     "consumed",
@@ -1584,7 +1602,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "consumedUnavailableReason",
                     "consumedUnavailableDetail"
                   ],
-                  "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+                  "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A funnel campaign's own cap counting its TARGET (`outcome`, reached after the first contact): consumed = Units of that target declared in the window on runs of its units OR on a person one of its units reached before (a meeting is declared by its own producer weeks after the first email); 0 until the first lands, so a delay never holds the campaign (its max budget still binds). A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
                 },
                 "salesFunnelName": {
                   "type": "string",
@@ -1619,7 +1637,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "outcomes_produced",
                     null
                   ],
-                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
                 },
                 "pipes": {
                   "type": "array",
@@ -1924,7 +1942,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "outcomes_produced",
                     null
                   ],
-                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
+                },
+                "outcome": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "With unit outcomes_produced on a funnel campaign's own cap counting its TARGET: that outcome (`meeting_booked`), so the page prints « 3 of 10 meetings booked this week ». null otherwise."
                 },
                 "periodStart": {
                   "type": "string"
@@ -1970,6 +1993,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "count",
                 "period",
                 "unit",
+                "outcome",
                 "periodStart",
                 "periodEnd",
                 "consumed",
@@ -1978,7 +2002,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "consumedUnavailableReason",
                 "consumedUnavailableDetail"
               ],
-              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A funnel campaign's own cap counting its TARGET (`outcome`, reached after the first contact): consumed = Units of that target declared in the window on runs of its units OR on a person one of its units reached before (a meeting is declared by its own producer weeks after the first email); 0 until the first lands, so a delay never holds the campaign (its max budget still binds). A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
             },
             "salesFunnelName": {
               "type": "string",
@@ -2013,7 +2037,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "outcomes_produced",
                 null
               ],
-              "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+              "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
             },
             "pipes": {
               "type": "array",
@@ -3407,6 +3431,27 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "DELETE /v1/orgs/instagram/accounts/{id}": {
+    "service": "social-service",
+    "method": "DELETE",
+    "path": "/orgs/instagram/accounts/{id}",
+    "responses": {
+      "200": {
+        "description": "Disconnected",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "message"
+          ]
+        }
+      }
+    }
+  },
   "DELETE /v1/orgs/linkedin/accounts/{id}": {
     "service": "social-service",
     "method": "DELETE",
@@ -4092,7 +4137,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "postId": {
                   "type": "string",
                   "nullable": true,
-                  "description": "X tweet id / LinkedIn share urn"
+                  "description": "X tweet id / LinkedIn share urn / Instagram media id"
                 },
                 "permalink": {
                   "type": "string",
@@ -6016,7 +6061,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "outcomes_produced",
                         null
                       ],
-                      "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                      "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
+                    },
+                    "outcome": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "With unit outcomes_produced on a funnel campaign's own cap counting its TARGET: that outcome (`meeting_booked`), so the page prints « 3 of 10 meetings booked this week ». null otherwise."
                     },
                     "periodStart": {
                       "type": "string"
@@ -6062,6 +6112,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "count",
                     "period",
                     "unit",
+                    "outcome",
                     "periodStart",
                     "periodEnd",
                     "consumed",
@@ -6070,7 +6121,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "consumedUnavailableReason",
                     "consumedUnavailableDetail"
                   ],
-                  "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+                  "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A funnel campaign's own cap counting its TARGET (`outcome`, reached after the first contact): consumed = Units of that target declared in the window on runs of its units OR on a person one of its units reached before (a meeting is declared by its own producer weeks after the first email); 0 until the first lands, so a delay never holds the campaign (its max budget still binds). A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
                 },
                 "salesFunnelName": {
                   "type": "string",
@@ -6105,7 +6156,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "outcomes_produced",
                     null
                   ],
-                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
                 },
                 "pipes": {
                   "type": "array",
@@ -6410,7 +6461,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "outcomes_produced",
                     null
                   ],
-                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
+                },
+                "outcome": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "With unit outcomes_produced on a funnel campaign's own cap counting its TARGET: that outcome (`meeting_booked`), so the page prints « 3 of 10 meetings booked this week ». null otherwise."
                 },
                 "periodStart": {
                   "type": "string"
@@ -6456,6 +6512,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "count",
                 "period",
                 "unit",
+                "outcome",
                 "periodStart",
                 "periodEnd",
                 "consumed",
@@ -6464,7 +6521,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "consumedUnavailableReason",
                 "consumedUnavailableDetail"
               ],
-              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A funnel campaign's own cap counting its TARGET (`outcome`, reached after the first contact): consumed = Units of that target declared in the window on runs of its units OR on a person one of its units reached before (a meeting is declared by its own producer weeks after the first email); 0 until the first lands, so a delay never holds the campaign (its max budget still binds). A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
             },
             "salesFunnelName": {
               "type": "string",
@@ -6499,7 +6556,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "outcomes_produced",
                 null
               ],
-              "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+              "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
             },
             "pipes": {
               "type": "array",
@@ -7549,13 +7606,19 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                           "outcomes_produced",
                           null
                         ],
-                        "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                        "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
+                      },
+                      "outcome": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "With unit outcomes_produced on a funnel campaign's own cap counting its TARGET: that outcome (`meeting_booked`), so the page prints « 3 of 10 meetings booked this week ». null otherwise."
                       }
                     },
                     "required": [
                       "count",
                       "period",
-                      "unit"
+                      "unit",
+                      "outcome"
                     ]
                   },
                   "updatedAt": {
@@ -7754,7 +7817,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "outcomes_produced",
                         null
                       ],
-                      "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                      "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
+                    },
+                    "outcome": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "With unit outcomes_produced on a funnel campaign's own cap counting its TARGET: that outcome (`meeting_booked`), so the page prints « 3 of 10 meetings booked this week ». null otherwise."
                     },
                     "periodStart": {
                       "type": "string"
@@ -7800,6 +7868,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "count",
                     "period",
                     "unit",
+                    "outcome",
                     "periodStart",
                     "periodEnd",
                     "consumed",
@@ -7808,7 +7877,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "consumedUnavailableReason",
                     "consumedUnavailableDetail"
                   ],
-                  "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+                  "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A funnel campaign's own cap counting its TARGET (`outcome`, reached after the first contact): consumed = Units of that target declared in the window on runs of its units OR on a person one of its units reached before (a meeting is declared by its own producer weeks after the first email); 0 until the first lands, so a delay never holds the campaign (its max budget still binds). A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
                 },
                 "salesFunnelName": {
                   "type": "string",
@@ -7843,7 +7912,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "outcomes_produced",
                     null
                   ],
-                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
                 },
                 "pipes": {
                   "type": "array",
@@ -8148,7 +8217,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "outcomes_produced",
                     null
                   ],
-                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
+                },
+                "outcome": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "With unit outcomes_produced on a funnel campaign's own cap counting its TARGET: that outcome (`meeting_booked`), so the page prints « 3 of 10 meetings booked this week ». null otherwise."
                 },
                 "periodStart": {
                   "type": "string"
@@ -8194,6 +8268,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "count",
                 "period",
                 "unit",
+                "outcome",
                 "periodStart",
                 "periodEnd",
                 "consumed",
@@ -8202,7 +8277,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "consumedUnavailableReason",
                 "consumedUnavailableDetail"
               ],
-              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A funnel campaign's own cap counting its TARGET (`outcome`, reached after the first contact): consumed = Units of that target declared in the window on runs of its units OR on a person one of its units reached before (a meeting is declared by its own producer weeks after the first email); 0 until the first lands, so a delay never holds the campaign (its max budget still binds). A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
             },
             "salesFunnelName": {
               "type": "string",
@@ -8237,7 +8312,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "outcomes_produced",
                 null
               ],
-              "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+              "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
             },
             "pipes": {
               "type": "array",
@@ -8516,7 +8591,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "type": "object",
                 "properties": {
                   "offerId": {
-                    "type": "string"
+                    "type": "string",
+                    "nullable": true
                   },
                   "salesFunnelId": {
                     "type": "string"
@@ -13443,6 +13519,24 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "type": "string",
                   "nullable": true
                 },
+                "checkedBefore": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Step key."
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ],
+                  "description": "The Target the read named (`?target=`): only the steps before it were checked. Null = every step."
+                },
                 "alwaysPresent": {
                   "type": "array",
                   "items": {
@@ -13468,6 +13562,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "stated",
                 "steps",
                 "statedAt",
+                "checkedBefore",
                 "alwaysPresent"
               ],
               "description": "Per-offer read only (owner 2026-10-12): what the offer stated about the steps its business has."
@@ -14149,6 +14244,24 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "type": "string",
                   "nullable": true
                 },
+                "checkedBefore": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Step key."
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ],
+                  "description": "The Target the read named (`?target=`): only the steps before it were checked. Null = every step."
+                },
                 "alwaysPresent": {
                   "type": "array",
                   "items": {
@@ -14174,6 +14287,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "stated",
                 "steps",
                 "statedAt",
+                "checkedBefore",
                 "alwaysPresent"
               ],
               "description": "Per-offer read only (owner 2026-10-12): what the offer stated about the steps its business has."
@@ -14435,6 +14549,24 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "type": "string",
                   "nullable": true
                 },
+                "checkedBefore": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Step key."
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ],
+                  "description": "The Target the read named (`?target=`): only the steps before it were checked. Null = every step."
+                },
                 "alwaysPresent": {
                   "type": "array",
                   "items": {
@@ -14460,6 +14592,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "stated",
                 "steps",
                 "statedAt",
+                "checkedBefore",
                 "alwaysPresent"
               ],
               "description": "Per-offer read only (owner 2026-10-12): what the offer stated about the steps its business has."
@@ -14853,6 +14986,24 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "type": "string",
                   "nullable": true
                 },
+                "checkedBefore": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Step key."
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ],
+                  "description": "The Target the read named (`?target=`): only the steps before it were checked. Null = every step."
+                },
                 "alwaysPresent": {
                   "type": "array",
                   "items": {
@@ -14878,6 +15029,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "stated",
                 "steps",
                 "statedAt",
+                "checkedBefore",
                 "alwaysPresent"
               ],
               "description": "Per-offer read only (owner 2026-10-12): what the offer stated about the steps its business has."
@@ -22917,7 +23069,17 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "probability": {
                     "type": "number",
                     "nullable": true,
-                    "description": "Jev's p that the brief rules it out (>= 0.5 = excluded); null with no Jev call."
+                    "description": "Jev's p that the brief rules it out (>= 0.5 = excluded, unless the brief names it); null with no Jev call."
+                  },
+                  "named": {
+                    "type": "boolean",
+                    "nullable": true,
+                    "description": "The brief NAMES this pipe's channel as one to use (Jev p >= 0.5, MON-PLAN-FOLLOWING-1122): the plan keeps it, it is never ruled out. Null when not judged; absent on a body stored before 2026-11-22."
+                  },
+                  "namedProbability": {
+                    "type": "number",
+                    "nullable": true,
+                    "description": "Jev's p that the brief names the channel; null with no Jev call."
                   },
                   "source": {
                     "type": "string",
@@ -23459,7 +23621,19 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "items": {
                     "type": "string"
                   },
-                  "description": "Channels (slugs) the brief names: on a brief that rules some channels out, every channel the pipe judge kept. Every plan line carries as many of them as any line can (a named channel stays on its leg). Absent on a plan stored before 2026-10-29."
+                  "description": "Channels (slugs) the brief NAMES as ones to use (the pipe judge's `named`, MON-PLAN-FOLLOWING-1122; supersedes « every channel kept on a brief that rules one out »). Every plan line carries as many of them as any line can (a named channel stays on its leg). Absent on a plan stored before 2026-10-29."
+                },
+                "launchedNamedPipes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Pipes (base ids `<channel>|<leg>`) of the funnel the campaign was LAUNCHED on whose channel the brief names: a plan keeps them all whenever a runnable line can; campaign-service never drains a unit of one of them. Absent on a plan stored before 2026-11-22."
+                },
+                "launchedNamedPipesKept": {
+                  "type": "boolean",
+                  "nullable": true,
+                  "description": "The shadow line keeps every launched named pipe; false = no runnable line to the Target can (the plan contradicts the brief); null with no shadow line. Absent on a plan stored before 2026-11-22."
                 }
               },
               "required": [
@@ -29480,6 +29654,24 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "type": "string",
                   "nullable": true
                 },
+                "checkedBefore": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "description": "Step key."
+                    },
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name"
+                  ],
+                  "description": "The Target the read named (`?target=`): only the steps before it were checked. Null = every step."
+                },
                 "alwaysPresent": {
                   "type": "array",
                   "items": {
@@ -29505,6 +29697,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "stated",
                 "steps",
                 "statedAt",
+                "checkedBefore",
                 "alwaysPresent"
               ],
               "description": "Per-offer read only (owner 2026-10-12): what the offer stated about the steps its business has."
@@ -30040,6 +30233,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         ],
                         "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
                       },
+                      "relation": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          "investors",
+                          "industry_peers",
+                          null
+                        ],
+                        "description": "OUTREACH-3WAYS-1121. Who the audience is to the brand beyond buyers of an offer: 'investors' (its equity investors) or 'industry_peers' (founders and leaders of companies in its industry, competitors included). Such an audience has no offer; its lists carry the same relation and only it walks them. null = buyers of its offer. See GET /orgs/audiences/relations."
+                      },
                       "canonicalAudienceId": {
                         "type": "string",
                         "nullable": true,
@@ -30228,6 +30431,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "source",
                       "profileAudienceId",
                       "role",
+                      "relation",
                       "canonicalAudienceId",
                       "filters",
                       "avatarUrl",
@@ -30446,6 +30650,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   ],
                   "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
                 },
+                "relation": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "investors",
+                    "industry_peers",
+                    null
+                  ],
+                  "description": "OUTREACH-3WAYS-1121. Who the audience is to the brand beyond buyers of an offer: 'investors' (its equity investors) or 'industry_peers' (founders and leaders of companies in its industry, competitors included). Such an audience has no offer; its lists carry the same relation and only it walks them. null = buyers of its offer. See GET /orgs/audiences/relations."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -30634,6 +30848,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "source",
                 "profileAudienceId",
                 "role",
+                "relation",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -33616,6 +33831,133 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "finishedAt"
           ],
           "additionalProperties": false
+        }
+      }
+    }
+  },
+  "GET /v1/orgs/instagram/accounts": {
+    "service": "social-service",
+    "method": "GET",
+    "path": "/orgs/instagram/accounts",
+    "responses": {
+      "200": {
+        "description": "Accounts, oldest first",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "accounts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "brandId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "igUserId": {
+                    "type": "string",
+                    "description": "The Instagram professional account id"
+                  },
+                  "username": {
+                    "type": "string",
+                    "description": "Instagram handle without @"
+                  },
+                  "name": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "profileImageUrl": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "profileUrl": {
+                    "type": "string"
+                  },
+                  "igAccountType": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Instagram's own account type: Business | Media_Creator"
+                  },
+                  "accountType": {
+                    "type": "string",
+                    "enum": [
+                      "pro_human",
+                      "personal_human",
+                      "pro_ai"
+                    ],
+                    "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI). Software publishes only on `pro_ai`."
+                  },
+                  "accountTypeLabel": {
+                    "type": "string",
+                    "description": "Human label of accountType, e.g. Pro (AI)"
+                  },
+                  "health": {
+                    "type": "string",
+                    "enum": [
+                      "connected",
+                      "needs_reconnect"
+                    ],
+                    "description": "`needs_reconnect` = Instagram no longer accepts this login; a human must connect it again (same Instagram user = same row, token replaced)"
+                  },
+                  "healthReason": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Plain-language reason when health is needs_reconnect"
+                  },
+                  "scopes": {
+                    "type": "string",
+                    "description": "What the owner granted, comma separated (publishing a Reel needs instagram_business_content_publish, reading its engagement instagram_business_manage_insights)"
+                  },
+                  "reconnectBy": {
+                    "type": "string",
+                    "description": "When the current login ends unless renewed (renewed by itself every pass while it works)"
+                  },
+                  "connectedByUserId": {
+                    "type": "string",
+                    "nullable": true,
+                    "format": "uuid"
+                  },
+                  "tokenRefreshedAt": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "createdAt": {
+                    "type": "string"
+                  },
+                  "updatedAt": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "brandId",
+                  "igUserId",
+                  "username",
+                  "name",
+                  "profileImageUrl",
+                  "profileUrl",
+                  "igAccountType",
+                  "accountType",
+                  "accountTypeLabel",
+                  "health",
+                  "healthReason",
+                  "scopes",
+                  "reconnectBy",
+                  "connectedByUserId",
+                  "tokenRefreshedAt",
+                  "createdAt",
+                  "updatedAt"
+                ]
+              }
+            }
+          },
+          "required": [
+            "accounts"
+          ]
         }
       }
     }
@@ -39546,9 +39888,10 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "type": "string",
                     "enum": [
                       "x",
-                      "linkedin"
+                      "linkedin",
+                      "instagram"
                     ],
-                    "description": "x | linkedin"
+                    "description": "x | linkedin | instagram"
                   },
                   "brandId": {
                     "type": "string",
@@ -39556,7 +39899,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   },
                   "username": {
                     "type": "string",
-                    "description": "X: the handle (no @). LinkedIn: the page's name."
+                    "description": "X / Instagram: the handle (no @). LinkedIn: the page's name."
                   },
                   "name": {
                     "type": "string",
@@ -39599,7 +39942,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "notPublishableReason": {
                     "type": "string",
                     "nullable": true,
-                    "description": "`<code>: <why>` (account_not_pro_ai, needs_reconnect, linkedin_page_not_publishable); null when publishable."
+                    "description": "`<code>: <why>` (account_not_pro_ai, needs_reconnect, linkedin_page_not_publishable, instagram_publish_permission_missing); null when publishable."
                   },
                   "createdAt": {
                     "type": "string"
@@ -39823,7 +40166,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "postId": {
                     "type": "string",
                     "nullable": true,
-                    "description": "X tweet id / LinkedIn share urn"
+                    "description": "X tweet id / LinkedIn share urn / Instagram media id"
                   },
                   "permalink": {
                     "type": "string",
@@ -40656,6 +40999,11 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "type": "integer",
                     "nullable": true,
                     "description": "The state's rank within its family, 1 = first (interest: 1..4; visit: 1). Null when `leadState` is null."
+                  },
+                  "towardStep": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "The step this one leads to, as its declaration states it (`email_queued` -> `email_sent`, `message_queued` -> `message_sent`); null when none is stated (every coded step). Read by billing-service to count a queue decision as the contact it leads to (OUTREACH-3WAYS-1121)."
                   }
                 },
                 "required": [
@@ -40668,7 +41016,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "subjectKind",
                   "leadState",
                   "leadStateFamily",
-                  "leadStateRank"
+                  "leadStateRank",
+                  "towardStep"
                 ]
               }
             }
@@ -40789,7 +41138,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "type": "string"
                   },
                   "offerId": {
-                    "type": "string"
+                    "type": "string",
+                    "nullable": true
                   },
                   "salesFunnelId": {
                     "type": "string"
@@ -41066,7 +41416,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
     "path": "/sales-funnel-campaigns/{id}",
     "responses": {
       "200": {
-        "description": "The funnel campaign",
+        "description": "The funnel campaign, and when its next run is expected (or why none is)",
         "schema": {
           "type": "object",
           "properties": {
@@ -41083,7 +41433,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "type": "string"
                 },
                 "offerId": {
-                  "type": "string"
+                  "type": "string",
+                  "nullable": true
                 },
                 "salesFunnelId": {
                   "type": "string"
@@ -41344,10 +41695,49 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "updatedAt",
                 "units"
               ]
+            },
+            "nextRun": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "scheduled",
+                    "on_event",
+                    "waiting",
+                    "finished",
+                    "stopped",
+                    "nothing_runs"
+                  ]
+                },
+                "at": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "withinSeconds": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "reason": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "detail": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "state",
+                "at",
+                "withinSeconds",
+                "reason",
+                "detail"
+              ]
             }
           },
           "required": [
-            "salesFunnelCampaign"
+            "salesFunnelCampaign",
+            "nextRun"
           ]
         }
       }
@@ -41543,7 +41933,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "parentSlug": {
                     "type": "string",
                     "nullable": true,
-                    "description": "Parent skill slug; null only for `index`."
+                    "description": "The old stored tree (read by no agent since DISTRY-SKILL-MENTIONS-1122; links are mentions). null for a skill created without one."
                   },
                   "title": {
                     "type": "string"
@@ -41554,7 +41944,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   },
                   "position": {
                     "type": "integer",
-                    "description": "Sort order among siblings."
+                    "description": "The old stored tree's place among siblings (read by no agent)."
                   },
                   "version": {
                     "type": "integer"
@@ -41565,6 +41955,74 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   },
                   "updatedAt": {
                     "type": "string"
+                  },
+                  "deletedAt": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "When staff deleted it from the tree; null while it is live."
+                  },
+                  "deletedBy": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Who deleted it; null while it is live."
+                  },
+                  "mentions": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "skill",
+                            "tool"
+                          ]
+                        },
+                        "ref": {
+                          "type": "string",
+                          "description": "The skill's slug or the tool's name. In the text: `@skill:<slug>` / `@tool:<name>`."
+                        },
+                        "known": {
+                          "type": "boolean",
+                          "description": "true = a live skill / a tool Distry can call. false = a deleted or unknown skill, or a tool that does not exist: the mention leads nowhere."
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "ref",
+                        "known"
+                      ]
+                    },
+                    "description": "What this skill's text mentions, in text order, each once (itself excluded)."
+                  },
+                  "mentionedBy": {
+                    "type": "object",
+                    "properties": {
+                      "prompt": {
+                        "type": "boolean",
+                        "description": "Distry's Prompt mentions it."
+                      },
+                      "skills": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        },
+                        "description": "Live skills whose text mentions it, sorted by slug."
+                      }
+                    },
+                    "required": [
+                      "prompt",
+                      "skills"
+                    ],
+                    "description": "Who mentions it. Warn before deleting a skill this is not empty for: their mentions then lead nowhere until it comes back."
+                  },
+                  "neverMentioned": {
+                    "type": "boolean",
+                    "description": "Nothing mentions it (not the Prompt, no other live skill): Distry never reads it."
+                  },
+                  "reachable": {
+                    "type": "boolean",
+                    "description": "Distry reaches it by following mentions from the Prompt."
                   }
                 },
                 "required": [
@@ -41575,13 +42033,57 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "position",
                   "version",
                   "updatedBy",
-                  "updatedAt"
+                  "updatedAt",
+                  "deletedAt",
+                  "deletedBy",
+                  "mentions",
+                  "mentionedBy",
+                  "neverMentioned",
+                  "reachable"
                 ]
               }
+            },
+            "prompt": {
+              "type": "object",
+              "properties": {
+                "mentions": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "skill",
+                          "tool"
+                        ]
+                      },
+                      "ref": {
+                        "type": "string",
+                        "description": "The skill's slug or the tool's name. In the text: `@skill:<slug>` / `@tool:<name>`."
+                      },
+                      "known": {
+                        "type": "boolean",
+                        "description": "true = a live skill / a tool Distry can call. false = a deleted or unknown skill, or a tool that does not exist: the mention leads nowhere."
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "ref",
+                      "known"
+                    ]
+                  }
+                }
+              },
+              "required": [
+                "mentions"
+              ],
+              "description": "What Distry's Prompt (the one text read every turn) mentions, in text order."
             }
           },
           "required": [
-            "skills"
+            "skills",
+            "prompt"
           ]
         }
       }
@@ -41593,69 +42095,132 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
     "path": "/internal/skills/{slug}",
     "responses": {
       "200": {
-        "description": "The skill with its content",
+        "description": "The skill with its content and its links",
         "schema": {
-          "allOf": [
-            {
-              "type": "object",
-              "properties": {
-                "slug": {
-                  "type": "string"
-                },
-                "parentSlug": {
-                  "type": "string",
-                  "nullable": true,
-                  "description": "Parent skill slug; null only for `index`."
-                },
-                "title": {
-                  "type": "string"
-                },
-                "description": {
-                  "type": "string",
-                  "description": "One line: when the model should load this skill."
-                },
-                "position": {
-                  "type": "integer",
-                  "description": "Sort order among siblings."
-                },
-                "version": {
-                  "type": "integer"
-                },
-                "updatedBy": {
-                  "type": "string",
-                  "description": "Who wrote the current content. `seed` = never edited by a human."
-                },
-                "updatedAt": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "slug",
-                "parentSlug",
-                "title",
-                "description",
-                "position",
-                "version",
-                "updatedBy",
-                "updatedAt"
-              ]
+          "type": "object",
+          "properties": {
+            "slug": {
+              "type": "string"
             },
-            {
+            "parentSlug": {
+              "type": "string",
+              "nullable": true,
+              "description": "The old stored tree (read by no agent since DISTRY-SKILL-MENTIONS-1122; links are mentions). null for a skill created without one."
+            },
+            "title": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string",
+              "description": "One line: when the model should load this skill."
+            },
+            "position": {
+              "type": "integer",
+              "description": "The old stored tree's place among siblings (read by no agent)."
+            },
+            "version": {
+              "type": "integer"
+            },
+            "updatedBy": {
+              "type": "string",
+              "description": "Who wrote the current content. `seed` = never edited by a human."
+            },
+            "updatedAt": {
+              "type": "string"
+            },
+            "deletedAt": {
+              "type": "string",
+              "nullable": true,
+              "description": "When staff deleted it from the tree; null while it is live."
+            },
+            "deletedBy": {
+              "type": "string",
+              "nullable": true,
+              "description": "Who deleted it; null while it is live."
+            },
+            "content": {
+              "type": "string",
+              "description": "Markdown body."
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "mentions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "skill",
+                      "tool"
+                    ]
+                  },
+                  "ref": {
+                    "type": "string",
+                    "description": "The skill's slug or the tool's name. In the text: `@skill:<slug>` / `@tool:<name>`."
+                  },
+                  "known": {
+                    "type": "boolean",
+                    "description": "true = a live skill / a tool Distry can call. false = a deleted or unknown skill, or a tool that does not exist: the mention leads nowhere."
+                  }
+                },
+                "required": [
+                  "kind",
+                  "ref",
+                  "known"
+                ]
+              },
+              "description": "What this skill's text mentions, in text order, each once (itself excluded)."
+            },
+            "mentionedBy": {
               "type": "object",
               "properties": {
-                "content": {
-                  "type": "string",
-                  "description": "Markdown body."
+                "prompt": {
+                  "type": "boolean",
+                  "description": "Distry's Prompt mentions it."
                 },
-                "createdAt": {
-                  "type": "string"
+                "skills": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Live skills whose text mentions it, sorted by slug."
                 }
               },
               "required": [
-                "content",
-                "createdAt"
-              ]
+                "prompt",
+                "skills"
+              ],
+              "description": "Who mentions it. Warn before deleting a skill this is not empty for: their mentions then lead nowhere until it comes back."
+            },
+            "neverMentioned": {
+              "type": "boolean",
+              "description": "Nothing mentions it (not the Prompt, no other live skill): Distry never reads it."
+            },
+            "reachable": {
+              "type": "boolean",
+              "description": "Distry reaches it by following mentions from the Prompt."
             }
+          },
+          "required": [
+            "slug",
+            "parentSlug",
+            "title",
+            "description",
+            "position",
+            "version",
+            "updatedBy",
+            "updatedAt",
+            "deletedAt",
+            "deletedBy",
+            "content",
+            "createdAt",
+            "mentions",
+            "mentionedBy",
+            "neverMentioned",
+            "reachable"
           ]
         }
       }
@@ -42580,6 +43145,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   ],
                   "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
                 },
+                "relation": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "investors",
+                    "industry_peers",
+                    null
+                  ],
+                  "description": "OUTREACH-3WAYS-1121. Who the audience is to the brand beyond buyers of an offer: 'investors' (its equity investors) or 'industry_peers' (founders and leaders of companies in its industry, competitors included). Such an audience has no offer; its lists carry the same relation and only it walks them. null = buyers of its offer. See GET /orgs/audiences/relations."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -42768,6 +43343,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "source",
                 "profileAudienceId",
                 "role",
+                "relation",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -42954,6 +43530,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   ],
                   "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
                 },
+                "relation": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "investors",
+                    "industry_peers",
+                    null
+                  ],
+                  "description": "OUTREACH-3WAYS-1121. Who the audience is to the brand beyond buyers of an offer: 'investors' (its equity investors) or 'industry_peers' (founders and leaders of companies in its industry, competitors included). Such an audience has no offer; its lists carry the same relation and only it walks them. null = buyers of its offer. See GET /orgs/audiences/relations."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -43142,6 +43728,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "source",
                 "profileAudienceId",
                 "role",
+                "relation",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -43356,6 +43943,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   ],
                   "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
                 },
+                "relation": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "investors",
+                    "industry_peers",
+                    null
+                  ],
+                  "description": "OUTREACH-3WAYS-1121. Who the audience is to the brand beyond buyers of an offer: 'investors' (its equity investors) or 'industry_peers' (founders and leaders of companies in its industry, competitors included). Such an audience has no offer; its lists carry the same relation and only it walks them. null = buyers of its offer. See GET /orgs/audiences/relations."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -43544,6 +44141,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "source",
                 "profileAudienceId",
                 "role",
+                "relation",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -43741,6 +44339,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   ],
                   "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
                 },
+                "relation": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "investors",
+                    "industry_peers",
+                    null
+                  ],
+                  "description": "OUTREACH-3WAYS-1121. Who the audience is to the brand beyond buyers of an offer: 'investors' (its equity investors) or 'industry_peers' (founders and leaders of companies in its industry, competitors included). Such an audience has no offer; its lists carry the same relation and only it walks them. null = buyers of its offer. See GET /orgs/audiences/relations."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -43929,6 +44537,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "source",
                 "profileAudienceId",
                 "role",
+                "relation",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -44147,6 +44756,130 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
           },
           "required": [
             "connection"
+          ]
+        }
+      }
+    }
+  },
+  "PATCH /v1/orgs/instagram/accounts/{id}": {
+    "service": "social-service",
+    "method": "PATCH",
+    "path": "/orgs/instagram/accounts/{id}",
+    "responses": {
+      "200": {
+        "description": "Updated",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "account": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "brandId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "igUserId": {
+                  "type": "string",
+                  "description": "The Instagram professional account id"
+                },
+                "username": {
+                  "type": "string",
+                  "description": "Instagram handle without @"
+                },
+                "name": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "profileImageUrl": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "profileUrl": {
+                  "type": "string"
+                },
+                "igAccountType": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Instagram's own account type: Business | Media_Creator"
+                },
+                "accountType": {
+                  "type": "string",
+                  "enum": [
+                    "pro_human",
+                    "personal_human",
+                    "pro_ai"
+                  ],
+                  "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI). Software publishes only on `pro_ai`."
+                },
+                "accountTypeLabel": {
+                  "type": "string",
+                  "description": "Human label of accountType, e.g. Pro (AI)"
+                },
+                "health": {
+                  "type": "string",
+                  "enum": [
+                    "connected",
+                    "needs_reconnect"
+                  ],
+                  "description": "`needs_reconnect` = Instagram no longer accepts this login; a human must connect it again (same Instagram user = same row, token replaced)"
+                },
+                "healthReason": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Plain-language reason when health is needs_reconnect"
+                },
+                "scopes": {
+                  "type": "string",
+                  "description": "What the owner granted, comma separated (publishing a Reel needs instagram_business_content_publish, reading its engagement instagram_business_manage_insights)"
+                },
+                "reconnectBy": {
+                  "type": "string",
+                  "description": "When the current login ends unless renewed (renewed by itself every pass while it works)"
+                },
+                "connectedByUserId": {
+                  "type": "string",
+                  "nullable": true,
+                  "format": "uuid"
+                },
+                "tokenRefreshedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "brandId",
+                "igUserId",
+                "username",
+                "name",
+                "profileImageUrl",
+                "profileUrl",
+                "igAccountType",
+                "accountType",
+                "accountTypeLabel",
+                "health",
+                "healthReason",
+                "scopes",
+                "reconnectBy",
+                "connectedByUserId",
+                "tokenRefreshedAt",
+                "createdAt",
+                "updatedAt"
+              ]
+            }
+          },
+          "required": [
+            "account"
           ]
         }
       }
@@ -45446,7 +46179,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
     "path": "/sales-funnel-campaigns/{id}",
     "responses": {
       "200": {
-        "description": "The funnel campaign after the move",
+        "description": "The funnel campaign after the move, and when its next run is expected (or why none is)",
         "schema": {
           "type": "object",
           "properties": {
@@ -45463,7 +46196,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "type": "string"
                 },
                 "offerId": {
-                  "type": "string"
+                  "type": "string",
+                  "nullable": true
                 },
                 "salesFunnelId": {
                   "type": "string"
@@ -45724,10 +46458,49 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "updatedAt",
                 "units"
               ]
+            },
+            "nextRun": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "scheduled",
+                    "on_event",
+                    "waiting",
+                    "finished",
+                    "stopped",
+                    "nothing_runs"
+                  ]
+                },
+                "at": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "withinSeconds": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "reason": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "detail": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "state",
+                "at",
+                "withinSeconds",
+                "reason",
+                "detail"
+              ]
             }
           },
           "required": [
-            "salesFunnelCampaign"
+            "salesFunnelCampaign",
+            "nextRun"
           ]
         }
       }
@@ -53068,6 +53841,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   ],
                   "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
                 },
+                "relation": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "investors",
+                    "industry_peers",
+                    null
+                  ],
+                  "description": "OUTREACH-3WAYS-1121. Who the audience is to the brand beyond buyers of an offer: 'investors' (its equity investors) or 'industry_peers' (founders and leaders of companies in its industry, competitors included). Such an audience has no offer; its lists carry the same relation and only it walks them. null = buyers of its offer. See GET /orgs/audiences/relations."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -53256,6 +54039,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "source",
                 "profileAudienceId",
                 "role",
+                "relation",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -53442,6 +54226,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   ],
                   "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
                 },
+                "relation": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "investors",
+                    "industry_peers",
+                    null
+                  ],
+                  "description": "OUTREACH-3WAYS-1121. Who the audience is to the brand beyond buyers of an offer: 'investors' (its equity investors) or 'industry_peers' (founders and leaders of companies in its industry, competitors included). Such an audience has no offer; its lists carry the same relation and only it walks them. null = buyers of its offer. See GET /orgs/audiences/relations."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -53630,6 +54424,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "source",
                 "profileAudienceId",
                 "role",
+                "relation",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -54055,6 +54850,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   ],
                   "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
                 },
+                "relation": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "investors",
+                    "industry_peers",
+                    null
+                  ],
+                  "description": "OUTREACH-3WAYS-1121. Who the audience is to the brand beyond buyers of an offer: 'investors' (its equity investors) or 'industry_peers' (founders and leaders of companies in its industry, competitors included). Such an audience has no offer; its lists carry the same relation and only it walks them. null = buyers of its offer. See GET /orgs/audiences/relations."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -54243,6 +55048,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "source",
                 "profileAudienceId",
                 "role",
+                "relation",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -54429,6 +55235,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   ],
                   "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
                 },
+                "relation": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "investors",
+                    "industry_peers",
+                    null
+                  ],
+                  "description": "OUTREACH-3WAYS-1121. Who the audience is to the brand beyond buyers of an offer: 'investors' (its equity investors) or 'industry_peers' (founders and leaders of companies in its industry, competitors included). Such an audience has no offer; its lists carry the same relation and only it walks them. null = buyers of its offer. See GET /orgs/audiences/relations."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -54617,6 +55433,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "source",
                 "profileAudienceId",
                 "role",
+                "relation",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -54847,6 +55664,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         ],
                         "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
                       },
+                      "relation": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                          "investors",
+                          "industry_peers",
+                          null
+                        ],
+                        "description": "OUTREACH-3WAYS-1121. Who the audience is to the brand beyond buyers of an offer: 'investors' (its equity investors) or 'industry_peers' (founders and leaders of companies in its industry, competitors included). Such an audience has no offer; its lists carry the same relation and only it walks them. null = buyers of its offer. See GET /orgs/audiences/relations."
+                      },
                       "canonicalAudienceId": {
                         "type": "string",
                         "nullable": true,
@@ -55035,6 +55862,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "source",
                       "profileAudienceId",
                       "role",
+                      "relation",
                       "canonicalAudienceId",
                       "filters",
                       "avatarUrl",
@@ -55357,6 +56185,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   ],
                   "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
                 },
+                "relation": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "investors",
+                    "industry_peers",
+                    null
+                  ],
+                  "description": "OUTREACH-3WAYS-1121. Who the audience is to the brand beyond buyers of an offer: 'investors' (its equity investors) or 'industry_peers' (founders and leaders of companies in its industry, competitors included). Such an audience has no offer; its lists carry the same relation and only it walks them. null = buyers of its offer. See GET /orgs/audiences/relations."
+                },
                 "canonicalAudienceId": {
                   "type": "string",
                   "nullable": true,
@@ -55545,6 +56383,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "source",
                 "profileAudienceId",
                 "role",
+                "relation",
                 "canonicalAudienceId",
                 "filters",
                 "avatarUrl",
@@ -55833,6 +56672,16 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     ],
                     "description": "AUDIENCE-PER-OFFER-1107. 'target' = THE audience of its offer: its text is who the offer targets, it has no list of its own and finds people through the brand's lists, each person judged against its text. 'search' = a list of the brand (Apollo search, signals, engagement) walked by every offer audience of it; hidden from GET /orgs/audiences unless role=search. null = an audience as before."
                   },
+                  "relation": {
+                    "type": "string",
+                    "nullable": true,
+                    "enum": [
+                      "investors",
+                      "industry_peers",
+                      null
+                    ],
+                    "description": "OUTREACH-3WAYS-1121. Who the audience is to the brand beyond buyers of an offer: 'investors' (its equity investors) or 'industry_peers' (founders and leaders of companies in its industry, competitors included). Such an audience has no offer; its lists carry the same relation and only it walks them. null = buyers of its offer. See GET /orgs/audiences/relations."
+                  },
                   "canonicalAudienceId": {
                     "type": "string",
                     "nullable": true,
@@ -56021,6 +56870,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "source",
                   "profileAudienceId",
                   "role",
+                  "relation",
                   "canonicalAudienceId",
                   "filters",
                   "avatarUrl",
@@ -57436,6 +58286,172 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "status"
           ],
           "additionalProperties": false
+        }
+      }
+    }
+  },
+  "POST /v1/orgs/instagram/auth/callback": {
+    "service": "social-service",
+    "method": "POST",
+    "path": "/orgs/instagram/auth/callback",
+    "responses": {
+      "200": {
+        "description": "Connected",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "account": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "brandId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "igUserId": {
+                  "type": "string",
+                  "description": "The Instagram professional account id"
+                },
+                "username": {
+                  "type": "string",
+                  "description": "Instagram handle without @"
+                },
+                "name": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "profileImageUrl": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "profileUrl": {
+                  "type": "string"
+                },
+                "igAccountType": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Instagram's own account type: Business | Media_Creator"
+                },
+                "accountType": {
+                  "type": "string",
+                  "enum": [
+                    "pro_human",
+                    "personal_human",
+                    "pro_ai"
+                  ],
+                  "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI). Software publishes only on `pro_ai`."
+                },
+                "accountTypeLabel": {
+                  "type": "string",
+                  "description": "Human label of accountType, e.g. Pro (AI)"
+                },
+                "health": {
+                  "type": "string",
+                  "enum": [
+                    "connected",
+                    "needs_reconnect"
+                  ],
+                  "description": "`needs_reconnect` = Instagram no longer accepts this login; a human must connect it again (same Instagram user = same row, token replaced)"
+                },
+                "healthReason": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "Plain-language reason when health is needs_reconnect"
+                },
+                "scopes": {
+                  "type": "string",
+                  "description": "What the owner granted, comma separated (publishing a Reel needs instagram_business_content_publish, reading its engagement instagram_business_manage_insights)"
+                },
+                "reconnectBy": {
+                  "type": "string",
+                  "description": "When the current login ends unless renewed (renewed by itself every pass while it works)"
+                },
+                "connectedByUserId": {
+                  "type": "string",
+                  "nullable": true,
+                  "format": "uuid"
+                },
+                "tokenRefreshedAt": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "brandId",
+                "igUserId",
+                "username",
+                "name",
+                "profileImageUrl",
+                "profileUrl",
+                "igAccountType",
+                "accountType",
+                "accountTypeLabel",
+                "health",
+                "healthReason",
+                "scopes",
+                "reconnectBy",
+                "connectedByUserId",
+                "tokenRefreshedAt",
+                "createdAt",
+                "updatedAt"
+              ]
+            },
+            "created": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "account",
+            "created"
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/orgs/instagram/auth/start": {
+    "service": "social-service",
+    "method": "POST",
+    "path": "/orgs/instagram/auth/start",
+    "responses": {
+      "200": {
+        "description": "Instagram login URL",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "authorizationUrl": {
+              "type": "string",
+              "format": "uri",
+              "description": "Send the account's owner here to log into Instagram (a professional account: Business or Creator)"
+            },
+            "state": {
+              "type": "string"
+            },
+            "expiresAt": {
+              "type": "string",
+              "description": "The login must finish before this time: 24 hours when Instagram returns to our public page (no `redirectUri` passed), 15 minutes for a caller's own page"
+            },
+            "redirectUri": {
+              "type": "string",
+              "format": "uri",
+              "description": "The redirect URI the link was built with"
+            }
+          },
+          "required": [
+            "authorizationUrl",
+            "state",
+            "expiresAt",
+            "redirectUri"
+          ]
         }
       }
     }
@@ -59513,7 +60529,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "postId": {
                   "type": "string",
                   "nullable": true,
-                  "description": "X tweet id / LinkedIn share urn"
+                  "description": "X tweet id / LinkedIn share urn / Instagram media id"
                 },
                 "permalink": {
                   "type": "string",
@@ -59644,7 +60660,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "postId": {
                   "type": "string",
                   "nullable": true,
-                  "description": "X tweet id / LinkedIn share urn"
+                  "description": "X tweet id / LinkedIn share urn / Instagram media id"
                 },
                 "permalink": {
                   "type": "string",
@@ -60472,7 +61488,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "type": "string"
                 },
                 "offerId": {
-                  "type": "string"
+                  "type": "string",
+                  "nullable": true
                 },
                 "salesFunnelId": {
                   "type": "string"
@@ -60734,6 +61751,44 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "units"
               ]
             },
+            "nextRun": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "scheduled",
+                    "on_event",
+                    "waiting",
+                    "finished",
+                    "stopped",
+                    "nothing_runs"
+                  ]
+                },
+                "at": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "withinSeconds": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "reason": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "detail": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "state",
+                "at",
+                "withinSeconds",
+                "reason",
+                "detail"
+              ]
+            },
             "created": {
               "type": "boolean"
             },
@@ -60770,6 +61825,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
           },
           "required": [
             "salesFunnelCampaign",
+            "nextRun",
             "created",
             "started"
           ]
@@ -60793,7 +61849,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "type": "string"
                 },
                 "offerId": {
-                  "type": "string"
+                  "type": "string",
+                  "nullable": true
                 },
                 "salesFunnelId": {
                   "type": "string"
@@ -61055,6 +62112,44 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "units"
               ]
             },
+            "nextRun": {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "enum": [
+                    "scheduled",
+                    "on_event",
+                    "waiting",
+                    "finished",
+                    "stopped",
+                    "nothing_runs"
+                  ]
+                },
+                "at": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "withinSeconds": {
+                  "type": "number",
+                  "nullable": true
+                },
+                "reason": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "detail": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "state",
+                "at",
+                "withinSeconds",
+                "reason",
+                "detail"
+              ]
+            },
             "created": {
               "type": "boolean"
             },
@@ -61091,6 +62186,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
           },
           "required": [
             "salesFunnelCampaign",
+            "nextRun",
             "created",
             "started"
           ]
@@ -61540,7 +62636,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "outcomes_produced",
                         null
                       ],
-                      "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                      "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
+                    },
+                    "outcome": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "With unit outcomes_produced on a funnel campaign's own cap counting its TARGET: that outcome (`meeting_booked`), so the page prints « 3 of 10 meetings booked this week ». null otherwise."
                     },
                     "periodStart": {
                       "type": "string"
@@ -61586,6 +62687,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "count",
                     "period",
                     "unit",
+                    "outcome",
                     "periodStart",
                     "periodEnd",
                     "consumed",
@@ -61594,7 +62696,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "consumedUnavailableReason",
                     "consumedUnavailableDetail"
                   ],
-                  "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+                  "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A funnel campaign's own cap counting its TARGET (`outcome`, reached after the first contact): consumed = Units of that target declared in the window on runs of its units OR on a person one of its units reached before (a meeting is declared by its own producer weeks after the first email); 0 until the first lands, so a delay never holds the campaign (its max budget still binds). A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
                 },
                 "salesFunnelName": {
                   "type": "string",
@@ -61629,7 +62731,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "outcomes_produced",
                     null
                   ],
-                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
                 },
                 "pipes": {
                   "type": "array",
@@ -61934,7 +63036,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "outcomes_produced",
                     null
                   ],
-                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
+                },
+                "outcome": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "With unit outcomes_produced on a funnel campaign's own cap counting its TARGET: that outcome (`meeting_booked`), so the page prints « 3 of 10 meetings booked this week ». null otherwise."
                 },
                 "periodStart": {
                   "type": "string"
@@ -61980,6 +63087,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "count",
                 "period",
                 "unit",
+                "outcome",
                 "periodStart",
                 "periodEnd",
                 "consumed",
@@ -61988,7 +63096,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "consumedUnavailableReason",
                 "consumedUnavailableDetail"
               ],
-              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A funnel campaign's own cap counting its TARGET (`outcome`, reached after the first contact): consumed = Units of that target declared in the window on runs of its units OR on a person one of its units reached before (a meeting is declared by its own producer weeks after the first email); 0 until the first lands, so a delay never holds the campaign (its max budget still binds). A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
             },
             "salesFunnelName": {
               "type": "string",
@@ -62023,7 +63131,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "outcomes_produced",
                 null
               ],
-              "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+              "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
             },
             "pipes": {
               "type": "array",
@@ -62806,7 +63914,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "outcomes_produced",
                         null
                       ],
-                      "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                      "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
+                    },
+                    "outcome": {
+                      "type": "string",
+                      "nullable": true,
+                      "description": "With unit outcomes_produced on a funnel campaign's own cap counting its TARGET: that outcome (`meeting_booked`), so the page prints « 3 of 10 meetings booked this week ». null otherwise."
                     },
                     "periodStart": {
                       "type": "string"
@@ -62852,6 +63965,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "count",
                     "period",
                     "unit",
+                    "outcome",
                     "periodStart",
                     "periodEnd",
                     "consumed",
@@ -62860,7 +63974,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "consumedUnavailableReason",
                     "consumedUnavailableDetail"
                   ],
-                  "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+                  "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A funnel campaign's own cap counting its TARGET (`outcome`, reached after the first contact): consumed = Units of that target declared in the window on runs of its units OR on a person one of its units reached before (a meeting is declared by its own producer weeks after the first email); 0 until the first lands, so a delay never holds the campaign (its max budget still binds). A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
                 },
                 "salesFunnelName": {
                   "type": "string",
@@ -62895,7 +64009,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "outcomes_produced",
                     null
                   ],
-                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
                 },
                 "pipes": {
                   "type": "array",
@@ -63200,7 +64314,12 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "outcomes_produced",
                     null
                   ],
-                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+                  "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
+                },
+                "outcome": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "With unit outcomes_produced on a funnel campaign's own cap counting its TARGET: that outcome (`meeting_booked`), so the page prints « 3 of 10 meetings booked this week ». null otherwise."
                 },
                 "periodStart": {
                   "type": "string"
@@ -63246,6 +64365,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "count",
                 "period",
                 "unit",
+                "outcome",
                 "periodStart",
                 "periodEnd",
                 "consumed",
@@ -63254,7 +64374,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "consumedUnavailableReason",
                 "consumedUnavailableDetail"
               ],
-              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
+              "description": "unit first_contacts: consumed = first contacts the funnel's PROACTIVE pipes made in the window (cold email: the first email of each prospect's sequence, completed or in flight). unit prospects_handled (all pipes reactive): consumed = prospects the FIRST reactive pipe took on (AI meeting booking: workflow runs that called the LLM; AI Follow-up Email: each email sent to one person). Any channel whose leg PRODUCES a step with a declared run (email_sent: one email sent), or whose reactive funnel fires on a trigger with a declared run (email_pushed_via_api: one email sent, Email Sending), is measured by that run, no per-channel entry. unit outcomes_produced: consumed = produced outcomes of the pipe's step (threads_post_published: one Threads thread; x_post_published / linkedin_post_published: one post; industry_update_video: one video) declared on runs-service's ledger on runs of the counted campaigns in the window. A funnel campaign's own cap counting its TARGET (`outcome`, reached after the first contact): consumed = Units of that target declared in the window on runs of its units OR on a person one of its units reached before (a meeting is declared by its own producer weeks after the first email); 0 until the first lands, so a delay never holds the campaign (its max budget still binds). A channel with no measure yet answers null + volume_not_measured_on_channel. unit null = the funnel is unreadable."
             },
             "salesFunnelName": {
               "type": "string",
@@ -63289,7 +64409,7 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "outcomes_produced",
                 null
               ],
-              "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs."
+              "description": "What a max volume counts. first_contacts: the funnel has a proactive pipe (each first contact it makes). prospects_handled: every pipe is reactive (each prospect a reactive pipe takes on once they reached its start step). outcomes_produced: every proactive pipe starts at Start and makes its own item (a Threads post, a daily video): each outcome of its leg's step declared on its campaigns' runs; OR a funnel campaign's own cap whose target (campaign-service `target`) is reached after the first contact (Meeting booked after the cold email): each Unit of that target, named by `outcome`."
             },
             "pipes": {
               "type": "array",
