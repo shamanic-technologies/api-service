@@ -34,6 +34,7 @@ import campaignOpsRoutes from "./routes/campaign-ops.js";
 import googleRoutes from "./routes/google.js";
 import threadsRoutes from "./routes/threads.js";
 import xAccountsRoutes from "./routes/x-accounts.js";
+import instagramAccountsRoutes from "./routes/instagram-accounts.js";
 import socialBrandRoutes from "./routes/social-brand.js";
 import brandMcpServersRoutes from "./routes/brand-mcp-servers.js";
 import linkedinAccountsRoutes from "./routes/linkedin-accounts.js";
@@ -348,6 +349,7 @@ app.use("/v1", apolloOpsRoutes); // apollo-service /internal/stats/email-sources
 app.use("/v1", googleRoutes);
 app.use("/v1", threadsRoutes);
 app.use("/v1", xAccountsRoutes);
+app.use("/v1", instagramAccountsRoutes);
 app.use("/v1", socialBrandRoutes);
 app.use("/v1", linkedinAccountsRoutes);
 app.use("/v1", scrapingRoutes);

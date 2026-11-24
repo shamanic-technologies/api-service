@@ -159,6 +159,28 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       ]
     }
   },
+  "PATCH /v1/orgs/instagram/accounts/{id}": {
+    "service": "social-service",
+    "method": "PATCH",
+    "path": "/orgs/instagram/accounts/{id}",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "accountType": {
+          "type": "string",
+          "enum": [
+            "pro_human",
+            "personal_human",
+            "pro_ai"
+          ],
+          "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI). Software publishes only on `pro_ai`."
+        }
+      },
+      "required": [
+        "accountType"
+      ]
+    }
+  },
   "PATCH /v1/orgs/linkedin/accounts/{id}": {
     "service": "social-service",
     "method": "PATCH",
@@ -386,6 +408,58 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         },
         "followsPlan": {
           "type": "boolean"
+        },
+        "maxBudget": {
+          "type": "object",
+          "nullable": true,
+          "properties": {
+            "amountCents": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "period": {
+              "type": "string",
+              "enum": [
+                "one_off",
+                "daily",
+                "weekly",
+                "monthly"
+              ],
+              "description": "UTC. daily = the calendar day; weekly = Monday to Monday; monthly = the calendar month; one_off = once."
+            }
+          },
+          "required": [
+            "amountCents",
+            "period"
+          ],
+          "additionalProperties": false,
+          "description": "The most this campaign spends per period, all its parts together (billing's max budget on this campaign). null clears it."
+        },
+        "maxVolume": {
+          "type": "object",
+          "nullable": true,
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "period": {
+              "type": "string",
+              "enum": [
+                "one_off",
+                "daily",
+                "weekly",
+                "monthly"
+              ],
+              "description": "UTC. daily = the calendar day; weekly = Monday to Monday; monthly = the calendar month; one_off = once."
+            }
+          },
+          "required": [
+            "count",
+            "period"
+          ],
+          "additionalProperties": false,
+          "description": "The volume this campaign aims at per period (billing's max volume on this campaign: it stops for the period once reached). What it counts (e.g. meetings booked for a campaign targeting them) is billing's, served on its caps read as `unit`. null clears it. A max volume always comes with a max budget in $ (`maxBudget`) beside it: a volume with no max budget is refused 400 `max_budget_required_with_max_volume`, nothing written. A max budget alone is fine."
         }
       },
       "additionalProperties": false
@@ -2686,6 +2760,63 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
     "path": "/orgs/google/sync",
     "schema": null
   },
+  "POST /v1/orgs/instagram/auth/callback": {
+    "service": "social-service",
+    "method": "POST",
+    "path": "/orgs/instagram/auth/callback",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "description": "`code` from Instagram's redirect (a trailing `#_` is dropped)"
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1,
+          "description": "`state` from Instagram's redirect"
+        }
+      },
+      "required": [
+        "code",
+        "state"
+      ]
+    }
+  },
+  "POST /v1/orgs/instagram/auth/start": {
+    "service": "social-service",
+    "method": "POST",
+    "path": "/orgs/instagram/auth/start",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "brandId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Brand the account is connected to"
+        },
+        "accountType": {
+          "type": "string",
+          "enum": [
+            "pro_human",
+            "personal_human",
+            "pro_ai"
+          ],
+          "description": "Who runs the account: `pro_human` = Pro (human), `personal_human` = Personal (human), `pro_ai` = Pro (AI). Software publishes only on `pro_ai`."
+        },
+        "redirectUri": {
+          "type": "string",
+          "format": "uri",
+          "description": "Where Instagram sends the account's owner back with `code` and `state`. LEAVE IT OUT when the link is handed to the owner (an AI or MCP caller): Instagram then returns to our public page https://api.distribute.you/v1/public/instagram/auth/return, which finishes the connection by itself (nothing to copy) and tells the owner to close the tab; the link lives 24 hours. A caller's own page relays `code` + `state` to POST /orgs/instagram/auth/callback within 15 minutes. Either way the URL must be registered, byte for byte, as an OAuth redirect URI of our Instagram app (INSTAGRAM_OAUTH_CONNECT_APP). The answer's `redirectUri` names the one used."
+        }
+      },
+      "required": [
+        "brandId",
+        "accountType"
+      ]
+    }
+  },
   "POST /v1/orgs/linkedin/auth/callback": {
     "service": "social-service",
     "method": "POST",
@@ -3164,7 +3295,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "type": "string",
           "minLength": 1,
           "maxLength": 3000,
-          "description": "As published. X: <= 280 weighted; every @handle in it moves to the reply (X refuses mentions in a post from our app), the post keeps the name. LinkedIn: <= 3000, `@[Name](urn:li:organization:<id>)` mentions as written."
+          "description": "As published. X: <= 280 weighted; every @handle in it moves to the reply (X refuses mentions in a post from our app), the post keeps the name. LinkedIn: <= 3000, `@[Name](urn:li:organization:<id>)` mentions as written. Instagram: the Reel's caption, <= 2200 characters, at most 30 hashtags and 20 @mentions."
         },
         "idempotencyKey": {
           "type": "string",
@@ -3175,7 +3306,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "outcomeKey": {
           "type": "string",
           "minLength": 1,
-          "description": "The Unit the caller's Engine makes (filled by workflow-service): must be `x_post_published` / `linkedin_post_published` for the account's network."
+          "description": "The Unit the caller's Engine makes (filled by workflow-service): must be the one outcome a publish on the account's network makes: `x_post_published` (X), `linkedin_post_published` (LinkedIn), `instagram_reel_published` (Instagram: a publish there is always a Reel). Any other key is a 400 `outcome_mismatch`."
         },
         "media": {
           "type": "array",
@@ -3185,7 +3316,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
               "url": {
                 "type": "string",
                 "format": "uri",
-                "description": "https URL this service downloads (a platform upload, the blog hero)"
+                "description": "https URL. X / LinkedIn: this service downloads it (a platform upload, the blog hero). Instagram: a PUBLIC video URL Instagram fetches itself (it must answer without login or signature expiry for a few minutes)"
               },
               "type": {
                 "type": "string",
@@ -3211,13 +3342,13 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
             "additionalProperties": false
           },
           "maxItems": 4,
-          "description": "Images or a video, uploaded through the account's own login. X: up to 4 images or 1 video; LinkedIn: 1 image or 1 video."
+          "description": "Images or a video, through the account's own login. X: up to 4 images or 1 video; LinkedIn: 1 image or 1 video. Instagram: REQUIRED, exactly ONE item of type `video` = the Reel (MP4 or MOV, H264 or HEVC video, AAC audio, 3 seconds to 15 minutes, at most 300 MB, 9:16 recommended); no video, an image or several items is a 400 `validation`."
         },
         "reply": {
           "type": "string",
           "minLength": 1,
           "maxLength": 3000,
-          "description": "X: a reply posted under the post (where a link goes; <= 280 weighted, its own X fee). LinkedIn: the post's first comment, as the same author (<= 1250). Own links get the post's tracking. A refused reply never undoes the post: its error is served on `publication.reply.error`."
+          "description": "X: a reply posted under the post (where a link goes; <= 280 weighted, its own X fee). LinkedIn: the post's first comment, as the same author (<= 1250). Own links get the post's tracking. A refused reply never undoes the post: its error is served on `publication.reply.error`. Instagram takes none: a publish carrying `reply` is a 400 `validation`, nothing sent."
         }
       },
       "required": [
@@ -3250,7 +3381,8 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "idempotencyKey": {
           "type": "string",
           "minLength": 8,
-          "maxLength": 200
+          "maxLength": 200,
+          "description": "One reply per key, ever: same key + same reply = the same answer; another reply = 409."
         },
         "outcomeKey": {
           "type": "string",
@@ -3301,25 +3433,25 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
           "type": "string",
           "minLength": 1,
           "maxLength": 500,
-          "description": "Post text, at most 500 characters (Threads' limit)"
+          "description": "The words to publish, 1 to 500 characters (Threads' limit). Text only: no image, no video. Published as written, except that every link to the brand's own site gets a `dy_post` tracking parameter (the answer's record keeps both: `text` as asked, `publishedText` as Threads received it)."
         },
         "replyToPostId": {
           "type": "string",
           "minLength": 1,
-          "description": "Publish as a reply under this Threads post id (e.g. the postId a previous call returned)"
+          "description": "Omitted = a MAIN post (one Unit of `threads_post_published`). Given = a reply published under this Threads post id (the `postId` a previous call returned, to chain a thread): part of that thread, no outcome of its own."
         },
         "idempotencyKey": {
           "type": "string",
           "minLength": 1,
           "maxLength": 512,
-          "description": "Caller's own key, unique per org. The same key again answers the publication it already made (200, `replayed: true`) and never calls Threads twice. The same key with another account, text or parent post is a 409 `idempotency_key_reused`."
+          "description": "Caller's own key for THIS publication, unique per org, at most 512 characters (e.g. `<run id>:<step>`). Optional, and strongly advised: without it a retry publishes the post a second time. The same key again answers the publication it already made (200, `replayed: true`) and never calls Threads twice. The same key with another account, text or parent post is a 409 `idempotency_key_reused`; while the first call is still running it is a 409 `publish_in_progress`. A publish Threads refused frees the key."
         },
         "outcomeKey": {
           "type": "string",
           "enum": [
             "threads_post_published"
           ],
-          "description": "The outcome a MAIN post declares on the caller's run: `threads_post_published` (OUTCOME-FINEST-1106), also the default when absent. The retired coarse `post_published` is refused 400 `outcome_retired` (DELETE-POST-PUBLISHED-1107). Kept on the publication; a replay answers the stored one."
+          "description": "The outcome a MAIN post declares on the caller's run (x-run-id). Only one value exists, `threads_post_published`, and it is also what an omitted `outcomeKey` means: leave it out. Any other value is a 400. Ignored for a reply (a reply declares no outcome)."
         }
       },
       "required": [
@@ -3620,11 +3752,62 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         },
         "followsPlan": {
           "type": "boolean"
+        },
+        "maxBudget": {
+          "type": "object",
+          "nullable": true,
+          "properties": {
+            "amountCents": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "period": {
+              "type": "string",
+              "enum": [
+                "one_off",
+                "daily",
+                "weekly",
+                "monthly"
+              ],
+              "description": "UTC. daily = the calendar day; weekly = Monday to Monday; monthly = the calendar month; one_off = once."
+            }
+          },
+          "required": [
+            "amountCents",
+            "period"
+          ],
+          "additionalProperties": false,
+          "description": "The most this campaign spends per period, all its parts together (billing's max budget on this campaign). null clears it."
+        },
+        "maxVolume": {
+          "type": "object",
+          "nullable": true,
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "period": {
+              "type": "string",
+              "enum": [
+                "one_off",
+                "daily",
+                "weekly",
+                "monthly"
+              ],
+              "description": "UTC. daily = the calendar day; weekly = Monday to Monday; monthly = the calendar month; one_off = once."
+            }
+          },
+          "required": [
+            "count",
+            "period"
+          ],
+          "additionalProperties": false,
+          "description": "The volume this campaign aims at per period (billing's max volume on this campaign: it stops for the period once reached). What it counts (e.g. meetings booked for a campaign targeting them) is billing's, served on its caps read as `unit`. null clears it. A max volume always comes with a max budget in $ (`maxBudget`) beside it: a volume with no max budget is refused 400 `max_budget_required_with_max_volume`, nothing written. A max budget alone is fine."
         }
       },
       "required": [
         "brandId",
-        "offerId",
         "status"
       ],
       "additionalProperties": false
@@ -3721,7 +3904,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "maxVolume"
       ],
       "additionalProperties": false,
-      "description": "Both keys are REQUIRED: an object states the cap, null clears it; both null clears the funnel. A cap restated in the same period keeps its window start (a one_off cap keeps counting)."
+      "description": "Both keys are REQUIRED: an object states the cap, null clears it; both null clears the funnel. A max volume is never stated alone: it needs a max budget beside it (400 `max_budget_required_with_max_volume`, owner 2026-11-24); a max budget alone is valid. A cap restated in the same period keeps its window start (a one_off cap keeps counting)."
     }
   },
   "PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps": {
@@ -3793,7 +3976,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "maxVolume"
       ],
       "additionalProperties": false,
-      "description": "Both keys are REQUIRED: an object states the cap, null clears it; both null clears the funnel. A cap restated in the same period keeps its window start (a one_off cap keeps counting)."
+      "description": "Both keys are REQUIRED: an object states the cap, null clears it; both null clears the funnel. A max volume is never stated alone: it needs a max budget beside it (400 `max_budget_required_with_max_volume`, owner 2026-11-24); a max budget alone is valid. A cap restated in the same period keeps its window start (a one_off cap keeps counting)."
     }
   },
   "PUT /v1/brands/{brandId}/sales-budget": {
@@ -3888,7 +4071,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "maxVolume"
       ],
       "additionalProperties": false,
-      "description": "Both keys are REQUIRED: an object states the cap, null clears it; both null clears the funnel. A cap restated in the same period keeps its window start (a one_off cap keeps counting)."
+      "description": "Both keys are REQUIRED: an object states the cap, null clears it; both null clears the funnel. A max volume is never stated alone: it needs a max budget beside it (400 `max_budget_required_with_max_volume`, owner 2026-11-24); a max budget alone is valid. A cap restated in the same period keeps its window start (a one_off cap keeps counting)."
     }
   },
   "PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps": {
@@ -3960,7 +4143,7 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
         "maxVolume"
       ],
       "additionalProperties": false,
-      "description": "Both keys are REQUIRED: an object states the cap, null clears it; both null clears the funnel. A cap restated in the same period keeps its window start (a one_off cap keeps counting)."
+      "description": "Both keys are REQUIRED: an object states the cap, null clears it; both null clears the funnel. A max volume is never stated alone: it needs a max budget beside it (400 `max_budget_required_with_max_volume`, owner 2026-11-24); a max budget alone is valid. A cap restated in the same period keeps its window start (a one_off cap keeps counting)."
     }
   },
   "PUT /v1/brands/{id}/leg-rates": {

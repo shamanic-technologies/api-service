@@ -239,3 +239,60 @@ describe("call log: batch size", () => {
     expect(_queuedCalls()).toHaveLength(0);
   });
 });
+
+describe("call log: keyless AI-agent signup calls (TG-EVERY-CALL-1124)", () => {
+  beforeEach(() => _resetCallLog());
+  afterEach(() => _resetCallLog());
+
+  function signupApp() {
+    const a = express();
+    a.use(express.json());
+    a.use(recordCustomerCalls);
+    a.post("/v1/agent-signups/start", (_req, res) => res.json({ sent: true, pollToken: "poll_secret_abcdef" }));
+    a.post("/v1/agent-signups/complete", (_req, res) =>
+      res.json({ apiKey: "distrib.usr_freshlyminted000000000000", orgId: ORG, userId: USER, email: "agent@acme.com" }),
+    );
+    a.get("/v1/agent-signups/approve", (_req, res) => res.send("<html>confirm</html>"));
+    a.get("/v1/public/thing", (_req, res) => res.json({ ok: true }));
+    return a;
+  }
+
+  it("records start with no user: the typed email, channel api, no key", async () => {
+    const res = await request(signupApp()).post("/v1/agent-signups/start").send({ email: " agent@acme.com ", phone: "+33600000000" });
+    expect(res.body).toEqual({ sent: true, pollToken: "poll_secret_abcdef" });
+    await settle();
+    const [rec] = _queuedCalls();
+    expect(rec).toMatchObject({ userId: null, orgId: null, email: "agent@acme.com", channel: "api", method: "POST", path: "/v1/agent-signups/start", status: 200, keyFingerprint: null });
+    expect(rec.responseBody).not.toContain("poll_secret_abcdef");
+  });
+
+  it("records complete without the one-time code nor the minted key", async () => {
+    await request(signupApp()).post("/v1/agent-signups/complete").send({ email: "agent@acme.com", code: "123456" });
+    await settle();
+    const [rec] = _queuedCalls();
+    expect(rec.userId).toBeNull();
+    expect(rec.email).toBe("agent@acme.com");
+    expect(rec.requestBody).not.toContain("123456");
+    expect(rec.requestBody).toContain(REDACTED);
+    expect(rec.responseBody).not.toContain("distrib.usr_freshlyminted");
+  });
+
+  it("records a refused signup too (the error status is the result)", async () => {
+    const a = express();
+    a.use(express.json());
+    a.use(recordCustomerCalls);
+    a.post("/v1/agent-signups/complete", (_req, res) => res.status(400).json({ error: "invalid_code" }));
+    await request(a).post("/v1/agent-signups/complete").send({ email: "agent@acme.com", code: "000000" });
+    await settle();
+    expect(_queuedCalls()[0]).toMatchObject({ status: 400, email: "agent@acme.com" });
+  });
+
+  it("records nothing with no email typed, for the approval page, or any other keyless call", async () => {
+    const a = signupApp();
+    await request(a).post("/v1/agent-signups/start").send({ phone: "+33600000000" });
+    await request(a).get("/v1/agent-signups/approve?token=t");
+    await request(a).get("/v1/public/thing");
+    await settle();
+    expect(_queuedCalls()).toHaveLength(0);
+  });
+});

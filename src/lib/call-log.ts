@@ -19,6 +19,14 @@
  * isLocalLlmWorkCall): a machine polling every few seconds, whose claims and
  * results carry the org's prompts and answers (customer content).
  *
+ * Also recorded, with no key (TG-EVERY-CALL-1124, owner 2026-11-24 « B »: every
+ * external call reaches Kevin's Telegram, which crm-service sends from this log):
+ * an AI agent opening an account through the keyless agent-signup routes
+ * (`POST /v1/agent-signups/start` and `/complete`, see isAgentSignupCall). No
+ * user exists yet: the record carries `userId: null` and the email the agent
+ * typed; the one-time code is redacted like a secret. The approval page (opened
+ * by the inbox owner, often prefetched by mail scanners) is not an agent call.
+ *
  * Never recorded: the Authorization / x-api-key / cookie headers (only an
  * allow-list of harmless headers is kept), the key itself (the record carries a
  * one-way fingerprint), and any secret-looking field or value in the query,
@@ -68,7 +76,8 @@ export interface CallRecord {
   channel: CallChannel;
   mcpTool: string | null;
   orgId: string | null;
-  userId: string;
+  /** null = an agent-signup call: no account yet, `email` is the address the agent typed. */
+  userId: string | null;
   email: string | null;
   displayName: string | null;
   /** First 16 hex chars of sha256(key): tells keys apart, cannot be turned back into one. */
@@ -143,6 +152,16 @@ export function redactJson(value: unknown): unknown {
   return value;
 }
 
+/** Top-level fields of a JSON body replaced by REDACTED (a value that proves something, not named like a secret). */
+function redactFields(value: unknown, fields: ReadonlySet<string>): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    out[k] = fields.has(k) && v !== null && v !== undefined ? REDACTED : v;
+  }
+  return out;
+}
+
 export function keepHeaders(headers: Record<string, string | string[] | undefined>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const name of KEPT_HEADERS) {
@@ -163,7 +182,7 @@ export function boundBody(text: string, totalBytes: number): { body: string; tru
 }
 
 /** The request body as recorded (JSON bodies are parsed by express.json before routes). */
-export function recordRequestBody(req: Request): { body: string | null; bytes: number; truncated: boolean } {
+export function recordRequestBody(req: Request, extraSecretFields?: ReadonlySet<string>): { body: string | null; bytes: number; truncated: boolean } {
   const contentType = String(req.headers["content-type"] ?? "");
   const declared = Number(req.headers["content-length"] ?? 0) || 0;
   if (contentType.startsWith("multipart/")) {
@@ -178,7 +197,7 @@ export function recordRequestBody(req: Request): { body: string | null; bytes: n
     ? redactText(raw.toString("utf8"))
     : typeof raw === "string"
       ? redactText(raw)
-      : JSON.stringify(redactJson(raw));
+      : JSON.stringify(redactJson(extraSecretFields ? redactFields(raw, extraSecretFields) : raw));
   const bytes = declared || Buffer.byteLength(text, "utf8");
   const { body, truncated } = boundBody(text, bytes);
   return { body, bytes, truncated };
@@ -249,6 +268,26 @@ export function isLocalLlmWorkCall(url: string): boolean {
   return path.startsWith("/v1/local-llm/work/") || path === "/v1/local-llm/orgs";
 }
 
+/** The keyless AI-agent signup calls (POST start / complete): recorded with no key. */
+export const AGENT_SIGNUP_PATHS: ReadonlySet<string> = new Set(["/v1/agent-signups/start", "/v1/agent-signups/complete"]);
+
+export function isAgentSignupCall(method: string, url: string): boolean {
+  if (method !== "POST") return false;
+  const [path] = url.split("?");
+  const bare = path.length > 1 ? path.replace(/\/+$/, "") : path;
+  return AGENT_SIGNUP_PATHS.has(bare);
+}
+
+/** Fields of an agent-signup body that prove the email: kept out of the log like a secret. */
+const AGENT_SIGNUP_PROOF_FIELDS = new Set(["code"]);
+
+/** The address an agent-signup call names, as typed (trimmed), or null. */
+export function agentSignupEmail(body: unknown): string | null {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
+  const email = (body as Record<string, unknown>).email;
+  return typeof email === "string" && email.trim() ? email.trim().slice(0, 320) : null;
+}
+
 /** A GET/HEAD of a catalogue document (query string and a trailing slash ignored). */
 export function isHousekeepingCall(method: string, url: string): boolean {
   if (method !== "GET" && method !== "HEAD") return false;
@@ -267,7 +306,8 @@ export function isHousekeepingCall(method: string, url: string): boolean {
  */
 export function recordCustomerCalls(req: Request, res: Response, next: NextFunction) {
   const authorization = req.headers.authorization;
-  if (typeof authorization !== "string" || !authorization.startsWith("Bearer ")) return next();
+  const bearer = typeof authorization === "string" && authorization.startsWith("Bearer ");
+  if (!bearer && !isAgentSignupCall(req.method, req.originalUrl)) return next();
   if (isHousekeepingCall(req.method, req.originalUrl)) return next();
   if (isLocalLlmWorkCall(req.originalUrl)) return next();
 
@@ -329,11 +369,14 @@ function buildRecord(
   totalBytes: number,
   startedAt: number,
 ): CallRecord | null {
-  // Only a call whose key resolved to a user is someone's conversation.
-  if (req.authType !== "user_key" || !req.userId) return null;
+  const signup = req.authType !== "user_key" && isAgentSignupCall(req.method, req.originalUrl);
+  const signupEmail = signup ? agentSignupEmail(req.body) : null;
+  // A call whose key resolved to a user is someone's conversation; so is an
+  // agent signing up, filed under the email it typed (none typed = nobody to file it under).
+  if (signup ? !signupEmail : req.authType !== "user_key" || !req.userId) return null;
   const [path] = req.originalUrl.split("?");
   const contentType = (res.getHeader("content-type") as string | undefined) ?? null;
-  const request = recordRequestBody(req);
+  const request = recordRequestBody(req, signup ? AGENT_SIGNUP_PROOF_FIELDS : undefined);
   const response = recordResponseBody(captured, totalBytes, contentType);
   const channel = callChannel(req.headers);
   const toolHeader = req.headers[MCP_TOOL_HEADER];
@@ -348,10 +391,10 @@ function buildRecord(
     callId: randomUUID(),
     channel,
     mcpTool,
-    orgId: req.orgId ?? null,
-    userId: req.userId,
-    email: req.userKeyScope?.email ?? null,
-    displayName: req.userKeyScope?.displayName ?? null,
+    orgId: signup ? null : (req.orgId ?? null),
+    userId: signup ? null : req.userId!,
+    email: signup ? signupEmail : (req.userKeyScope?.email ?? null),
+    displayName: signup ? null : (req.userKeyScope?.displayName ?? null),
     keyFingerprint: keyFingerprint(req.headers.authorization),
     brandIds,
     method: req.method,

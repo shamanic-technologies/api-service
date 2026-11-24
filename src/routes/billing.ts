@@ -971,6 +971,8 @@ router.get("/brands/:brandId/sales-budget/history", authenticate, requireOrg, sa
  * `salesFunnelId` is features-service's combinationKey (`@`, `+` inside): Express decodes the param, so it is
  * re-encoded for the downstream path. Body, read shape (consumed / remaining / reached) and refusals
  * (404 sales_funnel_not_found, 502 sales_funnel_catalogue_unavailable) are billing's, relayed verbatim.
+ * A max volume needs a max budget in $ beside it (VOL-NEEDS-USD-1124, owner 2026-11-24): billing refuses a
+ * volume-only body (400 max_budget_required_with_max_volume); the gateway documents it and relays the refusal.
  */
 function salesFunnelCapsProxy(method: "GET" | "PUT" | "DELETE", failure: string) {
   return async (req: AuthenticatedRequest, res: any) => {
