@@ -1324,7 +1324,7 @@ export const CreateCampaignRequestSchema = z
     maxBudgetWeeklyUsd: z.union([z.string(), z.number()]).optional().describe("Max weekly budget in USD"),
     maxBudgetMonthlyUsd: z.union([z.string(), z.number()]).optional().describe("Max monthly budget in USD"),
     maxBudgetTotalUsd: z.union([z.string(), z.number()]).optional().describe("Max total budget in USD"),
-    maxLeads: z.number().int().optional().describe("Maximum number of leads to contact"),
+    maxLeads: z.number().int().optional().describe("Maximum number of leads to contact. This is a max volume: state a max budget in USD (one of the maxBudget*Usd fields) beside it (VOL-NEEDS-USD-1124); never invent the $ amount, ask the person."),
     endDate: z.string().optional().describe("Campaign end date"),
     // Campaign v2 — per-campaign configuration (owned by campaign-service).
     // Faithful passthrough: types mirror campaign-service's create contract exactly.
@@ -13149,6 +13149,11 @@ const salesFunnelCapsResponses = {
   502: { description: "sales_funnel_catalogue_unavailable, forwarded verbatim", content: errorContent },
 };
 const salesFunnelCapsPath = "/v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps";
+// VOL-NEEDS-USD-1124 (owner 2026-11-24): a max volume never stands alone, a max budget in $ sits beside it.
+export const MAX_VOLUME_NEEDS_MAX_BUDGET =
+  " A max volume needs a max budget in $ beside it: a body stating `maxVolume` with `maxBudget: null` (or absent) " +
+  "is refused 400 `max_budget_required_with_max_volume` by billing. Ask the person for both; never invent the $ amount. " +
+  "A max budget alone is valid.";
 
 registry.registerPath({
   method: "get",
@@ -13168,7 +13173,8 @@ registry.registerPath({
   summary: "State a sales funnel's MAX BUDGET and MAX VOLUME",
   description:
     "Proxy to billing-service PUT " + salesFunnelCapsPath + ". Body { maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }, " +
-    "period one_off | daily | weekly | monthly, forwarded untouched. Charges nothing. Answers the read's shape.",
+    "period one_off | daily | weekly | monthly, forwarded untouched. Charges nothing. Answers the read's shape." +
+    MAX_VOLUME_NEEDS_MAX_BUDGET,
   security: authed,
   request: { params: SalesFunnelCapsParams, body: { content: { "application/json": { schema: SalesFunnelCapsRequestSchema } } } },
   responses: salesFunnelCapsResponses,
@@ -13207,7 +13213,8 @@ registry.registerPath({
   summary: "State the MAX BUDGET and MAX VOLUME of a sales funnel campaign naming no offer",
   description:
     "Proxy to billing-service PUT " + offerlessSalesFunnelCapsPath + ". Same body as the offer route " +
-    "({ maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }), forwarded untouched. Charges nothing.",
+    "({ maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }), forwarded untouched. Charges nothing." +
+    MAX_VOLUME_NEEDS_MAX_BUDGET,
   security: authed,
   request: { params: OfferlessSalesFunnelCapsParams, body: { content: { "application/json": { schema: SalesFunnelCapsRequestSchema } } } },
   responses: salesFunnelCapsResponses,
@@ -13256,7 +13263,8 @@ for (const [path, params, who] of [
     summary: `State the MAX BUDGET and MAX VOLUME of ${who}`,
     description:
       "Proxy to billing-service PUT " + path + ". Same body as the funnel route " +
-      "({ maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }), forwarded untouched. Charges nothing.",
+      "({ maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }), forwarded untouched. Charges nothing." +
+      MAX_VOLUME_NEEDS_MAX_BUDGET,
     security: authed,
     request: { params, body: { content: { "application/json": { schema: SalesFunnelCapsRequestSchema } } } },
     responses: salesFunnelCapsResponses,
