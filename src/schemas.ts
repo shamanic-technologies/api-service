@@ -17922,6 +17922,121 @@ registry.registerPath({
   },
 });
 
+// ─── Instagram accounts (social-service /orgs/instagram/*, REELS-1124) ──────
+// The X accounts model, same passthrough: bodies and answers owned by
+// social-service, documented from its openapi via DOWNSTREAM_BODY_SOURCES /
+// DOWNSTREAM_RESPONSE_SOURCES; query strings byte-copied.
+const InstagramAccountsPassthroughResponse = z.object({}).passthrough().openapi("InstagramAccountsPassthroughResponse");
+const InstagramAccountsPassthroughRequest = z.object({}).passthrough().openapi("InstagramAccountsPassthroughRequest");
+const instagramAccountsErrorResponses = {
+  400: {
+    description: "Bad request (`type: \"validation\"`) or Instagram refused the login (`type: \"instagram_login_invalid\"`: unknown, used or expired, start again), forwarded verbatim from social-service",
+    content: errorContent,
+  },
+  401: { description: "Unauthorized", content: errorContent },
+  404: { description: "Instagram account not found in this org, forwarded verbatim", content: errorContent },
+  409: { description: "`type: \"needs_reconnect\"` or `already_held`, forwarded verbatim", content: errorContent },
+  500: { description: "Internal error", content: errorContent },
+  502: {
+    description: "`type: \"instagram_not_configured\"` with `details.provider` (the missing variable of our Instagram app), Instagram refused a call (`instagram_refused`, its own words) or was unreachable (`upstream`), forwarded verbatim",
+    content: errorContent,
+  },
+};
+const instagramAccountId = z.object({ id: z.string().openapi({ description: "Instagram account id (uuid) from GET /v1/orgs/instagram/accounts" }) });
+
+const instagramAccountsRoutes: Array<{
+  method: "get" | "post" | "patch" | "delete";
+  path: string;
+  summary: string;
+  description: string;
+  body?: boolean;
+  params?: z.ZodObject;
+  query?: z.ZodObject;
+}> = [
+  {
+    method: "post",
+    path: "/v1/orgs/instagram/auth/start",
+    summary: "Start connecting an Instagram professional account (Business or Creator) to a brand (Instagram login)",
+    description:
+      "Proxy to social-service POST /orgs/instagram/auth/start. Body `{ brandId, accountType, redirectUri? }` forwarded untransformed; returns `{ authorizationUrl, state, expiresAt, redirectUri }`. Give `authorizationUrl` to the account's owner: his click is the whole human step. After he logs into Instagram he lands on GET /v1/public/instagram/auth/return, the account is connected with nothing to copy, and GET /v1/orgs/instagram/accounts lists it. The link works once, for 24 hours. Only a page of your own that relays `code` + `state` to POST /v1/orgs/instagram/auth/callback passes its own `redirectUri` (15 minutes). The login asks to read the profile, publish Reels and read insights. Free.",
+    body: true,
+  },
+  {
+    method: "post",
+    path: "/v1/orgs/instagram/auth/callback",
+    summary: "Finish connecting an Instagram account (exchange code, store the account)",
+    description:
+      "Proxy to social-service POST /orgs/instagram/auth/callback. Body `{ code, state }` from Instagram's redirect; returns `{ account, created }`. Only for a login started with a `redirectUri` of your own; a login started without one finishes by itself on GET /v1/public/instagram/auth/return.",
+    body: true,
+  },
+  {
+    method: "get",
+    path: "/v1/orgs/instagram/accounts",
+    summary: "List the Instagram accounts connected to the org (optionally one brand)",
+    description:
+      "Proxy to social-service GET /orgs/instagram/accounts. Response `{ accounts: [...] }` owned by social-service; each account carries its `accountType` and its health (`needs_reconnect` = a human must connect it again).",
+    query: z.object({ brandId: z.string().optional().openapi({ description: "Only this brand's accounts" }) }).passthrough(),
+  },
+  {
+    method: "patch",
+    path: "/v1/orgs/instagram/accounts/{id}",
+    summary: "Set an Instagram account's type",
+    description: "Proxy to social-service PATCH /orgs/instagram/accounts/{id}. Body `{ accountType }` forwarded untransformed; returns `{ account }`.",
+    body: true,
+    params: instagramAccountId,
+  },
+  {
+    method: "delete",
+    path: "/v1/orgs/instagram/accounts/{id}",
+    summary: "Disconnect an Instagram account",
+    description: "Proxy to social-service DELETE /orgs/instagram/accounts/{id} (its token is deleted).",
+    params: instagramAccountId,
+  },
+];
+
+for (const route of instagramAccountsRoutes) {
+  registry.registerPath({
+    method: route.method,
+    path: route.path,
+    tags: ["Instagram"],
+    summary: route.summary,
+    description: route.description,
+    security: authed,
+    request: {
+      ...(route.params ? { params: route.params } : {}),
+      ...(route.query ? { query: route.query } : {}),
+      ...(route.body ? { body: { content: { "application/json": { schema: InstagramAccountsPassthroughRequest } } } } : {}),
+    },
+    responses: {
+      200: { description: "As returned by social-service", content: { "application/json": { schema: InstagramAccountsPassthroughResponse } } },
+      ...instagramAccountsErrorResponses,
+    },
+  });
+}
+
+// The address Instagram redirects the account owner's browser to (LOCKED, registered in Meta's console). Public: no security.
+registry.registerPath({
+  method: "get",
+  path: "/v1/public/instagram/auth/return",
+  tags: ["Instagram"],
+  summary: "Where Instagram sends the account's owner back: finishes the connection and shows a page",
+  description:
+    "Not called by an agent: it is the redirect URI of a link started with POST /v1/orgs/instagram/auth/start (no `redirectUri`), opened by Instagram in the account owner's browser after he logs in. No key, no org, no user: the `state` alone names the pending connection (unguessable, single use, 24 hours), and the account is stored under the org and brand of whoever started it. Proxy to social-service GET /public/instagram/auth/return, query forwarded verbatim. Always answers an HTML page for a person: 200 = connected, you can close this tab; otherwise the page says why. The agent then reads GET /v1/orgs/instagram/accounts.",
+  request: {
+    query: z
+      .object({
+        state: z.string().openapi({ description: "`state` from Instagram's redirect" }),
+        code: z.string().optional().openapi({ description: "`code` from Instagram's redirect" }),
+        error: z.string().optional().openapi({ description: "Set by Instagram instead of `code` when the owner declined" }),
+      })
+      .passthrough(),
+  },
+  responses: {
+    200: { description: "The page: connected, you can close this tab (text/html)", content: { "text/html": { schema: z.string() } } },
+    400: { description: "The page: not connected, and why in plain words (text/html)", content: { "text/html": { schema: z.string() } } },
+  },
+});
+
 // LinkedIn accounts (LINKEDIN-ACCOUNTS-1106): the X accounts model, same passthrough.
 const LinkedinAccountsPassthroughResponse = z.object({}).passthrough().openapi("LinkedinAccountsPassthroughResponse");
 const LinkedinAccountsPassthroughRequest = z.object({}).passthrough().openapi("LinkedinAccountsPassthroughRequest");
@@ -18011,27 +18126,27 @@ const socialBrandErrorResponses = {
   401: { description: "Unauthorized", content: errorContent },
   402: { description: "The spend was refused (the campaign's max budget or the balance), forwarded verbatim", content: errorContent },
   404: { description: "No such account in this org, forwarded verbatim", content: errorContent },
-  409: { description: "`type` = account_not_pro_ai | needs_reconnect | linkedin_page_not_publishable | account_not_of_brand | idempotency_conflict, forwarded verbatim", content: errorContent },
+  409: { description: "`type` = account_not_pro_ai | needs_reconnect | linkedin_page_not_publishable | instagram_publish_permission_missing | account_not_of_brand | idempotency_conflict, forwarded verbatim", content: errorContent },
   500: { description: "Internal error", content: errorContent },
-  502: { description: "X or LinkedIn refused or was unreachable (`type` names it), forwarded verbatim", content: errorContent },
+  502: { description: "X, LinkedIn or Instagram refused, timed out processing a Reel, or was unreachable (`type` names it), forwarded verbatim", content: errorContent },
 };
 const socialBrandRoutes: Array<{ method: "get" | "post" | "delete"; path: string; summary: string; description: string; body?: boolean; params?: z.ZodObject; query?: z.ZodObject }> = [
   {
     method: "get",
     path: "/v1/orgs/social/accounts",
-    summary: "List a brand's connected X or LinkedIn accounts, each saying whether software may post on it",
+    summary: "List a brand's connected X, LinkedIn or Instagram accounts, each saying whether software may post on it",
     description: "Proxy to social-service GET /orgs/social/accounts. Response `{ accounts: [...] }` owned by social-service: `publishable` + `notPublishableReason` per account.",
-    query: z.object({ brandId: z.string().openapi({ description: "The brand (uuid)" }), network: z.enum(["x", "linkedin"]) }).passthrough(),
+    query: z.object({ brandId: z.string().openapi({ description: "The brand (uuid)" }), network: z.string().openapi({ description: "x | linkedin | instagram (social-service's vocabulary, forwarded as sent)" }) }).passthrough(),
   },
   {
     method: "get",
     path: "/v1/orgs/social/publications",
-    summary: "What was published on a brand's X or LinkedIn accounts since a date, newest first",
+    summary: "What was published on a brand's X, LinkedIn or Instagram accounts since a date, newest first",
     description: "Proxy to social-service GET /orgs/social/publications. Response `{ publications: [...] }` owned by social-service.",
     query: z
       .object({
         brandId: z.string().openapi({ description: "The brand (uuid)" }),
-        network: z.enum(["x", "linkedin"]),
+        network: z.string().openapi({ description: "x | linkedin | instagram (social-service's vocabulary, forwarded as sent)" }),
         since: z.string().openapi({ description: "ISO date-time" }),
         limit: z.string().optional(),
       })
@@ -18040,9 +18155,9 @@ const socialBrandRoutes: Array<{ method: "get" | "post" | "delete"; path: string
   {
     method: "post",
     path: "/v1/orgs/social/accounts/{id}/posts",
-    summary: "Publish one post on one of the brand's own X or LinkedIn accounts (with its X reply / LinkedIn first comment)",
+    summary: "Publish one post on one of the brand's own X, LinkedIn or Instagram accounts (an Instagram publish is a Reel)",
     description:
-      "Proxy to social-service POST /orgs/social/accounts/{id}/posts. Body `{ text, idempotencyKey, outcomeKey, reply? }` forwarded untransformed (`outcomeKey` = `x_post_published` / `linkedin_post_published`; `reply` = the X reply under the post / the LinkedIn first comment). Name the campaign with `?campaignId=` (or `x-campaign-id`): the post's Unit and its fee land on it. Text only. Returns `{ publication, created }`.",
+      "Proxy to social-service POST /orgs/social/accounts/{id}/posts. Body `{ text, idempotencyKey, outcomeKey, reply?, media? }` forwarded untransformed (`outcomeKey` = `x_post_published` / `linkedin_post_published` / `instagram_reel_published`; `reply` = the X reply under the post / the LinkedIn first comment; `media` = images or a video; Instagram: exactly one `{ url, type: \"video\" }`, a public URL Instagram fetches itself, and the call waits for Instagram's processing, up to ~4 minutes). Name the campaign with `?campaignId=` (or `x-campaign-id`): the post's Unit and its fee land on it. Returns `{ publication, created }`.",
     body: true,
     params: z.object({ id: z.string().openapi({ description: "Account id (uuid) from GET /v1/orgs/social/accounts" }) }),
     query: z.object({ campaignId: z.string().optional(), brandId: z.string().optional() }).passthrough(),
