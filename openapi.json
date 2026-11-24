@@ -1120,7 +1120,7 @@
           },
           "maxLeads": {
             "type": "integer",
-            "description": "Maximum number of leads to contact"
+            "description": "Maximum number of leads to contact. This is a max volume: state a max budget in USD (one of the maxBudget*Usd fields) beside it (VOL-NEEDS-USD-1124); never invent the $ amount, ask the person."
           },
           "endDate": {
             "type": "string",
@@ -67713,7 +67713,7 @@
           "Billing"
         ],
         "summary": "State a sales funnel's MAX BUDGET and MAX VOLUME",
-        "description": "Proxy to billing-service PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps. Body { maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }, period one_off | daily | weekly | monthly, forwarded untouched. Charges nothing. Answers the read's shape.\n\nRequest body: documented from billing-service PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from billing-service PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/billing.",
+        "description": "Proxy to billing-service PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps. Body { maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }, period one_off | daily | weekly | monthly, forwarded untouched. Charges nothing. Answers the read's shape. A max volume needs a max budget in $ beside it: a body stating `maxVolume` with `maxBudget: null` (or absent) is refused 400 `max_budget_required_with_max_volume` by billing. Ask the person for both; never invent the $ amount. A max budget alone is valid.\n\nRequest body: documented from billing-service PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from billing-service PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/billing.",
         "security": [
           {
             "bearerAuth": []
@@ -69098,7 +69098,7 @@
           "Billing"
         ],
         "summary": "State the MAX BUDGET and MAX VOLUME of a sales funnel campaign naming no offer",
-        "description": "Proxy to billing-service PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps. Same body as the offer route ({ maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }), forwarded untouched. Charges nothing.\n\nRequest body: documented from billing-service PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from billing-service PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/billing.",
+        "description": "Proxy to billing-service PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps. Same body as the offer route ({ maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }), forwarded untouched. Charges nothing. A max volume needs a max budget in $ beside it: a body stating `maxVolume` with `maxBudget: null` (or absent) is refused 400 `max_budget_required_with_max_volume` by billing. Ask the person for both; never invent the $ amount. A max budget alone is valid.\n\nRequest body: documented from billing-service PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from billing-service PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/billing.",
         "security": [
           {
             "bearerAuth": []
@@ -70508,7 +70508,7 @@
           "Billing"
         ],
         "summary": "State the MAX BUDGET and MAX VOLUME of a sales funnel campaign",
-        "description": "Proxy to billing-service PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps. Same body as the funnel route ({ maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }), forwarded untouched. Charges nothing.\n\nRequest body: documented from billing-service PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from billing-service PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/billing.",
+        "description": "Proxy to billing-service PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps. Same body as the funnel route ({ maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }), forwarded untouched. Charges nothing. A max volume needs a max budget in $ beside it: a body stating `maxVolume` with `maxBudget: null` (or absent) is refused 400 `max_budget_required_with_max_volume` by billing. Ask the person for both; never invent the $ amount. A max budget alone is valid.\n\nRequest body: documented from billing-service PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from billing-service PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/billing.",
         "security": [
           {
             "bearerAuth": []
@@ -71998,7 +71998,7 @@
           "Billing"
         ],
         "summary": "State the MAX BUDGET and MAX VOLUME of a sales funnel campaign naming no offer",
-        "description": "Proxy to billing-service PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps. Same body as the funnel route ({ maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }), forwarded untouched. Charges nothing.\n\nRequest body: documented from billing-service PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from billing-service PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/billing.",
+        "description": "Proxy to billing-service PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps. Same body as the funnel route ({ maxBudget: {amountCents, period} | null, maxVolume: {count, period} | null }), forwarded untouched. Charges nothing. A max volume needs a max budget in $ beside it: a body stating `maxVolume` with `maxBudget: null` (or absent) is refused 400 `max_budget_required_with_max_volume` by billing. Ask the person for both; never invent the $ amount. A max budget alone is valid.\n\nRequest body: documented from billing-service PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps, which owns and validates it; the gateway forwards it unchanged.\n\nResponse: documented from billing-service PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps, which owns it; the gateway forwards it unchanged. Its full document: GET /v1/platform/services/billing.",
         "security": [
           {
             "bearerAuth": []
