@@ -320,6 +320,11 @@ export const USER_YES_DECISIONS: Record<string, Decision> = {
   "POST /v1/billing/accounts/subscriptions/{subscriptionId}/pause": NO,
   "POST /v1/billing/accounts/subscriptions/{subscriptionId}/unpause": yes(SPEND, "Unpauses a monthly plan: the card is charged again."),
   "POST /v1/billing/accounts/prepaid_checkout": yes(SPEND, "Opens a payment for the amount chosen, with an automatic top-up."),
+  // The solo-founder plan (SOLO-PLAN-1125, billing-service owns amounts + refusals). Enrol = the free state, nothing charged or started.
+  "POST /v1/billing/accounts/solo_plan/enroll": NO,
+  "POST /v1/billing/accounts/solo_plan/start": yes(SPEND, "Starts the paid solo-founder plan: a card page or the trial at once, then the monthly charge."),
+  "POST /v1/billing/accounts/solo_plan/start_now": yes(SPEND, "Ends the trial and charges the first month today."),
+  "POST /v1/billing/accounts/solo_plan/layers": yes(SPEND, "Adds $100 a month to the plan, charged now."),
   "POST /v1/billing/checkout-sessions": yes(SPEND, "Opens a payment page that charges the card."),
   "POST /v1/billing/accounts/charge": yes(SPEND, "Charges the saved card the stated amount."),
   "POST /v1/billing/portal-sessions": NO,

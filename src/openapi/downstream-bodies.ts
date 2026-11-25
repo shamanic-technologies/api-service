@@ -66,6 +66,7 @@ export const DOWNSTREAM_BODY_SOURCES: Record<string, DownstreamBodySource> = {
   "PUT /v1/brands/{id}/user-fields": { service: "brand-service", method: "PUT", path: "/orgs/brands/{id}/user-fields" },
   "PUT /v1/brands/{id}/offers/{offerId}/user-fields": { service: "brand-service", method: "PUT", path: "/orgs/brands/{brandId}/offers/{offerId}/user-fields" },
   "PUT /v1/brands/{brandId}/sales-budget": { service: "billing-service", method: "PUT", path: "/v1/brands/{brandId}/sales-budget" },
+  "POST /v1/billing/accounts/solo_plan/start": { service: "billing-service", method: "POST", path: "/v1/accounts/solo_plan/start" },
   "PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps": { service: "billing-service", method: "PUT", path: "/v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/caps" },
   "PUT /v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps": { service: "billing-service", method: "PUT", path: "/v1/brands/{brandId}/sales-funnels/{salesFunnelId}/caps" },
   "PUT /v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps": { service: "billing-service", method: "PUT", path: "/v1/brands/{brandId}/offers/{offerId}/sales-funnels/{salesFunnelId}/campaigns/{salesFunnelCampaignId}/caps" },

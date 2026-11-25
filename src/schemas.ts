@@ -19778,6 +19778,48 @@ registry.registerPath({
   },
 });
 
+// The solo-founder plan (src/routes/solo-plan.ts → billing-service /v1/accounts/solo_plan*, SOLO-PLAN-1125).
+// Bodies and answers are billing's: documented from its served openapi (downstream-bodies/responses), never re-declared here.
+const SOLO_PLAN_MODEL =
+  "The solo-founder plan: a monthly plan you run from your own AI, with a 3-day trial, monthly credit and +$100/month layers. " +
+  "Amounts, states and refusals are billing-service's, answered verbatim (status and body). Your organization and user come from your key or session.";
+const soloPlanErrors = {
+  401: { description: "Unauthorized", content: errorContent },
+  404: { description: "`not_enrolled`: this account is not on the solo-founder plan (forwarded verbatim)", content: errorContent },
+  409: { description: "Refused by billing with its `code` (forwarded verbatim)", content: errorContent },
+  502: { description: "Upstream error; retry", content: errorContent },
+};
+const soloPlanOps: Array<{ method: "get" | "post"; suffix: string; summary: string; detail: string; body?: boolean; ok: string }> = [
+  { method: "get", suffix: "", summary: "Read your solo-founder plan", ok: "SoloPlanState",
+    detail: "Trial / active / out of credit, credit left, debt, cycle dates, monthly amount, whether a campaign may launch, and the next step to offer. Settles first (a trial that ended converts, an ended cycle renews). Byte passthrough to billing-service GET /v1/accounts/solo_plan." },
+  { method: "post", suffix: "/enroll", summary: "Put your account on the solo-founder plan (free state)", ok: "SoloPlanEnrolled",
+    detail: "Nothing is charged or started. Byte passthrough to billing-service POST /v1/accounts/solo_plan/enroll." },
+  { method: "post", suffix: "/start", summary: "Start the plan: the checkout link, or the trial at once", body: true, ok: "SoloPlanStarted",
+    detail: "Answers the plan state plus `card_required` and `checkout_url` when a card is needed first: give that link to your human. Body {return_url?, ui_mode?}: billing requires `return_url` for a hosted page. Byte passthrough to billing-service POST /v1/accounts/solo_plan/start." },
+  { method: "post", suffix: "/start_now", summary: "End the trial and pay the first month today", ok: "SoloPlanStartedNow",
+    detail: "Byte passthrough to billing-service POST /v1/accounts/solo_plan/start_now." },
+  { method: "post", suffix: "/layers", summary: "Add +$100/month to the plan, charged now", ok: "SoloPlanLayerAdded",
+    detail: "Answers the plan state plus `charged_cents` and `unspent_credit_deducted_cents`. Byte passthrough to billing-service POST /v1/accounts/solo_plan/layers." },
+];
+for (const op of soloPlanOps) {
+  registry.registerPath({
+    method: op.method,
+    path: `/v1/billing/accounts/solo_plan${op.suffix}`,
+    tags: ["Billing"],
+    summary: op.summary,
+    description: `${SOLO_PLAN_MODEL} ${op.detail}`,
+    security: authed,
+    ...(op.body
+      ? { request: { body: { content: { "application/json": { schema: z.object({}).passthrough().openapi("SoloPlanStartRequest") } } } } }
+      : {}),
+    responses: {
+      200: { description: "The plan state (billing-service, verbatim)", content: { "application/json": { schema: z.object({}).passthrough().openapi(op.ok) } } },
+      ...(op.body ? { 400: { description: "billing-service's refusal of the body, verbatim", content: errorContent } } : {}),
+      ...soloPlanErrors,
+    },
+  });
+}
+
 // ---------------------------------------------------------------------------
 // GET /v1/me/openapi.json — the API document for the calling key.
 // ---------------------------------------------------------------------------
