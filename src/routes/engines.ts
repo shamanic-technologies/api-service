@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { authenticatePlatform, requireStaff, type AuthenticatedRequest } from "../middleware/auth.js";
+import { authenticate, authenticatePlatform, requireOrg, requireStaff, requireUser, type AuthenticatedRequest } from "../middleware/auth.js";
+import { buildInternalHeaders } from "../lib/internal-headers.js";
 import { catalogueReader } from "./catalogue-staff.js";
 import { pipeExternalService, externalServices } from "../lib/service-client.js";
 import { respondUpstreamError } from "../lib/upstream-error.js";
@@ -41,6 +42,28 @@ router.get("/v1/engines/:outcome", catalogueReader, async (req: AuthenticatedReq
     console.error("[api-service] Failed to read engine:", error.message);
     if (res.headersSent) { res.end(); return; }
     respondUpstreamError(res, error, "Failed to read engine");
+  }
+});
+
+/**
+ * GET /v1/engines/:outcome/required-keys → workflow-service GET /internal/engines/{outcome}/required-keys (SOLO-PLAN-1125).
+ *
+ * The keys a campaign's Plan needs (provider + what for) and which ones the CALLER's org already holds: a founder on
+ * their own keys has their AI (the MCP) ask for exactly these. `authenticate + requireOrg + requireUser`: the org and
+ * user the producer reads its key holdings as are the AUTHENTICATED ones (`buildInternalHeaders`), never a query
+ * value. Query (`campaignId`) forwarded verbatim (#11); status and body piped byte-for-byte (#7, #10). Reads only.
+ */
+router.get("/v1/engines/:outcome/required-keys", authenticate, requireOrg, requireUser, async (req: AuthenticatedRequest, res) => {
+  try {
+    await pipeExternalService(
+      externalServices.workflow,
+      `/internal/engines/${encodeURIComponent(req.params.outcome)}/required-keys${rawQueryString(req.originalUrl)}`,
+      { expressRes: res, headers: buildInternalHeaders(req) },
+    );
+  } catch (error: any) {
+    console.error("[api-service] Failed to read required keys:", error.message);
+    if (res.headersSent) { res.end(); return; }
+    respondUpstreamError(res, error, "Failed to read the keys this campaign needs");
   }
 });
 
