@@ -551,6 +551,27 @@ export const DOWNSTREAM_REQUEST_BODIES: Record<string, DownstreamBodySnapshot> =
       ]
     }
   },
+  "POST /v1/billing/accounts/solo_plan/start": {
+    "service": "billing-service",
+    "method": "POST",
+    "path": "/v1/accounts/solo_plan/start",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "return_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "ui_mode": {
+          "type": "string",
+          "enum": [
+            "hosted",
+            "embedded"
+          ]
+        }
+      }
+    }
+  },
   "POST /v1/brands/{brandId}/conversions/{conversionId}/withdraw": {
     "service": "lead-service",
     "method": "POST",

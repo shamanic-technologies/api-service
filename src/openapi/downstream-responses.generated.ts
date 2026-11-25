@@ -4458,6 +4458,189 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
       }
     }
   },
+  "GET /v1/billing/accounts/solo_plan": {
+    "service": "billing-service",
+    "method": "GET",
+    "path": "/v1/accounts/solo_plan",
+    "responses": {
+      "200": {
+        "description": "Plan state",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "org_id": {
+              "type": "string"
+            },
+            "plan": {
+              "type": "string",
+              "enum": [
+                "free",
+                "trialing",
+                "active",
+                "past_due"
+              ],
+              "description": "free = on its own keys, a debt of at most $2 accepted on ours (never credit given), no campaign on our keys; trialing = 3-day trial behind a $99 card hold, spend capped at $10; active = paid monthly; past_due = the last charge was refused (retried +1d/+3d/+7d/+14d, then back to free)."
+            },
+            "monthly_amount_cents": {
+              "type": "integer",
+              "description": "$99 + $100 per layer."
+            },
+            "balance_cents": {
+              "type": "string",
+              "description": "Spendable balance (decimal cents, may be negative = debt)."
+            },
+            "credit_left_cents": {
+              "type": "string",
+              "description": "What is still spendable on our keys before the plan's limit; 0 on free."
+            },
+            "debt_cents": {
+              "type": "string",
+              "description": "What the account owes on our keys (0 when the balance is not negative). Repaid by the first payment."
+            },
+            "debt_limit_cents": {
+              "type": "integer"
+            },
+            "out_of_credit": {
+              "type": "boolean",
+              "description": "True = campaigns stop and every door shows the out-of-credit notice."
+            },
+            "out_of_credit_reason": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "paid_plan_required",
+                "debt_limit_reached",
+                "trial_cap_reached",
+                "credit_used_up",
+                "payment_failed",
+                null
+              ]
+            },
+            "may_launch_campaign_on_our_keys": {
+              "type": "boolean"
+            },
+            "campaign_launch_refused_reason": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "paid_plan_required",
+                "debt_limit_reached",
+                "trial_cap_reached",
+                "credit_used_up",
+                "payment_failed",
+                null
+              ]
+            },
+            "trial_started_at": {
+              "type": "string",
+              "nullable": true
+            },
+            "trial_ends_at": {
+              "type": "string",
+              "nullable": true
+            },
+            "trial_spend_cap_cents": {
+              "type": "integer",
+              "nullable": true
+            },
+            "trial_spent_cents": {
+              "type": "string",
+              "nullable": true
+            },
+            "trial_hold_cents": {
+              "type": "integer",
+              "nullable": true,
+              "description": "The card hold taken at trial start (9900), while trialing."
+            },
+            "had_trial": {
+              "type": "boolean"
+            },
+            "current_period_start": {
+              "type": "string",
+              "nullable": true
+            },
+            "current_period_end": {
+              "type": "string",
+              "nullable": true
+            },
+            "next_charge_at": {
+              "type": "string",
+              "nullable": true
+            },
+            "next_charge_cents": {
+              "type": "integer",
+              "nullable": true
+            },
+            "upgrade_url": {
+              "type": "string",
+              "nullable": true,
+              "description": "The public upgrade page for the out-of-credit notice (null when not configured)."
+            },
+            "next_step": {
+              "type": "object",
+              "nullable": true,
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "start_plan",
+                    "start_paid_now",
+                    "add_layer",
+                    "update_card"
+                  ]
+                },
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "POST"
+                  ]
+                },
+                "path": {
+                  "type": "string"
+                },
+                "amount_cents": {
+                  "type": "integer",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "action",
+                "method",
+                "path",
+                "amount_cents"
+              ],
+              "description": "The one call that gives this account more room (the out-of-credit notice's link)."
+            }
+          },
+          "required": [
+            "org_id",
+            "plan",
+            "monthly_amount_cents",
+            "balance_cents",
+            "credit_left_cents",
+            "debt_cents",
+            "debt_limit_cents",
+            "out_of_credit",
+            "out_of_credit_reason",
+            "may_launch_campaign_on_our_keys",
+            "campaign_launch_refused_reason",
+            "trial_started_at",
+            "trial_ends_at",
+            "trial_spend_cap_cents",
+            "trial_spent_cents",
+            "trial_hold_cents",
+            "had_trial",
+            "current_period_start",
+            "current_period_end",
+            "next_charge_at",
+            "next_charge_cents",
+            "upgrade_url",
+            "next_step"
+          ]
+        }
+      }
+    }
+  },
   "GET /v1/billing/accounts/subscription": {
     "service": "billing-service",
     "method": "GET",
@@ -13476,6 +13659,15 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "ownRateLegs": {
                   "type": "integer",
                   "description": "Legs priced on the brand's own rate."
+                },
+                "ownRatesUnavailableReason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "measured_rates_still_computing",
+                    null
+                  ],
+                  "description": "Set when the brand's measured rates (a walk of its leads) were not ready within the read's 4 s budget: the legs are priced on the rates the brand STATED, the fleet's and the defaults. Read again in a minute for its measured rates. Null = every own rate was read."
                 }
               },
               "required": [
@@ -13483,7 +13675,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "brandId",
                 "lifetimeRevenueUsd",
                 "lifetimeRevenueSource",
-                "ownRateLegs"
+                "ownRateLegs",
+                "ownRatesUnavailableReason"
               ],
               "description": "Present on a per-offer read only."
             },
@@ -14201,6 +14394,15 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "ownRateLegs": {
                   "type": "integer",
                   "description": "Legs priced on the brand's own rate."
+                },
+                "ownRatesUnavailableReason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "measured_rates_still_computing",
+                    null
+                  ],
+                  "description": "Set when the brand's measured rates (a walk of its leads) were not ready within the read's 4 s budget: the legs are priced on the rates the brand STATED, the fleet's and the defaults. Read again in a minute for its measured rates. Null = every own rate was read."
                 }
               },
               "required": [
@@ -14208,7 +14410,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "brandId",
                 "lifetimeRevenueUsd",
                 "lifetimeRevenueSource",
-                "ownRateLegs"
+                "ownRateLegs",
+                "ownRatesUnavailableReason"
               ],
               "description": "Present on a per-offer read only."
             },
@@ -14506,6 +14709,15 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "ownRateLegs": {
                   "type": "integer",
                   "description": "Legs priced on the brand's own rate."
+                },
+                "ownRatesUnavailableReason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "measured_rates_still_computing",
+                    null
+                  ],
+                  "description": "Set when the brand's measured rates (a walk of its leads) were not ready within the read's 4 s budget: the legs are priced on the rates the brand STATED, the fleet's and the defaults. Read again in a minute for its measured rates. Null = every own rate was read."
                 }
               },
               "required": [
@@ -14513,7 +14725,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "brandId",
                 "lifetimeRevenueUsd",
                 "lifetimeRevenueSource",
-                "ownRateLegs"
+                "ownRateLegs",
+                "ownRatesUnavailableReason"
               ],
               "description": "Present on a per-offer read only."
             },
@@ -14943,6 +15156,15 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "ownRateLegs": {
                   "type": "integer",
                   "description": "Legs priced on the brand's own rate."
+                },
+                "ownRatesUnavailableReason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "measured_rates_still_computing",
+                    null
+                  ],
+                  "description": "Set when the brand's measured rates (a walk of its leads) were not ready within the read's 4 s budget: the legs are priced on the rates the brand STATED, the fleet's and the defaults. Read again in a minute for its measured rates. Null = every own rate was read."
                 }
               },
               "required": [
@@ -14950,7 +15172,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "brandId",
                 "lifetimeRevenueUsd",
                 "lifetimeRevenueSource",
-                "ownRateLegs"
+                "ownRateLegs",
+                "ownRatesUnavailableReason"
               ],
               "description": "Present on a per-offer read only."
             },
@@ -29370,6 +29593,25 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 ]
               },
               "description": "Call families that still run on a platform key for a declaring org, and why."
+            },
+            "runsOnOurServer": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "family": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "family",
+                  "reason"
+                ]
+              },
+              "description": "Call families that run on our own server for every org, declared or not, charged $0 (no vendor is paid), and how."
             }
           },
           "required": [
@@ -29380,7 +29622,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "pendingCalls",
             "usageLast30Days",
             "runsLocally",
-            "stillOnPlatform"
+            "stillOnPlatform",
+            "runsOnOurServer"
           ]
         }
       }
@@ -29611,6 +29854,15 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "ownRateLegs": {
                   "type": "integer",
                   "description": "Legs priced on the brand's own rate."
+                },
+                "ownRatesUnavailableReason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "measured_rates_still_computing",
+                    null
+                  ],
+                  "description": "Set when the brand's measured rates (a walk of its leads) were not ready within the read's 4 s budget: the legs are priced on the rates the brand STATED, the fleet's and the defaults. Read again in a minute for its measured rates. Null = every own rate was read."
                 }
               },
               "required": [
@@ -29618,7 +29870,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 "brandId",
                 "lifetimeRevenueUsd",
                 "lifetimeRevenueSource",
-                "ownRateLegs"
+                "ownRateLegs",
+                "ownRatesUnavailableReason"
               ],
               "description": "Present on a per-offer read only."
             },
@@ -37341,7 +37594,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
               "nullable": true
             },
             "callerUserId": {
-              "type": "string"
+              "type": "string",
+              "nullable": true
             },
             "email": {
               "type": "string"
@@ -41985,6 +42239,62 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                         "known": {
                           "type": "boolean",
                           "description": "true = a live skill / a tool Distry can call. false = a deleted or unknown skill, or a tool that does not exist: the mention leads nowhere."
+                        },
+                        "api": {
+                          "type": "object",
+                          "properties": {
+                            "operations": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "method": {
+                                    "type": "string",
+                                    "enum": [
+                                      "GET",
+                                      "POST",
+                                      "PUT",
+                                      "PATCH",
+                                      "DELETE"
+                                    ]
+                                  },
+                                  "path": {
+                                    "type": "string",
+                                    "description": "The gateway path, e.g. `/v1/brands/{id}/offers/confirm`."
+                                  },
+                                  "operationId": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "The gateway's own id for this operation; null when its public document does not list it."
+                                  },
+                                  "describeUrl": {
+                                    "type": "string",
+                                    "nullable": true,
+                                    "description": "Serves this one operation's request body and answer schemas (`/openapi.json?operation=<operationId>`)."
+                                  }
+                                },
+                                "required": [
+                                  "method",
+                                  "path",
+                                  "operationId",
+                                  "describeUrl"
+                                ]
+                              },
+                              "description": "The public API call(s) doing what the tool does. Empty: `noRoute` says why."
+                            },
+                            "noRoute": {
+                              "type": "string",
+                              "description": "Why no public call does it (a chat screen, the API explorer itself, no route yet)."
+                            },
+                            "documentUnread": {
+                              "type": "string",
+                              "description": "The gateway's document could not be read: operationIds are null."
+                            }
+                          },
+                          "required": [
+                            "operations"
+                          ],
+                          "description": "Tool mentions on a one-skill read: the public API call an outside agent makes for that tool (AGENT-SIGNUP-UX-1125)."
                         }
                       },
                       "required": [
@@ -42065,6 +42375,62 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                       "known": {
                         "type": "boolean",
                         "description": "true = a live skill / a tool Distry can call. false = a deleted or unknown skill, or a tool that does not exist: the mention leads nowhere."
+                      },
+                      "api": {
+                        "type": "object",
+                        "properties": {
+                          "operations": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "method": {
+                                  "type": "string",
+                                  "enum": [
+                                    "GET",
+                                    "POST",
+                                    "PUT",
+                                    "PATCH",
+                                    "DELETE"
+                                  ]
+                                },
+                                "path": {
+                                  "type": "string",
+                                  "description": "The gateway path, e.g. `/v1/brands/{id}/offers/confirm`."
+                                },
+                                "operationId": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "description": "The gateway's own id for this operation; null when its public document does not list it."
+                                },
+                                "describeUrl": {
+                                  "type": "string",
+                                  "nullable": true,
+                                  "description": "Serves this one operation's request body and answer schemas (`/openapi.json?operation=<operationId>`)."
+                                }
+                              },
+                              "required": [
+                                "method",
+                                "path",
+                                "operationId",
+                                "describeUrl"
+                              ]
+                            },
+                            "description": "The public API call(s) doing what the tool does. Empty: `noRoute` says why."
+                          },
+                          "noRoute": {
+                            "type": "string",
+                            "description": "Why no public call does it (a chat screen, the API explorer itself, no route yet)."
+                          },
+                          "documentUnread": {
+                            "type": "string",
+                            "description": "The gateway's document could not be read: operationIds are null."
+                          }
+                        },
+                        "required": [
+                          "operations"
+                        ],
+                        "description": "Tool mentions on a one-skill read: the public API call an outside agent makes for that tool (AGENT-SIGNUP-UX-1125)."
                       }
                     },
                     "required": [
@@ -42164,6 +42530,62 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                   "known": {
                     "type": "boolean",
                     "description": "true = a live skill / a tool Distry can call. false = a deleted or unknown skill, or a tool that does not exist: the mention leads nowhere."
+                  },
+                  "api": {
+                    "type": "object",
+                    "properties": {
+                      "operations": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "method": {
+                              "type": "string",
+                              "enum": [
+                                "GET",
+                                "POST",
+                                "PUT",
+                                "PATCH",
+                                "DELETE"
+                              ]
+                            },
+                            "path": {
+                              "type": "string",
+                              "description": "The gateway path, e.g. `/v1/brands/{id}/offers/confirm`."
+                            },
+                            "operationId": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "The gateway's own id for this operation; null when its public document does not list it."
+                            },
+                            "describeUrl": {
+                              "type": "string",
+                              "nullable": true,
+                              "description": "Serves this one operation's request body and answer schemas (`/openapi.json?operation=<operationId>`)."
+                            }
+                          },
+                          "required": [
+                            "method",
+                            "path",
+                            "operationId",
+                            "describeUrl"
+                          ]
+                        },
+                        "description": "The public API call(s) doing what the tool does. Empty: `noRoute` says why."
+                      },
+                      "noRoute": {
+                        "type": "string",
+                        "description": "Why no public call does it (a chat screen, the API explorer itself, no route yet)."
+                      },
+                      "documentUnread": {
+                        "type": "string",
+                        "description": "The gateway's document could not be read: operationIds are null."
+                      }
+                    },
+                    "required": [
+                      "operations"
+                    ],
+                    "description": "Tool mentions on a one-skill read: the public API call an outside agent makes for that tool (AGENT-SIGNUP-UX-1125)."
                   }
                 },
                 "required": [
@@ -46644,9 +47066,10 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                     "legacy",
                     "match_100",
                     "agent_api",
-                    "prepaid_at_cost"
+                    "prepaid_at_cost",
+                    "solo_founder"
                   ],
-                  "description": "The free-credit offer this org was created under. `prepaid_at_cost` = every account created since 2026-10-29: a $5 advance at creation (repaid by the first payment, never a gift), NO other free credit (no match, no referral reward), PREPAID only with an OPTIONAL auto top-up (on by default, the org may switch it off and on), and every cost it causes is billed to it (spend with no campaign: onboarding, Copilot chat, card fees). `match_100` = 'We match your first $100' (a $30 advance at creation, repaid by the first payment, and +$100 free once $100 is paid). `agent_api` = opened by an AI agent through the API: NO free credit of any kind, prepaid with auto top-up armed at checkout (the org may switch it off, owner 2026-11-18). `legacy` = every older org, unchanged."
+                  "description": "The free-credit offer this org was created under. `solo_founder` = enrolled on the solo-founder plan (GET /v1/accounts/solo_plan): no advance, no free credit; a debt of at most $2 accepted on our keys while on its own keys, $99/month of credit on the paid plan. `prepaid_at_cost` = every account created since 2026-10-29: a $5 advance at creation (repaid by the first payment, never a gift), NO other free credit (no match, no referral reward), PREPAID only with an OPTIONAL auto top-up (on by default, the org may switch it off and on), and every cost it causes is billed to it (spend with no campaign: onboarding, Copilot chat, card fees). `match_100` = 'We match your first $100' (a $30 advance at creation, repaid by the first payment, and +$100 free once $100 is paid). `agent_api` = opened by an AI agent through the API: NO free credit of any kind, prepaid with auto top-up armed at checkout (the org may switch it off, owner 2026-11-18). `legacy` = every older org, unchanged."
                 },
                 "free_credit_entitlement_cents": {
                   "type": "integer",
@@ -46872,6 +47295,795 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "free_credit_offer",
             "topup_amount_cents",
             "auto_topup"
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/billing/accounts/solo_plan/enroll": {
+    "service": "billing-service",
+    "method": "POST",
+    "path": "/v1/accounts/solo_plan/enroll",
+    "responses": {
+      "200": {
+        "description": "Plan state",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "org_id": {
+              "type": "string"
+            },
+            "plan": {
+              "type": "string",
+              "enum": [
+                "free",
+                "trialing",
+                "active",
+                "past_due"
+              ],
+              "description": "free = on its own keys, a debt of at most $2 accepted on ours (never credit given), no campaign on our keys; trialing = 3-day trial behind a $99 card hold, spend capped at $10; active = paid monthly; past_due = the last charge was refused (retried +1d/+3d/+7d/+14d, then back to free)."
+            },
+            "monthly_amount_cents": {
+              "type": "integer",
+              "description": "$99 + $100 per layer."
+            },
+            "balance_cents": {
+              "type": "string",
+              "description": "Spendable balance (decimal cents, may be negative = debt)."
+            },
+            "credit_left_cents": {
+              "type": "string",
+              "description": "What is still spendable on our keys before the plan's limit; 0 on free."
+            },
+            "debt_cents": {
+              "type": "string",
+              "description": "What the account owes on our keys (0 when the balance is not negative). Repaid by the first payment."
+            },
+            "debt_limit_cents": {
+              "type": "integer"
+            },
+            "out_of_credit": {
+              "type": "boolean",
+              "description": "True = campaigns stop and every door shows the out-of-credit notice."
+            },
+            "out_of_credit_reason": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "paid_plan_required",
+                "debt_limit_reached",
+                "trial_cap_reached",
+                "credit_used_up",
+                "payment_failed",
+                null
+              ]
+            },
+            "may_launch_campaign_on_our_keys": {
+              "type": "boolean"
+            },
+            "campaign_launch_refused_reason": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "paid_plan_required",
+                "debt_limit_reached",
+                "trial_cap_reached",
+                "credit_used_up",
+                "payment_failed",
+                null
+              ]
+            },
+            "trial_started_at": {
+              "type": "string",
+              "nullable": true
+            },
+            "trial_ends_at": {
+              "type": "string",
+              "nullable": true
+            },
+            "trial_spend_cap_cents": {
+              "type": "integer",
+              "nullable": true
+            },
+            "trial_spent_cents": {
+              "type": "string",
+              "nullable": true
+            },
+            "trial_hold_cents": {
+              "type": "integer",
+              "nullable": true,
+              "description": "The card hold taken at trial start (9900), while trialing."
+            },
+            "had_trial": {
+              "type": "boolean"
+            },
+            "current_period_start": {
+              "type": "string",
+              "nullable": true
+            },
+            "current_period_end": {
+              "type": "string",
+              "nullable": true
+            },
+            "next_charge_at": {
+              "type": "string",
+              "nullable": true
+            },
+            "next_charge_cents": {
+              "type": "integer",
+              "nullable": true
+            },
+            "upgrade_url": {
+              "type": "string",
+              "nullable": true,
+              "description": "The public upgrade page for the out-of-credit notice (null when not configured)."
+            },
+            "next_step": {
+              "type": "object",
+              "nullable": true,
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "start_plan",
+                    "start_paid_now",
+                    "add_layer",
+                    "update_card"
+                  ]
+                },
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "POST"
+                  ]
+                },
+                "path": {
+                  "type": "string"
+                },
+                "amount_cents": {
+                  "type": "integer",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "action",
+                "method",
+                "path",
+                "amount_cents"
+              ],
+              "description": "The one call that gives this account more room (the out-of-credit notice's link)."
+            }
+          },
+          "required": [
+            "org_id",
+            "plan",
+            "monthly_amount_cents",
+            "balance_cents",
+            "credit_left_cents",
+            "debt_cents",
+            "debt_limit_cents",
+            "out_of_credit",
+            "out_of_credit_reason",
+            "may_launch_campaign_on_our_keys",
+            "campaign_launch_refused_reason",
+            "trial_started_at",
+            "trial_ends_at",
+            "trial_spend_cap_cents",
+            "trial_spent_cents",
+            "trial_hold_cents",
+            "had_trial",
+            "current_period_start",
+            "current_period_end",
+            "next_charge_at",
+            "next_charge_cents",
+            "upgrade_url",
+            "next_step"
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/billing/accounts/solo_plan/layers": {
+    "service": "billing-service",
+    "method": "POST",
+    "path": "/v1/accounts/solo_plan/layers",
+    "responses": {
+      "200": {
+        "description": "Raised",
+        "schema": {
+          "allOf": [
+            {
+              "type": "object",
+              "properties": {
+                "org_id": {
+                  "type": "string"
+                },
+                "plan": {
+                  "type": "string",
+                  "enum": [
+                    "free",
+                    "trialing",
+                    "active",
+                    "past_due"
+                  ],
+                  "description": "free = on its own keys, a debt of at most $2 accepted on ours (never credit given), no campaign on our keys; trialing = 3-day trial behind a $99 card hold, spend capped at $10; active = paid monthly; past_due = the last charge was refused (retried +1d/+3d/+7d/+14d, then back to free)."
+                },
+                "monthly_amount_cents": {
+                  "type": "integer",
+                  "description": "$99 + $100 per layer."
+                },
+                "balance_cents": {
+                  "type": "string",
+                  "description": "Spendable balance (decimal cents, may be negative = debt)."
+                },
+                "credit_left_cents": {
+                  "type": "string",
+                  "description": "What is still spendable on our keys before the plan's limit; 0 on free."
+                },
+                "debt_cents": {
+                  "type": "string",
+                  "description": "What the account owes on our keys (0 when the balance is not negative). Repaid by the first payment."
+                },
+                "debt_limit_cents": {
+                  "type": "integer"
+                },
+                "out_of_credit": {
+                  "type": "boolean",
+                  "description": "True = campaigns stop and every door shows the out-of-credit notice."
+                },
+                "out_of_credit_reason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "paid_plan_required",
+                    "debt_limit_reached",
+                    "trial_cap_reached",
+                    "credit_used_up",
+                    "payment_failed",
+                    null
+                  ]
+                },
+                "may_launch_campaign_on_our_keys": {
+                  "type": "boolean"
+                },
+                "campaign_launch_refused_reason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "paid_plan_required",
+                    "debt_limit_reached",
+                    "trial_cap_reached",
+                    "credit_used_up",
+                    "payment_failed",
+                    null
+                  ]
+                },
+                "trial_started_at": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "trial_ends_at": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "trial_spend_cap_cents": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "trial_spent_cents": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "trial_hold_cents": {
+                  "type": "integer",
+                  "nullable": true,
+                  "description": "The card hold taken at trial start (9900), while trialing."
+                },
+                "had_trial": {
+                  "type": "boolean"
+                },
+                "current_period_start": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "current_period_end": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "next_charge_at": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "next_charge_cents": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "upgrade_url": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "The public upgrade page for the out-of-credit notice (null when not configured)."
+                },
+                "next_step": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "start_plan",
+                        "start_paid_now",
+                        "add_layer",
+                        "update_card"
+                      ]
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "POST"
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "amount_cents": {
+                      "type": "integer",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "method",
+                    "path",
+                    "amount_cents"
+                  ],
+                  "description": "The one call that gives this account more room (the out-of-credit notice's link)."
+                }
+              },
+              "required": [
+                "org_id",
+                "plan",
+                "monthly_amount_cents",
+                "balance_cents",
+                "credit_left_cents",
+                "debt_cents",
+                "debt_limit_cents",
+                "out_of_credit",
+                "out_of_credit_reason",
+                "may_launch_campaign_on_our_keys",
+                "campaign_launch_refused_reason",
+                "trial_started_at",
+                "trial_ends_at",
+                "trial_spend_cap_cents",
+                "trial_spent_cents",
+                "trial_hold_cents",
+                "had_trial",
+                "current_period_start",
+                "current_period_end",
+                "next_charge_at",
+                "next_charge_cents",
+                "upgrade_url",
+                "next_step"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "charged_cents": {
+                  "type": "integer"
+                },
+                "unspent_credit_deducted_cents": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "charged_cents",
+                "unspent_credit_deducted_cents"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/billing/accounts/solo_plan/start": {
+    "service": "billing-service",
+    "method": "POST",
+    "path": "/v1/accounts/solo_plan/start",
+    "responses": {
+      "200": {
+        "description": "Card required, or started",
+        "schema": {
+          "allOf": [
+            {
+              "type": "object",
+              "properties": {
+                "org_id": {
+                  "type": "string"
+                },
+                "plan": {
+                  "type": "string",
+                  "enum": [
+                    "free",
+                    "trialing",
+                    "active",
+                    "past_due"
+                  ],
+                  "description": "free = on its own keys, a debt of at most $2 accepted on ours (never credit given), no campaign on our keys; trialing = 3-day trial behind a $99 card hold, spend capped at $10; active = paid monthly; past_due = the last charge was refused (retried +1d/+3d/+7d/+14d, then back to free)."
+                },
+                "monthly_amount_cents": {
+                  "type": "integer",
+                  "description": "$99 + $100 per layer."
+                },
+                "balance_cents": {
+                  "type": "string",
+                  "description": "Spendable balance (decimal cents, may be negative = debt)."
+                },
+                "credit_left_cents": {
+                  "type": "string",
+                  "description": "What is still spendable on our keys before the plan's limit; 0 on free."
+                },
+                "debt_cents": {
+                  "type": "string",
+                  "description": "What the account owes on our keys (0 when the balance is not negative). Repaid by the first payment."
+                },
+                "debt_limit_cents": {
+                  "type": "integer"
+                },
+                "out_of_credit": {
+                  "type": "boolean",
+                  "description": "True = campaigns stop and every door shows the out-of-credit notice."
+                },
+                "out_of_credit_reason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "paid_plan_required",
+                    "debt_limit_reached",
+                    "trial_cap_reached",
+                    "credit_used_up",
+                    "payment_failed",
+                    null
+                  ]
+                },
+                "may_launch_campaign_on_our_keys": {
+                  "type": "boolean"
+                },
+                "campaign_launch_refused_reason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "paid_plan_required",
+                    "debt_limit_reached",
+                    "trial_cap_reached",
+                    "credit_used_up",
+                    "payment_failed",
+                    null
+                  ]
+                },
+                "trial_started_at": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "trial_ends_at": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "trial_spend_cap_cents": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "trial_spent_cents": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "trial_hold_cents": {
+                  "type": "integer",
+                  "nullable": true,
+                  "description": "The card hold taken at trial start (9900), while trialing."
+                },
+                "had_trial": {
+                  "type": "boolean"
+                },
+                "current_period_start": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "current_period_end": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "next_charge_at": {
+                  "type": "string",
+                  "nullable": true
+                },
+                "next_charge_cents": {
+                  "type": "integer",
+                  "nullable": true
+                },
+                "upgrade_url": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "The public upgrade page for the out-of-credit notice (null when not configured)."
+                },
+                "next_step": {
+                  "type": "object",
+                  "nullable": true,
+                  "properties": {
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "start_plan",
+                        "start_paid_now",
+                        "add_layer",
+                        "update_card"
+                      ]
+                    },
+                    "method": {
+                      "type": "string",
+                      "enum": [
+                        "POST"
+                      ]
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "amount_cents": {
+                      "type": "integer",
+                      "nullable": true
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "method",
+                    "path",
+                    "amount_cents"
+                  ],
+                  "description": "The one call that gives this account more room (the out-of-credit notice's link)."
+                }
+              },
+              "required": [
+                "org_id",
+                "plan",
+                "monthly_amount_cents",
+                "balance_cents",
+                "credit_left_cents",
+                "debt_cents",
+                "debt_limit_cents",
+                "out_of_credit",
+                "out_of_credit_reason",
+                "may_launch_campaign_on_our_keys",
+                "campaign_launch_refused_reason",
+                "trial_started_at",
+                "trial_ends_at",
+                "trial_spend_cap_cents",
+                "trial_spent_cents",
+                "trial_hold_cents",
+                "had_trial",
+                "current_period_start",
+                "current_period_end",
+                "next_charge_at",
+                "next_charge_cents",
+                "upgrade_url",
+                "next_step"
+              ]
+            },
+            {
+              "type": "object",
+              "properties": {
+                "card_required": {
+                  "type": "boolean"
+                },
+                "checkout_url": {
+                  "type": "string",
+                  "nullable": true,
+                  "description": "The hosted card page to open (hosted mode), when a card is required."
+                },
+                "card_setup": {
+                  "type": "object",
+                  "nullable": true,
+                  "additionalProperties": {
+                    "nullable": true
+                  }
+                },
+                "card_refused_reason": {
+                  "type": "string",
+                  "nullable": true,
+                  "enum": [
+                    "prepaid_card",
+                    null
+                  ]
+                }
+              },
+              "required": [
+                "card_required",
+                "checkout_url",
+                "card_setup",
+                "card_refused_reason"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "POST /v1/billing/accounts/solo_plan/start_now": {
+    "service": "billing-service",
+    "method": "POST",
+    "path": "/v1/accounts/solo_plan/start_now",
+    "responses": {
+      "200": {
+        "description": "Plan state",
+        "schema": {
+          "type": "object",
+          "properties": {
+            "org_id": {
+              "type": "string"
+            },
+            "plan": {
+              "type": "string",
+              "enum": [
+                "free",
+                "trialing",
+                "active",
+                "past_due"
+              ],
+              "description": "free = on its own keys, a debt of at most $2 accepted on ours (never credit given), no campaign on our keys; trialing = 3-day trial behind a $99 card hold, spend capped at $10; active = paid monthly; past_due = the last charge was refused (retried +1d/+3d/+7d/+14d, then back to free)."
+            },
+            "monthly_amount_cents": {
+              "type": "integer",
+              "description": "$99 + $100 per layer."
+            },
+            "balance_cents": {
+              "type": "string",
+              "description": "Spendable balance (decimal cents, may be negative = debt)."
+            },
+            "credit_left_cents": {
+              "type": "string",
+              "description": "What is still spendable on our keys before the plan's limit; 0 on free."
+            },
+            "debt_cents": {
+              "type": "string",
+              "description": "What the account owes on our keys (0 when the balance is not negative). Repaid by the first payment."
+            },
+            "debt_limit_cents": {
+              "type": "integer"
+            },
+            "out_of_credit": {
+              "type": "boolean",
+              "description": "True = campaigns stop and every door shows the out-of-credit notice."
+            },
+            "out_of_credit_reason": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "paid_plan_required",
+                "debt_limit_reached",
+                "trial_cap_reached",
+                "credit_used_up",
+                "payment_failed",
+                null
+              ]
+            },
+            "may_launch_campaign_on_our_keys": {
+              "type": "boolean"
+            },
+            "campaign_launch_refused_reason": {
+              "type": "string",
+              "nullable": true,
+              "enum": [
+                "paid_plan_required",
+                "debt_limit_reached",
+                "trial_cap_reached",
+                "credit_used_up",
+                "payment_failed",
+                null
+              ]
+            },
+            "trial_started_at": {
+              "type": "string",
+              "nullable": true
+            },
+            "trial_ends_at": {
+              "type": "string",
+              "nullable": true
+            },
+            "trial_spend_cap_cents": {
+              "type": "integer",
+              "nullable": true
+            },
+            "trial_spent_cents": {
+              "type": "string",
+              "nullable": true
+            },
+            "trial_hold_cents": {
+              "type": "integer",
+              "nullable": true,
+              "description": "The card hold taken at trial start (9900), while trialing."
+            },
+            "had_trial": {
+              "type": "boolean"
+            },
+            "current_period_start": {
+              "type": "string",
+              "nullable": true
+            },
+            "current_period_end": {
+              "type": "string",
+              "nullable": true
+            },
+            "next_charge_at": {
+              "type": "string",
+              "nullable": true
+            },
+            "next_charge_cents": {
+              "type": "integer",
+              "nullable": true
+            },
+            "upgrade_url": {
+              "type": "string",
+              "nullable": true,
+              "description": "The public upgrade page for the out-of-credit notice (null when not configured)."
+            },
+            "next_step": {
+              "type": "object",
+              "nullable": true,
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "enum": [
+                    "start_plan",
+                    "start_paid_now",
+                    "add_layer",
+                    "update_card"
+                  ]
+                },
+                "method": {
+                  "type": "string",
+                  "enum": [
+                    "POST"
+                  ]
+                },
+                "path": {
+                  "type": "string"
+                },
+                "amount_cents": {
+                  "type": "integer",
+                  "nullable": true
+                }
+              },
+              "required": [
+                "action",
+                "method",
+                "path",
+                "amount_cents"
+              ],
+              "description": "The one call that gives this account more room (the out-of-credit notice's link)."
+            }
+          },
+          "required": [
+            "org_id",
+            "plan",
+            "monthly_amount_cents",
+            "balance_cents",
+            "credit_left_cents",
+            "debt_cents",
+            "debt_limit_cents",
+            "out_of_credit",
+            "out_of_credit_reason",
+            "may_launch_campaign_on_our_keys",
+            "campaign_launch_refused_reason",
+            "trial_started_at",
+            "trial_ends_at",
+            "trial_spend_cap_cents",
+            "trial_spent_cents",
+            "trial_hold_cents",
+            "had_trial",
+            "current_period_start",
+            "current_period_end",
+            "next_charge_at",
+            "next_charge_cents",
+            "upgrade_url",
+            "next_step"
           ]
         }
       }
@@ -65700,6 +66912,25 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
                 ]
               },
               "description": "Call families that still run on a platform key for a declaring org, and why."
+            },
+            "runsOnOurServer": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "family": {
+                    "type": "string"
+                  },
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "family",
+                  "reason"
+                ]
+              },
+              "description": "Call families that run on our own server for every org, declared or not, charged $0 (no vendor is paid), and how."
             }
           },
           "required": [
@@ -65710,7 +66941,8 @@ export const DOWNSTREAM_RESPONSES: Record<string, DownstreamResponseSnapshot> = 
             "pendingCalls",
             "usageLast30Days",
             "runsLocally",
-            "stillOnPlatform"
+            "stillOnPlatform",
+            "runsOnOurServer"
           ]
         }
       }
